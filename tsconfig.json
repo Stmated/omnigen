@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "outDir": "./dist",
+    "target": "ES2015",
+    "module": "CommonJS",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "lib": ["ESNext"],
+    "paths": {
+      "@model/*": ["model/*"],
+      "@model": ["model"],
+      "@parse/*": ["parse/*"],
+      "@parse": ["parse"]
+    },
+
+    "strict": true,
+    "alwaysStrict": true,
+    "noImplicitReturns": true
+  },
+  "include": ["src"]
+}

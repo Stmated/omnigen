@@ -1,0 +1,30 @@
+{
+  "name": "omnigen",
+  "packageManager": "yarn@3.2.1",
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "jest | pino-pretty --translateTime --singleLine",
+    "test-watch": "jest --watch | pino-pretty --translateTime --singleLine"
+  },
+  "dependencies": {
+    "@open-rpc/schema-utils-js": "^1.16.1",
+    "js-yaml": "^4.1.0",
+    "pino": "^8.0.0",
+    "change-case": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/json-schema": "^7.0.11",
+    "@types/node": "^17.0.38",
+    "@types/pino": "^7.0.5",
+    "@typescript-eslint/eslint-plugin": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.0",
+    "eslint": "^8.16.0",
+    "eslint-config-google": "^0.14.0",
+    "jest": "^28.1.0",
+    "pino-pretty": "^8.0.0",
+    "ts-jest": "^28.0.3",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^4.7.2"
+  }
+}

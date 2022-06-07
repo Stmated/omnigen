@@ -1,0 +1,6 @@
+.idea
+.git
+.yarn
+*.iml
+node_modules
+dist

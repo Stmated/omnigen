@@ -11,12 +11,14 @@ plugins: ['@typescript-eslint']
 
 extends:
   - google
+  - prettier
 
 rules:
   require-jsdoc: off
+  valid-jsdoc: off
   no-trailing-spaces: off
   max-len:
-    - error
+    - warn
     - code: 140
 
 overrides:

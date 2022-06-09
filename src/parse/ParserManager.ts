@@ -1,4 +1,4 @@
-import {GenericModel} from '@model';
+import {GenericModel} from '@parse';
 import {Parser} from '@parse/Parser';
 import {PathLike} from 'fs';
 import {SchemaFile} from '@parse/SchemaFile';

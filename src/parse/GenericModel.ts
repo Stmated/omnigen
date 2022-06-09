@@ -21,7 +21,7 @@ export interface GenericAnnotation {
 export interface GenericMethod {
   name: string;
   parameters: GenericParameter[];
-  returnType: GenericType;
+  returnType: GenericClassType;
   accessLevel: GenericAccessLevel;
 }
 
@@ -50,20 +50,16 @@ export interface GenericProperty {
   name: string;
   type: GenericTypeOrGenericArrayType;
   accessLevel?: GenericAccessLevel;
-  //required?: boolean;
 
   annotations?: GenericAnnotation[];
 }
 
-export enum GenericKnownType {
-  NUMBER,
-  INTEGER,
-  DECIMAL,
-  LONG,
-  STRING,
-  CHAR,
-  BOOL,
+export enum GenericTypeKind {
+  PRIMITIVE,
 
+  ENUM,
+
+  OBJECT,
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
@@ -72,26 +68,54 @@ export enum GenericKnownType {
   NULL,
 }
 
-export interface GenericType {
+export enum GenericPrimitiveKind {
+  NUMBER,
+  INTEGER,
+  DECIMAL,
+  LONG,
+  STRING,
+  CHAR,
+  BOOL,
+}
 
+type GenericAlwaysNullKnownKind = GenericTypeKind.NULL;
+export type GenericType = GenericBaseType<GenericAlwaysNullKnownKind> | GenericClassType | GenericPrimitiveType | GenericEnumType;
+
+export interface GenericBaseType<T> {
   name: string;
+  kind: T;
+  accessLevel?: GenericAccessLevel;
+}
 
-  knownType?: GenericKnownType;
+type GenericClassKnownKind = GenericTypeKind.OBJECT | GenericTypeKind.UNKNOWN;
+export interface GenericClassType extends GenericBaseType<GenericClassKnownKind> {
+
   valueConstant?: unknown;
 
-  accessLevel?: GenericAccessLevel;
-
-  extendsAnyOf?: GenericType[];
-  extendsAllOf?: GenericType[];
-  extendsOneOf?: GenericType[];
-  implements?: GenericType[];
+  extendsAnyOf?: GenericClassType[];
+  extendsAllOf?: GenericClassType[];
+  extendsOneOf?: GenericClassType[];
+  implements?: GenericClassType[];
 
   properties?: GenericProperty[];
   requiredProperties?: GenericProperty[];
   methods?: GenericMethod[];
   annotations?: GenericAnnotation[];
 
-  nestedTypes?: GenericType[];
+  nestedTypes?: GenericClassType[];
+}
+
+type GenericPrimitiveKnownKind = GenericTypeKind.PRIMITIVE;
+// Exclude<GenericKnownType, GenericKnownType.OBJECT | GenericKnownType.UNKNOWN | GenericKnownType.ENUM>;
+export interface GenericPrimitiveType extends GenericBaseType<GenericPrimitiveKnownKind> {
+  primitiveType: GenericPrimitiveKind;
+  valueConstant?: string | boolean | number;
+}
+
+type GenericEnumKnownKind = GenericTypeKind.ENUM;
+export interface GenericEnumType extends GenericBaseType<GenericEnumKnownKind> {
+  enumConstants?: unknown[];
+  enumType?: GenericClassType;
 }
 
 export interface GenericInput {
@@ -104,7 +128,7 @@ export interface GenericOutput {
   description?: string;
   summary?: string;
   contentType: string;
-  type: GenericType;
+  type: GenericClassType;
   required: boolean;
   deprecated: boolean;
 

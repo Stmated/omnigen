@@ -4,13 +4,15 @@ import {
   ComparisonOperator,
   GenericAccessLevel,
   GenericArrayType,
+  GenericClassType,
   GenericContact,
   GenericEndpoint,
   GenericExamplePairing,
   GenericExampleParam,
   GenericExampleResult,
   GenericExternalDocumentation,
-  GenericKnownType,
+  GenericPrimitiveKind,
+  GenericTypeKind,
   GenericLicense,
   GenericModel,
   GenericOutput,
@@ -18,10 +20,9 @@ import {
   GenericPayloadPathQualifier,
   GenericProperty,
   GenericServer,
-  GenericType,
   GenericTypeOrGenericArrayType,
-} from '@model';
-import {SchemaFile} from '@parse';
+  SchemaFile,
+} from '@parse';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
@@ -51,9 +52,12 @@ export class OpenRpcParser extends AbstractParser {
     });
     return this.docToGenericModel(document);
   }
+  canHandle(schemaFile: SchemaFile): Promise<boolean> {
+    return Promise.resolve(false);
+  }
 
   private async docToGenericModel(doc: OpenrpcDocument): Promise<GenericModel> {
-    const types: GenericType[] = [];
+    const types: GenericClassType[] = [];
     const endpointPromises = doc.methods.map((method) => this.methodToGenericEndpoint(doc, method, types));
     const endpoints = await Promise.all(endpointPromises);
 
@@ -89,7 +93,7 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async methodToGenericEndpoint(doc: OpenrpcDocument, method: MethodOrReference, types: GenericType[], name?: string): Promise<GenericEndpoint> {
+  private async methodToGenericEndpoint(doc: OpenrpcDocument, method: MethodOrReference, types: GenericClassType[], name?: string): Promise<GenericEndpoint> {
     if ('name' in method) {
       // method.links
       // method.tags
@@ -152,11 +156,13 @@ export class OpenRpcParser extends AbstractParser {
     return this.methodToGenericEndpoint(doc, dereferenced, types, method.$ref);
   }
 
-  private async jsonSchemaToType(doc: OpenrpcDocument, names: string[], schema: JSONSchema, types: GenericType[])
+  private async jsonSchemaToType(doc: OpenrpcDocument, names: string[], schema: JSONSchema, types: GenericClassType[])
     : Promise<GenericTypeOrGenericArrayType> {
     if (typeof schema == 'boolean') {
       return {
         name: 'boolean',
+        kind: GenericTypeKind.PRIMITIVE,
+        primitiveType: GenericPrimitiveKind.BOOL,
       };
     }
 
@@ -175,7 +181,7 @@ export class OpenRpcParser extends AbstractParser {
           // No items, so the schema for the array items is undefined.
           arrayItemType = {
             name: 'objectArray',
-            knownType: GenericKnownType.UNKNOWN,
+            kind: GenericTypeKind.UNKNOWN,
           };
         } else if (typeof items == 'boolean') {
           throw new Error('Do not know how to handle a boolean items');
@@ -194,10 +200,19 @@ export class OpenRpcParser extends AbstractParser {
           of: arrayItemType,
         };
       } else if (schema.type !== 'object') {
-        return {
-          name: schema.type,
-          knownType: this.typeToGenericKnownType(schema.type),
-        };
+        const t = this.typeToGenericKnownType(schema.type);
+        if (t.length == 1) {
+          return {
+            name: schema.type,
+            kind: t[0],
+          };
+        } else {
+          return {
+            name: schema.type,
+            kind: t[0],
+            primitiveType: t[1],
+          };
+        }
       }
     }
 
@@ -210,22 +225,28 @@ export class OpenRpcParser extends AbstractParser {
       return existingType;
     }
 
-    const type: GenericType = {
+    const type: GenericClassType = {
       name: name,
+      kind: GenericTypeKind.OBJECT,
     };
     types.push(type);
 
     const genericProperties: GenericProperty[] = [];
+    const requiredProperties: GenericProperty[] = [];
     if (schema.properties) {
       for (const key of Object.keys(schema.properties)) {
         const propertySchema = schema.properties[key] as JSONSchema7;
-        const isRequired = schema.required?.indexOf(key) !== -1;
-        const genericProperty = await this.jsonSchema7ToGenericProperty(doc, key, isRequired, propertySchema, types);
+        const genericProperty = await this.jsonSchema7ToGenericProperty(doc, key, propertySchema, types);
+
         genericProperties.push(genericProperty);
+        if (schema.required?.indexOf(key) !== -1) {
+          requiredProperties.push(genericProperty);
+        }
       }
     }
 
     type.properties = genericProperties;
+    type.requiredProperties = requiredProperties;
 
     if (schema.not) {
       // ???
@@ -248,13 +269,19 @@ export class OpenRpcParser extends AbstractParser {
     return type;
   }
 
-  private async gatherTypeExtensions(doc: OpenrpcDocument, schemaArray: JSONSchema[], names: string[], types: GenericType[]): Promise<GenericType[]> {
-    const typeExtendsAnyOf: GenericType[] = [];
+  private async gatherTypeExtensions(doc: OpenrpcDocument, schemaArray: JSONSchema[], names: string[], types: GenericClassType[])
+    : Promise<GenericClassType[]> {
+    const typeExtendsAnyOf: GenericClassType[] = [];
     for (let i = 0; i < schemaArray.length; i++) {
       const sub = schemaArray[i];
       const genericType = await this.jsonSchemaToType(doc, names.concat([`${i}`]), sub, types);
       if (!('of' in genericType)) {
-        typeExtendsAnyOf.push(genericType);
+        if (genericType.kind == GenericTypeKind.OBJECT) {
+          typeExtendsAnyOf.push(genericType);
+        } else {
+          // TODO: This should probably be supported, since it can be "oneOf" an array of numbers, or something similar?
+          throw new Error(`Do not know how to handle non-object extensions (${genericType.kind})`);
+        }
       } else {
         throw new Error(`Do not know how to handle inheriting arrays`);
       }
@@ -263,18 +290,18 @@ export class OpenRpcParser extends AbstractParser {
     return typeExtendsAnyOf;
   }
 
-  private async jsonSchema7ToGenericProperty(doc: OpenrpcDocument, propertyName: string, required: boolean, schema: JSONSchema7, types: GenericType[]): Promise<GenericProperty> {
+  private async jsonSchema7ToGenericProperty(doc: OpenrpcDocument, propertyName: string, schema: JSONSchema7, types: GenericClassType[])
+    : Promise<GenericProperty> {
     // This is ugly, but they should pretty much be the same.
     const openRpcJsonSchema = schema as JSONSchema;
 
     return <GenericProperty>{
       name: propertyName,
-      required: required,
       type: await this.jsonSchemaToType(doc, [], openRpcJsonSchema, types),
     };
   }
 
-  private async resultToGenericOutput(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericType[]): Promise<GenericOutput> {
+  private async resultToGenericOutput(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericClassType[]): Promise<GenericOutput> {
     if ('name' in result) {
       const typeNamePrefix = pascalCase(method.name);
       return <GenericOutput>{
@@ -301,7 +328,8 @@ export class OpenRpcParser extends AbstractParser {
               name: 'id',
               type: {
                 name: `${typeNamePrefix}ResultId`,
-                knownType: GenericKnownType.STRING,
+                kind: GenericTypeKind.PRIMITIVE,
+                primitiveType: GenericPrimitiveKind.STRING,
               },
             },
           ],
@@ -320,7 +348,7 @@ export class OpenRpcParser extends AbstractParser {
     return this.resultToGenericOutput(doc, method, dereferenced, types);
   }
 
-  private async errorToGenericOutput(doc: OpenrpcDocument, error: ErrorOrReference, types: GenericType[]): Promise<GenericOutput> {
+  private async errorToGenericOutput(doc: OpenrpcDocument, error: ErrorOrReference, types: GenericClassType[]): Promise<GenericOutput> {
     if ('code' in error) {
       const actualCode = (error.code === -1234567890) ? 0 : error.code;
       const typeName = `Error${actualCode}`;
@@ -328,7 +356,8 @@ export class OpenRpcParser extends AbstractParser {
       const errorProperty: GenericProperty = {
         name: 'error',
         type: {
-          name: 'string',
+          name: `${typeName}Error`,
+          kind: GenericTypeKind.OBJECT,
           properties: [
             // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
             {
@@ -336,7 +365,8 @@ export class OpenRpcParser extends AbstractParser {
               type: {
                 name: 'number',
                 valueConstant: (actualCode == error.code) ? error.code : undefined,
-                knownType: GenericKnownType.INTEGER,
+                kind: GenericTypeKind.PRIMITIVE,
+                primitiveType: GenericPrimitiveKind.INTEGER,
               },
             },
             {
@@ -344,7 +374,8 @@ export class OpenRpcParser extends AbstractParser {
               type: {
                 name: 'message',
                 valueConstant: error.message,
-                knownType: GenericKnownType.STRING,
+                kind: GenericTypeKind.PRIMITIVE,
+                primitiveType: GenericPrimitiveKind.STRING,
               },
             },
             {
@@ -355,23 +386,23 @@ export class OpenRpcParser extends AbstractParser {
               type: {
                 name: 'object',
                 valueConstant: error.data,
-                knownType: GenericKnownType.UNKNOWN,
+                kind: GenericTypeKind.UNKNOWN,
               },
             },
           ],
         },
       };
 
-      const errorType: GenericType = {
+      const errorType: GenericClassType = {
         name: typeName,
         accessLevel: GenericAccessLevel.PUBLIC,
+        kind: GenericTypeKind.OBJECT,
         properties: [
           {
             name: 'result',
             type: {
               name: 'string',
-              valueConstant: null,
-              knownType: GenericKnownType.STRING,
+              kind: GenericTypeKind.NULL,
             },
           },
           errorProperty,
@@ -379,7 +410,8 @@ export class OpenRpcParser extends AbstractParser {
             name: 'id',
             type: {
               name: 'string',
-              knownType: GenericKnownType.STRING,
+              kind: GenericTypeKind.PRIMITIVE,
+              primitiveType: GenericPrimitiveKind.STRING,
             },
           },
         ],
@@ -477,11 +509,7 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  canHandle(schemaFile: SchemaFile): Promise<boolean> {
-    return Promise.resolve(false);
-  }
-
-  private async paramToGenericParameter(doc: OpenrpcDocument, parameter: ContentDescriptorOrReference, types: GenericType[])
+  private async paramToGenericParameter(doc: OpenrpcDocument, parameter: ContentDescriptorOrReference, types: GenericClassType[])
     : Promise<GenericParameter> {
     if ('name' in parameter) {
       // parameter.schema
@@ -499,23 +527,24 @@ export class OpenRpcParser extends AbstractParser {
     return this.paramToGenericParameter(doc, dereferenced, types);
   }
 
-  private typeToGenericKnownType(type: string): GenericKnownType {
+
+  private typeToGenericKnownType(type: string): [GenericTypeKind.NULL] | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind] {
     switch (type.toLowerCase()) {
       case 'number':
-        return GenericKnownType.NUMBER;
+        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.NUMBER];
       case 'int':
       case 'integer':
-        return GenericKnownType.INTEGER;
+        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.INTEGER];
       case 'decimal':
       case 'double':
-        return GenericKnownType.DECIMAL;
+        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.DECIMAL];
       case 'bool':
       case 'boolean':
-        return GenericKnownType.BOOL;
+        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.BOOL];
       case 'string':
-        return GenericKnownType.STRING;
+        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.STRING];
       case 'null':
-        return GenericKnownType.NULL;
+        return [GenericTypeKind.NULL];
     }
 
     throw new Error(`Unknown type: ${type}`);

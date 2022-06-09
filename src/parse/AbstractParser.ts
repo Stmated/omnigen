@@ -1,5 +1,5 @@
 import {Parser} from '@parse/Parser';
-import {GenericModel} from '@model';
+import {GenericModel} from '@parse';
 import {SchemaFile} from '@parse/SchemaFile';
 
 export abstract class AbstractParser implements Parser {

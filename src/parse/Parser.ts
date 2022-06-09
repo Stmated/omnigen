@@ -1,4 +1,4 @@
-import {GenericModel} from '@model';
+import {GenericModel} from '@parse';
 import {SchemaFile} from '@parse/SchemaFile';
 
 export interface Parser {

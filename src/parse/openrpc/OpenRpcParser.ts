@@ -11,16 +11,16 @@ import {
   GenericExampleParam,
   GenericExampleResult,
   GenericExternalDocumentation,
-  GenericPrimitiveKind,
-  GenericTypeKind,
   GenericLicense,
   GenericModel,
   GenericOutput,
   GenericParameter,
   GenericPayloadPathQualifier,
+  GenericPrimitiveKind,
   GenericProperty,
   GenericServer,
-  GenericTypeOrGenericArrayType,
+  GenericType,
+  GenericTypeKind,
   SchemaFile,
 } from '@parse';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
@@ -60,22 +60,53 @@ export class OpenRpcParser extends AbstractParser {
     const types: GenericClassType[] = [];
     const endpointPromises = doc.methods.map((method) => this.methodToGenericEndpoint(doc, method, types));
     const endpoints = await Promise.all(endpointPromises);
+    const contact = doc.info.contact ? this.contactToGenericContact(doc, doc.info.contact) : undefined;
+    const license = doc.info.license ? this.licenseToGenericLicense(doc, doc.info.license) : undefined;
+    const servers = (doc.servers || []).map((server) => this.serverToGenericServer(doc, server));
+    const docs = doc.externalDocs ? [this.externalDocToGenericExternalDoc(doc, doc.externalDocs)] : [];
 
-    return Promise.resolve(<GenericModel>{
+    const model: GenericModel = {
       schemaType: 'openrpc',
       schemaVersion: doc.openrpc,
       name: doc.info.title,
       description: doc.info.description,
       version: doc.info.version,
-      contact: doc.info.contact ? this.contactToGenericContact(doc, doc.info.contact) : undefined,
-      license: doc.info.license ? this.licenseToGenericLicense(doc, doc.info.license) : undefined,
+      contact: contact,
+      license: license,
       termsOfService: doc.info.termsOfService,
-      servers: (doc.servers || []).map((server) => this.serverToGenericServer(doc, server)),
-      externalDocumentations: doc.externalDocs ? [this.externalDocToGenericExternalDoc(doc, doc.externalDocs)] : [],
+      servers: servers,
+      externalDocumentations: docs,
 
       endpoints: endpoints,
       types: types,
-    });
+    };
+
+    this.cleanup(model);
+
+    return model;
+  }
+
+  private cleanup(model: GenericModel): void {
+    const typeNames: string[] = [];
+    for (const type of model.types) {
+      let usedName: string;
+      if (type.name.indexOf('/') !== -1) {
+        // The type name contains a slash, which means it is probably a ref name.
+        // Just replace the name with the content after the furthest-right slash.
+        usedName = type.name.substring(type.name.lastIndexOf('/') + 1);
+      } else {
+        usedName = type.name;
+      }
+
+      const collisionCount = typeNames.filter(it => (it === usedName)).length;
+      typeNames.push(usedName);
+
+      if (collisionCount > 0) {
+        usedName = `${usedName}${collisionCount + 1}`;
+      }
+
+      type.name = usedName;
+    }
   }
 
   private licenseToGenericLicense(doc: OpenrpcDocument, license: LicenseObject): GenericLicense {
@@ -93,7 +124,7 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async methodToGenericEndpoint(doc: OpenrpcDocument, method: MethodOrReference, types: GenericClassType[], name?: string): Promise<GenericEndpoint> {
+  private async methodToGenericEndpoint(doc: OpenrpcDocument, method: MethodOrReference, types: GenericType[], name?: string): Promise<GenericEndpoint> {
     if ('name' in method) {
       // method.links
       // method.tags
@@ -105,7 +136,8 @@ export class OpenRpcParser extends AbstractParser {
       const responses: GenericOutput[] = [];
 
       // One regular response
-      responses.push(await this.resultToGenericOutput(doc, method, method.result, types));
+      const resultResponse = await this.resultToGenericOutput(doc, method, method.result, types);
+      responses.push(resultResponse);
 
       // And then one response for each potential error
       let errors: MethodObjectErrors = method.errors || [];
@@ -118,7 +150,7 @@ export class OpenRpcParser extends AbstractParser {
       }
 
       for (const error of errors) {
-        responses.push(await this.errorToGenericOutput(doc, error, types));
+        responses.push(await this.errorToGenericOutput(doc, pascalCase(method.name), error, types));
       }
 
       const paramPromises = method.params.map((param) => this.paramToGenericParameter(doc, param, types));
@@ -156,13 +188,13 @@ export class OpenRpcParser extends AbstractParser {
     return this.methodToGenericEndpoint(doc, dereferenced, types, method.$ref);
   }
 
-  private async jsonSchemaToType(doc: OpenrpcDocument, names: string[], schema: JSONSchema, types: GenericClassType[])
-    : Promise<GenericTypeOrGenericArrayType> {
+  private async jsonSchemaToType(doc: OpenrpcDocument, names: string[], schema: JSONSchema, types: GenericType[])
+    : Promise<GenericType> {
     if (typeof schema == 'boolean') {
       return {
         name: 'boolean',
         kind: GenericTypeKind.PRIMITIVE,
-        primitiveType: GenericPrimitiveKind.BOOL,
+        primitiveKind: GenericPrimitiveKind.BOOL,
       };
     }
 
@@ -176,7 +208,7 @@ export class OpenRpcParser extends AbstractParser {
     if (typeof schema.type === 'string') {
       if (schema.type === 'array') {
         const items = schema.items;
-        let arrayItemType: GenericTypeOrGenericArrayType;
+        let arrayItemType: GenericType;
         if (!items) {
           // No items, so the schema for the array items is undefined.
           arrayItemType = {
@@ -195,6 +227,8 @@ export class OpenRpcParser extends AbstractParser {
         }
 
         return <GenericArrayType>{
+          name: `ArrayOf${arrayItemType.name}`,
+          kind: GenericTypeKind.ARRAY,
           minLength: schema.minItems,
           maxLength: schema.maxItems,
           of: arrayItemType,
@@ -210,7 +244,7 @@ export class OpenRpcParser extends AbstractParser {
           return {
             name: schema.type,
             kind: t[0],
-            primitiveType: t[1],
+            primitiveKind: t[1],
           };
         }
       }
@@ -269,13 +303,13 @@ export class OpenRpcParser extends AbstractParser {
     return type;
   }
 
-  private async gatherTypeExtensions(doc: OpenrpcDocument, schemaArray: JSONSchema[], names: string[], types: GenericClassType[])
+  private async gatherTypeExtensions(doc: OpenrpcDocument, schemaArray: JSONSchema[], names: string[], types: GenericType[])
     : Promise<GenericClassType[]> {
     const typeExtendsAnyOf: GenericClassType[] = [];
     for (let i = 0; i < schemaArray.length; i++) {
       const sub = schemaArray[i];
       const genericType = await this.jsonSchemaToType(doc, names.concat([`${i}`]), sub, types);
-      if (!('of' in genericType)) {
+      if (genericType.kind != GenericTypeKind.ARRAY) {
         if (genericType.kind == GenericTypeKind.OBJECT) {
           typeExtendsAnyOf.push(genericType);
         } else {
@@ -290,7 +324,7 @@ export class OpenRpcParser extends AbstractParser {
     return typeExtendsAnyOf;
   }
 
-  private async jsonSchema7ToGenericProperty(doc: OpenrpcDocument, propertyName: string, schema: JSONSchema7, types: GenericClassType[])
+  private async jsonSchema7ToGenericProperty(doc: OpenrpcDocument, propertyName: string, schema: JSONSchema7, types: GenericType[])
     : Promise<GenericProperty> {
     // This is ugly, but they should pretty much be the same.
     const openRpcJsonSchema = schema as JSONSchema;
@@ -301,7 +335,7 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async resultToGenericOutput(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericClassType[]): Promise<GenericOutput> {
+  private async resultToGenericOutput(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericType[]): Promise<GenericOutput> {
     if ('name' in result) {
       const typeNamePrefix = pascalCase(method.name);
       return <GenericOutput>{
@@ -329,7 +363,7 @@ export class OpenRpcParser extends AbstractParser {
               type: {
                 name: `${typeNamePrefix}ResultId`,
                 kind: GenericTypeKind.PRIMITIVE,
-                primitiveType: GenericPrimitiveKind.STRING,
+                primitiveKind: GenericPrimitiveKind.STRING,
               },
             },
           ],
@@ -348,50 +382,54 @@ export class OpenRpcParser extends AbstractParser {
     return this.resultToGenericOutput(doc, method, dereferenced, types);
   }
 
-  private async errorToGenericOutput(doc: OpenrpcDocument, error: ErrorOrReference, types: GenericClassType[]): Promise<GenericOutput> {
+  private async errorToGenericOutput(doc: OpenrpcDocument, parentName: string, error: ErrorOrReference, types: GenericType[]): Promise<GenericOutput> {
     if ('code' in error) {
       const actualCode = (error.code === -1234567890) ? 0 : error.code;
-      const typeName = `Error${actualCode}`;
+      const typeName = `${parentName}Error${actualCode}`;
+
+      const errorPropertyType: GenericClassType = {
+        name: `${typeName}Error`,
+        kind: GenericTypeKind.OBJECT,
+        properties: [
+          // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
+          {
+            name: 'code',
+            type: {
+              name: 'number',
+              valueConstant: (actualCode == error.code) ? error.code : undefined,
+              kind: GenericTypeKind.PRIMITIVE,
+              primitiveKind: GenericPrimitiveKind.INTEGER,
+            },
+          },
+          {
+            name: 'message',
+            type: {
+              name: 'message',
+              valueConstant: error.message,
+              kind: GenericTypeKind.PRIMITIVE,
+              primitiveKind: GenericPrimitiveKind.STRING,
+            },
+          },
+          {
+            // For Trustly this is called "error" and not "data",
+            // then inside "error" we have "uuid", "method", "data": {"code", "message"}
+            // TODO: We need a way to specify the error structure -- which OpenRPC currently *cannot*
+            name: 'data',
+            type: {
+              name: 'object',
+              valueConstant: error.data,
+              kind: GenericTypeKind.UNKNOWN,
+            },
+          },
+        ],
+      };
 
       const errorProperty: GenericProperty = {
         name: 'error',
-        type: {
-          name: `${typeName}Error`,
-          kind: GenericTypeKind.OBJECT,
-          properties: [
-            // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
-            {
-              name: 'code',
-              type: {
-                name: 'number',
-                valueConstant: (actualCode == error.code) ? error.code : undefined,
-                kind: GenericTypeKind.PRIMITIVE,
-                primitiveType: GenericPrimitiveKind.INTEGER,
-              },
-            },
-            {
-              name: 'message',
-              type: {
-                name: 'message',
-                valueConstant: error.message,
-                kind: GenericTypeKind.PRIMITIVE,
-                primitiveType: GenericPrimitiveKind.STRING,
-              },
-            },
-            {
-              // For Trustly this is called "error" and not "data",
-              // then inside "error" we have "uuid", "method", "data": {"code", "message"}
-              // TODO: We need a way to specify the error structure -- which OpenRPC currently *cannot*
-              name: 'data',
-              type: {
-                name: 'object',
-                valueConstant: error.data,
-                kind: GenericTypeKind.UNKNOWN,
-              },
-            },
-          ],
-        },
+        type: errorPropertyType,
       };
+
+      types.push(errorPropertyType);
 
       const errorType: GenericClassType = {
         name: typeName,
@@ -401,7 +439,7 @@ export class OpenRpcParser extends AbstractParser {
           {
             name: 'result',
             type: {
-              name: 'string',
+              name: 'AlwaysNullResultBody',
               kind: GenericTypeKind.NULL,
             },
           },
@@ -411,7 +449,7 @@ export class OpenRpcParser extends AbstractParser {
             type: {
               name: 'string',
               kind: GenericTypeKind.PRIMITIVE,
-              primitiveType: GenericPrimitiveKind.STRING,
+              primitiveKind: GenericPrimitiveKind.STRING,
             },
           },
         ],
@@ -444,7 +482,7 @@ export class OpenRpcParser extends AbstractParser {
     }
 
     const dereferenced = await DefaultReferenceResolver.resolve(error.$ref, doc) as ErrorOrReference;
-    return this.errorToGenericOutput(doc, dereferenced, types);
+    return this.errorToGenericOutput(doc, parentName, dereferenced, types);
   }
 
   private async examplePairingToGenericExample(doc: OpenrpcDocument, example: ExamplePairingOrReference): Promise<GenericExamplePairing> {
@@ -509,7 +547,7 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async paramToGenericParameter(doc: OpenrpcDocument, parameter: ContentDescriptorOrReference, types: GenericClassType[])
+  private async paramToGenericParameter(doc: OpenrpcDocument, parameter: ContentDescriptorOrReference, types: GenericType[])
     : Promise<GenericParameter> {
     if ('name' in parameter) {
       // parameter.schema

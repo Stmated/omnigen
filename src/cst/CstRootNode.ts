@@ -1,10 +1,10 @@
 import AbstractNode from './AbstractNode';
-import {ICstVisitor} from '../visit/ICstVisitor';
+import {ICstVisitor, VisitResult} from '@visit';
 
-export class CstRootNode<TVisitor extends ICstVisitor> extends AbstractNode<TVisitor> {
-  children: AbstractNode<TVisitor>[] = [];
+export class CstRootNode extends AbstractNode {
+  children: AbstractNode[] = [];
 
-  visit(visitor: TVisitor): void {
-    visitor.visitRootNode(this);
+  visit<R>(visitor: ICstVisitor<R>): VisitResult<R> {
+    return visitor.visitRootNode(this);
   }
 }

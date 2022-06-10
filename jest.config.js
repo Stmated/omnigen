@@ -11,5 +11,5 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: pathsToModuleNameMapper(
       compilerOptions.paths,
-      {prefix: '<rootDir>/src/'}),
+      {prefix: '<rootDir>/'}),
 };

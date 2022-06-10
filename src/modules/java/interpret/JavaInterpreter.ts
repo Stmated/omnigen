@@ -1,13 +1,15 @@
 import {AbstractInterpreter} from '@interpret/AbstractInterpreter';
-import {ICstNode} from '@cst';
-import {GenericModel} from '@parse';
-import {JavaCstVisitor, JavaCstRootNode} from '@java';
+import {JavaCstVisitor, JavaCstRootNode, JavaOptions} from '@java';
 import {CstRootNode} from '@cst/CstRootNode';
+import {JavaBaseTransformer} from '@java/transform';
 
-export class JavaInterpreter<TNode extends ICstNode<JavaCstVisitor>> extends AbstractInterpreter<JavaCstVisitor, TNode> {
-  interpret(model: GenericModel): CstRootNode<JavaCstVisitor> {
-    const rootNode = new JavaCstRootNode();
+export class JavaInterpreter extends AbstractInterpreter<JavaCstVisitor<void>, JavaOptions> {
+  constructor() {
+    super();
+    this.registerTransformer(new JavaBaseTransformer());
+  }
 
-    return rootNode;
+  newRootNode(): Promise<CstRootNode> {
+    return Promise.resolve(new JavaCstRootNode());
   }
 }

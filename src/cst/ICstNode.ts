@@ -1,5 +1,5 @@
-import {ICstVisitor} from '../visit/ICstVisitor';
+import {ICstVisitor, VisitResult} from '@visit';
 
-export interface ICstNode<TVisitor extends ICstVisitor> {
-  visit(visitor: TVisitor): void;
+export interface ICstNode {
+  visit<R>(visitor: ICstVisitor<R>): VisitResult<R>;
 }

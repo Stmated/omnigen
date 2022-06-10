@@ -1,14 +1,10 @@
 
 
 export interface GenericParameter {
-  //name: string;
-  //type: GenericType;
-
   name: string;
   description?: string;
   summary?: string;
-  //contentType: string;
-  type: GenericTypeOrGenericArrayType;
+  type: GenericType;
   required: boolean;
   deprecated: boolean;
 }
@@ -37,18 +33,9 @@ export enum GenericArrayImplementationType {
   SET
 }
 
-export interface GenericArrayType {
-  of: GenericTypeOrGenericArrayType;
-  minLength?: number;
-  maxLength?: number;
-  implementationType?: GenericArrayImplementationType;
-}
-
-export type GenericTypeOrGenericArrayType = GenericType | GenericArrayType;
-
 export interface GenericProperty {
   name: string;
-  type: GenericTypeOrGenericArrayType;
+  type: GenericType;
   accessLevel?: GenericAccessLevel;
 
   annotations?: GenericAnnotation[];
@@ -60,6 +47,7 @@ export enum GenericTypeKind {
   ENUM,
 
   OBJECT,
+  ARRAY,
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
@@ -76,15 +64,24 @@ export enum GenericPrimitiveKind {
   STRING,
   CHAR,
   BOOL,
+  VOID
 }
 
 type GenericAlwaysNullKnownKind = GenericTypeKind.NULL;
-export type GenericType = GenericBaseType<GenericAlwaysNullKnownKind> | GenericClassType | GenericPrimitiveType | GenericEnumType;
+export type GenericType = GenericBaseType<GenericAlwaysNullKnownKind> | GenericArrayType | GenericClassType | GenericPrimitiveType | GenericEnumType;
 
 export interface GenericBaseType<T> {
   name: string;
   kind: T;
   accessLevel?: GenericAccessLevel;
+}
+
+type GenericArrayKnownKind = GenericTypeKind.ARRAY;
+export interface GenericArrayType extends GenericBaseType<GenericArrayKnownKind>{
+  of: GenericType;
+  minLength?: number;
+  maxLength?: number;
+  implementationType?: GenericArrayImplementationType;
 }
 
 type GenericClassKnownKind = GenericTypeKind.OBJECT | GenericTypeKind.UNKNOWN;
@@ -108,7 +105,11 @@ export interface GenericClassType extends GenericBaseType<GenericClassKnownKind>
 type GenericPrimitiveKnownKind = GenericTypeKind.PRIMITIVE;
 // Exclude<GenericKnownType, GenericKnownType.OBJECT | GenericKnownType.UNKNOWN | GenericKnownType.ENUM>;
 export interface GenericPrimitiveType extends GenericBaseType<GenericPrimitiveKnownKind> {
-  primitiveType: GenericPrimitiveKind;
+  primitiveKind: GenericPrimitiveKind;
+  /**
+   * Nullable means the primitive is for example not a "boolean" but a nullable "Boolean"
+   */
+  nullable?: boolean;
   valueConstant?: string | boolean | number;
 }
 

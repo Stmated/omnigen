@@ -1,3 +1,2 @@
 
-export * from '../cst/types';
-export * from './JavaCstRootNode';
+export * from './JavaInterpreter';

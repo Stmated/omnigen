@@ -1,5 +1,5 @@
-import {ICstVisitor} from '../visit/ICstVisitor';
+import {ICstVisitor, VisitResult} from '@visit';
 
-export default abstract class AbstractToken<TVisitor extends ICstVisitor> {
-  abstract visit(visitor: TVisitor): void;
+export default abstract class AbstractToken {
+  abstract visit<R>(visitor: ICstVisitor<R>): VisitResult<R>;
 }

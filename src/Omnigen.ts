@@ -1,6 +1,6 @@
 import {IParseManager, ParseInputOptions, ParserManager} from '@parse';
 import {OpenRpcParser} from '@parse/openrpc/OpenRpcParser';
-import {GenericModel} from '@model';
+import {GenericModel} from '@parse';
 
 /**
  * Main entry class which handles the default use-case for all the conversion from scheme to output.

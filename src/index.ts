@@ -1,6 +1,5 @@
 import pino from "pino";
 
-export * from '@model';
 export * from '@parse';
 export * from './Omnigen'
 

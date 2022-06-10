@@ -1,6 +1,6 @@
-import {ICstVisitor} from '../visit/ICstVisitor';
+import {ICstVisitor, VisitResult} from '@visit';
 import {ICstNode} from './ICstNode';
 
-export default abstract class AbstractNode<TVisitor extends ICstVisitor> implements ICstNode<TVisitor> {
-  abstract visit(visitor: TVisitor): void;
+export default abstract class AbstractNode implements ICstNode {
+  abstract visit<R>(visitor: ICstVisitor<R>): VisitResult<R>;
 }

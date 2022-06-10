@@ -4,11 +4,10 @@ import {CompilationUnitCallback} from '@cst/CompilationUnitCallback';
 import {VisitResult} from '@visit';
 import {IRenderer} from '@render';
 import {ICstNode} from '@cst';
+import {CompilationUnit} from '@java/cst/types';
 
 export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
-  // private stack: string[] = [''];
   private blockDepth = 0;
-  private compilationUnitDepth = 0;
   private readonly pattern_lineStart = new RegExp(/(?<!$)^/mg);
   private tokenPrefix = ' ';
   private tokenSuffix = ' ';
@@ -19,24 +18,6 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     super();
     this.cuCallback = callback;
   }
-
-  // private append(str: string): VisitResult<string> {
-  //   this.stack[this.stack.length - 1] += str;
-  //   return this.stack[this.stack.length - 1];
-  // }
-
-  // private push(): void {
-  //   this.stack.push('');
-  // }
-  //
-  // private pop(): string {
-  //   const popped = this.stack.pop();
-  //   if (popped === undefined) {
-  //     throw new Error('Cannot pop is the stack is empty');
-  //   }
-  //
-  //   return popped;
-  // }
 
   private static getTypeName(type: Java.Type): string {
     return type.fqn;
@@ -118,11 +99,11 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
   }
 
   visitCommonTypeDeclaration(node: Java.AbstractObjectDeclaration, typeType: string): VisitResult<string> {
-    this.compilationUnitDepth++;
+
     const modifiers = this.render(node.modifiers);
     const name = this.render(node.name);
-    const classExtension = node.extends ? ` ${this.render(node.extends)}` : '';
-    const classImplementations = node.implements ? ` ${this.render(node.implements)}` : '';
+    const classExtension = node.extends ? ` extends ${this.render(node.extends)}` : '';
+    const classImplementations = node.implements ? ` implements ${this.render(node.implements)}` : '';
 
     let typeDeclarationContent = '';
     typeDeclarationContent += (node.comments ? `${this.render(node.comments)}\n` : '');
@@ -131,18 +112,41 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     typeDeclarationContent += (this.render(node.body));
     typeDeclarationContent += ('}\n');
 
-    this.compilationUnitDepth--;
-
-    if (this.compilationUnitDepth === 0) {
-      // This was a top-level class/interface, so we will output it as a compilation unit.
-      this.cuCallback({
-        content: typeDeclarationContent,
-        name: node.name.value,
-        fileName: `${node.name.value}.java`
-      });
-    }
-
     return typeDeclarationContent;
+  }
+
+  visitCompilationUnit(node: CompilationUnit): VisitResult<string> {
+    const content = this.join(super.visitCompilationUnit(node));
+
+    // This was a top-level class/interface, so we will output it as a compilation unit.
+    this.cuCallback({
+      content: content,
+      name: node.object.name.value,
+      fileName: `${node.object.name.value}.java`
+    });
+
+    return content;
+  }
+
+  visitPackage(node: Java.PackageDeclaration): VisitResult<string> {
+    return `package ${node.fqn};\n\n`;
+  }
+
+  visitImportList(node: Java.ImportList): VisitResult<string> {
+    return `${node.children.map(it => this.render(it)).join('\n')}\n`;
+  }
+
+  visitImportStatement(node: Java.ImportStatement): VisitResult<string> {
+    return `import ${this.render(node.type)};\n`;
+  }
+
+  visitImplementsDeclaration(node: Java.ImplementsDeclaration): VisitResult<string> {
+    return (node.types.children.map(it => this.render(it)).join(', '));
+  }
+
+  visitExtendsDeclaration(node: Java.ExtendsDeclaration): VisitResult<string> {
+    // return (node.type.children.map(it => this.render(it)).join(', '));
+    return super.visitExtendsDeclaration(node);
   }
 
   visitClassDeclaration(node: Java.ClassDeclaration): VisitResult<string> {
@@ -200,14 +204,14 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
   }
 
   visitLiteral(node: Java.Literal): VisitResult<string> {
-    if (node.value) {
-      if (typeof node.value === 'string') {
-        return (`"${node.value}"`);
-      } else {
-        return (`${node.value}`);
-      }
+    if (typeof node.value === 'string') {
+      return (`"${node.value}"`);
+    } else if (typeof node.value == 'boolean') {
+      return (`${node.value ? 'true' : 'false'}`);
+    } else if (node.value === null) {
+      return (`null`);
     } else {
-      return ('');
+      return (`${node.value}`);
     }
   }
 

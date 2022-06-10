@@ -59,7 +59,10 @@ export enum GenericTypeKind {
 export enum GenericPrimitiveKind {
   NUMBER,
   INTEGER,
+  INTEGER_SMALL,
   DECIMAL,
+  DOUBLE,
+  FLOAT,
   LONG,
   STRING,
   CHAR,
@@ -92,7 +95,7 @@ export interface GenericClassType extends GenericBaseType<GenericClassKnownKind>
   extendsAnyOf?: GenericClassType[];
   extendsAllOf?: GenericClassType[];
   extendsOneOf?: GenericClassType[];
-  implements?: GenericClassType[];
+  // implements?: GenericClassType[];
 
   properties?: GenericProperty[];
   requiredProperties?: GenericProperty[];

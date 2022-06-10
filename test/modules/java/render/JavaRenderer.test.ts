@@ -5,6 +5,8 @@ import {JavaRenderer} from '@java/render/JavaRenderer';
 import {CompilationUnit} from '@cst/CompilationUnitCallback';
 import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 describe('Test the rendering of a CST tree to string', () => {
 
@@ -19,7 +21,21 @@ describe('Test the rendering of a CST tree to string', () => {
         const interpreter = new JavaInterpreter();
         const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
-        const renderer = new JavaRenderer((cu) => {
+        const outDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
+        try {
+          if ((await fs.stat(outDir)).isDirectory()) {
+            await fs.rm(outDir, {recursive: true, force: true});
+          }
+        } catch (ex) {
+          // Ignore any error here and just hope for the best
+        }
+
+        await fs.mkdir(outDir, {recursive: true});
+
+        const renderer = new JavaRenderer(async (cu) => {
+
+          const outPath = `${outDir}/${cu.fileName}`;
+          await fs.writeFile(outPath, cu.content);
 
           let cst: JavaParser.CstNode;
           try {

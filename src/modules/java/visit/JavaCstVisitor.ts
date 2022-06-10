@@ -17,11 +17,7 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitAnnotationList(node: Java.AnnotationList): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const child of node.children) {
-      results.push(child.visit<R>(this));
-    }
-    return results;
+    return node.children.map(it => it.visit(this));
   }
 
   visitArgumentDeclaration(node: Java.ArgumentDeclaration): VisitResult<R> {
@@ -40,11 +36,7 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitArgumentDeclarationList(node: Java.ArgumentDeclarationList): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const argumentDeclaration of node.children) {
-      results.push(argumentDeclaration.visit(this));
-    }
-    return results;
+    return node.children.map(it => it.visit(this));
   }
 
   visitBinaryExpression(node: Java.BinaryExpression): VisitResult<R> {
@@ -80,11 +72,7 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitCommentList(node: Java.CommentList): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const comment of node.children) {
-      results.push(comment.visit(this));
-    }
-    return results;
+    return node.children.map(it => it.visit(this));
   }
 
   visitComment(node: Java.Comment): VisitResult<R> {
@@ -130,11 +118,7 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitTypeList(node: Java.TypeList): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const type of node.children) {
-      results.push(type.visit(this));
-    }
-    return results;
+    return node.children.map(it => it.visit(this));
   }
 
   visitLiteral(node: Java.Literal): VisitResult<R> {
@@ -149,14 +133,17 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitIfElseStatement(node: Java.IfElseStatement): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const ifStatement of node.ifStatements) {
-      results.push(ifStatement.visit(this));
-    }
-    if (node.elseBlock) {
-      results.push(node.elseBlock.visit(this));
-    }
-    return results;
+    return node.ifStatements.map(it => it.visit(this))
+      .concat(node.elseBlock?.visit(this));
+
+    // const results: VisitResult<R>[] = [];
+    // for (const ifStatement of node.ifStatements) {
+    //   results.push(ifStatement.visit(this));
+    // }
+    // if (node.elseBlock) {
+    //   results.push(node.elseBlock.visit(this));
+    // }
+    // return results;
   }
 
   visitImportStatement(node: Java.ImportStatement): VisitResult<R> {
@@ -164,11 +151,7 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitImportList(node: Java.ImportList): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const importStatement of node.children) {
-      results.push(importStatement.visit(this));
-    }
-    return results;
+    return node.children.map(it => it.visit(this));
   }
 
   visitMethodCall(node: Java.MethodCall): VisitResult<R> {
@@ -194,11 +177,7 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitArgumentList(node: Java.ArgumentList): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const argument of node.children) {
-      results.push(argument.visit(this));
-    }
-    return results;
+    return node.children.map(it => it.visit(this));
   }
 
   visitReturnStatement(node: Java.ReturnStatement): VisitResult<R> {
@@ -221,11 +200,7 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitAnnotationKeyValuePairList(node: Java.AnnotationKeyValuePairList): VisitResult<R> {
-    const results: VisitResult<R>[] = [];
-    for (const pair of node.children) {
-      results.push(pair.visit(this));
-    }
-    return results;
+    return node.children.map(it => it.visit(this));
   }
 
   visitAnnotationKeyValuePair(node: Java.AnnotationKeyValuePair): VisitResult<R> {
@@ -244,12 +219,10 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitBlock(node: Java.Block): VisitResult<R> {
-    if (node.children) {
-      return node.children.map(it => it.visit(this));
-    }
+    return node.children.map(it => it.visit(this));
   }
 
-  visitPackage(node: Java.Package): VisitResult<R> {
+  visitPackage(node: Java.PackageDeclaration): VisitResult<R> {
     // Edge node
   }
 
@@ -258,50 +231,55 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitModifierList(node: Java.ModifierList): VisitResult<R> {
-    for (const modifier of node.modifiers) {
-      modifier.visit(this);
-    }
+    return node.modifiers.map(it => it.visit(this));
   }
 
   visitFieldGetterSetter(node: Java.FieldGetterSetter): VisitResult<R> {
-    node.field.visit(this);
-    node.getter.visit(this);
-    node.setter.visit(this);
+    return [
+      node.field.visit(this),
+      node.getter.visit(this),
+      node.setter.visit(this),
+    ];
   }
 
-  visitCast(node: Java.Cast): void {
-    node.expression.visit(this);
-    node.toType.visit(this);
+  visitCast(node: Java.Cast): VisitResult<R> {
+    return [
+      node.expression.visit(this),
+      node.toType.visit(this),
+    ];
   }
 
   visitObjectDeclaration(node: Java.AbstractObjectDeclaration): VisitResult<R> {
+    const result: VisitResult<R>[] = [];
     if (node.comments) {
-      node.comments.visit(this);
+      result.push(node.comments.visit(this));
     }
     if (node.annotations) {
-      node.annotations.visit(this);
+      result.push(node.annotations.visit(this));
     }
-    node.modifiers.visit(this);
-    node.name.visit(this);
+    result.push(node.modifiers.visit(this));
+    result.push(node.name.visit(this));
     if (node.extends) {
-      node.extends.visit(this);
+      result.push(node.extends.visit(this));
     }
     if (node.implements) {
-      node.implements.visit(this);
+      result.push(node.implements.visit(this));
     }
-    node.body.visit(this);
+    result.push(node.body.visit(this));
+
+    return result;
   }
 
   visitClassDeclaration(node: Java.ClassDeclaration): VisitResult<R> {
-    this.visitObjectDeclaration(node);
+    return this.visitObjectDeclaration(node);
   }
 
   visitInterfaceDeclaration(node: Java.InterfaceDeclaration): VisitResult<R> {
-    this.visitObjectDeclaration(node);
+    return this.visitObjectDeclaration(node);
   }
 
   visitEnumDeclaration(node: Java.EnumDeclaration): VisitResult<R> {
-    this.visitObjectDeclaration(node);
+    return this.visitObjectDeclaration(node);
   }
 
   visitFieldReference(node: Java.FieldReference): VisitResult<R> {
@@ -309,11 +287,21 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitAssignExpression(node: Java.AssignExpression): VisitResult<R> {
-    this.visitBinaryExpression(node);
+    return this.visitBinaryExpression(node);
   }
 
   visitEnumItem(node: Java.EnumItem): VisitResult<R> {
-    node.identifier.visit(this);
-    node.value.visit(this);
+    return [
+      node.identifier.visit(this),
+      node.value.visit(this),
+    ];
+  }
+
+  visitCompilationUnit(node: Java.CompilationUnit): VisitResult<R> {
+    return [
+      node.packageDeclaration.visit(this),
+      node.imports.visit(this),
+      node.object.visit(this),
+    ]
   }
 }

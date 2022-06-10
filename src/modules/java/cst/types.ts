@@ -47,8 +47,6 @@ export class Type extends AbstractJavaNode {
   constructor(genericType: GenericType) {
     super();
     this.genericType = genericType;
-    // this.fqn = fqn;
-    // this.array = array;
   }
 
   visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
@@ -77,10 +75,11 @@ export abstract class AbstractExpression extends AbstractJavaNode {
 }
 
 // Split this into different types of constant depending on the type?
+type LiteralType = boolean | number | string | null;
 export class Literal extends AbstractJavaNode {
-  value: unknown;
+  value: LiteralType;
 
-  constructor(value: unknown) {
+  constructor(value: LiteralType) {
     super();
     this.value = value;
   }
@@ -206,7 +205,7 @@ export class AssignExpression extends BinaryExpression {
   }
 }
 
-export class Package extends AbstractJavaNode {
+export class PackageDeclaration extends AbstractJavaNode {
   fqn: string;
 
   constructor(fqn: string) {
@@ -446,12 +445,13 @@ export class MethodDeclaration extends AbstractMethodDeclaration {
     this.pParameters = value;
   }
 
-  constructor(type: Type, name: Identifier, parameters?: ArgumentDeclarationList, modifiers?: ModifierList) {
+  constructor(type: Type, name: Identifier, parameters?: ArgumentDeclarationList, modifiers?: ModifierList, body?: Block) {
     super();
     this.pType = type;
     this.pName = name;
     this.pParameters = parameters;
     this.pModifiers = modifiers || new ModifierList([new Modifier(ModifierType.PUBLIC)]);
+    this.body = body;
   }
 
   visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
@@ -475,7 +475,7 @@ export abstract class AbstractFieldBackedMethodDeclaration extends AbstractMetho
     return new ModifierList([new Modifier(ModifierType.PUBLIC)]);
   }
 
-  constructor(pField: Field, pAnnotations?: AnnotationList, body?: Block) {
+  protected constructor(pField: Field, pAnnotations?: AnnotationList, body?: Block) {
     super();
     this.field = pField;
     this.pAnnotations = pAnnotations;
@@ -490,7 +490,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 
   // The name needs to be capitalized properly, etc, etc
   get name(): Identifier {
-    return new Identifier(JavaUtil.getGetterName(this.field.identifier, this.type.genericType));
+    return new Identifier(JavaUtil.getGetterName(this.field.identifier.value, this.type.genericType));
   }
 
   get parameters(): ArgumentDeclarationList | undefined {
@@ -581,7 +581,7 @@ export class Cast extends AbstractJavaNode {
 export class TypeList extends AbstractJavaNode {
   children: Type[];
 
-  constructor(...types: Type[]) {
+  constructor(types: Type[]) {
     super();
     this.children = types;
   }
@@ -635,6 +635,23 @@ export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
 
   visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitObjectDeclaration(this);
+  }
+}
+
+export class CompilationUnit extends AbstractJavaNode {
+  packageDeclaration: PackageDeclaration;
+  imports: ImportList;
+  object: AbstractObjectDeclaration;
+
+  constructor(packageDeclaration: PackageDeclaration, imports: ImportList, object: AbstractObjectDeclaration) {
+    super();
+    this.packageDeclaration = packageDeclaration;
+    this.imports = imports;
+    this.object = object;
+  }
+
+  visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitCompilationUnit(this);
   }
 }
 

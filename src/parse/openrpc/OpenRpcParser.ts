@@ -384,8 +384,8 @@ export class OpenRpcParser extends AbstractParser {
 
   private async errorToGenericOutput(doc: OpenrpcDocument, parentName: string, error: ErrorOrReference, types: GenericType[]): Promise<GenericOutput> {
     if ('code' in error) {
-      const actualCode = (error.code === -1234567890) ? 0 : error.code;
-      const typeName = `${parentName}Error${actualCode}`;
+      const isUnknownCode = (error.code === -1234567890);
+      const typeName = `${parentName}Error${isUnknownCode ? 'Unknown' : error.code}`;
 
       const errorPropertyType: GenericClassType = {
         name: `${typeName}Error`,
@@ -396,7 +396,7 @@ export class OpenRpcParser extends AbstractParser {
             name: 'code',
             type: {
               name: 'number',
-              valueConstant: (actualCode == error.code) ? error.code : undefined,
+              valueConstant: isUnknownCode ? undefined : error.code,
               kind: GenericTypeKind.PRIMITIVE,
               primitiveKind: GenericPrimitiveKind.INTEGER,
             },
@@ -463,7 +463,7 @@ export class OpenRpcParser extends AbstractParser {
         operator: ComparisonOperator.DEFINED,
       }];
 
-      if (error.code === actualCode) {
+      if (!isUnknownCode) {
         qualifiers.push({
           path: ['error', 'code'],
           operator: ComparisonOperator.EQUALS,
@@ -472,7 +472,7 @@ export class OpenRpcParser extends AbstractParser {
       }
 
       return <GenericOutput>{
-        name: `error-${actualCode}`,
+        name: `error-${isUnknownCode ? 'unknown' : error.code}`,
         deprecated: false,
         required: false,
         type: errorType,
@@ -564,7 +564,6 @@ export class OpenRpcParser extends AbstractParser {
     const dereferenced = await DefaultReferenceResolver.resolve(parameter.$ref, doc) as ContentDescriptorOrReference;
     return this.paramToGenericParameter(doc, dereferenced, types);
   }
-
 
   private typeToGenericKnownType(type: string): [GenericTypeKind.NULL] | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind] {
     switch (type.toLowerCase()) {

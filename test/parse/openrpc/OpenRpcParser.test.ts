@@ -42,6 +42,6 @@ describe('Test Generic Model Creation', () => {
     expect(response0properties[1].name).toEqual('error');
     expect(response0properties[2].name).toEqual('id');
 
-    expect(model.types.map(it => it.name)).toContain('DeletePetByIdError0Error');
+    expect(model.types.map(it => it.name)).toContain('DeletePetByIdErrorUnknownError');
   });
 });

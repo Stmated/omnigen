@@ -304,4 +304,18 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
       node.object.visit(this),
     ]
   }
+
+  visitConstructor(node: Java.ConstructorDeclaration): VisitResult<R> {
+    return [
+      node.modifiers.visit(this),
+      node.parameters?.visit(this),
+      node.comments?.visit(this),
+      node.annotations?.visit(this),
+      node.body?.visit(this),
+    ]
+  }
+
+  visitAdditionalPropertiesDeclaration(node: Java.AdditionalPropertiesDeclaration): VisitResult<R> {
+    return undefined;
+  }
 }

@@ -214,6 +214,7 @@ export class OpenRpcParser extends AbstractParser {
           arrayItemType = {
             name: 'objectArray',
             kind: GenericTypeKind.UNKNOWN,
+            additionalProperties: true,
           };
         } else if (typeof items == 'boolean') {
           throw new Error('Do not know how to handle a boolean items');
@@ -262,6 +263,14 @@ export class OpenRpcParser extends AbstractParser {
     const type: GenericClassType = {
       name: name,
       kind: GenericTypeKind.OBJECT,
+
+      // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
+      additionalProperties: (schema.additionalProperties == undefined
+          ? true
+          : typeof schema.additionalProperties == 'boolean'
+            ? schema.additionalProperties
+            : true
+      )
     };
     types.push(type);
 
@@ -338,36 +347,44 @@ export class OpenRpcParser extends AbstractParser {
   private async resultToGenericOutput(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericType[]): Promise<GenericOutput> {
     if ('name' in result) {
       const typeNamePrefix = pascalCase(method.name);
+
+      // TODO: Should this always be unique, or should we ever use a common inherited method type?
+      const resultType: GenericType = {
+        name: `${typeNamePrefix}Result`,
+        kind: GenericTypeKind.OBJECT,
+        additionalProperties: false,
+        properties: [
+          {
+            name: 'result',
+            type: await this.jsonSchemaToType(doc, [result.name], result.schema, types),
+          },
+          {
+            name: 'error',
+            type: {
+              name: `${typeNamePrefix}ResultError`,
+              kind: GenericTypeKind.NULL,
+            },
+          },
+          {
+            name: 'id',
+            type: {
+              name: `${typeNamePrefix}ResultId`,
+              kind: GenericTypeKind.PRIMITIVE,
+              primitiveKind: GenericPrimitiveKind.STRING,
+            },
+          },
+        ],
+      };
+
+      types.push(resultType);
+
       return <GenericOutput>{
         name: result.name,
         description: result.description,
         summary: result.summary,
         deprecated: result.deprecated || false,
         required: result.required,
-        type: {
-          name: `${typeNamePrefix}Result`,
-          properties: [
-            {
-              name: 'result',
-              type: await this.jsonSchemaToType(doc, [result.name], result.schema, types),
-            },
-            {
-              name: 'error',
-              type: {
-                name: `${typeNamePrefix}ResultError`,
-                valueConstant: null,
-              },
-            },
-            {
-              name: 'id',
-              type: {
-                name: `${typeNamePrefix}ResultId`,
-                kind: GenericTypeKind.PRIMITIVE,
-                primitiveKind: GenericPrimitiveKind.STRING,
-              },
-            },
-          ],
-        },
+        type: resultType,
         contentType: 'application/json',
         qualifiers: [
           {
@@ -390,6 +407,7 @@ export class OpenRpcParser extends AbstractParser {
       const errorPropertyType: GenericClassType = {
         name: `${typeName}Error`,
         kind: GenericTypeKind.OBJECT,
+        additionalProperties: false,
         properties: [
           // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
           {
@@ -419,6 +437,7 @@ export class OpenRpcParser extends AbstractParser {
               name: 'object',
               valueConstant: error.data,
               kind: GenericTypeKind.UNKNOWN,
+              additionalProperties: true,
             },
           },
         ],
@@ -435,6 +454,7 @@ export class OpenRpcParser extends AbstractParser {
         name: typeName,
         accessLevel: GenericAccessLevel.PUBLIC,
         kind: GenericTypeKind.OBJECT,
+        additionalProperties: false,
         properties: [
           {
             name: 'result',

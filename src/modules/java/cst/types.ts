@@ -257,7 +257,8 @@ export enum ModifierType {
   DEFAULT,
   PROTECTED,
 
-  STATIC
+  STATIC,
+  FINAL,
 }
 
 export class Modifier extends AbstractJavaNode {
@@ -652,6 +653,36 @@ export class CompilationUnit extends AbstractJavaNode {
 
   visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitCompilationUnit(this);
+  }
+}
+
+export class ConstructorDeclaration extends AbstractJavaNode {
+
+  owner: ClassDeclaration;
+  modifiers: ModifierList;
+  parameters?: ArgumentDeclarationList;
+  annotations?: AnnotationList;
+  comments?: CommentList;
+  body?: Block;
+
+
+  constructor(owner: ClassDeclaration, parameters?: ArgumentDeclarationList, body?: Block, modifiers?: ModifierList) {
+    super();
+    this.owner = owner;
+    this.modifiers = modifiers || new ModifierList([new Modifier(ModifierType.PUBLIC)]);
+    this.parameters = parameters;
+    this.body = body;
+  }
+
+  visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitConstructor(this);
+  }
+}
+
+export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
+
+  visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitAdditionalPropertiesDeclaration(this);
   }
 }
 

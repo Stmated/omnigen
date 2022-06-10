@@ -27,7 +27,11 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     return '  '.repeat(d);
   }
 
-  public render(node: ICstNode): string {
+  public render(node: ICstNode | undefined): string {
+    if (node === undefined) {
+      return '';
+    }
+
     return this.join(node.visit<string>(this));
   }
 
@@ -43,7 +47,7 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     }
   }
 
-  private static getModifierString(type: Java.ModifierType): 'public' | 'private' | 'protected' | '' {
+  private static getModifierString(type: Java.ModifierType): 'public' | 'private' | 'protected' | 'final' | 'static' | '' {
     switch (type) {
       case Java.ModifierType.PUBLIC:
         return 'public';
@@ -53,8 +57,10 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
         return '';
       case Java.ModifierType.PROTECTED:
         return 'protected';
-      default:
-        throw new Error('Unknown modifier type');
+      case Java.ModifierType.FINAL:
+        return 'final';
+      case Java.ModifierType.STATIC:
+        return 'static';
     }
   }
 
@@ -87,6 +93,13 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
       default:
         throw new Error('Unknown token type');
     }
+  }
+
+  visitConstructor(node: Java.ConstructorDeclaration): VisitResult<string> {
+    const annotations = node.annotations ? `${this.render(node.annotations)}\n` : '';
+    const body = node.body ? `\n${this.render(node.body)}` : '';
+
+    return `\n${annotations}${this.render(node.modifiers)} ${this.render(node.owner.name)}(${this.render(node.parameters)}) {${body}}\n\n`;
   }
 
   visitBlock(node: Java.Block): VisitResult<string> {
@@ -253,10 +266,10 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
   }
 
   visitAssignExpression(node: Java.AssignExpression): VisitResult<string> {
+    // TODO: This is wrong. Need to find a better way!
     return [
       super.visitAssignExpression(node),
-      // TODO: This is wrong. Need to find a better way!
-      ';',
+      ';\n',
     ];
   }
 
@@ -269,15 +282,7 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
   }
 
   visitType(node: Java.Type): VisitResult<string> {
-    const typeName = JavaRenderer.getTypeName(node);
-    if (node.array) {
-      return [
-        typeName,
-        '[]',
-      ];
-    } else {
-      return typeName;
-    }
+    return JavaRenderer.getTypeName(node);
   }
 
   visitModifierList(node: Java.ModifierList): VisitResult<string> {
@@ -289,5 +294,11 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     if (modifierString) {
       return modifierString;
     }
+  }
+
+  visitAdditionalPropertiesDeclaration(node: Java.AdditionalPropertiesDeclaration): VisitResult<string> {
+
+    // TODO: Render it somehow. What is the best way to keep it modular and modifiable by others?
+    return `// TODO: This is where the additionalProperties code should go\n`;
   }
 }

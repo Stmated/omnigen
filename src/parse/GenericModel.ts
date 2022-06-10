@@ -95,10 +95,11 @@ export interface GenericClassType extends GenericBaseType<GenericClassKnownKind>
   extendsAnyOf?: GenericClassType[];
   extendsAllOf?: GenericClassType[];
   extendsOneOf?: GenericClassType[];
-  // implements?: GenericClassType[];
 
   properties?: GenericProperty[];
   requiredProperties?: GenericProperty[];
+  additionalProperties: boolean;
+
   methods?: GenericMethod[];
   annotations?: GenericAnnotation[];
 

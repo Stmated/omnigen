@@ -1,5 +1,5 @@
 import {AbstractJavaTransformer} from './AbstractJavaTransformer';
-import {Block, FieldReference, JavaCstRootNode, JavaOptions, JavaUtil, ReturnStatement} from '@java';
+import {JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {GenericClassType, GenericModel, GenericType, GenericTypeKind} from '@parse';
 import * as Java from '@java/cst';
 import {pascalCase} from 'change-case';
@@ -59,6 +59,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance
     const body = new Java.Block();
+    const fieldsForConstructor: Java.Field[] = []; // Java.ArgumentDeclarationList = new Java.ArgumentDeclarationList();
+
     if (type.properties) {
       for (const property of type.properties) {
         if (property.type.kind == GenericTypeKind.NULL) {
@@ -98,10 +100,15 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         if (options.immutableModels) {
           const field = new Java.Field(
             this.toJavaType(property.type),
-            new Java.Identifier(property.name)
+            new Java.Identifier(property.name),
+            new Java.ModifierList([
+              new Java.Modifier(ModifierType.PRIVATE),
+              new Java.Modifier(ModifierType.FINAL)
+            ])
           );
           body.children.push(field);
           body.children.push(new Java.FieldBackedGetter(field));
+          fieldsForConstructor.push(field);
         } else {
           body.children.push(new Java.FieldGetterSetter(
             this.toJavaType(property.type),
@@ -111,10 +118,38 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
+    if (type.additionalProperties) {
+
+      // TODO: Need to implement this.
+      //  Need an easy way of describing this, so it can be replaced or altered by another transformer.
+      body.children.push(new Java.AdditionalPropertiesDeclaration());
+    }
+
     const javaClass = new Java.ClassDeclaration(
       new Java.Identifier(type.name),
       body,
     );
+
+    if (fieldsForConstructor.length > 0) {
+
+      // TODO: Move this into another transformer
+      //  One that checks for "final" fields without setters, and adds a constructor.
+      //  This is much more dynamic and could be called by an implementor at another stage.
+      const assignExpressions = fieldsForConstructor.map(it => new Java.AssignExpression(
+        new Java.FieldReference(it),
+        new Java.VariableReference(it.identifier)
+      ));
+
+      body.children.push(new Java.ConstructorDeclaration(
+        javaClass,
+        new Java.ArgumentDeclarationList(
+          // TODO: Can this be handled in a better way?
+          //  To intrinsically link the argument to the field? A "FieldBackedArgumentDeclaration"? Too silly?
+          ...fieldsForConstructor.map(it => new Java.ArgumentDeclaration(it.type, it.identifier))
+        ),
+        new Java.Block(...assignExpressions)
+      ))
+    }
 
     if (type.extendsAllOf) {
       if (type.extendsAllOf.length == 1) {

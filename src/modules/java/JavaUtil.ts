@@ -4,21 +4,9 @@ import {GenericPrimitiveKind, GenericType, GenericTypeKind} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
 
 export class JavaUtil {
-  // public static isPrimitive(type: Java.Type): boolean {
-  //   return false;
-  // }
-
-  // public static isBoolean(type: Java.Type): boolean {
-  //   return (type.fqn === 'boolean' || type.fqn === 'java.lang.Boolean');
-  // }
-
-  // public static getCapitalizedString(value: string): string {
-  //   return value.charAt(0).toUpperCase() + value.slice(1);
-  // }
 
   public static getFullyQualifiedName(type: GenericType, options?: JavaOptions): string {
 
-    // TODO: This needs to be VERY improved.
     if (type.kind == GenericTypeKind.ARRAY) {
       return JavaUtil.getFullyQualifiedName(type.of, options) + '[]';
     } else if (type.kind == GenericTypeKind.NULL) {

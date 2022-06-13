@@ -1,7 +1,14 @@
 import AbstractNode from '@cst/AbstractNode';
 import AbstractToken from '@cst/AbstractToken';
-import {JavaUtil, JavaCstVisitor} from '@java';
-import {GenericPrimitiveKind, GenericPrimitiveType, GenericType, GenericTypeKind} from '@parse';
+import {JavaCstVisitor, JavaUtil} from '@java';
+import {
+  GenericClassType,
+  GenericDictionaryType,
+  GenericPrimitiveKind,
+  GenericPrimitiveType, GenericReferenceType,
+  GenericType,
+  GenericTypeKind
+} from '@parse';
 import {VisitResult} from '@visit';
 
 export enum TokenType {
@@ -463,9 +470,10 @@ export class MethodDeclaration extends AbstractMethodDeclaration {
 export abstract class AbstractFieldBackedMethodDeclaration extends AbstractMethodDeclaration {
   protected readonly field: Field;
   private readonly pAnnotations: AnnotationList | undefined;
+  private readonly pComments?: CommentList;
 
   get comments(): CommentList | undefined {
-    return this.field.comments;
+    return this.pComments;
   }
 
   get annotations(): AnnotationList | undefined {
@@ -476,10 +484,11 @@ export abstract class AbstractFieldBackedMethodDeclaration extends AbstractMetho
     return new ModifierList([new Modifier(ModifierType.PUBLIC)]);
   }
 
-  protected constructor(pField: Field, pAnnotations?: AnnotationList, body?: Block) {
+  protected constructor(pField: Field, pAnnotations?: AnnotationList, pComments?: CommentList, body?: Block) {
     super();
     this.field = pField;
     this.pAnnotations = pAnnotations;
+    this.pComments = pComments;
     this.body = body;
   }
 }
@@ -498,8 +507,8 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
     return undefined;
   }
 
-  constructor(field: Field, annotations?: AnnotationList) {
-    super(field, annotations, new Block(
+  constructor(field: Field, annotations?: AnnotationList, comments?: CommentList) {
+    super(field, annotations, comments, new Block(
         new ReturnStatement(new FieldReference(field)),
     ));
   }
@@ -532,8 +541,8 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
     );
   }
 
-  constructor(field: Field, annotations?: AnnotationList) {
-    super(field, annotations, new Block(
+  constructor(field: Field, annotations?: AnnotationList, comments?: CommentList) {
+    super(field, annotations, comments, new Block(
         new AssignExpression(
             new FieldReference(field),
             // TODO: Change, so that "value" is not hard-coded! Or is "identifier" enough?
@@ -552,10 +561,10 @@ export class FieldGetterSetter extends AbstractJavaNode {
   readonly getter: FieldBackedGetter;
   readonly setter: FieldBackedSetter;
 
-  constructor(type: Type, identifier: Identifier, annotations?: AnnotationList) {
+  constructor(type: Type, identifier: Identifier, annotations?: AnnotationList, comments?: CommentList) {
     super();
     this.field = new Field(type, identifier, undefined, undefined, annotations);
-    this.getter = new FieldBackedGetter(this.field);
+    this.getter = new FieldBackedGetter(this.field, undefined, comments);
     this.setter = new FieldBackedSetter(this.field);
   }
 
@@ -680,6 +689,90 @@ export class ConstructorDeclaration extends AbstractJavaNode {
 }
 
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
+  children: AbstractJavaNode[];
+
+  constructor() {
+    super();
+
+    // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
+    const keyType: GenericPrimitiveType = {
+      name: "AdditionalPropertiesKeyType",
+      kind: GenericTypeKind.PRIMITIVE,
+      primitiveKind: GenericPrimitiveKind.STRING
+    };
+
+    // TODO: Should this be "Unknown" or another type that is "Any"?
+    //  Difference between rendering as JsonNode and Object in some cases.
+    const valueType: GenericClassType = {
+      name: "AdditionalPropertiesValueType",
+      kind: GenericTypeKind.UNKNOWN,
+      additionalProperties: false
+    }
+    const mapType: GenericDictionaryType = {
+      name: 'AdditionalProperties',
+      kind: GenericTypeKind.DICTIONARY,
+      keyType: keyType,
+      valueType: valueType
+    };
+
+    const additionalPropertiesFieldIdentifier = new Identifier('_additionalProperties');
+    const keyParameterIdentifier = new Identifier('key');
+    const valueParameterIdentifier = new Identifier('value');
+
+    const additionalPropertiesField = new Field(
+      new Type(mapType),
+      additionalPropertiesFieldIdentifier,
+      undefined,
+      new NewStatement(new Type(mapType))
+    );
+
+    const addMethod = new MethodDeclaration(
+      new Type(<GenericPrimitiveType> { name: '', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.VOID}),
+      new Identifier('addAdditionalProperty'),
+      new ArgumentDeclarationList(
+        new ArgumentDeclaration(new Type(keyType), keyParameterIdentifier),
+        new ArgumentDeclaration(new Type(valueType), valueParameterIdentifier)
+      ),
+      undefined,
+      new Block(
+        new Statement(
+          new MethodCall(
+            new FieldReference(additionalPropertiesField),
+            new Identifier('put'),
+            new ArgumentList(
+              new VariableReference(keyParameterIdentifier),
+              new VariableReference(valueParameterIdentifier)
+            )
+          )
+        )
+      ),
+    );
+
+    addMethod.annotations = new AnnotationList(
+      new Annotation(
+        new Type({
+          name: 'AnySetter',
+          kind: GenericTypeKind.REFERENCE,
+          fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
+        }),
+      )
+    );
+
+    this.children = [
+      additionalPropertiesField,
+      addMethod,
+      new FieldBackedGetter(
+        additionalPropertiesField,
+        new AnnotationList(new Annotation(
+          new Type({
+            name: 'AnyGetter',
+            kind: GenericTypeKind.REFERENCE,
+            fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
+          }),
+        ))
+      )
+    ];
+  }
 
   visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitAdditionalPropertiesDeclaration(this);
@@ -788,6 +881,19 @@ export class ImportList extends AbstractJavaNode {
   }
 }
 
+export class Statement extends AbstractJavaNode {
+  child: AbstractJavaNode;
+
+  constructor(child: AbstractJavaNode) {
+    super();
+    this.child = child;
+  }
+
+  visit<R>(visitor: JavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitStatement(this);
+  }
+}
+
 export class MethodCall extends AbstractJavaNode {
   target: AbstractExpression;
   methodName: Identifier;
@@ -810,9 +916,9 @@ export class MethodCall extends AbstractJavaNode {
  */
 export class NewStatement extends AbstractJavaNode {
   type: Type;
-  constructorArguments: ArgumentList;
+  constructorArguments?: ArgumentList;
 
-  constructor(type: Type, constructorArguments: ArgumentList) {
+  constructor(type: Type, constructorArguments?: ArgumentList) {
     super();
     this.type = type;
     this.constructorArguments = constructorArguments;

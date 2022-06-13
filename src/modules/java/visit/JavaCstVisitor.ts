@@ -155,24 +155,17 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitMethodCall(node: Java.MethodCall): VisitResult<R> {
-    if (node.methodArguments) {
-      return [
-        node.target.visit(this),
-        node.methodName.visit(this),
-        node.methodArguments.visit(this),
-      ];
-    } else {
-      return [
-        node.target.visit(this),
-        node.methodName.visit(this),
-      ];
-    }
+    return [
+      node.target.visit(this),
+      node.methodName.visit(this),
+      node.methodArguments?.visit(this),
+    ];
   }
 
   visitNewStatement(node: Java.NewStatement): VisitResult<R> {
     return [
       node.type.visit(this),
-      node.constructorArguments.visit(this),
+      node.constructorArguments?.visit(this),
     ];
   }
 
@@ -316,6 +309,10 @@ export class JavaCstVisitor<R> extends AbstractCstVisitor<R> {
   }
 
   visitAdditionalPropertiesDeclaration(node: Java.AdditionalPropertiesDeclaration): VisitResult<R> {
-    return undefined;
+    return node.children.map(it => it.visit(this));
+  }
+
+  visitStatement(node: Java.Statement): VisitResult<R> {
+    return node.child.visit(this);
   }
 }

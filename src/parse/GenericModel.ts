@@ -36,6 +36,12 @@ export enum GenericArrayImplementationType {
 export interface GenericProperty {
   name: string;
   type: GenericType;
+
+  description?: string;
+  summary?: string;
+  deprecated?: boolean;
+  required?: boolean;
+
   accessLevel?: GenericAccessLevel;
 
   annotations?: GenericAnnotation[];
@@ -47,7 +53,10 @@ export enum GenericTypeKind {
   ENUM,
 
   OBJECT,
+  REFERENCE,
+  DICTIONARY,
   ARRAY,
+  ARRAY_STATIC,
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
@@ -71,23 +80,57 @@ export enum GenericPrimitiveKind {
 }
 
 type GenericAlwaysNullKnownKind = GenericTypeKind.NULL;
-export type GenericType = GenericBaseType<GenericAlwaysNullKnownKind> | GenericArrayType | GenericClassType | GenericPrimitiveType | GenericEnumType;
+export type GenericType = GenericBaseType<GenericAlwaysNullKnownKind> | GenericArrayType | GenericStaticArrayType | GenericClassType | GenericDictionaryType | GenericReferenceType | GenericPrimitiveType | GenericEnumType;
 
 export interface GenericBaseType<T> {
   name: string;
   kind: T;
   accessLevel?: GenericAccessLevel;
+  description?: string;
+  summary?: string;
+}
+
+type GenericDictionaryKnownKind = GenericTypeKind.DICTIONARY;
+export interface GenericDictionaryType extends GenericBaseType<GenericDictionaryKnownKind>{
+  keyType: GenericType;
+  valueType: GenericType;
+}
+
+type GenericReferenceKnownKind = GenericTypeKind.REFERENCE;
+export interface GenericReferenceType extends GenericBaseType<GenericReferenceKnownKind>{
+  fqn: string;
 }
 
 type GenericArrayKnownKind = GenericTypeKind.ARRAY;
 export interface GenericArrayType extends GenericBaseType<GenericArrayKnownKind>{
+
   of: GenericType;
   minLength?: number;
   maxLength?: number;
   implementationType?: GenericArrayImplementationType;
 }
 
-type GenericClassKnownKind = GenericTypeKind.OBJECT | GenericTypeKind.UNKNOWN;
+type GenericStaticArrayKnownKind = GenericTypeKind.ARRAY_STATIC;
+
+export interface GenericStaticArrayEntry {
+  name: string;
+  description?: string;
+  summary?: string;
+  type: GenericType;
+}
+
+/**
+ * Similar to GenericArrayType, but this solves issue of having a list of types in a static order.
+ * It DOES NOT mean "any of these types" or "one of these types", it means "THESE TYPES IN THIS ORDER IN THIS ARRAY"
+ */
+export interface GenericStaticArrayType extends GenericBaseType<GenericStaticArrayKnownKind>{
+
+  of: GenericStaticArrayEntry[];
+  commonDenominator?: GenericType;
+  implementationType?: GenericArrayImplementationType;
+}
+
+type GenericClassKnownKind = GenericTypeKind.OBJECT | GenericTypeKind.UNKNOWN; // TODO: Should Unknown be own type?
 export interface GenericClassType extends GenericBaseType<GenericClassKnownKind> {
 
   valueConstant?: unknown;
@@ -118,14 +161,17 @@ export interface GenericPrimitiveType extends GenericBaseType<GenericPrimitiveKn
 }
 
 type GenericEnumKnownKind = GenericTypeKind.ENUM;
+type AllowedEnumTypes = number | string;
 export interface GenericEnumType extends GenericBaseType<GenericEnumKnownKind> {
-  enumConstants?: unknown[];
+  enumConstants?: AllowedEnumTypes[];
   enumType?: GenericClassType;
 }
 
 export interface GenericInput {
-  description: string;
+  description?: string;
   contentType: string;
+
+  type: GenericType;
 }
 
 export interface GenericOutput {
@@ -133,7 +179,7 @@ export interface GenericOutput {
   description?: string;
   summary?: string;
   contentType: string;
-  type: GenericClassType;
+  type: GenericType;
   required: boolean;
   deprecated: boolean;
 
@@ -169,12 +215,14 @@ export interface GenericExampleResult {
   name: string;
   summary?: string;
   description?: string;
+  type: GenericType;
   value: unknown;
 }
 
 export interface GenericExamplePairing {
   name: string;
   description?: string;
+  summary?: string;
   params?: GenericExampleParam[];
   result: GenericExampleResult;
 }
@@ -204,7 +252,7 @@ export interface GenericEndpoint {
   responses: GenericOutput[];
   examples: GenericExamplePairing[];
 
-  parameters: GenericParameter[];
+  // parameters: GenericParameter[];
 }
 
 export interface GenericServer {

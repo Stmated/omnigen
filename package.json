@@ -10,7 +10,8 @@
     "@open-rpc/schema-utils-js": "^1.16.1",
     "js-yaml": "^4.1.0",
     "pino": "^8.0.0",
-    "change-case": "^4.1.2"
+    "change-case": "^4.1.2",
+    "ts-json-schema-generator": "^1.0.0"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",

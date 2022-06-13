@@ -104,7 +104,7 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
 
   visitBlock(node: Java.Block): VisitResult<string> {
     this.blockDepth++;
-    const indentation = this.getIndentation();
+    const indentation = this.getIndentation(1);
     const blockContent = this.join(super.visitBlock(node));
     this.blockDepth--;
 
@@ -126,6 +126,16 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     typeDeclarationContent += ('}\n');
 
     return typeDeclarationContent;
+  }
+
+  visitCommentList(node: Java.CommentList): VisitResult<string> {
+    const commentSections = node.children.map(it => this.render(it));
+    return `/**\n * ${commentSections.join('\n *\n * ')}\n */`;
+  }
+
+  visitComment(node: Java.Comment): VisitResult<string> {
+    const lines = node.text.replace('\r', '').split('\n');
+    return `${lines.join('\n * ')}`;
   }
 
   visitCompilationUnit(node: CompilationUnit): VisitResult<string> {
@@ -198,6 +208,17 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     ];
   }
 
+  visitMethodCall(node: Java.MethodCall): VisitResult<string> {
+    return `${this.render(node.target)}.${this.render(node.methodName)}(${this.render(node.methodArguments)})`;
+  }
+
+  visitStatement(node: Java.Statement): VisitResult<string> {
+    return [
+      super.visitStatement(node),
+      ';',
+    ];
+  }
+
   visitAnnotationList(node: Java.AnnotationList): VisitResult<string> {
     return (node.children.map(it => this.render(it)).join('\n'));
   }
@@ -245,6 +266,11 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
       annotations,
       `${modifiers} ${typeName} ${identifier}${initializer};\n`,
     ];
+  }
+
+  visitNewStatement(node: Java.NewStatement): VisitResult<string> {
+    const parameters = node.constructorArguments ? this.render(node.constructorArguments) : '';
+    return `new ${this.render(node.type)}(${parameters})`;
   }
 
   visitIdentifier(node: Java.Identifier): VisitResult<string> {
@@ -296,9 +322,10 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     }
   }
 
-  visitAdditionalPropertiesDeclaration(node: Java.AdditionalPropertiesDeclaration): VisitResult<string> {
-
-    // TODO: Render it somehow. What is the best way to keep it modular and modifiable by others?
-    return `// TODO: This is where the additionalProperties code should go\n`;
-  }
+  // visitAdditionalPropertiesDeclaration(node: Java.AdditionalPropertiesDeclaration): VisitResult<string> {
+  //   return node.children.map(it => it.visit(this));
+  //
+  //   // TODO: Render it somehow. What is the best way to keep it modular and modifiable by others?
+  //   return `// TODO: This is where the additionalProperties code should go\n`;
+  // }
 }

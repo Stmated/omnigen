@@ -44,8 +44,20 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       } else if (type.kind == GenericTypeKind.PRIMITIVE) {
 
         // This is a primitive
+      } else if (type.kind == GenericTypeKind.DICTIONARY) {
+
+        // This is a map. What to do here? It's a top-level type, so...?
+      } else if (type.kind == GenericTypeKind.REFERENCE) {
+
+        // This is a map in the target language, which we have zero control over.
+      } else if (type.kind == GenericTypeKind.ARRAY_STATIC) {
+
+        // This is a list of static types. This should modify the model, creating a marker interface.
+        // Like an ISomethingOrOtherOrDifferent that contains the common properties, or is just empty.
+        // (preferably they contain the ones in common, just because it's Nice).
+
       } else {
-        this.transformObject(type, options, root);
+        this.transformObject(model, type, options, root);
       }
 
       // TODO: Find enum
@@ -55,7 +67,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return Promise.resolve();
   }
 
-  private transformObject(type: GenericClassType, options: JavaOptions, root: JavaCstRootNode): void {
+  private transformObject(model: GenericModel, type: GenericClassType, options: JavaOptions, root: JavaCstRootNode): void {
 
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance
     const body = new Java.Block();
@@ -63,20 +75,44 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     if (type.properties) {
       for (const property of type.properties) {
+
+        const comments: Java.Comment[] = [];
+        if (property.type.kind != GenericTypeKind.OBJECT) {
+
+          // If the type is not an object, then we will never create a class just for its sake.
+          // So we should propagate all the examples and all other data we can find about it, to the property's comments.
+
+          comments.push(...this.getCommentsForType(property.type, model));
+
+          if (property.type.kind == GenericTypeKind.ARRAY_STATIC) {
+            comments.push(new Java.Comment(`Array with parameters in this order:\n${property.type.of.map((it, idx) => {
+              const typeName = JavaUtil.getFullyQualifiedName(it.type);
+              const parameterName = it.name;
+              const description = it.description || it.type.description;
+              return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
+            }).join('\n')}`));
+          }
+        }
+
+        const commentList = (comments.length > 0) ? new Java.CommentList(...comments) : undefined;
+
         if (property.type.kind == GenericTypeKind.NULL) {
 
           if (options.includeAlwaysNullProperties) {
 
             // We're told to include it, even though it always returns null.
-            body.children.push(new Java.MethodDeclaration(
-              new Java.Type(property.type),
+            const methodDeclaration = new Java.MethodDeclaration(
+              this.toJavaType(property.type),
               new Java.Identifier(JavaUtil.getGetterName(property.name, property.type)),
               undefined,
               undefined,
               new Java.Block(
                 new Java.ReturnStatement(new Java.Literal(null)),
               )
-            ));
+            );
+
+            methodDeclaration.comments = commentList;
+            body.children.push(methodDeclaration);
           }
 
           continue;
@@ -84,7 +120,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
         if (property.type.kind == GenericTypeKind.PRIMITIVE && property.type.valueConstant) {
 
-          body.children.push(new Java.MethodDeclaration(
+          const methodDeclaration = new Java.MethodDeclaration(
             new Java.Type(property.type),
             new Java.Identifier(JavaUtil.getGetterName(property.name, property.type)),
             undefined,
@@ -92,7 +128,10 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
             new Java.Block(
               new Java.ReturnStatement(new Java.Literal(property.type.valueConstant)),
             )
-          ));
+          );
+
+          methodDeclaration.comments = commentList;
+          body.children.push(methodDeclaration);
 
           continue;
         }
@@ -107,12 +146,15 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
             ])
           );
           body.children.push(field);
-          body.children.push(new Java.FieldBackedGetter(field));
+          body.children.push(new Java.FieldBackedGetter(field, undefined, commentList));
+
           fieldsForConstructor.push(field);
         } else {
           body.children.push(new Java.FieldGetterSetter(
             this.toJavaType(property.type),
             new Java.Identifier(property.name),
+            undefined,
+            commentList
           ));
         }
       }
@@ -129,6 +171,11 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       new Java.Identifier(type.name),
       body,
     );
+
+    const comments = this.getCommentsForType(type, model);
+    if (comments.length > 0) {
+      javaClass.comments = new Java.CommentList(...comments);
+    }
 
     if (fieldsForConstructor.length > 0) {
 
@@ -172,6 +219,90 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       ),
       javaClass
     ));
+  }
+
+  private getCommentsForType(type: GenericType, model: GenericModel): Java.Comment[] {
+    const comments: Java.Comment[] = [];
+    if (type.description) {
+      comments.push(new Java.Comment(type.description));
+    }
+    if (type.summary) {
+      comments.push(new Java.Comment(type.summary));
+    }
+
+    for (const endpoint of model.endpoints) {
+
+      // TODO: Redo so they are only linked by "@see" and stuff?
+      // TODO: Is it even correct to go through the properties?
+      // TODO: Should this be more generic, to have a sort of "visitor" for all types of a GenericModel?
+      if (endpoint.request.type.kind == GenericTypeKind.OBJECT && endpoint.request.type.properties) {
+        for (const property of endpoint.request.type.properties) {
+          if (property.type == type) {
+            if (property.description) {
+              comments.push(new Java.Comment(property.description));
+            }
+            if (property.summary) {
+              comments.push(new Java.Comment(property.summary));
+            }
+          }
+        }
+      }
+
+      for (const response of endpoint.responses) {
+        if (response.type == type) {
+
+          comments.push(new Java.Comment(`<section>\n<h2>${response.name}</h2>`));
+
+          response.type
+          if (response.description) {
+            comments.push(new Java.Comment(response.description));
+          }
+          if (response.summary) {
+            comments.push(new Java.Comment(response.summary));
+          }
+
+          comments.push(new Java.Comment(`</section>`));
+        }
+      }
+
+      for (const example of endpoint.examples) {
+        if (example.result.type == type) {
+
+          comments.push(new Java.Comment(`<section>\n<h2>${example.name} - ${example.result.name}</h2>`));
+
+          if (example.description) {
+            comments.push(new Java.Comment(example.description));
+          }
+          if (example.summary) {
+            comments.push(new Java.Comment(example.summary));
+          }
+
+          if (example.result.description) {
+            comments.push(new Java.Comment(example.result.description));
+          }
+          if (example.result.summary) {
+            comments.push(new Java.Comment(example.result.summary));
+          }
+
+          // WRONG CLASS!
+          if (example.result.value) {
+
+            let prettyValue: string;
+            if (typeof example.result.value == 'string') {
+              prettyValue = example.result.value;
+            } else {
+              prettyValue = JSON.stringify(example.result.value, null, 2);
+            }
+
+            comments.push(new Java.Comment(`<pre>{@code ${prettyValue}}</pre>`));
+          }
+
+          comments.push(new Java.Comment(`</section>`));
+        }
+      }
+    }
+
+    return comments;
   }
 
   private toJavaType(type: GenericType): Java.Type {

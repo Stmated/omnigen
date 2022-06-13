@@ -1,4 +1,4 @@
-import {OpenRpcParser, SchemaFile} from '@parse';
+import {GenericTypeKind, OpenRpcParser, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -33,9 +33,12 @@ describe('Test Generic Model Creation', () => {
     expect(model.endpoints[0].name).toEqual('get_pets');
     expect(model.endpoints[0].responses).toHaveLength(2); // 1 result, 1 error
     expect(model.endpoints[0].responses[0].name).toEqual('pet'); // Or should it be something else?
-    expect(model.endpoints[0].responses[0].type.name).toEqual('GetPetsResult'); // Should this be 'pet' since is name of `result`?
+    expect(model.endpoints[0].responses[0].type.name).toEqual('GetPetsResponse'); // Should this be 'pet' since is name of `result`?
 
-    const response0properties = model.endpoints[0].responses[0].type.properties || [];
+    const response0 = model.endpoints[0].responses[0];
+    expect(response0.type.kind).toEqual(GenericTypeKind.OBJECT);
+
+    const response0properties = ((response0.type.kind == GenericTypeKind.OBJECT) ? response0.type.properties : []) || [];
     expect(response0properties).toBeDefined();
     expect(response0properties).toHaveLength(3);
     expect(response0properties[0].name).toEqual('result');

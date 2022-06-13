@@ -14,11 +14,12 @@ import {
   GenericLicense,
   GenericModel,
   GenericOutput,
-  GenericParameter,
   GenericPayloadPathQualifier,
   GenericPrimitiveKind,
+  GenericPrimitiveType,
   GenericProperty,
   GenericServer,
+  GenericStaticArrayType,
   GenericType,
   GenericTypeKind,
   SchemaFile,
@@ -43,6 +44,7 @@ import {
 import {JSONSchema7} from 'json-schema';
 import {default as DefaultReferenceResolver} from '@json-schema-tools/reference-resolver';
 import {pascalCase} from 'change-case';
+import {JavaUtil} from '@java';
 
 export class OpenRpcParser extends AbstractParser {
   async parse(schemaFile: SchemaFile): Promise<GenericModel> {
@@ -136,8 +138,8 @@ export class OpenRpcParser extends AbstractParser {
       const responses: GenericOutput[] = [];
 
       // One regular response
-      const resultResponse = await this.resultToGenericOutput(doc, method, method.result, types);
-      responses.push(resultResponse);
+      const resultResponse = await this.resultToGenericOutputAndResultParamType(doc, method, method.result, types);
+      responses.push(resultResponse[0]);
 
       // And then one response for each potential error
       let errors: MethodObjectErrors = method.errors || [];
@@ -152,12 +154,17 @@ export class OpenRpcParser extends AbstractParser {
       for (const error of errors) {
         responses.push(await this.errorToGenericOutput(doc, pascalCase(method.name), error, types));
       }
+      const examples = await Promise.all(
+        (method.examples || []).map((it) => this.examplePairingToGenericExample(doc, resultResponse[1], it))
+      );
 
-      const paramPromises = method.params.map((param) => this.paramToGenericParameter(doc, param, types));
-      const params = await Promise.all(paramPromises);
+      const requestType = await this.methodToGenericInputType(doc, method, types);
+      types.push(requestType);
 
-      const examplePromises = (method.examples || []).map((example) => this.examplePairingToGenericExample(doc, example));
-      const examples = await Promise.all(examplePromises);
+      // TODO: Remake so that the request body is another type!
+      //  The parameters build into an object
+      //  -- for other specifications, the parameters end up in the URL and headers maybe! That's a later problem!
+      // TODO: Also need to handle the "required" in a good way. JSR-303 annotations? If-cases? Both?
 
       return <GenericEndpoint>{
         name: method.name,
@@ -167,9 +174,8 @@ export class OpenRpcParser extends AbstractParser {
         path: '',
         request: {
           contentType: 'application/json',
-          description: '',
+          type: requestType
         },
-        parameters: params,
         requestQualifiers: [
           {
             path: ['method'],
@@ -263,6 +269,7 @@ export class OpenRpcParser extends AbstractParser {
     const type: GenericClassType = {
       name: name,
       kind: GenericTypeKind.OBJECT,
+      description: schema.description,
 
       // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
       additionalProperties: (schema.additionalProperties == undefined
@@ -344,19 +351,22 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async resultToGenericOutput(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericType[]): Promise<GenericOutput> {
+  private async resultToGenericOutputAndResultParamType(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericType[]): Promise<[GenericOutput, GenericType]> {
     if ('name' in result) {
       const typeNamePrefix = pascalCase(method.name);
 
       // TODO: Should this always be unique, or should we ever use a common inherited method type?
+      const resultParameterType = await this.jsonSchemaToType(doc, [result.name], result.schema, types);
       const resultType: GenericType = {
-        name: `${typeNamePrefix}Result`,
+        name: `${typeNamePrefix}Response`,
         kind: GenericTypeKind.OBJECT,
         additionalProperties: false,
+        description: method.description,
+        summary: method.summary,
         properties: [
           {
             name: 'result',
-            type: await this.jsonSchemaToType(doc, [result.name], result.schema, types),
+            type: resultParameterType,
           },
           {
             name: 'error',
@@ -378,25 +388,28 @@ export class OpenRpcParser extends AbstractParser {
 
       types.push(resultType);
 
-      return <GenericOutput>{
-        name: result.name,
-        description: result.description,
-        summary: result.summary,
-        deprecated: result.deprecated || false,
-        required: result.required,
-        type: resultType,
-        contentType: 'application/json',
-        qualifiers: [
-          {
-            path: ['result'],
-            operator: ComparisonOperator.DEFINED,
-          },
-        ],
-      };
+      return [
+        <GenericOutput>{
+          name: result.name,
+          description: result.description,
+          summary: result.summary,
+          deprecated: result.deprecated || false,
+          required: result.required,
+          type: resultType,
+          contentType: 'application/json',
+          qualifiers: [
+            {
+              path: ['result'],
+              operator: ComparisonOperator.DEFINED,
+            },
+          ],
+        },
+        resultParameterType
+      ];
     }
 
     const dereferenced = await DefaultReferenceResolver.resolve(result.$ref, doc) as MethodObjectResult;
-    return this.resultToGenericOutput(doc, method, dereferenced, types);
+    return this.resultToGenericOutputAndResultParamType(doc, method, dereferenced, types);
   }
 
   private async errorToGenericOutput(doc: OpenrpcDocument, parentName: string, error: ErrorOrReference, types: GenericType[]): Promise<GenericOutput> {
@@ -505,7 +518,7 @@ export class OpenRpcParser extends AbstractParser {
     return this.errorToGenericOutput(doc, parentName, dereferenced, types);
   }
 
-  private async examplePairingToGenericExample(doc: OpenrpcDocument, example: ExamplePairingOrReference): Promise<GenericExamplePairing> {
+  private async examplePairingToGenericExample(doc: OpenrpcDocument, valueType: GenericType, example: ExamplePairingOrReference): Promise<GenericExamplePairing> {
     if ('name' in example) {
       const paramPromises = example.params.map((param) => this.exampleParamToGenericExampleParam(doc, param));
       const params = await Promise.all(paramPromises);
@@ -513,13 +526,14 @@ export class OpenRpcParser extends AbstractParser {
       return <GenericExamplePairing>{
         name: example.name,
         description: example.description,
+        summary: example['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
         params: params,
-        result: await this.exampleResultToGenericExampleResult(doc, example.result),
+        result: await this.exampleResultToGenericExampleResult(doc, valueType, example.result),
       };
     }
 
     const dereferenced = await DefaultReferenceResolver.resolve(example.$ref, doc) as ExamplePairingOrReference;
-    return this.examplePairingToGenericExample(doc, dereferenced);
+    return this.examplePairingToGenericExample(doc, valueType, dereferenced);
   }
 
   private async exampleParamToGenericExampleParam(doc: OpenrpcDocument, param: ExampleOrReference): Promise<GenericExampleParam> {
@@ -536,18 +550,31 @@ export class OpenRpcParser extends AbstractParser {
     return this.exampleParamToGenericExampleParam(doc, dereferenced);
   }
 
-  private async exampleResultToGenericExampleResult(doc: OpenrpcDocument, param: ExampleOrReference): Promise<GenericExampleResult> {
-    if ('name' in param) {
+  private async exampleResultToGenericExampleResult(doc: OpenrpcDocument, valueType: GenericType, example: ExampleOrReference): Promise<GenericExampleResult> {
+    if ('name' in example) {
+
+      if (example['externalValue']) {
+
+        // This is part of the specification, but not part of the OpenRPC interface.
+      }
+
+      // if (typeof example.value == 'string') {
+      //
+      //   // If the type of the value is a string, then maybe it is a JSON payload.
+      //   // If it is, then we should prettify it to keep the same look as other examples.
+      // }
+
       return <GenericExampleResult>{
-        name: param.name,
-        description: param.description,
-        summary: param.summary,
-        value: param.value,
+        name: example.name,
+        description: example.description,
+        summary: example.summary,
+        value: example.value,
+        type: valueType
       };
     }
 
-    const dereferenced = await DefaultReferenceResolver.resolve(param.$ref, doc) as ExampleOrReference;
-    return this.exampleResultToGenericExampleResult(doc, dereferenced);
+    const dereferenced = await DefaultReferenceResolver.resolve(example.$ref, doc) as ExampleOrReference;
+    return this.exampleResultToGenericExampleResult(doc, valueType, dereferenced);
   }
 
   private externalDocToGenericExternalDoc(doc: OpenrpcDocument, documentation: ExternalDocumentationObject): GenericExternalDocumentation {
@@ -567,22 +594,22 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async paramToGenericParameter(doc: OpenrpcDocument, parameter: ContentDescriptorOrReference, types: GenericType[])
-    : Promise<GenericParameter> {
-    if ('name' in parameter) {
-      // parameter.schema
-      return <GenericParameter>{
-        name: parameter.name,
-        description: parameter.description,
-        summary: parameter.summary,
-        deprecated: parameter.deprecated || false,
-        required: parameter.required || false,
-        type: await this.jsonSchemaToType(doc, [parameter.name], parameter.schema, types),
+  private async contentDescriptorToGenericProperty(doc: OpenrpcDocument, descriptor: ContentDescriptorOrReference, types: GenericType[])
+    : Promise<GenericProperty> {
+    if ('name' in descriptor) {
+
+      return <GenericProperty>{
+        name: descriptor.name,
+        description: descriptor.description,
+        summary: descriptor.summary,
+        deprecated: descriptor.deprecated || false,
+        required: descriptor.required || false,
+        type: await this.jsonSchemaToType(doc, [descriptor.name], descriptor.schema, types),
       };
     }
 
-    const dereferenced = await DefaultReferenceResolver.resolve(parameter.$ref, doc) as ContentDescriptorOrReference;
-    return this.paramToGenericParameter(doc, dereferenced, types);
+    const dereferenced = await DefaultReferenceResolver.resolve(descriptor.$ref, doc) as ContentDescriptorOrReference;
+    return this.contentDescriptorToGenericProperty(doc, dereferenced, types);
   }
 
   private typeToGenericKnownType(type: string): [GenericTypeKind.NULL] | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind] {
@@ -605,5 +632,88 @@ export class OpenRpcParser extends AbstractParser {
     }
 
     throw new Error(`Unknown type: ${type}`);
+  }
+
+  private async methodToGenericInputType(doc: OpenrpcDocument, method: MethodObject, types: GenericType[]): Promise<GenericType>  {
+
+    const properties = await Promise.all(
+      method.params.map((it) => this.contentDescriptorToGenericProperty(doc, it, types))
+    );
+
+    // jsonrpc
+    // A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
+
+    const requestJsonRpcType: GenericPrimitiveType = {
+      name: `${method.name}RequestMethod`,
+      kind: GenericTypeKind.PRIMITIVE,
+      primitiveKind: GenericPrimitiveKind.STRING,
+      valueConstant: "2.0",
+      nullable: false
+    };
+
+    const requestMethodType: GenericPrimitiveType = {
+      name: `${method.name}RequestMethod`,
+      kind: GenericTypeKind.PRIMITIVE,
+      primitiveKind: GenericPrimitiveKind.STRING,
+      valueConstant: method.name,
+      nullable: false
+    };
+
+    // TODO: This should be able to be a String OR Number -- need to make this more generic
+    const requestIdType: GenericPrimitiveType = {
+      name: `${method.name}RequestId`,
+      kind: GenericTypeKind.PRIMITIVE,
+      primitiveKind: GenericPrimitiveKind.STRING,
+      nullable: false
+    };
+
+    // The params is an array values, and not a map nor properties.
+    // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
+    // const commonType = JavaUtil.getCommonDenominator(...properties.map(it => it.type));
+    const requestParamsType: GenericClassType = {
+      name: `${method.name}RequestParams`,
+      kind: GenericTypeKind.OBJECT,
+      properties: properties,
+      additionalProperties: false,
+      // of: properties.map(it => {
+      //   return {
+      //     name: it.name || it.type.name,
+      //     description: it.description,
+      //     summary: it.summary,
+      //     type: it.type
+      //   };
+      // }),
+    };
+
+    types.push(requestParamsType);
+
+    return <GenericClassType>{
+      name: `${method.name}Request`,
+      kind: GenericTypeKind.OBJECT,
+      additionalProperties: false,
+      description: method.description,
+      summary: method.summary,
+      properties: [
+        <GenericProperty>{
+          name: "jsonrpc",
+          type: requestJsonRpcType,
+          required: true
+        },
+        <GenericProperty>{
+          name: "method",
+          type: requestMethodType,
+          required: true
+        },
+        <GenericProperty>{
+          name: "id",
+          type: requestIdType,
+          required: true
+        },
+        <GenericProperty>{
+          name: "params",
+          type: requestParamsType
+        }
+      ]
+    };
   }
 }

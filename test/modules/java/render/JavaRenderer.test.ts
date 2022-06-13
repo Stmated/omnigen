@@ -74,19 +74,22 @@ describe('Test the rendering of a CST tree to string', () => {
     expect(compilationUnits).toBeDefined();
     expect(compilationUnits).toHaveLength(model.types.length);
 
-    // const cst = JavaParser.parse(str);
-    // expect(cst).toBeDefined();
-    //
-    // const visitor = new ParsedJavaTestVisitor();
-    // visitor.visit(cst);
-    //
-    // expect(visitor.foundFields).toHaveLength(1);
-    // expect(visitor.foundLiterals).toHaveLength(2);
-    // expect(visitor.foundLiterals[0]).toEqual('"A Value"');
-    // expect(visitor.foundLiterals[1]).toEqual(1.11);
-
     // TODO: We should assert actual useful stuff here :)
 
+  });
+
+  test('Test link-example rendering', async () => {
+
+    const interpreter = new JavaInterpreter();
+    const model = await TestUtils.readExample('openrpc', 'api-with-examples.json');
+    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    const renderer = new JavaRenderer((cu) => {
+    });
+
+    const content = renderer.render(interpretation);
+
+    expect(content).toBeDefined();
   });
 });
 

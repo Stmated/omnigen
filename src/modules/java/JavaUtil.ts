@@ -105,8 +105,7 @@ export class JavaUtil {
     return `get${capitalized}`;
   }
 
-  public static getSetterName(identifier: Java.Identifier, type: GenericType): string {
-    const baseName = identifier.value;
+  public static getSetterName(baseName: string, type: GenericType): string {
     const capitalized = pascalCase(baseName);
     return `set${capitalized}`;
   }

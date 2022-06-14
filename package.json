@@ -3,21 +3,24 @@
   "packageManager": "yarn@3.2.1",
   "scripts": {
     "build": "tsc -p .",
-    "test": "jest | pino-pretty --translateTime --singleLine",
-    "test-watch": "jest --watch | pino-pretty --translateTime --singleLine"
+    "test": "jest",
+    "test-watch": "jest --watch"
   },
   "dependencies": {
     "@open-rpc/schema-utils-js": "^1.16.1",
     "js-yaml": "^4.1.0",
     "pino": "^8.0.0",
     "change-case": "^4.1.2",
-    "ts-json-schema-generator": "^1.0.0"
+    "ts-json-schema-generator": "^1.0.0",
+    "@etclabscore/string-json-template-language": "^1.0.0",
+    "string-similarity": "^4.0.4"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",
     "@types/json-schema": "^7.0.11",
     "@types/node": "^17.0.38",
     "@types/pino": "^7.0.5",
+    "@types/string-similarity": "^4.0.0",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
     "eslint-config-prettier": "^8.5.0",

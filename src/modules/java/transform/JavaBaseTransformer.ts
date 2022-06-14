@@ -1,6 +1,13 @@
 import {AbstractJavaTransformer} from './AbstractJavaTransformer';
 import {JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
-import {GenericClassType, GenericModel, GenericType, GenericTypeKind} from '@parse';
+import {
+  GenericClassType,
+  GenericContinuation,
+  GenericContinuationMapping,
+  GenericModel,
+  GenericType,
+  GenericTypeKind
+} from '@parse';
 import * as Java from '@java/cst';
 import {pascalCase} from 'change-case';
 
@@ -82,7 +89,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           // If the type is not an object, then we will never create a class just for its sake.
           // So we should propagate all the examples and all other data we can find about it, to the property's comments.
 
-          comments.push(...this.getCommentsForType(property.type, model));
+          comments.push(...this.getCommentsForType(property.type, model, options));
 
           if (property.type.kind == GenericTypeKind.ARRAY_STATIC) {
             comments.push(new Java.Comment(`Array with parameters in this order:\n${property.type.of.map((it, idx) => {
@@ -172,7 +179,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       body,
     );
 
-    const comments = this.getCommentsForType(type, model);
+    const comments = this.getCommentsForType(type, model, options);
     if (comments.length > 0) {
       javaClass.comments = new Java.CommentList(...comments);
     }
@@ -221,7 +228,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     ));
   }
 
-  private getCommentsForType(type: GenericType, model: GenericModel): Java.Comment[] {
+  private getCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {
     const comments: Java.Comment[] = [];
     if (type.description) {
       comments.push(new Java.Comment(type.description));
@@ -302,7 +309,76 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
+    for (const continuation of (model.continuations || [])) {
+
+      if (continuation.sourceOutput.type == type || continuation.targetInput.type == type) {
+
+        // There are links between different servers/methods
+        comments.push(new Java.Comment("<section>\n<h2>Links</h2>"));
+        comments.push(...continuation.mappings.map(mapping => {
+          return this.getMappingSourceTargetComment(mapping, continuation, options);
+        }));
+        comments.push(new Java.Comment("</section>"));
+      }
+    }
+
     return comments;
+  }
+
+  private getMappingSourceTargetComment(
+    mapping: GenericContinuationMapping,
+    continuation: GenericContinuation,
+    options: JavaOptions
+  ): Java.Comment {
+    const targetPath = mapping.target.propertyPath;
+    const targetLinks: string[] = [];
+    for (let i = 0; i < targetPath.length; i++) {
+
+      let ownerType: GenericType;
+      if (i > 0) {
+        ownerType = targetPath[i - 1].type;
+      } else {
+        ownerType = continuation.targetInput.type;
+      }
+
+      const typeName = JavaUtil.getFullyQualifiedName(ownerType);
+
+      const prop = targetPath[i];
+      let memberName: string;
+      if (i < targetPath.length - 1) {
+        memberName = `${JavaUtil.getGetterName(prop.name, prop.type)}()`;
+      } else {
+        // TODO: Possible to find the *actual* setter/field and use that as the @link?
+        //       We should not need to check for immutability here, should be centralized somehow
+        if (options.immutableModels) {
+          memberName = prop.name;
+        } else {
+          memberName = `${JavaUtil.getSetterName(prop.name, prop.type)}(${JavaUtil.getFullyQualifiedName(prop.type)})`
+        }
+      }
+
+      targetLinks.push(`{@link ${typeName}#${memberName}}`);
+    }
+
+    const sourcePath = mapping.source.propertyPath || [];
+    const sourceLinks: string[] = [];
+    for (let i = 0; i < sourcePath.length; i++) {
+
+      let ownerType: GenericType;
+      if (i > 0) {
+        ownerType = sourcePath[i - 1].type;
+      } else {
+        ownerType = continuation.sourceOutput.type;
+      }
+
+      const typeName = JavaUtil.getFullyQualifiedName(ownerType);
+      const prop = sourcePath[i];
+
+      const memberName = `${JavaUtil.getGetterName(prop.name, prop.type)}()`;
+      sourceLinks.push(`{@link ${typeName}#${memberName}}`);
+    }
+
+    return new Java.Comment(`Source: ${sourceLinks.join('.')}\nTarget: ${targetLinks.join('.')}`);
   }
 
   private toJavaType(type: GenericType): Java.Type {

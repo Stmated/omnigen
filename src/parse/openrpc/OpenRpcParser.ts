@@ -6,6 +6,9 @@ import {
   GenericArrayType,
   GenericClassType,
   GenericContact,
+  GenericContinuation,
+  GenericContinuationMapping,
+  GenericContinuationSourceParameter,
   GenericEndpoint,
   GenericExamplePairing,
   GenericExampleParam,
@@ -34,19 +37,29 @@ import {
   ExternalDocumentationObject,
   JSONSchema,
   LicenseObject,
+  LinkObject,
   MethodObject,
   MethodObjectErrors,
   MethodObjectResult,
   MethodOrReference,
   OpenrpcDocument,
+  ReferenceObject,
   ServerObject,
 } from '@open-rpc/meta-schema';
 import {JSONSchema7} from 'json-schema';
 import {default as DefaultReferenceResolver} from '@json-schema-tools/reference-resolver';
 import {pascalCase} from 'change-case';
 import {JavaUtil} from '@java';
+import * as stringSimilarity from 'string-similarity';
+import {LoggerFactory} from '@util';
+import {BestMatch, Rating} from 'string-similarity';
+import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
+
+export const logger = LoggerFactory.create(__filename);
 
 export class OpenRpcParser extends AbstractParser {
+  private readonly _options: IParserOptions = DEFAULT_PARSER_OPTIONS;
+
   async parse(schemaFile: SchemaFile): Promise<GenericModel> {
     const schemaObject = await schemaFile.asObject();
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
@@ -60,12 +73,12 @@ export class OpenRpcParser extends AbstractParser {
 
   private async docToGenericModel(doc: OpenrpcDocument): Promise<GenericModel> {
     const types: GenericClassType[] = [];
-    const endpointPromises = doc.methods.map((method) => this.methodToGenericEndpoint(doc, method, types));
-    const endpoints = await Promise.all(endpointPromises);
+    const endpoints = await Promise.all(doc.methods.map((method) => this.methodToGenericEndpoint(doc, method, types)));
     const contact = doc.info.contact ? this.contactToGenericContact(doc, doc.info.contact) : undefined;
     const license = doc.info.license ? this.licenseToGenericLicense(doc, doc.info.license) : undefined;
     const servers = (doc.servers || []).map((server) => this.serverToGenericServer(doc, server));
     const docs = doc.externalDocs ? [this.externalDocToGenericExternalDoc(doc, doc.externalDocs)] : [];
+    const continuations = await this.linksToGenericContinuations(doc, endpoints);
 
     const model: GenericModel = {
       schemaType: 'openrpc',
@@ -78,8 +91,8 @@ export class OpenRpcParser extends AbstractParser {
       termsOfService: doc.info.termsOfService,
       servers: servers,
       externalDocumentations: docs,
-
       endpoints: endpoints,
+      continuations: continuations,
       types: types,
     };
 
@@ -128,12 +141,10 @@ export class OpenRpcParser extends AbstractParser {
 
   private async methodToGenericEndpoint(doc: OpenrpcDocument, method: MethodOrReference, types: GenericType[], name?: string): Promise<GenericEndpoint> {
     if ('name' in method) {
-      // method.links
-      // method.tags
-      // method.servers
-      // method.params
-      // method.paramStructure
-      // method.result;
+
+      // TODO:
+      //   method.tags
+      //   method.servers
 
       const responses: GenericOutput[] = [];
 
@@ -640,9 +651,6 @@ export class OpenRpcParser extends AbstractParser {
       method.params.map((it) => this.contentDescriptorToGenericProperty(doc, it, types))
     );
 
-    // jsonrpc
-    // A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
-
     const requestJsonRpcType: GenericPrimitiveType = {
       name: `${method.name}RequestMethod`,
       kind: GenericTypeKind.PRIMITIVE,
@@ -667,25 +675,34 @@ export class OpenRpcParser extends AbstractParser {
       nullable: false
     };
 
-    // The params is an array values, and not a map nor properties.
-    // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
-    // const commonType = JavaUtil.getCommonDenominator(...properties.map(it => it.type));
-    const requestParamsType: GenericClassType = {
-      name: `${method.name}RequestParams`,
-      kind: GenericTypeKind.OBJECT,
-      properties: properties,
-      additionalProperties: false,
-      // of: properties.map(it => {
-      //   return {
-      //     name: it.name || it.type.name,
-      //     description: it.description,
-      //     summary: it.summary,
-      //     type: it.type
-      //   };
-      // }),
-    };
+    let requestParamsType: GenericType;
+    if (method.paramStructure == 'by-position') {
+      // The params is an array values, and not a map nor properties.
+      // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
+      const commonType = JavaUtil.getCommonDenominator(...properties.map(it => it.type));
+      requestParamsType = <GenericStaticArrayType> {
+        name: `${method.name}RequestParams`,
+        kind: GenericTypeKind.ARRAY_STATIC,
+        commonDenominator: commonType,
+        of: properties.map(it => {
+          return {
+            name: it.name || it.type.name,
+            description: it.description,
+            summary: it.summary,
+            type: it.type
+          };
+        }),
+      };
+    } else {
+      requestParamsType = <GenericClassType> {
+        name: `${method.name}RequestParams`,
+        kind: GenericTypeKind.OBJECT,
+        properties: properties,
+        additionalProperties: false
+      };
 
-    types.push(requestParamsType);
+      types.push(requestParamsType);
+    }
 
     return <GenericClassType>{
       name: `${method.name}Request`,
@@ -715,5 +732,171 @@ export class OpenRpcParser extends AbstractParser {
         }
       ]
     };
+  }
+
+  private async linksToGenericContinuations(doc: OpenrpcDocument, endpoints: GenericEndpoint[]): Promise<GenericContinuation[]> {
+
+    const continuations: Promise<GenericContinuation>[] = [];
+    const methods = await Promise.all(doc.methods.map(async method => await this.dereference(doc, method)));
+    for (const method of methods) {
+      const links = await Promise.all((method.object.links || []).map(async link => await this.dereference(doc, link)));
+      const sourceEndpoint = endpoints.find(it => it.name == method.object.name);
+      if (sourceEndpoint) {
+        for (const link of links) {
+          continuations.push(this.linkToGenericContinuation(doc, sourceEndpoint, endpoints, method.object, link.object, link.ref));
+        }
+      } else {
+        continuations.push(Promise.reject(new Error(`There is no source endpoint called '${method.object.name}'`)));
+      }
+    }
+
+    return Promise.allSettled(continuations)
+    .then(result => {
+      const fulfilled: GenericContinuation[] = [];
+      for (const entry of result) {
+        if (entry.status == 'fulfilled') {
+          fulfilled.push(entry.value);
+        } else {
+          logger.error(`Could not build one of the continuations, ${entry?.reason?.message || ''}`);
+        }
+      }
+
+      return fulfilled;
+    });
+  }
+
+  private getTargetEndpoint(name: string, endpoints: GenericEndpoint[]): Promise<GenericEndpoint> {
+    let targetEndpoint = endpoints.find(it => it.name == name);
+    if (!targetEndpoint) {
+      const options = endpoints.map(it => it.name);
+      const choice = name;
+
+      // TODO: Try converting both into PascalCase and compare
+      // TODO: Need to mark as "incorrect" somehow, so the documentation can know the Spec is invalid!
+      if (this._options.relaxedLookup) {
+        const pascalName = pascalCase(name);
+        targetEndpoint = endpoints.find(it => pascalCase(it.name) == pascalName);
+        if (targetEndpoint) {
+          logger.warn(`There is no target endpoint called '${choice || 'N/A'}', WILL ASSUME INVALID CASE '${targetEndpoint.name}'!`);
+        }
+      }
+
+      if (!targetEndpoint) {
+        const closest = this.getClosest(options, choice);
+        if (this._options.relaxedLookup && closest.rating >= 0.8) {
+          logger.warn(`There is no target endpoint called '${choice || 'N/A'}', WILL ASSUME CLOSE MATCH '${closest.target}'!`);
+          targetEndpoint = endpoints.find(it => it.name == closest.target);
+        }
+
+        if (!targetEndpoint) {
+          const msg = `There is no target endpoint called '${choice || 'N/A'}', did you mean '${closest.target}' (${closest.rating})?`;
+          return Promise.reject(new Error(msg));
+        }
+      }
+    }
+
+    return Promise.resolve(targetEndpoint);
+  }
+
+  private async linkToGenericContinuation(doc: OpenrpcDocument, sourceEndpoint: GenericEndpoint, endpoints: GenericEndpoint[], method: MethodObject, link: LinkObject, refName?: string): Promise<GenericContinuation> {
+
+    const targetEndpoint = await this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
+    const paramNames: string[] = Object.keys(link.params);
+
+    // The request type is always a class type, since it is created as such by us.
+    const requestClass = targetEndpoint.request.type as GenericClassType;
+    const requestParamsParameter = requestClass.properties?.find(it => it.name == 'params');
+    if (!requestParamsParameter) {
+      return Promise.reject(new Error(`The target request type must be Class and have a 'params' property`));
+    }
+    const requestResultClass = requestParamsParameter.type as GenericClassType;
+
+    const source = sourceEndpoint.responses[0]; // The first response is the Result, not Error or otherwise.
+
+    return <GenericContinuation>{
+      name: link.name || refName,
+      sourceOutput: source,
+      targetInput: targetEndpoint.request, // The first response is the Result
+      mappings: paramNames.map(linkParamName => {
+        const requestResultParamParameter = requestResultClass.properties?.find(prop => prop.name == linkParamName);
+        return <GenericContinuationMapping>{
+          source: this.getSource(source, link, linkParamName),
+          target: {
+            propertyPath: [
+              requestParamsParameter,
+              requestResultParamParameter,
+            ]
+          },
+        };
+      }),
+      description: link.description,
+      summary: link.summary,
+    };
+  }
+
+  private getSource(sourceOutput: GenericOutput, link: LinkObject, linkParamName: string): GenericContinuationSourceParameter {
+
+    let value = link.params[linkParamName];
+    if (typeof value == 'string') {
+      if (/^[$]{[^}]+}$/.test(value)) {
+
+        // The whole value is just one placeholder.
+        // Let's replace it with a property path, which is code-wise more easy to work with.
+        const pathString = value.substring(2, value.length - 1);
+        const pathParts = pathString.split('.');
+
+        const propertyPath: GenericProperty[] = [];
+        let type = sourceOutput.type;
+        for (let i = 0; i < pathParts.length; i++) {
+          if (type.kind == GenericTypeKind.OBJECT) {
+
+            const property = type.properties?.find(it => it.name == pathParts[i]);
+            if (property) {
+              propertyPath.push(property);
+              type = property.type;
+            } else {
+              throw new Error(`There is no property '${pathParts[i]}' in '${type.name}'`);
+            }
+          } else {
+            throw new Error(`Do not know how to handle '${type.name}' in property path '${value}'`);
+          }
+        }
+
+        return {
+          propertyPath: propertyPath
+        };
+      }
+    }
+
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      constantValue: value
+    };
+  }
+
+  getClosest(options: string[], choice: string | undefined): Rating {
+
+    if (!choice) {
+      return {
+        rating: 0,
+        target: ''
+      };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-return
+    return stringSimilarity.findBestMatch(choice, options).bestMatch;
+  }
+
+  private async dereference<T>(doc: OpenrpcDocument, object: T | ReferenceObject): Promise<{object: T, ref: string | undefined}> {
+
+    if ('$ref' in object) {
+      const dereferenced = await DefaultReferenceResolver.resolve(object.$ref, doc) as T;
+      return {
+        object: (await this.dereference(doc, dereferenced)).object,
+        ref: object.$ref
+      };
+    } else {
+      return {object: object, ref: undefined};
+    }
   }
 }

@@ -1,5 +1,5 @@
-import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {TestUtils} from '@test';
+import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {DEFAULT_JAVA_OPTIONS} from '@java';
 import {JavaRenderer} from '@java/render/JavaRenderer';
 import {CompilationUnit} from '@cst/CompilationUnitCallback';
@@ -81,7 +81,7 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test link-example rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'api-with-examples.json');
+    const model = await TestUtils.readExample('openrpc', 'link-example.json');
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer((cu) => {
@@ -92,7 +92,6 @@ describe('Test the rendering of a CST tree to string', () => {
     expect(content).toBeDefined();
   });
 });
-
 
 // TODO:
 // result.name = Name of the content that is being described. If the content described is a method parameter assignable by-name, this field SHALL define the parameter’s key (ie name).

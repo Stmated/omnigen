@@ -1,12 +1,9 @@
 import {ParseManagerInput} from '@parse/ParserManager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import pino from 'pino';
+import {LoggerFactory} from '@util';
 
-export const logger = pino({
-  name: 'app-name',
-  level: 'debug',
-});
+export const logger = LoggerFactory.create(__filename);
 
 /**
  * Used for caching and converting a target file or string into a structure object.
@@ -49,14 +46,5 @@ export class SchemaFile {
 
     const buffer = await fs.readFile(this._input, {});
     return this._readContent = buffer.toString();
-
-    // const handle = await fs.open(this._input);
-    // try {
-    //   const result = await handle.read();
-    //
-    //   return this._readContent = result.buffer.toString();
-    // } finally {
-    //   await handle.close();
-    // }
   }
 }

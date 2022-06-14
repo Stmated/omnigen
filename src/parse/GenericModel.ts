@@ -279,6 +279,34 @@ export interface GenericContact {
   url?: string;
 }
 
+export interface GenericContinuationSourceParameter {
+  propertyPath?: GenericProperty[];
+  constantValue?: unknown;
+}
+
+export interface GenericContinuationTargetParameter {
+  propertyPath: GenericProperty[];
+  //constantValue?: unknown;
+}
+
+export interface GenericContinuationMapping {
+  source: GenericContinuationSourceParameter;
+  target: GenericContinuationTargetParameter;
+}
+
+export interface GenericContinuation {
+  sourceModel?: GenericModel;
+  sourceOutput: GenericOutput;
+  targetModel?: GenericModel;
+  targetInput: GenericInput;
+  mappings: GenericContinuationMapping[];
+
+  description?: string;
+  summary?: string;
+
+  server?: GenericServer;
+}
+
 export interface GenericModel {
   name: string;
   description?: string;
@@ -292,4 +320,5 @@ export interface GenericModel {
   types: GenericType[];
   servers: GenericServer[];
   externalDocumentations?: GenericExternalDocumentation[];
+  continuations?: GenericContinuation[];
 }

@@ -1,5 +1,5 @@
+import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
-import {TestUtils} from '../../../TestUtils';
 import {DEFAULT_JAVA_OPTIONS} from '@java';
 
 describe('Test the structuring of GenericModel into a Java CST', () => {

@@ -529,7 +529,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
 
   // The name needs to be capitalized properly, etc, etc
   get name(): Identifier {
-    return new Identifier(JavaUtil.getSetterName(this.field.identifier, this.type.genericType));
+    return new Identifier(JavaUtil.getSetterName(this.field.identifier.value, this.type.genericType));
   }
 
   get parameters(): ArgumentDeclarationList {

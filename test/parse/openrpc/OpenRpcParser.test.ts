@@ -1,3 +1,4 @@
+import {TestUtils} from '@test';
 import {GenericTypeKind, OpenRpcParser, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';

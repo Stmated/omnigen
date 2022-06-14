@@ -61,8 +61,8 @@
           "description": "use the parameters from addition for subtraction",
           "method": "subtraction",
           "params": {
-            "a": "$params.a",
-            "b": "$params.b"
+            "a": "${params.a}",
+            "b": "${params.b}"
           }
         }
       ]

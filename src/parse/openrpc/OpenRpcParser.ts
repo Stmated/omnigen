@@ -8,12 +8,13 @@ import {
   GenericContact,
   GenericContinuation,
   GenericContinuationMapping,
-  GenericContinuationSourceParameter,
+  GenericContinuationSourceParameter, GenericContinuationTargetParameter,
   GenericEndpoint,
   GenericExamplePairing,
   GenericExampleParam,
   GenericExampleResult,
   GenericExternalDocumentation,
+  GenericInput,
   GenericLicense,
   GenericModel,
   GenericOutput,
@@ -21,6 +22,7 @@ import {
   GenericPrimitiveKind,
   GenericPrimitiveType,
   GenericProperty,
+  GenericPropertyOwner,
   GenericServer,
   GenericStaticArrayType,
   GenericType,
@@ -51,11 +53,21 @@ import {default as DefaultReferenceResolver} from '@json-schema-tools/reference-
 import {pascalCase} from 'change-case';
 import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
+import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@util';
-import {BestMatch, Rating} from 'string-similarity';
 import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 
 export const logger = LoggerFactory.create(__filename);
+
+// TODO:
+// * simple-math -- the examples need to print the given params correctly (if multiple)
+// * simple-math -- the broken '$params.a' should be handled "correctly" -- display it somehow even though wrong
+// * simple-math -- support "${params.xyz}" inside links params, to say "source is the request, not response"
+// * petstore-expanded -- the classes with inheritance need to implement classes/interfaces correctly
+// * petstore-expanded -- if a schema contains inline types inside 'allOf', it should just merge with parent
+// * Need to develop a new example with *VERY* complex inheritance structure, and try to convert it
+// * Remove the need for the "types" array, and instead do it dynamically by searching for types through whole structure
+//    * It can be cached during build-up though, just to make initial lookup while parsing a bit faster
 
 export class OpenRpcParser extends AbstractParser {
   private readonly _options: IParserOptions = DEFAULT_PARSER_OPTIONS;
@@ -150,7 +162,7 @@ export class OpenRpcParser extends AbstractParser {
 
       // One regular response
       const resultResponse = await this.resultToGenericOutputAndResultParamType(doc, method, method.result, types);
-      responses.push(resultResponse[0]);
+      responses.push(resultResponse.output);
 
       // And then one response for each potential error
       let errors: MethodObjectErrors = method.errors || [];
@@ -165,12 +177,14 @@ export class OpenRpcParser extends AbstractParser {
       for (const error of errors) {
         responses.push(await this.errorToGenericOutput(doc, pascalCase(method.name), error, types));
       }
-      const examples = await Promise.all(
-        (method.examples || []).map((it) => this.examplePairingToGenericExample(doc, resultResponse[1], it))
-      );
 
-      const requestType = await this.methodToGenericInputType(doc, method, types);
+      const input = await this.methodToGenericInputType(doc, method, types);
+      const requestType = input.type;
       types.push(requestType);
+
+      const examples = await Promise.all(
+        (method.examples || []).map((it) => this.examplePairingToGenericExample(doc, resultResponse.type, input.properties, it))
+      );
 
       // TODO: Remake so that the request body is another type!
       //  The parameters build into an object
@@ -297,7 +311,7 @@ export class OpenRpcParser extends AbstractParser {
     if (schema.properties) {
       for (const key of Object.keys(schema.properties)) {
         const propertySchema = schema.properties[key] as JSONSchema7;
-        const genericProperty = await this.jsonSchema7ToGenericProperty(doc, key, propertySchema, types);
+        const genericProperty = await this.jsonSchema7ToGenericProperty(doc, type, key, propertySchema, types);
 
         genericProperties.push(genericProperty);
         if (schema.required?.indexOf(key) !== -1) {
@@ -351,7 +365,7 @@ export class OpenRpcParser extends AbstractParser {
     return typeExtendsAnyOf;
   }
 
-  private async jsonSchema7ToGenericProperty(doc: OpenrpcDocument, propertyName: string, schema: JSONSchema7, types: GenericType[])
+  private async jsonSchema7ToGenericProperty(doc: OpenrpcDocument, owner: GenericPropertyOwner, propertyName: string, schema: JSONSchema7, types: GenericType[])
     : Promise<GenericProperty> {
     // This is ugly, but they should pretty much be the same.
     const openRpcJsonSchema = schema as JSONSchema;
@@ -359,10 +373,11 @@ export class OpenRpcParser extends AbstractParser {
     return <GenericProperty>{
       name: propertyName,
       type: await this.jsonSchemaToType(doc, [], openRpcJsonSchema, types),
+      owner: owner
     };
   }
 
-  private async resultToGenericOutputAndResultParamType(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericType[]): Promise<[GenericOutput, GenericType]> {
+  private async resultToGenericOutputAndResultParamType(doc: OpenrpcDocument, method: MethodObject, result: MethodObjectResult, types: GenericType[]): Promise<{output: GenericOutput, type: GenericType}> {
     if ('name' in result) {
       const typeNamePrefix = pascalCase(method.name);
 
@@ -374,33 +389,37 @@ export class OpenRpcParser extends AbstractParser {
         additionalProperties: false,
         description: method.description,
         summary: method.summary,
-        properties: [
-          {
-            name: 'result',
-            type: resultParameterType,
-          },
-          {
-            name: 'error',
-            type: {
-              name: `${typeNamePrefix}ResultError`,
-              kind: GenericTypeKind.NULL,
-            },
-          },
-          {
-            name: 'id',
-            type: {
-              name: `${typeNamePrefix}ResultId`,
-              kind: GenericTypeKind.PRIMITIVE,
-              primitiveKind: GenericPrimitiveKind.STRING,
-            },
-          },
-        ],
       };
+
+      resultType.properties = [
+        {
+          name: 'result',
+          type: resultParameterType,
+          owner: resultType
+        },
+        {
+          name: 'error',
+          type: {
+            name: `${typeNamePrefix}ResultError`,
+            kind: GenericTypeKind.NULL,
+          },
+          owner: resultType
+        },
+        {
+          name: 'id',
+          type: {
+            name: `${typeNamePrefix}ResultId`,
+            kind: GenericTypeKind.PRIMITIVE,
+            primitiveKind: GenericPrimitiveKind.STRING,
+          },
+          owner: resultType
+        },
+      ];
 
       types.push(resultType);
 
-      return [
-        <GenericOutput>{
+      return {
+        output: <GenericOutput>{
           name: result.name,
           description: result.description,
           summary: result.summary,
@@ -415,8 +434,8 @@ export class OpenRpcParser extends AbstractParser {
             },
           ],
         },
-        resultParameterType
-      ];
+        type: resultParameterType
+      };
     }
 
     const dereferenced = await DefaultReferenceResolver.resolve(result.$ref, doc) as MethodObjectResult;
@@ -432,45 +451,44 @@ export class OpenRpcParser extends AbstractParser {
         name: `${typeName}Error`,
         kind: GenericTypeKind.OBJECT,
         additionalProperties: false,
-        properties: [
-          // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
-          {
-            name: 'code',
-            type: {
-              name: 'number',
-              valueConstant: isUnknownCode ? undefined : error.code,
-              kind: GenericTypeKind.PRIMITIVE,
-              primitiveKind: GenericPrimitiveKind.INTEGER,
-            },
-          },
-          {
-            name: 'message',
-            type: {
-              name: 'message',
-              valueConstant: error.message,
-              kind: GenericTypeKind.PRIMITIVE,
-              primitiveKind: GenericPrimitiveKind.STRING,
-            },
-          },
-          {
-            // For Trustly this is called "error" and not "data",
-            // then inside "error" we have "uuid", "method", "data": {"code", "message"}
-            // TODO: We need a way to specify the error structure -- which OpenRPC currently *cannot*
-            name: 'data',
-            type: {
-              name: 'object',
-              valueConstant: error.data,
-              kind: GenericTypeKind.UNKNOWN,
-              additionalProperties: true,
-            },
-          },
-        ],
       };
 
-      const errorProperty: GenericProperty = {
-        name: 'error',
-        type: errorPropertyType,
-      };
+      errorPropertyType.properties = [
+        // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
+        {
+          name: 'code',
+          type: {
+            name: 'number',
+            valueConstant: isUnknownCode ? undefined : error.code,
+            kind: GenericTypeKind.PRIMITIVE,
+            primitiveKind: GenericPrimitiveKind.INTEGER,
+          },
+          owner: errorPropertyType,
+        },
+        {
+          name: 'message',
+          type: {
+            name: 'message',
+            valueConstant: error.message,
+            kind: GenericTypeKind.PRIMITIVE,
+            primitiveKind: GenericPrimitiveKind.STRING,
+          },
+          owner: errorPropertyType,
+        },
+        {
+          // For Trustly this is called "error" and not "data",
+          // then inside "error" we have "uuid", "method", "data": {"code", "message"}
+          // TODO: We need a way to specify the error structure -- which OpenRPC currently *cannot*
+          name: 'data',
+          type: {
+            name: 'object',
+            valueConstant: error.data,
+            kind: GenericTypeKind.UNKNOWN,
+            additionalProperties: true,
+          },
+          owner: errorPropertyType,
+        },
+      ];
 
       types.push(errorPropertyType);
 
@@ -479,26 +497,35 @@ export class OpenRpcParser extends AbstractParser {
         accessLevel: GenericAccessLevel.PUBLIC,
         kind: GenericTypeKind.OBJECT,
         additionalProperties: false,
-        properties: [
-          {
-            name: 'result',
-            type: {
-              name: 'AlwaysNullResultBody',
-              kind: GenericTypeKind.NULL,
-            },
-          },
-          errorProperty,
-          {
-            name: 'id',
-            type: {
-              name: 'string',
-              kind: GenericTypeKind.PRIMITIVE,
-              primitiveKind: GenericPrimitiveKind.STRING,
-            },
-          },
-        ],
-        requiredProperties: [errorProperty],
       };
+
+      const errorProperty: GenericProperty = {
+        name: 'error',
+        type: errorPropertyType,
+        owner: errorType,
+      };
+
+      errorType.properties = [
+        {
+          name: 'result',
+          type: {
+            name: 'AlwaysNullResultBody',
+            kind: GenericTypeKind.NULL,
+          },
+          owner: errorType,
+        },
+        errorProperty,
+        {
+          name: 'id',
+          type: {
+            name: 'string',
+            kind: GenericTypeKind.PRIMITIVE,
+            primitiveKind: GenericPrimitiveKind.STRING,
+          },
+          owner: errorType,
+        },
+      ];
+      errorType.requiredProperties = [errorProperty];
 
       types.push(errorType);
 
@@ -529,10 +556,11 @@ export class OpenRpcParser extends AbstractParser {
     return this.errorToGenericOutput(doc, parentName, dereferenced, types);
   }
 
-  private async examplePairingToGenericExample(doc: OpenrpcDocument, valueType: GenericType, example: ExamplePairingOrReference): Promise<GenericExamplePairing> {
+  private async examplePairingToGenericExample(doc: OpenrpcDocument, valueType: GenericType, inputProperties: GenericProperty[], example: ExamplePairingOrReference): Promise<GenericExamplePairing> {
     if ('name' in example) {
-      const paramPromises = example.params.map((param) => this.exampleParamToGenericExampleParam(doc, param));
-      const params = await Promise.all(paramPromises);
+      const params = await Promise.all(
+        example.params.map((param, idx) => this.exampleParamToGenericExampleParam(doc, inputProperties, param, idx))
+      );
 
       return <GenericExamplePairing>{
         name: example.name,
@@ -544,21 +572,40 @@ export class OpenRpcParser extends AbstractParser {
     }
 
     const dereferenced = await DefaultReferenceResolver.resolve(example.$ref, doc) as ExamplePairingOrReference;
-    return this.examplePairingToGenericExample(doc, valueType, dereferenced);
+    return this.examplePairingToGenericExample(doc, valueType, inputProperties, dereferenced);
   }
 
-  private async exampleParamToGenericExampleParam(doc: OpenrpcDocument, param: ExampleOrReference): Promise<GenericExampleParam> {
+  private async exampleParamToGenericExampleParam(doc: OpenrpcDocument, inputProperties: GenericProperty[], param: ExampleOrReference, paramIndex: number): Promise<GenericExampleParam> {
     if ('name' in param) {
+
+      // If the name of the example param is the same as the property name, it will match here.
+      let property = inputProperties.find(it => it.name == param.name);
+      if (!property) {
+
+        // But most of the time, the example param is actually just in the same index as the request params.
+        // NOTE: This is actually *how the standard works* -- but we try to be nice.
+        property = inputProperties[paramIndex];
+      }
+
+      let valueType: GenericType;
+      if (property) {
+        valueType = property.type;
+      } else {
+        valueType = <GenericClassType>{kind: GenericTypeKind.UNKNOWN};
+      }
+
       return <GenericExampleParam>{
         name: param.name,
+        property: property,
         description: param.description,
         summary: param.summary,
+        type: valueType,
         value: param.value,
       };
     }
 
     const dereferenced = await DefaultReferenceResolver.resolve(param.$ref, doc) as ExampleOrReference;
-    return this.exampleParamToGenericExampleParam(doc, dereferenced);
+    return this.exampleParamToGenericExampleParam(doc, inputProperties, dereferenced, paramIndex);
   }
 
   private async exampleResultToGenericExampleResult(doc: OpenrpcDocument, valueType: GenericType, example: ExampleOrReference): Promise<GenericExampleResult> {
@@ -568,12 +615,6 @@ export class OpenRpcParser extends AbstractParser {
 
         // This is part of the specification, but not part of the OpenRPC interface.
       }
-
-      // if (typeof example.value == 'string') {
-      //
-      //   // If the type of the value is a string, then maybe it is a JSON payload.
-      //   // If it is, then we should prettify it to keep the same look as other examples.
-      // }
 
       return <GenericExampleResult>{
         name: example.name,
@@ -605,7 +646,7 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async contentDescriptorToGenericProperty(doc: OpenrpcDocument, descriptor: ContentDescriptorOrReference, types: GenericType[])
+  private async contentDescriptorToGenericProperty(doc: OpenrpcDocument, owner: GenericPropertyOwner, descriptor: ContentDescriptorOrReference, types: GenericType[])
     : Promise<GenericProperty> {
     if ('name' in descriptor) {
 
@@ -616,11 +657,12 @@ export class OpenRpcParser extends AbstractParser {
         deprecated: descriptor.deprecated || false,
         required: descriptor.required || false,
         type: await this.jsonSchemaToType(doc, [descriptor.name], descriptor.schema, types),
+        owner: owner,
       };
     }
 
     const dereferenced = await DefaultReferenceResolver.resolve(descriptor.$ref, doc) as ContentDescriptorOrReference;
-    return this.contentDescriptorToGenericProperty(doc, dereferenced, types);
+    return this.contentDescriptorToGenericProperty(doc, owner, dereferenced, types);
   }
 
   private typeToGenericKnownType(type: string): [GenericTypeKind.NULL] | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind] {
@@ -645,11 +687,7 @@ export class OpenRpcParser extends AbstractParser {
     throw new Error(`Unknown type: ${type}`);
   }
 
-  private async methodToGenericInputType(doc: OpenrpcDocument, method: MethodObject, types: GenericType[]): Promise<GenericType>  {
-
-    const properties = await Promise.all(
-      method.params.map((it) => this.contentDescriptorToGenericProperty(doc, it, types))
-    );
+  private async methodToGenericInputType(doc: OpenrpcDocument, method: MethodObject, types: GenericType[]): Promise<{type: GenericType, properties: GenericProperty[]}>  {
 
     const requestJsonRpcType: GenericPrimitiveType = {
       name: `${method.name}RequestMethod`,
@@ -675,78 +713,90 @@ export class OpenRpcParser extends AbstractParser {
       nullable: false
     };
 
-    let requestParamsType: GenericType;
+    let requestParamsType: GenericPropertyOwner;
     if (method.paramStructure == 'by-position') {
       // The params is an array values, and not a map nor properties.
       // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
-      const commonType = JavaUtil.getCommonDenominator(...properties.map(it => it.type));
       requestParamsType = <GenericStaticArrayType> {
         name: `${method.name}RequestParams`,
-        kind: GenericTypeKind.ARRAY_STATIC,
-        commonDenominator: commonType,
-        of: properties.map(it => {
-          return {
-            name: it.name || it.type.name,
-            description: it.description,
-            summary: it.summary,
-            type: it.type
-          };
-        }),
+        kind: GenericTypeKind.ARRAY_STATIC
       };
+
+      requestParamsType.properties = await Promise.all(
+        method.params.map((it) => this.contentDescriptorToGenericProperty(doc, requestParamsType, it, types))
+      );
+
+      requestParamsType.commonDenominator = JavaUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type));
+
     } else {
       requestParamsType = <GenericClassType> {
         name: `${method.name}RequestParams`,
         kind: GenericTypeKind.OBJECT,
-        properties: properties,
         additionalProperties: false
       };
+
+      requestParamsType.properties = await Promise.all(
+        method.params.map((it) => this.contentDescriptorToGenericProperty(doc, requestParamsType, it, types))
+      );
 
       types.push(requestParamsType);
     }
 
-    return <GenericClassType>{
+    const requestType = <GenericClassType>{
       name: `${method.name}Request`,
       kind: GenericTypeKind.OBJECT,
       additionalProperties: false,
       description: method.description,
       summary: method.summary,
-      properties: [
-        <GenericProperty>{
-          name: "jsonrpc",
-          type: requestJsonRpcType,
-          required: true
-        },
-        <GenericProperty>{
-          name: "method",
-          type: requestMethodType,
-          required: true
-        },
-        <GenericProperty>{
-          name: "id",
-          type: requestIdType,
-          required: true
-        },
-        <GenericProperty>{
-          name: "params",
-          type: requestParamsType
-        }
-      ]
+    };
+
+    requestType.properties = [
+      <GenericProperty>{
+        name: "jsonrpc",
+        type: requestJsonRpcType,
+        required: true,
+        owner: requestType,
+      },
+      <GenericProperty>{
+        name: "method",
+        type: requestMethodType,
+        required: true,
+        owner: requestType,
+      },
+      <GenericProperty>{
+        name: "id",
+        type: requestIdType,
+        required: true,
+        owner: requestType,
+      },
+      <GenericProperty>{
+        name: "params",
+        type: requestParamsType,
+        owner: requestType,
+      }
+    ];
+
+    return {
+      type: requestType,
+      properties: requestParamsType.properties
     };
   }
 
   private async linksToGenericContinuations(doc: OpenrpcDocument, endpoints: GenericEndpoint[]): Promise<GenericContinuation[]> {
 
     const continuations: Promise<GenericContinuation>[] = [];
-    const methods = await Promise.all(doc.methods.map(async method => await this.dereference(doc, method)));
+    const methods = await Promise.all(doc.methods.map(method => this.dereference(doc, method)));
     for (const method of methods) {
-      const links = await Promise.all((method.object.links || []).map(async link => await this.dereference(doc, link)));
-      const sourceEndpoint = endpoints.find(it => it.name == method.object.name);
-      if (sourceEndpoint) {
-        for (const link of links) {
-          continuations.push(this.linkToGenericContinuation(doc, sourceEndpoint, endpoints, method.object, link.object, link.ref));
+      const endpoint = endpoints.find(it => it.name == method.object.name);
+      if (endpoint) {
+        for (const link of (method.object.links || [])) {
+          continuations.push(
+            this.dereference(doc, link)
+              .then(link => this.linkToGenericContinuation(doc, endpoint, endpoints, link.object, link.ref))
+          );
         }
       } else {
-        continuations.push(Promise.reject(new Error(`There is no source endpoint called '${method.object.name}'`)));
+        continuations.push(Promise.reject(new Error(`There is no endpoint called '${method.object.name}'`)));
       }
     }
 
@@ -798,7 +848,7 @@ export class OpenRpcParser extends AbstractParser {
     return Promise.resolve(targetEndpoint);
   }
 
-  private async linkToGenericContinuation(doc: OpenrpcDocument, sourceEndpoint: GenericEndpoint, endpoints: GenericEndpoint[], method: MethodObject, link: LinkObject, refName?: string): Promise<GenericContinuation> {
+  private async linkToGenericContinuation(doc: OpenrpcDocument, sourceEndpoint: GenericEndpoint, endpoints: GenericEndpoint[], link: LinkObject, refName?: string): Promise<GenericContinuation> {
 
     const targetEndpoint = await this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
     const paramNames: string[] = Object.keys(link.params);
@@ -811,54 +861,82 @@ export class OpenRpcParser extends AbstractParser {
     }
     const requestResultClass = requestParamsParameter.type as GenericClassType;
 
-    const source = sourceEndpoint.responses[0]; // The first response is the Result, not Error or otherwise.
+    const mappings: GenericContinuationMapping[] = [];
+    for (const linkParamName of paramNames) {
+
+      const requestResultParamParameter = requestResultClass.properties?.find(prop => prop.name == linkParamName);
+
+      if (requestResultParamParameter) {
+
+        const sourceParameter: GenericContinuationSourceParameter = this.getLinkSourceParameter(
+          // The first response is the Result, not Error or otherwise.
+          sourceEndpoint.responses[0].type,
+          sourceEndpoint.request.type,
+          link,
+          linkParamName
+        );
+
+        const targetParameter: GenericContinuationTargetParameter = {
+          propertyPath: [
+            requestParamsParameter,
+            requestResultParamParameter,
+          ]
+        };
+
+        mappings.push({
+          source: sourceParameter,
+          target: targetParameter,
+        });
+      } else {
+        logger.warn(`Could not find property '${linkParamName}' in '${requestResultClass.name}'`);
+      }
+    }
 
     return <GenericContinuation>{
       name: link.name || refName,
-      sourceOutput: source,
-      targetInput: targetEndpoint.request, // The first response is the Result
-      mappings: paramNames.map(linkParamName => {
-        const requestResultParamParameter = requestResultClass.properties?.find(prop => prop.name == linkParamName);
-        return <GenericContinuationMapping>{
-          source: this.getSource(source, link, linkParamName),
-          target: {
-            propertyPath: [
-              requestParamsParameter,
-              requestResultParamParameter,
-            ]
-          },
-        };
-      }),
+      //sourceOutput: sourceEndpoint.responses[0],
+      //targetInput: targetEndpoint.request, // The first response is the Result
+      mappings: mappings,
       description: link.description,
       summary: link.summary,
     };
   }
 
-  private getSource(sourceOutput: GenericOutput, link: LinkObject, linkParamName: string): GenericContinuationSourceParameter {
+  private static readonly PATTERN_PLACEHOLDER = new RegExp(/^[$]{([^}]+)}$/);
+  private static readonly PATTERN_PLACEHOLDER_RELAXED = new RegExp(/(?:[$]{([^}]+)}$|^{{([^}]+?)}}$|^[$](.+?)$)/);
+
+  private getLinkSourceParameter(primaryType: GenericType, secondaryType: GenericType, link: LinkObject, linkParamName: string): GenericContinuationSourceParameter {
 
     let value = link.params[linkParamName];
     if (typeof value == 'string') {
-      if (/^[$]{[^}]+}$/.test(value)) {
+
+      const matcher = this._options.relaxedLookup
+        ? OpenRpcParser.PATTERN_PLACEHOLDER_RELAXED
+        : OpenRpcParser.PATTERN_PLACEHOLDER;
+
+      const match = matcher.exec(value);
+
+      if (match) {
 
         // The whole value is just one placeholder.
         // Let's replace it with a property path, which is code-wise more easy to work with.
-        const pathString = value.substring(2, value.length - 1);
+        const pathString = this._options.relaxedLookup
+          ? (match[1] || match[2] || match[3])
+          : match[1];
+
+        // const pathString = value.substring(2, value.length - 1);
         const pathParts = pathString.split('.');
 
-        const propertyPath: GenericProperty[] = [];
-        let type = sourceOutput.type;
-        for (let i = 0; i < pathParts.length; i++) {
-          if (type.kind == GenericTypeKind.OBJECT) {
+        let propertyPath = this.getPropertyPath(primaryType, pathParts);
+        if (propertyPath.length !== pathParts.length) {
 
-            const property = type.properties?.find(it => it.name == pathParts[i]);
-            if (property) {
-              propertyPath.push(property);
-              type = property.type;
-            } else {
-              throw new Error(`There is no property '${pathParts[i]}' in '${type.name}'`);
-            }
+          // The placeholder might be ${params.x} instead of ${result.x}
+          // But ${result.a} makes more sense and is more usual, so we try that first.
+          const inputProperties = this.getPropertyPath(secondaryType, pathParts);
+          if (inputProperties.length > propertyPath.length) {
+            propertyPath = inputProperties;
           } else {
-            throw new Error(`Do not know how to handle '${type.name}' in property path '${value}'`);
+            throw new Error(`There is no property path '${pathString}' in '${primaryType.name}' nor '${secondaryType.name}'`);
           }
         }
 
@@ -872,6 +950,26 @@ export class OpenRpcParser extends AbstractParser {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       constantValue: value
     };
+  }
+
+  private getPropertyPath(type: GenericType, pathParts: string[]): GenericProperty[] {
+    const propertyPath: GenericProperty[] = [];
+    for (let i = 0; i < pathParts.length; i++) {
+      if (type.kind == GenericTypeKind.OBJECT) {
+
+        const property = type.properties?.find(it => it.name == pathParts[i]);
+        if (property) {
+          propertyPath.push(property);
+          type = property.type;
+        } else {
+          return propertyPath;
+        }
+      } else {
+        throw new Error(`Do not know how to handle '${type.name}' in property path '${pathParts.join('.')}'`);
+      }
+    }
+
+    return propertyPath;
   }
 
   getClosest(options: string[], choice: string | undefined): Rating {

@@ -196,14 +196,14 @@ export class JavaUtil {
       }
     } else if (a.kind == GenericTypeKind.ARRAY_STATIC) {
       if (b.kind == GenericTypeKind.ARRAY_STATIC) {
-        if (a.of.length === b.of.length) {
+        if (a.properties.length === b.properties.length) {
           const commonTypes: GenericType[] = [];
-          for (let i = 0; i < a.of.length; i++) {
-            if (a.of[i].name !== b.of[i].name) {
+          for (let i = 0; i < a.properties.length; i++) {
+            if (a.properties[i].name !== b.properties[i].name) {
               return undefined;
             }
 
-            const commonType = JavaUtil.getCommonDenominator(a.of[i].type, b.of[i].type);
+            const commonType = JavaUtil.getCommonDenominator(a.properties[i].type, b.properties[i].type);
             if (!commonType) {
               return undefined;
             }

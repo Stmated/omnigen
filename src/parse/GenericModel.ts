@@ -36,6 +36,7 @@ export enum GenericArrayImplementationType {
 export interface GenericProperty {
   name: string;
   type: GenericType;
+  owner: GenericPropertyOwner;
 
   description?: string;
   summary?: string;
@@ -112,12 +113,7 @@ export interface GenericArrayType extends GenericBaseType<GenericArrayKnownKind>
 
 type GenericStaticArrayKnownKind = GenericTypeKind.ARRAY_STATIC;
 
-export interface GenericStaticArrayEntry {
-  name: string;
-  description?: string;
-  summary?: string;
-  type: GenericType;
-}
+export type GenericPropertyOwner = GenericClassType | GenericStaticArrayType;
 
 /**
  * Similar to GenericArrayType, but this solves issue of having a list of types in a static order.
@@ -125,7 +121,7 @@ export interface GenericStaticArrayEntry {
  */
 export interface GenericStaticArrayType extends GenericBaseType<GenericStaticArrayKnownKind>{
 
-  of: GenericStaticArrayEntry[];
+  properties: GenericProperty[];
   commonDenominator?: GenericType;
   implementationType?: GenericArrayImplementationType;
 }
@@ -206,8 +202,10 @@ export interface GenericError {
 
 export interface GenericExampleParam {
   name: string;
+  property: GenericProperty;
   description?: string;
   summary?: string;
+  type: GenericType;
   value: unknown;
 }
 
@@ -286,7 +284,6 @@ export interface GenericContinuationSourceParameter {
 
 export interface GenericContinuationTargetParameter {
   propertyPath: GenericProperty[];
-  //constantValue?: unknown;
 }
 
 export interface GenericContinuationMapping {
@@ -296,9 +293,7 @@ export interface GenericContinuationMapping {
 
 export interface GenericContinuation {
   sourceModel?: GenericModel;
-  sourceOutput: GenericOutput;
   targetModel?: GenericModel;
-  targetInput: GenericInput;
   mappings: GenericContinuationMapping[];
 
   description?: string;

@@ -2,9 +2,10 @@ import {AbstractJavaTransformer} from './AbstractJavaTransformer';
 import {JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
   GenericClassType,
-  GenericContinuation,
   GenericContinuationMapping,
+  GenericExamplePairing,
   GenericModel,
+  GenericProperty,
   GenericType,
   GenericTypeKind
 } from '@parse';
@@ -92,7 +93,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           comments.push(...this.getCommentsForType(property.type, model, options));
 
           if (property.type.kind == GenericTypeKind.ARRAY_STATIC) {
-            comments.push(new Java.Comment(`Array with parameters in this order:\n${property.type.of.map((it, idx) => {
+            comments.push(new Java.Comment(`Array with parameters in this order:\n${property.type.properties.map((it, idx) => {
               const typeName = JavaUtil.getFullyQualifiedName(it.type);
               const parameterName = it.name;
               const description = it.description || it.type.description;
@@ -273,75 +274,127 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
 
       for (const example of endpoint.examples) {
-        if (example.result.type == type) {
 
-          comments.push(new Java.Comment(`<section>\n<h2>${example.name} - ${example.result.name}</h2>`));
-
-          if (example.description) {
-            comments.push(new Java.Comment(example.description));
-          }
-          if (example.summary) {
-            comments.push(new Java.Comment(example.summary));
-          }
-
-          if (example.result.description) {
-            comments.push(new Java.Comment(example.result.description));
-          }
-          if (example.result.summary) {
-            comments.push(new Java.Comment(example.result.summary));
-          }
-
-          // WRONG CLASS!
-          if (example.result.value) {
-
-            let prettyValue: string;
-            if (typeof example.result.value == 'string') {
-              prettyValue = example.result.value;
-            } else {
-              prettyValue = JSON.stringify(example.result.value, null, 2);
-            }
-
-            comments.push(new Java.Comment(`<pre>{@code ${prettyValue}}</pre>`));
-          }
-
-          comments.push(new Java.Comment(`</section>`));
+        const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
+        if (example.result.type == type || parameterHasType) {
+          comments.push(...this.getExampleComments(example, options));
         }
       }
     }
 
-    for (const continuation of (model.continuations || [])) {
+    if (type.kind == GenericTypeKind.OBJECT || type.kind == GenericTypeKind.ARRAY_STATIC) {
+      for (const continuation of (model.continuations || [])) {
 
-      if (continuation.sourceOutput.type == type || continuation.targetInput.type == type) {
+        // Look if any of the continuation source or targets use this type as root.
+        // TODO: This could be improved by answering "true" if any in path is true, and make it relative.
+        const firstMatch = continuation.mappings
+          .some(mapping => {
 
-        // There are links between different servers/methods
-        comments.push(new Java.Comment("<section>\n<h2>Links</h2>"));
-        comments.push(...continuation.mappings.map(mapping => {
-          return this.getMappingSourceTargetComment(mapping, continuation, options);
-        }));
-        comments.push(new Java.Comment("</section>"));
+            if (mapping.source.propertyPath?.length) {
+              if (mapping.source.propertyPath[0]?.owner == type) {
+                return true;
+              }
+            }
+
+            if (mapping.target.propertyPath?.length) {
+              if (mapping.target.propertyPath[mapping.target.propertyPath.length - 1].owner == type) {
+                return true;
+              }
+            }
+
+            return false;
+          });
+
+        if (firstMatch) {
+
+          // There are links between different servers/methods
+          comments.push(new Java.Comment("<section>\n<h2>Links</h2>"));
+          comments.push(...continuation.mappings.map(mapping => {
+            return this.getMappingSourceTargetComment(mapping, options);
+          }));
+          comments.push(new Java.Comment("</section>"));
+        }
       }
     }
 
     return comments;
   }
 
+  private getLink(propertyOwner: GenericType, property: GenericProperty, options: JavaOptions): string {
+
+    const memberName = `${JavaUtil.getGetterName(property.name, property.type)}()`;
+    return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
+  }
+
+  private getExampleComments(example: GenericExamplePairing, options: JavaOptions): Java.Comment[] {
+
+    const comments: Java.Comment[] = [];
+    comments.push(new Java.Comment(`<section>\n<h2>Example - ${example.name}</h2>`));
+
+    if (example.description) {
+      comments.push(new Java.Comment(example.description));
+    }
+    if (example.summary) {
+      comments.push(new Java.Comment(example.summary));
+    }
+
+    const params = (example.params || []);
+    if (params.length > 0) {
+
+      const requestCommentLines: string[] = [];
+      requestCommentLines.push(`<h3>➡ Request</h3>`);
+
+      for (let i = 0; i < params.length; i++) {
+
+        const param = params[i];
+        const propertyLink = this.getLink(param.property.owner, param.property, options);
+        requestCommentLines.push(`📌 ${propertyLink} (${param.name}): ${JSON.stringify(param.value)}`);
+      }
+
+      comments.push(new Java.Comment(requestCommentLines.join('\n')))
+    }
+
+    if (example.result.description || example.result.summary || example.result.value) {
+
+      const responseCommentLines: string[] = [];
+      responseCommentLines.push(`<h3>↩ Response - ${example.result.name}</h3>`);
+
+      if (example.result.description) {
+        responseCommentLines.push(`💡 ${example.result.description}`);
+      }
+      if (example.result.summary) {
+        responseCommentLines.push(`💡 ${example.result.summary}`);
+      }
+
+      // WRONG CLASS!
+      if (example.result.value) {
+
+        let prettyValue: string;
+        if (typeof example.result.value == 'string') {
+          prettyValue = example.result.value;
+        } else {
+          prettyValue = JSON.stringify(example.result.value, null, 2);
+        }
+
+        responseCommentLines.push(`⬅ returns <pre>{@code ${prettyValue}}</pre>`);
+      }
+
+      comments.push(new Java.Comment(responseCommentLines.join('\n')))
+    }
+
+    comments.push(new Java.Comment(`</section>`));
+    return comments;
+  }
+
   private getMappingSourceTargetComment(
     mapping: GenericContinuationMapping,
-    continuation: GenericContinuation,
     options: JavaOptions
   ): Java.Comment {
     const targetPath = mapping.target.propertyPath;
     const targetLinks: string[] = [];
     for (let i = 0; i < targetPath.length; i++) {
 
-      let ownerType: GenericType;
-      if (i > 0) {
-        ownerType = targetPath[i - 1].type;
-      } else {
-        ownerType = continuation.targetInput.type;
-      }
-
-      const typeName = JavaUtil.getFullyQualifiedName(ownerType);
+      const typeName = JavaUtil.getFullyQualifiedName(targetPath[i].owner);
 
       const prop = targetPath[i];
       let memberName: string;
@@ -360,22 +413,14 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       targetLinks.push(`{@link ${typeName}#${memberName}}`);
     }
 
-    const sourcePath = mapping.source.propertyPath || [];
     const sourceLinks: string[] = [];
-    for (let i = 0; i < sourcePath.length; i++) {
-
-      let ownerType: GenericType;
-      if (i > 0) {
-        ownerType = sourcePath[i - 1].type;
-      } else {
-        ownerType = continuation.sourceOutput.type;
+    if (mapping.source.propertyPath) {
+      const sourcePath = mapping.source.propertyPath || [];
+      for (let i = 0; i < sourcePath.length; i++) {
+        sourceLinks.push(this.getLink(sourcePath[i].owner, sourcePath[i], options));
       }
-
-      const typeName = JavaUtil.getFullyQualifiedName(ownerType);
-      const prop = sourcePath[i];
-
-      const memberName = `${JavaUtil.getGetterName(prop.name, prop.type)}()`;
-      sourceLinks.push(`{@link ${typeName}#${memberName}}`);
+    } else if (mapping.source.constantValue) {
+      sourceLinks.push(JSON.stringify(mapping.source.constantValue));
     }
 
     return new Java.Comment(`Source: ${sourceLinks.join('.')}\nTarget: ${targetLinks.join('.')}`);

@@ -60,14 +60,12 @@ import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 export const logger = LoggerFactory.create(__filename);
 
 // TODO:
-// * simple-math -- the examples need to print the given params correctly (if multiple)
-// * simple-math -- the broken '$params.a' should be handled "correctly" -- display it somehow even though wrong
-// * simple-math -- support "${params.xyz}" inside links params, to say "source is the request, not response"
 // * petstore-expanded -- the classes with inheritance need to implement classes/interfaces correctly
 // * petstore-expanded -- if a schema contains inline types inside 'allOf', it should just merge with parent
 // * Need to develop a new example with *VERY* complex inheritance structure, and try to convert it
 // * Remove the need for the "types" array, and instead do it dynamically by searching for types through whole structure
 //    * It can be cached during build-up though, just to make initial lookup while parsing a bit faster
+// * simple-math -- check if the examples are actually printed to the right places (make it work like links)
 
 export class OpenRpcParser extends AbstractParser {
   private readonly _options: IParserOptions = DEFAULT_PARSER_OPTIONS;

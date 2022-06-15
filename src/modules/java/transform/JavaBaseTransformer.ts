@@ -102,6 +102,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           }
         }
 
+        comments.push(...this.getCommentsForProperty(property, model, options));
+
         const commentList = (comments.length > 0) ? new Java.CommentList(...comments) : undefined;
 
         if (property.type.kind == GenericTypeKind.NULL) {
@@ -282,6 +284,17 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
+    comments.push(...this.getLinkCommentsForType(type, model, options));
+
+    return comments;
+  }
+
+  private getLinkCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {
+    const comments: Java.Comment[] = [];
+    if (!options.includeLinksOnType) {
+      return comments;
+    }
+
     if (type.kind == GenericTypeKind.OBJECT || type.kind == GenericTypeKind.ARRAY_STATIC) {
       for (const continuation of (model.continuations || [])) {
 
@@ -315,6 +328,36 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           comments.push(new Java.Comment("</section>"));
         }
       }
+    }
+
+    return comments;
+  }
+
+  private getCommentsForProperty(property: GenericProperty, model: GenericModel, options: JavaOptions): Java.Comment[] {
+    const comments: Java.Comment[] = [];
+    if (!options.includeLinksOnProperty) {
+      return comments;
+    }
+
+    const linkComments: string[] = [];
+    for (const continuation of (model.continuations || [])) {
+      for (const mapping of continuation.mappings) {
+        if (mapping.source.propertyPath?.length) {
+          if (mapping.source.propertyPath[mapping.source.propertyPath.length - 1] == property) {
+            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'target').text);
+          }
+        }
+
+        if (mapping.target.propertyPath.length) {
+          if (mapping.target.propertyPath[mapping.target.propertyPath.length - 1] == property) {
+            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'source').text);
+          }
+        }
+      }
+    }
+
+    if (linkComments.length > 0) {
+      comments.push(new Java.Comment(linkComments.join('\n')));
     }
 
     return comments;
@@ -388,42 +431,55 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
   private getMappingSourceTargetComment(
     mapping: GenericContinuationMapping,
-    options: JavaOptions
+    options: JavaOptions,
+    only: 'source' | 'target' | undefined = undefined
   ): Java.Comment {
-    const targetPath = mapping.target.propertyPath;
-    const targetLinks: string[] = [];
-    for (let i = 0; i < targetPath.length; i++) {
-
-      const typeName = JavaUtil.getFullyQualifiedName(targetPath[i].owner);
-
-      const prop = targetPath[i];
-      let memberName: string;
-      if (i < targetPath.length - 1) {
-        memberName = `${JavaUtil.getGetterName(prop.name, prop.type)}()`;
-      } else {
-        // TODO: Possible to find the *actual* setter/field and use that as the @link?
-        //       We should not need to check for immutability here, should be centralized somehow
-        if (options.immutableModels) {
-          memberName = prop.name;
-        } else {
-          memberName = `${JavaUtil.getSetterName(prop.name, prop.type)}(${JavaUtil.getFullyQualifiedName(prop.type)})`
-        }
-      }
-
-      targetLinks.push(`{@link ${typeName}#${memberName}}`);
-    }
 
     const sourceLinks: string[] = [];
-    if (mapping.source.propertyPath) {
-      const sourcePath = mapping.source.propertyPath || [];
-      for (let i = 0; i < sourcePath.length; i++) {
-        sourceLinks.push(this.getLink(sourcePath[i].owner, sourcePath[i], options));
+    const targetLinks: string[] = [];
+
+    if (!only || only == 'source') {
+      if (mapping.source.propertyPath) {
+        const sourcePath = mapping.source.propertyPath || [];
+        for (let i = 0; i < sourcePath.length; i++) {
+          sourceLinks.push(this.getLink(sourcePath[i].owner, sourcePath[i], options));
+        }
+      } else if (mapping.source.constantValue) {
+        sourceLinks.push(JSON.stringify(mapping.source.constantValue));
       }
-    } else if (mapping.source.constantValue) {
-      sourceLinks.push(JSON.stringify(mapping.source.constantValue));
     }
 
-    return new Java.Comment(`Source: ${sourceLinks.join('.')}\nTarget: ${targetLinks.join('.')}`);
+    if (!only || only == 'target') {
+      const targetPath = mapping.target.propertyPath;
+      for (let i = 0; i < targetPath.length; i++) {
+
+        const typeName = JavaUtil.getFullyQualifiedName(targetPath[i].owner);
+
+        const prop = targetPath[i];
+        let memberName: string;
+        if (i < targetPath.length - 1) {
+          memberName = `${JavaUtil.getGetterName(prop.name, prop.type)}()`;
+        } else {
+          // TODO: Possible to find the *actual* setter/field and use that as the @link?
+          //       We should not need to check for immutability here, should be centralized somehow
+          if (options.immutableModels) {
+            memberName = prop.name;
+          } else {
+            memberName = `${JavaUtil.getSetterName(prop.name, prop.type)}(${JavaUtil.getFullyQualifiedName(prop.type)})`
+          }
+        }
+
+        targetLinks.push(`{@link ${typeName}#${memberName}}`);
+      }
+    }
+
+    if (only == 'source') {
+      return new Java.Comment(`@see Source ${sourceLinks.join('.')}`);
+    } else if (only == 'target') {
+      return new Java.Comment(`@see Use ${targetLinks.join('.')}`);
+    } else {
+      return new Java.Comment(`Source: ${sourceLinks.join('.')}\nTarget: ${targetLinks.join('.')}`);
+    }
   }
 
   private toJavaType(type: GenericType): Java.Type {

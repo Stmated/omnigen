@@ -11,6 +11,8 @@ export interface JavaOptions extends IOptions {
   package: string;
   includeAlwaysNullProperties: boolean;
   unknownType: UnknownType;
+  includeLinksOnType: boolean;
+  includeLinksOnProperty: boolean;
 }
 
 export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
@@ -18,4 +20,6 @@ export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
   package: 'generated.omnigen',
   includeAlwaysNullProperties: false,
   unknownType: UnknownType.JSON,
+  includeLinksOnType: false,
+  includeLinksOnProperty: true,
 }

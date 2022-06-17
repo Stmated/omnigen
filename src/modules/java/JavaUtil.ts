@@ -3,7 +3,6 @@ import {ModifierType} from './cst/types';
 import {pascalCase} from 'change-case';
 import {GenericDictionaryType, GenericPrimitiveKind, GenericType, GenericTypeKind} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
-import {JavaCstVisitor} from '@java/visit';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
@@ -238,7 +237,7 @@ export class JavaUtil {
     const fields: Java.Field[] = [];
     const setters: Java.FieldBackedSetter[] = [];
 
-    const fieldVisitor = VisitorFactoryManager.create2(JavaUtil._javaVisitor, {
+    const fieldVisitor = VisitorFactoryManager.create(JavaUtil._javaVisitor, {
       visitObjectDeclaration: () => {
         // Do not go into any nested objects.
       },
@@ -275,19 +274,10 @@ export class JavaUtil {
       // TODO: Find any class we extend, and then do this same thing to that class.
 
       const supertypeRequired: Java.Field[] = [];
-      const extendedFrom = node.extends.type;
-      root.visit(VisitorFactoryManager.create2(JavaUtil._javaVisitor, {
-        visitClassDeclaration: (n, visitor) => {
-          if (n.type.genericType == extendedFrom.genericType) {
-
-            // This is the type we are looking for.
-            // This could maybe be improved by instead finding the constructor,
-            // But then we would need to be sure that the types are handled in the right order!
-
-            supertypeRequired.push(...JavaUtil.getFieldsRequiredInConstructor(root, n, false)[0]);
-          }
-        }
-      }));
+      const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.genericType);
+      if (extendedBy) {
+        supertypeRequired.push(...JavaUtil.getFieldsRequiredInConstructor(root, extendedBy, false)[0]);
+      }
 
       return [
         immediateRequired,
@@ -306,7 +296,7 @@ export class JavaUtil {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
     const holder: {ref?: Java.ClassDeclaration} = {};
-    root.visit(VisitorFactoryManager.create2(JavaUtil._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(JavaUtil._javaVisitor, {
       visitClassDeclaration: (node) => {
         if (node.type.genericType == type) {
           holder.ref = node;

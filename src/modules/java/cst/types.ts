@@ -1,6 +1,6 @@
 import AbstractNode from '@cst/AbstractNode';
 import AbstractToken from '@cst/AbstractToken';
-import {JavaCstVisitor, JavaUtil} from '@java';
+import {JavaUtil} from '@java';
 import {
   GenericClassType,
   GenericDictionaryType,
@@ -789,7 +789,7 @@ export class ClassDeclaration extends AbstractObjectDeclaration {
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
-    return visitor.visitClassDeclaration(this);
+    return visitor.visitClassDeclaration(this, visitor);
   }
 }
 
@@ -898,7 +898,7 @@ export class Statement extends AbstractJavaNode {
   }
 }
 
-export class SuperCall extends AbstractJavaNode {
+export class SuperConstructorCall extends AbstractJavaNode {
   parameters: ArgumentList;
 
 
@@ -908,7 +908,7 @@ export class SuperCall extends AbstractJavaNode {
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
-    return visitor.visitSuperCall(this, visitor);
+    return visitor.visitSuperConstructorCall(this, visitor);
   }
 }
 

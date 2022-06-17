@@ -12,10 +12,11 @@ export class AddConstructorTransformer extends AbstractJavaTransformer {
   transform(model: GenericModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 
     const classDeclarations: Java.ClassDeclaration[] = [];
-    root.visit(VisitorFactoryManager.create2(this._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(this._javaVisitor, {
       visitClassDeclaration: (node, visitor) => {
+        this._javaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
+
         classDeclarations.push(node);
-        this._javaVisitor.visitClassDeclaration(node, visitor);
       }
     }));
 
@@ -29,6 +30,8 @@ export class AddConstructorTransformer extends AbstractJavaTransformer {
       } else if (!a.extends && b.extends) {
         return -1;
       } else if (a.extends && b.extends) {
+
+        // TODO: This is probably wrong? We should build an actual tree, and sort based on it?
         const aHierarchy = JavaUtil.getExtendHierarchy(a.type.genericType);
         const bHierarchy = JavaUtil.getExtendHierarchy(a.type.genericType);
         return aHierarchy.length - bHierarchy.length;
@@ -53,7 +56,7 @@ export class AddConstructorTransformer extends AbstractJavaTransformer {
         if (constructorFields[1].length > 0) {
           blockExpressions.push(
             new Java.Statement(
-              new Java.SuperCall(
+              new Java.SuperConstructorCall(
                 new Java.ArgumentList(
                   ...constructorFields[1].map(it => new Java.VariableReference(it.identifier))
                 )

@@ -1,2 +1,2 @@
 
-export * from './JavaCstVisitor';
+export * from './JavaVisitor';

@@ -1,5 +1,4 @@
 import * as Java from '@java/cst/types';
-import {JavaCstVisitor} from '@java';
 import {CompilationUnitCallback} from '@cst/CompilationUnitCallback';
 import {ICstVisitor, VisitResult} from '@visit';
 import {IRenderer} from '@render';
@@ -334,7 +333,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return undefined;
   }
 
-  visitSuperCall: JavaRendererVisitFn<Java.SuperCall> = (node, visitor) => {
+  visitSuperConstructorCall: JavaRendererVisitFn<Java.SuperConstructorCall> = (node, visitor) => {
 
     return `super(${this.render(node.parameters, visitor)})`;
   }

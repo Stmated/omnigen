@@ -5,6 +5,6 @@ export class CstRootNode extends AbstractNode {
   children: AbstractNode[] = [];
 
   visit<R>(visitor: ICstVisitor<R>): VisitResult<R> {
-    return visitor.visitRootNode(this);
+    return visitor.visitRootNode(this, visitor);
   }
 }

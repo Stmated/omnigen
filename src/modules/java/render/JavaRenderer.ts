@@ -1,12 +1,15 @@
 import * as Java from '@java/cst/types';
 import {JavaCstVisitor} from '@java';
 import {CompilationUnitCallback} from '@cst/CompilationUnitCallback';
-import {VisitResult} from '@visit';
+import {ICstVisitor, VisitResult} from '@visit';
 import {IRenderer} from '@render';
 import {ICstNode} from '@cst';
-import {CompilationUnit} from '@java/cst/types';
+import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
+import {JavaVisitor} from '@java/visit/JavaVisitor';
 
-export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
+type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>; 
+
+export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   private blockDepth = 0;
   private readonly pattern_lineStart = new RegExp(/(?<!$)^/mg);
   private tokenPrefix = ' ';
@@ -27,12 +30,12 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     return '  '.repeat(d);
   }
 
-  public render(node: ICstNode | undefined): string {
+  public render<N extends ICstNode, V extends ICstVisitor<string>>(node: N | undefined, visitor?: V): string {
     if (node === undefined) {
       return '';
     }
 
-    return this.join(node.visit<string>(this));
+    return this.join(node.visit(visitor || this));
   }
 
   join(result: VisitResult<string>): string {
@@ -64,15 +67,15 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     }
   }
 
-  visitFieldReference(node: Java.FieldReference): VisitResult<string> {
-    return (`this.${this.render(node.field.identifier)}`);
+  visitFieldReference: JavaRendererVisitFn<Java.FieldReference> = (node, visitor) => {
+    return (`this.${this.render(node.field.identifier, visitor)}`);
   }
 
-  visitReturnStatement(node: Java.ReturnStatement): VisitResult<string> {
-    return (`return ${this.render(node.expression)};`);
+  visitReturnStatement: JavaRendererVisitFn<Java.ReturnStatement> = (node, visitor) => {
+    return (`return ${this.render(node.expression, visitor)};`);
   }
 
-  visitToken(node: Java.JavaToken): VisitResult<string> {
+  visitToken: JavaRendererVisitFn<Java.JavaToken> = (node, visitor) => {
     return (`${this.tokenPrefix}${JavaRenderer.getTokenTypeString(node.type)}${this.tokenSuffix}`);
   }
 
@@ -95,51 +98,56 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     }
   }
 
-  visitConstructor(node: Java.ConstructorDeclaration): VisitResult<string> {
-    const annotations = node.annotations ? `${this.render(node.annotations)}\n` : '';
-    const body = node.body ? `\n${this.render(node.body)}` : '';
+  visitConstructor: JavaRendererVisitFn<Java.ConstructorDeclaration> = (node, visitor) => {
+    const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
+    const body = node.body ? `\n${this.render(node.body, visitor)}` : '';
 
-    return `\n${annotations}${this.render(node.modifiers)} ${this.render(node.owner.name)}(${this.render(node.parameters)}) {${body}}\n\n`;
+    return `\n${annotations}${this.render(node.modifiers, visitor)} ${this.render(node.owner.name, visitor)}(${this.render(node.parameters, visitor)}) {${body}}\n\n`;
   }
 
-  visitBlock(node: Java.Block): VisitResult<string> {
+  visitBlock: JavaRendererVisitFn<Java.Block> = (node, visitor) => {
     this.blockDepth++;
     const indentation = this.getIndentation(1);
-    const blockContent = this.join(super.visitBlock(node));
+    const blockContent = this.join(node.children.map(it => it.visit(visitor)));
     this.blockDepth--;
 
     return blockContent.replace(this.pattern_lineStart, indentation);
   }
 
-  visitCommonTypeDeclaration(node: Java.AbstractObjectDeclaration, typeType: string): VisitResult<string> {
+  visitCommonTypeDeclaration(visitor: IJavaCstVisitor<string>, node: Java.AbstractObjectDeclaration, typeType: string): VisitResult<string> {
 
-    const modifiers = this.render(node.modifiers);
-    const name = this.render(node.name);
-    const classExtension = node.extends ? ` extends ${this.render(node.extends)}` : '';
-    const classImplementations = node.implements ? ` implements ${this.render(node.implements)}` : '';
+    const modifiers = this.render(node.modifiers, visitor);
+    const name = this.render(node.name, visitor);
+    const classExtension = node.extends ? ` extends ${this.render(node.extends, visitor)}` : '';
+    const classImplementations = node.implements ? ` implements ${this.render(node.implements, visitor)}` : '';
 
     let typeDeclarationContent = '';
-    typeDeclarationContent += (node.comments ? `${this.render(node.comments)}\n` : '');
-    typeDeclarationContent += (node.annotations ? `${this.render(node.annotations)}\n` : '');
+    typeDeclarationContent += (node.comments ? `${this.render(node.comments, visitor)}\n` : '');
+    typeDeclarationContent += (node.annotations ? `${this.render(node.annotations, visitor)}\n` : '');
     typeDeclarationContent += (`${modifiers} ${typeType} ${name}${classExtension}${classImplementations} {\n`);
-    typeDeclarationContent += (this.render(node.body));
+    typeDeclarationContent += (this.render(node.body, visitor));
     typeDeclarationContent += ('}\n');
 
     return typeDeclarationContent;
   }
 
-  visitCommentList(node: Java.CommentList): VisitResult<string> {
-    const commentSections = node.children.map(it => this.render(it));
+  visitCommentList: JavaRendererVisitFn<Java.CommentList> = (node, visitor) => {
+    const commentSections = node.children.map(it => this.render(it, visitor));
     return `/**\n * ${commentSections.join('\n *\n * ')}\n */`;
   }
 
-  visitComment(node: Java.Comment): VisitResult<string> {
+  visitComment: JavaRendererVisitFn<Java.Comment> = (node, visitor) => {
     const lines = node.text.replace('\r', '').split('\n');
     return `${lines.join('\n * ')}`;
   }
 
-  visitCompilationUnit(node: CompilationUnit): VisitResult<string> {
-    const content = this.join(super.visitCompilationUnit(node));
+  visitCompilationUnit: JavaRendererVisitFn<Java.CompilationUnit> = (node, visitor) => {
+
+    const content = this.join([
+      node.packageDeclaration.visit(visitor),
+      node.imports.visit(visitor),
+      node.object.visit(visitor),
+    ]);
 
     // This was a top-level class/interface, so we will output it as a compilation unit.
     this.cuCallback({
@@ -151,53 +159,48 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     return content;
   }
 
-  visitPackage(node: Java.PackageDeclaration): VisitResult<string> {
+  visitPackage: JavaRendererVisitFn<Java.PackageDeclaration> = (node, visitor) => {
     return `package ${node.fqn};\n\n`;
   }
 
-  visitImportList(node: Java.ImportList): VisitResult<string> {
-    return `${node.children.map(it => this.render(it)).join('\n')}\n`;
+  visitImportList: JavaRendererVisitFn<Java.ImportList> = (node, visitor) => {
+    return `${node.children.map(it => this.render(it, visitor)).join('\n')}\n`;
   }
 
-  visitImportStatement(node: Java.ImportStatement): VisitResult<string> {
-    return `import ${this.render(node.type)};\n`;
+  visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = (node, visitor) => {
+    return `import ${this.render(node.type, visitor)};\n`;
   }
 
-  visitImplementsDeclaration(node: Java.ImplementsDeclaration): VisitResult<string> {
-    return (node.types.children.map(it => this.render(it)).join(', '));
+  visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
+    return (node.types.children.map(it => this.render(it, visitor)).join(', '));
   }
 
-  visitExtendsDeclaration(node: Java.ExtendsDeclaration): VisitResult<string> {
-    // return (node.type.children.map(it => this.render(it)).join(', '));
-    return super.visitExtendsDeclaration(node);
+  visitClassDeclaration: JavaRendererVisitFn<Java.ClassDeclaration> = (node, visitor) => {
+    return this.visitCommonTypeDeclaration(visitor, node, 'class');
   }
 
-  visitClassDeclaration(node: Java.ClassDeclaration): VisitResult<string> {
-    return this.visitCommonTypeDeclaration(node, 'class');
+  visitInterfaceDeclaration: JavaRendererVisitFn<Java.InterfaceDeclaration> = (node, visitor) => {
+    return this.visitCommonTypeDeclaration(visitor, node, 'interface');
   }
 
-  visitInterfaceDeclaration(node: Java.InterfaceDeclaration): VisitResult<string> {
-    return this.visitCommonTypeDeclaration(node, 'interface');
+  visitEnumDeclaration: JavaRendererVisitFn<Java.EnumDeclaration> = (node, visitor) => {
+    return this.visitCommonTypeDeclaration(visitor, node, 'enum');
   }
 
-  visitEnumDeclaration(node: Java.EnumDeclaration): VisitResult<string> {
-    return this.visitCommonTypeDeclaration(node, 'enum');
-  }
-
-  visitEnumItem(node: Java.EnumItem): VisitResult<string> {
-    const key = this.render(node.identifier);
-    const value = this.render(node.value);
+  visitEnumItem: JavaRendererVisitFn<Java.EnumItem> = (node, visitor) => {
+    const key = this.render(node.identifier, visitor);
+    const value = this.render(node.value, visitor);
     return (`${key}(${value});\n`);
   }
 
-  visitMethodDeclaration(node: Java.AbstractMethodDeclaration): VisitResult<string> {
-    const comments = node.comments ? `${this.render(node.comments)}\n` : '';
-    const annotations = node.annotations ? `${this.render(node.annotations)}\n` : '';
-    const modifiers = this.render(node.modifiers);
-    const type = this.render(node.type);
-    const name = this.render(node.name);
-    const parameters = node.parameters ? this.render(node.parameters) : '';
-    const body = node.body ? this.render(node.body) : '';
+  visitMethodDeclaration: JavaRendererVisitFn<Java.AbstractMethodDeclaration> = (node, visitor) => {
+    const comments = node.comments ? `${this.render(node.comments, visitor)}\n` : '';
+    const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
+    const modifiers = this.render(node.modifiers, visitor);
+    const type = this.render(node.type, visitor);
+    const name = this.render(node.name, visitor);
+    const parameters = node.parameters ? this.render(node.parameters, visitor) : '';
+    const body = node.body ? this.render(node.body, visitor) : '';
 
     return [
       comments,
@@ -208,36 +211,36 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     ];
   }
 
-  visitMethodCall(node: Java.MethodCall): VisitResult<string> {
-    return `${this.render(node.target)}.${this.render(node.methodName)}(${this.render(node.methodArguments)})`;
+  visitMethodCall: JavaRendererVisitFn<Java.MethodCall> = (node, visitor) => {
+    return `${this.render(node.target, visitor)}.${this.render(node.methodName, visitor)}(${this.render(node.methodArguments, visitor)})`;
   }
 
-  visitStatement(node: Java.Statement): VisitResult<string> {
+  visitStatement: JavaRendererVisitFn<Java.Statement> = (node, visitor) => {
     return [
-      super.visitStatement(node),
-      ';',
+      node.child.visit(this),
+      ';\n',
     ];
   }
 
-  visitAnnotationList(node: Java.AnnotationList): VisitResult<string> {
-    return (node.children.map(it => this.render(it)).join('\n'));
+  visitAnnotationList: JavaRendererVisitFn<Java.AnnotationList> = (node, visitor) => {
+    return (node.children.map(it => this.render(it, visitor)).join('\n'));
   }
 
-  visitAnnotation(node: Java.Annotation): VisitResult<string> {
-    const pairs = node.pairs ? `(${this.render(node.pairs)})` : '';
-    return (`@${this.render(node.type)}${pairs}`);
+  visitAnnotation: JavaRendererVisitFn<Java.Annotation> = (node, visitor) => {
+    const pairs = node.pairs ? `(${this.render(node.pairs, visitor)})` : '';
+    return (`@${this.render(node.type, visitor)}${pairs}`);
   }
 
-  visitAnnotationKeyValuePairList(node: Java.AnnotationKeyValuePairList): VisitResult<string> {
-    return (node.children.map(it => this.render(it)).join(', '));
+  visitAnnotationKeyValuePairList: JavaRendererVisitFn<Java.AnnotationKeyValuePairList> = (node, visitor) => {
+    return (node.children.map(it => this.render(it, visitor)).join(', '));
   }
 
-  visitAnnotationKeyValuePair(node: Java.AnnotationKeyValuePair): VisitResult<string> {
-    const key = node.key ? `${this.render(node.key)} = ` : '';
-    return (`${key}${this.render(node.value)}`);
+  visitAnnotationKeyValuePair: JavaRendererVisitFn<Java.AnnotationKeyValuePair> = (node, visitor) => {
+    const key = node.key ? `${this.render(node.key, visitor)} = ` : '';
+    return (`${key}${this.render(node.value, visitor)}`);
   }
 
-  visitLiteral(node: Java.Literal): VisitResult<string> {
+  visitLiteral: JavaRendererVisitFn<Java.Literal> = (node, visitor) => {
     if (typeof node.value === 'string') {
       return (`"${node.value}"`);
     } else if (typeof node.value == 'boolean') {
@@ -249,17 +252,23 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     }
   }
 
-  visitFieldGetterSetter(node: Java.FieldGetterSetter): VisitResult<string> {
-    return `${this.join(super.visitFieldGetterSetter(node))}\n`;
+  visitFieldGetterSetter: JavaRendererVisitFn<Java.FieldGetterSetter> = (node, visitor) => {
+    const content = this.join([
+      node.field.visit(visitor),
+      node.getter.visit(visitor),
+      node.setter.visit(visitor),
+    ]);
+
+    return `${content}\n`;
   }
 
-  visitField(node: Java.Field): VisitResult<string> {
-    const comments = node.comments ? `${this.render(node.comments)}\n` : '';
-    const annotations = node.annotations ? `${this.render(node.annotations)}\n` : '';
-    const modifiers = this.render(node.modifiers);
-    const typeName = this.render(node.type);
-    const initializer = node.initializer ? ` = ${this.render(node.initializer)}` : '';
-    const identifier = this.render(node.identifier);
+  visitField: JavaRendererVisitFn<Java.Field> = (node, visitor) => {
+    const comments = node.comments ? `${this.render(node.comments, visitor)}\n` : '';
+    const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
+    const modifiers = this.render(node.modifiers, visitor);
+    const typeName = this.render(node.type, visitor);
+    const initializer = node.initializer ? ` = ${this.render(node.initializer, visitor)}` : '';
+    const identifier = this.render(node.identifier, visitor);
 
     return [
       comments,
@@ -268,61 +277,69 @@ export class JavaRenderer extends JavaCstVisitor<string> implements IRenderer {
     ];
   }
 
-  visitNewStatement(node: Java.NewStatement): VisitResult<string> {
-    const parameters = node.constructorArguments ? this.render(node.constructorArguments) : '';
-    return `new ${this.render(node.type)}(${parameters})`;
+  visitNewStatement: JavaRendererVisitFn<Java.NewStatement> = (node, visitor) => {
+    const parameters = node.constructorArguments ? this.render(node.constructorArguments, visitor) : '';
+    return `new ${this.render(node.type, visitor)}(${parameters})`;
   }
 
-  visitIdentifier(node: Java.Identifier): VisitResult<string> {
+  visitIdentifier: JavaRendererVisitFn<Java.Identifier> = (node, visitor) => {
     return node.value;
   }
 
-  visitArgumentDeclaration(node: Java.ArgumentDeclaration): VisitResult<string> {
+  visitArgumentDeclaration: JavaRendererVisitFn<Java.ArgumentDeclaration> = (node, visitor) => {
     // TODO: Make this simpler by allowing to "visit" between things,
     //  so we can insert spaces or delimiters without tinkering inside the base visitor
-    const annotations = node.annotations ? `${this.render(node.annotations)} ` : '';
-    const type = this.render(node.type);
-    const identifier = this.render(node.identifier);
+    const annotations = node.annotations ? `${this.render(node.annotations, visitor)} ` : '';
+    const type = this.render(node.type, visitor);
+    const identifier = this.render(node.identifier, visitor);
 
     return `${annotations}${type} ${identifier}`;
   }
 
-  visitBinaryExpression(node: Java.BinaryExpression): VisitResult<string> {
-    return super.visitBinaryExpression(node);
-  }
-
-  visitAssignExpression(node: Java.AssignExpression): VisitResult<string> {
+  visitAssignExpression: JavaRendererVisitFn<Java.AssignExpression> = (node, visitor) => {
     // TODO: This is wrong. Need to find a better way!
+    // TODO: This should make use of the "statement" to make it add the semi-colon. DO NOT DO IT HERE. FIX!
     return [
-      super.visitAssignExpression(node),
+      this.visitBinaryExpression(node, visitor),
       ';\n',
     ];
   }
 
-  visitArgumentDeclarationList(node: Java.ArgumentDeclarationList): VisitResult<string> {
-    return node.children.map(it => this.render(it)).join(', ');
+  visitArgumentDeclarationList: JavaRendererVisitFn<Java.ArgumentDeclarationList> = (node, visitor) => {
+    return node.children.map(it => this.render(it, visitor)).join(', ');
   }
 
-  visitTypeList(node: Java.TypeList): VisitResult<string> {
-    return node.children.map(it => this.render(it)).join(' ');
+  visitArgumentList: JavaRendererVisitFn<Java.ArgumentList> = (node, visitor) => {
+    return node.children.map(it => this.render(it, visitor)).join(', ');
   }
 
-  visitType(node: Java.Type): VisitResult<string> {
+  visitTypeList: JavaRendererVisitFn<Java.TypeList> = (node, visitor) => {
+    return node.children.map(it => this.render(it, visitor)).join(' ');
+  }
+
+  visitType: JavaRendererVisitFn<Java.Type> = (node, visitor) => {
     return JavaRenderer.getTypeName(node);
   }
 
-  visitModifierList(node: Java.ModifierList): VisitResult<string> {
-    return node.modifiers.map(it => this.render(it)).join(' ');
+  visitModifierList: JavaRendererVisitFn<Java.ModifierList> = (node, visitor) => {
+    return node.modifiers.map(it => this.render(it, visitor)).join(' ');
   }
 
-  visitModifier(node: Java.Modifier): VisitResult<string> {
+  visitModifier: JavaRendererVisitFn<Java.Modifier> = (node, visitor) => {
     const modifierString = JavaRenderer.getModifierString(node.type);
     if (modifierString) {
       return modifierString;
     }
+
+    return undefined;
   }
 
-  // visitAdditionalPropertiesDeclaration(node: Java.AdditionalPropertiesDeclaration): VisitResult<string> {
+  visitSuperCall: JavaRendererVisitFn<Java.SuperCall> = (node, visitor) => {
+
+    return `super(${this.render(node.parameters, visitor)})`;
+  }
+
+  // visitAdditionalPropertiesDeclaration: VisitFn<Java.AdditionalPropertiesDeclaration, string, this> = (node, visitor) => {
   //   return node.children.map(it => it.visit(this));
   //
   //   // TODO: Render it somehow. What is the best way to keep it modular and modifiable by others?

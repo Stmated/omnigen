@@ -1,7 +1,12 @@
 import * as Java from './cst/types';
+import {ModifierType} from './cst/types';
 import {pascalCase} from 'change-case';
 import {GenericDictionaryType, GenericPrimitiveKind, GenericType, GenericTypeKind} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
+import {JavaCstVisitor} from '@java/visit';
+import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
+import {JavaVisitor} from '@java/visit/JavaVisitor';
+import {CstRootNode} from '@cst/CstRootNode';
 
 export class JavaUtil {
 
@@ -221,5 +226,127 @@ export class JavaUtil {
     }
 
     return undefined;
+  }
+
+  /**
+   * Re-usable Java Visitor, so we do not create a new one every time.
+   */
+  private static readonly _javaVisitor: JavaVisitor<void> = new JavaVisitor<void>();
+
+  public static getFieldsRequiredInConstructor(root: CstRootNode, node: Java.AbstractObjectDeclaration, followSupertype = false): [Java.Field[], Java.Field[]] {
+
+    const fields: Java.Field[] = [];
+    const setters: Java.FieldBackedSetter[] = [];
+
+    const fieldVisitor = VisitorFactoryManager.create2(JavaUtil._javaVisitor, {
+      visitObjectDeclaration: () => {
+        // Do not go into any nested objects.
+      },
+      visitField: (n) => {
+        fields.push(n);
+      },
+      visitFieldBackedSetter: (n) => {
+        setters.push(n);
+      }
+    });
+
+    node.body.visit(fieldVisitor);
+
+    const fieldsWithSetters = setters.map(setter => setter.field);
+    const fieldsWithFinal = fields.filter(field => field.modifiers.modifiers.some(m => m.type == ModifierType.FINAL));
+    const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
+    const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer == undefined);
+
+    const immediateRequired = fields.filter(field => {
+
+      if (fieldsWithSetters.includes(field) && fieldsWithoutInitializer.includes(field)) {
+        return true;
+      }
+
+      if (fieldsWithFinal.includes(field) && fieldsWithoutInitializer.includes(field)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (followSupertype && node.extends) {
+
+      // TODO: Find any class we extend, and then do this same thing to that class.
+
+      const supertypeRequired: Java.Field[] = [];
+      const extendedFrom = node.extends.type;
+      root.visit(VisitorFactoryManager.create2(JavaUtil._javaVisitor, {
+        visitClassDeclaration: (n, visitor) => {
+          if (n.type.genericType == extendedFrom.genericType) {
+
+            // This is the type we are looking for.
+            // This could maybe be improved by instead finding the constructor,
+            // But then we would need to be sure that the types are handled in the right order!
+
+            supertypeRequired.push(...JavaUtil.getFieldsRequiredInConstructor(root, n, false)[0]);
+          }
+        }
+      }));
+
+      return [
+        immediateRequired,
+        supertypeRequired
+      ];
+
+    } else {
+      return [
+        immediateRequired,
+        [],
+      ];
+    }
+  }
+
+  public static getClassDeclaration(root: CstRootNode, type: GenericType): Java.ClassDeclaration | undefined {
+
+    // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
+    const holder: {ref?: Java.ClassDeclaration} = {};
+    root.visit(VisitorFactoryManager.create2(JavaUtil._javaVisitor, {
+      visitClassDeclaration: (node) => {
+        if (node.type.genericType == type) {
+          holder.ref = node;
+        }
+      }
+    }));
+
+    return holder.ref;
+  }
+
+  public static getExtendType(type: GenericType): GenericType | undefined {
+
+    // TODO: Implement! Should have *one* if possible, the best common denominator between most types.
+    if (type.kind == GenericTypeKind.OBJECT) {
+
+      if (type.extendsAllOf && type.extendsAllOf?.length > 0) {
+        return type.extendsAllOf[0];
+      }
+
+      // TODO: How do we actually handle this in Java? Check other existing generator libraries for ideas
+      //        Maybe there exists a dedicated library for analyzing JSONSchema -> Java conversions?
+    }
+
+    return undefined;
+  }
+
+  public static getImplementsTypes(type: GenericType): GenericType[] {
+
+    // TODO: Implement! Should be any number of types that will be inherited from as interfaces.
+    return [];
+  }
+
+  public static getExtendHierarchy(type: GenericType): GenericType[] {
+
+    const path: GenericType[] = [];
+    let pointer: GenericType | undefined = type;
+    while (pointer = JavaUtil.getExtendType(pointer)) {
+      path.push(pointer);
+    }
+
+    return path;
   }
 }

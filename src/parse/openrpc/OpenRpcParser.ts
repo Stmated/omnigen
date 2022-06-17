@@ -8,13 +8,13 @@ import {
   GenericContact,
   GenericContinuation,
   GenericContinuationMapping,
-  GenericContinuationSourceParameter, GenericContinuationTargetParameter,
+  GenericContinuationSourceParameter,
+  GenericContinuationTargetParameter,
   GenericEndpoint,
   GenericExamplePairing,
   GenericExampleParam,
   GenericExampleResult,
   GenericExternalDocumentation,
-  GenericInput,
   GenericLicense,
   GenericModel,
   GenericOutput,
@@ -66,6 +66,7 @@ export const logger = LoggerFactory.create(__filename);
 // * Remove the need for the "types" array, and instead do it dynamically by searching for types through whole structure
 //    * It can be cached during build-up though, just to make initial lookup while parsing a bit faster
 // * simple-math -- check if the examples are actually printed to the right places (make it work like links)
+// * Simple way of creating a custom visitor! Remake into interfaces with properties you can re-assign!
 
 export class OpenRpcParser extends AbstractParser {
   private readonly _options: IParserOptions = DEFAULT_PARSER_OPTIONS;
@@ -149,89 +150,92 @@ export class OpenRpcParser extends AbstractParser {
     };
   }
 
-  private async methodToGenericEndpoint(doc: OpenrpcDocument, method: MethodOrReference, types: GenericType[], name?: string): Promise<GenericEndpoint> {
-    if ('name' in method) {
+  private async methodToGenericEndpoint(doc: OpenrpcDocument, method: MethodOrReference, types: GenericType[]): Promise<GenericEndpoint> {
 
-      // TODO:
-      //   method.tags
-      //   method.servers
+    const dereferenced = await this.dereference(doc, method);
+    method = dereferenced.object;
 
-      const responses: GenericOutput[] = [];
+    // TODO:
+    //   method.tags
+    //   method.servers
 
-      // One regular response
-      const resultResponse = await this.resultToGenericOutputAndResultParamType(doc, method, method.result, types);
-      responses.push(resultResponse.output);
+    const responses: GenericOutput[] = [];
 
-      // And then one response for each potential error
-      let errors: MethodObjectErrors = method.errors || [];
-      if (errors.length == 0) {
-        // If there were no known errors specified, then we will add a generic fallback.
-        errors = [{
-          code: -1234567890,
-          message: 'Unknown Error',
-        }];
-      }
+    // One regular response
+    const resultResponse = await this.resultToGenericOutputAndResultParamType(doc, method, method.result, types);
+    responses.push(resultResponse.output);
 
-      for (const error of errors) {
-        responses.push(await this.errorToGenericOutput(doc, pascalCase(method.name), error, types));
-      }
-
-      const input = await this.methodToGenericInputType(doc, method, types);
-      const requestType = input.type;
-      types.push(requestType);
-
-      const examples = await Promise.all(
-        (method.examples || []).map((it) => this.examplePairingToGenericExample(doc, resultResponse.type, input.properties, it))
-      );
-
-      // TODO: Remake so that the request body is another type!
-      //  The parameters build into an object
-      //  -- for other specifications, the parameters end up in the URL and headers maybe! That's a later problem!
-      // TODO: Also need to handle the "required" in a good way. JSR-303 annotations? If-cases? Both?
-
-      return <GenericEndpoint>{
-        name: method.name,
-        description: method.description,
-        summary: method.summary,
-        async: false,
-        path: '',
-        request: {
-          contentType: 'application/json',
-          type: requestType
-        },
-        requestQualifiers: [
-          {
-            path: ['method'],
-            operator: ComparisonOperator.EQUALS,
-            value: method.name,
-          },
-        ],
-        responses: responses,
-        deprecated: method.deprecated,
-        examples: examples,
-        externalDocumentations: method.externalDocs ? [this.externalDocToGenericExternalDoc(doc, method.externalDocs)] : [],
-      };
+    // And then one response for each potential error
+    let errors: MethodObjectErrors = method.errors || [];
+    if (errors.length == 0) {
+      // If there were no known errors specified, then we will add a generic fallback.
+      errors = [{
+        code: -1234567890,
+        message: 'Unknown Error',
+      }];
     }
 
-    const dereferenced = await DefaultReferenceResolver.resolve(method.$ref, doc) as MethodObject;
-    return this.methodToGenericEndpoint(doc, dereferenced, types, method.$ref);
+    for (const error of errors) {
+      responses.push(await this.errorToGenericOutput(doc, pascalCase(method.name), error, types));
+    }
+
+    const input = await this.methodToGenericInputType(doc, method, types);
+    const requestType = input.type;
+    types.push(requestType);
+
+    const examples = await Promise.all(
+      (method.examples || []).map((it) => this.examplePairingToGenericExample(doc, resultResponse.type, input.properties, it))
+    );
+
+    // TODO: Remake so that the request body is another type!
+    //  The parameters build into an object
+    //  -- for other specifications, the parameters end up in the URL and headers maybe! That's a later problem!
+    // TODO: Also need to handle the "required" in a good way. JSR-303 annotations? If-cases? Both?
+
+    return <GenericEndpoint>{
+      name: method.name,
+      description: method.description,
+      summary: method.summary,
+      async: false,
+      path: '',
+      request: {
+        contentType: 'application/json',
+        type: requestType
+      },
+      requestQualifiers: [
+        {
+          path: ['method'],
+          operator: ComparisonOperator.EQUALS,
+          value: method.name,
+        },
+      ],
+      responses: responses,
+      deprecated: method.deprecated,
+      examples: examples,
+      externalDocumentations: method.externalDocs ? [this.externalDocToGenericExternalDoc(doc, method.externalDocs)] : [],
+    };
   }
 
   private async jsonSchemaToType(doc: OpenrpcDocument, names: string[], schema: JSONSchema, types: GenericType[])
-    : Promise<GenericType> {
+    : Promise<{type: GenericType, canInline: boolean}> {
     if (typeof schema == 'boolean') {
       return {
-        name: 'boolean',
-        kind: GenericTypeKind.PRIMITIVE,
-        primitiveKind: GenericPrimitiveKind.BOOL,
+        type: {
+          name: 'boolean',
+          kind: GenericTypeKind.PRIMITIVE,
+          primitiveKind: GenericPrimitiveKind.BOOL,
+        },
+        canInline: false
       };
     }
 
-    if (schema.$ref) {
-      const dereferenced = await DefaultReferenceResolver.resolve(schema.$ref, doc) as JSONSchema;
+    const dereferenced = await this.dereference(doc, schema);
+    if (dereferenced.ref) {
 
       // The ref is the much better unique name of the type.
-      return this.jsonSchemaToType(doc, [schema.$ref], dereferenced, types);
+      //return this.jsonSchemaToType(doc, [dereferenced.ref], dereferenced.object, types);
+      schema = dereferenced.object;
+      names = [dereferenced.ref];
     }
 
     if (typeof schema.type === 'string') {
@@ -253,28 +257,37 @@ export class OpenRpcParser extends AbstractParser {
           throw new Error('Do not know how to handle multiple items schemas');
         } else {
           // items is a single JSONSchemaObject
-          arrayItemType = await this.jsonSchemaToType(doc, names, items, types);
+          arrayItemType = (await this.jsonSchemaToType(doc, names, items, types)).type;
         }
 
-        return <GenericArrayType>{
-          name: `ArrayOf${arrayItemType.name}`,
-          kind: GenericTypeKind.ARRAY,
-          minLength: schema.minItems,
-          maxLength: schema.maxItems,
-          of: arrayItemType,
+        return {
+          type: <GenericArrayType>{
+            name: `ArrayOf${arrayItemType.name}`,
+            kind: GenericTypeKind.ARRAY,
+            minLength: schema.minItems,
+            maxLength: schema.maxItems,
+            of: arrayItemType,
+          },
+          canInline: false,
         };
       } else if (schema.type !== 'object') {
         const t = this.typeToGenericKnownType(schema.type);
         if (t.length == 1) {
           return {
-            name: schema.type,
-            kind: t[0],
+            type: {
+              name: schema.type,
+              kind: t[0],
+            },
+            canInline: false,
           };
         } else {
           return {
-            name: schema.type,
-            kind: t[0],
-            primitiveKind: t[1],
+            type: {
+              name: schema.type,
+              kind: t[0],
+              primitiveKind: t[1],
+            },
+            canInline: false,
           };
         }
       }
@@ -286,7 +299,10 @@ export class OpenRpcParser extends AbstractParser {
     const name = names.join('_');
     const existingType = types.find((type) => type.name === name);
     if (existingType) {
-      return existingType;
+      return {
+        type: existingType,
+        canInline: false,
+      };
     }
 
     const type: GenericClassType = {
@@ -302,7 +318,10 @@ export class OpenRpcParser extends AbstractParser {
             : true
       )
     };
-    types.push(type);
+
+    //if (dereferenced.ref) { // TODO: This is wrong -- not only ref components should be added!!!!!!!
+      types.push(type);
+    //}
 
     const genericProperties: GenericProperty[] = [];
     const requiredProperties: GenericProperty[] = [];
@@ -330,37 +349,123 @@ export class OpenRpcParser extends AbstractParser {
     }
 
     if (schema.allOf) {
-      type.extendsAllOf = await this.gatherTypeExtensions(doc, schema.allOf, names, types);
+      type.extendsAllOf = await this.gatherTypeExtensions(doc, schema.allOf, type, names, types, true);
     }
     if (schema.anyOf) {
-      type.extendsAnyOf = await this.gatherTypeExtensions(doc, schema.anyOf, names, types);
+      type.extendsAnyOf = await this.gatherTypeExtensions(doc, schema.anyOf, type, names, types, false);
     }
     if (schema.oneOf) {
-      type.extendsOneOf = await this.gatherTypeExtensions(doc, schema.oneOf, names, types);
+      type.extendsOneOf = await this.gatherTypeExtensions(doc, schema.oneOf, type, names, types, false);
     }
 
-    return type;
+    return {
+      type: type,
+
+      // If this type is inline in the JSON Schema, without being referenced as a ref:
+      // Then we might possibly be able to merge this type with the caller, if it wants to.
+      canInline: (dereferenced.ref == undefined)
+    };
   }
 
-  private async gatherTypeExtensions(doc: OpenrpcDocument, schemaArray: JSONSchema[], names: string[], types: GenericType[])
+  private async gatherTypeExtensions(
+    doc: OpenrpcDocument,
+    sourceSchemas: JSONSchema[],
+    parentType: GenericType,
+    names: string[],
+    types: GenericType[],
+    tryInline: boolean)
     : Promise<GenericClassType[]> {
-    const typeExtendsAnyOf: GenericClassType[] = [];
-    for (let i = 0; i < schemaArray.length; i++) {
-      const sub = schemaArray[i];
-      const genericType = await this.jsonSchemaToType(doc, names.concat([`${i}`]), sub, types);
-      if (genericType.kind != GenericTypeKind.ARRAY) {
-        if (genericType.kind == GenericTypeKind.OBJECT) {
-          typeExtendsAnyOf.push(genericType);
+
+    const extensions: GenericClassType[] = [];
+    for (let i = 0; i < sourceSchemas.length; i++) {
+      const sub = sourceSchemas[i];
+      const conversion = await this.jsonSchemaToType(doc, names.concat([`${i}`]), sub, types);
+      if (tryInline && conversion.canInline) {
+        // The type that we are extending by is allowed to try to be inlined by its parent,
+        // and the type itself says it is allowing the parent to inline it.
+        // This can for example me a type inside an 'allOf' that is not a $ref, so used nowhere else.
+        const newType = this.mergeType(conversion.type, parentType);
+        if (newType) {
+          throw new Error(`Do not know how to handle extending from a newly created type ${newType.name}`);
         } else {
-          // TODO: This should probably be supported, since it can be "oneOf" an array of numbers, or something similar?
-          throw new Error(`Do not know how to handle non-object extensions (${genericType.kind})`);
+          // Remove the type that was merged
+          const idx = types.indexOf(conversion.type);
+          if (idx !== -1) {
+            types.splice(idx, 1);
+          }
         }
       } else {
-        throw new Error(`Do not know how to handle inheriting arrays`);
+        const genericType = conversion.type;
+        if (genericType.kind != GenericTypeKind.ARRAY) {
+          if (genericType.kind == GenericTypeKind.OBJECT) {
+            extensions.push(genericType);
+          } else {
+            // TODO: This should probably be supported, since it can be "oneOf" an array of numbers, or something similar?
+            throw new Error(`Do not know how to handle non-object extensions (${genericType.kind})`);
+          }
+        } else {
+          throw new Error(`Do not know how to handle inheriting arrays`);
+        }
       }
     }
 
-    return typeExtendsAnyOf;
+    return extensions;
+  }
+
+  /**
+   * Will merge between types 'from' into 'to'.
+   * If a new type is returned, it means it could not update 'to' object but a whole new type was created.
+   * If undefined is returned, it means that the merging was done into the 'to' object silently.
+   */
+  private mergeType(from: GenericType, to: GenericType): GenericType | undefined {
+    if (from.kind == GenericTypeKind.OBJECT && to.kind == GenericTypeKind.OBJECT) {
+
+      to.properties = to.properties || [];
+      for (const fromProperty of (from.properties || [])) {
+        const toProperty = to.properties.find(p => p.name == fromProperty.name);
+        if (!toProperty) {
+          // This is a new property, and can just be added to the 'to'.
+          to.properties.push({
+            ...fromProperty,
+            ...{
+              owner: to,
+            }
+          });
+        } else {
+          // This property already exists, so we should try and find common type.
+          const common = JavaUtil.getCommonDenominatorBetween(fromProperty.type, toProperty.type);
+          if (common) {
+            const idx = to.properties.indexOf(toProperty);
+            to.properties.splice(idx, 1);
+            to.properties.push({
+              ...fromProperty,
+              ...{
+                owner: to,
+                type: common,
+              }
+            });
+          } else {
+            const vsString = `${fromProperty.type.name} vs ${toProperty.type.name}`;
+            const errMessage = `No common type for merging properties ${fromProperty.name}. ${vsString}`;
+            throw new Error(errMessage);
+          }
+        }
+      }
+
+      return undefined;
+
+    } else if (from.kind == GenericTypeKind.PRIMITIVE && to.kind == GenericTypeKind.PRIMITIVE) {
+
+      // TODO: Do not use any Java classes here!
+      const common = JavaUtil.getCommonDenominatorBetween(from, to);
+      if (common) {
+        return common;
+      } else {
+        throw new Error(`Two primitive types ${from.primitiveKind} and ${to.primitiveKind} do not have common type`);
+      }
+    } else {
+      throw new Error(`Cannot merge two types of different kinds, ${from.kind} vs ${to.kind}`);
+    }
   }
 
   private async jsonSchema7ToGenericProperty(doc: OpenrpcDocument, owner: GenericPropertyOwner, propertyName: string, schema: JSONSchema7, types: GenericType[])
@@ -370,7 +475,7 @@ export class OpenRpcParser extends AbstractParser {
 
     return <GenericProperty>{
       name: propertyName,
-      type: await this.jsonSchemaToType(doc, [], openRpcJsonSchema, types),
+      type: (await this.jsonSchemaToType(doc, [], openRpcJsonSchema, types)).type,
       owner: owner
     };
   }
@@ -380,7 +485,7 @@ export class OpenRpcParser extends AbstractParser {
       const typeNamePrefix = pascalCase(method.name);
 
       // TODO: Should this always be unique, or should we ever use a common inherited method type?
-      const resultParameterType = await this.jsonSchemaToType(doc, [result.name], result.schema, types);
+      const resultParameterType = (await this.jsonSchemaToType(doc, [result.name], result.schema, types)).type;
       const resultType: GenericType = {
         name: `${typeNamePrefix}Response`,
         kind: GenericTypeKind.OBJECT,
@@ -654,7 +759,7 @@ export class OpenRpcParser extends AbstractParser {
         summary: descriptor.summary,
         deprecated: descriptor.deprecated || false,
         required: descriptor.required || false,
-        type: await this.jsonSchemaToType(doc, [descriptor.name], descriptor.schema, types),
+        type: (await this.jsonSchemaToType(doc, [descriptor.name], descriptor.schema, types)).type,
         owner: owner,
       };
     }

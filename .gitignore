@@ -5,3 +5,4 @@
 node_modules
 dist
 .target_test
+*.log

@@ -1,0 +1,58 @@
+import {ICstVisitor, VisitFn} from '@visit';
+import * as Java from '@java/cst';
+import {ICstNode} from '@cst';
+
+export type JavaVisitFn<in N extends ICstNode, R> = VisitFn<N, R, IJavaCstVisitor<R>>;
+
+export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
+  visitor_java: IJavaCstVisitor<R>;
+  visitType: JavaVisitFn<Java.Type, R>;
+  visitIdentifier: JavaVisitFn<Java.Identifier, R>;
+  visitToken: JavaVisitFn<Java.JavaToken, R>;
+  visitAnnotationList: JavaVisitFn<Java.AnnotationList, R>;
+  visitArgumentDeclaration: JavaVisitFn<Java.ArgumentDeclaration, R>;
+  visitArgumentDeclarationList: JavaVisitFn<Java.ArgumentDeclarationList, R>;
+  visitBinaryExpression: JavaVisitFn<Java.BinaryExpression, R>;
+  visitModifier: JavaVisitFn<Java.Modifier, R>;
+  visitField: JavaVisitFn<Java.Field, R>;
+  visitCommentList: JavaVisitFn<Java.CommentList, R>;
+  visitComment: JavaVisitFn<Java.Comment, R>;
+  visitFieldBackedGetter: JavaVisitFn<Java.FieldBackedGetter, R>;
+  visitFieldBackedSetter: JavaVisitFn<Java.FieldBackedSetter, R>;
+  visitMethodDeclaration: JavaVisitFn<Java.AbstractMethodDeclaration, R>;
+  visitExtendsDeclaration: JavaVisitFn<Java.ExtendsDeclaration, R>;
+  visitImplementsDeclaration: JavaVisitFn<Java.ImplementsDeclaration, R>;
+  visitTypeList: JavaVisitFn<Java.TypeList, R>;
+  visitLiteral: JavaVisitFn<Java.Literal, R>;
+  visitIfStatement: JavaVisitFn<Java.IfStatement, R>;
+  visitIfElseStatement: JavaVisitFn<Java.IfElseStatement, R>;
+  visitImportStatement: JavaVisitFn<Java.ImportStatement, R>;
+  visitImportList: JavaVisitFn<Java.ImportList, R>;
+  visitMethodCall: JavaVisitFn<Java.MethodCall, R>;
+  visitNewStatement: JavaVisitFn<Java.NewStatement, R>;
+  visitArgumentList: JavaVisitFn<Java.ArgumentList, R>;
+  visitReturnStatement: JavaVisitFn<Java.ReturnStatement, R>;
+  visitVariableReference: JavaVisitFn<Java.VariableReference, R>;
+  visitAnnotation: JavaVisitFn<Java.Annotation, R>;
+  visitAnnotationKeyValuePairList: JavaVisitFn<Java.AnnotationKeyValuePairList, R>;
+  visitAnnotationKeyValuePair: JavaVisitFn<Java.AnnotationKeyValuePair, R>;
+  visitHardCoded: JavaVisitFn<Java.HardCoded, R>;
+  visitBlock: JavaVisitFn<Java.Block, R>;
+  visitPackage: JavaVisitFn<Java.PackageDeclaration, R>;
+  visitPredicate: JavaVisitFn<Java.Predicate, R>;
+  visitModifierList: JavaVisitFn<Java.ModifierList, R>;
+  visitFieldGetterSetter: JavaVisitFn<Java.FieldGetterSetter, R>;
+  visitCast: JavaVisitFn<Java.Cast, R>;
+  visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
+  visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
+  visitInterfaceDeclaration: JavaVisitFn<Java.InterfaceDeclaration, R>;
+  visitEnumDeclaration: JavaVisitFn<Java.EnumDeclaration, R>;
+  visitFieldReference: JavaVisitFn<Java.FieldReference, R>;
+  visitAssignExpression: JavaVisitFn<Java.AssignExpression, R>;
+  visitEnumItem: JavaVisitFn<Java.EnumItem, R>;
+  visitCompilationUnit: JavaVisitFn<Java.CompilationUnit, R>;
+  visitConstructor: JavaVisitFn<Java.ConstructorDeclaration, R>;
+  visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
+  visitStatement: JavaVisitFn<Java.Statement, R>;
+  visitSuperCall: JavaVisitFn<Java.SuperCall, R>;
+}

@@ -42,6 +42,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         const body = new Java.Block();
 
         const enumDeclaration = new Java.EnumDeclaration(
+          new Java.Type(type),
           new Java.Identifier(type.name),
           body,
         );
@@ -79,7 +80,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance
     const body = new Java.Block();
-    const fieldsForConstructor: Java.Field[] = []; // Java.ArgumentDeclarationList = new Java.ArgumentDeclarationList();
 
     if (type.properties) {
       for (const property of type.properties) {
@@ -157,8 +157,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           );
           body.children.push(field);
           body.children.push(new Java.FieldBackedGetter(field, undefined, commentList));
-
-          fieldsForConstructor.push(field);
         } else {
           body.children.push(new Java.FieldGetterSetter(
             this.toJavaType(property.type),
@@ -178,6 +176,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
 
     const javaClass = new Java.ClassDeclaration(
+      new Java.Type(type),
       new Java.Identifier(type.name),
       body,
     );
@@ -185,27 +184,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     const comments = this.getCommentsForType(type, model, options);
     if (comments.length > 0) {
       javaClass.comments = new Java.CommentList(...comments);
-    }
-
-    if (fieldsForConstructor.length > 0) {
-
-      // TODO: Move this into another transformer
-      //  One that checks for "final" fields without setters, and adds a constructor.
-      //  This is much more dynamic and could be called by an implementor at another stage.
-      const assignExpressions = fieldsForConstructor.map(it => new Java.AssignExpression(
-        new Java.FieldReference(it),
-        new Java.VariableReference(it.identifier)
-      ));
-
-      body.children.push(new Java.ConstructorDeclaration(
-        javaClass,
-        new Java.ArgumentDeclarationList(
-          // TODO: Can this be handled in a better way?
-          //  To intrinsically link the argument to the field? A "FieldBackedArgumentDeclaration"? Too silly?
-          ...fieldsForConstructor.map(it => new Java.ArgumentDeclaration(it.type, it.identifier))
-        ),
-        new Java.Block(...assignExpressions)
-      ))
     }
 
     if (type.extendsAllOf) {
@@ -263,7 +241,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
           comments.push(new Java.Comment(`<section>\n<h2>${response.name}</h2>`));
 
-          response.type
           if (response.description) {
             comments.push(new Java.Comment(response.description));
           }
@@ -371,42 +348,37 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
   private getExampleComments(example: GenericExamplePairing, options: JavaOptions): Java.Comment[] {
 
-    const comments: Java.Comment[] = [];
-    comments.push(new Java.Comment(`<section>\n<h2>Example - ${example.name}</h2>`));
+    const commentLines: string[] = [];
+    commentLines.push(`<h2>Example - ${example.name}</h2>`);
 
     if (example.description) {
-      comments.push(new Java.Comment(example.description));
+      commentLines.push(example.description);
     }
     if (example.summary) {
-      comments.push(new Java.Comment(example.summary));
+      commentLines.push(example.summary);
     }
 
     const params = (example.params || []);
     if (params.length > 0) {
-
-      const requestCommentLines: string[] = [];
-      requestCommentLines.push(`<h3>➡ Request</h3>`);
+      commentLines.push(`<h3>➡ Request</h3>`);
 
       for (let i = 0; i < params.length; i++) {
 
         const param = params[i];
         const propertyLink = this.getLink(param.property.owner, param.property, options);
-        requestCommentLines.push(`📌 ${propertyLink} (${param.name}): ${JSON.stringify(param.value)}`);
+        commentLines.push(`  📌 ${propertyLink} (${param.name}): ${JSON.stringify(param.value)}`);
       }
-
-      comments.push(new Java.Comment(requestCommentLines.join('\n')))
     }
 
     if (example.result.description || example.result.summary || example.result.value) {
 
-      const responseCommentLines: string[] = [];
-      responseCommentLines.push(`<h3>↩ Response - ${example.result.name}</h3>`);
+      commentLines.push(`<h3>↩ Response - ${example.result.name}</h3>`);
 
       if (example.result.description) {
-        responseCommentLines.push(`💡 ${example.result.description}`);
+        commentLines.push(`  💡 ${example.result.description}`);
       }
       if (example.result.summary) {
-        responseCommentLines.push(`💡 ${example.result.summary}`);
+        commentLines.push(`  💡 ${example.result.summary}`);
       }
 
       // WRONG CLASS!
@@ -419,14 +391,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           prettyValue = JSON.stringify(example.result.value, null, 2);
         }
 
-        responseCommentLines.push(`⬅ returns <pre>{@code ${prettyValue}}</pre>`);
+        commentLines.push(`  ⬅ returns <pre>{@code ${prettyValue}}</pre>`);
       }
-
-      comments.push(new Java.Comment(responseCommentLines.join('\n')))
     }
 
-    comments.push(new Java.Comment(`</section>`));
-    return comments;
+    return [
+      new Java.Comment(commentLines.join('\n  ')),
+    ];
   }
 
   private getMappingSourceTargetComment(

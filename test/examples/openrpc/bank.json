@@ -1,0 +1,161 @@
+{
+  "openrpc": "1.2.4",
+  "info": {
+    "title": "Bank",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "methods": [
+    {
+      "$ref": "#/components/methods/AccountLedgerMethod"
+    }
+  ],
+  "components": {
+    "methods": {
+      "AccountLedgerMethod": {
+        "name": "AccountLedger",
+        "summary": "",
+        "params": [
+          {
+            "$ref": "#/components/contentDescriptors/ParamSignature"
+          },
+          {
+            "$ref": "#/components/contentDescriptors/ParamUUID"
+          },
+          {
+            "name": "Data",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AccountLedgerRequestData"
+            }
+          }
+        ],
+        "result": {
+          "name": "AccountLedgerResponse",
+          "schema": {
+            "$ref": "#/components/schemas/AccountLedgerResponseData"
+          }
+        }
+      }
+    },
+    "contentDescriptors": {
+      "ParamSignature": {
+        "name": "Signature",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ParamUUID": {
+        "name": "UUID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "AbstractSignedRequestParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AbstractToTrustlyRequestParamsData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "Username": {
+            "type": "string"
+          },
+          "Password": {
+            "type": "string"
+          }
+        }
+      },
+      "AbstractResponseResultData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AccountLedgerRequestData": {
+        "type": "object",
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractToTrustlyRequestParamsData"
+          }
+        ],
+        "properties": {
+          "FromDate": {
+            "type": "string"
+          },
+          "ToDate": {
+            "type": "string"
+          },
+          "Currency": {
+            "type": "string"
+          },
+          "Attributes": {
+            "$ref": "#/components/schemas/EmptyRequestParamsDataAttributes"
+          }
+        },
+        "required": [
+          "FromDate",
+          "ToDate",
+          "Currency"
+        ]
+      },
+      "EmptyRequestParamsDataAttributes": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AccountLedgerResponseData": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractResponseResultData"
+          }
+        ]
+      },
+      "AccountLedgerResponseDataEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AbstractFromTrustlyRequestParamsData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "something": {
+            "$ref": "#/components/schemas/repository"
+          }
+        }
+      },
+      "AbstractRequestParamsData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AbstractRequestParamsDataAttributes": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      }
+    }
+  }
+}

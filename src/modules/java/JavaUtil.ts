@@ -13,7 +13,7 @@ export class JavaUtil {
 
     if (type.kind == GenericTypeKind.ARRAY) {
       return JavaUtil.getFullyQualifiedName(type.of, options) + '[]';
-    } else if (type.kind == GenericTypeKind.ARRAY_STATIC) {
+    } else if (type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
 
       // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
 
@@ -25,13 +25,20 @@ export class JavaUtil {
         return this.getUnknownType(UnknownType.OBJECT) + "[]"; // options?.unknownType);
       }
 
-      // if (Array.isArray(type.of)) {
-      //   if (type.of.length == 1) {
-      //     return JavaUtil.getFullyQualifiedName(type.of[0], options) + '[]';
-      //   }
-      //
-      //   throw new Error(`Not allowed to get the type of a list of types`);
-      // } else {
+    } else if (type.kind == GenericTypeKind.ARRAY_TYPES_BY_POSITION) {
+
+      // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
+      //        There must be a better of saying "this is an array with objects of this type in this order"
+      //        We should be generating a helper class that wraps an array and gives us managed getters? Getter0() Getter1()???
+      //        "commonDenominator" is a *REALLY* crappy way of handling it.
+
+      if (type.commonDenominator) {
+
+        // Return the common denominator instead. That is this static type array's "representation" in the code.
+        return JavaUtil.getFullyQualifiedName(type.commonDenominator, options) + "[]";
+      } else {
+        return this.getUnknownType(UnknownType.OBJECT) + "[]";
+      }
 
     } else if (type.kind == GenericTypeKind.NULL) {
       // The type is "No Type. Void." It is not even really an Object.
@@ -198,8 +205,8 @@ export class JavaUtil {
       if (b.kind == GenericTypeKind.NULL) {
         return a;
       }
-    } else if (a.kind == GenericTypeKind.ARRAY_STATIC) {
-      if (b.kind == GenericTypeKind.ARRAY_STATIC) {
+    } else if (a.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+      if (b.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
         if (a.properties.length === b.properties.length) {
           const commonTypes: GenericType[] = [];
           for (let i = 0; i < a.properties.length; i++) {
@@ -312,8 +319,17 @@ export class JavaUtil {
     // TODO: Implement! Should have *one* if possible, the best common denominator between most types.
     if (type.kind == GenericTypeKind.OBJECT) {
 
-      if (type.extendsAllOf && type.extendsAllOf?.length > 0) {
-        return type.extendsAllOf[0];
+      if (type.extendedBy) {
+
+        // TODO: This is probably VERY wrong at the moment. Need to figure out which SINGLE type in probable composition to extend from
+        if (type.extendedBy.kind == GenericTypeKind.OBJECT) {
+          return type.extendedBy;
+        } else if (type.extendedBy.kind == GenericTypeKind.COMPOSITION) {
+
+          // TODO: Need to figure out which one it is we should actually *extend* from. It can only be one.
+        }
+
+        return type.extendedBy;
       }
 
       // TODO: How do we actually handle this in Java? Check other existing generator libraries for ideas

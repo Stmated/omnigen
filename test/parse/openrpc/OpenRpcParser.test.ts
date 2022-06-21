@@ -1,13 +1,13 @@
-import {TestUtils} from '@test';
-import {GenericTypeKind, OpenRpcParser, SchemaFile} from '@parse';
+import {CompositionKind, GenericPrimitiveKind, GenericTypeKind, OpenRpcParser, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import assert = require('assert');
 
 describe('Test Generic Model Creation', () => {
   const parser = new OpenRpcParser();
 
   test('Test basic loading', async () => {
-    const dirPath ='./test/examples/openrpc/';
+    const dirPath = './test/examples/openrpc/';
     const files = await fs.readdir(dirPath);
     for (const file of files) {
       const filePath = path.join(dirPath, file);

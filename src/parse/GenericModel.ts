@@ -57,12 +57,18 @@ export enum GenericTypeKind {
   REFERENCE,
   DICTIONARY,
   ARRAY,
-  ARRAY_STATIC,
+  ARRAY_PROPERTIES_BY_POSITION,
+  ARRAY_TYPES_BY_POSITION,
+  COMPOSITION,
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
    */
   UNKNOWN,
+
+  /**
+   * TODO: Should this be a primitive?
+   */
   NULL,
 }
 
@@ -81,14 +87,41 @@ export enum GenericPrimitiveKind {
 }
 
 type GenericAlwaysNullKnownKind = GenericTypeKind.NULL;
-export type GenericType = GenericBaseType<GenericAlwaysNullKnownKind> | GenericArrayType | GenericStaticArrayType | GenericClassType | GenericDictionaryType | GenericReferenceType | GenericPrimitiveType | GenericEnumType;
+export type GenericNullType = GenericBaseType<GenericAlwaysNullKnownKind>;
+
+// TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
+
+export type GenericType = GenericNullType
+  | GenericArrayType
+  | GenericArrayPropertiesByPositionType
+  | GenericArrayTypesByPositionType
+  | GenericClassType
+  | GenericDictionaryType
+  | GenericReferenceType
+  | GenericPrimitiveType
+  | GenericCompositionType
+  | GenericEnumType;
 
 export interface GenericBaseType<T> {
   name: string;
   kind: T;
   accessLevel?: GenericAccessLevel;
+  title?: string;
   description?: string;
   summary?: string;
+}
+
+export enum CompositionKind {
+  AND,
+  OR,
+  XOR,
+  NOT
+}
+
+type GenericCompositionKnownKind = GenericTypeKind.COMPOSITION;
+export interface GenericCompositionType extends GenericBaseType<GenericCompositionKnownKind>{
+  compositionKind: CompositionKind;
+  types: GenericType[];
 }
 
 type GenericDictionaryKnownKind = GenericTypeKind.DICTIONARY;
@@ -104,24 +137,32 @@ export interface GenericReferenceType extends GenericBaseType<GenericReferenceKn
 
 type GenericArrayKnownKind = GenericTypeKind.ARRAY;
 export interface GenericArrayType extends GenericBaseType<GenericArrayKnownKind>{
-
   of: GenericType;
   minLength?: number;
   maxLength?: number;
   implementationType?: GenericArrayImplementationType;
+  possiblySingle?: boolean;
 }
 
-type GenericStaticArrayKnownKind = GenericTypeKind.ARRAY_STATIC;
+type GenericArrayPropertiesByPositionKnownKind = GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION;
 
-export type GenericPropertyOwner = GenericClassType | GenericStaticArrayType;
+export type GenericPropertyOwner = GenericClassType | GenericArrayPropertiesByPositionType;
 
 /**
  * Similar to GenericArrayType, but this solves issue of having a list of types in a static order.
  * It DOES NOT mean "any of these types" or "one of these types", it means "THESE TYPES IN THIS ORDER IN THIS ARRAY"
  */
-export interface GenericStaticArrayType extends GenericBaseType<GenericStaticArrayKnownKind>{
+export interface GenericArrayPropertiesByPositionType extends GenericBaseType<GenericArrayPropertiesByPositionKnownKind>{
 
   properties: GenericProperty[];
+  commonDenominator?: GenericType;
+  implementationType?: GenericArrayImplementationType;
+}
+
+type GenericArrayTypesByPositionKnownKind = GenericTypeKind.ARRAY_TYPES_BY_POSITION;
+export interface GenericArrayTypesByPositionType extends GenericBaseType<GenericArrayTypesByPositionKnownKind>{
+
+  types: GenericType[];
   commonDenominator?: GenericType;
   implementationType?: GenericArrayImplementationType;
 }
@@ -131,9 +172,17 @@ export interface GenericClassType extends GenericBaseType<GenericClassKnownKind>
 
   valueConstant?: unknown;
 
-  extendsAnyOf?: GenericClassType[];
-  extendsAllOf?: GenericClassType[];
-  extendsOneOf?: GenericClassType[];
+  /**
+   * This type can only be extended by "one" thing.
+   * But this one thing can be a GenericAndType or GenericOrType or anything else.
+   * This extension property tries to follow the originating specification as much as possible.
+   * It is up to the target language what to do with it/how to transform it to something useful.
+   */
+  extendedBy?: GenericType;
+
+  //extendsAnyOf?: GenericClassType[];
+  //extendsAllOf?: GenericClassType[];
+  //extendsOneOf?: GenericClassType[];
 
   properties?: GenericProperty[];
   requiredProperties?: GenericProperty[];

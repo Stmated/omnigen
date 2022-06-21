@@ -1,6 +1,7 @@
 import {AbstractJavaTransformer} from './AbstractJavaTransformer';
 import {JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
+  CompositionKind,
   GenericClassType,
   GenericContinuationMapping,
   GenericExamplePairing,
@@ -10,19 +11,20 @@ import {
   GenericTypeKind
 } from '@parse';
 import * as Java from '@java/cst';
-import {pascalCase} from 'change-case';
+import {camelCase, pascalCase} from 'change-case';
 
 export class JavaBaseTransformer extends AbstractJavaTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
 
   transform(model: GenericModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 
-    // TODO: Move this to another transformer later
+    // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
+
     for (const type of model.types) {
       if (!JavaBaseTransformer.PATTERN_IDENTIFIER.test(type.name)) {
-        // The type does not have a valid name, so we need to transform it.
-        throw new Error(`Type name '${type.name}' is not valid`);
+        // The type does not have a valid name; what can we do about it?
+        throw new Error(`Type name '${type.name}' (${type.description || type.summary || type.kind}) is not valid`);
       } else {
         // The type has a valid name, but we will make sure it is in PascalCase for Java.
         const pascalName = pascalCase(type.name);
@@ -59,11 +61,21 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       } else if (type.kind == GenericTypeKind.REFERENCE) {
 
         // This is a map in the target language, which we have zero control over.
-      } else if (type.kind == GenericTypeKind.ARRAY_STATIC) {
+      } else if (type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
 
-        // This is a list of static types. This should modify the model, creating a marker interface.
-        // Like an ISomethingOrOtherOrDifferent that contains the common properties, or is just empty.
+        // This is a list of static properties. This should modify the model, creating a marker interface?
+        // Like an ISomethingOrOtherOrDifferent that contains the common properties, or is just empty?
         // (preferably they contain the ones in common, just because it's Nice).
+
+      } else if (type.kind == GenericTypeKind.ARRAY_TYPES_BY_POSITION) {
+
+        // This is a list of static types. This should modify the model, creating a marker interface?
+        // Like an ISomethingOrOtherOrDifferent that contains the common properties, or is just empty?
+        // (preferably they contain the ones in common, just because it's Nice).
+
+      } else if (type.kind == GenericTypeKind.COMPOSITION) {
+
+        // Should we do something here?
 
       } else {
         this.transformObject(model, type, options, root);
@@ -92,13 +104,16 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
           comments.push(...this.getCommentsForType(property.type, model, options));
 
-          if (property.type.kind == GenericTypeKind.ARRAY_STATIC) {
-            comments.push(new Java.Comment(`Array with parameters in this order:\n${property.type.properties.map((it, idx) => {
-              const typeName = JavaUtil.getFullyQualifiedName(it.type);
-              const parameterName = it.name;
-              const description = it.description || it.type.description;
+          if (property.type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+
+            const staticArrayStrings = property.type.properties.map((prop, idx) => {
+              const typeName = JavaUtil.getFullyQualifiedName(prop.type);
+              const parameterName = prop.name;
+              const description = prop.description || prop.type.description;
               return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
-            }).join('\n')}`));
+            });
+
+            comments.push(new Java.Comment(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`));
           }
         }
 
@@ -113,7 +128,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
             // We're told to include it, even though it always returns null.
             const methodDeclaration = new Java.MethodDeclaration(
               this.toJavaType(property.type),
-              new Java.Identifier(JavaUtil.getGetterName(property.name, property.type)),
+              new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
               undefined,
               undefined,
               new Java.Block(
@@ -132,7 +147,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
           const methodDeclaration = new Java.MethodDeclaration(
             new Java.Type(property.type),
-            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type)),
+            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
             undefined,
             undefined,
             new Java.Block(
@@ -149,7 +164,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         if (options.immutableModels) {
           const field = new Java.Field(
             this.toJavaType(property.type),
-            new Java.Identifier(property.name),
+            new Java.Identifier(camelCase(property.name), property.name),
             new Java.ModifierList([
               new Java.Modifier(ModifierType.PRIVATE),
               new Java.Modifier(ModifierType.FINAL)
@@ -160,7 +175,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         } else {
           body.children.push(new Java.FieldGetterSetter(
             this.toJavaType(property.type),
-            new Java.Identifier(property.name),
+            new Java.Identifier(camelCase(property.name), property.name),
             undefined,
             commentList
           ));
@@ -182,23 +197,31 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     );
 
     const comments = this.getCommentsForType(type, model, options);
+
+    if (type.extendedBy) {
+
+      // TODO: Implement all this. For now, just write the stuff in comments
+
+      comments.push(new Java.Comment(this.getCommentsDescribingExtensions(type.extendedBy) || ''));
+    }
+
     if (comments.length > 0) {
       javaClass.comments = new Java.CommentList(...comments);
     }
 
-    if (type.extendsAllOf) {
-      if (type.extendsAllOf.length == 1) {
-        javaClass.extends = new Java.ExtendsDeclaration(
-          new Java.Type(type.extendsAllOf[0])
-        );
-      } else {
-
-        const types = type.extendsAllOf.map(it => new Java.Type(it));
-        javaClass.implements = new Java.ImplementsDeclaration(
-          new Java.TypeList(types)
-        );
-      }
-    }
+    // if (type.extendsAllOf) {
+    //   if (type.extendsAllOf.length == 1) {
+    //     javaClass.extends = new Java.ExtendsDeclaration(
+    //       new Java.Type(type.extendsAllOf[0])
+    //     );
+    //   } else {
+    //
+    //     const types = type.extendsAllOf.map(it => new Java.Type(it));
+    //     javaClass.implements = new Java.ImplementsDeclaration(
+    //       new Java.TypeList(types)
+    //     );
+    //   }
+    // }
 
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(options.package),
@@ -207,6 +230,26 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       ),
       javaClass
     ));
+  }
+
+  private getCommentsDescribingExtensions(type: GenericType): string {
+
+    /*
+    if (type.kind == GenericTypeKind.COMPOSITION) {
+
+      if (type.compositionKind == CompositionKind.AND) {
+
+      } else if (type.compositionKind == CompositionKind.OR) {
+
+      } else if (type.compositionKind == CompositionKind.XOR) {
+
+      } else if (type.compositionKind == CompositionKind.NOT) {
+
+      }
+
+    } else {*/
+      return type.name;
+    //}
   }
 
   private getCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {
@@ -272,7 +315,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       return comments;
     }
 
-    if (type.kind == GenericTypeKind.OBJECT || type.kind == GenericTypeKind.ARRAY_STATIC) {
+    if (type.kind == GenericTypeKind.OBJECT || type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
       for (const continuation of (model.continuations || [])) {
 
         // Look if any of the continuation source or targets use this type as root.

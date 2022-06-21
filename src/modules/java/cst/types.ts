@@ -64,10 +64,12 @@ export interface IWithChildren<T extends AbstractJavaNode> {
 
 export class Identifier extends AbstractJavaNode {
   value: string;
+  original?: string;
 
-  constructor(name: string) {
+  constructor(name: string, original?: string) {
     super();
     this.value = name;
+    this.original = original;
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {

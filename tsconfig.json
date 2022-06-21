@@ -35,7 +35,9 @@
 
     "strict": true,
     "alwaysStrict": true,
-    "noImplicitReturns": true
+    "noImplicitReturns": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
   },
   "include": ["src"]
 }

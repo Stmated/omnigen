@@ -7,6 +7,7 @@ import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import {GenericModelUtil} from '../../../../src/parse/GenericModelUtil';
 
 // const SegfaultHandler = require('segfault-handler');
 // SegfaultHandler.registerHandler('crash.log');
@@ -65,7 +66,8 @@ describe('Test the rendering of a CST tree to string', () => {
 
     expect(interpretation).toBeDefined();
 
-    expect(interpretation.children).toHaveLength(model.types.length);
+    const allTypes1 = GenericModelUtil.getAllExportableTypes(model, model.types);
+    expect(interpretation.children).toHaveLength(allTypes1.length);
 
     const compilationUnits: CompilationUnit[] = [];
     const renderer = new JavaRenderer((cu) => {
@@ -75,7 +77,9 @@ describe('Test the rendering of a CST tree to string', () => {
     renderer.render(interpretation);
 
     expect(compilationUnits).toBeDefined();
-    expect(compilationUnits).toHaveLength(model.types.length);
+
+    const allTypes2 = GenericModelUtil.getAllExportableTypes(model, model.types);
+    expect(compilationUnits).toHaveLength(allTypes2.length);
 
     // TODO: We should assert actual useful stuff here :)
 
@@ -84,7 +88,7 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json');
+    const model = await TestUtils.readExample('openrpc', 'ethereum.json');
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer((cu) => {

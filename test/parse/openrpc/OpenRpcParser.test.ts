@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import assert = require('assert');
 import {Naming} from '../../../src/parse/Naming';
+import {GenericModelUtil} from '../../../src/parse/GenericModelUtil';
 
 describe('Test Generic Model Creation', () => {
   const parser = new OpenRpcParser();
@@ -47,6 +48,7 @@ describe('Test Generic Model Creation', () => {
     expect(response0properties[1].name).toEqual('error');
     expect(response0properties[2].name).toEqual('id');
 
-    expect(model.types.map(it => Naming.unwrap(it.name))).toContain('DeletePetByIdErrorUnknownError');
+    const allTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
+    expect(allTypes.map(it => Naming.unwrap(it.name))).toContain('DeletePetByIdErrorUnknownError');
   });
 });

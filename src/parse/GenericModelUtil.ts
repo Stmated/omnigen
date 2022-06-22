@@ -30,7 +30,7 @@ export class GenericModelUtil {
     return [...set].filter(it => {
 
       // Is this enough?
-      return it.kind == GenericTypeKind.OBJECT || it.kind == GenericTypeKind.ENUM;
+      return it.kind == GenericTypeKind.OBJECT || it.kind == GenericTypeKind.ENUM || it.kind == GenericTypeKind.COMPOSITION;
     });
   }
 

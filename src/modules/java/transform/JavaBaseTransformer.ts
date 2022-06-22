@@ -1,6 +1,7 @@
 import {AbstractJavaTransformer} from './AbstractJavaTransformer';
 import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
+  CompositionKind,
   GenericClassType,
   GenericContinuationMapping,
   GenericExamplePairing,
@@ -10,10 +11,11 @@ import {
   GenericTypeKind
 } from '@parse';
 import * as Java from '@java/cst';
-import {camelCase, pascalCase} from 'change-case';
+import {camelCase} from 'change-case';
 import {Naming} from '@parse/Naming';
-import {DependencyGraphBuilder, DEFAULT_GRAPH_OPTIONS, DependencyGraph} from '@parse/DependencyGraphBuilder';
+import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
+import {GenericModelUtil} from '@parse/GenericModelUtil';
 
 export class JavaBaseTransformer extends AbstractJavaTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
@@ -23,7 +25,18 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
 
-    for (const type of model.types) {
+    let allTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
+
+    const removedTypes: GenericType[] = [];
+    for (const type of allTypes) {
+      removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
+    }
+
+    // NOTE: Is this actually correct? Could it not delete types we actually want?
+    allTypes = allTypes.filter(it => !removedTypes.includes(it));
+
+    const typeNames: string[] = [];
+    for (const type of allTypes) {
       const typeName = Naming.unwrap(type.name);
       if (!JavaBaseTransformer.PATTERN_IDENTIFIER.test(typeName)) {
         // The type does not have a valid name; what can we do about it?
@@ -31,13 +44,14 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       } else {
         // The type has a valid name, but we will make sure it is in PascalCase for Java.
         // Also replace the callback with a new one, so it is set in stone from now on.
-        type.name = pascalCase(typeName);
+        type.name = Naming.safer(type, (v) => typeNames.includes(v));
+        typeNames.push(type.name);
       }
     }
 
-    const graph = DependencyGraphBuilder.build(model.types, DEFAULT_GRAPH_OPTIONS);
+    const graph = DependencyGraphBuilder.build(allTypes, DEFAULT_GRAPH_OPTIONS);
 
-    for (const type of model.types) {
+    for (const type of allTypes) {
 
       if (type.kind == GenericTypeKind.ARRAY) {
 
@@ -111,7 +125,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     if (type.additionalProperties) {
 
-      if (!JavaDependencyGraph.superMatches(graph, type, parent => parent.additionalProperties)) {
+      if (!JavaDependencyGraph.superMatches(graph, type, parent => parent.additionalProperties == true)) {
 
         // No parent implements additional properties, so we should.
         body.children.push(new Java.AdditionalPropertiesDeclaration());
@@ -513,5 +527,59 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
   private toJavaType(type: GenericType): Java.Type {
     return new Java.Type(type);
+  }
+
+  private simplifyTypeAndReturnUnwanted(type: GenericType): GenericType[] {
+
+    // TODO: Below should not be needed, this "should not happen" -- it should have been normalized by the source
+
+    // TODO: ComponentsSchemasIntegerOrNull SHOULD NOT HAVE BEEN CREATED! IT SHOULD NOT BE AN OBJECT! IT SHOULD BE A COMPOSITION OF XOR!
+
+    // if (type.kind == GenericTypeKind.OBJECT) {
+    //   if (type.extendedBy && !type.properties?.length && !type.nestedTypes?.length) {
+    //     // If this class extends a class, but it has no content of itself...
+    //     // Then we can just "simplify" the type by returning the extended class.
+    //     type = type.extendedBy;
+    //   }
+    // }
+
+    if (type.kind == GenericTypeKind.COMPOSITION) {
+      if (type.compositionKind == CompositionKind.XOR) {
+        if (type.types.length == 2) {
+          const nullType = type.types.find(it => it.kind == GenericTypeKind.NULL);
+          if (nullType) {
+            const otherType = type.types.find(it => it.kind != GenericTypeKind.NULL);
+            if (otherType && otherType.kind == GenericTypeKind.PRIMITIVE) {
+
+              // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
+              this.clearProperties(type);
+              Object.assign(type, {
+                ...otherType,
+                ...{
+                  nullable: true
+                }
+              });
+              return [otherType];
+            } else if (otherType && otherType.kind == GenericTypeKind.OBJECT) {
+
+              // For Java, any object can always be null.
+              // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
+              this.clearProperties(type);
+              Object.assign(type, otherType);
+              return [otherType];
+            }
+          }
+        }
+      }
+    }
+
+    return [];
+  }
+
+  private clearProperties(type: GenericType): void {
+    for (const key of Object.keys(type)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      delete (type as any)[key];
+    }
   }
 }

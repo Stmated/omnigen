@@ -3,17 +3,17 @@ import {Naming} from '@parse/Naming';
 
 export class CompositionUtil {
 
-  public static getCompositionType(
+  public static getCompositionOrExtensionType(
     compositionsAnyOfOr: GenericType[] = [],
     compositionsAllOfAnd: GenericType[] = [],
     compositionsOneOfOr: GenericType[] = [],
     compositionNot?: GenericType
   ): GenericType | undefined {
 
-    let extensionType: GenericType | undefined;
+    let composition: GenericType | undefined;
 
-    if (compositionsAnyOfOr.length == 1 && !extensionType) {
-      extensionType = compositionsAnyOfOr[0];
+    if (compositionsAnyOfOr.length == 1 && !composition) {
+      composition = compositionsAnyOfOr[0];
     } else if (compositionsAnyOfOr.length > 0) {
       const or: GenericType = (compositionsAnyOfOr.length > 1)
         ? <GenericCompositionType>{
@@ -24,21 +24,21 @@ export class CompositionUtil {
         }
         : compositionsAnyOfOr[0];
 
-      if (!extensionType) {
-        extensionType = or;
+      if (!composition) {
+        composition = or;
       } else {
-        const finalType = extensionType;
-        extensionType = {
+        const finalType = composition;
+        composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.safer(or)}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          types: [extensionType, or]
+          types: [composition, or]
         } as GenericCompositionType;
       }
     }
 
-    if (compositionsAllOfAnd.length == 1 && !extensionType) {
-      extensionType = compositionsAllOfAnd[0];
+    if (compositionsAllOfAnd.length == 1 && !composition) {
+      composition = compositionsAllOfAnd[0];
     } else if (compositionsAllOfAnd.length > 0) {
       const and: GenericType = (compositionsAllOfAnd.length > 1)
         ? <GenericCompositionType>{
@@ -49,21 +49,21 @@ export class CompositionUtil {
         }
         : compositionsAllOfAnd[0];
 
-      if (!extensionType) {
-        extensionType = and;
+      if (!composition) {
+        composition = and;
       } else {
-        const finalType = extensionType;
-        extensionType = {
+        const finalType = composition;
+        composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.safer(and)}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          types: [extensionType, and]
+          types: [composition, and]
         } as GenericCompositionType;
       }
     }
 
-    if (compositionsOneOfOr.length == 1 && !extensionType) {
-      extensionType = compositionsOneOfOr[0];
+    if (compositionsOneOfOr.length == 1 && !composition) {
+      composition = compositionsOneOfOr[0];
     } else if (compositionsOneOfOr.length > 1) {
       const xor: GenericType = (compositionsOneOfOr.length > 1)
         ? <GenericCompositionType>{
@@ -74,15 +74,15 @@ export class CompositionUtil {
         }
         : compositionsOneOfOr[0];
 
-      if (!extensionType) {
-        extensionType = xor;
+      if (!composition) {
+        composition = xor;
       } else {
-        const finalType = extensionType;
-        extensionType = {
+        const finalType = composition;
+        composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.safer(xor)}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          types: [extensionType, xor]
+          types: [composition, xor]
         } as GenericCompositionType;
       }
     }
@@ -95,19 +95,19 @@ export class CompositionUtil {
         types: [compositionNot]
       } as GenericCompositionType;
 
-      if (!extensionType) {
-        extensionType = not;
+      if (!composition) {
+        composition = not;
       } else {
-        const finalType = extensionType;
-        extensionType = {
+        const finalType = composition;
+        composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.unwrap(not.name)}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          types: [extensionType, not]
+          types: [composition, not]
         } as GenericCompositionType;
       }
     }
 
-    return extensionType;
+    return composition;
   }
 }

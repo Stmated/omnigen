@@ -4,17 +4,17 @@ import assert = require('assert');
 describe('Test Composition Types', () => {
 
   test('Merging no composition types', async () => {
-    const result = CompositionUtil.getCompositionType();
+    const result = CompositionUtil.getCompositionOrExtensionType();
     expect(result).toBeUndefined();
   });
 
   test('Merging empty composition types', async () => {
-    const result = CompositionUtil.getCompositionType([], [], []);
+    const result = CompositionUtil.getCompositionOrExtensionType([], [], []);
     expect(result).toBeUndefined();
   });
 
   test('Merging primitive allOf composition type', async () => {
-    const result = CompositionUtil.getCompositionType([], [{
+    const result = CompositionUtil.getCompositionOrExtensionType([], [{
       name: 'a',
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.NUMBER
@@ -25,7 +25,7 @@ describe('Test Composition Types', () => {
   });
 
   test('Merging primitive allOf composition type', async () => {
-    const result = CompositionUtil.getCompositionType([], [
+    const result = CompositionUtil.getCompositionOrExtensionType([], [
       // This is invalid, it is not possible to be a Number AND String, but this method should not validate.
       {name: 'a', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.NUMBER},
       {name: 'b', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.STRING}
@@ -40,7 +40,7 @@ describe('Test Composition Types', () => {
   });
 
   test('allOf1+anyOf1', async () => {
-    const result = CompositionUtil.getCompositionType(
+    const result = CompositionUtil.getCompositionOrExtensionType(
       [{name: 'a', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.STRING}],
       [{name: 'b', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.NUMBER}]
     );
@@ -54,7 +54,7 @@ describe('Test Composition Types', () => {
   });
 
   test('allOf1+anyOf2', async () => {
-    const result = CompositionUtil.getCompositionType(
+    const result = CompositionUtil.getCompositionOrExtensionType(
       [
         {name: 'a', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.STRING},
         {name: 'b', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.BOOL}
@@ -73,7 +73,7 @@ describe('Test Composition Types', () => {
   });
 
   test('allOf1+oneOf2', async () => {
-    const result = CompositionUtil.getCompositionType(
+    const result = CompositionUtil.getCompositionOrExtensionType(
       [],
       [{name: 'a', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.NUMBER}],
       [
@@ -93,7 +93,7 @@ describe('Test Composition Types', () => {
   });
 
   test('allOf1+oneOf2+not', async () => {
-    const result = CompositionUtil.getCompositionType(
+    const result = CompositionUtil.getCompositionOrExtensionType(
       [],
       [{name: 'a', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.NUMBER}],
       [

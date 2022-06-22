@@ -1,6 +1,7 @@
 import {AbstractParser} from '@parse/AbstractParser';
 
 import {
+  AllowedEnumTypes,
   ComparisonOperator,
   CompositionKind,
   GenericAccessLevel,
@@ -63,7 +64,6 @@ import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@util';
 import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
-import {GenericModelUtil} from '@parse/GenericModelUtil';
 import {Naming} from '@parse/Naming';
 
 export const logger = LoggerFactory.create(__filename);
@@ -124,28 +124,10 @@ class OpenRpcParserImpl {
       externalDocumentations: docs,
       endpoints: endpoints,
       continuations: continuations,
-      types: [],
+      types: (await Promise.all([...this._typePromiseMap.values()])).map(it => it.type),
     };
 
-    // Then find all the exportable types
-    const refTypes: GenericType[] = [];
-    for (const refTypePromise of this._typePromiseMap.values()) {
-      refTypes.push((await refTypePromise).type);
-    }
-    model.types.push(...GenericModelUtil.getAllExportableTypes(model, refTypes));
-
-    this.cleanup(model);
-
     return model;
-  }
-
-  private cleanup(model: GenericModel): void {
-    const typeNames: string[] = [];
-
-    for (const type of model.types) {
-      type.name = Naming.safer(type, (v) => typeNames.includes(v));
-      typeNames.push(type.name);
-    }
   }
 
   private licenseToGenericLicense(license: LicenseObject): GenericLicense {
@@ -196,7 +178,7 @@ class OpenRpcParserImpl {
     const input = await this.methodToGenericInputType(method);
 
     const examples = await Promise.all(
-      (method.examples || []).map((it) => this.examplePairingToGenericExample(resultResponse.type, input.properties, it))
+      (method.examples || []).map((it) => this.examplePairingToGenericExample(resultResponse.type, input.properties || [], it))
     );
 
     // TODO: Remake so that the request body is another type!
@@ -286,7 +268,7 @@ class OpenRpcParserImpl {
 
       // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
       additionalProperties: (schema.additionalProperties == undefined
-          ? true
+          ? undefined
           : typeof schema.additionalProperties == 'boolean'
             ? schema.additionalProperties
             : true
@@ -307,7 +289,7 @@ class OpenRpcParserImpl {
       }
     }
 
-    type.properties = genericProperties;
+    type.properties = genericProperties.length ? genericProperties : undefined;
     type.requiredProperties = requiredProperties;
 
     if (schema.not) {
@@ -318,10 +300,8 @@ class OpenRpcParserImpl {
       // TODO: Make this general, so that all other places call it.
     }
 
-    await this.extendOrEnhanceClassType(schema, type, names);
-
     return {
-      type: this.simplifyType(type),
+      type: await this.extendOrEnhanceClassType(schema, type, names),
 
       // If this type is inline in the JSON Schema, without being referenced as a ref:
       // Then we might possibly be able to merge this type with the caller, if it wants to.
@@ -339,12 +319,20 @@ class OpenRpcParserImpl {
       } else if (schema.type !== 'object') {
 
         // TODO: This is not lossless if the primitive has comments/summary/etc
-        const t = this.typeToGenericKnownType(schema.type, schema.format);
+        const t = this.typeToGenericKnownType(schema.type, schema.format, schema.enum);
         const schemaType = schema.type;
         if (t.length == 1) {
           return {
             name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
             kind: t[0],
+            description: schema.description,
+          };
+        } else if (t.length == 3) {
+          return {
+            name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
+            kind: t[0],
+            primitiveKind: t[1],
+            enumConstants: t[2],
             description: schema.description,
           };
         } else {
@@ -361,43 +349,7 @@ class OpenRpcParserImpl {
     return undefined;
   }
 
-  private simplifyType(type: GenericType): GenericType {
-
-    // TODO: Take the take and the type(s) it is extended by, and simplify without loss
-    // TODO: We should care if there are descriptions/titles/summary set on things. Either keep type, or merge comments.
-
-    // const newType = this.mergeType()
-
-    // if (type.kind == GenericTypeKind.OBJECT) {
-    //   if (type.extendedBy && !type.properties?.length && !type.nestedTypes?.length) {
-    //     // If this class extends a class, but it has no content of itself...
-    //     // Then we can just "simplify" the type by returning the extended class.
-    //     type = type.extendedBy;
-    //   }
-    // }
-
-    /*
-    if (type.kind == GenericTypeKind.COMPOSITION) {
-      if (type.compositionKind == CompositionKind.XOR) {
-        if (type.types.length == 2) {
-          const nullType = type.types.find(it => it.kind == GenericTypeKind.NULL);
-          if (nullType) {
-            const otherType = type.types.find(it => it.kind != GenericTypeKind.NULL);
-            if (otherType && otherType.kind == GenericTypeKind.PRIMITIVE) {
-              const copy = {...otherType};
-              copy.nullable = true;
-              return copy;
-            }
-          }
-        }
-      }
-    }
-    */
-
-    return type;
-  }
-
-  public async extendOrEnhanceClassType(schema: JSONSchemaObject, type: GenericClassType, names: TypeName[]): Promise<void> {
+  public async extendOrEnhanceClassType(schema: JSONSchemaObject, type: GenericClassType, names: TypeName[]): Promise<GenericType> {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -417,10 +369,9 @@ class OpenRpcParserImpl {
         schema.allOf = (schema.allOf || []).concat(schema.oneOf);
         schema.oneOf = undefined;
       } else {
-        for (const oneOf of schema.oneOf) {
-          const subType = await this.jsonSchemaToType(names, oneOf);
-          compositionsOneOfOr.push(subType.type);
-        }
+        compositionsOneOfOr.push(
+          ...(await Promise.all(schema.oneOf.map(it => this.jsonSchemaToType(names, it)))).map(it => it.type)
+        );
       }
     }
 
@@ -469,12 +420,34 @@ class OpenRpcParserImpl {
       compositionsNot = (await this.jsonSchemaToType(names, schema.not)).type;
     }
 
-    type.extendedBy = CompositionUtil.getCompositionType(
+    const extendedBy = CompositionUtil.getCompositionOrExtensionType(
       compositionsAnyOfOr,
       compositionsAllOfAnd,
       compositionsOneOfOr,
       compositionsNot
     );
+
+    if (type.additionalProperties == undefined && type.properties == undefined) {
+
+      // If there object is "empty" but we inherit from something, then just use the inherited type instead.
+      // NOTE: This might be "inaccurate" and should maybe be more selective (like ONLY replacing COMPOSITIONS)
+      if (extendedBy) {
+
+        return {
+          ...extendedBy,
+          ...{
+
+            // TODO: Should the two types' descriptions be merged if both exist?
+            description: extendedBy.description || type.description,
+            summary: extendedBy.summary || type.summary,
+            title: extendedBy.title || type.title,
+          }
+        };
+      }
+    }
+
+    type.extendedBy = extendedBy;
+    return type;
   }
 
 // private async gatherTypeExtensionsForOneOf(doc: OpenrpcDocument, oneOf: JSONSchema[], type: GenericClassType, names: string[], types: GenericType[]): Promise<GenericType> {
@@ -678,12 +651,8 @@ class OpenRpcParserImpl {
 
     if (from.kind == GenericTypeKind.OBJECT && to.kind == GenericTypeKind.OBJECT) {
 
-      if (!to.properties) {
-        to.properties = [];
-      }
-
       for (const fromProperty of (from.properties || [])) {
-        const toProperty = to.properties.find(p => p.name == fromProperty.name);
+        const toProperty = to.properties?.find(p => p.name == fromProperty.name);
         if (!toProperty) {
           // This is a new property, and can just be added to the 'to'.
           this.addPropertyToClassType(fromProperty, to);
@@ -704,9 +673,7 @@ class OpenRpcParserImpl {
   private mergeTwoPropertiesAndAddToClassType(a: GenericProperty, b: GenericProperty, to: GenericClassType): void {
     const common = JavaUtil.getCommonDenominatorBetween(a.type, b.type);
     if (common) {
-      if (!to.properties) {
-        to.properties = [];
-      } else {
+      if (to.properties) {
         const idx = to.properties.indexOf(b);
         if (idx !== -1) {
           to.properties.splice(idx, 1);
@@ -1144,30 +1111,70 @@ class OpenRpcParserImpl {
     return await promise;
   }
 
-  private typeToGenericKnownType(type: string, format?: string): [GenericTypeKind.NULL] | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind] {
+  private typeToGenericKnownType(type: string, format?: string, enumValues?: unknown[]):
+    [GenericTypeKind.NULL]
+    | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind]
+    | [GenericTypeKind.ENUM, GenericPrimitiveKind, AllowedEnumTypes[]] {
+
     // TODO: Need to take heed to 'schema.format' for some primitive and/or known types!
-    switch (type.toLowerCase()) {
-      case 'number':
-        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.NUMBER];
-      case 'int':
-      case 'integer':
-        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.INTEGER];
-      case 'decimal':
-      case 'double':
-        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.DECIMAL];
-      case 'bool':
-      case 'boolean':
-        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.BOOL];
-      case 'string':
-        return [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind.STRING];
-      case 'null':
-        return [GenericTypeKind.NULL];
+    const lcType = type.toLowerCase();
+    if (lcType == 'null') {
+      return [GenericTypeKind.NULL];
     }
 
-    throw new Error(`Unknown type: ${type}`);
+    let primitiveType: GenericPrimitiveKind;
+    switch (lcType) {
+      case 'number':
+        primitiveType = GenericPrimitiveKind.NUMBER;
+        break;
+      case 'int':
+      case 'integer':
+        primitiveType = GenericPrimitiveKind.INTEGER;
+        break;
+      case 'decimal':
+      case 'double':
+        primitiveType = GenericPrimitiveKind.DECIMAL;
+        break;
+      case 'float':
+        primitiveType = GenericPrimitiveKind.FLOAT;
+        break;
+      case 'bool':
+      case 'boolean':
+        primitiveType = GenericPrimitiveKind.BOOL;
+        break;
+      case 'string':
+        primitiveType = GenericPrimitiveKind.STRING;
+        break;
+      default:
+        logger.warn(`Do not know how to handle primitive type '${lcType}', will assume String`);
+        primitiveType = GenericPrimitiveKind.STRING;
+        break;
+    }
+
+    if (enumValues && enumValues.length > 0) {
+
+      // "enum": [
+      //   "earliest",
+      //   "latest",
+      //   "pending"
+      // ]
+      let allowedValues: AllowedEnumTypes[];
+      if (primitiveType == GenericPrimitiveKind.STRING) {
+        allowedValues = enumValues.map(it => `${String(it)}`);
+      } else if (primitiveType == GenericPrimitiveKind.DECIMAL || primitiveType == GenericPrimitiveKind.FLOAT) {
+        allowedValues = enumValues.map(it => Number.parseFloat(`${String(it)}`));
+      } else {
+        allowedValues = enumValues.map(it => Number.parseInt(`${String(it)}`));
+      }
+
+      // TODO: Try to convert the ENUM values into the specified primitive type.
+      return [GenericTypeKind.ENUM, primitiveType, allowedValues];
+    } else {
+      return [GenericTypeKind.PRIMITIVE, primitiveType];
+    }
   }
 
-  private async methodToGenericInputType(method: MethodObject): Promise<{ type: GenericType; properties: GenericProperty[] }> {
+  private async methodToGenericInputType(method: MethodObject): Promise<{ type: GenericType; properties: GenericProperty[] | undefined }> {
 
     const requestJsonRpcType: GenericPrimitiveType = {
       name: `${method.name}RequestMethod`,
@@ -1215,9 +1222,13 @@ class OpenRpcParserImpl {
         additionalProperties: false
       };
 
-      requestParamsType.properties = await Promise.all(
+      const properties = await Promise.all(
         method.params.map((it) => this.contentDescriptorToGenericProperty(requestParamsType, it))
       );
+
+      if (properties.length > 0) {
+        requestParamsType.properties = properties;
+      }
     }
 
     const requestType = <GenericClassType>{
@@ -1468,48 +1479,80 @@ class OpenRpcParserImpl {
   private async dereference<T>(object: ReferenceObject | T): Promise<{ object: T; ref: string | undefined }> {
 
     if ('$ref' in object) {
-
-      const cachedPromise = this._derefPromiseMap.get(object.$ref);
-      if (cachedPromise) {
-        return {
-          // We wait on the same promise, to make things a bit smarter.
-          // TODO: This should become a helper Util -- or check if there exists a good library for this already!
-          object: await cachedPromise as T,
-          ref: object.$ref,
-        }
-      }
-
-      const resolvePromise = DefaultReferenceResolver.resolve(object.$ref, this._doc)
-        .then(dereferenced => {
-
-          let resolved = dereferenced as T; //  await resolvePromise as T;
-
-          const keys = Object.keys(object);
-          if (keys.length > 1) {
-
-            const extraKeys = keys.filter(it => (it != '$ref'));
-            const copy = {...object};
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            delete (copy as never)['$ref'];
-            logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
-
-            resolved = {...resolved, ...copy};
-          }
-
-          // TODO: Should we resolve recursively? Seems destructive
-
-          return resolved;
-        });
-
-      this._derefPromiseMap.set(object.$ref, resolvePromise);
-      const resolved = await resolvePromise;
-
-      return {
-        object: resolved,
-        ref: object.$ref
-      };
+      return {object: await this.dereferenceRecursively<T>(object), ref: object.$ref};
     } else {
       return {object: object, ref: undefined};
     }
+  }
+
+  private async dereferenceRecursively<T>(object: ReferenceObject | T): Promise<T> {
+
+    if ('$ref' in object) {
+      const cachedPromise = this._derefPromiseMap.get(object.$ref);
+      if (cachedPromise) {
+        return await cachedPromise as T;
+      }
+
+      const promise: Promise<T> = new Promise((resolve, reject) => {
+        this.dereferenceRecursivelyUncached<T>(object)
+          .then(result => {
+            resolve(result);
+          })
+          .catch(reason => {
+            reject(reason);
+          });
+      });
+
+      this._derefPromiseMap.set(object.$ref, promise);
+      return await promise;
+    } else {
+      return object;
+    }
+  }
+
+  private async dereferenceRecursivelyUncached<T>(object: ReferenceObject | T): Promise<T> {
+
+    if ('$ref' in object) {
+      const deref: ReferenceObject | T = await this.dereferenceInternal(object);
+      if ('$ref' in deref) {
+
+        // There were nested $ref, so we need to do The Ugly and merge them.
+        const inner = await this.dereferenceRecursively(deref);
+        const mix = this.mixRefObjectAndInvalidRefObject<T>(deref, inner);
+        return await this.dereferenceRecursively(mix);
+      } else {
+        return deref;
+      }
+    } else {
+      return object;
+    }
+  }
+
+  private async dereferenceInternal<T>(object: ReferenceObject | T): Promise<ReferenceObject | T> {
+
+    if ('$ref' in object) {
+      return await DefaultReferenceResolver.resolve(object.$ref, this._doc) as T;
+    } else {
+      return object;
+    }
+  }
+
+  private mixRefObjectAndInvalidRefObject<T>(object: ReferenceObject, resolved: T | ReferenceObject): T | ReferenceObject {
+
+    const keys = Object.keys(object);
+    if (keys.length > 1) {
+
+      const extraKeys = keys.filter(it => (it != '$ref'));
+      const copy = {...object};
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      delete (copy as never)['$ref'];
+      logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
+
+      // TODO: Use Object.assign instead?
+      // TODO: What to do if the property exists in both?
+      resolved = {...resolved, ...copy};
+    }
+
+    return resolved;
   }
 }

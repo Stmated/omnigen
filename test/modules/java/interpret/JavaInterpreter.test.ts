@@ -1,6 +1,7 @@
 import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {DEFAULT_JAVA_OPTIONS} from '@java';
+import {GenericModelUtil} from '../../../../src/parse/GenericModelUtil';
 
 describe('Test the structuring of GenericModel into a Java CST', () => {
 
@@ -12,7 +13,8 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(interpretation).toBeDefined();
 
-    expect(interpretation.children).toHaveLength(model.types.length);
+    const allTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
+    expect(interpretation.children).toHaveLength(allTypes.length);
 
 
     // TODO: We should assert stuff here :)

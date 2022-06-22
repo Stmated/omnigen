@@ -195,7 +195,7 @@ export interface GenericClassType extends GenericBaseType<GenericClassKnownKind>
 
   properties?: GenericProperty[];
   requiredProperties?: GenericProperty[];
-  additionalProperties: boolean;
+  additionalProperties?: boolean;
 
   methods?: GenericMethod[];
   annotations?: GenericAnnotation[];
@@ -215,10 +215,10 @@ export interface GenericPrimitiveType extends GenericBaseType<GenericPrimitiveKn
 }
 
 type GenericEnumKnownKind = GenericTypeKind.ENUM;
-type AllowedEnumTypes = number | string;
+export type AllowedEnumTypes = number | string;
 export interface GenericEnumType extends GenericBaseType<GenericEnumKnownKind> {
   enumConstants?: AllowedEnumTypes[];
-  enumType?: GenericClassType;
+  primitiveKind: GenericPrimitiveKind;
 }
 
 export interface GenericInput {

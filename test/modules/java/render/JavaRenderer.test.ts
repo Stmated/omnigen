@@ -84,7 +84,7 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'ethereum.json');
+    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json');
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer((cu) => {

@@ -104,6 +104,7 @@ class OpenRpcParserImpl {
 
   private readonly _derefPromiseMap = new Map<string, Promise<unknown>>();
   private readonly _typePromiseMap = new Map<string, Promise<SchemaToTypeResult>>();
+  private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
 
   constructor(doc: OpenrpcDocument, options = DEFAULT_PARSER_OPTIONS) {
     this._doc = doc;
@@ -151,7 +152,7 @@ class OpenRpcParserImpl {
     const typeNames: string[] = [];
 
     for (const type of model.types) {
-      type.name = NamingUtil.getSafeTypeName(type.name, (v) => typeNames.includes(v));
+      type.name = NamingUtil.getSafeTypeName(type.name, type.nameClassifier,(v) => typeNames.includes(v));
       typeNames.push(type.name);
     }
   }
@@ -184,6 +185,7 @@ class OpenRpcParserImpl {
 
     // One regular response
     const resultResponse = await this.resultToGenericOutputAndResultParamType(method, method.result);
+    resultResponse.type.nameClassifier = resultResponse.type.nameClassifier || 'Response';
     responses.push(resultResponse.output);
 
     // And then one response for each potential error
@@ -263,10 +265,7 @@ class OpenRpcParserImpl {
       }
     }
 
-    // TODO: We need to save the reference to the cache map before we go on.
-
-    const finalSchema = schema;
-    const promise = this.jsonSchemaToTypeUncached(finalSchema, names, actualRef);
+    const promise = this.jsonSchemaToTypeUncached(schema, names, actualRef);
     if (actualRef) {
       this._typePromiseMap.set(actualRef, promise);
     }
@@ -282,14 +281,6 @@ class OpenRpcParserImpl {
 
     const nonClassType = await this.jsonSchemaToNonClassType(schema, names);
     if (nonClassType) {
-
-      // If we got something back here, the schema is not a class type.
-      // if (dereferenced.ref) {
-      //   logger.info(`Setting ${nonClassType.name} as ${dereferenced.ref}`);
-      //   this._refTypeMap.set(dereferenced.ref, nonClassType);
-      // }
-
-      logger.info(`Created and giving back non-class ${nonClassType.name} (${ref || 'N/A'})`);
       return {
         type: nonClassType,
         canInline: false,
@@ -336,7 +327,7 @@ class OpenRpcParserImpl {
       // TODO: Make this general, so that all other places call it.
     }
 
-    type.extendedBy = await this.getExtendedBy(schema, type, names);
+    await this.extendOrEnhanceClassType(schema, type, names);
 
     return {
       type: this.simplifyType(type),
@@ -381,13 +372,41 @@ class OpenRpcParserImpl {
   private simplifyType(type: GenericType): GenericType {
 
     // TODO: Take the take and the type(s) it is extended by, and simplify without loss
-
     // TODO: We should care if there are descriptions/titles/summary set on things. Either keep type, or merge comments.
+
+    // const newType = this.mergeType()
+
+    // if (type.kind == GenericTypeKind.OBJECT) {
+    //   if (type.extendedBy && !type.properties?.length && !type.nestedTypes?.length) {
+    //     // If this class extends a class, but it has no content of itself...
+    //     // Then we can just "simplify" the type by returning the extended class.
+    //     type = type.extendedBy;
+    //   }
+    // }
+
+    /*
+    if (type.kind == GenericTypeKind.COMPOSITION) {
+      if (type.compositionKind == CompositionKind.XOR) {
+        if (type.types.length == 2) {
+          const nullType = type.types.find(it => it.kind == GenericTypeKind.NULL);
+          if (nullType) {
+            const otherType = type.types.find(it => it.kind != GenericTypeKind.NULL);
+            if (otherType && otherType.kind == GenericTypeKind.PRIMITIVE) {
+              const copy = {...otherType};
+              copy.nullable = true;
+              return copy;
+            }
+          }
+        }
+      }
+    }
+    */
+
 
     return type;
   }
 
-  public async getExtendedBy(schema: JSONSchemaObject, type: GenericClassType, names: string[]): Promise<GenericType | undefined> {
+  public async extendOrEnhanceClassType(schema: JSONSchemaObject, type: GenericClassType, names: string[]): Promise<void> {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -408,33 +427,44 @@ class OpenRpcParserImpl {
         schema.oneOf = undefined;
       } else {
         for (const oneOf of schema.oneOf) {
-          const type = await this.jsonSchemaToType(names, oneOf);
-          compositionsOneOfOr.push(type.type);
+          const subType = await this.jsonSchemaToType(names, oneOf);
+          compositionsOneOfOr.push(subType.type);
         }
       }
     }
+
+    // todo: fix back the commented out mergeType -- probable problem
 
     if (schema.allOf?.length) {
 
       const types: GenericType[] = [];
       for (const allOf of schema.allOf) {
-        const type = await this.jsonSchemaToType(names, allOf);
-        types.push(type.type);
+        const subType = await this.jsonSchemaToType(names, allOf);
+        if (subType.canInline) {
+          // This schema can actually just be consumed by the parent type.
+          // This happens if the sub-schema is anonymous and never used by anyone else.
+          this.mergeType(subType.type, type);
+        } else {
+          types.push(subType.type);
+        }
       }
 
-      compositionsAllOfAnd.push({
-        kind: GenericTypeKind.COMPOSITION,
-        compositionKind: CompositionKind.AND,
-        types: types
-      } as GenericCompositionType);
+      if (types.length > 0) {
+        compositionsAllOfAnd.push({
+          name: types.map(it => NamingUtil.getSafeTypeName(it.name, it.nameClassifier)).join('And'),
+          kind: GenericTypeKind.COMPOSITION,
+          compositionKind: CompositionKind.AND,
+          types: types
+        } as GenericCompositionType);
+      }
     }
 
     if (schema.anyOf?.length) {
 
       const types: GenericType[] = [];
       for (const anyOf of schema.anyOf) {
-        const type = await this.jsonSchemaToType(names, anyOf);
-        types.push(type.type);
+        const subType = await this.jsonSchemaToType(names, anyOf);
+        types.push(subType.type);
       }
 
       compositionsAnyOfOr.push({
@@ -448,7 +478,12 @@ class OpenRpcParserImpl {
       compositionsNot = (await this.jsonSchemaToType(names, schema.not)).type;
     }
 
-    return CompositionUtil.getCompositionType(compositionsAnyOfOr, compositionsAllOfAnd, compositionsOneOfOr, compositionsNot);
+    type.extendedBy = CompositionUtil.getCompositionType(
+      compositionsAnyOfOr,
+      compositionsAllOfAnd,
+      compositionsOneOfOr,
+      compositionsNot
+    );
   }
 
 // private async gatherTypeExtensionsForOneOf(doc: OpenrpcDocument, oneOf: JSONSchema[], type: GenericClassType, names: string[], types: GenericType[]): Promise<GenericType> {
@@ -621,7 +656,7 @@ class OpenRpcParserImpl {
         items.map((it) => this.jsonSchemaToType([], it))
       ));
 
-      const staticArrayTypeNames = staticArrayTypes.map(it => NamingUtil.getSafeTypeName(it.type.name)).join('And');
+      const staticArrayTypeNames = staticArrayTypes.map(it => NamingUtil.getSafeTypeName(it.type.name, it.type.nameClassifier)).join('And');
       const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
       return <GenericArrayTypesByPositionType>{
@@ -635,7 +670,7 @@ class OpenRpcParserImpl {
       // items is a single JSONSchemaObject
       const itemType = (await this.jsonSchemaToType(names, items)).type;
       return {
-        name: names.length > 0 ? names.join('_') : `ArrayOf${NamingUtil.getSafeTypeName(itemType.name)}`,
+        name: names.length > 0 ? names.join('_') : `ArrayOf${NamingUtil.getSafeTypeName(itemType.name, itemType.nameClassifier)}`,
         kind: GenericTypeKind.ARRAY,
         minLength: schema.minItems,
         maxLength: schema.maxItems,
@@ -644,102 +679,163 @@ class OpenRpcParserImpl {
     }
   }
 
-  /**
-   * Will merge between types 'from' into 'to'.
-   * If a new type is returned, it means it could not update 'to' object but a whole new type was created.
-   * If undefined is returned, it means that the merging was done into the 'to' object silently.
-   */
-  private mergeType(from: GenericType | undefined, to: GenericType): GenericType | undefined {
-
-    if (!from) {
-      return to;
-    }
+  private mergeType(from: GenericType, to: GenericType, lossless = true): GenericType {
 
     if (from.kind == GenericTypeKind.OBJECT && to.kind == GenericTypeKind.OBJECT) {
 
-      to.properties = to.properties || [];
+      if (!to.properties) {
+        to.properties = [];
+      }
+
       for (const fromProperty of (from.properties || [])) {
         const toProperty = to.properties.find(p => p.name == fromProperty.name);
         if (!toProperty) {
           // This is a new property, and can just be added to the 'to'.
-          to.properties.push({
-            ...fromProperty,
-            ...{
-              owner: to,
-            }
-          });
+          this.addPropertyToClassType(fromProperty, to);
         } else {
           // This property already exists, so we should try and find common type.
-          const common = JavaUtil.getCommonDenominatorBetween(fromProperty.type, toProperty.type);
-          if (common) {
-            const idx = to.properties.indexOf(toProperty);
-            to.properties.splice(idx, 1);
-            to.properties.push({
-              ...fromProperty,
-              ...{
-                owner: to,
-                type: common,
-              }
-            });
+          if (lossless) {
+            throw new Error(`Property ${toProperty.name} already exists, and merging should be lossless`);
           } else {
-            const vsString = `${fromProperty.type.name} vs ${toProperty.type.name}`;
-            const errMessage = `No common type for merging properties ${fromProperty.name}. ${vsString}`;
-            throw new Error(errMessage);
+            this.mergeTwoPropertiesAndAddToClassType(fromProperty, toProperty, to);
           }
         }
       }
+    }
 
-      return undefined;
+    return to;
+  }
 
-    } else if (from.kind == GenericTypeKind.PRIMITIVE && to.kind == GenericTypeKind.PRIMITIVE) {
-
-      // TODO: Do not use any Java classes here!
-      const common = JavaUtil.getCommonDenominatorBetween(from, to);
-      if (common) {
-        return common;
+  private mergeTwoPropertiesAndAddToClassType(a: GenericProperty, b: GenericProperty, to: GenericClassType): void {
+    const common = JavaUtil.getCommonDenominatorBetween(a.type, b.type);
+    if (common) {
+      if (!to.properties) {
+        to.properties = [];
       } else {
-        throw new Error(`Two primitive types ${from.primitiveKind} and ${to.primitiveKind} do not have common type`);
+        const idx = to.properties.indexOf(b);
+        if (idx !== -1) {
+          to.properties.splice(idx, 1);
+        }
       }
-    } else if (from.kind == GenericTypeKind.COMPOSITION && to.kind == GenericTypeKind.COMPOSITION) {
-
-      if (from.compositionKind == to.compositionKind) {
-        to.types.push(...from.types);
-        return undefined;
-      } else if (from.compositionKind == CompositionKind.OR && to.compositionKind == CompositionKind.AND) {
-
-        // If 'from' is: (A) or (B) or (C)
-        // And 'to' is: (D) and (E)
-        // Then we get: (A and D and E) or (B and D and E) or (C and D and E)
-        return {
-          kind: GenericTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.OR,
-          types: from.types.map(or => {
-            return {
-              kind: GenericTypeKind.COMPOSITION,
-              compositionKind: CompositionKind.AND,
-              types: [or].concat(to.types),
-            } as GenericCompositionType;
-          })
-        } as GenericCompositionType;
-
-      } else if (from.compositionKind == CompositionKind.AND && to.compositionKind == CompositionKind.OR) {
-
-        // If 'from' is: (A) and (B) and (C)
-        // And 'to' is: (D) or (E)
-        // Then we get: (A and B and C and (D or E))
-        return {
-          kind: GenericTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.AND,
-          types: from.types.concat([to]),
-        } as GenericCompositionType;
-      } else {
-        throw new Error(`Can it even be any other combo?`)
-      }
-
+      this.addPropertyToClassType(a, to, common);
     } else {
-      throw new Error(`Cannot merge two types of different kinds, ${from.kind} vs ${to.kind}`);
+      const vsString = `${a.type.name} vs ${b.type.name}`;
+      const errMessage = `No common type for merging properties ${a.name}. ${vsString}`;
+      throw new Error(errMessage);
     }
   }
+
+  private addPropertyToClassType(property: GenericProperty, toType: GenericClassType, as?: GenericType): void {
+
+    if (!toType.properties) {
+      toType.properties = [];
+    }
+
+    toType.properties.push({
+      ...property,
+      ...{
+        owner: toType,
+        type: as || property.type
+      }
+    });
+  }
+
+// /**
+  //  * Will merge between types 'from' into 'to'.
+  //  * If a new type is returned, it means it could not update 'to' object but a whole new type was created.
+  //  * If undefined is returned, it means that the merging was done into the 'to' object silently.
+  //  */
+  // private mergeType(from: GenericType | undefined, to: GenericType): GenericType | undefined {
+  //
+  //   if (!from) {
+  //     return to;
+  //   }
+  //
+  //   if (from.kind == GenericTypeKind.OBJECT && to.kind == GenericTypeKind.OBJECT) {
+  //
+  //     to.properties = to.properties || [];
+  //     for (const fromProperty of (from.properties || [])) {
+  //       const toProperty = to.properties.find(p => p.name == fromProperty.name);
+  //       if (!toProperty) {
+  //         // This is a new property, and can just be added to the 'to'.
+  //         to.properties.push({
+  //           ...fromProperty,
+  //           ...{
+  //             owner: to,
+  //           }
+  //         });
+  //       } else {
+  //         // This property already exists, so we should try and find common type.
+  //         const common = JavaUtil.getCommonDenominatorBetween(fromProperty.type, toProperty.type);
+  //         if (common) {
+  //           const idx = to.properties.indexOf(toProperty);
+  //           to.properties.splice(idx, 1);
+  //           to.properties.push({
+  //             ...fromProperty,
+  //             ...{
+  //               owner: to,
+  //               type: common,
+  //             }
+  //           });
+  //         } else {
+  //           const vsString = `${fromProperty.type.name} vs ${toProperty.type.name}`;
+  //           const errMessage = `No common type for merging properties ${fromProperty.name}. ${vsString}`;
+  //           throw new Error(errMessage);
+  //         }
+  //       }
+  //     }
+  //
+  //     return undefined;
+  //
+  //   } else if (from.kind == GenericTypeKind.PRIMITIVE && to.kind == GenericTypeKind.PRIMITIVE) {
+  //
+  //     // TODO: Do not use any Java classes here!
+  //     const common = JavaUtil.getCommonDenominatorBetween(from, to);
+  //     if (common) {
+  //       return common;
+  //     } else {
+  //       throw new Error(`Two primitive types ${from.primitiveKind} and ${to.primitiveKind} do not have common type`);
+  //     }
+  //   } else if (from.kind == GenericTypeKind.COMPOSITION && to.kind == GenericTypeKind.COMPOSITION) {
+  //
+  //     if (from.compositionKind == to.compositionKind) {
+  //       to.types.push(...from.types);
+  //       return undefined;
+  //     } else if (from.compositionKind == CompositionKind.OR && to.compositionKind == CompositionKind.AND) {
+  //
+  //       // If 'from' is: (A) or (B) or (C)
+  //       // And 'to' is: (D) and (E)
+  //       // Then we get: (A and D and E) or (B and D and E) or (C and D and E)
+  //       return {
+  //         kind: GenericTypeKind.COMPOSITION,
+  //         compositionKind: CompositionKind.OR,
+  //         types: from.types.map(or => {
+  //           return {
+  //             kind: GenericTypeKind.COMPOSITION,
+  //             compositionKind: CompositionKind.AND,
+  //             types: [or].concat(to.types),
+  //           } as GenericCompositionType;
+  //         })
+  //       } as GenericCompositionType;
+  //
+  //     } else if (from.compositionKind == CompositionKind.AND && to.compositionKind == CompositionKind.OR) {
+  //
+  //       // If 'from' is: (A) and (B) and (C)
+  //       // And 'to' is: (D) or (E)
+  //       // Then we get: (A and B and C and (D or E))
+  //       return {
+  //         kind: GenericTypeKind.COMPOSITION,
+  //         compositionKind: CompositionKind.AND,
+  //         types: from.types.concat([to]),
+  //       } as GenericCompositionType;
+  //     } else {
+  //       throw new Error(`Can it even be any other combo?`)
+  //     }
+  //
+  //   } else {
+  //     throw new Error(`Cannot merge two types of different kinds, ${from.kind} vs ${to.kind}`);
+  //   }
+  // }
 
   private async jsonSchema7ToGenericProperty(owner: GenericPropertyOwner, propertyName: string, schema: JSONSchema7)
     : Promise<GenericProperty> {
@@ -1016,8 +1112,6 @@ class OpenRpcParserImpl {
       variables: new Map<string, unknown>(Object.entries((server.variables || {}))),
     };
   }
-
-  private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
 
   private async contentDescriptorToGenericProperty(owner: GenericPropertyOwner, descriptor: ContentDescriptorOrReference)
     : Promise<GenericProperty> {

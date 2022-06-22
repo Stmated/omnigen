@@ -17,7 +17,7 @@ export class CompositionUtil {
     } else if (compositionsAnyOfOr.length > 0) {
       const or: GenericType = (compositionsAnyOfOr.length > 1)
         ? <GenericCompositionType>{
-          name: compositionsAnyOfOr.map(it => NamingUtil.getSafeTypeName(it.name)).join('Or'),
+          name: compositionsAnyOfOr.map(it => NamingUtil.getSafeTypeName(it.name, it.nameClassifier)).join('Or'),
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.OR,
           types: compositionsAnyOfOr
@@ -28,7 +28,7 @@ export class CompositionUtil {
         extensionType = or;
       } else {
         extensionType = {
-          name: `${NamingUtil.getSafeTypeName(extensionType.name)}And${NamingUtil.getSafeTypeName(or.name)}`,
+          name: `${NamingUtil.getSafeTypeName(extensionType.name, extensionType.nameClassifier)}And${NamingUtil.getSafeTypeName(or.name)}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [extensionType, or]
@@ -41,7 +41,7 @@ export class CompositionUtil {
     } else if (compositionsAllOfAnd.length > 0) {
       const and: GenericType = (compositionsAllOfAnd.length > 1)
         ? <GenericCompositionType>{
-          name: compositionsAllOfAnd.map(it => NamingUtil.getSafeTypeName(it.name)).join('And'),
+          name: compositionsAllOfAnd.map(it => NamingUtil.getSafeTypeName(it.name, it.nameClassifier)).join('And'),
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: compositionsAllOfAnd
@@ -52,7 +52,7 @@ export class CompositionUtil {
         extensionType = and;
       } else {
         extensionType = {
-          name: `${NamingUtil.getSafeTypeName(extensionType.name)}And${NamingUtil.getSafeTypeName(and.name)}`,
+          name: `${NamingUtil.getSafeTypeName(extensionType.name, extensionType.nameClassifier)}And${NamingUtil.getSafeTypeName(and.name)}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [extensionType, and]
@@ -65,7 +65,7 @@ export class CompositionUtil {
     } else if (compositionsOneOfOr.length > 1) {
       const xor: GenericType = (compositionsOneOfOr.length > 1)
         ? <GenericCompositionType>{
-          name: compositionsOneOfOr.map(it => NamingUtil.getSafeTypeName(it.name)).join('XOr'),
+          name: compositionsOneOfOr.map(it => NamingUtil.getSafeTypeName(it.name, it.nameClassifier)).join('XOr'),
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.XOR,
           types: compositionsOneOfOr
@@ -76,7 +76,7 @@ export class CompositionUtil {
         extensionType = xor;
       } else {
         extensionType = {
-          name: `${NamingUtil.getSafeTypeName(extensionType.name)}And${NamingUtil.getSafeTypeName(xor.name)}`,
+          name: `${NamingUtil.getSafeTypeName(extensionType.name, extensionType.nameClassifier)}And${NamingUtil.getSafeTypeName(xor.name)}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [extensionType, xor]
@@ -96,7 +96,7 @@ export class CompositionUtil {
         extensionType = not;
       } else {
         extensionType = {
-          name: `${NamingUtil.getSafeTypeName(extensionType.name)}And${not.name}`,
+          name: `${NamingUtil.getSafeTypeName(extensionType.name, extensionType.nameClassifier)}And${not.name}`,
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [extensionType, not]

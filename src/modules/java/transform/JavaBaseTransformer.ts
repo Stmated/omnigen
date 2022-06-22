@@ -202,7 +202,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
       // TODO: Implement all this. For now, just write the stuff in comments
 
-      comments.push(new Java.Comment(this.getCommentsDescribingExtensions(type.extendedBy) || ''));
+      comments.push(new Java.Comment(`Composition: ${this.getCommentsDescribingExtensions(type.extendedBy) || ''}`));
     }
 
     if (comments.length > 0) {
@@ -234,22 +234,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
   private getCommentsDescribingExtensions(type: GenericType): string {
 
-    /*
-    if (type.kind == GenericTypeKind.COMPOSITION) {
-
-      if (type.compositionKind == CompositionKind.AND) {
-
-      } else if (type.compositionKind == CompositionKind.OR) {
-
-      } else if (type.compositionKind == CompositionKind.XOR) {
-
-      } else if (type.compositionKind == CompositionKind.NOT) {
-
-      }
-
-    } else {*/
-      return type.name;
-    //}
+    return type.name;
   }
 
   private getCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {

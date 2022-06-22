@@ -109,6 +109,17 @@ export interface GenericBaseType<T> {
   title?: string;
   description?: string;
   summary?: string;
+
+  /**
+   * Can be used to classify the type with something extra.
+   * Can be helpful if there are multiple types that have the same "name",
+   * but are used for different things throughout the schema.
+   * For example "Pet" as a Param or "Pet" as a response.
+   * Then instead of naming the types Pet and Pet1, it could be Pet and ResponsePet.
+   *
+   * TODO: Rename this into "tag" and use that system throughout?
+   */
+  nameClassifier?: string;
 }
 
 export enum CompositionKind {

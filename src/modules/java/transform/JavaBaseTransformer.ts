@@ -22,15 +22,14 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
 
     for (const type of model.types) {
-      if (!JavaBaseTransformer.PATTERN_IDENTIFIER.test(type.name)) {
+      const typeName = (typeof type.name == 'string') ? type.name : type.name();
+      if (!JavaBaseTransformer.PATTERN_IDENTIFIER.test(typeName)) {
         // The type does not have a valid name; what can we do about it?
-        throw new Error(`Type name '${type.name}' (${type.description || type.summary || type.kind}) is not valid`);
+        throw new Error(`Type name '${typeName}' (${type.description || type.summary || type.kind}) is not valid`);
       } else {
         // The type has a valid name, but we will make sure it is in PascalCase for Java.
-        const pascalName = pascalCase(type.name);
-        if (pascalName !== type.name) {
-          type.name = pascalName;
-        }
+        // Also replace the callback with a new one, so it is set in stone from now on.
+        type.name = pascalCase(typeName);
       }
     }
 
@@ -45,7 +44,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
         const enumDeclaration = new Java.EnumDeclaration(
           new Java.Type(type),
-          new Java.Identifier(type.name),
+          new Java.Identifier((typeof type.name == 'string') ? type.name : type.name()),
           body,
         );
 
@@ -192,7 +191,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     const javaClass = new Java.ClassDeclaration(
       new Java.Type(type),
-      new Java.Identifier(type.name),
+      new Java.Identifier((typeof type.name == 'string') ? type.name : type.name()),
       body,
     );
 
@@ -233,8 +232,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
   }
 
   private getCommentsDescribingExtensions(type: GenericType): string {
-
-    return type.name;
+    return (typeof type.name == 'string') ? type.name : type.name();
   }
 
   private getCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {

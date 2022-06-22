@@ -1,6 +1,15 @@
 import {pascalCase} from 'change-case';
+import {GenericType, TypeName} from '@parse/GenericModel';
 
-export class NamingUtil {
+export class Naming {
+
+  public static unwrap(name: TypeName): string {
+    return (typeof name == 'string') ? name : name();
+  }
+
+  public static safer(type: GenericType, hasDuplicateFn?: (value: string) => boolean): string {
+    return Naming.safe(type.name, type.nameClassifier, hasDuplicateFn);
+  }
 
   /**
    * TODO: This needs to not be called everywhere. We need to synchronize the names better.
@@ -10,12 +19,13 @@ export class NamingUtil {
    *        Maybe make the name property a callback which can alter during the execution?
    *        (And then finalize it at the end, at the cleanup)
    */
-  public static getSafeTypeName(name: string, classifier?: string, hasDuplicateFn?: (value: string) => boolean): string {
+  public static safe(name: TypeName, classifier?: string, hasDuplicateFn?: (value: string) => boolean): string {
 
     let safeName = '';
-    if (name.indexOf('/') !== -1) {
+    const resolvedName = Naming.unwrap(name);
+    if (resolvedName.indexOf('/') !== -1) {
       // The type name contains a slash, which means it is probably a ref name.
-      const nameParts = name.split('/');
+      const nameParts = resolvedName.split('/');
       for (let i = nameParts.length - 1; i >= 0; i--) {
         safeName = (nameParts[i] + pascalCase(safeName));
 
@@ -24,7 +34,7 @@ export class NamingUtil {
         }
       }
     } else {
-      safeName = pascalCase(name);
+      safeName = pascalCase(resolvedName);
     }
 
     if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
@@ -48,6 +58,6 @@ export class NamingUtil {
       }
     }
 
-    throw new Error(`Could not build a safe unique name for '${name}'`);
+    throw new Error(`Could not build a safe unique name for '${safeName}'`);
   }
 }

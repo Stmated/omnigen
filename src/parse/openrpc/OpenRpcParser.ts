@@ -30,7 +30,7 @@ import {
   GenericServer,
   GenericType,
   GenericTypeKind,
-  SchemaFile,
+  SchemaFile, TypeName,
 } from '@parse';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
@@ -63,7 +63,7 @@ import {LoggerFactory} from '@util';
 import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
 import {GenericModelUtil} from '@parse/GenericModelUtil';
-import {NamingUtil} from '@parse/NamingUtil';
+import {Naming} from '@parse/Naming';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -152,7 +152,7 @@ class OpenRpcParserImpl {
     const typeNames: string[] = [];
 
     for (const type of model.types) {
-      type.name = NamingUtil.getSafeTypeName(type.name, type.nameClassifier,(v) => typeNames.includes(v));
+      type.name = Naming.safer(type, (v) => typeNames.includes(v));
       typeNames.push(type.name);
     }
   }
@@ -185,7 +185,7 @@ class OpenRpcParserImpl {
 
     // One regular response
     const resultResponse = await this.resultToGenericOutputAndResultParamType(method, method.result);
-    resultResponse.type.nameClassifier = resultResponse.type.nameClassifier || 'Response';
+    resultResponse.type.nameClassifier = resultResponse.type.nameClassifier || `${pascalCase(method.name)}Response`;
     responses.push(resultResponse.output);
 
     // And then one response for each potential error
@@ -237,7 +237,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async jsonSchemaToType(names: string[], schema: JSONSchema, ref?: string)
+  private async jsonSchemaToType(names: TypeName[], schema: JSONSchema, ref?: string)
     : Promise<SchemaToTypeResult> {
     if (typeof schema == 'boolean') {
       return {
@@ -275,7 +275,7 @@ class OpenRpcParserImpl {
 
   private async jsonSchemaToTypeUncached(
     schema: JSONSchemaObject,
-    names: string[],
+    names: TypeName[],
     ref: string | undefined
   ): Promise<SchemaToTypeResult> {
 
@@ -288,7 +288,7 @@ class OpenRpcParserImpl {
     }
 
     const type: GenericClassType = {
-      name: names.join('_'),
+      name: () => names.map(it => Naming.unwrap(it)).join('_'),
       kind: GenericTypeKind.OBJECT,
       description: schema.description,
       title: schema.title,
@@ -338,7 +338,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async jsonSchemaToNonClassType(schema: JSONSchemaObject, names: string[]): Promise<GenericType | undefined> {
+  private async jsonSchemaToNonClassType(schema: JSONSchemaObject, names: TypeName[]): Promise<GenericType | undefined> {
 
     if (typeof schema.type === 'string') {
       if (schema.type === 'array') {
@@ -349,15 +349,16 @@ class OpenRpcParserImpl {
 
         // TODO: This is not lossless if the primitive has comments/summary/etc
         const t = this.typeToGenericKnownType(schema.type, schema.format);
+        const schemaType = schema.type;
         if (t.length == 1) {
           return {
-            name: names.length ? names.join('_') : schema.type,
+            name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
             kind: t[0],
             description: schema.description,
           };
         } else {
           return {
-            name: names.length ? names.join('_') : schema.type,
+            name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
             kind: t[0],
             primitiveKind: t[1],
             description: schema.description,
@@ -406,7 +407,7 @@ class OpenRpcParserImpl {
     return type;
   }
 
-  public async extendOrEnhanceClassType(schema: JSONSchemaObject, type: GenericClassType, names: string[]): Promise<void> {
+  public async extendOrEnhanceClassType(schema: JSONSchemaObject, type: GenericClassType, names: TypeName[]): Promise<void> {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -451,7 +452,7 @@ class OpenRpcParserImpl {
 
       if (types.length > 0) {
         compositionsAllOfAnd.push({
-          name: types.map(it => NamingUtil.getSafeTypeName(it.name, it.nameClassifier)).join('And'),
+          name: () => types.map(it => Naming.safer(it)).join('And'),
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: types
@@ -629,12 +630,12 @@ class OpenRpcParserImpl {
   //   return extensions;
   // }
 
-  private async getArrayItemType(schema: JSONSchemaObject, items: Items | undefined, names: string[]): Promise<GenericArrayType | GenericArrayPropertiesByPositionType | GenericArrayTypesByPositionType> {
+  private async getArrayItemType(schema: JSONSchemaObject, items: Items | undefined, names: TypeName[]): Promise<GenericArrayType | GenericArrayPropertiesByPositionType | GenericArrayTypesByPositionType> {
 
     if (!items) {
       // No items, so the schema for the array items is undefined.
       return {
-        name: names.length > 0 ? names.join('_') : `ArrayOfUnknowns`,
+        name: names.length > 0 ? () => names.map(it => Naming.unwrap(it)).join('_') : `ArrayOfUnknowns`,
         kind: GenericTypeKind.ARRAY,
         minLength: schema.minItems,
         maxLength: schema.maxItems,
@@ -656,11 +657,13 @@ class OpenRpcParserImpl {
         items.map((it) => this.jsonSchemaToType([], it))
       ));
 
-      const staticArrayTypeNames = staticArrayTypes.map(it => NamingUtil.getSafeTypeName(it.type.name, it.type.nameClassifier)).join('And');
+      // const staticArrayTypeNames = ;
       const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
       return <GenericArrayTypesByPositionType>{
-        name: names.length > 0 ? names.join('_') : `ArrayOf${staticArrayTypeNames}`,
+        name: names.length > 0
+          ? () => names.map(it => Naming.unwrap(it)).join('_')
+          : `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
         kind: GenericTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
         commonDenominator: commonDenominator,
@@ -670,7 +673,9 @@ class OpenRpcParserImpl {
       // items is a single JSONSchemaObject
       const itemType = (await this.jsonSchemaToType(names, items)).type;
       return {
-        name: names.length > 0 ? names.join('_') : `ArrayOf${NamingUtil.getSafeTypeName(itemType.name, itemType.nameClassifier)}`,
+        name: names.length > 0
+          ? () => names.map(it => Naming.unwrap(it)).join('_')
+          : () => `ArrayOf${Naming.safer(itemType)}`,
         kind: GenericTypeKind.ARRAY,
         minLength: schema.minItems,
         maxLength: schema.maxItems,
@@ -719,7 +724,7 @@ class OpenRpcParserImpl {
       }
       this.addPropertyToClassType(a, to, common);
     } else {
-      const vsString = `${a.type.name} vs ${b.type.name}`;
+      const vsString = `${Naming.safer(a.type)} vs ${Naming.safer(b.type)}`;
       const errMessage = `No common type for merging properties ${a.name}. ${vsString}`;
       throw new Error(errMessage);
     }
@@ -1365,7 +1370,7 @@ class OpenRpcParserImpl {
           target: targetParameter,
         });
       } else {
-        logger.warn(`Could not find property '${linkParamName}' in '${requestResultClass.name}'`);
+        logger.warn(`Could not find property '${linkParamName}' in '${Naming.safer(requestResultClass)}'`);
       }
     }
 
@@ -1408,7 +1413,9 @@ class OpenRpcParserImpl {
           if (inputProperties.length > propertyPath.length) {
             propertyPath = inputProperties;
           } else {
-            throw new Error(`There is no property path '${pathString}' in '${primaryType.name}' nor '${secondaryType.name}'`);
+            const primaryName = Naming.safer(primaryType);
+            const secondaryName = Naming.safer(secondaryType);
+            throw new Error(`There is no property path '${pathString}' in '${primaryName}' nor '${secondaryName}'`);
           }
         }
 
@@ -1450,7 +1457,7 @@ class OpenRpcParserImpl {
         pointer = pointer.of;
         i--;
       } else {
-        throw new Error(`Do not know how to handle '${type.name}' in property path '${pathParts.join('.')}'`);
+        throw new Error(`Do not know how to handle '${Naming.safer(type)}' in property path '${pathParts.join('.')}'`);
       }
     }
 

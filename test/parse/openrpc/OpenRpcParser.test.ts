@@ -2,6 +2,7 @@ import {CompositionKind, GenericPrimitiveKind, GenericTypeKind, OpenRpcParser, S
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import assert = require('assert');
+import {Naming} from '../../../src/parse/Naming';
 
 describe('Test Generic Model Creation', () => {
   const parser = new OpenRpcParser();
@@ -34,7 +35,7 @@ describe('Test Generic Model Creation', () => {
     expect(model.endpoints[0].name).toEqual('get_pets');
     expect(model.endpoints[0].responses).toHaveLength(2); // 1 result, 1 error
     expect(model.endpoints[0].responses[0].name).toEqual('pet'); // Or should it be something else?
-    expect(model.endpoints[0].responses[0].type.name).toEqual('GetPetsResponse'); // Should this be 'pet' since is name of `result`?
+    expect(Naming.unwrap(model.endpoints[0].responses[0].type.name)).toEqual('GetPetsResponse'); // Should this be 'pet' since is name of `result`?
 
     const response0 = model.endpoints[0].responses[0];
     expect(response0.type.kind).toEqual(GenericTypeKind.OBJECT);
@@ -46,6 +47,6 @@ describe('Test Generic Model Creation', () => {
     expect(response0properties[1].name).toEqual('error');
     expect(response0properties[2].name).toEqual('id');
 
-    expect(model.types.map(it => it.name)).toContain('DeletePetByIdErrorUnknownError');
+    expect(model.types.map(it => Naming.unwrap(it.name))).toContain('DeletePetByIdErrorUnknownError');
   });
 });

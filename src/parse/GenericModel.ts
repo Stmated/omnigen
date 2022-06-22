@@ -102,8 +102,10 @@ export type GenericType = GenericNullType
   | GenericCompositionType
   | GenericEnumType;
 
+export type TypeName = string | {(): string};
+
 export interface GenericBaseType<T> {
-  name: string;
+  name: TypeName;
   kind: T;
   accessLevel?: GenericAccessLevel;
   title?: string;
@@ -190,10 +192,6 @@ export interface GenericClassType extends GenericBaseType<GenericClassKnownKind>
    * It is up to the target language what to do with it/how to transform it to something useful.
    */
   extendedBy?: GenericType;
-
-  //extendsAnyOf?: GenericClassType[];
-  //extendsAllOf?: GenericClassType[];
-  //extendsOneOf?: GenericClassType[];
 
   properties?: GenericProperty[];
   requiredProperties?: GenericProperty[];

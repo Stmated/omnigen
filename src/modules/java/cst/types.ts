@@ -520,7 +520,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
   get type(): Type {
     return new Type(<GenericPrimitiveType>{
-      name: 'void',
+      name: () => 'void',
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.VOID,
     });
@@ -702,7 +702,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
     const keyType: GenericPrimitiveType = {
-      name: "AdditionalPropertiesKeyType",
+      name: () => 'AdditionalPropertiesKeyType',
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.STRING
     };
@@ -710,12 +710,12 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     // TODO: Should this be "Unknown" or another type that is "Any"?
     //  Difference between rendering as JsonNode and Object in some cases.
     const valueType: GenericClassType = {
-      name: "AdditionalPropertiesValueType",
+      name: () => 'AdditionalPropertiesValueType',
       kind: GenericTypeKind.UNKNOWN,
       additionalProperties: false
     }
     const mapType: GenericDictionaryType = {
-      name: 'AdditionalProperties',
+      name: () => 'AdditionalProperties',
       kind: GenericTypeKind.DICTIONARY,
       keyType: keyType,
       valueType: valueType
@@ -733,7 +733,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     );
 
     const addMethod = new MethodDeclaration(
-      new Type(<GenericPrimitiveType> { name: '', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.VOID}),
+      new Type(<GenericPrimitiveType> { name: () => '', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.VOID}),
       new Identifier('addAdditionalProperty'),
       new ArgumentDeclarationList(
         new ArgumentDeclaration(new Type(keyType), keyParameterIdentifier),
@@ -757,7 +757,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     addMethod.annotations = new AnnotationList(
       new Annotation(
         new Type({
-          name: 'AnySetter',
+          name: () => 'AnySetter',
           kind: GenericTypeKind.REFERENCE,
           fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
         }),
@@ -771,7 +771,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
         additionalPropertiesField,
         new AnnotationList(new Annotation(
           new Type({
-            name: 'AnyGetter',
+            name: () => 'AnyGetter',
             kind: GenericTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
           }),

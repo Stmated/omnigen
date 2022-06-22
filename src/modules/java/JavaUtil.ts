@@ -1,14 +1,18 @@
 import * as Java from './cst/types';
-import {ModifierType} from './cst/types';
+import {ModifierType} from '@java/cst';
 import {pascalCase} from 'change-case';
 import {GenericDictionaryType, GenericPrimitiveKind, GenericType, GenericTypeKind} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
+import {Naming} from '@parse/Naming';
 
 export class JavaUtil {
 
+  /**
+   * TODO: Return TypeName instead?
+   */
   public static getFullyQualifiedName(type: GenericType, options?: JavaOptions): string {
 
     if (type.kind == GenericTypeKind.ARRAY) {
@@ -81,13 +85,13 @@ export class JavaUtil {
     } else if (type.kind == GenericTypeKind.ENUM) {
 
       // TODO: This might need to be prefixed with the package name?
-      return type.name;
+      return Naming.safer(type);
     } else {
 
       // This is a generated type's name.
       // TODO: We might need to look into doing some work here, if it should be the FQN or relative path?
       // TODO: This might need to be prefixed with the package name?
-      return type.name;
+      return Naming.safer(type);
     }
   }
 
@@ -178,7 +182,7 @@ export class JavaUtil {
       }
     } else if (a.kind == GenericTypeKind.ENUM) {
       if (b.kind == GenericTypeKind.ENUM) {
-        return a.name === b.name ? a : undefined;
+        return Naming.unwrap(a.name) == Naming.unwrap(b.name) ? a : undefined;
       }
     } else if (a.kind == GenericTypeKind.DICTIONARY) {
       if (b.kind == GenericTypeKind.DICTIONARY) {
@@ -187,7 +191,7 @@ export class JavaUtil {
           const commonValue = JavaUtil.getCommonDenominator(a.valueType, b.valueType);
           if (commonValue) {
             return <GenericDictionaryType>{
-              name: `CommonBetween${a.name}And${b.name}`,
+              name: () => `CommonBetween${Naming.safer(a)}And${Naming.safer(b)}`,
               kind: GenericTypeKind.DICTIONARY,
               keyType: commonKey,
               valueType: commonValue,

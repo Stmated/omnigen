@@ -30,7 +30,8 @@ import {
   GenericServer,
   GenericType,
   GenericTypeKind,
-  SchemaFile, TypeName,
+  SchemaFile,
+  TypeName,
 } from '@parse';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
@@ -68,15 +69,6 @@ import {Naming} from '@parse/Naming';
 export const logger = LoggerFactory.create(__filename);
 
 type SchemaToTypeResult = { type: GenericType; canInline: boolean };
-
-// TODO:
-// * petstore-expanded -- the classes with inheritance need to implement classes/interfaces correctly
-// * petstore-expanded -- if a schema contains inline types inside 'allOf', it should just merge with parent
-// * Need to develop a new example with *VERY* complex inheritance structure, and try to convert it
-// * Remove the need for the "types" array, and instead do it dynamically by searching for types through whole structure
-//    * It can be cached during build-up though, just to make initial lookup while parsing a bit faster
-// * simple-math -- check if the examples are actually printed to the right places (make it work like links)
-// * Simple way of creating a custom visitor! Remake into interfaces with properties you can re-assign!
 
 export class OpenRpcParser extends AbstractParser {
 
@@ -141,7 +133,6 @@ class OpenRpcParserImpl {
       refTypes.push((await refTypePromise).type);
     }
     model.types.push(...GenericModelUtil.getAllExportableTypes(model, refTypes));
-    // model.types.push(...GenericModelUtil.getAllExportableTypes(model, this._refTypeMap.values()));
 
     this.cleanup(model);
 
@@ -402,7 +393,6 @@ class OpenRpcParserImpl {
       }
     }
     */
-
 
     return type;
   }
@@ -1228,8 +1218,6 @@ class OpenRpcParserImpl {
       requestParamsType.properties = await Promise.all(
         method.params.map((it) => this.contentDescriptorToGenericProperty(requestParamsType, it))
       );
-
-      // types.push(requestParamsType);
     }
 
     const requestType = <GenericClassType>{
@@ -1480,13 +1468,6 @@ class OpenRpcParserImpl {
   private async dereference<T>(object: ReferenceObject | T): Promise<{ object: T; ref: string | undefined }> {
 
     if ('$ref' in object) {
-      // const existing = this._refMap.get(object.$ref);
-      // if (existing) {
-      //   return {
-      //     object: existing as T,
-      //     ref: object.$ref
-      //   };
-      // }
 
       const cachedPromise = this._derefPromiseMap.get(object.$ref);
       if (cachedPromise) {
@@ -1522,11 +1503,9 @@ class OpenRpcParserImpl {
 
       this._derefPromiseMap.set(object.$ref, resolvePromise);
       const resolved = await resolvePromise;
-      // this._refMap.set(object.$ref, resolved);
-      // this._dereferencePromises.delete(object.$ref);
 
       return {
-        object: resolved, // (await this.dereference(dereferenced)).object,
+        object: resolved,
         ref: object.$ref
       };
     } else {

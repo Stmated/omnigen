@@ -5,6 +5,7 @@ import {IRenderer} from '@render';
 import {ICstNode} from '@cst';
 import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
+import {pascalCase} from 'change-case';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>; 
 
@@ -171,7 +172,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
-    return (node.types.children.map(it => this.render(it, visitor)).join(', '));
+    return (node.types.children.map(it => this.escapeImplements(this.render(it, visitor))).join(', '));
   }
 
   visitClassDeclaration: JavaRendererVisitFn<Java.ClassDeclaration> = (node, visitor) => {
@@ -338,10 +339,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `super(${this.render(node.parameters, visitor)})`;
   }
 
-  // visitAdditionalPropertiesDeclaration: VisitFn<Java.AdditionalPropertiesDeclaration, string, this> = (node, visitor) => {
-  //   return node.children.map(it => it.visit(this));
-  //
-  //   // TODO: Render it somehow. What is the best way to keep it modular and modifiable by others?
-  //   return `// TODO: This is where the additionalProperties code should go\n`;
-  // }
+  private escapeImplements(value: string): string {
+
+    // This will most likely result in *INCORRECT* Java Code, since it will refer to other type that intended.
+    // But for now this is better than simply crashing.
+    // TODO: But THIS MUST BE REMOVED later when the inheritance system is fully functional. Then it *should* crash on parse error.
+    return pascalCase(value.replaceAll(/[^\w0-9]/g, '_'));
+  }
 }

@@ -7,10 +7,10 @@ import {
   GenericTypeKind
 } from '@parse';
 import {
-  CompositionDependencyUtil,
+  DependencyGraphBuilder,
   DEFAULT_GRAPH_OPTIONS, DependencyGraph,
   DependencyGraphOptions
-} from '@parse/CompositionDependencyUtil';
+} from '../../src/parse/DependencyGraphBuilder';
 import {Naming} from '../../src/parse/Naming';
 
 describe('Test CompositionDependencyUtil', () => {
@@ -21,7 +21,7 @@ describe('Test CompositionDependencyUtil', () => {
   };
 
   function java(types: GenericType[]): DependencyGraph {
-    return CompositionDependencyUtil.buildGraph(types, javaOptions);
+    return DependencyGraphBuilder.build(types, javaOptions);
   }
 
   test('Empty', async () => {

@@ -7,7 +7,7 @@
  */
 import {GenericType, GenericTypeKind} from '@parse/GenericModel';
 
-export class CompositionDependencyUtil {
+export class DependencyGraphBuilder {
 
   /**
    * Builds an informational dependency graph between the different types.
@@ -19,7 +19,7 @@ export class CompositionDependencyUtil {
    * For example, a type can be both Abstract and an Interface.
    * In for example Java, it should output type as two files: Abstract[XYZ] and I[XYZ], then replace use with both.
    */
-  public static buildGraph(types: GenericType[], options = DEFAULT_GRAPH_OPTIONS): DependencyGraph {
+  public static build(types: GenericType[], options = DEFAULT_GRAPH_OPTIONS): DependencyGraph {
 
     const graph: DependencyGraph = {
       usedBy: new Map<GenericType, GenericType[]>(),
@@ -36,7 +36,7 @@ export class CompositionDependencyUtil {
 
         if (type.extendedBy) {
           let index = 0;
-          for (const expanded of CompositionDependencyUtil.expand(type.extendedBy)) {
+          for (const expanded of DependencyGraphBuilder.expand(type.extendedBy)) {
             if (!graph.usedBy.get(expanded)) {
               graph.usedBy.set(expanded, []);
             }

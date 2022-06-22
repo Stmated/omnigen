@@ -1,7 +1,6 @@
 import {AbstractJavaTransformer} from './AbstractJavaTransformer';
-import {JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
+import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
-  CompositionKind,
   GenericClassType,
   GenericContinuationMapping,
   GenericExamplePairing,
@@ -12,6 +11,9 @@ import {
 } from '@parse';
 import * as Java from '@java/cst';
 import {camelCase, pascalCase} from 'change-case';
+import {Naming} from '@parse/Naming';
+import {DependencyGraphBuilder, DEFAULT_GRAPH_OPTIONS, DependencyGraph} from '@parse/DependencyGraphBuilder';
+import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 
 export class JavaBaseTransformer extends AbstractJavaTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
@@ -22,7 +24,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
 
     for (const type of model.types) {
-      const typeName = (typeof type.name == 'string') ? type.name : type.name();
+      const typeName = Naming.unwrap(type.name);
       if (!JavaBaseTransformer.PATTERN_IDENTIFIER.test(typeName)) {
         // The type does not have a valid name; what can we do about it?
         throw new Error(`Type name '${typeName}' (${type.description || type.summary || type.kind}) is not valid`);
@@ -32,6 +34,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         type.name = pascalCase(typeName);
       }
     }
+
+    const graph = DependencyGraphBuilder.build(model.types, DEFAULT_GRAPH_OPTIONS);
 
     for (const type of model.types) {
 
@@ -44,7 +48,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
         const enumDeclaration = new Java.EnumDeclaration(
           new Java.Type(type),
-          new Java.Identifier((typeof type.name == 'string') ? type.name : type.name()),
+          new Java.Identifier(Naming.unwrap(type.name)),
           body,
         );
 
@@ -77,7 +81,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // Should we do something here?
 
       } else {
-        this.transformObject(model, type, options, root);
+        this.transformObject(model, type, options, root, graph);
       }
 
       // TODO: Find enum
@@ -87,140 +91,64 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return Promise.resolve();
   }
 
-  private transformObject(model: GenericModel, type: GenericClassType, options: JavaOptions, root: JavaCstRootNode): void {
+  private transformObject(
+    model: GenericModel,
+    type: GenericClassType,
+    options: JavaOptions,
+    root: JavaCstRootNode,
+    graph: DependencyGraph
+  ): void {
 
-    // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance
+    // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
+    //        Make use of the DependencyGraph to figure things out...
     const body = new Java.Block();
 
     if (type.properties) {
       for (const property of type.properties) {
-
-        const comments: Java.Comment[] = [];
-        if (property.type.kind != GenericTypeKind.OBJECT) {
-
-          // If the type is not an object, then we will never create a class just for its sake.
-          // So we should propagate all the examples and all other data we can find about it, to the property's comments.
-
-          comments.push(...this.getCommentsForType(property.type, model, options));
-
-          if (property.type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-
-            const staticArrayStrings = property.type.properties.map((prop, idx) => {
-              const typeName = JavaUtil.getFullyQualifiedName(prop.type);
-              const parameterName = prop.name;
-              const description = prop.description || prop.type.description;
-              return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
-            });
-
-            comments.push(new Java.Comment(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`));
-          }
-        }
-
-        comments.push(...this.getCommentsForProperty(property, model, options));
-
-        const commentList = (comments.length > 0) ? new Java.CommentList(...comments) : undefined;
-
-        if (property.type.kind == GenericTypeKind.NULL) {
-
-          if (options.includeAlwaysNullProperties) {
-
-            // We're told to include it, even though it always returns null.
-            const methodDeclaration = new Java.MethodDeclaration(
-              this.toJavaType(property.type),
-              new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-              undefined,
-              undefined,
-              new Java.Block(
-                new Java.ReturnStatement(new Java.Literal(null)),
-              )
-            );
-
-            methodDeclaration.comments = commentList;
-            body.children.push(methodDeclaration);
-          }
-
-          continue;
-        }
-
-        if (property.type.kind == GenericTypeKind.PRIMITIVE && property.type.valueConstant) {
-
-          const methodDeclaration = new Java.MethodDeclaration(
-            new Java.Type(property.type),
-            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-            undefined,
-            undefined,
-            new Java.Block(
-              new Java.ReturnStatement(new Java.Literal(property.type.valueConstant)),
-            )
-          );
-
-          methodDeclaration.comments = commentList;
-          body.children.push(methodDeclaration);
-
-          continue;
-        }
-
-        if (options.immutableModels) {
-          const field = new Java.Field(
-            this.toJavaType(property.type),
-            new Java.Identifier(camelCase(property.name), property.name),
-            new Java.ModifierList([
-              new Java.Modifier(ModifierType.PRIVATE),
-              new Java.Modifier(ModifierType.FINAL)
-            ])
-          );
-          body.children.push(field);
-          body.children.push(new Java.FieldBackedGetter(field, undefined, commentList));
-        } else {
-          body.children.push(new Java.FieldGetterSetter(
-            this.toJavaType(property.type),
-            new Java.Identifier(camelCase(property.name), property.name),
-            undefined,
-            commentList
-          ));
-        }
+        this.transformObjectProperty(model, body, property, options);
       }
     }
 
     if (type.additionalProperties) {
 
-      // TODO: Need to implement this.
-      //  Need an easy way of describing this, so it can be replaced or altered by another transformer.
-      body.children.push(new Java.AdditionalPropertiesDeclaration());
+      if (!JavaDependencyGraph.superMatches(graph, type, parent => parent.additionalProperties)) {
+
+        // No parent implements additional properties, so we should.
+        body.children.push(new Java.AdditionalPropertiesDeclaration());
+      }
     }
 
     const javaClass = new Java.ClassDeclaration(
       new Java.Type(type),
-      new Java.Identifier((typeof type.name == 'string') ? type.name : type.name()),
+      new Java.Identifier(Naming.unwrap(type.name)),
       body,
     );
 
     const comments = this.getCommentsForType(type, model, options);
 
+    const typeExtends = JavaDependencyGraph.getExtends(graph, type);
+    if (typeExtends) {
+      javaClass.extends = new Java.ExtendsDeclaration(
+        new Java.Type(typeExtends)
+      );
+    }
+
+    const typeImplements = JavaDependencyGraph.getImplements(graph, type);
+    if (typeImplements.length > 0) {
+      javaClass.implements = new Java.ImplementsDeclaration(
+        new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
+      );
+    }
+
     if (type.extendedBy) {
 
-      // TODO: Implement all this. For now, just write the stuff in comments
-
+      // Let's add a comment about what it extends, for DEBUG PURPOSES. Might need it for some complex types.
       comments.push(new Java.Comment(`Composition: ${this.getCommentsDescribingExtensions(type.extendedBy) || ''}`));
     }
 
     if (comments.length > 0) {
       javaClass.comments = new Java.CommentList(...comments);
     }
-
-    // if (type.extendsAllOf) {
-    //   if (type.extendsAllOf.length == 1) {
-    //     javaClass.extends = new Java.ExtendsDeclaration(
-    //       new Java.Type(type.extendsAllOf[0])
-    //     );
-    //   } else {
-    //
-    //     const types = type.extendsAllOf.map(it => new Java.Type(it));
-    //     javaClass.implements = new Java.ImplementsDeclaration(
-    //       new Java.TypeList(types)
-    //     );
-    //   }
-    // }
 
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(options.package),
@@ -231,8 +159,112 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     ));
   }
 
+  private transformObjectProperty(model: GenericModel, body: Block, property: GenericProperty, options: JavaOptions): void {
+
+    const comments: Java.Comment[] = [];
+    if (property.type.kind != GenericTypeKind.OBJECT) {
+
+      // If the type is not an object, then we will never create a class just for its sake.
+      // So we should propagate all the examples and all other data we can find about it, to the property's comments.
+
+      comments.push(...this.getCommentsForType(property.type, model, options));
+
+      if (property.type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+
+        const staticArrayStrings = property.type.properties.map((prop, idx) => {
+          const typeName = JavaUtil.getFullyQualifiedName(prop.type);
+          const parameterName = prop.name;
+          const description = prop.description || prop.type.description;
+          return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
+        });
+
+        comments.push(new Java.Comment(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`));
+      }
+    }
+
+    if (property.description) {
+      comments.push(new Java.Comment(property.description));
+    }
+
+    if (property.summary) {
+      comments.push(new Java.Comment(property.summary));
+    }
+
+    if (property.deprecated) {
+      comments.push(new Java.Comment('@deprecated'));
+    }
+
+    if (property.required) {
+      comments.push(new Java.Comment('Required'));
+    }
+
+    comments.push(...this.getLinkCommentsForProperty(property, model, options));
+
+    const commentList = (comments.length > 0) ? new Java.CommentList(...comments) : undefined;
+
+    if (property.type.kind == GenericTypeKind.NULL) {
+
+      if (options.includeAlwaysNullProperties) {
+
+        // We're told to include it, even though it always returns null.
+        const methodDeclaration = new Java.MethodDeclaration(
+          this.toJavaType(property.type),
+          new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
+          undefined,
+          undefined,
+          new Java.Block(
+            new Java.ReturnStatement(new Java.Literal(null)),
+          )
+        );
+
+        methodDeclaration.comments = commentList;
+        body.children.push(methodDeclaration);
+      }
+
+      return;
+    }
+
+    if (property.type.kind == GenericTypeKind.PRIMITIVE && property.type.valueConstant) {
+
+      const methodDeclaration = new Java.MethodDeclaration(
+        new Java.Type(property.type),
+        new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
+        undefined,
+        undefined,
+        new Java.Block(
+          new Java.ReturnStatement(new Java.Literal(property.type.valueConstant)),
+        )
+      );
+
+      methodDeclaration.comments = commentList;
+      body.children.push(methodDeclaration);
+
+      return;
+    }
+
+    if (options.immutableModels) {
+      const field = new Java.Field(
+        this.toJavaType(property.type),
+        new Java.Identifier(camelCase(property.name), property.name),
+        new Java.ModifierList([
+          new Java.Modifier(ModifierType.PRIVATE),
+          new Java.Modifier(ModifierType.FINAL)
+        ])
+      );
+      body.children.push(field);
+      body.children.push(new Java.FieldBackedGetter(field, undefined, commentList));
+    } else {
+      body.children.push(new Java.FieldGetterSetter(
+        this.toJavaType(property.type),
+        new Java.Identifier(camelCase(property.name), property.name),
+        undefined,
+        commentList
+      ));
+    }
+  }
+
   private getCommentsDescribingExtensions(type: GenericType): string {
-    return (typeof type.name == 'string') ? type.name : type.name();
+    return Naming.unwrap(type.name);
   }
 
   private getCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {
@@ -336,7 +368,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return comments;
   }
 
-  private getCommentsForProperty(property: GenericProperty, model: GenericModel, options: JavaOptions): Java.Comment[] {
+  private getLinkCommentsForProperty(property: GenericProperty, model: GenericModel, options: JavaOptions): Java.Comment[] {
     const comments: Java.Comment[] = [];
     if (!options.includeLinksOnProperty) {
       return comments;

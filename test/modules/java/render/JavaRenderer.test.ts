@@ -45,7 +45,7 @@ describe('Test the rendering of a CST tree to string', () => {
             cst = JavaParser.parse(cu.content);
             expect(cst).toBeDefined();
           } catch (ex) {
-            throw new Error(`Could not parse ${schemaName} ${fileName}: ${ex}`, {cause: ex instanceof Error ? ex : undefined});
+            throw new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}`, {cause: ex instanceof Error ? ex : undefined});
           }
 
           const visitor = new ParsedJavaTestVisitor();

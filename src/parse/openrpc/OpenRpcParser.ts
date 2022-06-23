@@ -1,7 +1,8 @@
 import {AbstractParser} from '@parse/AbstractParser';
 
 import {
-  AllowedEnumTypes,
+  AllowedEnumGenericPrimitiveTypes,
+  AllowedEnumTsTypes,
   ComparisonOperator,
   CompositionKind,
   GenericAccessLevel,
@@ -427,6 +428,7 @@ class OpenRpcParserImpl {
       compositionsNot
     );
 
+    // TODO: Remove this? It should be up to the final language to decide how to handle it, right?
     if (type.additionalProperties == undefined && type.properties == undefined) {
 
       // If there object is "empty" but we inherit from something, then just use the inherited type instead.
@@ -436,6 +438,8 @@ class OpenRpcParserImpl {
         return {
           ...extendedBy,
           ...{
+            // The name should be kept the same, since it is likely much more specific.
+            name: type.name,
 
             // TODO: Should the two types' descriptions be merged if both exist?
             description: extendedBy.description || type.description,
@@ -1114,7 +1118,7 @@ class OpenRpcParserImpl {
   private typeToGenericKnownType(type: string, format?: string, enumValues?: unknown[]):
     [GenericTypeKind.NULL]
     | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind]
-    | [GenericTypeKind.ENUM, GenericPrimitiveKind, AllowedEnumTypes[]] {
+    | [GenericTypeKind.ENUM, AllowedEnumGenericPrimitiveTypes, AllowedEnumTsTypes[]] {
 
     // TODO: Need to take heed to 'schema.format' for some primitive and/or known types!
     const lcType = type.toLowerCase();
@@ -1153,18 +1157,14 @@ class OpenRpcParserImpl {
 
     if (enumValues && enumValues.length > 0) {
 
-      // "enum": [
-      //   "earliest",
-      //   "latest",
-      //   "pending"
-      // ]
-      let allowedValues: AllowedEnumTypes[];
+      let allowedValues: AllowedEnumTsTypes[];
       if (primitiveType == GenericPrimitiveKind.STRING) {
         allowedValues = enumValues.map(it => `${String(it)}`);
-      } else if (primitiveType == GenericPrimitiveKind.DECIMAL || primitiveType == GenericPrimitiveKind.FLOAT) {
+      } else if (primitiveType == GenericPrimitiveKind.DECIMAL || primitiveType == GenericPrimitiveKind.FLOAT || primitiveType == GenericPrimitiveKind.NUMBER) {
         allowedValues = enumValues.map(it => Number.parseFloat(`${String(it)}`));
       } else {
         allowedValues = enumValues.map(it => Number.parseInt(`${String(it)}`));
+        primitiveType = GenericPrimitiveKind.STRING;
       }
 
       // TODO: Try to convert the ENUM values into the specified primitive type.

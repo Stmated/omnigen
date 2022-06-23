@@ -47,12 +47,14 @@ export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
   visitInterfaceDeclaration: JavaVisitFn<Java.InterfaceDeclaration, R>;
   visitEnumDeclaration: JavaVisitFn<Java.EnumDeclaration, R>;
+  visitEnumItem: JavaVisitFn<Java.EnumItem, R>;
+  visitEnumItemList: JavaVisitFn<Java.EnumItemList, R>;
   visitFieldReference: JavaVisitFn<Java.FieldReference, R>;
   visitAssignExpression: JavaVisitFn<Java.AssignExpression, R>;
-  visitEnumItem: JavaVisitFn<Java.EnumItem, R>;
   visitCompilationUnit: JavaVisitFn<Java.CompilationUnit, R>;
   visitConstructor: JavaVisitFn<Java.ConstructorDeclaration, R>;
   visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
+
 }

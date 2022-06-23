@@ -197,6 +197,8 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
       node.value.visit(visitor),
     ];
 
+    this.visitEnumItemList = (node, visitor) => node.children.map(it => it.visit(visitor));
+
     this.visitCompilationUnit = (node, visitor) => [
       node.packageDeclaration.visit(visitor),
       node.imports.visit(visitor),
@@ -259,9 +261,10 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
   visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
   visitInterfaceDeclaration: JavaVisitFn<Java.InterfaceDeclaration, R>;
   visitEnumDeclaration: JavaVisitFn<Java.EnumDeclaration, R>;
+  visitEnumItem: JavaVisitFn<Java.EnumItem, R>;
+  visitEnumItemList: JavaVisitFn<Java.EnumItemList, R>;
   visitFieldReference: JavaVisitFn<Java.FieldReference, R>;
   visitAssignExpression: JavaVisitFn<Java.AssignExpression, R>;
-  visitEnumItem: JavaVisitFn<Java.EnumItem, R>;
   visitCompilationUnit: JavaVisitFn<Java.CompilationUnit, R>;
   visitConstructor: JavaVisitFn<Java.ConstructorDeclaration, R>;
   visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;

@@ -8,6 +8,7 @@ import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {GenericModelUtil} from '../../../../src/parse/GenericModelUtil';
+import {GenericEndpoint, GenericModel, GenericOutput, GenericProperty, GenericTypeKind} from '../../../../src';
 
 // const SegfaultHandler = require('segfault-handler');
 // SegfaultHandler.registerHandler('crash.log');
@@ -88,7 +89,40 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'ethereum.json');
+    const model = await TestUtils.readExample('openrpc', 'description-inheritance.json');
+    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    const renderer = new JavaRenderer((cu) => {
+    });
+
+    const content = renderer.render(interpretation);
+
+    expect(content).toBeDefined();
+  });
+
+  test('Test inheritance of descriptions', async () => {
+
+    const interpreter = new JavaInterpreter();
+    const model = await TestUtils.readExample('openrpc', 'description-inheritance.json');
+
+    // TODO: Assert every single description, make sure things are inherited just as we want them to be
+    // TODO: There are *LOTS* of bugs here, we should make sure it is EXACTLY like we want it to be
+    // TODO: Comments can end up with the wrong names of classes, since they are not fully set until LATE
+
+    // const resultSchemaPropertyA = getEndpointResultProperty(model, 'method', 'ResultSchemaPropertyA');
+
+    // expect(resultSchemaPropertyA.description)
+    //   .toEqual('components_schemas_ResultSchema_allOf_inline_properties_ResultSchemaPropertyA_description');
+
+    // AbstractOne.description: components_schemas_AbstractOne_description
+    // ResultSchema.description: components_schemas_ResultSchema_description
+    // endpoint.method.description: methods_method_description
+
+    // endpoint.method.result.type.name = MethodResponse ---- but should be ResultDescriptor? Right??? Keep names as close to Spec IF POSSIBLE, yes?
+
+    // ResultDescriptor.name: ResultDescriptor (taken from $ref of methods/method/result/ref
+    //
+
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer((cu) => {
@@ -99,6 +133,38 @@ describe('Test the rendering of a CST tree to string', () => {
     expect(content).toBeDefined();
   });
 });
+
+function getEndpoint(model: GenericModel, endpointName: string): GenericEndpoint {
+  const endpoint = model.endpoints.find(it => it.name == endpointName);
+  if (!endpoint) {
+    throw new Error(`No endpoint called ${endpointName}`);
+  }
+
+  return endpoint;
+}
+
+function getEndpointResult(model: GenericModel, endpointName: string): GenericOutput {
+  const endpoint = getEndpoint(model, endpointName);
+  if (endpoint.responses.length == 0) {
+    throw new Error(`There are no responses in ${endpointName}`);
+  }
+
+  return endpoint.responses[0];
+}
+
+function getEndpointResultProperty(model: GenericModel, endpointName: string, propertyName: string): GenericProperty {
+  const result = getEndpointResult(model, endpointName);
+  if (result.type.kind != GenericTypeKind.OBJECT) {
+    throw new Error(`Cannot get property from ${endpointName} result since it's not an object`);
+  }
+
+  const property = result.type.properties?.find(it => it.name == propertyName);
+  if (!property) {
+    throw new Error(`There is no property called ${propertyName} in ${endpointName}`);
+  }
+
+  return property;
+}
 
 // TODO:
 // result.name = Name of the content that is being described. If the content described is a method parameter assignable by-name, this field SHALL define the parameter’s key (ie name).

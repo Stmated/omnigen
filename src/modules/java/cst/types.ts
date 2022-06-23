@@ -243,6 +243,19 @@ export class ArgumentList extends AbstractJavaNode {
   }
 }
 
+export class EnumItemList extends AbstractJavaNode {
+  children: EnumItem[];
+
+  constructor(...children: EnumItem[]) {
+    super();
+    this.children = children;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitEnumItemList(this, visitor);
+  }
+}
+
 export class Block extends AbstractJavaNode {
   children: AbstractJavaNode[];
 
@@ -671,9 +684,10 @@ export class CompilationUnit extends AbstractJavaNode {
   }
 }
 
+export type ConstructorOwnerDeclaration = ClassDeclaration | EnumDeclaration;
 export class ConstructorDeclaration extends AbstractJavaNode {
 
-  owner: ClassDeclaration;
+  owner: ConstructorOwnerDeclaration;
   modifiers: ModifierList;
   parameters?: ArgumentDeclarationList;
   annotations?: AnnotationList;
@@ -681,7 +695,7 @@ export class ConstructorDeclaration extends AbstractJavaNode {
   body?: Block;
 
 
-  constructor(owner: ClassDeclaration, parameters?: ArgumentDeclarationList, body?: Block, modifiers?: ModifierList) {
+  constructor(owner: ConstructorOwnerDeclaration, parameters?: ArgumentDeclarationList, body?: Block, modifiers?: ModifierList) {
     super();
     this.owner = owner;
     this.modifiers = modifiers || new ModifierList([new Modifier(ModifierType.PUBLIC)]);

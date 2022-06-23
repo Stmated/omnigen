@@ -27,7 +27,7 @@ export class Naming {
       // The type name contains a slash, which means it is probably a ref name.
       const nameParts = resolvedName.split('/');
       for (let i = nameParts.length - 1; i >= 0; i--) {
-        safeName = (nameParts[i] + pascalCase(safeName));
+        safeName = (pascalCase(nameParts[i]) + safeName);
 
         if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
           return safeName;

@@ -65,10 +65,10 @@ export class AddConstructorTransformer extends AbstractJavaTransformer {
           )
         }
 
-        blockExpressions.push(...constructorFields[0].map(it => new Java.AssignExpression(
+        blockExpressions.push(...constructorFields[0].map(it => new Java.Statement(new Java.AssignExpression(
           new Java.FieldReference(it),
           new Java.VariableReference(it.identifier)
-        )));
+        ))));
 
         const allParameters = constructorFields[0].concat(constructorFields[1]);
 

@@ -1,4 +1,4 @@
-import {GenericClassType, GenericType, GenericTypeKind} from '@parse';
+import {GenericClassType, GenericCompositionType, GenericType, GenericTypeKind} from '@parse';
 import {DependencyGraph} from '@parse/DependencyGraphBuilder';
 
 export class JavaDependencyGraph {
@@ -15,7 +15,7 @@ export class JavaDependencyGraph {
     return !JavaDependencyGraph.isInterface(graph, type);
   }
 
-  public static getExtends(graph: DependencyGraph, type: GenericClassType): GenericClassType | undefined {
+  public static getExtends(graph: DependencyGraph, type: GenericClassType | GenericCompositionType): GenericClassType | undefined {
 
     const uses = graph.uses.get(type);
     if (uses) {
@@ -31,7 +31,7 @@ export class JavaDependencyGraph {
     return undefined;
   }
 
-  public static getImplements(graph: DependencyGraph, type: GenericClassType): GenericType[] {
+  public static getImplements(graph: DependencyGraph, type: GenericClassType | GenericCompositionType): GenericType[] {
 
     const interfaces: GenericType[] = [];
     const uses = graph.uses.get(type);

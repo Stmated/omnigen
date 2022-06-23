@@ -3,15 +3,19 @@ import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java
 import {
   CompositionKind,
   GenericClassType,
+  GenericCompositionType,
   GenericContinuationMapping,
+  GenericEnumType,
   GenericExamplePairing,
   GenericModel,
+  GenericPrimitiveKind,
+  GenericPrimitiveType,
   GenericProperty,
   GenericType,
   GenericTypeKind
 } from '@parse';
 import * as Java from '@java/cst';
-import {camelCase} from 'change-case';
+import {camelCase, constantCase} from 'change-case';
 import {Naming} from '@parse/Naming';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
@@ -58,15 +62,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // What do we do here?
 
       } else if (type.kind == GenericTypeKind.ENUM) {
-        const body = new Java.Block();
-
-        const enumDeclaration = new Java.EnumDeclaration(
-          new Java.Type(type),
-          new Java.Identifier(Naming.unwrap(type.name)),
-          body,
-        );
-
-        root.children.push(enumDeclaration);
+        this.transformEnum(type, root, options);
       } else if (type.kind == GenericTypeKind.NULL) {
 
       } else if (type.kind == GenericTypeKind.PRIMITIVE) {
@@ -92,7 +88,12 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
       } else if (type.kind == GenericTypeKind.COMPOSITION) {
 
-        // Should we do something here?
+        // A composition type is likely just like any other object.
+        // Just that has no real content in itself, but made up of the different parts.
+        // If the composition is a "extends A and B"
+        // Then it should be extending A, and implementing B interface, and rendering B properties
+
+        this.transformComposition(model, type, options, root, graph)
 
       } else {
         this.transformObject(model, type, options, root, graph);
@@ -103,6 +104,136 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
 
     return Promise.resolve();
+  }
+
+  private transformEnum(type: GenericEnumType, root: JavaCstRootNode, options: JavaOptions): void {
+    const body = new Java.Block();
+
+    // TODO: Add comments and examples and everything
+    const enumDeclaration = new Java.EnumDeclaration(
+      new Java.Type(type),
+      new Java.Identifier(Naming.unwrap(type.name)),
+      body,
+    );
+
+    if (type.enumConstants) {
+      body.children.push(
+        new Java.EnumItemList(
+          ...type.enumConstants.map(item => new Java.EnumItem(
+            new Java.Identifier(constantCase(String(item))),
+            new Java.Literal(item)
+          ))
+        )
+      );
+
+      // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
+      //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
+      const itemType: GenericPrimitiveType =  {
+        name: `ValueOfEnum${Naming.unwrap(type.name)}`,
+        kind: GenericTypeKind.PRIMITIVE,
+        primitiveKind: type.primitiveKind
+      };
+
+      const fieldType = new Java.Type(itemType);
+      const fieldIdentifier = new Java.Identifier('value');
+      const field = new Java.Field(
+        fieldType,
+        fieldIdentifier,
+        undefined
+      );
+
+      body.children.push(field);
+
+      body.children.push(
+        new Java.ConstructorDeclaration(
+          enumDeclaration,
+          new Java.ArgumentDeclarationList(
+            new Java.ArgumentDeclaration(
+              fieldType,
+              fieldIdentifier
+            )
+          ),
+          new Java.Block(
+            new Java.Statement(
+              new Java.AssignExpression(
+                new Java.FieldReference(field),
+                new Java.VariableReference(fieldIdentifier)
+              )
+            )
+          )
+        )
+      );
+    }
+
+    root.children.push(new Java.CompilationUnit(
+      new Java.PackageDeclaration(options.package),
+      new Java.ImportList(
+        [] // TODO: Add the actual imports here. Visit all nodes of 'javaClass' and gather all types!
+      ),
+      enumDeclaration
+    ));
+  }
+
+  private transformComposition(
+    model: GenericModel,
+    type: GenericClassType | GenericCompositionType,
+    options: JavaOptions,
+    root: JavaCstRootNode,
+    graph: DependencyGraph
+  ): void {
+
+    // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
+    //        Make use of the DependencyGraph to figure things out...
+    const body = new Java.Block();
+
+    // if (type.properties) {
+    //   for (const property of type.properties) {
+    //     this.transformObjectProperty(model, body, property, options);
+    //   }
+    // }
+
+    // if (type.additionalProperties) {
+    //
+    //   if (!JavaDependencyGraph.superMatches(graph, type, parent => parent.additionalProperties == true)) {
+    //
+    //     // No parent implements additional properties, so we should.
+    //     body.children.push(new Java.AdditionalPropertiesDeclaration());
+    //   }
+    // }
+
+    const javaClass = new Java.ClassDeclaration(
+      new Java.Type(type),
+      new Java.Identifier(Naming.unwrap(type.name)),
+      body,
+    );
+
+    const comments = this.getCommentsForType(type, model, options);
+
+    const typeExtends = JavaDependencyGraph.getExtends(graph, type);
+    if (typeExtends) {
+      javaClass.extends = new Java.ExtendsDeclaration(
+        new Java.Type(typeExtends)
+      );
+    }
+
+    const typeImplements = JavaDependencyGraph.getImplements(graph, type);
+    if (typeImplements.length > 0) {
+      javaClass.implements = new Java.ImplementsDeclaration(
+        new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
+      );
+    }
+
+    if (comments.length > 0) {
+      javaClass.comments = new Java.CommentList(...comments);
+    }
+
+    root.children.push(new Java.CompilationUnit(
+      new Java.PackageDeclaration(options.package),
+      new Java.ImportList(
+        [] // TODO: Add the actual imports here. Visit all nodes of 'javaClass' and gather all types!
+      ),
+      javaClass
+    ));
   }
 
   private transformObject(

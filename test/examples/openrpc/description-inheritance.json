@@ -1,0 +1,151 @@
+{
+  "openrpc": "1.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "description-inheritance",
+    "description": "Specification for testing the inheritance of descriptions and names in advanced structures"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/description-inheritance"
+    }
+  ],
+  "methods": [
+    {
+      "name": "method",
+      "description": "methods_method_description",
+      "params": [
+        {
+          "$ref": "#/components/contentDescriptors/RequestParamDescriptor"
+        }
+      ],
+      "result": {
+        "$ref": "#/components/contentDescriptors/ResultDescriptor"
+      }
+    }
+  ],
+  "components": {
+    "contentDescriptors": {
+      "RequestParamDescriptor": {
+        "name": "RequestParamDescriptor",
+        "description": "components_contentDescriptors_RequestParamDescriptor_description",
+        "schema": {
+          "description": "components_contentDescriptors_RequestParamDescriptor_schema_description",
+          "$ref": "#/components/schemas/RequestParamSchema"
+        }
+      },
+      "ResultDescriptor": {
+        "name": "ResultDescriptor",
+        "description": "components_contentDescriptors_ResultDescriptor_description",
+        "schema": {
+          "description": "components_contentDescriptors_ResultDescriptor_schema_description",
+          "$ref": "#/components/schemas/ResultSchema"
+        }
+      }
+    },
+    "schemas": {
+      "AbstractOne": {
+        "type": "object",
+        "description": "components_schemas_AbstractOne_description",
+        "allOf": [
+          {
+            "description": "components_schemas_AbstractOne_allOf_inline_description",
+            "required": [
+              "AbstractOnePropertyA"
+            ],
+            "properties": {
+              "AbstractOnePropertyA": {
+                "$ref": "#/components/schemas/NumberOrNull"
+              }
+            }
+          }
+        ],
+        "properties": {
+          "AbstractOnePropertyB": {
+            "type": "string",
+            "description": "components_schemas_AbstractOne_properties_AbstractOnePropertyB_description"
+          }
+        }
+      },
+      "AbstractOther": {
+        "type": "object",
+        "description": "components_schemas_AbstractOther_description",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractOne"
+          },
+          {
+            "description": "components_schemas_AbstractOther_allOf_inline_description",
+            "properties": {
+              "AbstractOtherPropertyA": {
+                "type": "integer",
+                "$ref": "#/components/schemas/NumberOrNull",
+                "description": "components_schemas_AbstractOther_allOf_AbstractOtherPropertyA_description"
+              }
+            }
+          }
+        ],
+        "required": [
+          "AbstractOtherPropertyB"
+        ],
+        "properties": {
+          "AbstractOtherPropertyB": {
+            "type": "string",
+            "description": "components_schemas_AbstractOne_properties_AbstractOtherPropertyB_description"
+          }
+        }
+      },
+      "RequestParamSchema": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractOne"
+          },
+          {
+            "$ref": "#/components/schemas/AbstractOther"
+          }
+        ]
+      },
+      "ResultSchema": {
+        "type": "object",
+        "description": "components_schemas_ResultSchema_description",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractOne"
+          },
+          {
+            "description": "components_schemas_ResultSchema_allOf_inline_description",
+            "properties": {
+              "ResultSchemaPropertyA": {
+                "type": "string",
+                "description": "components_schemas_ResultSchema_allOf_inline_properties_ResultSchemaPropertyA_description"
+              }
+            }
+          }
+        ]
+      },
+
+      "NumberOrNull": {
+        "description": "components_schemas_NumberOrNull_description",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Number",
+            "description": "components_schemas_NumberSchema_OneOf_Number_description"
+          },
+          {
+            "$ref": "#/components/schemas/Null",
+            "description": "components_schemas_NumberSchema_OneOf_Null_description"
+          }
+        ]
+      },
+      "Number": {
+        "type": "integer",
+        "description": "components_schemas_Number_description"
+      },
+      "Null": {
+        "type": "null",
+        "description": "components_schemas_Null_description"
+      }
+    }
+  }
+}

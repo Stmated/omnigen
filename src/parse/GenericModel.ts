@@ -1,5 +1,3 @@
-
-
 export interface GenericParameter {
   name: string;
   description?: string;
@@ -102,7 +100,7 @@ export type GenericType = GenericNullType
   | GenericCompositionType
   | GenericEnumType;
 
-export type TypeName = string | {(): string};
+export type TypeName = string | { (): string };
 
 export interface GenericBaseType<T> {
   name: TypeName;
@@ -132,24 +130,28 @@ export enum CompositionKind {
 }
 
 type GenericCompositionKnownKind = GenericTypeKind.COMPOSITION;
-export interface GenericCompositionType extends GenericBaseType<GenericCompositionKnownKind>{
+
+export interface GenericCompositionType extends GenericBaseType<GenericCompositionKnownKind> {
   compositionKind: CompositionKind;
   types: GenericType[];
 }
 
 type GenericDictionaryKnownKind = GenericTypeKind.DICTIONARY;
-export interface GenericDictionaryType extends GenericBaseType<GenericDictionaryKnownKind>{
+
+export interface GenericDictionaryType extends GenericBaseType<GenericDictionaryKnownKind> {
   keyType: GenericType;
   valueType: GenericType;
 }
 
 type GenericReferenceKnownKind = GenericTypeKind.REFERENCE;
-export interface GenericReferenceType extends GenericBaseType<GenericReferenceKnownKind>{
+
+export interface GenericReferenceType extends GenericBaseType<GenericReferenceKnownKind> {
   fqn: string;
 }
 
 type GenericArrayKnownKind = GenericTypeKind.ARRAY;
-export interface GenericArrayType extends GenericBaseType<GenericArrayKnownKind>{
+
+export interface GenericArrayType extends GenericBaseType<GenericArrayKnownKind> {
   of: GenericType;
   minLength?: number;
   maxLength?: number;
@@ -165,7 +167,7 @@ export type GenericPropertyOwner = GenericClassType | GenericArrayPropertiesByPo
  * Similar to GenericArrayType, but this solves issue of having a list of types in a static order.
  * It DOES NOT mean "any of these types" or "one of these types", it means "THESE TYPES IN THIS ORDER IN THIS ARRAY"
  */
-export interface GenericArrayPropertiesByPositionType extends GenericBaseType<GenericArrayPropertiesByPositionKnownKind>{
+export interface GenericArrayPropertiesByPositionType extends GenericBaseType<GenericArrayPropertiesByPositionKnownKind> {
 
   properties: GenericProperty[];
   commonDenominator?: GenericType;
@@ -173,7 +175,8 @@ export interface GenericArrayPropertiesByPositionType extends GenericBaseType<Ge
 }
 
 type GenericArrayTypesByPositionKnownKind = GenericTypeKind.ARRAY_TYPES_BY_POSITION;
-export interface GenericArrayTypesByPositionType extends GenericBaseType<GenericArrayTypesByPositionKnownKind>{
+
+export interface GenericArrayTypesByPositionType extends GenericBaseType<GenericArrayTypesByPositionKnownKind> {
 
   types: GenericType[];
   commonDenominator?: GenericType;
@@ -204,6 +207,7 @@ export interface GenericClassType extends GenericBaseType<GenericClassKnownKind>
 }
 
 type GenericPrimitiveKnownKind = GenericTypeKind.PRIMITIVE;
+
 // Exclude<GenericKnownType, GenericKnownType.OBJECT | GenericKnownType.UNKNOWN | GenericKnownType.ENUM>;
 export interface GenericPrimitiveType extends GenericBaseType<GenericPrimitiveKnownKind> {
   primitiveKind: GenericPrimitiveKind;
@@ -215,10 +219,29 @@ export interface GenericPrimitiveType extends GenericBaseType<GenericPrimitiveKn
 }
 
 type GenericEnumKnownKind = GenericTypeKind.ENUM;
-export type AllowedEnumTypes = number | string;
+
+export type GenericPrimitiveTypeKinds = GenericPrimitiveKind.INTEGER
+  | GenericPrimitiveKind.INTEGER_SMALL
+  | GenericPrimitiveKind.DOUBLE
+  | GenericPrimitiveKind.FLOAT
+  | GenericPrimitiveKind.DECIMAL
+  | GenericPrimitiveKind.NUMBER;
+
+export type AllowedEnumTsTypes = number | string;
+export type AllowedEnumGenericPrimitiveTypes = GenericPrimitiveKind.STRING | GenericPrimitiveTypeKinds;
+
 export interface GenericEnumType extends GenericBaseType<GenericEnumKnownKind> {
-  enumConstants?: AllowedEnumTypes[];
-  primitiveKind: GenericPrimitiveKind;
+  enumConstants?: AllowedEnumTsTypes[];
+  primitiveKind: AllowedEnumGenericPrimitiveTypes;
+
+  /**
+   * If this is true, then the enum actually also need to support any other value outside of the constants.
+   * This could happen if the JSONSchema is a composition of "String or Enum[A, B, C]".
+   * Then the A, B, C choices need to be there, but we also need to support in case something else is received.
+   *
+   * For Java this would mean we should not render as an Enum, but as a class with static public final fields.
+   */
+  otherValues?: boolean;
 }
 
 export interface GenericInput {

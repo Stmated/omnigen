@@ -190,7 +190,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   visitEnumItem: JavaRendererVisitFn<Java.EnumItem> = (node, visitor) => {
     const key = this.render(node.identifier, visitor);
     const value = this.render(node.value, visitor);
-    return (`${key}(${value});\n`);
+    return `${key}(${value})`;
+  }
+
+  visitEnumItemList: JavaRendererVisitFn<Java.EnumItemList> = (node, visitor) => {
+    return `${node.children.map(it => this.render(it)).join(',\n')};\n`;
   }
 
   visitMethodDeclaration: JavaRendererVisitFn<Java.AbstractMethodDeclaration> = (node, visitor) => {
@@ -294,15 +298,6 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const identifier = this.render(node.identifier, visitor);
 
     return `${annotations}${type} ${identifier}`;
-  }
-
-  visitAssignExpression: JavaRendererVisitFn<Java.AssignExpression> = (node, visitor) => {
-    // TODO: This is wrong. Need to find a better way!
-    // TODO: This should make use of the "statement" to make it add the semi-colon. DO NOT DO IT HERE. FIX!
-    return [
-      this.visitBinaryExpression(node, visitor),
-      ';\n',
-    ];
   }
 
   visitArgumentDeclarationList: JavaRendererVisitFn<Java.ArgumentDeclarationList> = (node, visitor) => {

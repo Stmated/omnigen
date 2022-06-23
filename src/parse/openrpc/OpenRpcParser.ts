@@ -380,7 +380,6 @@ class OpenRpcParserImpl {
 
     if (schema.allOf?.length) {
 
-      const types: GenericType[] = [];
       for (const allOf of schema.allOf) {
         const subType = await this.jsonSchemaToType(names, allOf);
         if (subType.canInline) {
@@ -388,33 +387,18 @@ class OpenRpcParserImpl {
           // This happens if the sub-schema is anonymous and never used by anyone else.
           this.mergeType(subType.type, type);
         } else {
-          types.push(subType.type);
+          compositionsAllOfAnd.push(subType.type);
         }
-      }
-
-      if (types.length > 0) {
-        compositionsAllOfAnd.push({
-          name: () => types.map(it => Naming.safer(it)).join('And'),
-          kind: GenericTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.AND,
-          types: types
-        } as GenericCompositionType);
       }
     }
 
     if (schema.anyOf?.length) {
 
-      const types: GenericType[] = [];
+      // const types: GenericType[] = [];
       for (const anyOf of schema.anyOf) {
         const subType = await this.jsonSchemaToType(names, anyOf);
-        types.push(subType.type);
+        compositionsAnyOfOr.push(subType.type);
       }
-
-      compositionsAnyOfOr.push({
-        kind: GenericTypeKind.COMPOSITION,
-        compositionKind: CompositionKind.OR,
-        types: types
-      } as GenericCompositionType);
     }
 
     if (schema.not && typeof schema.not !== 'boolean') {

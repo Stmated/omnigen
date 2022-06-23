@@ -8,7 +8,6 @@ import {
   GenericEnumType,
   GenericExamplePairing,
   GenericModel,
-  GenericPrimitiveKind,
   GenericPrimitiveType,
   GenericProperty,
   GenericType,
@@ -208,6 +207,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     );
 
     const comments = this.getCommentsForType(type, model, options);
+
+    comments.push(new Java.Comment("This is a composition class"));
 
     const typeExtends = JavaDependencyGraph.getExtends(graph, type);
     if (typeExtends) {

@@ -7,7 +7,7 @@ import {
   GenericContinuationMapping,
   GenericEnumType,
   GenericExamplePairing,
-  GenericModel,
+  GenericModel, GenericOutput,
   GenericPrimitiveType,
   GenericProperty,
   GenericType,
@@ -144,7 +144,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
       // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
       //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
-      const itemType: GenericPrimitiveType =  {
+      const itemType: GenericPrimitiveType = {
         name: `ValueOfEnum${Naming.unwrap(type.name)}`,
         kind: GenericTypeKind.PRIMITIVE,
         primitiveKind: type.primitiveKind
@@ -209,8 +209,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     );
 
     const comments = this.getCommentsForType(type, model, options);
-
-    comments.push(new Java.Comment(`This is a composition class: ${type.types.map(it => `${Naming.unwrap(it.name)} ${it.kind}`).join(', ')}`));
 
     if (type.compositionKind == CompositionKind.XOR) {
       // The composition type is XOR, it can only be one of them.
@@ -448,6 +446,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       comments.push(new Java.Comment(type.summary));
     }
 
+    const handledResponse: GenericOutput[] = [];
     for (const endpoint of model.endpoints) {
 
       // TODO: Redo so they are only linked by "@see" and stuff?
@@ -467,18 +466,24 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
 
       for (const response of endpoint.responses) {
-        if (response.type == type) {
 
-          comments.push(new Java.Comment(`<section>\n<h2>${response.name}</h2>`));
+        // Multiple endpoints might have the same response (like generic fallback error).
+        // So we have to check that we have not already handled the GenericOutput.
+        if (response.type == type && !handledResponse.includes(response)) {
+          handledResponse.push(response);
 
-          if (response.description) {
-            comments.push(new Java.Comment(response.description));
+          if (response.description || response.summary) {
+            comments.push(new Java.Comment(`<section>\n<h2>${response.name}</h2>`));
+
+            if (response.description) {
+              comments.push(new Java.Comment(response.description));
+            }
+            if (response.summary) {
+              comments.push(new Java.Comment(response.summary));
+            }
+
+            comments.push(new Java.Comment(`</section>`));
           }
-          if (response.summary) {
-            comments.push(new Java.Comment(response.summary));
-          }
-
-          comments.push(new Java.Comment(`</section>`));
         }
       }
 

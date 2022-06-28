@@ -38,7 +38,7 @@ import {
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
-  ContentDescriptorOrReference,
+  ContentDescriptorOrReference, ErrorObject,
   ErrorOrReference,
   ExampleOrReference,
   ExamplePairingOrReference,
@@ -644,13 +644,34 @@ class OpenRpcParserImpl {
     };
   }
 
+  private _unknownError?: GenericOutput;
+
   private async errorToGenericOutput(parentName: string, error: ErrorOrReference): Promise<GenericOutput> {
 
     const dereferenced = await this.dereference(error);
     error = dereferenced.object;
 
     const isUnknownCode = (error.code === -1234567890);
-    const typeName = `${parentName}Error${isUnknownCode ? 'Unknown' : error.code}`;
+    if (isUnknownCode && this._unknownError) {
+      return this._unknownError;
+    }
+
+    const errorOutput = this.errorToGenericOutputReal(parentName, error, isUnknownCode);
+    if (isUnknownCode) {
+      if (!this._unknownError) {
+        this._unknownError = errorOutput;
+      }
+
+      return this._unknownError;
+    }
+
+    return errorOutput;
+  }
+
+  private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): GenericOutput {
+    const typeName =  isUnknownCode
+      ? `ErrorUnknown`
+      : `${parentName}Error${error.code}`;
 
     const errorPropertyType: GenericClassType = {
       name: `${typeName}Error`,
@@ -695,8 +716,6 @@ class OpenRpcParserImpl {
       },
     ];
 
-    // types.push(errorPropertyType);
-
     const errorType: GenericClassType = {
       name: typeName,
       accessLevel: GenericAccessLevel.PUBLIC,
@@ -732,8 +751,6 @@ class OpenRpcParserImpl {
     ];
     errorType.requiredProperties = [errorProperty];
 
-    // types.push(errorType);
-
     const qualifiers: GenericPayloadPathQualifier[] = [{
       path: ['error'],
       operator: ComparisonOperator.DEFINED,
@@ -747,7 +764,7 @@ class OpenRpcParserImpl {
       });
     }
 
-    return <GenericOutput>{
+    return {
       name: `error-${isUnknownCode ? 'unknown' : error.code}`,
       deprecated: false,
       required: false,

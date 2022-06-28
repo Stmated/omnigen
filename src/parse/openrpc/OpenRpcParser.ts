@@ -36,7 +36,8 @@ import {
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
-  ContentDescriptorOrReference, ErrorObject,
+  ContentDescriptorOrReference,
+  ErrorObject,
   ErrorOrReference,
   ExampleOrReference,
   ExamplePairingOrReference,
@@ -56,7 +57,7 @@ import {
 } from '@open-rpc/meta-schema';
 import {JSONSchema7} from 'json-schema';
 import {default as DefaultReferenceResolver} from '@json-schema-tools/reference-resolver';
-import {camelCase, pascalCase} from 'change-case';
+import {camelCase, paramCase, pascalCase, snakeCase} from 'change-case';
 import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
@@ -100,6 +101,27 @@ class OpenRpcParserImpl {
   constructor(doc: OpenrpcDocument, options = DEFAULT_PARSER_OPTIONS) {
     this._doc = doc;
     this._options = options;
+
+    const unsafeOptions = this._options as unknown as Record<string, unknown>;
+    const customOptions = doc['x-omnigen'] as Record<string, unknown>;
+    if (customOptions) {
+      logger.info(`Received options ${JSON.stringify(customOptions)}`);
+      const optionsKeys = Object.keys(customOptions);
+      for (const key of optionsKeys) {
+
+        const value = customOptions[key];
+        const camelKey = camelCase(key);
+
+        if (value !== undefined) {
+          if (unsafeOptions[camelKey] === undefined) {
+            logger.warn(`Tried to set option '${camelKey}' which does not exist`);
+          } else {
+            unsafeOptions[camelKey] = value;
+            logger.info(`Set option '${camelKey}' to '${String(value)}'`);
+          }
+        }
+      }
+    }
   }
 
   async docToGenericModel(): Promise<GenericModel> {
@@ -611,6 +633,15 @@ class OpenRpcParserImpl {
 
     resultType.properties = [
       {
+        name: this._options.jsonRpcPropertyName,
+        type: {
+          kind: GenericTypeKind.PRIMITIVE,
+          primitiveKind: GenericPrimitiveKind.STRING,
+          name: `${typeNamePrefix}ResultJsonRpc`
+        },
+        owner: resultType
+      },
+      {
         name: 'result',
         type: resultParameterType,
         owner: resultType
@@ -623,18 +654,19 @@ class OpenRpcParserImpl {
         },
         owner: resultType
       },
-      {
+    ];
+
+    if (this._options.jsonRpcIdIncluded) {
+      resultType.properties.push({
         name: 'id',
         type: {
           name: `${typeNamePrefix}ResultId`,
           kind: GenericTypeKind.PRIMITIVE,
           primitiveKind: GenericPrimitiveKind.STRING,
         },
-        owner: resultType
-      },
-    ];
-
-    // types.push(resultType);
+        owner: resultType,
+      });
+    }
 
     return {
       output: <GenericOutput>{
@@ -968,11 +1000,12 @@ class OpenRpcParserImpl {
 
   private async methodToGenericInputType(method: MethodObject): Promise<{ type: GenericType; properties: GenericProperty[] | undefined }> {
 
+    const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
     const requestJsonRpcType: GenericPrimitiveType = {
       name: `${method.name}RequestVersion`,
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.STRING,
-      valueConstant: "2.0",
+      valueConstant: hasConstantVersion ? this._options.jsonRpcRequestVersion : undefined,
       nullable: false
     };
 
@@ -1033,7 +1066,7 @@ class OpenRpcParserImpl {
 
     requestType.properties = [
       <GenericProperty>{
-        name: "jsonrpc",
+        name: this._options.jsonRpcPropertyName,
         type: requestJsonRpcType,
         required: true,
         owner: requestType,
@@ -1045,17 +1078,22 @@ class OpenRpcParserImpl {
         owner: requestType,
       },
       <GenericProperty>{
-        name: "id",
-        type: requestIdType,
-        required: true,
-        owner: requestType,
-      },
-      <GenericProperty>{
         name: "params",
         type: requestParamsType,
         owner: requestType,
       }
     ];
+
+    if (this._options.jsonRpcIdIncluded) {
+      requestType.properties.push(
+        <GenericProperty>{
+          name: "id",
+          type: requestIdType,
+          required: true,
+          owner: requestType,
+        },
+      );
+    }
 
     return {
       type: requestType,

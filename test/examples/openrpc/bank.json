@@ -4,6 +4,11 @@
     "title": "Bank",
     "version": "1.0.0"
   },
+  "x-omnigen": {
+    "jsonRpcPropertyName": "version",
+    "jsonRpcRequestVersion": "1.1",
+    "jsonRpcIdIncluded": false
+  },
   "servers": [
     {
       "url": "http://localhost:8080"
@@ -81,6 +86,15 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "signature": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
         }
       },
       "AccountLedgerRequestData": {
@@ -118,14 +132,20 @@
         }
       },
       "AccountLedgerResponseData": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
         "additionalProperties": false,
         "allOf": [
           {
             "$ref": "#/components/schemas/AbstractResponseResultData"
+          },
+          {
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         ]
       },

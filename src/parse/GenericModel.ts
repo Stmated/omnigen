@@ -100,6 +100,8 @@ export type GenericType = GenericNullType
   | GenericCompositionType
   | GenericEnumType;
 
+export type GenericCompositionType = GenericCompositionDefaultType | GenericCompositionXORType;
+
 export type TypeName = string | { (): string };
 
 export interface GenericBaseType<T> {
@@ -118,6 +120,8 @@ export interface GenericBaseType<T> {
    * Then instead of naming the types Pet and Pet1, it could be Pet and ResponsePet.
    *
    * TODO: Rename this into "tag" and use that system throughout?
+   *        Or remove and make "name" able to return an array of possible names in ascending specificity?
+   *          "Data" "DataObject" "DataSchemaObject" etc
    */
   nameClassifier?: string;
 }
@@ -131,8 +135,22 @@ export enum CompositionKind {
 
 type GenericCompositionKnownKind = GenericTypeKind.COMPOSITION;
 
-export interface GenericCompositionType extends GenericBaseType<GenericCompositionKnownKind> {
-  compositionKind: CompositionKind;
+export interface GenericCompositionBaseType<T> extends GenericBaseType<GenericCompositionKnownKind> {
+  compositionKind: T;
+}
+
+export interface GenericCompositionDefaultType extends GenericCompositionBaseType<CompositionKind.AND | CompositionKind.OR | CompositionKind.NOT> {
+  types: GenericType[];
+}
+
+export interface GenericCompositionXORType extends GenericCompositionBaseType<CompositionKind.XOR> {
+  mappingPropertyName: string;
+  mappings: Map<string, GenericType>;
+
+  /**
+   * This array is for keeping all the types of the composition, but for XOR it should mainly be used
+   * to figure out which types have specific mappings, and which are unmapped and need runtime solutions.
+   */
   types: GenericType[];
 }
 

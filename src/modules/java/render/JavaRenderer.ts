@@ -6,6 +6,7 @@ import {ICstNode} from '@cst';
 import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
+import {Naming} from '@parse/Naming';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>; 
 
@@ -72,19 +73,29 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitReturnStatement: JavaRendererVisitFn<Java.ReturnStatement> = (node, visitor) => {
-    return (`return ${this.render(node.expression, visitor)};`);
+    return (`return ${this.render(node.expression, visitor)}`);
   }
 
   visitToken: JavaRendererVisitFn<Java.JavaToken> = (node, visitor) => {
     return (`${this.tokenPrefix}${JavaRenderer.getTokenTypeString(node.type)}${this.tokenSuffix}`);
   }
 
-  private static getTokenTypeString(type: Java.TokenType): '=' | '==' | '+' | '-' | '*' | ',' {
+  private static getTokenTypeString(type: Java.TokenType): '=' | '==' | '!=' | '<' | '>' | '<=' | '>=' | '+' | '-' | '*' | ',' {
     switch (type) {
       case Java.TokenType.ASSIGN:
         return '=';
       case Java.TokenType.EQUALS:
         return '==';
+      case Java.TokenType.NOT_EQUALS:
+        return '!=';
+      case Java.TokenType.GT:
+        return '>';
+      case Java.TokenType.LT:
+        return '<';
+      case Java.TokenType.GTE:
+        return '>=';
+      case Java.TokenType.LTE:
+        return '<=';
       case Java.TokenType.ADD:
         return '+';
       case Java.TokenType.SUBTRACT:
@@ -102,7 +113,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
     const body = node.body ? `\n${this.render(node.body, visitor)}` : '';
 
-    return `\n${annotations}${this.render(node.modifiers, visitor)} ${this.render(node.owner.name, visitor)}(${this.render(node.parameters, visitor)}) {${body}}\n\n`;
+    return `${annotations}${this.render(node.modifiers, visitor)} ${this.render(node.owner.name, visitor)}(${this.render(node.parameters, visitor)}) {${body}}\n\n`;
   }
 
   visitBlock: JavaRendererVisitFn<Java.Block> = (node, visitor) => {
@@ -211,7 +222,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
       annotations,
       `${modifiers} ${type} ${name}(${parameters}) {\n`,
       body,
-      '\n}\n',
+      '}\n\n',
     ];
   }
 
@@ -332,6 +343,24 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   visitSuperConstructorCall: JavaRendererVisitFn<Java.SuperConstructorCall> = (node, visitor) => {
 
     return `super(${this.render(node.parameters, visitor)})`;
+  }
+
+  visitIfStatement: JavaRendererVisitFn<Java.IfStatement> = (node, visitor) => {
+
+    return `if (${this.render(node.predicate, visitor)}) {\n${this.render(node.body)}}\n`;
+  }
+
+  visitRuntimeTypeMapping: JavaRendererVisitFn<Java.RuntimeTypeMapping> = (node, visitor) => {
+
+    return [
+      ...node.fields.map(it => this.render(it, visitor)),
+      ...node.getters.map(it => this.render(it, visitor)),
+      ...node.methods.map(it => this.render(it, visitor))
+    ];
+  }
+
+  visitClassReference: JavaRendererVisitFn<Java.ClassReference> = (node, visitor) => {
+    return `${this.render(node.type, visitor)}.class`;
   }
 
   private escapeImplements(value: string): string {

@@ -28,18 +28,27 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
 
-    let allTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
+    const exportableTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
 
-    const removedTypes: GenericType[] = [];
-    for (const type of allTypes) {
-      removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
+    for (const type of exportableTypes.all) {
+
+      if (!type.nameClassifier) {
+        if (type.kind == GenericTypeKind.PRIMITIVE) {
+
+          // Help with potential naming collisions.
+          let fqn = JavaUtil.getFullyQualifiedName(type);
+          const fqnLastDotIndex = fqn.lastIndexOf('.');
+          if (fqnLastDotIndex != -1) {
+            fqn = fqn.substring(fqnLastDotIndex + 1);
+          }
+
+          type.nameClassifier = fqn;
+        }
+      }
     }
 
-    // NOTE: Is this actually correct? Could it not delete types we actually want?
-    allTypes = allTypes.filter(it => !removedTypes.includes(it));
-
     const typeNames: string[] = [];
-    for (const type of allTypes) {
+    for (const type of exportableTypes.all) {
       const typeName = Naming.unwrap(type.name);
       if (!JavaBaseTransformer.PATTERN_IDENTIFIER.test(typeName)) {
         // The type does not have a valid name; what can we do about it?
@@ -52,9 +61,20 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
-    const graph = DependencyGraphBuilder.build(allTypes, DEFAULT_GRAPH_OPTIONS);
+    const removedTypes: GenericType[] = [];
+    for (const type of exportableTypes.all) {
+      removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
+    }
 
-    for (const type of allTypes) {
+    // NOTE: Is this actually correct? Could it not delete types we actually want?
+    exportableTypes.all = exportableTypes.all.filter(it => !removedTypes.includes(it));
+
+    // const edge = exportableTypes.all.filter(it => GenericModelUtil.isNotPrimitive(it));
+
+    // TODO: Incorrect call signature, need to separate edge and named types.
+    const graph = DependencyGraphBuilder.build(exportableTypes.all, DEFAULT_GRAPH_OPTIONS);
+
+    for (const type of exportableTypes.all) {
 
       if (type.kind == GenericTypeKind.ARRAY) {
 
@@ -62,6 +82,16 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
       } else if (type.kind == GenericTypeKind.ENUM) {
         this.transformEnum(type, root, options);
+      } else if (type.kind == GenericTypeKind.COMPOSITION) {
+
+        // A composition type is likely just like any other object.
+        // Just that has no real content in itself, but made up of the different parts.
+        // If the composition is a "extends A and B"
+        // Then it should be extending A, and implementing B interface, and rendering B properties
+        this.transformComposition(model, type, options, root, graph)
+
+      } else if (type.kind == GenericTypeKind.OBJECT) {
+        this.transformObject(model, type, options, root, graph);
       } else if (type.kind == GenericTypeKind.NULL) {
 
       } else if (type.kind == GenericTypeKind.PRIMITIVE) {
@@ -84,21 +114,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // This is a list of static types. This should modify the model, creating a marker interface?
         // Like an ISomethingOrOtherOrDifferent that contains the common properties, or is just empty?
         // (preferably they contain the ones in common, just because it's Nice).
-
-      } else if (type.kind == GenericTypeKind.COMPOSITION) {
-
-        // A composition type is likely just like any other object.
-        // Just that has no real content in itself, but made up of the different parts.
-        // If the composition is a "extends A and B"
-        // Then it should be extending A, and implementing B interface, and rendering B properties
-
-        this.transformComposition(model, type, options, root, graph)
-
-      } else {
-        this.transformObject(model, type, options, root, graph);
       }
 
-      // TODO: Find enum
       // TODO: Find interface
     }
 
@@ -175,7 +192,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
   private transformComposition(
     model: GenericModel,
-    type: GenericClassType | GenericCompositionType,
+    type: GenericCompositionType,
     options: JavaOptions,
     root: JavaCstRootNode,
     graph: DependencyGraph
@@ -185,21 +202,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     //        Make use of the DependencyGraph to figure things out...
     const body = new Java.Block();
 
-    // if (type.properties) {
-    //   for (const property of type.properties) {
-    //     this.transformObjectProperty(model, body, property, options);
-    //   }
-    // }
-
-    // if (type.additionalProperties) {
-    //
-    //   if (!JavaDependencyGraph.superMatches(graph, type, parent => parent.additionalProperties == true)) {
-    //
-    //     // No parent implements additional properties, so we should.
-    //     body.children.push(new Java.AdditionalPropertiesDeclaration());
-    //   }
-    // }
-
     const javaClass = new Java.ClassDeclaration(
       new Java.Type(type),
       new Java.Identifier(Naming.unwrap(type.name)),
@@ -208,20 +210,49 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     const comments = this.getCommentsForType(type, model, options);
 
-    comments.push(new Java.Comment("This is a composition class"));
+    comments.push(new Java.Comment(`This is a composition class: ${type.types.map(it => `${Naming.unwrap(it.name)} ${it.kind}`).join(', ')}`));
 
-    const typeExtends = JavaDependencyGraph.getExtends(graph, type);
-    if (typeExtends) {
-      javaClass.extends = new Java.ExtendsDeclaration(
-        new Java.Type(typeExtends)
-      );
-    }
+    if (type.compositionKind == CompositionKind.XOR) {
+      // The composition type is XOR, it can only be one of them.
+      // That is not possible to represent in Java, so we need another way of representing it.
+      // Order of importance is:
+      // 1. Using discriminator.propertyName and mapping (By Json fasterxml subtypes)
+      // 2. Using discriminator.propertyName and schema ref name (if mapping does not exist) (By Json fasterxml subtypes)
+      // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
 
-    const typeImplements = JavaDependencyGraph.getImplements(graph, type);
-    if (typeImplements.length > 0) {
-      javaClass.implements = new Java.ImplementsDeclaration(
-        new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
-      );
+      const mappedTypes = [...type.mappings.values()];
+      const unmapped = type.types.filter(it => !mappedTypes.includes(it));
+      if (unmapped.length > 0) {
+
+        // This means the specification did not have any discriminators.
+        // Instead we need to figure out what it is in runtime.
+        comments.push(new Java.Comment(`This needs to be figured out at runtime`));
+
+        body.children.push(
+          new Java.RuntimeTypeMapping(type.types, options)
+        );
+
+      } else {
+
+        // The specification did map all types using a discriminator.
+        // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
+        comments.push(new Java.Comment(`This bad boy can be mapped so hard`));
+      }
+
+    } else {
+      const typeExtends = JavaDependencyGraph.getExtends(graph, type);
+      if (typeExtends) {
+        javaClass.extends = new Java.ExtendsDeclaration(
+          new Java.Type(typeExtends)
+        );
+      }
+
+      const typeImplements = JavaDependencyGraph.getImplements(graph, type);
+      if (typeImplements.length > 0) {
+        javaClass.implements = new Java.ImplementsDeclaration(
+          new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
+        );
+      }
     }
 
     if (comments.length > 0) {
@@ -264,9 +295,10 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
+    const javaClassName = Naming.unwrap(type.name);
     const javaClass = new Java.ClassDeclaration(
       new Java.Type(type),
-      new Java.Identifier(Naming.unwrap(type.name)),
+      new Java.Identifier(javaClassName),
       body,
     );
 
@@ -284,12 +316,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       javaClass.implements = new Java.ImplementsDeclaration(
         new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
       );
-    }
-
-    if (type.extendedBy) {
-
-      // Let's add a comment about what it extends, for DEBUG PURPOSES. Might need it for some complex types.
-      comments.push(new Java.Comment(`Composition: ${this.getCommentsDescribingExtensions(type.extendedBy) || ''}`));
     }
 
     if (comments.length > 0) {
@@ -359,7 +385,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           undefined,
           undefined,
           new Java.Block(
-            new Java.ReturnStatement(new Java.Literal(null)),
+            new Java.Statement(new Java.ReturnStatement(new Java.Literal(null))),
           )
         );
 
@@ -378,7 +404,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         undefined,
         undefined,
         new Java.Block(
-          new Java.ReturnStatement(new Java.Literal(property.type.valueConstant)),
+          new Java.Statement(new Java.ReturnStatement(new Java.Literal(property.type.valueConstant))),
         )
       );
 
@@ -392,10 +418,10 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       const field = new Java.Field(
         this.toJavaType(property.type),
         new Java.Identifier(camelCase(property.name), property.name),
-        new Java.ModifierList([
+        new Java.ModifierList(
           new Java.Modifier(ModifierType.PRIVATE),
           new Java.Modifier(ModifierType.FINAL)
-        ])
+        )
       );
       body.children.push(field);
       body.children.push(new Java.FieldBackedGetter(field, undefined, commentList));

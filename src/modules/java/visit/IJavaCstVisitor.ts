@@ -56,5 +56,6 @@ export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
-
+  visitRuntimeTypeMapping: JavaVisitFn<Java.RuntimeTypeMapping, R>;
+  visitClassReference: JavaVisitFn<Java.ClassReference, R>;
 }

@@ -263,6 +263,7 @@ class OpenRpcParserImpl {
 
     const type: GenericClassType = {
       name: () => names.map(it => Naming.unwrap(it)).join('_'),
+      nameClassifier: schema.title ? pascalCase(schema.title) : String(schema.type),
       kind: GenericTypeKind.OBJECT,
       description: schema.description,
       title: schema.title,
@@ -314,9 +315,7 @@ class OpenRpcParserImpl {
 
     if (typeof schema.type === 'string') {
       if (schema.type === 'array') {
-        const items = schema.items;
-
-        return await this.getArrayItemType(schema, items, names)
+        return await this.getArrayItemType(schema, schema.items, names)
       } else if (schema.type !== 'object') {
 
         // TODO: This is not lossless if the primitive has comments/summary/etc
@@ -438,160 +437,22 @@ class OpenRpcParserImpl {
     return type;
   }
 
-// private async gatherTypeExtensionsForOneOf(doc: OpenrpcDocument, oneOf: JSONSchema[], type: GenericClassType, names: string[], types: GenericType[]): Promise<GenericType> {
-  //
-  //   if (oneOf.length == 1) {
-  //     // Weird way of writing the schema, but if it's just 1 then it's same as "allOf"
-  //     const extensions = await this.gatherTypeExtensions(doc, oneOf, type, names, types, true);
-  //     if (Array.isArray(extensions)) {
-  //       type.extendsAllOf = (type.extendsAllOf || []).concat(extensions);
-  //     } else {
-  //       throw new Error(`Do not know how to handle mix of primitive inheritance and allOf`);
-  //     }
-  //
-  //     return type;
-  //   }
-  //
-  //   // "address": {
-  //   //   "title": "oneOrArrayOfAddresses",
-  //   //   "oneOf": [
-  //   //     {
-  //   //       "$ref": "#/components/schemas/Address"
-  //   //     },
-  //   //     {
-  //   //       "$ref": "#/components/schemas/Addresses"
-  //   //     }
-  //   //   ]
-  //   // },
-  //   // = @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-  //   // (If it's an array or single, return an array and say add boolean that says "single or array allowed"
-  //
-  //   // TODO: This should become a new "Or" GenericType
-  //   const extensions = await this.gatherTypeExtensions(doc, oneOf, type, names, types, false);
-  //   if (Array.isArray(extensions)) {
-  //     type.extendsOneOf = extensions;
-  //   } else {
-  //     if (!type.properties?.length) {
-  //       logger.debug(`Will be replacing ${type.name} with ${extensions.name}`);
-  //       return extensions;
-  //     } else {
-  //       throw new Error(`Do not know how to handle mix of primitive oneOf inheritance and properties`);
-  //     }
-  //   }
-  //
-  //   return type;
-  // }
-
-  // private async gatherTypeExtensions(
-  //   doc: OpenrpcDocument,
-  //   sourceSchemas: JSONSchema[],
-  //   parentType: GenericType,
-  //   names: string[],
-  //   types: GenericType[],
-  //   tryInline: boolean)
-  //   : Promise<GenericClassType[] | GenericPrimitiveType> {
-  //
-  //   const extensions: GenericClassType[] = [];
-  //   const primitives: GenericPrimitiveType[] = [];
-  //   const nulls: GenericNullType[] = [];
-  //   const arrays: GenericArrayType[] = [];
-  //
-  //   for (let i = 0; i < sourceSchemas.length; i++) {
-  //     const sub = sourceSchemas[i];
-  //     const conversion = await this.jsonSchemaToType(doc, names.concat([`${i}`]), sub, types);
-  //     if (tryInline && conversion.canInline) {
-  //       // The type that we are extending by is allowed to try to be inlined by its parent,
-  //       // and the type itself says it is allowing the parent to inline it.
-  //       // This can for example be a type inside an 'allOf' that is not a $ref, so used nowhere else.
-  //       const newType = this.mergeType(conversion.type, parentType);
-  //       if (newType) {
-  //         throw new Error(`Do not know how to handle extending from a newly created type ${newType.name}`);
-  //       } else {
-  //         // Remove the type that was merged
-  //         const idx = types.indexOf(conversion.type);
-  //         if (idx !== -1) {
-  //           types.splice(idx, 1);
-  //         }
-  //       }
-  //     } else {
-  //       const genericType = conversion.type;
-  //       if (genericType.kind != GenericTypeKind.ARRAY) {
-  //         if (genericType.kind == GenericTypeKind.OBJECT) {
-  //           extensions.push(genericType);
-  //         } else if (genericType.kind == GenericTypeKind.NULL) {
-  //           // We cannot inherit from non-objects.
-  //           // But we can perhaps make the type itself into a primitive, if all it does is inherit from them.
-  //           logger.debug(`Encountered NULL type for '${names.join('.')}', will translate into nullable`);
-  //           nulls.push(genericType);
-  //         } else if (genericType.kind == GenericTypeKind.PRIMITIVE) {
-  //           // We cannot inherit from non-objects.
-  //           // But we can perhaps make the type itself into a primitive, if all it does is inherit from them.
-  //           primitives.push(genericType);
-  //         } else {
-  //           // TODO: Give back something which by the caller can be translated into an "Or" type?
-  //           // TODO: Also need to make an "Any" type that works
-  //           // TODO: This should probably be supported, since it can be "oneOf" an array of numbers, or something similar?
-  //           throw new Error(`Cannot handle non-object extensions '${genericType.name}' (${genericType.kind}) for '${names.join('.')}' in '${doc.info.title}'`);
-  //         }
-  //       } else {
-  //         arrays.push(genericType);
-  //       }
-  //     }
-  //   }
-  //
-  //   // TODO: Create "And" or "Or" types instead of handling things here. Should be up to later language to decide how to handle!
-  //   if (arrays.length > 1) {
-  //     throw new Error(`Do not know how to mix multiple different arrays`);
-  //   } else if (arrays.length == 1) {
-  //     if (extensions.length > 0) {
-  //       const arrayNames = arrays.map(it => it.name).join(', ');
-  //       const classNames = extensions.map(it => it.name).join(', ');
-  //       throw new Error(`Cannot mix arrays '${arrayNames}' w/ '${classNames}' for '${names.join('.')}' in '${doc.info.title}'`);
-  //     } else if (primitives.length == 1) {
-  //
-  //       const primitive = primitives[0];
-  //       if (arrays[0].of == primitive) {
-  //         // The array items and the primitive are of the same type.
-  //         // They can be merged by just saying that the array could also be a solo item.
-  //         arrays[0].possiblySingle = true;
-  //       } else {
-  //         throw new Error(`Cannot mix an array with a single item of a different type`); // (Until we add an "Or" type)
-  //       }
-  //
-  //     } else if (primitives.length > 1) {
-  //
-  //     }
-  //   }
-  //
-  //   if (extensions.length == 0 && primitives.length > 0) {
-  //
-  //     // This type is only inheriting from primitive types.
-  //     // We do not extend from those, but instead replace them into something more manageable.
-  //     const commonDenominator = JavaUtil.getCommonDenominator(...primitives);
-  //     if (commonDenominator?.kind == GenericTypeKind.PRIMITIVE) {
-  //       return {
-  //         ...commonDenominator,
-  //         ...{nullable: (nulls.length > 0) ? true : commonDenominator.nullable}
-  //       };
-  //     } else {
-  //       throw new Error(`Do not know how to handle this mix of inheritance for '${names.join('.')}' in '${doc.info.title}'`);
-  //     }
-  //   }
-  //
-  //   return extensions;
-  // }
-
   private async getArrayItemType(schema: JSONSchemaObject, items: Items | undefined, names: TypeName[]): Promise<GenericArrayType | GenericArrayPropertiesByPositionType | GenericArrayTypesByPositionType> {
 
     if (!items) {
       // No items, so the schema for the array items is undefined.
+      const arrayTypeName: TypeName = (names.length > 0)
+        ? () => names.map(it => Naming.unwrap(it)).join('_')
+        : `ArrayOfUnknowns`;
+
       return {
-        name: names.length > 0 ? () => names.map(it => Naming.unwrap(it)).join('_') : `ArrayOfUnknowns`,
+        name: arrayTypeName,
         kind: GenericTypeKind.ARRAY,
         minLength: schema.minItems,
         maxLength: schema.maxItems,
+        description: schema.description,
         of: {
-          name: 'objectArray',
+          name: () => `UnknownItemOf${Naming.unwrap(arrayTypeName)}`,
           kind: GenericTypeKind.UNKNOWN,
           additionalProperties: true,
         },
@@ -617,19 +478,32 @@ class OpenRpcParserImpl {
           : `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
         kind: GenericTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
+        description: schema.description,
         commonDenominator: commonDenominator,
       };
 
     } else {
       // items is a single JSONSchemaObject
-      const itemType = (await this.jsonSchemaToType(names, items)).type;
+      let itemTypeNames: TypeName[];
+      if (items.title) {
+        itemTypeNames = [pascalCase(items.title)];
+      } else {
+        itemTypeNames = names.map(it => () => `${Naming.unwrap(it)}Item`);
+      }
+
+      const itemType = (await this.jsonSchemaToType(itemTypeNames, items)).type;
+
+      const arrayTypeName: TypeName = (names.length > 0)
+        ? () => `${names.map(it => Naming.unwrap(it)).join('_')}`
+        : () => `ArrayOf${Naming.safer(itemType)}`;
+
       return {
-        name: names.length > 0
-          ? () => names.map(it => Naming.unwrap(it)).join('_')
-          : () => `ArrayOf${Naming.safer(itemType)}`,
+        name: arrayTypeName,
+        nameClassifier: 'Array',
         kind: GenericTypeKind.ARRAY,
         minLength: schema.minItems,
         maxLength: schema.maxItems,
+        description: schema.description,
         of: itemType,
       };
     }
@@ -690,103 +564,6 @@ class OpenRpcParserImpl {
     });
   }
 
-// /**
-  //  * Will merge between types 'from' into 'to'.
-  //  * If a new type is returned, it means it could not update 'to' object but a whole new type was created.
-  //  * If undefined is returned, it means that the merging was done into the 'to' object silently.
-  //  */
-  // private mergeType(from: GenericType | undefined, to: GenericType): GenericType | undefined {
-  //
-  //   if (!from) {
-  //     return to;
-  //   }
-  //
-  //   if (from.kind == GenericTypeKind.OBJECT && to.kind == GenericTypeKind.OBJECT) {
-  //
-  //     to.properties = to.properties || [];
-  //     for (const fromProperty of (from.properties || [])) {
-  //       const toProperty = to.properties.find(p => p.name == fromProperty.name);
-  //       if (!toProperty) {
-  //         // This is a new property, and can just be added to the 'to'.
-  //         to.properties.push({
-  //           ...fromProperty,
-  //           ...{
-  //             owner: to,
-  //           }
-  //         });
-  //       } else {
-  //         // This property already exists, so we should try and find common type.
-  //         const common = JavaUtil.getCommonDenominatorBetween(fromProperty.type, toProperty.type);
-  //         if (common) {
-  //           const idx = to.properties.indexOf(toProperty);
-  //           to.properties.splice(idx, 1);
-  //           to.properties.push({
-  //             ...fromProperty,
-  //             ...{
-  //               owner: to,
-  //               type: common,
-  //             }
-  //           });
-  //         } else {
-  //           const vsString = `${fromProperty.type.name} vs ${toProperty.type.name}`;
-  //           const errMessage = `No common type for merging properties ${fromProperty.name}. ${vsString}`;
-  //           throw new Error(errMessage);
-  //         }
-  //       }
-  //     }
-  //
-  //     return undefined;
-  //
-  //   } else if (from.kind == GenericTypeKind.PRIMITIVE && to.kind == GenericTypeKind.PRIMITIVE) {
-  //
-  //     // TODO: Do not use any Java classes here!
-  //     const common = JavaUtil.getCommonDenominatorBetween(from, to);
-  //     if (common) {
-  //       return common;
-  //     } else {
-  //       throw new Error(`Two primitive types ${from.primitiveKind} and ${to.primitiveKind} do not have common type`);
-  //     }
-  //   } else if (from.kind == GenericTypeKind.COMPOSITION && to.kind == GenericTypeKind.COMPOSITION) {
-  //
-  //     if (from.compositionKind == to.compositionKind) {
-  //       to.types.push(...from.types);
-  //       return undefined;
-  //     } else if (from.compositionKind == CompositionKind.OR && to.compositionKind == CompositionKind.AND) {
-  //
-  //       // If 'from' is: (A) or (B) or (C)
-  //       // And 'to' is: (D) and (E)
-  //       // Then we get: (A and D and E) or (B and D and E) or (C and D and E)
-  //       return {
-  //         kind: GenericTypeKind.COMPOSITION,
-  //         compositionKind: CompositionKind.OR,
-  //         types: from.types.map(or => {
-  //           return {
-  //             kind: GenericTypeKind.COMPOSITION,
-  //             compositionKind: CompositionKind.AND,
-  //             types: [or].concat(to.types),
-  //           } as GenericCompositionType;
-  //         })
-  //       } as GenericCompositionType;
-  //
-  //     } else if (from.compositionKind == CompositionKind.AND && to.compositionKind == CompositionKind.OR) {
-  //
-  //       // If 'from' is: (A) and (B) and (C)
-  //       // And 'to' is: (D) or (E)
-  //       // Then we get: (A and B and C and (D or E))
-  //       return {
-  //         kind: GenericTypeKind.COMPOSITION,
-  //         compositionKind: CompositionKind.AND,
-  //         types: from.types.concat([to]),
-  //       } as GenericCompositionType;
-  //     } else {
-  //       throw new Error(`Can it even be any other combo?`)
-  //     }
-  //
-  //   } else {
-  //     throw new Error(`Cannot merge two types of different kinds, ${from.kind} vs ${to.kind}`);
-  //   }
-  // }
-
   private async jsonSchema7ToGenericProperty(owner: GenericPropertyOwner, propertyName: string, schema: JSONSchema7)
     : Promise<GenericProperty> {
     // This is ugly, but they should hopefully be the same.
@@ -794,10 +571,11 @@ class OpenRpcParserImpl {
 
     // The type name will be replaced if the schema is a $ref to another type.
     const propertyTypeName = (schema.title ? camelCase(schema.title) : undefined) || propertyName;
+    const propertyType = (await this.jsonSchemaToType([propertyTypeName], openRpcJsonSchema)).type;
 
     return <GenericProperty>{
       name: propertyName,
-      type: (await this.jsonSchemaToType([propertyTypeName], openRpcJsonSchema)).type,
+      type: propertyType,
       owner: owner
     };
   }
@@ -885,7 +663,7 @@ class OpenRpcParserImpl {
       {
         name: 'code',
         type: {
-          name: 'number',
+          name: `${typeName}CodeInteger`,
           valueConstant: isUnknownCode ? undefined : error.code,
           kind: GenericTypeKind.PRIMITIVE,
           primitiveKind: GenericPrimitiveKind.INTEGER,
@@ -895,7 +673,7 @@ class OpenRpcParserImpl {
       {
         name: 'message',
         type: {
-          name: 'message',
+          name: `${typeName}MessageString`,
           valueConstant: error.message,
           kind: GenericTypeKind.PRIMITIVE,
           primitiveKind: GenericPrimitiveKind.STRING,
@@ -908,7 +686,7 @@ class OpenRpcParserImpl {
         // TODO: We need a way to specify the error structure -- which OpenRPC currently *cannot*
         name: 'data',
         type: {
-          name: 'object',
+          name: `${typeName}UnknownData`,
           valueConstant: error.data,
           kind: GenericTypeKind.UNKNOWN,
           additionalProperties: true,
@@ -936,7 +714,7 @@ class OpenRpcParserImpl {
       {
         name: 'result',
         type: {
-          name: 'AlwaysNullResultBody',
+          name: () => `${Naming.unwrap(errorPropertyType.name)}AlwaysNullResultBody`,
           kind: GenericTypeKind.NULL,
         },
         owner: errorType,
@@ -945,7 +723,7 @@ class OpenRpcParserImpl {
       {
         name: 'id',
         type: {
-          name: 'string',
+          name: `${typeName}IdString`,
           kind: GenericTypeKind.PRIMITIVE,
           primitiveKind: GenericPrimitiveKind.STRING,
         },

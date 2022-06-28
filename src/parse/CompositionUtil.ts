@@ -1,4 +1,10 @@
-import {CompositionKind, GenericCompositionType, GenericType, GenericTypeKind} from '@parse/GenericModel';
+import {
+  CompositionKind,
+  GenericCompositionType,
+  GenericCompositionXORType,
+  GenericType,
+  GenericTypeKind
+} from '@parse/GenericModel';
 import {Naming} from '@parse/Naming';
 
 export class CompositionUtil {
@@ -66,10 +72,14 @@ export class CompositionUtil {
       composition = compositionsOneOfOr[0];
     } else if (compositionsOneOfOr.length > 1) {
       const xor: GenericType = (compositionsOneOfOr.length > 1)
-        ? <GenericCompositionType>{
+        ? <GenericCompositionXORType>{
           name: () => compositionsOneOfOr.map(it => Naming.safer(it)).join('XOr'),
           kind: GenericTypeKind.COMPOSITION,
           compositionKind: CompositionKind.XOR,
+
+          mappingPropertyName: '',
+          mappings: new Map<string, GenericType>(),
+
           types: compositionsOneOfOr
         }
         : compositionsOneOfOr[0];

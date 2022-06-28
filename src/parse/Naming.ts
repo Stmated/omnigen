@@ -1,5 +1,9 @@
 import {pascalCase} from 'change-case';
-import {GenericType, TypeName} from '@parse/GenericModel';
+import {GenericType, GenericTypeKind, TypeName} from '@parse/GenericModel';
+import {LoggerFactory} from '@util';
+import {JavaUtil} from '@java';
+
+export const logger = LoggerFactory.create(__filename);
 
 export class Naming {
 
@@ -51,9 +55,11 @@ export class Naming {
     }
 
     // If we have come this far, then we will have to attempt to add a numbered suffix.
-    for (let i = 1; i < 20; i++) {
+    // We should *really* try to avoid this by some other naming.
+    for (let i = 1; i < 50; i++) {
       const safeSuffixedName = `${safeName}${i}`;
       if (!hasDuplicateFn(safeSuffixedName)) {
+        logger.warn(`Created fallback naming '${safeSuffixedName}', this should be avoided`);
         return safeSuffixedName;
       }
     }

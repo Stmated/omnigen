@@ -3,9 +3,9 @@ import {DependencyGraph} from '@parse/DependencyGraphBuilder';
 
 export class JavaDependencyGraph {
 
-  public static isAbstract(graph: DependencyGraph, type: GenericType): boolean {
-    return graph.abstracts.includes(type);
-  }
+  // public static isAbstract(graph: DependencyGraph, type: GenericType): boolean {
+  //   return graph.abstracts.includes(type);
+  // }
 
   public static isInterface(graph: DependencyGraph, type: GenericType): boolean {
     return graph.interfaces.includes(type);

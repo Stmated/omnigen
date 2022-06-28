@@ -7,8 +7,8 @@ import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {GenericModelUtil} from '../../../../src/parse/GenericModelUtil';
-import {GenericEndpoint, GenericModel, GenericOutput, GenericProperty, GenericTypeKind} from '../../../../src';
+import {GenericModelUtil} from '@parse/GenericModelUtil';
+import {GenericEndpoint, GenericModel, GenericOutput, GenericProperty, GenericTypeKind} from '@parse';
 
 // const SegfaultHandler = require('segfault-handler');
 // SegfaultHandler.registerHandler('crash.log');
@@ -39,6 +39,10 @@ describe('Test the rendering of a CST tree to string', () => {
 
         const renderer = new JavaRenderer(async (cu) => {
 
+          if (cu.fileName.indexOf('#') !== -1) {
+            throw new Error(`# not allowed in CU '${cu.fileName}'`);
+          }
+
           const outPath = `${outDir}/${cu.fileName}`;
           await fs.writeFile(outPath, cu.content);
 
@@ -68,7 +72,7 @@ describe('Test the rendering of a CST tree to string', () => {
     expect(interpretation).toBeDefined();
 
     const allTypes1 = GenericModelUtil.getAllExportableTypes(model, model.types);
-    expect(interpretation.children).toHaveLength(allTypes1.length);
+    expect(interpretation.children).toHaveLength(allTypes1.all.length);
 
     const compilationUnits: CompilationUnit[] = [];
     const renderer = new JavaRenderer((cu) => {
@@ -80,7 +84,7 @@ describe('Test the rendering of a CST tree to string', () => {
     expect(compilationUnits).toBeDefined();
 
     const allTypes2 = GenericModelUtil.getAllExportableTypes(model, model.types);
-    expect(compilationUnits).toHaveLength(allTypes2.length);
+    expect(compilationUnits).toHaveLength(allTypes2.all.length);
 
     // TODO: We should assert actual useful stuff here :)
 
@@ -89,7 +93,7 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'description-inheritance.json');
+    const model = await TestUtils.readExample('openrpc', 'ethereum.json');
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer((cu) => {

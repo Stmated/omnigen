@@ -7,8 +7,9 @@ import {
   GenericTypeKind
 } from '@parse';
 import {
+  DEFAULT_GRAPH_OPTIONS,
+  DependencyGraph,
   DependencyGraphBuilder,
-  DEFAULT_GRAPH_OPTIONS, DependencyGraph,
   DependencyGraphOptions
 } from '../../src/parse/DependencyGraphBuilder';
 import {Naming} from '../../src/parse/Naming';
@@ -20,8 +21,8 @@ describe('Test CompositionDependencyUtil', () => {
     ...{}
   };
 
-  function java(types: GenericType[]): DependencyGraph {
-    return DependencyGraphBuilder.build(types, javaOptions);
+  function java(namedTypes: GenericType[]): DependencyGraph {
+    return DependencyGraphBuilder.build(namedTypes, javaOptions);
   }
 
   test('Empty', async () => {
@@ -30,8 +31,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(0);
-    expect(result.abstracts).toHaveLength(0);
-    expect(result.usedBy.size).toEqual(0);
+    // expect(result.abstracts).toHaveLength(0);
+    expect(getUsedBy(result.uses).size).toEqual(0);
     expect(result.uses.size).toEqual(0);
   });
 
@@ -45,8 +46,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(0);
-    expect(result.abstracts).toHaveLength(0);
-    expect(result.usedBy.size).toEqual(0);
+    // expect(result.abstracts).toHaveLength(0);
+    expect(getUsedBy(result.uses).size).toEqual(0);
     expect(result.uses.size).toEqual(0);
   });
 
@@ -56,8 +57,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(1);
-    expect(result.abstracts).toHaveLength(0);
-    expect(result.usedBy.size).toEqual(0);
+    // expect(result.abstracts).toHaveLength(0);
+    expect(getUsedBy(result.uses).size).toEqual(0);
     expect(result.uses.size).toEqual(0);
   });
 
@@ -67,8 +68,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(2);
-    expect(result.abstracts).toHaveLength(0);
-    expect(result.usedBy.size).toEqual(0);
+    // expect(result.abstracts).toHaveLength(0);
+    expect(getUsedBy(result.uses).size).toEqual(0);
     expect(result.uses.size).toEqual(0);
   });
 
@@ -79,8 +80,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(2);
-    expect(result.abstracts).toHaveLength(0);
-    expect(result.usedBy.size).toEqual(1);
+    // expect(result.abstracts).toHaveLength(0);
+    expect(getUsedBy(result.uses).size).toEqual(1);
     expect(result.uses.size).toEqual(1);
   });
 
@@ -91,8 +92,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(1);
-    expect(result.abstracts).toHaveLength(1);
-    expect(result.usedBy.size).toEqual(1);
+    // expect(result.abstracts).toHaveLength(1);
+    expect(getUsedBy(result.uses).size).toEqual(1);
     expect(result.uses.size).toEqual(1);
   });
 
@@ -107,8 +108,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(2);
-    expect(result.abstracts).toHaveLength(2);
-    expect(result.usedBy.size).toEqual(2);
+    // expect(result.abstracts).toHaveLength(2);
+    expect(getUsedBy(result.uses).size).toEqual(2);
     expect(result.uses.size).toEqual(2);
   });
 
@@ -119,8 +120,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(2);
-    expect(result.abstracts).toHaveLength(1);
-    expect(result.usedBy.size).toEqual(1);
+    // expect(result.abstracts).toHaveLength(1);
+    expect(getUsedBy(result.uses).size).toEqual(1);
     expect(result.uses.size).toEqual(2);
   });
 
@@ -131,8 +132,8 @@ describe('Test CompositionDependencyUtil', () => {
     expect(result).toBeDefined();
     expect(result.interfaces).toHaveLength(0);
     expect(result.concretes).toHaveLength(3);
-    expect(result.abstracts).toHaveLength(0);
-    expect(result.usedBy.size).toEqual(1);
+    // expect(result.abstracts).toHaveLength(0);
+    expect(getUsedBy(result.uses).size).toEqual(1);
     expect(result.uses.size).toEqual(2);
   });
 
@@ -144,19 +145,15 @@ describe('Test CompositionDependencyUtil', () => {
     const a = obj('A', bc1);
     const d = obj('D', bc2);
 
-    const result = java([a, d, b]);
+    const result = java([a, d, b, c]);
 
     expect(result).toEqual<DependencyGraph>({
-      abstracts: [],
-      concretes: [a, d, b],
+      // abstracts: [],
+      concretes: [a, d, b, c],
       interfaces: [c],
       uses: map([
         [a, [b, c]],
         [d, [b, c]]
-      ]),
-      usedBy: map([
-        [b, [a, d]],
-        [c, [a, d]]
       ])
     });
   });
@@ -169,25 +166,79 @@ describe('Test CompositionDependencyUtil', () => {
     const a = obj('A', bc);
     const d = obj('D', cb);
 
-    const result = java([a, d, b]);
+    const result = java([a, d, b, c]);
 
     expect(result).toEqual<DependencyGraph>({
-      abstracts: [c],
-      concretes: [a, d, b],
-      interfaces: [c],
+      // abstracts: [c],
+      concretes: [a, d, b, c],
+      interfaces: [c, b],
       uses: map([
         [a, [b, c]],
         [d, [c, b]]
-      ]),
-      usedBy: map([
-        [b, [a, d]],
-        [c, [a, d]]
+      ])
+    });
+  });
+
+  test('ABCDEF', async () => {
+
+    const inline = inlineClassWithProp('DInline');
+
+    const A = obj('A');
+    const B = obj('B');
+    const C = obj('C');
+    const cAndInline = and(C, inline)
+    const D = obj('D', cAndInline);
+    const E = obj('E', and(C, D));
+    const F = obj('F', and(B, D));
+
+    const result = java([A, B, C, D, E, F]);
+
+    // We will get the composition type in "uses" here, since the model is not simplified.
+    // In a simplified model here, "inline" would be merged into D, and D only extend C.
+    expect(result).toEqual<DependencyGraph>({
+      // abstracts: [],
+      concretes: [A, B, C, D, E, F],
+      interfaces: [D],
+      uses: map([
+        [D, [C, inline]],
+        [E, [D]],
+        [F, [B, D]]
+      ])
+    });
+  });
+
+  test('Ancestry simplification', async () => {
+
+    const A = obj('A');
+    const B = obj('B', A);
+    const C = obj('C', and(A, B));
+
+    const result = java([A, B, C]);
+
+    expect(result).toEqual<DependencyGraph>({
+      // abstracts: [],
+      concretes: [A, B, C],
+      interfaces: [],
+      uses: map([
+        [C, [B]],
+        [B, [A]],
       ])
     });
   });
 });
 
 type MapArg = Array<[GenericType, Array<GenericType>]>;
+
+function getUsedBy(original: Map<GenericType, GenericType[]>): Map<GenericType, GenericType[]> {
+  const map = new Map<GenericType, GenericType[]>();
+  for (const e of original.entries()) {
+    for (const key of e[1]) {
+      map.set(key, (map.get(key) || []).concat(e[0]));
+    }
+  }
+
+  return map;
+}
 
 function map(arg: MapArg): Map<GenericType, GenericType[]> {
   const map = new Map<GenericType, GenericType[]>();
@@ -214,4 +265,20 @@ function and(...types: GenericType[]): GenericCompositionType {
     compositionKind: CompositionKind.AND,
     types: types,
   };
+}
+
+function inlineClassWithProp(name: string,) {
+  const inline: GenericClassType = {
+    kind: GenericTypeKind.OBJECT,
+    properties: [],
+    name: `${name}Class`,
+  };
+  inline.properties = [
+    {
+      name: `${name}Property`,
+      owner: inline,
+      type: {name: "integer", kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.INTEGER}
+    }
+  ];
+  return inline;
 }

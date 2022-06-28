@@ -38,12 +38,10 @@ export class SchemaFile {
       if (this._input.split('\n').length > 1) {
         // If the input is multiline, then we assume it is the raw content.
         return Promise.resolve(this._input);
-      } else {
-        const absolutePath = path.resolve(this._input);
-        logger.info(`Absolute path is ${absolutePath}`);
       }
     }
 
+    logger.info(`Going to read content from ${String(this._input)}`);
     const buffer = await fs.readFile(this._input, {});
     return this._readContent = buffer.toString();
   }

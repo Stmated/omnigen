@@ -216,6 +216,15 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
     this.visitAdditionalPropertiesDeclaration = (node, visitor) => node.children.map(it => it.visit(visitor));
     this.visitStatement = (node, visitor) => node.child.visit(visitor);
     this.visitSuperConstructorCall = (node, visitor) => node.parameters.visit(visitor);
+    this.visitRuntimeTypeMapping = (node, visitor) => [
+      ...node.fields.flatMap(it => it.visit(visitor)),
+      ...node.getters.flatMap(it => it.visit(visitor)),
+      ...node.methods.flatMap(it => it.visit(visitor))
+    ];
+
+    this.visitClassReference = (node, visitor) => {
+      node.type.visit(visitor);
+    }
   }
 
   visitor_java: IJavaCstVisitor<R>;
@@ -270,4 +279,6 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
   visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
+  visitRuntimeTypeMapping: JavaVisitFn<Java.RuntimeTypeMapping, R>;
+  visitClassReference: JavaVisitFn<Java.ClassReference, R>;
 }

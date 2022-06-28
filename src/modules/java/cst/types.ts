@@ -1,22 +1,30 @@
 import AbstractNode from '@cst/AbstractNode';
 import AbstractToken from '@cst/AbstractToken';
-import {JavaUtil} from '@java';
+import {JavaOptions, JavaUtil, UnknownType} from '@java';
 import {
   GenericClassType,
   GenericDictionaryType,
   GenericPrimitiveKind,
   GenericPrimitiveType,
+  GenericReferenceType,
   GenericType,
   GenericTypeKind
 } from '@parse';
 import {VisitResult} from '@visit';
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
+import {Naming} from '@parse/Naming';
+import {camelCase} from 'change-case';
 
 export enum TokenType {
   ASSIGN,
   ADD,
   COMMA,
   EQUALS,
+  NOT_EQUALS,
+  GT,
+  LT,
+  GTE,
+  LTE,
   MULTIPLY,
   SUBTRACT
 }
@@ -40,6 +48,7 @@ export abstract class AbstractJavaNode extends AbstractNode {
 
 export class Type extends AbstractJavaNode {
   genericType: GenericType;
+
   get array(): boolean {
     return this.genericType.kind == GenericTypeKind.ARRAY;
   }
@@ -82,7 +91,8 @@ export abstract class AbstractExpression extends AbstractJavaNode {
 
 // Split this into different types of constant depending on the type?
 type LiteralType = boolean | number | string | null;
-export class Literal extends AbstractJavaNode {
+
+export class Literal extends AbstractExpression {
   value: LiteralType;
 
   constructor(value: LiteralType) {
@@ -224,9 +234,22 @@ export class PackageDeclaration extends AbstractJavaNode {
   }
 }
 
-export class Predicate extends AbstractJavaNode {
+export type TokenTypePredicate =
+  TokenType.EQUALS
+  | TokenType.NOT_EQUALS
+  | TokenType.GT
+  | TokenType.LT
+  | TokenType.LTE
+  | TokenType.GTE;
+
+export class Predicate extends BinaryExpression {
+
+  constructor(left: AbstractExpression, token: TokenTypePredicate, right: AbstractExpression) {
+    super(left, new JavaToken(token), right);
+  }
+
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
-    return visitor.visitPredicate(this, visitor);
+    return visitor.visitBinaryExpression(this, visitor);
   }
 }
 
@@ -296,7 +319,7 @@ export class Modifier extends AbstractJavaNode {
 export class ModifierList extends AbstractJavaNode {
   modifiers: Modifier[];
 
-  constructor(modifiers: Modifier[]) {
+  constructor(...modifiers: Modifier[]) {
     super();
     this.modifiers = modifiers;
   }
@@ -342,7 +365,7 @@ export class Field extends AbstractJavaNode {
 
   constructor(type: Type, name: Identifier, modifiers?: ModifierList, initializer?: AbstractExpression, annotations?: AnnotationList) {
     super();
-    this.modifiers = modifiers || new ModifierList([new Modifier(ModifierType.PRIVATE)]);
+    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PRIVATE));
     this.type = type;
     this.identifier = name;
     this.initializer = initializer;
@@ -470,7 +493,7 @@ export class MethodDeclaration extends AbstractMethodDeclaration {
     this.pType = type;
     this.pName = name;
     this.pParameters = parameters;
-    this.pModifiers = modifiers || new ModifierList([new Modifier(ModifierType.PUBLIC)]);
+    this.pModifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
     this.body = body;
   }
 
@@ -493,7 +516,7 @@ export abstract class AbstractFieldBackedMethodDeclaration extends AbstractMetho
   }
 
   get modifiers(): ModifierList {
-    return new ModifierList([new Modifier(ModifierType.PUBLIC)]);
+    return new ModifierList(new Modifier(ModifierType.PUBLIC));
   }
 
   protected constructor(pField: Field, pAnnotations?: AnnotationList, pComments?: CommentList, body?: Block) {
@@ -521,7 +544,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 
   constructor(field: Field, annotations?: AnnotationList, comments?: CommentList) {
     super(field, annotations, comments, new Block(
-        new ReturnStatement(new FieldReference(field)),
+      new Statement(new ReturnStatement(new FieldReference(field))),
     ));
   }
 
@@ -546,10 +569,10 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
 
   get parameters(): ArgumentDeclarationList {
     return new ArgumentDeclarationList(
-        new ArgumentDeclaration(
-            this.field.type,
-            this.field.identifier,
-        ),
+      new ArgumentDeclaration(
+        this.field.type,
+        this.field.identifier,
+      ),
     );
   }
 
@@ -557,11 +580,11 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
 
   constructor(field: Field, annotations?: AnnotationList, comments?: CommentList) {
     super(field, annotations, comments, new Block(
-        new AssignExpression(
-            new FieldReference(field),
-            // TODO: Change, so that "value" is not hard-coded! Or is "identifier" enough?
-            new VariableReference(new Identifier('value')),
-        ),
+      new AssignExpression(
+        new FieldReference(field),
+        // TODO: Change, so that "value" is not hard-coded! Or is "identifier" enough?
+        new VariableReference(new Identifier('value')),
+      ),
     ));
 
     // Should be possible to remove, and fetched from the block assign reference?
@@ -657,7 +680,7 @@ export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
   constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
     super();
     this.type = type;
-    this.modifiers = modifiers || new ModifierList([new Modifier(ModifierType.PUBLIC)]);
+    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
     this.name = name;
     this.body = body;
   }
@@ -685,6 +708,7 @@ export class CompilationUnit extends AbstractJavaNode {
 }
 
 export type ConstructorOwnerDeclaration = ClassDeclaration | EnumDeclaration;
+
 export class ConstructorDeclaration extends AbstractJavaNode {
 
   owner: ConstructorOwnerDeclaration;
@@ -698,7 +722,7 @@ export class ConstructorDeclaration extends AbstractJavaNode {
   constructor(owner: ConstructorOwnerDeclaration, parameters?: ArgumentDeclarationList, body?: Block, modifiers?: ModifierList) {
     super();
     this.owner = owner;
-    this.modifiers = modifiers || new ModifierList([new Modifier(ModifierType.PUBLIC)]);
+    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
     this.parameters = parameters;
     this.body = body;
   }
@@ -747,7 +771,11 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     );
 
     const addMethod = new MethodDeclaration(
-      new Type(<GenericPrimitiveType> { name: () => '', kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.VOID}),
+      new Type(<GenericPrimitiveType>{
+        name: () => '',
+        kind: GenericTypeKind.PRIMITIVE,
+        primitiveKind: GenericPrimitiveKind.VOID
+      }),
       new Identifier('addAdditionalProperty'),
       new ArgumentDeclarationList(
         new ArgumentDeclaration(new Type(keyType), keyParameterIdentifier),
@@ -973,5 +1001,125 @@ export class HardCoded extends AbstractJavaNode {
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitHardCoded(this, visitor);
+  }
+}
+
+export class ClassReference extends AbstractExpression {
+  type: Type;
+
+  constructor(type: Type) {
+    super();
+    this.type = type;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitClassReference(this, visitor);
+  }
+}
+
+export class RuntimeTypeMapping extends AbstractJavaNode {
+  fields: Field[];
+  getters: FieldBackedGetter[];
+  methods: MethodDeclaration[];
+
+  constructor(types: GenericType[], options: JavaOptions) {
+    super();
+
+    this.fields = [];
+    this.getters = [];
+    this.methods = [];
+
+    const unknownType: GenericClassType = {
+      kind: GenericTypeKind.UNKNOWN,
+      name: 'unknown'
+    };
+
+    const untypedField = new Field(
+      new Type(unknownType),
+      new Identifier('_raw'),
+      new ModifierList(
+        new Modifier(ModifierType.PRIVATE),
+        new Modifier(ModifierType.FINAL),
+      )
+    );
+    const untypedGetter = new FieldBackedGetter(
+      untypedField
+    );
+
+    this.fields.push(untypedField);
+    this.getters.push(untypedGetter);
+
+    for (const type of types) {
+
+      const typedFieldName = camelCase(Naming.unwrap(type.name));
+      const typedField = new Field(
+        new Type(type),
+        new Identifier(`_${typedFieldName}`)
+      );
+      const typedFieldReference = new FieldReference(typedField);
+
+      const argumentDeclarationList = new ArgumentDeclarationList();
+      let conversionExpression: AbstractExpression;
+      if (options.unknownType == UnknownType.JSON) {
+        const objectMapperReference = new Identifier('objectMapper');
+        argumentDeclarationList.children.push(
+          new ArgumentDeclaration(
+            new Type({kind: GenericTypeKind.REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper", name: 'om'}),
+            objectMapperReference
+          )
+        );
+        conversionExpression = new MethodCall(
+          new VariableReference(objectMapperReference),
+          new Identifier('convertValue'),
+          new ArgumentList(
+            new FieldReference(untypedField),
+            new ClassReference(typedField.type)
+          )
+        )
+      } else {
+        conversionExpression = new Literal('Conversion path unknown');
+      }
+
+      const typedGetter = new MethodDeclaration(
+        typedField.type,
+        new Identifier(JavaUtil.getGetterName(Naming.unwrap(type.name), typedField.type.genericType)),
+        argumentDeclarationList,
+        undefined,
+        new Block(
+          // First check if we have already cached the result.
+          new IfStatement(
+            new Predicate(
+              typedFieldReference,
+              TokenType.NOT_EQUALS,
+              new Literal(null)
+            ),
+            new Block(
+              new Statement(
+                new ReturnStatement(
+                  typedFieldReference
+                )
+              )
+            )
+          ),
+          // If not, then try to convert the raw value into the target type and cache it.
+          new Statement(
+            new ReturnStatement(
+              new BinaryExpression(
+                typedFieldReference,
+                new JavaToken(TokenType.ASSIGN),
+                conversionExpression
+              )
+            )
+          )
+        )
+      );
+
+      this.fields.push(typedField);
+      this.methods.push(typedGetter);
+    }
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitRuntimeTypeMapping(this, visitor);
   }
 }

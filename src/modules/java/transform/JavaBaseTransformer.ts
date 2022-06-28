@@ -7,7 +7,8 @@ import {
   GenericContinuationMapping,
   GenericEnumType,
   GenericExamplePairing,
-  GenericModel, GenericOutput,
+  GenericModel,
+  GenericOutput,
   GenericPrimitiveType,
   GenericProperty,
   GenericType,
@@ -57,7 +58,12 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // The type has a valid name, but we will make sure it is in PascalCase for Java.
         // Also replace the callback with a new one, so it is set in stone from now on.
         type.name = Naming.safer(type, (v) => typeNames.includes(v));
-        typeNames.push(type.name);
+        if (type.kind != GenericTypeKind.PRIMITIVE) {
+
+          // If the type is primitive, then we don't care if it clashes with something else.
+          // That is because the type will not be generated into a Compilation Unit anyway.
+          typeNames.push(type.name);
+        }
       }
     }
 
@@ -81,7 +87,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // What do we do here?
 
       } else if (type.kind == GenericTypeKind.ENUM) {
-        this.transformEnum(type, root, options);
+        this.transformEnum(model, type, root, options);
       } else if (type.kind == GenericTypeKind.COMPOSITION) {
 
         // A composition type is likely just like any other object.
@@ -122,15 +128,19 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return Promise.resolve();
   }
 
-  private transformEnum(type: GenericEnumType, root: JavaCstRootNode, options: JavaOptions): void {
+  private transformEnum(model: GenericModel, type: GenericEnumType, root: JavaCstRootNode, options: JavaOptions): void {
     const body = new Java.Block();
 
-    // TODO: Add comments and examples and everything
     const enumDeclaration = new Java.EnumDeclaration(
       new Java.Type(type),
       new Java.Identifier(Naming.unwrap(type.name)),
       body,
     );
+
+    const comments = this.getCommentsForType(type, model, options);
+    if (comments.length > 0) {
+      enumDeclaration.comments = new Java.CommentList(...comments);
+    }
 
     if (type.enumConstants) {
       body.children.push(
@@ -223,11 +233,9 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       if (unmapped.length > 0) {
 
         // This means the specification did not have any discriminators.
-        // Instead we need to figure out what it is in runtime.
-        comments.push(new Java.Comment(`This needs to be figured out at runtime`));
-
+        // Instead we need to figure out what it is in runtime. To be improved.
         body.children.push(
-          new Java.RuntimeTypeMapping(type.types, options)
+          new Java.RuntimeTypeMapping(type.types, options, (t) => this.getCommentsForType(t, model, options))
         );
 
       } else {

@@ -1022,7 +1022,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
   getters: FieldBackedGetter[];
   methods: MethodDeclaration[];
 
-  constructor(types: GenericType[], options: JavaOptions) {
+  constructor(types: GenericType[], options: JavaOptions, commentSupplier: {(type: GenericType): Comment[]}) {
     super();
 
     this.fields = [];
@@ -1113,6 +1113,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
           )
         )
       );
+      typedGetter.comments = new CommentList(...commentSupplier(typedGetter.type.genericType));
 
       this.fields.push(typedField);
       this.methods.push(typedGetter);

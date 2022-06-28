@@ -4,13 +4,11 @@ import {
   AllowedEnumGenericPrimitiveTypes,
   AllowedEnumTsTypes,
   ComparisonOperator,
-  CompositionKind,
   GenericAccessLevel,
   GenericArrayPropertiesByPositionType,
   GenericArrayType,
   GenericArrayTypesByPositionType,
   GenericClassType,
-  GenericCompositionType,
   GenericContact,
   GenericContinuation,
   GenericContinuationMapping,
@@ -151,15 +149,11 @@ class OpenRpcParserImpl {
     const dereferenced = await this.dereference(method);
     method = dereferenced.object;
 
-    // TODO:
-    //   method.tags
-    //   method.servers
-
     const responses: GenericOutput[] = [];
 
     // One regular response
     const resultResponse = await this.resultToGenericOutputAndResultParamType(method, method.result);
-    resultResponse.type.nameClassifier = resultResponse.type.nameClassifier || `${pascalCase(method.name)}Response`;
+    // resultResponse.type.nameClassifier = resultResponse.type.nameClassifier || `${pascalCase(method.name)}Response`;
     responses.push(resultResponse.output);
 
     // And then one response for each potential error
@@ -211,7 +205,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async jsonSchemaToType(names: TypeName[], schema: JSONSchema, ref?: string)
+  private async jsonSchemaToType(names: TypeName[], schema: JSONSchema, fallbackRef?: string)
     : Promise<SchemaToTypeResult> {
     if (typeof schema == 'boolean') {
       return {
@@ -224,22 +218,29 @@ class OpenRpcParserImpl {
       };
     }
 
-    const dereferenced = await this.dereference(schema);
-    const actualRef = ref || dereferenced.ref;
+    const deref = await this.dereference(schema);
+
+    // If contentDescriptor contains an anonymous schema,
+    // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
+    // That way we will not get duplicates of the schema when called from different locations.
+    const actualRef = deref.ref || fallbackRef;
 
     if (actualRef) {
-
-      // The ref is the much better unique name of the type.
-      schema = dereferenced.object;
-      names = [actualRef];
-
       const existing = this._typePromiseMap.get(actualRef);
       if (existing) {
         return await existing;
       }
+
+      // The ref is the much better unique name of the type.
+      schema = deref.object;
+      if (deref.ref) {
+        // We only use the ref as a replacement name if the actual element has a ref.
+        // We do not include the fallback ref here, since it might not be the best name.
+        names = [deref.ref];
+      }
     }
 
-    const promise = this.jsonSchemaToTypeUncached(schema, names, actualRef);
+    const promise = this.jsonSchemaToTypeUncached(schema, names, deref.ref == undefined);
     if (actualRef) {
       this._typePromiseMap.set(actualRef, promise);
     }
@@ -250,14 +251,14 @@ class OpenRpcParserImpl {
   private async jsonSchemaToTypeUncached(
     schema: JSONSchemaObject,
     names: TypeName[],
-    ref: string | undefined
+    canInline: boolean
   ): Promise<SchemaToTypeResult> {
 
     const nonClassType = await this.jsonSchemaToNonClassType(schema, names);
     if (nonClassType) {
       return {
         type: nonClassType,
-        canInline: false,
+        canInline: canInline,
       };
     }
 
@@ -307,7 +308,7 @@ class OpenRpcParserImpl {
 
       // If this type is inline in the JSON Schema, without being referenced as a ref:
       // Then we might possibly be able to merge this type with the caller, if it wants to.
-      canInline: (ref == undefined)
+      canInline: canInline
     };
   }
 
@@ -580,15 +581,26 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async resultToGenericOutputAndResultParamType(method: MethodObject, result: MethodObjectResult): Promise<{ output: GenericOutput; type: GenericType }> {
+  private async unwrapJsonSchema(schema: JSONSchema): Promise<JSONSchemaObject | undefined> {
+    if (typeof schema == 'boolean') {
+      return undefined;
+    }
 
-    const dereferenced = await this.dereference(result);
-    result = dereferenced.object;
+    const deref = await this.dereference(schema);
+    return deref.object;
+  }
+
+  private async resultToGenericOutputAndResultParamType(method: MethodObject, methodResult: MethodObjectResult): Promise<{ output: GenericOutput; type: GenericType }> {
+
+    const deref = await this.dereference(methodResult);
 
     const typeNamePrefix = pascalCase(method.name);
 
     // TODO: Should this always be unique, or should we ever use a common inherited method type?
-    const resultParameterType = (await this.jsonSchemaToType([dereferenced.ref || result.name], result.schema)).type;
+    const derefSchema = await this.unwrapJsonSchema(deref.object.schema);
+    // TODO: Reuse the code from contentDescriptorToGenericProperty -- so they are ALWAYS THE SAME
+    const preferredName = derefSchema?.title || deref.object.name;
+    const resultParameterType = (await this.jsonSchemaToType([preferredName], deref.object.schema, deref.ref)).type;
     const resultType: GenericType = {
       name: `${typeNamePrefix}Response`,
       kind: GenericTypeKind.OBJECT,
@@ -626,11 +638,11 @@ class OpenRpcParserImpl {
 
     return {
       output: <GenericOutput>{
-        name: result.name,
-        description: result.description,
-        summary: result.summary,
-        deprecated: result.deprecated || false,
-        required: result.required,
+        name: deref.object.name,
+        description: deref.object.description,
+        summary: deref.object.summary,
+        deprecated: deref.object.deprecated || false,
+        required: deref.object.required,
         type: resultType,
         contentType: 'application/json',
         qualifiers: [
@@ -871,8 +883,9 @@ class OpenRpcParserImpl {
 
     const promise = this.dereference(descriptor)
       .then(async deref => {
-        const preferredName = deref.ref || deref.object.name;
-        const propertyType = (await this.jsonSchemaToType([preferredName], deref.object.schema)).type;
+        const derefSchema = await this.unwrapJsonSchema(deref.object.schema);
+        const preferredName = derefSchema?.title || deref.object.name;
+        const propertyType = (await this.jsonSchemaToType([preferredName], deref.object.schema, deref.ref)).type;
 
         return <GenericProperty>{
           name: deref.object.name,
@@ -956,7 +969,7 @@ class OpenRpcParserImpl {
   private async methodToGenericInputType(method: MethodObject): Promise<{ type: GenericType; properties: GenericProperty[] | undefined }> {
 
     const requestJsonRpcType: GenericPrimitiveType = {
-      name: `${method.name}RequestMethod`,
+      name: `${method.name}RequestVersion`,
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.STRING,
       valueConstant: "2.0",

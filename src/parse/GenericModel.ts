@@ -1,3 +1,7 @@
+import {JSONSchema7Definition} from 'json-schema';
+
+export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
+
 export interface GenericParameter {
   name: string;
   description?: string;
@@ -111,6 +115,8 @@ export interface GenericBaseType<T> {
   title?: string;
   description?: string;
   summary?: string;
+  readOnly?: boolean;
+  writeOnly?: boolean;
 
   /**
    * Can be used to classify the type with something extra.

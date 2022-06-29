@@ -142,7 +142,7 @@
               "data": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/AccountLedgerResponseDataEntry"
                 }
               }
             }
@@ -153,6 +153,42 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "userid": {
+            "description": "Your userid in our system.",
+            "type": "string"
+          },
+          "datestamp": {
+            "description": "The datestamp for when this ledger row affected your balance in our system.",
+            "type": "string"
+          },
+          "orderid": {
+            "description": "The globally unique OrderID that resulted in this ledger record.",
+            "type": "string"
+          },
+          "accountname": {
+            "description": "The name of the bookkeeping account this ledger record belongs to.",
+            "type": "string"
+          },
+          "messageid": {
+            "description": "Your unique MessageID that you used to create the order that resulted in this ledger record.",
+            "type": "string"
+          },
+          "transactiontype": {
+            "description": "A human friendly description of this ledger record.",
+            "type": "string"
+          },
+          "currency": {
+            "description": "The currency of the amount in this ledger record.",
+            "type": "string"
+          },
+          "amount": {
+            "description": "The amount your balance in our system was affected with due to this ledger record. May contain a lot of decimals.",
+            "type": "string"
+          },
+          "gluepayid": {
+            "description": "An ID meaning different things for different payment methods, you probably don't need this data.",
+            "type": "string"
+          }
         }
       },
       "AbstractFromTrustlyRequestParamsData": {

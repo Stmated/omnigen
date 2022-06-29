@@ -29,7 +29,7 @@ import {
   GenericPropertyOwner,
   GenericServer,
   GenericType,
-  GenericTypeKind,
+  GenericTypeKind, JSONSchema7Items,
   SchemaFile,
   TypeName,
 } from '@parse';
@@ -42,9 +42,7 @@ import {
   ExampleOrReference,
   ExamplePairingOrReference,
   ExternalDocumentationObject,
-  Items,
   JSONSchema,
-  JSONSchemaObject,
   LicenseObject,
   LinkObject,
   MethodObject,
@@ -55,9 +53,9 @@ import {
   ReferenceObject,
   ServerObject,
 } from '@open-rpc/meta-schema';
-import {JSONSchema7} from 'json-schema';
+import {JSONSchema7, JSONSchema7Definition} from 'json-schema';
 import {default as DefaultReferenceResolver} from '@json-schema-tools/reference-resolver';
-import {camelCase, paramCase, pascalCase, snakeCase} from 'change-case';
+import {camelCase, pascalCase} from 'change-case';
 import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
@@ -97,6 +95,8 @@ class OpenRpcParserImpl {
   private readonly _derefPromiseMap = new Map<string, Promise<unknown>>();
   private readonly _typePromiseMap = new Map<string, Promise<SchemaToTypeResult>>();
   private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
+
+  private _unknownError?: GenericOutput;
 
   constructor(doc: OpenrpcDocument, options = DEFAULT_PARSER_OPTIONS) {
     this._doc = doc;
@@ -227,7 +227,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async jsonSchemaToType(names: TypeName[], schema: JSONSchema, fallbackRef?: string)
+  private async jsonSchemaToType(names: TypeName[], schema: JSONSchema7Definition, fallbackRef?: string)
     : Promise<SchemaToTypeResult> {
     if (typeof schema == 'boolean') {
       return {
@@ -271,7 +271,7 @@ class OpenRpcParserImpl {
   }
 
   private async jsonSchemaToTypeUncached(
-    schema: JSONSchemaObject,
+    schema: JSONSchema7,
     names: TypeName[],
     canInline: boolean
   ): Promise<SchemaToTypeResult> {
@@ -290,6 +290,8 @@ class OpenRpcParserImpl {
       kind: GenericTypeKind.OBJECT,
       description: schema.description,
       title: schema.title,
+      readOnly: schema.readOnly,
+      writeOnly: schema.writeOnly,
 
       // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
       additionalProperties: (schema.additionalProperties == undefined
@@ -304,7 +306,7 @@ class OpenRpcParserImpl {
     const requiredProperties: GenericProperty[] = [];
     if (schema.properties) {
       for (const key of Object.keys(schema.properties)) {
-        const propertySchema = schema.properties[key] as JSONSchema7;
+        const propertySchema = schema.properties[key];
         const genericProperty = await this.jsonSchema7ToGenericProperty(type, key, propertySchema);
 
         genericProperties.push(genericProperty);
@@ -334,7 +336,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async jsonSchemaToNonClassType(schema: JSONSchemaObject, names: TypeName[]): Promise<GenericType | undefined> {
+  private async jsonSchemaToNonClassType(schema: JSONSchema7, names: TypeName[]): Promise<GenericType | undefined> {
 
     if (typeof schema.type === 'string') {
       if (schema.type === 'array') {
@@ -372,7 +374,7 @@ class OpenRpcParserImpl {
     return undefined;
   }
 
-  public async extendOrEnhanceClassType(schema: JSONSchemaObject, type: GenericClassType, names: TypeName[]): Promise<GenericType> {
+  public async extendOrEnhanceClassType(schema: JSONSchema7, type: GenericClassType, names: TypeName[]): Promise<GenericType> {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -460,7 +462,7 @@ class OpenRpcParserImpl {
     return type;
   }
 
-  private async getArrayItemType(schema: JSONSchemaObject, items: Items | undefined, names: TypeName[]): Promise<GenericArrayType | GenericArrayPropertiesByPositionType | GenericArrayTypesByPositionType> {
+  private async getArrayItemType(schema: JSONSchema7, items: JSONSchema7Items, names: TypeName[]): Promise<GenericArrayType | GenericArrayPropertiesByPositionType | GenericArrayTypesByPositionType> {
 
     if (!items) {
       // No items, so the schema for the array items is undefined.
@@ -587,29 +589,38 @@ class OpenRpcParserImpl {
     });
   }
 
-  private async jsonSchema7ToGenericProperty(owner: GenericPropertyOwner, propertyName: string, schema: JSONSchema7)
+  private async jsonSchema7ToGenericProperty(owner: GenericPropertyOwner, propertyName: string, schema: JSONSchema7Definition)
     : Promise<GenericProperty> {
     // This is ugly, but they should hopefully be the same.
-    const openRpcJsonSchema = schema as JSONSchema;
+    // const openRpcJsonSchema = schema as JSONSchema;
 
     // The type name will be replaced if the schema is a $ref to another type.
-    const propertyTypeName = (schema.title ? camelCase(schema.title) : undefined) || propertyName;
-    const propertyType = (await this.jsonSchemaToType([propertyTypeName], openRpcJsonSchema)).type;
+    const schemaDeref  = await this.unwrapJsonSchema(schema);
+    const propertyTypeName = (schemaDeref.title ? camelCase(schemaDeref.title) : undefined) || propertyName;
+    const propertyType = (await this.jsonSchemaToType([propertyTypeName], schema)).type;
 
-    return <GenericProperty>{
+    return {
       name: propertyName,
       type: propertyType,
       owner: owner
     };
   }
 
-  private async unwrapJsonSchema(schema: JSONSchema): Promise<JSONSchemaObject | undefined> {
+  private async unwrapJsonSchema(schema: JSONSchema7Definition | JSONSchema): Promise<JSONSchema7> {
     if (typeof schema == 'boolean') {
-      return undefined;
+      if (schema) {
+        return {}
+      } else {
+        return {not: {}};
+      }
     }
 
     const deref = await this.dereference(schema);
-    return deref.object;
+    return deref.object as JSONSchema7;
+  }
+
+  private convertJsonSchema(schema: JSONSchema): JSONSchema7Definition {
+    return schema as JSONSchema7Definition;
   }
 
   private async resultToGenericOutputAndResultParamType(method: MethodObject, methodResult: MethodObjectResult): Promise<{ output: GenericOutput; type: GenericType }> {
@@ -619,10 +630,11 @@ class OpenRpcParserImpl {
     const typeNamePrefix = pascalCase(method.name);
 
     // TODO: Should this always be unique, or should we ever use a common inherited method type?
-    const derefSchema = await this.unwrapJsonSchema(deref.object.schema);
     // TODO: Reuse the code from contentDescriptorToGenericProperty -- so they are ALWAYS THE SAME
+    const convSchema = this.convertJsonSchema(deref.object.schema);
+    const derefSchema = await this.unwrapJsonSchema(convSchema);
     const preferredName = derefSchema?.title || deref.object.name;
-    const resultParameterType = (await this.jsonSchemaToType([preferredName], deref.object.schema, deref.ref)).type;
+    const resultParameterType = (await this.jsonSchemaToType([preferredName], convSchema, deref.ref)).type;
     const resultType: GenericType = {
       name: `${typeNamePrefix}Response`,
       kind: GenericTypeKind.OBJECT,
@@ -687,8 +699,6 @@ class OpenRpcParserImpl {
       type: resultParameterType
     };
   }
-
-  private _unknownError?: GenericOutput;
 
   private async errorToGenericOutput(parentName: string, error: ErrorOrReference): Promise<GenericOutput> {
 
@@ -915,9 +925,10 @@ class OpenRpcParserImpl {
 
     const promise = this.dereference(descriptor)
       .then(async deref => {
-        const derefSchema = await this.unwrapJsonSchema(deref.object.schema);
+        const convSchema = this.convertJsonSchema(deref.object.schema);
+        const derefSchema = await this.unwrapJsonSchema(convSchema);
         const preferredName = derefSchema?.title || deref.object.name;
-        const propertyType = (await this.jsonSchemaToType([preferredName], deref.object.schema, deref.ref)).type;
+        const propertyType = (await this.jsonSchemaToType([preferredName], convSchema, deref.ref)).type;
 
         return <GenericProperty>{
           name: deref.object.name,

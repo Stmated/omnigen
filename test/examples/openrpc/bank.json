@@ -155,7 +155,9 @@
         "properties": {
           "userid": {
             "description": "Your userid in our system.",
-            "type": "string"
+            "type": "string",
+            "x-field-name": "user_id",
+            "x-property-name": "UserId"
           },
           "datestamp": {
             "description": "The datestamp for when this ledger row affected your balance in our system.",

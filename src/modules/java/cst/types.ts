@@ -14,6 +14,7 @@ import {VisitResult} from '@visit';
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
 import {Naming} from '@parse/Naming';
 import {camelCase} from 'change-case';
+import * as Java from '@java/cst/index';
 
 export enum TokenType {
   ASSIGN,
@@ -529,12 +530,19 @@ export abstract class AbstractFieldBackedMethodDeclaration extends AbstractMetho
 }
 
 export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
+
+  private readonly getterName?: Identifier;
+
   get type(): Type {
     return this.field.type;
   }
 
   // The name needs to be capitalized properly, etc, etc
   get name(): Identifier {
+    if (this.getterName) {
+      return this.getterName;
+    }
+
     return new Identifier(JavaUtil.getGetterName(this.field.identifier.value, this.type.genericType));
   }
 
@@ -542,10 +550,11 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
     return undefined;
   }
 
-  constructor(field: Field, annotations?: AnnotationList, comments?: CommentList) {
+  constructor(field: Field, annotations?: AnnotationList, comments?: CommentList, getterName?: Identifier) {
     super(field, annotations, comments, new Block(
       new Statement(new ReturnStatement(new FieldReference(field))),
     ));
+    this.getterName = getterName;
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
@@ -601,10 +610,10 @@ export class FieldGetterSetter extends AbstractJavaNode {
   readonly getter: FieldBackedGetter;
   readonly setter: FieldBackedSetter;
 
-  constructor(type: Type, identifier: Identifier, annotations?: AnnotationList, comments?: CommentList) {
+  constructor(type: Type, fieldIdentifier: Identifier, getterAnnotations?: AnnotationList, comments?: CommentList, getterIdentifier?: Identifier) {
     super();
-    this.field = new Field(type, identifier, undefined, undefined, annotations);
-    this.getter = new FieldBackedGetter(this.field, undefined, comments);
+    this.field = new Field(type, fieldIdentifier, undefined, undefined, undefined);
+    this.getter = new FieldBackedGetter(this.field, getterAnnotations, comments, getterIdentifier);
     this.setter = new FieldBackedSetter(this.field);
   }
 
@@ -1040,6 +1049,12 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       new ModifierList(
         new Modifier(ModifierType.PRIVATE),
         new Modifier(ModifierType.FINAL),
+      ),
+      undefined,
+      new AnnotationList(
+        new Java.Annotation(
+          new Java.Type({kind: GenericTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue', name: 'JsonValue'}),
+        )
       )
     );
     const untypedGetter = new FieldBackedGetter(

@@ -37,6 +37,8 @@ export enum GenericArrayImplementationType {
 
 export interface GenericProperty {
   name: string;
+  fieldName?: string;
+  propertyName?: string;
   type: GenericType;
   owner: GenericPropertyOwner;
 

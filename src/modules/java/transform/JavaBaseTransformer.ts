@@ -1,5 +1,5 @@
 import {AbstractJavaTransformer} from './AbstractJavaTransformer';
-import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
+import {Annotation, Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
   CompositionKind,
   GenericClassType,
@@ -420,23 +420,50 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       return;
     }
 
+    // TODO: Move this to another transformer which checks for differences between field name and original name.
+    const getterAnnotations: Java.Annotation[] = [];
+    if (property.propertyName) {
+      getterAnnotations.push(
+        new Java.Annotation(
+          new Java.Type({kind: GenericTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonProperty', name: 'JsonProperty'}),
+          new Java.AnnotationKeyValuePairList(
+            new Java.AnnotationKeyValuePair(
+              undefined,
+              new Java.Literal(property.name)
+            )
+          )
+        )
+      );
+    }
+
+    const getterAnnotationList = (getterAnnotations.length > 0)
+      ? new Java.AnnotationList(...getterAnnotations)
+      : undefined;
+
+    const fieldType = this.toJavaType(property.type);
+    const fieldIdentifier = new Java.Identifier(property.fieldName || camelCase(property.name), property.name);
+    const getterIdentifier = property.propertyName
+      ? new Java.Identifier(JavaUtil.getGetterName(property.propertyName, property.type))
+      : undefined;
+
     if (options.immutableModels) {
       const field = new Java.Field(
-        this.toJavaType(property.type),
-        new Java.Identifier(camelCase(property.name), property.name),
+        fieldType,
+        fieldIdentifier,
         new Java.ModifierList(
           new Java.Modifier(ModifierType.PRIVATE),
           new Java.Modifier(ModifierType.FINAL)
         )
       );
       body.children.push(field);
-      body.children.push(new Java.FieldBackedGetter(field, undefined, commentList));
+      body.children.push(new Java.FieldBackedGetter(field, getterAnnotationList, commentList, getterIdentifier));
     } else {
       body.children.push(new Java.FieldGetterSetter(
-        this.toJavaType(property.type),
-        new Java.Identifier(camelCase(property.name), property.name),
-        undefined,
-        commentList
+        fieldType,
+        fieldIdentifier,
+        getterAnnotationList,
+        commentList,
+        getterIdentifier
       ));
     }
   }

@@ -601,9 +601,21 @@ class OpenRpcParserImpl {
 
     return {
       name: propertyName,
+      fieldName: this.getVendorExtension(schemaDeref, 'field-name'),
+      propertyName: this.getVendorExtension(schemaDeref, 'property-name'),
       type: propertyType,
       owner: owner
     };
+  }
+
+  private getVendorExtension<R>(obj: unknown, key: string): R | undefined {
+    const records = obj as Record<string, unknown>;
+    const value = records[`x-${key}`];
+    if (value == undefined) {
+      return undefined;
+    }
+
+    return value as R;
   }
 
   private async unwrapJsonSchema(schema: JSONSchema7Definition | JSONSchema): Promise<JSONSchema7> {

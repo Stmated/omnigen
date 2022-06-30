@@ -11,12 +11,16 @@ export class TestUtils {
 
   static async listExampleFileNames(type: KnownSchemaNames): Promise<string[]> {
     const dirPath = `./test/examples/${type}/`;
-    return await fs.readdir(dirPath);
+    return await fs.readdir(dirPath, {withFileTypes: true})
+    .then(paths => {
+      return paths.filter(it => it.isFile()).map(it => it.name);
+    });
   }
 
   static async readExample(type: KnownSchemaNames, fileName: string): Promise<GenericModel> {
 
     const parser = new OpenRpcParser();
-    return await parser.parse(new SchemaFile(`./test/examples/${type}/${fileName}`));
+    const path = `./test/examples/${type}/${fileName}`;
+    return await parser.parse(new SchemaFile(path, path));
   }
 }

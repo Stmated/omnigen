@@ -1,0 +1,14 @@
+{
+  "a": {
+    "value": "x"
+  },
+  "b": {
+    "$ref": "#/a/value"
+  },
+  "c": {
+    "$ref": "b.json#/a/value"
+  },
+  "d": {
+    "$ref": "file:b.json#/a/value"
+  }
+}

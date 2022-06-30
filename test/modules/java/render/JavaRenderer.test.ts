@@ -18,7 +18,14 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test that all examples can be rendered and parsed', async () => {
 
     for (const schemaName of TestUtils.getKnownSchemaNames()) {
-      const fileNames = await TestUtils.listExampleFileNames(schemaName);
+
+      let fileNames: string[];
+      try {
+        fileNames = await TestUtils.listExampleFileNames(schemaName);
+      } catch (ex) {
+        throw new Error(`Could not list filenames inside ${schemaName}: ${ex}`, {cause: ex instanceof Error ? ex : undefined});
+      }
+
       for (const fileName of fileNames) {
 
         const model = await TestUtils.readExample(schemaName, fileName);
@@ -26,7 +33,14 @@ describe('Test the rendering of a CST tree to string', () => {
         const interpreter = new JavaInterpreter();
         const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
-        const outDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
+        let outDir: string;
+
+        try {
+          outDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
+        } catch (ex) {
+          throw new Error(`Could not resolve path of ${fileName}`)
+        }
+
         try {
           if ((await fs.stat(outDir)).isDirectory()) {
             await fs.rm(outDir, {recursive: true, force: true});
@@ -44,7 +58,12 @@ describe('Test the rendering of a CST tree to string', () => {
           }
 
           const outPath = `${outDir}/${cu.fileName}`;
-          await fs.writeFile(outPath, cu.content);
+
+          try {
+            await fs.writeFile(outPath, cu.content);
+          } catch (ex) {
+            throw new Error(`Could not write '${outPath}' of '${fileName}': ${ex}`, {cause: ex instanceof Error ? ex : undefined});
+          }
 
           let cst: JavaParser.CstNode;
           try {

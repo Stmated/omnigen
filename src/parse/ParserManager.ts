@@ -3,7 +3,7 @@ import {Parser} from '@parse/Parser';
 import {PathLike} from 'fs';
 import {SchemaFile} from '@parse/SchemaFile';
 
-export type ParseManagerInput = string | PathLike; // | Record<string, any>;
+export type ParseManagerInput = string | PathLike;
 
 export interface ParseInputOptions {
   input: ParseManagerInput;

@@ -1,0 +1,76 @@
+{
+  "components": {
+    "methods": {
+      "AccountPayout": {
+        "name": "AccountPayout",
+        "summary": "",
+        "params": [
+          {
+            "$ref": "#/components/contentDescriptors/ParamSignature"
+          },
+          {
+            "$ref": "#/components/contentDescriptors/ParamUUID"
+          },
+          {
+            "name": "Data",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AccountPayoutRequestData"
+            }
+          }
+        ],
+        "result": {
+          "name": "AccountLedgerResponse",
+          "schema": {
+            "$ref": "#/components/schemas/AccountPayoutResponseData"
+          }
+        }
+      }
+    },
+    "schemas": {
+      "AccountPayoutRequestData": {
+        "type": "object",
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractToTrustlyRequestParamsData"
+          }
+        ],
+        "properties": {
+          "FromDate": {
+            "type": "string"
+          },
+          "ToDate": {
+            "type": "string"
+          },
+          "Currency": {
+            "type": "string"
+          },
+          "Attributes": {
+            "$ref": "#/components/schemas/EmptyRequestParamsDataAttributes"
+          }
+        },
+        "required": [
+          "FromDate",
+          "ToDate",
+          "Currency"
+        ]
+      },
+      "AccountPayoutResponseData": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AbstractResponseResultData"
+          },
+          {
+            "properties": {
+              "data": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

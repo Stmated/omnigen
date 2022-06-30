@@ -5,5 +5,6 @@ import {LoggerUtils} from './LoggerUtils';
 //        Otherwise the logger fix will not be registered when the logger is created.
 LoggerUtils.registerLoggerFix();
 
+export * from './LoggerUtils';
 export * from './TestUtils';
 export * from './ParsedJavaTestVisitor';

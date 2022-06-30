@@ -20,13 +20,31 @@ export class SchemaFile {
     this._fileName = fileName;
   }
 
-  public async asObject(): Promise<unknown> {
+  public getAbsolutePath(): string | undefined {
+    if (typeof this._input === 'string') {
+      if (this._input.indexOf('\n') !== -1) {
+        return this._fileName;
+      }
+    }
+
+    if (typeof this._input == 'string') {
+      return path.resolve(this._input);
+    }
+
+    if (this._input instanceof URL) {
+      return this._input.toString();
+    }
+
+    return this._fileName;
+  }
+
+  public async asObject<R>(): Promise<R> {
     if (this._parsedObject !== undefined) {
-      return Promise.resolve(this._parsedObject);
+      return Promise.resolve(this._parsedObject as R);
     }
 
     const str = await this.asString();
-    return this._parsedObject = JSON.parse(str) as unknown;
+    return this._parsedObject = JSON.parse(str) as R;
   }
 
   public async asString(): Promise<string> {
@@ -35,14 +53,19 @@ export class SchemaFile {
     }
 
     if (typeof this._input === 'string') {
-      if (this._input.split('\n').length > 1) {
+      if (this._input.indexOf('\n') !== -1) {
         // If the input is multiline, then we assume it is the raw content.
         return Promise.resolve(this._input);
       }
     }
 
-    logger.info(`Going to read content from ${String(this._input)}`);
-    const buffer = await fs.readFile(this._input, {});
+    if (this._input instanceof Buffer) {
+      return this._input.toString();
+    }
+
+    const path = this.getAbsolutePath() || '';
+    logger.info(`Going to read content from ${path}`);
+    const buffer = await fs.readFile(path, {});
     return this._readContent = buffer.toString();
   }
 }

@@ -1,5 +1,5 @@
 import {AbstractJavaTransformer} from './AbstractJavaTransformer';
-import {Annotation, Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
+import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
   CompositionKind,
   GenericClassType,
@@ -308,6 +308,23 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       body,
     );
 
+    // TODO: Move into a separate transformer, and make it an option
+    javaClass.annotations = new Java.AnnotationList(
+      new Java.Annotation(
+        new Java.Type({kind: GenericTypeKind.REFERENCE, fqn: 'javax.annotation.Generated', name: 'Generated'}),
+        new Java.AnnotationKeyValuePairList(
+          new Java.AnnotationKeyValuePair(
+            new Java.Identifier('value'),
+            new Java.Literal('omnigen')
+          ),
+          new Java.AnnotationKeyValuePair(
+            new Java.Identifier('date'),
+            new Java.Literal(new Date().toISOString())
+          )
+        )
+      )
+    )
+
     const comments = this.getCommentsForType(type, model, options);
 
     const typeExtends = JavaDependencyGraph.getExtends(graph, type);
@@ -422,7 +439,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     // TODO: Move this to another transformer which checks for differences between field name and original name.
     const getterAnnotations: Java.Annotation[] = [];
-    if (property.propertyName) {
+    if (property.fieldName || property.propertyName) {
       getterAnnotations.push(
         new Java.Annotation(
           new Java.Type({kind: GenericTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonProperty', name: 'JsonProperty'}),

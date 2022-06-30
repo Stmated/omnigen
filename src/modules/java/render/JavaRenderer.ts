@@ -6,7 +6,6 @@ import {ICstNode} from '@cst';
 import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
-import {Naming} from '@parse/Naming';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>; 
 
@@ -312,7 +311,15 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitArgumentDeclarationList: JavaRendererVisitFn<Java.ArgumentDeclarationList> = (node, visitor) => {
-    return node.children.map(it => this.render(it, visitor)).join(', ');
+
+    const listString = node.children.map(it => this.render(it, visitor)).join(', ');
+    if (listString.length > 140) {
+      // TODO: Make 140 an option
+      const spaces = this.getIndentation(1);
+      return `\n${spaces}${listString.replaceAll(/, /g, `,\n${spaces}`)}\n`;
+    }
+
+    return listString;
   }
 
   visitArgumentList: JavaRendererVisitFn<Java.ArgumentList> = (node, visitor) => {
@@ -346,8 +353,15 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitIfStatement: JavaRendererVisitFn<Java.IfStatement> = (node, visitor) => {
-
     return `if (${this.render(node.predicate, visitor)}) {\n${this.render(node.body)}}\n`;
+  }
+
+  visitIfElseStatement: JavaRendererVisitFn<Java.IfElseStatement> = (node, visitor) => {
+
+    const ifs = node.ifStatements.map(it => this.render(it, visitor));
+    const el = node.elseBlock ? `\nelse {\n${this.render(node.elseBlock)}\n}` : '';
+
+    return `${ifs.join('else ')}${el}`;
   }
 
   visitRuntimeTypeMapping: JavaRendererVisitFn<Java.RuntimeTypeMapping> = (node, visitor) => {

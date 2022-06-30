@@ -1,0 +1,55 @@
+{
+  "openrpc": "1.2.4",
+  "info": {
+    "title": "Bank",
+    "version": "1.0.0"
+  },
+  "x-omnigen": {
+    "jsonRpcPropertyName": "version",
+    "jsonRpcRequestVersion": "1.1",
+    "jsonRpcIdIncluded": false
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "methods": [
+    {
+      "$ref": "./bank/AccountLedger.json#/components/methods/AccountLedger"
+    },
+    {
+      "$ref": "./bank/AccountPayout.json#/components/methods/AccountPayout"
+    }
+  ],
+  "components": {
+    "methods": {
+
+      "AccountPayout": {
+        "name": "AccountPayout",
+        "summary": "",
+        "params": [
+          {
+            "$ref": "#/components/contentDescriptors/ParamSignature"
+          },
+          {
+            "$ref": "#/components/contentDescriptors/ParamUUID"
+          },
+          {
+            "name": "Data",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AccountPayoutRequestData"
+            }
+          }
+        ],
+        "result": {
+          "name": "AccountPayoutResponse",
+          "schema": {
+            "$ref": "#/components/schemas/AccountPayoutResponseData"
+          }
+        }
+      }
+    }
+  }
+}

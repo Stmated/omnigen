@@ -63,6 +63,8 @@ import {LoggerFactory} from '@util';
 import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
 import {Naming} from '@parse/Naming';
+import * as path from 'path';
+import {ProtocolHandler} from '@util/ProtocolHandler';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -75,7 +77,7 @@ export class OpenRpcParser extends AbstractParser {
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
       dereference: false,
     });
-    const parserImpl = new OpenRpcParserImpl(document);
+    const parserImpl = new OpenRpcParserImpl(schemaFile, document);
     return parserImpl.docToGenericModel();
   }
 
@@ -84,24 +86,36 @@ export class OpenRpcParser extends AbstractParser {
   }
 }
 
+/**
+ * TODO: Remove this class, keep the global variables in the class above
+ */
 class OpenRpcParserImpl {
 
-  private static readonly PATTERN_PLACEHOLDER = new RegExp(/^[$]{([^}]+)}$/);
-  private static readonly PATTERN_PLACEHOLDER_RELAXED = new RegExp(/(?:[$]{([^}]+)}$|^{{([^}]+?)}}$|^[$](.+?)$)/);
+  static readonly PATTERN_PLACEHOLDER = new RegExp(/^[$]{([^}]+)}$/);
+  static readonly PATTERN_PLACEHOLDER_RELAXED = new RegExp(/(?:[$]{([^}]+)}$|^{{([^}]+?)}}$|^[$](.+?)$)/);
 
-  private readonly _doc: OpenrpcDocument;
-  private readonly _options: IParserOptions;
+  readonly _options: IParserOptions;
 
-  private readonly _derefPromiseMap = new Map<string, Promise<unknown>>();
-  private readonly _typePromiseMap = new Map<string, Promise<SchemaToTypeResult>>();
-  private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
+  _unknownError?: GenericOutput;
 
-  private _unknownError?: GenericOutput;
+  private readonly _parserRoot: OpenRpcParserDoc;
 
-  constructor(doc: OpenrpcDocument, options = DEFAULT_PARSER_OPTIONS) {
-    this._doc = doc;
+  /**
+   * Map of absolute paths and their document roots.
+   * Used for resolving references in external documents.
+   */
+  private readonly _roots = new Map<string, unknown>();
+
+  constructor(schemaFile: SchemaFile, doc: OpenrpcDocument, options = DEFAULT_PARSER_OPTIONS) {
     this._options = options;
 
+    this.updateOptionsFromDocument(doc);
+    this._parserRoot = new OpenRpcParserDoc(this, schemaFile, doc);
+  }
+
+  private updateOptionsFromDocument(doc: OpenrpcDocument): void {
+
+    // TODO: This should be moved somewhere generic, since it should work the same in all languages.
     const unsafeOptions = this._options as unknown as Record<string, unknown>;
     const customOptions = doc['x-omnigen'] as Record<string, unknown>;
     if (customOptions) {
@@ -116,8 +130,16 @@ class OpenRpcParserImpl {
           if (unsafeOptions[camelKey] === undefined) {
             logger.warn(`Tried to set option '${camelKey}' which does not exist`);
           } else {
+
+            const existingType = typeof (unsafeOptions[camelKey]);
+            const newType = typeof (value);
+
             unsafeOptions[camelKey] = value;
-            logger.info(`Set option '${camelKey}' to '${String(value)}'`);
+            if (existingType !== newType) {
+              logger.warn(`Set option '${camelKey}' to '${String(value)}' (but '${newType}' != '${existingType}'`);
+            } else {
+              logger.info(`Set option '${camelKey}' to '${String(value)}'`);
+            }
           }
         }
       }
@@ -125,40 +147,75 @@ class OpenRpcParserImpl {
   }
 
   async docToGenericModel(): Promise<GenericModel> {
-    const endpoints = await Promise.all(this._doc.methods.map((method) => this.methodToGenericEndpoint(method)));
-    const contact = this._doc.info.contact ? this.contactToGenericContact(this._doc.info.contact) : undefined;
-    const license = this._doc.info.license ? this.licenseToGenericLicense(this._doc.info.license) : undefined;
-    const servers = (this._doc.servers || []).map((server) => this.serverToGenericServer(server));
-    const docs = this._doc.externalDocs ? [this.externalDocToGenericExternalDoc(this._doc.externalDocs)] : [];
+    return this._parserRoot.docToGenericModel();
+  }
+}
+
+class OpenRpcParserDoc {
+
+  private readonly _parser: OpenRpcParserImpl;
+  private readonly _doc?: OpenrpcDocument;
+  private readonly _parent?: OpenRpcParserDoc;
+  private readonly _schemaFile: SchemaFile;
+
+  // TODO: Move this to the root? But always have the key be the absolute path?
+  private readonly _typePromiseMap = new Map<string, Promise<SchemaToTypeResult>>();
+  private readonly _derefPromiseMap = new Map<string, Promise<unknown>>();
+  private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
+
+  constructor(parser: OpenRpcParserImpl, schemaFile: SchemaFile, doc?: OpenrpcDocument, parent?: OpenRpcParserDoc) {
+    this._parser = parser;
+    this._doc = doc;
+    this._schemaFile = schemaFile;
+    this._parent = parent;
+  }
+
+  private getClosestOpenRpcDocument(): OpenrpcDocument {
+    if (this._doc) {
+      return this._doc;
+    } else {
+      if (this._parent) {
+        return this._parent.getClosestOpenRpcDocument();
+      } else {
+        throw new Error(`There is no OpenRpcDocument found in the hierarchy`);
+      }
+    }
+  }
+
+  async docToGenericModel(): Promise<GenericModel> {
+    const doc = this.getClosestOpenRpcDocument();
+    const endpoints = await Promise.all(doc.methods.map((method) => this.methodToGenericEndpoint(method)));
+    const contact = doc.info.contact ? this.contactToGenericContact(doc.info.contact) : undefined;
+    const license = doc.info.license ? this.licenseToGenericLicense(doc.info.license) : undefined;
+    const servers = (doc.servers || []).map((server) => this.serverToGenericServer(server));
+    const docs = doc.externalDocs ? [this.externalDocToGenericExternalDoc(doc.externalDocs)] : [];
     const continuations = await this.linksToGenericContinuations(endpoints);
 
-    const model: GenericModel = {
+    return {
       schemaType: 'openrpc',
-      schemaVersion: this._doc.openrpc,
-      name: this._doc.info.title,
-      description: this._doc.info.description,
-      version: this._doc.info.version,
+      schemaVersion: doc.openrpc,
+      name: doc.info.title,
+      description: doc.info.description,
+      version: doc.info.version,
       contact: contact,
       license: license,
-      termsOfService: this._doc.info.termsOfService,
+      termsOfService: doc.info.termsOfService,
       servers: servers,
       externalDocumentations: docs,
       endpoints: endpoints,
       continuations: continuations,
-      types: (await Promise.all([...this._typePromiseMap.values()])).map(it => it.type),
+      types: [], // (await Promise.all([...this._typePromiseMap.values()])).map(it => it.type),
     };
-
-    return model;
   }
 
-  private licenseToGenericLicense(license: LicenseObject): GenericLicense {
+  licenseToGenericLicense(license: LicenseObject): GenericLicense {
     return <GenericLicense>{
       name: license.name,
       url: license.url,
     };
   }
 
-  private contactToGenericContact(contact: ContactObject): GenericContact {
+  contactToGenericContact(contact: ContactObject): GenericContact {
     return <GenericContact>{
       name: contact.name,
       url: contact.url,
@@ -166,7 +223,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async methodToGenericEndpoint(method: MethodOrReference): Promise<GenericEndpoint> {
+  async methodToGenericEndpoint(method: MethodOrReference): Promise<GenericEndpoint> {
 
     const dereferenced = await this.dereference(method);
     method = dereferenced.object;
@@ -240,12 +297,10 @@ class OpenRpcParserImpl {
       };
     }
 
-    const deref = await this.dereference(schema);
-
     // If contentDescriptor contains an anonymous schema,
     // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
     // That way we will not get duplicates of the schema when called from different locations.
-    const actualRef = deref.ref || fallbackRef;
+    const actualRef = schema.$ref || fallbackRef;
 
     if (actualRef) {
       const existing = this._typePromiseMap.get(actualRef);
@@ -254,15 +309,16 @@ class OpenRpcParserImpl {
       }
 
       // The ref is the much better unique name of the type.
-      schema = deref.object;
-      if (deref.ref) {
+      if (schema.$ref) {
         // We only use the ref as a replacement name if the actual element has a ref.
         // We do not include the fallback ref here, since it might not be the best name.
-        names = [deref.ref];
+        names = [schema.$ref];
       }
     }
 
-    const promise = this.jsonSchemaToTypeUncached(schema, names, deref.ref == undefined);
+    const promise = this.dereference(schema)
+      .then(deref => this.jsonSchemaToTypeUncached(deref.object, names, schema.$ref == undefined));
+
     if (actualRef) {
       this._typePromiseMap.set(actualRef, promise);
     }
@@ -484,7 +540,7 @@ class OpenRpcParserImpl {
       }
 
     } else if (typeof items == 'boolean') {
-      throw new Error(`Do not know how to handle a boolean items '${names.join('.')}' in '${this._doc.info.title}'`);
+      throw new Error(`Do not know how to handle a boolean items '${names.map(it => Naming.unwrap(it)).join('.')}'`);
     } else if (Array.isArray(items)) {
 
       // TODO: We should be introducing interfaces that describe the common denominators between the different items?
@@ -595,7 +651,7 @@ class OpenRpcParserImpl {
     // const openRpcJsonSchema = schema as JSONSchema;
 
     // The type name will be replaced if the schema is a $ref to another type.
-    const schemaDeref  = await this.unwrapJsonSchema(schema);
+    const schemaDeref = await this.unwrapJsonSchema(schema);
     const propertyTypeName = (schemaDeref.title ? camelCase(schemaDeref.title) : undefined) || propertyName;
     const propertyType = (await this.jsonSchemaToType([propertyTypeName], schema)).type;
 
@@ -657,7 +713,7 @@ class OpenRpcParserImpl {
 
     resultType.properties = [
       {
-        name: this._options.jsonRpcPropertyName,
+        name: this._parser._options.jsonRpcPropertyName,
         type: {
           kind: GenericTypeKind.PRIMITIVE,
           primitiveKind: GenericPrimitiveKind.STRING,
@@ -680,7 +736,7 @@ class OpenRpcParserImpl {
       },
     ];
 
-    if (this._options.jsonRpcIdIncluded) {
+    if (this._parser._options.jsonRpcIdIncluded) {
       resultType.properties.push({
         name: 'id',
         type: {
@@ -718,24 +774,24 @@ class OpenRpcParserImpl {
     error = dereferenced.object;
 
     const isUnknownCode = (error.code === -1234567890);
-    if (isUnknownCode && this._unknownError) {
-      return this._unknownError;
+    if (isUnknownCode && this._parser._unknownError) {
+      return this._parser._unknownError;
     }
 
     const errorOutput = this.errorToGenericOutputReal(parentName, error, isUnknownCode);
     if (isUnknownCode) {
-      if (!this._unknownError) {
-        this._unknownError = errorOutput;
+      if (!this._parser._unknownError) {
+        this._parser._unknownError = errorOutput;
       }
 
-      return this._unknownError;
+      return this._parser._unknownError;
     }
 
     return errorOutput;
   }
 
   private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): GenericOutput {
-    const typeName =  isUnknownCode
+    const typeName = isUnknownCode
       ? `ErrorUnknown`
       : `${parentName}Error${error.code}`;
 
@@ -907,14 +963,14 @@ class OpenRpcParserImpl {
     };
   }
 
-  private externalDocToGenericExternalDoc(documentation: ExternalDocumentationObject): GenericExternalDocumentation {
+  externalDocToGenericExternalDoc(documentation: ExternalDocumentationObject): GenericExternalDocumentation {
     return <GenericExternalDocumentation>{
       url: documentation.url,
       description: documentation.description,
     };
   }
 
-  private serverToGenericServer(server: ServerObject): GenericServer {
+  serverToGenericServer(server: ServerObject): GenericServer {
     return <GenericServer>{
       name: server.name,
       description: server.description,
@@ -1023,12 +1079,12 @@ class OpenRpcParserImpl {
 
   private async methodToGenericInputType(method: MethodObject): Promise<{ type: GenericType; properties: GenericProperty[] | undefined }> {
 
-    const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
+    const hasConstantVersion = (this._parser._options.jsonRpcRequestVersion || '').length > 0;
     const requestJsonRpcType: GenericPrimitiveType = {
       name: `${method.name}RequestVersion`,
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.STRING,
-      valueConstant: hasConstantVersion ? this._options.jsonRpcRequestVersion : undefined,
+      valueConstant: hasConstantVersion ? this._parser._options.jsonRpcRequestVersion : undefined,
       nullable: false
     };
 
@@ -1089,7 +1145,7 @@ class OpenRpcParserImpl {
 
     requestType.properties = [
       <GenericProperty>{
-        name: this._options.jsonRpcPropertyName,
+        name: this._parser._options.jsonRpcPropertyName,
         type: requestJsonRpcType,
         required: true,
         owner: requestType,
@@ -1107,7 +1163,7 @@ class OpenRpcParserImpl {
       }
     ];
 
-    if (this._options.jsonRpcIdIncluded) {
+    if (this._parser._options.jsonRpcIdIncluded) {
       requestType.properties.push(
         <GenericProperty>{
           name: "id",
@@ -1124,10 +1180,11 @@ class OpenRpcParserImpl {
     };
   }
 
-  private async linksToGenericContinuations(endpoints: GenericEndpoint[]): Promise<GenericContinuation[]> {
+  async linksToGenericContinuations(endpoints: GenericEndpoint[]): Promise<GenericContinuation[]> {
 
     const continuations: GenericContinuation[] = [];
-    const methods = await Promise.all(this._doc.methods.map(method => this.dereference(method)));
+    const doc = this.getClosestOpenRpcDocument();
+    const methods = await Promise.all(doc.methods.map(method => this.dereference(method)));
     for (const method of methods) {
       const endpoint = endpoints.find(it => it.name == method.object.name);
       if (endpoint) {
@@ -1157,7 +1214,7 @@ class OpenRpcParserImpl {
 
       // TODO: Try converting both into PascalCase and compare
       // TODO: Need to mark as "incorrect" somehow, so the documentation can know the Spec is invalid!
-      if (this._options.relaxedLookup) {
+      if (this._parser._options.relaxedLookup) {
         const pascalName = pascalCase(name);
         targetEndpoint = endpoints.find(it => pascalCase(it.name) == pascalName);
         if (targetEndpoint) {
@@ -1167,7 +1224,7 @@ class OpenRpcParserImpl {
 
       if (!targetEndpoint) {
         const closest = this.getClosest(options, choice);
-        if (this._options.relaxedLookup && closest.rating >= 0.8) {
+        if (this._parser._options.relaxedLookup && closest.rating >= 0.8) {
           logger.warn(`There is no target endpoint called '${choice || 'N/A'}', WILL ASSUME CLOSE MATCH '${closest.target}'!`);
           targetEndpoint = endpoints.find(it => it.name == closest.target);
         }
@@ -1185,7 +1242,7 @@ class OpenRpcParserImpl {
   private linkToGenericContinuation(sourceEndpoint: GenericEndpoint, endpoints: GenericEndpoint[], link: LinkObject, refName?: string): GenericContinuation {
 
     const targetEndpoint = this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
-    const paramNames: string[] = Object.keys(link.params);
+    const paramNames: string[] = Object.keys(link.params as object);
 
     // The request type is always a class type, since it is created as such by us.
     const requestClass = targetEndpoint.request.type as GenericClassType;
@@ -1236,10 +1293,11 @@ class OpenRpcParserImpl {
 
   private getLinkSourceParameter(primaryType: GenericType, secondaryType: GenericType, link: LinkObject, linkParamName: string): GenericContinuationSourceParameter {
 
-    let value = link.params[linkParamName];
+    const params = link.params as Record<string, unknown>;
+    const value = params[linkParamName];
     if (typeof value == 'string') {
 
-      const matcher = this._options.relaxedLookup
+      const matcher = this._parser._options.relaxedLookup
         ? OpenRpcParserImpl.PATTERN_PLACEHOLDER_RELAXED
         : OpenRpcParserImpl.PATTERN_PLACEHOLDER;
 
@@ -1249,7 +1307,7 @@ class OpenRpcParserImpl {
 
         // The whole value is just one placeholder.
         // Let's replace it with a property path, which is code-wise more easy to work with.
-        const pathString = this._options.relaxedLookup
+        const pathString = this._parser._options.relaxedLookup
           ? (match[1] || match[2] || match[3])
           : match[1];
 
@@ -1332,61 +1390,92 @@ class OpenRpcParserImpl {
   private async dereference<T>(object: ReferenceObject | T): Promise<{ object: T; ref: string | undefined }> {
 
     if ('$ref' in object) {
-      return {object: await this.dereferenceRecursively<T>(object), ref: object.$ref};
-    } else {
-      return {object: object, ref: undefined};
-    }
-  }
-
-  private async dereferenceRecursively<T>(object: ReferenceObject | T): Promise<T> {
-
-    if ('$ref' in object) {
       const cachedPromise = this._derefPromiseMap.get(object.$ref);
       if (cachedPromise) {
-        return await cachedPromise as T;
+        return {object: await cachedPromise as T, ref: object.$ref};
       }
 
-      const promise: Promise<T> = new Promise((resolve, reject) => {
-        this.dereferenceRecursivelyUncached<T>(object)
-          .then(result => {
-            resolve(result);
-          })
-          .catch(reason => {
-            reject(reason);
-          });
-      });
+      const promise: Promise<T> = this.dereferenceInternal(object)
+        .then((deref: ReferenceObject | T) => {
+
+          if ('$ref' in deref) {
+
+            // There were nested $ref, so we need to do The Ugly and merge them.
+            return this.dereference(deref)
+              .then(inner => {
+                const mix = this.mixRefObjectAndInvalidRefObject<T>(deref, inner.object);
+                return this.dereference(mix)
+                  .then(derefMix => derefMix.object);
+              })
+
+          } else {
+            return deref;
+          }
+        });
 
       this._derefPromiseMap.set(object.$ref, promise);
-      return await promise;
+      return {object: await promise, ref: object.$ref};
     } else {
-      return object;
-    }
-  }
-
-  private async dereferenceRecursivelyUncached<T>(object: ReferenceObject | T): Promise<T> {
-
-    if ('$ref' in object) {
-      const deref: ReferenceObject | T = await this.dereferenceInternal(object);
-      if ('$ref' in deref) {
-
-        // There were nested $ref, so we need to do The Ugly and merge them.
-        const inner = await this.dereferenceRecursively(deref);
-        const mix = this.mixRefObjectAndInvalidRefObject<T>(deref, inner);
-        return await this.dereferenceRecursively(mix);
-      } else {
-        return deref;
-      }
-    } else {
-      return object;
+      return {object: object, ref: undefined};
     }
   }
 
   private async dereferenceInternal<T>(object: ReferenceObject | T): Promise<ReferenceObject | T> {
 
     if ('$ref' in object) {
-      return await DefaultReferenceResolver.resolve(object.$ref, this._doc) as T;
+
+      const ref = object.$ref;
+      if (ref.startsWith('#')) {
+        // This ref is in relation to the current document.
+        return this.resolveFromLocalReference(ref);
+      }
+
+      // This ref is a relative path to something external.
+      // We need to figure out what it is and fetch it and create a new parser.
+      const refParts = ref.split('#');
+      const protocolUri = refParts[0];
+      const hash = refParts[1];
+
+      // const protocolIndex = protocolUri.indexOf(':');
+      // const protocol = (protocolIndex != -1)
+      //   ? protocolUri.substring(0, protocolIndex)
+      //   : 'file';
+      // const protocolPath = (protocolIndex != -1)
+      //   ? protocolUri.substring(protocolIndex + 1)
+      //   : protocolUri;
+      //
+      // const protocolHandler = DefaultReferenceResolver.protocolHandlerMap[protocol];
+      // if (!protocolHandler) {
+      //   throw new Error(`There is no protocol handler for '${protocol}'`);
+      // }
+      // protocolHandler(protocolPath,)
+
+      // The path is relative, so we will append it with the path of this document.
+      const documentPath = this._schemaFile.getAbsolutePath();
+      const content = ProtocolHandler.get<unknown>(protocolUri, documentPath);
+
+      const schemaFile = new SchemaFile('');
+      const nested = new OpenRpcParserDoc(this._parser, schemaFile, undefined, this);
+
+      // TODO: Need to make this able to figure out how to load external files and create child document instances!
+      // TODO: (then we need to figure out how to make this general, so it can be re-used by other JSON-Schema based specs)
+
+      // TODO: Use @stoplight/json-ref-resolver instead of the jsonschema utils one -- we need the more generic one!
+
+      return object;
+
     } else {
       return object;
+    }
+  }
+
+  private async resolveFromLocalReference<T>(ref: string): Promise<T> {
+
+    try {
+      // TODO: Figure out how to read with different docs as roots!
+      return await DefaultReferenceResolver.resolve(ref, this.getClosestOpenRpcDocument()) as T;
+    } catch (ex) {
+      throw new Error(`Could not resolve ref '${ref}': ${JSON.stringify(ex)}`, {cause: ex instanceof Error ? ex : undefined});
     }
   }
 

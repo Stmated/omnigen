@@ -1,0 +1,79 @@
+{
+  "components": {
+    "contentDescriptors": {
+      "ParamSignature": {
+        "name": "Signature",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ParamUUID": {
+        "name": "UUID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "AbstractSignedRequestParams": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AbstractToTrustlyRequestParamsData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "Username": {
+            "type": "string"
+          },
+          "Password": {
+            "type": "string"
+          }
+        }
+      },
+      "AbstractResponseResultData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "signature": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "EmptyRequestParamsDataAttributes": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AbstractFromTrustlyRequestParamsData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AbstractRequestParamsData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      },
+      "AbstractRequestParamsDataAttributes": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+        }
+      }
+    }
+  }
+}

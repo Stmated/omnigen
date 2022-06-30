@@ -1,35 +1,15 @@
 {
-  "openrpc": "1.2.4",
-  "info": {
-    "title": "Bank",
-    "version": "1.0.0"
-  },
-  "x-omnigen": {
-    "jsonRpcPropertyName": "version",
-    "jsonRpcRequestVersion": "1.1",
-    "jsonRpcIdIncluded": false
-  },
-  "servers": [
-    {
-      "url": "http://localhost:8080"
-    }
-  ],
-  "methods": [
-    {
-      "$ref": "#/components/methods/AccountLedgerMethod"
-    }
-  ],
   "components": {
     "methods": {
-      "AccountLedgerMethod": {
+      "AccountLedger": {
         "name": "AccountLedger",
         "summary": "",
         "params": [
           {
-            "$ref": "#/components/contentDescriptors/ParamSignature"
+            "$ref": "Common.json#/components/contentDescriptors/ParamSignature"
           },
           {
-            "$ref": "#/components/contentDescriptors/ParamUUID"
+            "$ref": "Common.json#/components/contentDescriptors/ParamUUID"
           },
           {
             "name": "Data",
@@ -47,62 +27,13 @@
         }
       }
     },
-    "contentDescriptors": {
-      "ParamSignature": {
-        "name": "Signature",
-        "required": true,
-        "schema": {
-          "type": "string"
-        }
-      },
-      "ParamUUID": {
-        "name": "UUID",
-        "required": true,
-        "schema": {
-          "type": "string"
-        }
-      }
-    },
     "schemas": {
-      "AbstractSignedRequestParams": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-        }
-      },
-      "AbstractToTrustlyRequestParamsData": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "Username": {
-            "type": "string"
-          },
-          "Password": {
-            "type": "string"
-          }
-        }
-      },
-      "AbstractResponseResultData": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "signature": {
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "uuid": {
-            "type": "string"
-          }
-        }
-      },
       "AccountLedgerRequestData": {
         "type": "object",
         "additionalProperties": false,
         "allOf": [
           {
-            "$ref": "#/components/schemas/AbstractToTrustlyRequestParamsData"
+            "$ref": "Common.json#/components/schemas/AbstractToTrustlyRequestParamsData"
           }
         ],
         "properties": {
@@ -116,7 +47,7 @@
             "type": "string"
           },
           "Attributes": {
-            "$ref": "#/components/schemas/EmptyRequestParamsDataAttributes"
+            "$ref": "Common.json#/components/schemas/EmptyRequestParamsDataAttributes"
           }
         },
         "required": [
@@ -125,17 +56,11 @@
           "Currency"
         ]
       },
-      "EmptyRequestParamsDataAttributes": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-        }
-      },
       "AccountLedgerResponseData": {
         "additionalProperties": false,
         "allOf": [
           {
-            "$ref": "#/components/schemas/AbstractResponseResultData"
+            "$ref": "Common.json#/components/schemas/AbstractResponseResultData"
           },
           {
             "properties": {
@@ -156,7 +81,6 @@
           "userid": {
             "description": "Your userid in our system.",
             "type": "string",
-            "x-field-name": "user_id",
             "x-property-name": "UserId"
           },
           "datestamp": {
@@ -165,19 +89,23 @@
           },
           "orderid": {
             "description": "The globally unique OrderID that resulted in this ledger record.",
-            "type": "string"
+            "type": "string",
+            "x-property-name": "OrderId"
           },
           "accountname": {
             "description": "The name of the bookkeeping account this ledger record belongs to.",
-            "type": "string"
+            "type": "string",
+            "x-property-name": "AccountName"
           },
           "messageid": {
             "description": "Your unique MessageID that you used to create the order that resulted in this ledger record.",
-            "type": "string"
+            "type": "string",
+            "x-property-name": "MessageId"
           },
           "transactiontype": {
             "description": "A human friendly description of this ledger record.",
-            "type": "string"
+            "type": "string",
+            "x-property-name": "TransactionType"
           },
           "currency": {
             "description": "The currency of the amount in this ledger record.",
@@ -189,29 +117,9 @@
           },
           "gluepayid": {
             "description": "An ID meaning different things for different payment methods, you probably don't need this data.",
-            "type": "string"
+            "type": "string",
+            "x-property-name": "GluepayId"
           }
-        }
-      },
-      "AbstractFromTrustlyRequestParamsData": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "something": {
-            "$ref": "#/components/schemas/repository"
-          }
-        }
-      },
-      "AbstractRequestParamsData": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-        }
-      },
-      "AbstractRequestParamsDataAttributes": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
         }
       }
     }

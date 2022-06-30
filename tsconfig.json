@@ -6,7 +6,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
-    "lib": ["es2022"],
+    "lib": ["es2022", "es2022.error"],
     "paths": {
       "@model/*": ["src/model/*"],
       "@model": ["src/model"],

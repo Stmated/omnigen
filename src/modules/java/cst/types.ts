@@ -6,7 +6,6 @@ import {
   GenericDictionaryType,
   GenericPrimitiveKind,
   GenericPrimitiveType,
-  GenericReferenceType,
   GenericType,
   GenericTypeKind
 } from '@parse';

@@ -36,20 +36,17 @@ import {
 } from '@parse';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
-  ContactObject, ContentDescriptorObject,
-  ContentDescriptorOrReference,
+  ContactObject,
+  ContentDescriptorObject,
   ErrorObject,
-  ErrorOrReference, ExampleObject,
-  ExampleOrReference, ExamplePairingObject,
-  ExamplePairingOrReference,
+  ExampleObject,
+  ExamplePairingObject,
   ExternalDocumentationObject,
   JSONSchema,
   LicenseObject,
   LinkObject,
   MethodObject,
   MethodObjectErrors,
-  MethodObjectResult,
-  MethodOrReference,
   OpenrpcDocument,
   ServerObject,
 } from '@open-rpc/meta-schema';
@@ -86,7 +83,7 @@ export class OpenRpcParser extends AbstractParser {
     }
 
     const baseUri = path.dirname(absolutePath);
-    const traverser = await Dereferencer.create<OpenrpcDocument>(baseUri, document);
+    const traverser = await Dereferencer.create<OpenrpcDocument>(baseUri, absolutePath, document);
 
     const parserImpl = new OpenRpcParserImpl(traverser);
     return parserImpl.docToGenericModel();

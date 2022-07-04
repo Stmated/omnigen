@@ -1,5 +1,30 @@
 {
   "components": {
+    "methods": {
+      "AbstractMethod": {
+        "summary": "",
+        "params": [
+          {
+            "$ref": "#/components/contentDescriptors/ParamSignature"
+          },
+          {
+            "$ref": "#/components/contentDescriptors/ParamUUID"
+          },
+          {
+            "name": "Data",
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "result": {
+          "name": "ShouldBeReplaced",
+          "schema": {
+            "type": "object"
+          }
+        }
+      }
+    },
     "contentDescriptors": {
       "ParamSignature": {
         "name": "Signature",

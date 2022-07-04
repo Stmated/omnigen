@@ -1,15 +1,24 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-argument */
 import pointer, {JsonObject} from 'json-pointer';
 import {ProtocolHandler} from '@util/ProtocolHandler';
 import {LoggerFactory} from '@util/LoggerFactory';
+import * as deepmerge from 'deepmerge';
 import * as path from 'path';
 
 const logger = LoggerFactory.create(__filename);
 
-export type RefAware = {$ref: string};
+export type RefAware = { $ref: string };
 
 export type Dereferenced<out T> = { obj: T, root: object, hash?: string };
 
-export type UriHash = {uri: string, hash: string};
+export type UriHash = { uri: string, hash: string };
+
+// type ReduceMap = {[key: '']: Array<any>} | {[key: string]: any};
+
+interface ReduceMap {
+  '': Array<any>;
+  [key: string]: any;
+}
 
 type UriParts = {
   protocol: string | undefined;
@@ -98,24 +107,25 @@ export class Dereferencer<T> {
     Dereferencer.PROTOCOL_RESOLVERS.set('https', Dereferencer.https);
   }
 
-  public static async create<T extends object>(uri: string, root?: T): Promise<Dereferencer<T>> {
+  public static async create<T extends object>(baseUri: string, fileUri: string, root?: T): Promise<Dereferencer<T>> {
 
-    const protocolIndex = uri?.indexOf(':') || -1;
-    const defaultProtocolResolver = (uri && protocolIndex != -1)
-      ? Dereferencer.PROTOCOL_RESOLVERS.get(uri.substring(0, protocolIndex).toLowerCase()) || Dereferencer.file
+    const protocolIndex = baseUri?.indexOf(':') || -1;
+    const defaultProtocolResolver = (baseUri && protocolIndex != -1)
+      ? Dereferencer.PROTOCOL_RESOLVERS.get(baseUri.substring(0, protocolIndex).toLowerCase()) || Dereferencer.file
       : Dereferencer.file; // The default protocol handler if none is set
 
     if (!root) {
 
       // There is no root object.
       // We will assume that the the uri is the absolute path of the root.
-      root = await defaultProtocolResolver.fetch<T>(uri);
+      root = await defaultProtocolResolver.fetch<T>(fileUri);
     }
 
     const traverser = new Dereferencer<T>(root);
+    traverser._documents.set(fileUri, root);
 
     // Start pre-loading the document so that the traversal can be done synchronously.
-    return traverser.preLoad(uri, root, defaultProtocolResolver)
+    return traverser.preLoad(baseUri, fileUri, root, defaultProtocolResolver, [])
       .then(() => traverser);
   }
 
@@ -128,7 +138,6 @@ export class Dereferencer<T> {
   private readonly _documents = new Map<string, JsonObject | Promise<JsonObject>>();
 
   private constructor(root: T) {
-    // Private constructor
     this._root = root;
   }
 
@@ -136,7 +145,18 @@ export class Dereferencer<T> {
     return this._root;
   }
 
-  private async preLoad(absoluteBaseUri: string, obj: object, previousResolver: ProtocolResolver): Promise<void> {
+  private async preLoad(
+    absoluteBaseUri: string,
+    absoluteFileUri: string,
+    obj: object,
+    previousResolver: ProtocolResolver,
+    callstack: string[]
+  ): Promise<void> {
+
+    if (callstack.length > 50) {
+      throw new Error(`Loading too deep: ${callstack.join('\n')}`);
+    }
+
     for (const e of Object.entries(obj)) {
       const key = e[0];
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -153,21 +173,23 @@ export class Dereferencer<T> {
             const absoluteUri = this.getAbsoluteUri(resolver, uriParts, absoluteBaseUri);
             const absoluteUriDir = path.dirname(absoluteUri);
 
+            const newRef = absoluteUri + '#' + pointerParts.hash;
+
             // We replace the $ref with an absolute ref, so it is easier to traverse later.
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
-            obj[key] = absoluteUri + '#' + pointerParts.hash;
+            obj[key] = newRef;
 
             // We cache the promises for the document
             const documentOrPromise = this._documents.get(absoluteUri);
             if (documentOrPromise && !(documentOrPromise instanceof Promise)) {
-              // The document is cached and resolved, so we simply handle it.
-              await this.preLoad(absoluteUriDir, documentOrPromise, resolver);
+              // The document is cached and resolved, so it is already done.
+              // await this.preLoad(absoluteUriDir, absoluteUri, documentOrPromise, resolver, callstack.concat([`cached ${key}: ${newRef}`]));
             } else if (documentOrPromise) {
-              // The document is a promise, and we should wait for it and continue.
-              await documentOrPromise.then(doc => {
-                this._documents.set(absoluteUri, doc);
-                return this.preLoad(absoluteUriDir, doc, resolver)
+              // The document is a promise. We will wait for it to finish, but do nothing.
+              await documentOrPromise.then(() => {
+                // this._documents.set(absoluteUri, doc);
+                // return this.preLoad(absoluteUriDir, absoluteUri, doc, resolver, callstack.concat(['awaited ${key}: ${newRef}']))
               });
             } else {
               // This is a new external document. Fetch and cache and handle.
@@ -175,16 +197,23 @@ export class Dereferencer<T> {
               this._documents.set(absoluteUri, promise);
               await promise.then(doc => {
                 this._documents.set(absoluteUri, doc);
-                return this.preLoad(absoluteUriDir, doc, resolver);
+                return this.preLoad(absoluteUriDir, absoluteUri, doc, resolver, callstack.concat([`new ${key}: ${newRef}`]));
               });
             }
+          } else {
+
+            // Replace the ref with an absolute uri if none is used.
+            // This makes it easier to traverse the document later, and things are moved around.
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            obj[key] = absoluteFileUri + '#' + pointerParts.hash;
           }
         } else {
           throw new Error(`The ref value must be a string`);
         }
       } else if (value && typeof value === 'object') {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        await this.preLoad(absoluteBaseUri, value, previousResolver);
+        await this.preLoad(absoluteBaseUri, absoluteFileUri, value, previousResolver, callstack.concat([key]));
       } else {
         // This is an edge node, no need to go any further
       }
@@ -204,7 +233,7 @@ export class Dereferencer<T> {
 
         return this.resolveJsonPointer(given, externalDocument, parts.hash);
       } else {
-        return this.resolveJsonPointer<R>(given, root, parts.hash);
+        return this.resolveJsonPointer<RefAware, R>(given, root, parts.hash);
       }
     } else {
       return {
@@ -252,12 +281,7 @@ export class Dereferencer<T> {
     });
   }
 
-  private resolveJsonPointer<R>(given: RefAware, root: object, path: string): Dereferenced<R> {
-
-    // TODO: Allow "" and relative paths based on the "given" object as root?
-    // const used = (parts.hash.startsWith('/'))
-    //   ? root // this._objectStack[this._objectStack.length - 1] // root
-    //   : given;
+  private resolveJsonPointer<T extends RefAware, R>(given: T, root: object, path: string): Dereferenced<R> {
 
     let resolvedObject: RefAware | R;
     if (path == '') {
@@ -294,6 +318,23 @@ export class Dereferencer<T> {
     }
   }
 
+  private emptyTarget(val: unknown): any {
+    return Array.isArray(val) ? [] : {}
+  }
+
+  private reduceArrayToIdMap(map: ReduceMap, obj: any): Record<string, any> {
+
+    // If the items all contain 'name', 'id' or $id, we should merge and replace those respective items
+    const id = obj['$id'] || obj['id'] || obj['name'];
+    if (id) {
+      map[id] = obj;
+    } else {
+      map[''].push(obj);
+    }
+
+    return map;
+  }
+
   private mix<R>(object: RefAware, resolved: R | RefAware): R | RefAware {
 
     const keys = Object.keys(object);
@@ -305,9 +346,41 @@ export class Dereferencer<T> {
       delete (copy as never)['$ref'];
       logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
 
-      // TODO: Use Object.assign instead?
-      // TODO: What to do if the property exists in both?
-      resolved = {...resolved, ...copy};
+      resolved = deepmerge.default(resolved, copy, <deepmerge.Options>{
+
+        arrayMerge: (source, target, options) => {
+
+          const namedSource: ReduceMap = source.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
+          const namedTarget: ReduceMap = target.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
+
+          const replacements: any[] = [];
+          for (const key of Object.keys(namedSource)) {
+            if (key.length > 0) {
+              if (!namedTarget[key]) {
+                replacements.push(namedSource[key]);
+              } else {
+                // Other takes precedence
+              }
+            }
+          }
+
+          for (const key of Object.keys(namedTarget)) {
+            if (key.length > 0) {
+              replacements.push(namedTarget[key]);
+            }
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          return replacements.concat(namedTarget['']).concat(namedSource['']).map((element: any) => {
+
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            return (options?.clone !== false && options && options?.isMergeableObject(element as object))
+              ? deepmerge.default(this.emptyTarget(element), element, options)
+              : element;
+          })
+        }
+      });
     }
 
     return resolved;

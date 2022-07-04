@@ -15,7 +15,8 @@
     "@etclabscore/string-json-template-language": "^1.0.0",
     "string-similarity": "^4.0.4",
     "json-pointer": "^0.6.2",
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "deepmerge": "^4.2.2"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",

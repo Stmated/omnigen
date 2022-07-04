@@ -2,15 +2,10 @@
   "components": {
     "methods": {
       "ApproveWithdrawal": {
+        "$ref": "Common.json#/components/methods/AbstractMethod",
         "name": "ApproveWithdrawal",
         "summary": "",
         "params": [
-          {
-            "$ref": "Common.json#/components/contentDescriptors/ParamSignature"
-          },
-          {
-            "$ref": "Common.json#/components/contentDescriptors/ParamUUID"
-          },
           {
             "name": "Data",
             "required": true,
@@ -20,7 +15,7 @@
           }
         ],
         "result": {
-          "name": "AccountLedgerResponse",
+          "name": "ApproveWithdrawalResponse",
           "schema": {
             "$ref": "#/components/schemas/ApproveWithdrawalResponseData"
           }

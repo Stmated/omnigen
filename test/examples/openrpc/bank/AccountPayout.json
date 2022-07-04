@@ -6,10 +6,10 @@
         "summary": "",
         "params": [
           {
-            "$ref": "#/components/contentDescriptors/ParamSignature"
+            "$ref": "Common.json#/components/contentDescriptors/ParamSignature"
           },
           {
-            "$ref": "#/components/contentDescriptors/ParamUUID"
+            "$ref": "Common.json#/components/contentDescriptors/ParamUUID"
           },
           {
             "name": "Data",
@@ -33,26 +33,44 @@
         "additionalProperties": false,
         "allOf": [
           {
-            "$ref": "#/components/schemas/AbstractToTrustlyRequestParamsData"
+            "$ref": "Common.json#/components/schemas/AbstractToTrustlyRequestParamsData"
           }
         ],
         "properties": {
-          "FromDate": {
-            "type": "string"
+          "NotificationURL": {
+            "type": "string",
+            "description": "The URL to which notifications for this payment should be sent to. This URL should be hard to guess and not contain a ? (\"question mark\")."
           },
-          "ToDate": {
-            "type": "string"
+          "AccountID": {
+            "type": "string",
+            "description": "The AccountID received from an account notification to which the money shall be sent."
+          },
+          "EndUserID": {
+            "type": "string",
+            "description": "ID, username, hash or anything uniquely identifying the end-user requesting the withdrawal. Preferably the same ID/username as used in the merchant's own backoffice in order to simplify for the merchant's support department."
+          },
+          "MessageID": {
+            "type": "string",
+            "description": "Your unique ID for the payout. If the MessageID is a previously initiated P2P order then the payout will be attached to that P2P order and the amount must be equal to or lower than the previously deposited amount."
+          },
+          "Amount": {
+            "type": "string",
+            "description": "The amount to send with exactly two decimals. Only digits. Use dot (.) as decimal separator. If the end-user holds a balance in the merchant's system then the amount must have been deducted from that balance before calling this method."
           },
           "Currency": {
-            "type": "string"
+            "type": "string",
+            "description": "The currency of the end-user's account in the merchant's system."
           },
           "Attributes": {
-            "$ref": "#/components/schemas/EmptyRequestParamsDataAttributes"
+            "$ref": "#/components/schemas/AccountPayoutRequestDataAttributes"
           }
         },
         "required": [
-          "FromDate",
-          "ToDate",
+          "NotificationURL",
+          "AccountID",
+          "EndUserID",
+          "MessageID",
+          "Amount",
           "Currency"
         ]
       },
@@ -60,7 +78,7 @@
         "additionalProperties": false,
         "allOf": [
           {
-            "$ref": "#/components/schemas/AbstractResponseResultData"
+            "$ref": "Common.json#/components/schemas/AbstractResponseResultData"
           },
           {
             "properties": {
@@ -70,6 +88,20 @@
             }
           }
         ]
+      },
+      "AccountPayoutRequestDataAttributes": {
+        "additionalProperties": true,
+        "description": "Account Payout Schema Attributes",
+        "properties": {
+          "ShopperStatement": {
+            "type": "string",
+            "description": "The text to show on the end-user's bank statement after bank's own 10 digit reference (which always will be displayed first). The reference must let the end user identify the merchant based on this value. So the ShopperStatement should contain either your brand name, website name, or company name.\n\nIf possible, try to keep this text as short as possible to maximise the chance that the full reference will fit into the reference field on the customer's bank since some banks allow only a limited number of characters."
+          },
+          "SenderInformation": {
+            "description": "Information about the Payer (ultimate debtor). This is required for some merchants and partners, see below. ",
+            "$ref": "Common.json#/components/schemas/RecipientOrSenderInformation"
+          }
+        }
       }
     }
   }

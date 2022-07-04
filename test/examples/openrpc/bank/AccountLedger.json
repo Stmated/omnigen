@@ -65,14 +65,17 @@
           {
             "properties": {
               "data": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/AccountLedgerResponseDataEntry"
-                }
+                "$ref": "#/components/schemas/AccountLedgerResponseDataEntries"
               }
             }
           }
         ]
+      },
+      "AccountLedgerResponseDataEntries": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/AccountLedgerResponseDataEntry"
+        }
       },
       "AccountLedgerResponseDataEntry": {
         "type": "object",

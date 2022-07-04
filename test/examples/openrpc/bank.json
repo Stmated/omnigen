@@ -1,0 +1,30 @@
+{
+  "openrpc": "1.2.4",
+  "info": {
+    "title": "Bank",
+    "version": "1.0.0"
+  },
+  "x-omnigen": {
+    "jsonRpcPropertyName": "version",
+    "jsonRpcRequestVersion": "1.1",
+    "jsonRpcIdIncluded": false
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "methods": [
+    {
+      "$ref": "./bank/AccountLedger.json#/components/methods/AccountLedger"
+    },
+    {
+      "$ref": "./bank/AccountPayout.json#/components/methods/AccountPayout"
+    },
+    {
+      "$ref": "./bank/ApproveWithdrawal.json#/components/methods/ApproveWithdrawal"
+    }
+  ],
+  "components": {
+  }
+}

@@ -62,6 +62,8 @@ import {LoggerFactory, Dereferencer, RefAware, Dereferenced} from '@util';
 import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
 import {Naming} from '@parse/Naming';
+import * as path from 'path';
+import {JsonObject} from 'json-pointer';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -83,7 +85,8 @@ export class OpenRpcParser extends AbstractParser {
       throw new Error(`The schema file must have a path, to able to dereference documents`);
     }
 
-    const traverser = await Dereferencer.create<OpenrpcDocument>(absolutePath, document);
+    const baseUri = path.dirname(absolutePath);
+    const traverser = await Dereferencer.create<OpenrpcDocument>(baseUri, document);
 
     const parserImpl = new OpenRpcParserImpl(traverser);
     return parserImpl.docToGenericModel();
@@ -158,7 +161,7 @@ class OpenRpcParserImpl {
 
   docToGenericModel(): GenericModel {
 
-    const endpoints = this.doc.methods.map(it => this.methodToGenericEndpoint(this._deref.get(it)));
+    const endpoints = this.doc.methods.map(it => this.methodToGenericEndpoint(this._deref.get(it, this._deref.getFirstRoot())));
     const contact = this.doc.info.contact ? this.contactToGenericContact(this.doc.info.contact) : undefined;
     const license = this.doc.info.license ? this.licenseToGenericLicense(this.doc.info.license) : undefined;
     const servers = (this.doc.servers || []).map((server) => this.serverToGenericServer(server));
@@ -199,8 +202,12 @@ class OpenRpcParserImpl {
 
   methodToGenericEndpoint(method: Dereferenced<MethodObject>): GenericEndpoint {
 
-    const derefResult = this._deref.get(method.obj.result, method.root);
-    const resultResponse = this.resultToGenericOutputAndResultParamTypeDereferenced(method.obj, derefResult);
+    const input = this.methodToGenericInputType(method);
+
+    const resultResponse = this.resultToGenericOutputAndResultParamType(
+      method.obj,
+      this._deref.get(method.obj.result, method.root)
+    );
 
     const responses: GenericOutput[] = [];
 
@@ -223,8 +230,6 @@ class OpenRpcParserImpl {
     });
 
     responses.push(...errorOutputs);
-
-    const input = this.methodToGenericInputType(method);
 
     const examples = (method.obj.examples || []).map(it => {
       const deref = this._deref.get(it, method.root);
@@ -341,7 +346,7 @@ class OpenRpcParserImpl {
     if (schema.obj.properties) {
       for (const key of Object.keys(schema.obj.properties)) {
         const propertySchema = schema.obj.properties[key];
-        const derefPropertySchema = this._deref.get(propertySchema);
+        const derefPropertySchema = this._deref.get(propertySchema, schema.root);
         const genericProperty = this.jsonSchema7ToGenericProperty(type, key, derefPropertySchema);
         genericProperties.push(genericProperty);
         if (schema.obj.required?.indexOf(key) !== -1) {
@@ -548,15 +553,17 @@ class OpenRpcParserImpl {
       };
 
     } else {
+
       // items is a single JSONSchemaObject
+      const itemsSchema = this.unwrapJsonSchema({obj: items, root: schema.root});
       let itemTypeNames: TypeName[];
-      if (items.title) {
-        itemTypeNames = [pascalCase(items.title)];
+      if (itemsSchema.obj.title) {
+        itemTypeNames = [pascalCase(itemsSchema.obj.title)];
       } else {
         itemTypeNames = names.map(it => () => `${Naming.unwrap(it)}Item`);
       }
 
-      const itemType = this.jsonSchemaToType(itemTypeNames, {obj: items, root: schema.root}, undefined);
+      const itemType = this.jsonSchemaToType(itemTypeNames, itemsSchema, undefined);
 
       const arrayTypeName: TypeName = (names.length > 0)
         ? () => `${names.map(it => Naming.unwrap(it)).join('_')}`
@@ -640,14 +647,19 @@ class OpenRpcParserImpl {
 
     return {
       name: propertyName,
-      fieldName: this.getVendorExtension(schema, 'field-name'),
-      propertyName: this.getVendorExtension(schema, 'property-name'),
+      fieldName: this.getVendorExtension(schema.obj, 'field-name'),
+      propertyName: this.getVendorExtension(schema.obj, 'property-name'),
       type: propertyType.type,
       owner: owner
     };
   }
 
-  private getVendorExtension<R>(obj: unknown, key: string): R | undefined {
+  private getVendorExtension<R>(obj: Dereferenced<JsonObject> | JsonObject, key: string): R | undefined {
+
+    if ('obj' in obj && 'root' in obj) {
+      throw new Error(`You seem to have given a dereference object, when you should give the inner object.`);
+    }
+
     const records = obj as Record<string, unknown>;
     const value = records[`x-${key}`];
     if (value == undefined) {
@@ -660,17 +672,22 @@ class OpenRpcParserImpl {
   private unwrapJsonSchema(schema: Dereferenced<JSONSchema7Definition | JSONSchema>): Dereferenced<JSONSchema7> {
     if (typeof schema.obj == 'boolean') {
       if (schema.obj) {
-        return {obj: {}, root: schema.root};
+        return {obj: {}, root: schema.root, hash: schema.hash};
       } else {
-        return {obj: {not: {}}, root: schema.root};
+        return {obj: {not: {}}, root: schema.root, hash: schema.hash};
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-      return this._deref.get<JSONSchema7>(schema.obj as JSONSchema7);
+      const deref = this._deref.get<JSONSchema7>(schema.obj as JSONSchema7, schema.root);
+      return {
+        obj: deref.obj,
+        hash: deref.hash || schema.hash,
+        root: deref.root || schema.root
+      };
     }
   }
 
-  private resultToGenericOutputAndResultParamTypeDereferenced(method: MethodObject, methodResult: Dereferenced<ContentDescriptorObject>): OutputAndType {
+  private resultToGenericOutputAndResultParamType(method: MethodObject, methodResult: Dereferenced<ContentDescriptorObject>): OutputAndType {
 
     const typeNamePrefix = pascalCase(method.name);
 
@@ -682,9 +699,7 @@ class OpenRpcParserImpl {
     });
 
     const preferredName = derefSchema.obj.title || methodResult.obj.name;
-
     const resultParameterType = this.jsonSchemaToType([preferredName], derefSchema, methodResult.hash);
-
 
     const resultType: GenericType = {
       name: `${typeNamePrefix}Response`,
@@ -888,7 +903,7 @@ class OpenRpcParserImpl {
       description: example.obj.description,
       summary: example.obj['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
       params: params,
-      result: this.exampleResultToGenericExampleResult(valueType, example.obj.result),
+      result: this.exampleResultToGenericExampleResult(valueType, this._deref.get(example.obj.result, example.root)),
     };
   }
 
@@ -920,9 +935,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private exampleResultToGenericExampleResult(valueType: GenericType, exampleOrRef: ExampleOrReference): GenericExampleResult {
-
-    const example = this._deref.get(exampleOrRef)
+  private exampleResultToGenericExampleResult(valueType: GenericType, example: Dereferenced<ExampleObject>): GenericExampleResult {
 
     if (example.obj['externalValue']) {
       // This is part of the specification, but not part of the OpenRPC interface.
@@ -1140,15 +1153,17 @@ class OpenRpcParserImpl {
 
     const continuations: GenericContinuation[] = [];
     for (const methodOrRef of this.doc.methods) {
-      const method = this._deref.get(methodOrRef);
+
+      // TODO: This is probably wrong! The reference can exist in another file; in the file that contains the endpoint
+      const method = this._deref.get(methodOrRef, this._deref.getFirstRoot());
 
       for (const linkOrRef of (method.obj.links || [])) {
-        const link = this._deref.get(linkOrRef);
+        const link = this._deref.get(linkOrRef, this._deref.getFirstRoot());
 
         try {
           continuations.push(this.linkToGenericContinuation(endpoint, endpoints, link.obj, link.hash));
         } catch (ex) {
-          logger.error(ex, `Could not build link for ${endpoint.name}`);
+          logger.error(`Could not build link for ${endpoint.name}: ${ex instanceof Error ? ex.message : ''}`);
         }
       }
     }

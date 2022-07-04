@@ -191,7 +191,7 @@ export class Dereferencer<T> {
     }
   }
 
-  public get<R>(given: RefAware | R, root: JsonObject = this._root): Dereferenced<R> {
+  public get<R>(given: RefAware | R, root: JsonObject): Dereferenced<R> {
 
     if ('$ref' in given) {
       const parts = this.getPointerParts(given.$ref);
@@ -226,80 +226,6 @@ export class Dereferencer<T> {
       hash: refParts[1]
     };
   }
-
-  /*
-  private dereferenceExternal<R>(given: RefAware, refUri: string, refHash: string, callback: TraverseCallback<R>): void {
-
-    const uri = this.getUriParts(refUri);
-    const protocolResolver = this.getProtocolResolver(uri);
-    const absoluteUri = this.getAbsoluteUri(protocolResolver, uri);
-
-    // We cache the promises for the document
-    const documentOrPromise = this._documents.get(absoluteUri);
-    if (documentOrPromise && !(documentOrPromise instanceof Promise)) {
-      // The document is cached and resolved, so we simply handle it.
-      this.dereferenceExternalDocument(given, absoluteUri, documentOrPromise, refHash, protocolResolver, callback);
-    } else {
-      this.dereferenceOngoingOrNewExternalDocument(given, documentOrPromise, protocolResolver, absoluteUri, refHash, callback);
-    }
-  }
-  */
-
-  /*
-  private async dereferenceOngoingOrNewExternalDocument<R>(
-    promiseOrNew: Promise<JsonObject> | undefined,
-    protocolResolver: ProtocolResolver,
-    absoluteUri: string,
-    refHash: string
-  ): Promise<R> {
-
-    let promise: Promise<JsonObject>;
-    if (promiseOrNew) {
-      promise = promiseOrNew;
-    } else {
-      promise = protocolResolver.fetch<R>(absoluteUri);
-      this._documents.set(absoluteUri, promise);
-    }
-
-    promise
-      .then(externalDocument => {
-
-        // Replace the cached promise with the actual document.
-        // This way we will get prettier callstacks if it has already been resolved once.
-        // We only replace the document if the fetching was a success.
-        this._documents.set(absoluteUri, externalDocument);
-        this.dereferenceExternalDocument(given, absoluteUri, externalDocument, refHash, protocolResolver, callback);
-      })
-      .catch(ex => callback(undefined, new Error(
-        `Could not get external document at ${absoluteUri}: ${JSON.stringify(ex)}`,
-        {cause: ex instanceof Error ? ex : undefined}
-      )));
-  }
-  */
-
-  /*
-  private async dereferenceExternalDocument<T, R>(
-    given: RefAware,
-    absoluteUri: string,
-    externalDocument: T,
-    refHash: string,
-    protocolResolver: ProtocolResolver
-  ): Promise<R> {
-
-    const absoluteUriDir = path.dirname(absoluteUri);
-
-    if (externalDocument) this._objectStack.push(externalDocument);
-    if (absoluteUriDir) this._baseUriStack.push(absoluteUriDir);
-    if (protocolResolver) this._protocolResolverStack.push(protocolResolver);
-
-    // After the document has been pushed to the stack, we can try to resolve the pointer.
-    this.resolveJsonPointer<R>(given, externalDocument, refHash, callback);
-
-    if (externalDocument) this._objectStack.pop();
-    if (absoluteUriDir) this._baseUriStack.pop();
-    if (protocolResolver) this._protocolResolverStack.pop();
-  }
-   */
 
   private getAbsoluteUri(protocolResolver: ProtocolResolver, uri: UriParts, baseUri: string): string {
     return baseUri ? protocolResolver.resolveUri(baseUri, uri.path) : uri.path;
@@ -338,7 +264,11 @@ export class Dereferencer<T> {
       // Pretty dangerous, but it is up to the spec writer to be correct.
       resolvedObject = root as unknown as R;
     } else {
-      resolvedObject = pointer.get(root, path) as R | RefAware;
+      try {
+        resolvedObject = pointer.get(root, path) as R | RefAware;
+      } catch (ex) {
+        throw new Error(`Could not resolve '${path}': ${String(ex)}`, {cause: (ex instanceof Error ? ex : undefined)});
+      }
     }
 
     if (given) {
@@ -363,22 +293,6 @@ export class Dereferencer<T> {
       };
     }
   }
-
-  // private getLatestBaseUri(): string {
-  //   if (this._baseUriStack.length == 0) {
-  //     throw new Error(`There must be a baseUri registered`);
-  //   }
-  //
-  //   return this._baseUriStack[this._baseUriStack.length - 1];
-  // }
-
-  // private getLatestProtocolResolver(): ProtocolResolver {
-  //   if (this._protocolResolverStack.length == 0) {
-  //     throw new Error(`There must be a default protocol handler set`);
-  //   }
-  //
-  //   return this._protocolResolverStack[this._protocolResolverStack.length - 1];
-  // }
 
   private mix<R>(object: RefAware, resolved: R | RefAware): R | RefAware {
 

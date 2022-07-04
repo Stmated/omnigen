@@ -1,0 +1,70 @@
+{
+  "components": {
+    "methods": {
+      "ApproveWithdrawal": {
+        "name": "ApproveWithdrawal",
+        "summary": "",
+        "params": [
+          {
+            "$ref": "Common.json#/components/contentDescriptors/ParamSignature"
+          },
+          {
+            "$ref": "Common.json#/components/contentDescriptors/ParamUUID"
+          },
+          {
+            "name": "Data",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ApproveWithdrawalRequestData"
+            }
+          }
+        ],
+        "result": {
+          "name": "AccountLedgerResponse",
+          "schema": {
+            "$ref": "#/components/schemas/ApproveWithdrawalResponseData"
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ApproveWithdrawalRequestData": {
+        "type": "object",
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "$ref": "Common.json#/components/schemas/AbstractToTrustlyRequestParamsData"
+          }
+        ],
+        "properties": {
+          "orderid": {
+            "type": "int",
+            "x-property-name": "OrderId"
+          }
+        },
+        "required": [
+          "orderid"
+        ]
+      },
+      "ApproveWithdrawalResponseData": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "$ref": "Common.json#/components/schemas/AbstractResponseResultData"
+          },
+          {
+            "properties": {
+              "orderid": {
+                "type": "int",
+                "x-property-name": "OrderId"
+              },
+              "result": {
+                "type": "bool"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

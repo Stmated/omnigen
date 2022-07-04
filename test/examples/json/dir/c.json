@@ -1,17 +1,17 @@
 {
-  "a": {
+  "c_a": {
     "value": "z"
   },
-  "b": {
+  "c_b": {
     "$ref": "#/a/value"
   },
-  "c": {
-    "$ref": "../b.json#/a/value"
+  "c_c": {
+    "$ref": "../b.json#/b_a/value"
   },
-  "d": {
-    "$ref": "file:../b.json#/a/value"
+  "c_d": {
+    "$ref": "file:../b.json#/b_a/value"
   },
-  "e": {
-    "$ref": "file:../a.json#/b"
+  "c_e": {
+    "$ref": "file:../b.json#/b_b"
   }
 }

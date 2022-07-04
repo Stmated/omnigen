@@ -1,14 +1,17 @@
 {
-  "a": {
+  "a_a": {
     "value": "x"
   },
-  "b": {
-    "$ref": "#/a/value"
+  "a_b": {
+    "$ref": "#/a_a/value"
   },
-  "c": {
-    "$ref": "b.json#/a/value"
+  "a_c": {
+    "$ref": "b.json#/b_a/value"
   },
-  "d": {
-    "$ref": "file:b.json#/a/value"
+  "a_d": {
+    "$ref": "file:b.json#/b_a/value"
+  },
+  "a_e": {
+    "$ref": "dir/c.json#"
   }
 }

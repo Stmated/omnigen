@@ -1,3 +1,3 @@
 
 export * from './LoggerFactory';
-export * from './ObjectRefTraverser'
+export * from './Dereferencer'

@@ -1,4 +1,5 @@
 import * as fs from 'fs/promises';
+import fetch from 'node-fetch';
 
 export class ProtocolHandler {
 
@@ -25,14 +26,11 @@ export class ProtocolHandler {
   }
 
   public static http<R>(uri: string): Promise<R> {
-    return import('node-fetch')
-      .then(fetch => {
-        return fetch.default(uri, {method: 'GET', compress: false})
-          .then(response => {
-            return response.json()
-              .then(obj => {
-                return obj as R;
-              });
+    return fetch(uri, {method: 'GET', compress: false})
+      .then(response => {
+        return response.json()
+          .then(obj => {
+            return obj as R;
           });
       });
   }

@@ -1,4 +1,4 @@
-import {CompositionKind, GenericPrimitiveKind, GenericTypeKind, OpenRpcParser, SchemaFile} from '@parse';
+import {GenericTypeKind, OpenRpcParser, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import assert = require('assert');

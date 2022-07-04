@@ -96,9 +96,7 @@ export type GenericNullType = GenericBaseType<GenericAlwaysNullKnownKind>;
 // TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
 
 export type GenericType = GenericNullType
-  | GenericArrayType
-  | GenericArrayPropertiesByPositionType
-  | GenericArrayTypesByPositionType
+  | GenericArrayTypes
   | GenericClassType
   | GenericDictionaryType
   | GenericReferenceType
@@ -106,6 +104,7 @@ export type GenericType = GenericNullType
   | GenericCompositionType
   | GenericEnumType;
 
+export type GenericArrayTypes = GenericArrayType | GenericArrayPropertiesByPositionType | GenericArrayTypesByPositionType;
 export type GenericCompositionType = GenericCompositionDefaultType | GenericCompositionXORType;
 
 export type TypeName = string | { (): string };
@@ -345,10 +344,10 @@ export interface GenericPayloadPathQualifier {
 
 export interface GenericEndpoint {
   name: string;
-  description: string;
+  description?: string;
   summary?: string;
   async: boolean;
-  deprecated: boolean;
+  deprecated?: boolean;
   path: string;
   externalDocumentations?: GenericExternalDocumentation[];
   requestQualifiers: GenericPayloadPathQualifier[];

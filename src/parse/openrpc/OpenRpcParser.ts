@@ -6,7 +6,7 @@ import {
   ComparisonOperator,
   GenericAccessLevel,
   GenericArrayPropertiesByPositionType,
-  GenericArrayType,
+  GenericArrayTypes,
   GenericArrayTypesByPositionType,
   GenericClassType,
   GenericContact,
@@ -29,17 +29,18 @@ import {
   GenericPropertyOwner,
   GenericServer,
   GenericType,
-  GenericTypeKind, JSONSchema7Items,
+  GenericTypeKind,
+  JSONSchema7Items,
   SchemaFile,
   TypeName,
 } from '@parse';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
-  ContactObject,
+  ContactObject, ContentDescriptorObject,
   ContentDescriptorOrReference,
   ErrorObject,
-  ErrorOrReference,
-  ExampleOrReference,
+  ErrorOrReference, ExampleObject,
+  ExampleOrReference, ExamplePairingObject,
   ExamplePairingOrReference,
   ExternalDocumentationObject,
   JSONSchema,
@@ -50,25 +51,24 @@ import {
   MethodObjectResult,
   MethodOrReference,
   OpenrpcDocument,
-  ReferenceObject,
   ServerObject,
 } from '@open-rpc/meta-schema';
 import {JSONSchema7, JSONSchema7Definition} from 'json-schema';
-import {default as DefaultReferenceResolver} from '@json-schema-tools/reference-resolver';
 import {camelCase, pascalCase} from 'change-case';
 import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
-import {LoggerFactory} from '@util';
+import {LoggerFactory, Dereferencer, RefAware, Dereferenced} from '@util';
 import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
 import {Naming} from '@parse/Naming';
-import * as path from 'path';
-import {ProtocolHandler} from '@util/ProtocolHandler';
 
 export const logger = LoggerFactory.create(__filename);
 
 type SchemaToTypeResult = { type: GenericType; canInline: boolean };
+
+type OutputAndType = { output: GenericOutput; type: GenericType };
+type TypeAndProperties = { type: GenericType; properties: GenericProperty[] | undefined };
 
 export class OpenRpcParser extends AbstractParser {
 
@@ -77,7 +77,15 @@ export class OpenRpcParser extends AbstractParser {
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
       dereference: false,
     });
-    const parserImpl = new OpenRpcParserImpl(schemaFile, document);
+
+    const absolutePath = schemaFile.getAbsolutePath();
+    if (!absolutePath) {
+      throw new Error(`The schema file must have a path, to able to dereference documents`);
+    }
+
+    const traverser = await Dereferencer.create<OpenrpcDocument>(absolutePath, document);
+
+    const parserImpl = new OpenRpcParserImpl(traverser);
     return parserImpl.docToGenericModel();
   }
 
@@ -94,23 +102,25 @@ class OpenRpcParserImpl {
   static readonly PATTERN_PLACEHOLDER = new RegExp(/^[$]{([^}]+)}$/);
   static readonly PATTERN_PLACEHOLDER_RELAXED = new RegExp(/(?:[$]{([^}]+)}$|^{{([^}]+?)}}$|^[$](.+?)$)/);
 
-  readonly _options: IParserOptions;
+  private readonly _options: IParserOptions;
 
-  _unknownError?: GenericOutput;
+  private _unknownError?: GenericOutput;
 
-  private readonly _parserRoot: OpenRpcParserDoc;
+  // TODO: Move this to the root? But always have the key be the absolute path?
+  private readonly _typePromiseMap = new Map<string, SchemaToTypeResult>();
+  private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
 
-  /**
-   * Map of absolute paths and their document roots.
-   * Used for resolving references in external documents.
-   */
-  private readonly _roots = new Map<string, unknown>();
+  private readonly _deref: Dereferencer<OpenrpcDocument>;
 
-  constructor(schemaFile: SchemaFile, doc: OpenrpcDocument, options = DEFAULT_PARSER_OPTIONS) {
+  private get doc(): OpenrpcDocument {
+    return this._deref.getFirstRoot();
+  }
+
+  constructor(doc: Dereferencer<OpenrpcDocument>, options = DEFAULT_PARSER_OPTIONS) {
     this._options = options;
 
-    this.updateOptionsFromDocument(doc);
-    this._parserRoot = new OpenRpcParserDoc(this, schemaFile, doc);
+    this._deref = doc;
+    this.updateOptionsFromDocument(doc.getFirstRoot());
   }
 
   private updateOptionsFromDocument(doc: OpenrpcDocument): void {
@@ -146,65 +156,29 @@ class OpenRpcParserImpl {
     }
   }
 
-  async docToGenericModel(): Promise<GenericModel> {
-    return this._parserRoot.docToGenericModel();
-  }
-}
+  docToGenericModel(): GenericModel {
 
-class OpenRpcParserDoc {
-
-  private readonly _parser: OpenRpcParserImpl;
-  private readonly _doc?: OpenrpcDocument;
-  private readonly _parent?: OpenRpcParserDoc;
-  private readonly _schemaFile: SchemaFile;
-
-  // TODO: Move this to the root? But always have the key be the absolute path?
-  private readonly _typePromiseMap = new Map<string, Promise<SchemaToTypeResult>>();
-  private readonly _derefPromiseMap = new Map<string, Promise<unknown>>();
-  private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
-
-  constructor(parser: OpenRpcParserImpl, schemaFile: SchemaFile, doc?: OpenrpcDocument, parent?: OpenRpcParserDoc) {
-    this._parser = parser;
-    this._doc = doc;
-    this._schemaFile = schemaFile;
-    this._parent = parent;
-  }
-
-  private getClosestOpenRpcDocument(): OpenrpcDocument {
-    if (this._doc) {
-      return this._doc;
-    } else {
-      if (this._parent) {
-        return this._parent.getClosestOpenRpcDocument();
-      } else {
-        throw new Error(`There is no OpenRpcDocument found in the hierarchy`);
-      }
-    }
-  }
-
-  async docToGenericModel(): Promise<GenericModel> {
-    const doc = this.getClosestOpenRpcDocument();
-    const endpoints = await Promise.all(doc.methods.map((method) => this.methodToGenericEndpoint(method)));
-    const contact = doc.info.contact ? this.contactToGenericContact(doc.info.contact) : undefined;
-    const license = doc.info.license ? this.licenseToGenericLicense(doc.info.license) : undefined;
-    const servers = (doc.servers || []).map((server) => this.serverToGenericServer(server));
-    const docs = doc.externalDocs ? [this.externalDocToGenericExternalDoc(doc.externalDocs)] : [];
-    const continuations = await this.linksToGenericContinuations(endpoints);
+    const endpoints = this.doc.methods.map(it => this.methodToGenericEndpoint(this._deref.get(it)));
+    const contact = this.doc.info.contact ? this.contactToGenericContact(this.doc.info.contact) : undefined;
+    const license = this.doc.info.license ? this.licenseToGenericLicense(this.doc.info.license) : undefined;
+    const servers = (this.doc.servers || []).map((server) => this.serverToGenericServer(server));
+    const docs = this.doc.externalDocs ? [this.externalDocToGenericExternalDoc(this.doc.externalDocs)] : [];
+    const continuations = endpoints.flatMap(it => this.linkToGenericContinuations(it, endpoints));
 
     return {
       schemaType: 'openrpc',
-      schemaVersion: doc.openrpc,
-      name: doc.info.title,
-      description: doc.info.description,
-      version: doc.info.version,
+      schemaVersion: this.doc.openrpc,
+      name: this.doc.info.title,
+      description: this.doc.info.description,
+      version: this.doc.info.version,
       contact: contact,
       license: license,
-      termsOfService: doc.info.termsOfService,
+      termsOfService: this.doc.info.termsOfService,
       servers: servers,
       externalDocumentations: docs,
       endpoints: endpoints,
       continuations: continuations,
-      types: [], // (await Promise.all([...this._typePromiseMap.values()])).map(it => it.type),
+      types: [...this._typePromiseMap.values()].map(it => it.type),
     };
   }
 
@@ -223,47 +197,49 @@ class OpenRpcParserDoc {
     };
   }
 
-  async methodToGenericEndpoint(method: MethodOrReference): Promise<GenericEndpoint> {
+  methodToGenericEndpoint(method: Dereferenced<MethodObject>): GenericEndpoint {
 
-    const dereferenced = await this.dereference(method);
-    method = dereferenced.object;
+    const derefResult = this._deref.get(method.obj.result, method.root);
+    const resultResponse = this.resultToGenericOutputAndResultParamTypeDereferenced(method.obj, derefResult);
 
     const responses: GenericOutput[] = [];
 
     // One regular response
-    const resultResponse = await this.resultToGenericOutputAndResultParamType(method, method.result);
-    // resultResponse.type.nameClassifier = resultResponse.type.nameClassifier || `${pascalCase(method.name)}Response`;
     responses.push(resultResponse.output);
 
     // And then one response for each potential error
-    let errors: MethodObjectErrors = method.errors || [];
-    if (errors.length == 0) {
+    let errorsOrReferences: MethodObjectErrors = method.obj.errors || [];
+    if (errorsOrReferences.length == 0) {
       // If there were no known errors specified, then we will add a generic fallback.
-      errors = [{
+      errorsOrReferences = [{
         code: -1234567890,
         message: 'Unknown Error',
       }];
     }
 
-    for (const error of errors) {
-      responses.push(await this.errorToGenericOutput(pascalCase(method.name), error));
-    }
+    const errorOutputs = errorsOrReferences.map(it => {
+      const deref = this._deref.get(it, method.root);
+      return this.errorToGenericOutput(pascalCase(method.obj.name), deref);
+    });
 
-    const input = await this.methodToGenericInputType(method);
+    responses.push(...errorOutputs);
 
-    const examples = await Promise.all(
-      (method.examples || []).map((it) => this.examplePairingToGenericExample(resultResponse.type, input.properties || [], it))
-    );
+    const input = this.methodToGenericInputType(method);
+
+    const examples = (method.obj.examples || []).map(it => {
+      const deref = this._deref.get(it, method.root);
+      return this.examplePairingToGenericExample(resultResponse.type, input.properties || [], deref);
+    })
 
     // TODO: Remake so that the request body is another type!
     //  The parameters build into an object
     //  -- for other specifications, the parameters end up in the URL and headers maybe! That's a later problem!
     // TODO: Also need to handle the "required" in a good way. JSR-303 annotations? If-cases? Both?
 
-    return <GenericEndpoint>{
-      name: method.name,
-      description: method.description,
-      summary: method.summary,
+    return {
+      name: method.obj.name,
+      description: method.obj.description,
+      summary: method.obj.summary,
       async: false,
       path: '',
       request: {
@@ -274,19 +250,55 @@ class OpenRpcParserDoc {
         {
           path: ['method'],
           operator: ComparisonOperator.EQUALS,
-          value: method.name,
+          value: method.obj.name,
         },
       ],
       responses: responses,
-      deprecated: method.deprecated,
+      deprecated: method.obj.deprecated,
       examples: examples,
-      externalDocumentations: method.externalDocs ? [this.externalDocToGenericExternalDoc(method.externalDocs)] : [],
+      externalDocumentations: method.obj.externalDocs ? [this.externalDocToGenericExternalDoc(method.obj.externalDocs)] : [],
     };
   }
 
-  private async jsonSchemaToType(names: TypeName[], schema: JSONSchema7Definition, fallbackRef?: string)
-    : Promise<SchemaToTypeResult> {
-    if (typeof schema == 'boolean') {
+  private jsonSchemaToType(names: TypeName[], schema: Dereferenced<JSONSchema7Definition>, fallbackRef: string | undefined): SchemaToTypeResult {
+
+    // If contentDescriptor contains an anonymous schema,
+    // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
+    // That way we will not get duplicates of the schema when called from different locations.
+    const actualRef = schema.hash || fallbackRef;
+
+    if (actualRef) {
+      const existing = this._typePromiseMap.get(actualRef);
+      if (existing) {
+        return existing;
+      }
+
+      // The ref is the much better unique name of the type.
+      if (schema.hash) {
+        // We only use the ref as a replacement name if the actual element has a ref.
+        // We do not include the fallback ref here, since it might not be the best name.
+        names = [schema.hash];
+      }
+    }
+
+    // const promise: Promise<SchemaToTypeResult> = new Promise((resolve, reject) => {
+    //   this.dereference(schemaOrRef, schema => {
+    const schemaType = this.jsonSchemaToTypeUncached(schema, names, schema.hash == undefined);
+
+    if (actualRef) {
+      this._typePromiseMap.set(actualRef, schemaType);
+    }
+
+    return schemaType;
+  }
+
+  private jsonSchemaToTypeUncached(
+    schema: Dereferenced<JSONSchema7Definition>,
+    names: TypeName[],
+    canInline: boolean
+  ): SchemaToTypeResult {
+
+    if (typeof schema.obj == 'boolean') {
       return {
         type: {
           name: 'boolean',
@@ -297,42 +309,8 @@ class OpenRpcParserDoc {
       };
     }
 
-    // If contentDescriptor contains an anonymous schema,
-    // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
-    // That way we will not get duplicates of the schema when called from different locations.
-    const actualRef = schema.$ref || fallbackRef;
+    const nonClassType = this.jsonSchemaToNonClassType(schema, names);
 
-    if (actualRef) {
-      const existing = this._typePromiseMap.get(actualRef);
-      if (existing) {
-        return await existing;
-      }
-
-      // The ref is the much better unique name of the type.
-      if (schema.$ref) {
-        // We only use the ref as a replacement name if the actual element has a ref.
-        // We do not include the fallback ref here, since it might not be the best name.
-        names = [schema.$ref];
-      }
-    }
-
-    const promise = this.dereference(schema)
-      .then(deref => this.jsonSchemaToTypeUncached(deref.object, names, schema.$ref == undefined));
-
-    if (actualRef) {
-      this._typePromiseMap.set(actualRef, promise);
-    }
-
-    return await promise;
-  }
-
-  private async jsonSchemaToTypeUncached(
-    schema: JSONSchema7,
-    names: TypeName[],
-    canInline: boolean
-  ): Promise<SchemaToTypeResult> {
-
-    const nonClassType = await this.jsonSchemaToNonClassType(schema, names);
     if (nonClassType) {
       return {
         type: nonClassType,
@@ -342,31 +320,31 @@ class OpenRpcParserDoc {
 
     const type: GenericClassType = {
       name: () => names.map(it => Naming.unwrap(it)).join('_'),
-      nameClassifier: schema.title ? pascalCase(schema.title) : String(schema.type),
+      nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : String(schema.obj.type),
       kind: GenericTypeKind.OBJECT,
-      description: schema.description,
-      title: schema.title,
-      readOnly: schema.readOnly,
-      writeOnly: schema.writeOnly,
+      description: schema.obj.description,
+      title: schema.obj.title,
+      readOnly: schema.obj.readOnly,
+      writeOnly: schema.obj.writeOnly,
 
       // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
-      additionalProperties: (schema.additionalProperties == undefined
+      additionalProperties: (schema.obj.additionalProperties == undefined
           ? undefined
-          : typeof schema.additionalProperties == 'boolean'
-            ? schema.additionalProperties
+          : typeof schema.obj.additionalProperties == 'boolean'
+            ? schema.obj.additionalProperties
             : true
       )
     };
 
     const genericProperties: GenericProperty[] = [];
     const requiredProperties: GenericProperty[] = [];
-    if (schema.properties) {
-      for (const key of Object.keys(schema.properties)) {
-        const propertySchema = schema.properties[key];
-        const genericProperty = await this.jsonSchema7ToGenericProperty(type, key, propertySchema);
-
+    if (schema.obj.properties) {
+      for (const key of Object.keys(schema.obj.properties)) {
+        const propertySchema = schema.obj.properties[key];
+        const derefPropertySchema = this._deref.get(propertySchema);
+        const genericProperty = this.jsonSchema7ToGenericProperty(type, key, derefPropertySchema);
         genericProperties.push(genericProperty);
-        if (schema.required?.indexOf(key) !== -1) {
+        if (schema.obj.required?.indexOf(key) !== -1) {
           requiredProperties.push(genericProperty);
         }
       }
@@ -375,16 +353,17 @@ class OpenRpcParserDoc {
     type.properties = genericProperties.length ? genericProperties : undefined;
     type.requiredProperties = requiredProperties;
 
-    if (schema.not) {
+    if (schema.obj.not) {
       // ???
     }
 
-    if (schema.multipleOf) {
+    if (schema.obj.multipleOf) {
       // TODO: Make this general, so that all other places call it.
     }
 
+    const extended = this.extendOrEnhanceClassType(schema, type, names);
     return {
-      type: await this.extendOrEnhanceClassType(schema, type, names),
+      type: extended,
 
       // If this type is inline in the JSON Schema, without being referenced as a ref:
       // Then we might possibly be able to merge this type with the caller, if it wants to.
@@ -392,21 +371,25 @@ class OpenRpcParserDoc {
     };
   }
 
-  private async jsonSchemaToNonClassType(schema: JSONSchema7, names: TypeName[]): Promise<GenericType | undefined> {
+  private jsonSchemaToNonClassType(schema: Dereferenced<JSONSchema7Definition>, names: TypeName[]): GenericType | undefined {
 
-    if (typeof schema.type === 'string') {
-      if (schema.type === 'array') {
-        return await this.getArrayItemType(schema, schema.items, names)
-      } else if (schema.type !== 'object') {
+    if (typeof schema.obj == 'boolean') {
+      return undefined;
+    }
+
+    if (typeof schema.obj.type === 'string') {
+      if (schema.obj.type === 'array') {
+        return this.getArrayItemType(schema, schema.obj.items, names);
+      } else if (schema.obj.type !== 'object') {
 
         // TODO: This is not lossless if the primitive has comments/summary/etc
-        const t = this.typeToGenericKnownType(schema.type, schema.format, schema.enum);
-        const schemaType = schema.type;
+        const t = this.typeToGenericKnownType(schema.obj.type, schema.obj.format, schema.obj.enum);
+        const schemaType = schema.obj.type;
         if (t.length == 1) {
           return {
             name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
             kind: t[0],
-            description: schema.description,
+            description: schema.obj.description,
           };
         } else if (t.length == 3) {
           return {
@@ -414,75 +397,72 @@ class OpenRpcParserDoc {
             kind: t[0],
             primitiveKind: t[1],
             enumConstants: t[2],
-            description: schema.description,
+            description: schema.obj.description,
           };
         } else {
           return {
             name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
             kind: t[0],
             primitiveKind: t[1],
-            description: schema.description,
+            description: schema.obj.description,
           };
         }
+      } else {
+        return undefined;
       }
+    } else {
+      return undefined;
     }
-
-    return undefined;
   }
 
-  public async extendOrEnhanceClassType(schema: JSONSchema7, type: GenericClassType, names: TypeName[]): Promise<GenericType> {
+  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: GenericClassType, names: TypeName[]): GenericType {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
     //        Then it might be that this "type" can cease to exist and instead be replaced by its children
 
     // TODO: Make it optional to "simplify" types that inherit from a primitive -- instead make it use @JsonValue (and maybe @JsonCreator)
+    if (typeof schema.obj == 'boolean') {
+      throw new Error(`Not allowed to be a boolea`);
+    }
 
     const compositionsOneOfOr: GenericType[] = [];
     const compositionsAllOfAnd: GenericType[] = [];
     const compositionsAnyOfOr: GenericType[] = [];
     let compositionsNot: GenericType | undefined;
 
-    if (schema.oneOf) {
+    if (schema.obj.oneOf) {
 
-      if (schema.oneOf.length == 1) {
+      if (schema.obj.oneOf.length == 1) {
         // Weird way of writing the schema, but if it's just 1 then it's same as "allOf"
-        schema.allOf = (schema.allOf || []).concat(schema.oneOf);
-        schema.oneOf = undefined;
+        schema.obj.allOf = (schema.obj.allOf || []).concat(schema.obj.oneOf);
+        schema.obj.oneOf = undefined;
       } else {
-        compositionsOneOfOr.push(
-          ...(await Promise.all(schema.oneOf.map(it => this.jsonSchemaToType(names, it)))).map(it => it.type)
-        );
-      }
-    }
-
-    // todo: fix back the commented out mergeType -- probable problem
-
-    if (schema.allOf?.length) {
-
-      for (const allOf of schema.allOf) {
-        const subType = await this.jsonSchemaToType(names, allOf);
-        if (subType.canInline) {
-          // This schema can actually just be consumed by the parent type.
-          // This happens if the sub-schema is anonymous and never used by anyone else.
-          this.mergeType(subType.type, type);
-        } else {
-          compositionsAllOfAnd.push(subType.type);
+        for (const oneOf of schema.obj.oneOf) {
+          const deref = this._deref.get(oneOf, schema.root);
+          compositionsOneOfOr.push(this.jsonSchemaToType(names, deref, undefined).type);
         }
       }
     }
 
-    if (schema.anyOf?.length) {
-
-      // const types: GenericType[] = [];
-      for (const anyOf of schema.anyOf) {
-        const subType = await this.jsonSchemaToType(names, anyOf);
-        compositionsAnyOfOr.push(subType.type);
+    // todo: fix back the commented out mergeType -- probable problem
+    for (const subType of (schema.obj.allOf || []).map(it => this.jsonSchemaToType(names, this._deref.get(it, schema.root), undefined))) {
+      if (subType.canInline) {
+        // This schema can actually just be consumed by the parent type.
+        // This happens if the sub-schema is anonymous and never used by anyone else.
+        this.mergeType(subType.type, type);
+      } else {
+        compositionsAllOfAnd.push(subType.type);
       }
     }
 
-    if (schema.not && typeof schema.not !== 'boolean') {
-      compositionsNot = (await this.jsonSchemaToType(names, schema.not)).type;
+    for (const subType of (schema.obj.anyOf || []).map(it => this.jsonSchemaToType(names, this._deref.get(it, schema.root), undefined))) {
+      compositionsAnyOfOr.push(subType.type);
+    }
+
+    // TODO: This is wrong--it needs to be done in order
+    if (schema.obj.not && typeof schema.obj.not !== 'boolean') {
+      compositionsNot = (this.jsonSchemaToType(names, {obj: schema.obj.not, root: schema.root}, undefined)).type;
     }
 
     const extendedBy = CompositionUtil.getCompositionOrExtensionType(
@@ -518,7 +498,11 @@ class OpenRpcParserDoc {
     return type;
   }
 
-  private async getArrayItemType(schema: JSONSchema7, items: JSONSchema7Items, names: TypeName[]): Promise<GenericArrayType | GenericArrayPropertiesByPositionType | GenericArrayTypesByPositionType> {
+  private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, names: TypeName[]): GenericArrayTypes {
+
+    if (typeof schema.obj == 'boolean') {
+      throw new Error(`The schema object should not be able to be a boolean`);
+    }
 
     if (!items) {
       // No items, so the schema for the array items is undefined.
@@ -529,15 +513,15 @@ class OpenRpcParserDoc {
       return {
         name: arrayTypeName,
         kind: GenericTypeKind.ARRAY,
-        minLength: schema.minItems,
-        maxLength: schema.maxItems,
-        description: schema.description,
+        minLength: schema.obj.minItems,
+        maxLength: schema.obj.maxItems,
+        description: schema.obj.description,
         of: {
           name: () => `UnknownItemOf${Naming.unwrap(arrayTypeName)}`,
           kind: GenericTypeKind.UNKNOWN,
           additionalProperties: true,
         },
-      }
+      };
 
     } else if (typeof items == 'boolean') {
       throw new Error(`Do not know how to handle a boolean items '${names.map(it => Naming.unwrap(it)).join('.')}'`);
@@ -546,11 +530,11 @@ class OpenRpcParserDoc {
       // TODO: We should be introducing interfaces that describe the common denominators between the different items?
       // TODO: This needs some seriously good implementation on the code-generator side of things.
       // TODO: What do we do here if the type can be inlined? Just ignore I guess?
-      const staticArrayTypes = (await Promise.all(
-        items.map((it) => this.jsonSchemaToType([], it))
-      ));
 
-      // const staticArrayTypeNames = ;
+      const staticArrayTypes = items.map(it => {
+        return this.jsonSchemaToType([], this._deref.get(it, schema.root), undefined);
+      });
+
       const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
       return <GenericArrayTypesByPositionType>{
@@ -559,7 +543,7 @@ class OpenRpcParserDoc {
           : `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
         kind: GenericTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
-        description: schema.description,
+        description: schema.obj.description,
         commonDenominator: commonDenominator,
       };
 
@@ -572,20 +556,20 @@ class OpenRpcParserDoc {
         itemTypeNames = names.map(it => () => `${Naming.unwrap(it)}Item`);
       }
 
-      const itemType = (await this.jsonSchemaToType(itemTypeNames, items)).type;
+      const itemType = this.jsonSchemaToType(itemTypeNames, {obj: items, root: schema.root}, undefined);
 
       const arrayTypeName: TypeName = (names.length > 0)
         ? () => `${names.map(it => Naming.unwrap(it)).join('_')}`
-        : () => `ArrayOf${Naming.safer(itemType)}`;
+        : () => `ArrayOf${Naming.safer(itemType.type)}`;
 
       return {
         name: arrayTypeName,
         nameClassifier: 'Array',
         kind: GenericTypeKind.ARRAY,
-        minLength: schema.minItems,
-        maxLength: schema.maxItems,
-        description: schema.description,
-        of: itemType,
+        minLength: schema.obj.minItems,
+        maxLength: schema.obj.maxItems,
+        description: schema.obj.description,
+        of: itemType.type,
       };
     }
   }
@@ -645,21 +629,20 @@ class OpenRpcParserDoc {
     });
   }
 
-  private async jsonSchema7ToGenericProperty(owner: GenericPropertyOwner, propertyName: string, schema: JSONSchema7Definition)
-    : Promise<GenericProperty> {
+  private jsonSchema7ToGenericProperty(owner: GenericPropertyOwner, propertyName: string, schemaOrRef: Dereferenced<JSONSchema7Definition>): GenericProperty {
     // This is ugly, but they should hopefully be the same.
-    // const openRpcJsonSchema = schema as JSONSchema;
 
     // The type name will be replaced if the schema is a $ref to another type.
-    const schemaDeref = await this.unwrapJsonSchema(schema);
-    const propertyTypeName = (schemaDeref.title ? camelCase(schemaDeref.title) : undefined) || propertyName;
-    const propertyType = (await this.jsonSchemaToType([propertyTypeName], schema)).type;
+    const schema = this.unwrapJsonSchema(schemaOrRef);
+
+    const propertyTypeName = (schema.obj.title ? camelCase(schema.obj.title) : undefined) || propertyName;
+    const propertyType = this.jsonSchemaToType([propertyTypeName], schema, undefined);
 
     return {
       name: propertyName,
-      fieldName: this.getVendorExtension(schemaDeref, 'field-name'),
-      propertyName: this.getVendorExtension(schemaDeref, 'property-name'),
-      type: propertyType,
+      fieldName: this.getVendorExtension(schema, 'field-name'),
+      propertyName: this.getVendorExtension(schema, 'property-name'),
+      type: propertyType.type,
       owner: owner
     };
   }
@@ -674,35 +657,35 @@ class OpenRpcParserDoc {
     return value as R;
   }
 
-  private async unwrapJsonSchema(schema: JSONSchema7Definition | JSONSchema): Promise<JSONSchema7> {
-    if (typeof schema == 'boolean') {
-      if (schema) {
-        return {}
+  private unwrapJsonSchema(schema: Dereferenced<JSONSchema7Definition | JSONSchema>): Dereferenced<JSONSchema7> {
+    if (typeof schema.obj == 'boolean') {
+      if (schema.obj) {
+        return {obj: {}, root: schema.root};
       } else {
-        return {not: {}};
+        return {obj: {not: {}}, root: schema.root};
       }
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+      return this._deref.get<JSONSchema7>(schema.obj as JSONSchema7);
     }
-
-    const deref = await this.dereference(schema);
-    return deref.object as JSONSchema7;
   }
 
-  private convertJsonSchema(schema: JSONSchema): JSONSchema7Definition {
-    return schema as JSONSchema7Definition;
-  }
-
-  private async resultToGenericOutputAndResultParamType(method: MethodObject, methodResult: MethodObjectResult): Promise<{ output: GenericOutput; type: GenericType }> {
-
-    const deref = await this.dereference(methodResult);
+  private resultToGenericOutputAndResultParamTypeDereferenced(method: MethodObject, methodResult: Dereferenced<ContentDescriptorObject>): OutputAndType {
 
     const typeNamePrefix = pascalCase(method.name);
 
     // TODO: Should this always be unique, or should we ever use a common inherited method type?
     // TODO: Reuse the code from contentDescriptorToGenericProperty -- so they are ALWAYS THE SAME
-    const convSchema = this.convertJsonSchema(deref.object.schema);
-    const derefSchema = await this.unwrapJsonSchema(convSchema);
-    const preferredName = derefSchema?.title || deref.object.name;
-    const resultParameterType = (await this.jsonSchemaToType([preferredName], convSchema, deref.ref)).type;
+    const derefSchema = this.unwrapJsonSchema({
+      obj: methodResult.obj.schema,
+      root: methodResult.root
+    });
+
+    const preferredName = derefSchema.obj.title || methodResult.obj.name;
+
+    const resultParameterType = this.jsonSchemaToType([preferredName], derefSchema, methodResult.hash);
+
+
     const resultType: GenericType = {
       name: `${typeNamePrefix}Response`,
       kind: GenericTypeKind.OBJECT,
@@ -713,7 +696,7 @@ class OpenRpcParserDoc {
 
     resultType.properties = [
       {
-        name: this._parser._options.jsonRpcPropertyName,
+        name: this._options.jsonRpcPropertyName,
         type: {
           kind: GenericTypeKind.PRIMITIVE,
           primitiveKind: GenericPrimitiveKind.STRING,
@@ -723,7 +706,7 @@ class OpenRpcParserDoc {
       },
       {
         name: 'result',
-        type: resultParameterType,
+        type: resultParameterType.type,
         owner: resultType
       },
       {
@@ -736,7 +719,7 @@ class OpenRpcParserDoc {
       },
     ];
 
-    if (this._parser._options.jsonRpcIdIncluded) {
+    if (this._options.jsonRpcIdIncluded) {
       resultType.properties.push({
         name: 'id',
         type: {
@@ -750,11 +733,11 @@ class OpenRpcParserDoc {
 
     return {
       output: <GenericOutput>{
-        name: deref.object.name,
-        description: deref.object.description,
-        summary: deref.object.summary,
-        deprecated: deref.object.deprecated || false,
-        required: deref.object.required,
+        name: methodResult.obj.name,
+        description: methodResult.obj.description,
+        summary: methodResult.obj.summary,
+        deprecated: methodResult.obj.deprecated || false,
+        required: methodResult.obj.required,
         type: resultType,
         contentType: 'application/json',
         qualifiers: [
@@ -764,30 +747,27 @@ class OpenRpcParserDoc {
           },
         ],
       },
-      type: resultParameterType
+      type: resultParameterType.type
     };
   }
 
-  private async errorToGenericOutput(parentName: string, error: ErrorOrReference): Promise<GenericOutput> {
+  private errorToGenericOutput(parentName: string, error: Dereferenced<ErrorObject>): GenericOutput {
 
-    const dereferenced = await this.dereference(error);
-    error = dereferenced.object;
+    const isUnknownCode = (error.obj.code === -1234567890);
+    if (isUnknownCode && this._unknownError) {
+      return this._unknownError;
+    } else {
+      const errorOutput = this.errorToGenericOutputReal(parentName, error.obj, isUnknownCode);
+      if (isUnknownCode) {
+        if (!this._unknownError) {
+          this._unknownError = errorOutput;
+        }
 
-    const isUnknownCode = (error.code === -1234567890);
-    if (isUnknownCode && this._parser._unknownError) {
-      return this._parser._unknownError;
-    }
-
-    const errorOutput = this.errorToGenericOutputReal(parentName, error, isUnknownCode);
-    if (isUnknownCode) {
-      if (!this._parser._unknownError) {
-        this._parser._unknownError = errorOutput;
+        return this._unknownError;
+      } else {
+        return errorOutput;
       }
-
-      return this._parser._unknownError;
     }
-
-    return errorOutput;
   }
 
   private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): GenericOutput {
@@ -896,30 +876,26 @@ class OpenRpcParserDoc {
     };
   }
 
-  private async examplePairingToGenericExample(valueType: GenericType, inputProperties: GenericProperty[], example: ExamplePairingOrReference): Promise<GenericExamplePairing> {
+  private examplePairingToGenericExample(valueType: GenericType, inputProperties: GenericProperty[], example: Dereferenced<ExamplePairingObject>): GenericExamplePairing {
 
-    const dereferenced = await this.dereference(example);
-    example = dereferenced.object;
-
-    const params = await Promise.all(
-      example.params.map((param, idx) => this.exampleParamToGenericExampleParam(inputProperties, param, idx))
-    );
+    const params = example.obj.params.map((paramOrRef, idx) => {
+      const param = this._deref.get(paramOrRef, example.root);
+      return this.exampleParamToGenericExampleParam(inputProperties, param, idx);
+    });
 
     return <GenericExamplePairing>{
-      name: example.name,
-      description: example.description,
-      summary: example['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
+      name: example.obj.name,
+      description: example.obj.description,
+      summary: example.obj['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
       params: params,
-      result: await this.exampleResultToGenericExampleResult(valueType, example.result),
+      result: this.exampleResultToGenericExampleResult(valueType, example.obj.result),
     };
   }
 
-  private async exampleParamToGenericExampleParam(inputProperties: GenericProperty[], param: ExampleOrReference, paramIndex: number): Promise<GenericExampleParam> {
-
-    const paramDeref = await this.dereference(param);
+  private exampleParamToGenericExampleParam(inputProperties: GenericProperty[], param: Dereferenced<ExampleObject>, paramIndex: number): GenericExampleParam {
 
     // If the name of the example param is the same as the property name, it will match here.
-    let property = inputProperties.find(it => it.name == paramDeref.object.name);
+    let property = inputProperties.find(it => it.name == param.obj.name);
     if (!property) {
 
       // But most of the time, the example param is actually just in the same index as the request params.
@@ -934,31 +910,29 @@ class OpenRpcParserDoc {
       valueType = <GenericClassType>{kind: GenericTypeKind.UNKNOWN};
     }
 
-    return <GenericExampleParam>{
-      name: paramDeref.object.name,
+    return {
+      name: param.obj.name,
       property: property,
-      description: paramDeref.object.description,
-      summary: paramDeref.object.summary,
+      description: param.obj.description,
+      summary: param.obj.summary,
       type: valueType,
-      value: paramDeref.object.value,
+      value: param.obj.value,
     };
   }
 
-  private async exampleResultToGenericExampleResult(valueType: GenericType, example: ExampleOrReference): Promise<GenericExampleResult> {
+  private exampleResultToGenericExampleResult(valueType: GenericType, exampleOrRef: ExampleOrReference): GenericExampleResult {
 
-    const dereference = await this.dereference(example);
-    example = dereference.object;
+    const example = this._deref.get(exampleOrRef)
 
-    if (example['externalValue']) {
-
+    if (example.obj['externalValue']) {
       // This is part of the specification, but not part of the OpenRPC interface.
     }
 
-    return <GenericExampleResult>{
-      name: example.name,
-      description: example.description,
-      summary: example.summary,
-      value: example.value,
+    return {
+      name: example.obj.name,
+      description: example.obj.description,
+      summary: example.obj.summary,
+      value: example.obj.value,
       type: valueType
     };
   }
@@ -980,42 +954,24 @@ class OpenRpcParserDoc {
     };
   }
 
-  private async contentDescriptorToGenericProperty(owner: GenericPropertyOwner, descriptor: ContentDescriptorOrReference)
-    : Promise<GenericProperty> {
+  private contentDescriptorToGenericProperty(owner: GenericPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): GenericProperty {
 
-    const ref = descriptor.$ref as string;
-    if (ref) {
-      const promise = this._contentDescriptorPromiseMap.get(ref);
-      if (promise) {
-        return await promise;
-      }
-    }
+    const derefSchema = this.unwrapJsonSchema({
+      obj: descriptor.obj.schema,
+      root: descriptor.root
+    });
 
-    const promise = this.dereference(descriptor)
-      .then(async deref => {
-        const convSchema = this.convertJsonSchema(deref.object.schema);
-        const derefSchema = await this.unwrapJsonSchema(convSchema);
-        const preferredName = derefSchema?.title || deref.object.name;
-        const propertyType = (await this.jsonSchemaToType([preferredName], convSchema, deref.ref)).type;
-
-        return <GenericProperty>{
-          name: deref.object.name,
-          description: deref.object.description,
-          summary: deref.object.summary,
-          deprecated: deref.object.deprecated || false,
-          required: deref.object.required || false,
-          type: propertyType,
-          owner: owner,
-        };
-      });
-
-    if (ref) {
-
-      // Cache the promise, so we will ask for the same one every time.
-      this._contentDescriptorPromiseMap.set(ref, promise);
-    }
-
-    return await promise;
+    const preferredName = derefSchema.obj.title || descriptor.obj.name;
+    const propertyType = this.jsonSchemaToType([preferredName], derefSchema, descriptor.hash);
+    return {
+      name: descriptor.obj.name,
+      description: descriptor.obj.description,
+      summary: descriptor.obj.summary,
+      deprecated: descriptor.obj.deprecated || false,
+      required: descriptor.obj.required || false,
+      type: propertyType.type,
+      owner: owner,
+    };
   }
 
   private typeToGenericKnownType(type: string, format?: string, enumValues?: unknown[]):
@@ -1077,58 +1033,58 @@ class OpenRpcParserDoc {
     }
   }
 
-  private async methodToGenericInputType(method: MethodObject): Promise<{ type: GenericType; properties: GenericProperty[] | undefined }> {
+  private methodToGenericInputType(method: Dereferenced<MethodObject>): TypeAndProperties {
 
-    const hasConstantVersion = (this._parser._options.jsonRpcRequestVersion || '').length > 0;
+    const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
     const requestJsonRpcType: GenericPrimitiveType = {
-      name: `${method.name}RequestVersion`,
+      name: `${method.obj.name}RequestVersion`,
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.STRING,
-      valueConstant: hasConstantVersion ? this._parser._options.jsonRpcRequestVersion : undefined,
+      valueConstant: hasConstantVersion ? this._options.jsonRpcRequestVersion : undefined,
       nullable: false
     };
 
     const requestMethodType: GenericPrimitiveType = {
-      name: `${method.name}RequestMethod`,
+      name: `${method.obj.name}RequestMethod`,
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.STRING,
-      valueConstant: method.name,
+      valueConstant: method.obj.name,
       nullable: false
     };
 
     // TODO: This should be able to be a String OR Number -- need to make this more generic
     const requestIdType: GenericPrimitiveType = {
-      name: `${method.name}RequestId`,
+      name: `${method.obj.name}RequestId`,
       kind: GenericTypeKind.PRIMITIVE,
       primitiveKind: GenericPrimitiveKind.STRING,
       nullable: false
     };
 
     let requestParamsType: GenericPropertyOwner;
-    if (method.paramStructure == 'by-position') {
+    if (method.obj.paramStructure == 'by-position') {
       // The params is an array values, and not a map nor properties.
       requestParamsType = <GenericArrayPropertiesByPositionType>{
-        name: `${method.name}RequestParams`,
+        name: `${method.obj.name}RequestParams`,
         kind: GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION
       };
 
-      requestParamsType.properties = await Promise.all(
-        method.params.map((it) => this.contentDescriptorToGenericProperty(requestParamsType, it))
-      );
+      requestParamsType.properties = method.obj.params.map((it) => {
+        return this.contentDescriptorToGenericProperty(requestParamsType, this._deref.get(it, method.root));
+      });
 
       // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
       requestParamsType.commonDenominator = JavaUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type));
 
     } else {
       requestParamsType = <GenericClassType>{
-        name: `${method.name}RequestParams`,
+        name: `${method.obj.name}RequestParams`,
         kind: GenericTypeKind.OBJECT,
         additionalProperties: false
       };
 
-      const properties = await Promise.all(
-        method.params.map((it) => this.contentDescriptorToGenericProperty(requestParamsType, it))
-      );
+      const properties = method.obj.params.map((it) => {
+        return this.contentDescriptorToGenericProperty(requestParamsType, this._deref.get(it, method.root))
+      });
 
       if (properties.length > 0) {
         requestParamsType.properties = properties;
@@ -1136,16 +1092,16 @@ class OpenRpcParserDoc {
     }
 
     const requestType = <GenericClassType>{
-      name: `${method.name}Request`,
+      name: `${method.obj.name}Request`,
       kind: GenericTypeKind.OBJECT,
       additionalProperties: false,
-      description: method.description,
-      summary: method.summary,
+      description: method.obj.description,
+      summary: method.obj.summary,
     };
 
     requestType.properties = [
       <GenericProperty>{
-        name: this._parser._options.jsonRpcPropertyName,
+        name: this._options.jsonRpcPropertyName,
         type: requestJsonRpcType,
         required: true,
         owner: requestType,
@@ -1163,7 +1119,7 @@ class OpenRpcParserDoc {
       }
     ];
 
-    if (this._parser._options.jsonRpcIdIncluded) {
+    if (this._options.jsonRpcIdIncluded) {
       requestType.properties.push(
         <GenericProperty>{
           name: "id",
@@ -1176,30 +1132,24 @@ class OpenRpcParserDoc {
 
     return {
       type: requestType,
-      properties: requestParamsType.properties
+      properties: requestParamsType.properties,
     };
   }
 
-  async linksToGenericContinuations(endpoints: GenericEndpoint[]): Promise<GenericContinuation[]> {
+  private linkToGenericContinuations(endpoint: GenericEndpoint, endpoints: GenericEndpoint[]): GenericContinuation[] {
 
     const continuations: GenericContinuation[] = [];
-    const doc = this.getClosestOpenRpcDocument();
-    const methods = await Promise.all(doc.methods.map(method => this.dereference(method)));
-    for (const method of methods) {
-      const endpoint = endpoints.find(it => it.name == method.object.name);
-      if (endpoint) {
-        for (const link of (method.object.links || [])) {
-          try {
+    for (const methodOrRef of this.doc.methods) {
+      const method = this._deref.get(methodOrRef);
 
-            const dereferenced = await this.dereference(link);
-            continuations.push(this.linkToGenericContinuation(endpoint, endpoints, dereferenced.object, dereferenced.ref))
-          } catch (ex) {
-            logger.error(ex, `Could not build link for ${endpoint.name}`);
-          }
+      for (const linkOrRef of (method.obj.links || [])) {
+        const link = this._deref.get(linkOrRef);
+
+        try {
+          continuations.push(this.linkToGenericContinuation(endpoint, endpoints, link.obj, link.hash));
+        } catch (ex) {
+          logger.error(ex, `Could not build link for ${endpoint.name}`);
         }
-
-      } else {
-        logger.error(`There is no endpoint called '${method.object.name}'`);
       }
     }
 
@@ -1214,7 +1164,7 @@ class OpenRpcParserDoc {
 
       // TODO: Try converting both into PascalCase and compare
       // TODO: Need to mark as "incorrect" somehow, so the documentation can know the Spec is invalid!
-      if (this._parser._options.relaxedLookup) {
+      if (this._options.relaxedLookup) {
         const pascalName = pascalCase(name);
         targetEndpoint = endpoints.find(it => pascalCase(it.name) == pascalName);
         if (targetEndpoint) {
@@ -1224,7 +1174,7 @@ class OpenRpcParserDoc {
 
       if (!targetEndpoint) {
         const closest = this.getClosest(options, choice);
-        if (this._parser._options.relaxedLookup && closest.rating >= 0.8) {
+        if (this._options.relaxedLookup && closest.rating >= 0.8) {
           logger.warn(`There is no target endpoint called '${choice || 'N/A'}', WILL ASSUME CLOSE MATCH '${closest.target}'!`);
           targetEndpoint = endpoints.find(it => it.name == closest.target);
         }
@@ -1291,13 +1241,18 @@ class OpenRpcParserDoc {
     };
   }
 
-  private getLinkSourceParameter(primaryType: GenericType, secondaryType: GenericType, link: LinkObject, linkParamName: string): GenericContinuationSourceParameter {
+  private getLinkSourceParameter(
+    primaryType: GenericType,
+    secondaryType: GenericType,
+    link: LinkObject,
+    linkParamName: string
+  ): GenericContinuationSourceParameter {
 
     const params = link.params as Record<string, unknown>;
     const value = params[linkParamName];
     if (typeof value == 'string') {
 
-      const matcher = this._parser._options.relaxedLookup
+      const matcher = this._options.relaxedLookup
         ? OpenRpcParserImpl.PATTERN_PLACEHOLDER_RELAXED
         : OpenRpcParserImpl.PATTERN_PLACEHOLDER;
 
@@ -1307,7 +1262,7 @@ class OpenRpcParserDoc {
 
         // The whole value is just one placeholder.
         // Let's replace it with a property path, which is code-wise more easy to work with.
-        const pathString = this._parser._options.relaxedLookup
+        const pathString = this._options.relaxedLookup
           ? (match[1] || match[2] || match[3])
           : match[1];
 
@@ -1385,116 +1340,5 @@ class OpenRpcParserDoc {
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-return
     return stringSimilarity.findBestMatch(choice, options).bestMatch;
-  }
-
-  private async dereference<T>(object: ReferenceObject | T): Promise<{ object: T; ref: string | undefined }> {
-
-    if ('$ref' in object) {
-      const cachedPromise = this._derefPromiseMap.get(object.$ref);
-      if (cachedPromise) {
-        return {object: await cachedPromise as T, ref: object.$ref};
-      }
-
-      const promise: Promise<T> = this.dereferenceInternal(object)
-        .then((deref: ReferenceObject | T) => {
-
-          if ('$ref' in deref) {
-
-            // There were nested $ref, so we need to do The Ugly and merge them.
-            return this.dereference(deref)
-              .then(inner => {
-                const mix = this.mixRefObjectAndInvalidRefObject<T>(deref, inner.object);
-                return this.dereference(mix)
-                  .then(derefMix => derefMix.object);
-              })
-
-          } else {
-            return deref;
-          }
-        });
-
-      this._derefPromiseMap.set(object.$ref, promise);
-      return {object: await promise, ref: object.$ref};
-    } else {
-      return {object: object, ref: undefined};
-    }
-  }
-
-  private async dereferenceInternal<T>(object: ReferenceObject | T): Promise<ReferenceObject | T> {
-
-    if ('$ref' in object) {
-
-      const ref = object.$ref;
-      if (ref.startsWith('#')) {
-        // This ref is in relation to the current document.
-        return this.resolveFromLocalReference(ref);
-      }
-
-      // This ref is a relative path to something external.
-      // We need to figure out what it is and fetch it and create a new parser.
-      const refParts = ref.split('#');
-      const protocolUri = refParts[0];
-      const hash = refParts[1];
-
-      // const protocolIndex = protocolUri.indexOf(':');
-      // const protocol = (protocolIndex != -1)
-      //   ? protocolUri.substring(0, protocolIndex)
-      //   : 'file';
-      // const protocolPath = (protocolIndex != -1)
-      //   ? protocolUri.substring(protocolIndex + 1)
-      //   : protocolUri;
-      //
-      // const protocolHandler = DefaultReferenceResolver.protocolHandlerMap[protocol];
-      // if (!protocolHandler) {
-      //   throw new Error(`There is no protocol handler for '${protocol}'`);
-      // }
-      // protocolHandler(protocolPath,)
-
-      // The path is relative, so we will append it with the path of this document.
-      const documentPath = this._schemaFile.getAbsolutePath();
-      const content = ProtocolHandler.get<unknown>(protocolUri, documentPath);
-
-      const schemaFile = new SchemaFile('');
-      const nested = new OpenRpcParserDoc(this._parser, schemaFile, undefined, this);
-
-      // TODO: Need to make this able to figure out how to load external files and create child document instances!
-      // TODO: (then we need to figure out how to make this general, so it can be re-used by other JSON-Schema based specs)
-
-      // TODO: Use @stoplight/json-ref-resolver instead of the jsonschema utils one -- we need the more generic one!
-
-      return object;
-
-    } else {
-      return object;
-    }
-  }
-
-  private async resolveFromLocalReference<T>(ref: string): Promise<T> {
-
-    try {
-      // TODO: Figure out how to read with different docs as roots!
-      return await DefaultReferenceResolver.resolve(ref, this.getClosestOpenRpcDocument()) as T;
-    } catch (ex) {
-      throw new Error(`Could not resolve ref '${ref}': ${JSON.stringify(ex)}`, {cause: ex instanceof Error ? ex : undefined});
-    }
-  }
-
-  private mixRefObjectAndInvalidRefObject<T>(object: ReferenceObject, resolved: T | ReferenceObject): T | ReferenceObject {
-
-    const keys = Object.keys(object);
-    if (keys.length > 1) {
-
-      const extraKeys = keys.filter(it => (it != '$ref'));
-      const copy = {...object};
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      delete (copy as never)['$ref'];
-      logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
-
-      // TODO: Use Object.assign instead?
-      // TODO: What to do if the property exists in both?
-      resolved = {...resolved, ...copy};
-    }
-
-    return resolved;
   }
 }

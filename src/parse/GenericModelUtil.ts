@@ -1,19 +1,19 @@
-import {GenericModel, GenericType, GenericTypeKind} from '@parse/GenericModel';
+import {OmniModel, OmniType, OmniTypeKind} from '@parse/OmniModel';
 
 export interface TypeCollection {
 
   // edge: GenericType[];
-  named: GenericType[];
-  all: GenericType[];
+  named: OmniType[];
+  all: OmniType[];
 }
 
 export class GenericModelUtil {
 
-  public static getAllExportableTypes(model: GenericModel, refTypes?: GenericType[]): TypeCollection {
+  public static getAllExportableTypes(model: OmniModel, refTypes?: OmniType[]): TypeCollection {
 
     // TODO: Should be an option to do a deep dive or a quick dive!
-    const set = new Set<GenericType>();
-    const setEdge = new Set<GenericType>();
+    const set = new Set<OmniType>();
+    const setEdge = new Set<OmniType>();
     if (refTypes) {
       for (const refType of refTypes) {
         set.add(refType);
@@ -47,15 +47,15 @@ export class GenericModelUtil {
     };
   }
 
-  public static isNotPrimitive(it: GenericType): boolean {
+  public static isNotPrimitive(it: OmniType): boolean {
 
       // Is this enough?
-      return it.kind == GenericTypeKind.OBJECT
-        || it.kind == GenericTypeKind.ENUM
-        || it.kind == GenericTypeKind.COMPOSITION;
+      return it.kind == OmniTypeKind.OBJECT
+        || it.kind == OmniTypeKind.ENUM
+        || it.kind == OmniTypeKind.COMPOSITION;
   }
 
-  private static getTypesRecursively(type: GenericType, target: Set<GenericType>, edge: Set<GenericType>, isEdge: boolean): void {
+  private static getTypesRecursively(type: OmniType, target: Set<OmniType>, edge: Set<OmniType>, isEdge: boolean): void {
 
     // Add self, and then try to find recursive types.
     target.add(type);
@@ -63,7 +63,7 @@ export class GenericModelUtil {
       edge.add(type);
     }
 
-    if (type.kind == GenericTypeKind.OBJECT) {
+    if (type.kind == OmniTypeKind.OBJECT) {
       if (type.extendedBy) {
         this.getTypesRecursively(type.extendedBy, target, edge, false);
       }
@@ -74,21 +74,21 @@ export class GenericModelUtil {
         type.properties.forEach(p => this.getTypesRecursively(p.type, target, edge, isEdge));
       }
 
-    } else if (type.kind == GenericTypeKind.ARRAY_TYPES_BY_POSITION) {
+    } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
       type.types.forEach(t =>  this.getTypesRecursively(t, target, edge, isEdge));
       if (type.commonDenominator) {
         this.getTypesRecursively(type.commonDenominator, target, edge, isEdge);
       }
-    } else if (type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+    } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
       type.properties.forEach(p =>  this.getTypesRecursively(p.type, target, edge, isEdge));
       if (type.commonDenominator) {
         this.getTypesRecursively(type.commonDenominator, target, edge, isEdge);
       }
-    } else if (type.kind == GenericTypeKind.COMPOSITION) {
+    } else if (type.kind == OmniTypeKind.COMPOSITION) {
       type.types.forEach(it => this.getTypesRecursively(it, target, edge, isEdge));
-    } else if (type.kind == GenericTypeKind.ARRAY) {
+    } else if (type.kind == OmniTypeKind.ARRAY) {
       this.getTypesRecursively(type.of, target, edge, isEdge);
-    } else if (type.kind == GenericTypeKind.DICTIONARY) {
+    } else if (type.kind == OmniTypeKind.DICTIONARY) {
       this.getTypesRecursively(type.keyType, target, edge, isEdge);
       this.getTypesRecursively(type.valueType, target, edge, isEdge);
     }

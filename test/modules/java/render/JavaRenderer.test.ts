@@ -8,7 +8,7 @@ import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {GenericModelUtil} from '@parse/GenericModelUtil';
-import {GenericEndpoint, GenericModel, GenericOutput, GenericProperty, GenericTypeKind} from '@parse';
+import {OmniEndpoint, OmniModel, OmniOutput, OmniProperty, OmniTypeKind} from '@parse';
 
 // const SegfaultHandler = require('segfault-handler');
 // SegfaultHandler.registerHandler('crash.log');
@@ -159,7 +159,7 @@ describe('Test the rendering of a CST tree to string', () => {
   });
 });
 
-function getEndpoint(model: GenericModel, endpointName: string): GenericEndpoint {
+function getEndpoint(model: OmniModel, endpointName: string): OmniEndpoint {
   const endpoint = model.endpoints.find(it => it.name == endpointName);
   if (!endpoint) {
     throw new Error(`No endpoint called ${endpointName}`);
@@ -168,7 +168,7 @@ function getEndpoint(model: GenericModel, endpointName: string): GenericEndpoint
   return endpoint;
 }
 
-function getEndpointResult(model: GenericModel, endpointName: string): GenericOutput {
+function getEndpointResult(model: OmniModel, endpointName: string): OmniOutput {
   const endpoint = getEndpoint(model, endpointName);
   if (endpoint.responses.length == 0) {
     throw new Error(`There are no responses in ${endpointName}`);
@@ -177,9 +177,9 @@ function getEndpointResult(model: GenericModel, endpointName: string): GenericOu
   return endpoint.responses[0];
 }
 
-function getEndpointResultProperty(model: GenericModel, endpointName: string, propertyName: string): GenericProperty {
+function getEndpointResultProperty(model: OmniModel, endpointName: string, propertyName: string): OmniProperty {
   const result = getEndpointResult(model, endpointName);
-  if (result.type.kind != GenericTypeKind.OBJECT) {
+  if (result.type.kind != OmniTypeKind.OBJECT) {
     throw new Error(`Cannot get property from ${endpointName} result since it's not an object`);
   }
 

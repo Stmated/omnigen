@@ -1,7 +1,7 @@
 import * as Java from './cst/types';
 import {ModifierType} from '@java/cst';
 import {pascalCase} from 'change-case';
-import {GenericDictionaryType, GenericPrimitiveKind, GenericPrimitiveType, GenericType, GenericTypeKind} from '@parse';
+import {OmniDictionaryType, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
@@ -9,13 +9,13 @@ import {CstRootNode} from '@cst/CstRootNode';
 import {Naming} from '@parse/Naming';
 
 interface FqnOptions {
-  type: GenericType,
+  type: OmniType,
   withSuffix?: boolean;
   options?: JavaOptions;
   relativeTo?: string;
 }
 
-export type FqnArgs = GenericType | FqnOptions;
+export type FqnArgs = OmniType | FqnOptions;
 
 export class JavaUtil {
 
@@ -32,7 +32,7 @@ export class JavaUtil {
     }
   }
 
-  public static getRelativeName(type: GenericType, options: JavaOptions, relativeTo = options.package): string {
+  public static getRelativeName(type: OmniType, options: JavaOptions, relativeTo = options.package): string {
     return JavaUtil.getName({
       type: type,
       withSuffix: true,
@@ -41,7 +41,7 @@ export class JavaUtil {
     });
   }
 
-  public static getImportName(type: GenericType, options: JavaOptions): string {
+  public static getImportName(type: OmniType, options: JavaOptions): string {
     return JavaUtil.getName({
       type: type,
       options: options,
@@ -54,13 +54,13 @@ export class JavaUtil {
    */
   public static getName(args: FqnOptions): string {
 
-    if (args.type.kind == GenericTypeKind.ARRAY) {
+    if (args.type.kind == OmniTypeKind.ARRAY) {
       if (args.withSuffix === false) {
         return JavaUtil.getName({...args, ...{type: args.type.of}});
       } else {
         return JavaUtil.getName({...args, ...{type: args.type.of}}) + '[]';
       }
-    } else if (args.type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION || args.type.kind == GenericTypeKind.ARRAY_TYPES_BY_POSITION) {
+    } else if (args.type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION || args.type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
 
       // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
 
@@ -84,7 +84,7 @@ export class JavaUtil {
         return `${javaType}[]`;
       }
 
-    } else if (args.type.kind == GenericTypeKind.NULL) {
+    } else if (args.type.kind == OmniTypeKind.NULL) {
       // The type is "No Type. Void." It is not even really an Object.
       // But we return it as an Object in case we really need to display it somewhere.
       if (args.relativeTo) {
@@ -92,19 +92,19 @@ export class JavaUtil {
       } else {
         return 'java.lang.Object';
       }
-    } else if (args.type.kind == GenericTypeKind.PRIMITIVE) {
+    } else if (args.type.kind == OmniTypeKind.PRIMITIVE) {
       if (args.relativeTo) {
         return JavaUtil.getClassName(this.getPrimitiveKindName(args.type), args.withSuffix);
       } else {
         return JavaUtil.getCleanedFullyQualifiedName(this.getPrimitiveKindName(args.type), args.withSuffix);
       }
-    } else if (args.type.kind == GenericTypeKind.UNKNOWN) {
+    } else if (args.type.kind == OmniTypeKind.UNKNOWN) {
       if (args.relativeTo) {
         return JavaUtil.getClassName(this.getUnknownType(args.options?.unknownType), args.withSuffix);
       } else {
         return JavaUtil.getCleanedFullyQualifiedName(this.getUnknownType(args.options?.unknownType), args.withSuffix);
       }
-    } else if (args.type.kind == GenericTypeKind.DICTIONARY) {
+    } else if (args.type.kind == OmniTypeKind.DICTIONARY) {
 
       const mapClass = args.relativeTo ? `HashMap` : `java.lang.HashMap`;
       if (args.withSuffix === false) {
@@ -115,7 +115,7 @@ export class JavaUtil {
         return `${mapClass}<${keyString}, ${valueString}>`;
       }
 
-    } else if (args.type.kind == GenericTypeKind.REFERENCE) {
+    } else if (args.type.kind == OmniTypeKind.REFERENCE) {
 
       if (args.relativeTo) {
         return JavaUtil.getClassName(args.type.fqn, args.withSuffix);
@@ -135,27 +135,27 @@ export class JavaUtil {
     }
   }
 
-  private static getPrimitiveKindName(type: GenericPrimitiveType): string {
+  private static getPrimitiveKindName(type: OmniPrimitiveType): string {
     switch (type.primitiveKind) {
-      case GenericPrimitiveKind.BOOL:
+      case OmniPrimitiveKind.BOOL:
         return type.nullable ? 'java.lang.Boolean' : 'boolean';
-      case GenericPrimitiveKind.VOID:
+      case OmniPrimitiveKind.VOID:
         return 'void';
-      case GenericPrimitiveKind.CHAR:
+      case OmniPrimitiveKind.CHAR:
         return type.nullable ? 'java.lang.Character' : 'char';
-      case GenericPrimitiveKind.STRING:
+      case OmniPrimitiveKind.STRING:
         return 'String';
-      case GenericPrimitiveKind.FLOAT:
+      case OmniPrimitiveKind.FLOAT:
         return type.nullable ? 'java.lang.Float' : 'float';
-      case GenericPrimitiveKind.INTEGER:
+      case OmniPrimitiveKind.INTEGER:
         return type.nullable ? 'java.lang.Integer' : 'int';
-      case GenericPrimitiveKind.INTEGER_SMALL:
+      case OmniPrimitiveKind.INTEGER_SMALL:
         return type.nullable ? 'java.lang.Short' : 'short';
-      case GenericPrimitiveKind.LONG:
+      case OmniPrimitiveKind.LONG:
         return type.nullable ? 'java.lang.Long' : 'long';
-      case GenericPrimitiveKind.DECIMAL:
-      case GenericPrimitiveKind.DOUBLE:
-      case GenericPrimitiveKind.NUMBER:
+      case OmniPrimitiveKind.DECIMAL:
+      case OmniPrimitiveKind.DOUBLE:
+      case OmniPrimitiveKind.NUMBER:
         return type.nullable ? 'java.lang.Double' : 'double';
     }
   }
@@ -235,10 +235,10 @@ export class JavaUtil {
   /**
    * Move to elsewhere, these should be based on the renderer and its settings?
    */
-  public static getGetterName(baseName: string, type: GenericType): string {
+  public static getGetterName(baseName: string, type: OmniType): string {
     const capitalized = pascalCase(baseName);
-    if (type.kind != GenericTypeKind.ARRAY) {
-      if (type.kind == GenericTypeKind.PRIMITIVE && type.primitiveKind == GenericPrimitiveKind.BOOL && !type.nullable) {
+    if (type.kind != OmniTypeKind.ARRAY) {
+      if (type.kind == OmniTypeKind.PRIMITIVE && type.primitiveKind == OmniPrimitiveKind.BOOL && !type.nullable) {
         return `is${capitalized}`;
       }
     }
@@ -246,14 +246,14 @@ export class JavaUtil {
     return `get${capitalized}`;
   }
 
-  public static getSetterName(baseName: string, type: GenericType): string {
+  public static getSetterName(baseName: string, type: OmniType): string {
     const capitalized = pascalCase(baseName);
     return `set${capitalized}`;
   }
 
-  public static getCommonDenominator(...types: GenericType[]): GenericType | undefined {
+  public static getCommonDenominator(...types: OmniType[]): OmniType | undefined {
 
-    let common: GenericType | undefined = types[0];
+    let common: OmniType | undefined = types[0];
     for (let i = 1; i < types.length; i++) {
       common = JavaUtil.getCommonDenominatorBetween(common, types[i]);
       if (!common) {
@@ -264,81 +264,81 @@ export class JavaUtil {
     return common;
   }
 
-  public static getCommonDenominatorBetween(a: GenericType, b: GenericType): GenericType | undefined {
+  public static getCommonDenominatorBetween(a: OmniType, b: OmniType): OmniType | undefined {
 
     if (a == b) {
       return a;
     }
 
-    if (a.kind == GenericTypeKind.PRIMITIVE) {
-      if (b.kind == GenericTypeKind.PRIMITIVE) {
+    if (a.kind == OmniTypeKind.PRIMITIVE) {
+      if (b.kind == OmniTypeKind.PRIMITIVE) {
         if (a.primitiveKind == b.primitiveKind) {
           return a;
         }
 
-        if (a.primitiveKind == GenericPrimitiveKind.INTEGER || a.primitiveKind == GenericPrimitiveKind.INTEGER_SMALL) {
-          if (b.primitiveKind == GenericPrimitiveKind.LONG || b.primitiveKind == GenericPrimitiveKind.DOUBLE || b.primitiveKind == GenericPrimitiveKind.FLOAT || b.primitiveKind == GenericPrimitiveKind.DECIMAL) {
+        if (a.primitiveKind == OmniPrimitiveKind.INTEGER || a.primitiveKind == OmniPrimitiveKind.INTEGER_SMALL) {
+          if (b.primitiveKind == OmniPrimitiveKind.LONG || b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.FLOAT || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
             return b;
           }
-        } else if (a.primitiveKind == GenericPrimitiveKind.LONG) {
-          if (b.primitiveKind == GenericPrimitiveKind.DOUBLE || b.primitiveKind == GenericPrimitiveKind.FLOAT || b.primitiveKind == GenericPrimitiveKind.DECIMAL) {
+        } else if (a.primitiveKind == OmniPrimitiveKind.LONG) {
+          if (b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.FLOAT || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
             return b;
           }
-        } else if (a.primitiveKind == GenericPrimitiveKind.FLOAT) {
-          if (b.primitiveKind == GenericPrimitiveKind.DOUBLE || b.primitiveKind == GenericPrimitiveKind.DECIMAL) {
+        } else if (a.primitiveKind == OmniPrimitiveKind.FLOAT) {
+          if (b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
             return b;
           }
-        } else if (a.primitiveKind == GenericPrimitiveKind.DECIMAL) {
-          if (b.primitiveKind == GenericPrimitiveKind.DOUBLE) {
+        } else if (a.primitiveKind == OmniPrimitiveKind.DECIMAL) {
+          if (b.primitiveKind == OmniPrimitiveKind.DOUBLE) {
             return b;
           }
-        } else if (a.primitiveKind == GenericPrimitiveKind.NUMBER) {
-          if (b.primitiveKind == GenericPrimitiveKind.INTEGER || b.primitiveKind == GenericPrimitiveKind.INTEGER_SMALL || b.primitiveKind == GenericPrimitiveKind.LONG || b.primitiveKind == GenericPrimitiveKind.DOUBLE || b.primitiveKind == GenericPrimitiveKind.FLOAT || b.primitiveKind == GenericPrimitiveKind.DECIMAL) {
+        } else if (a.primitiveKind == OmniPrimitiveKind.NUMBER) {
+          if (b.primitiveKind == OmniPrimitiveKind.INTEGER || b.primitiveKind == OmniPrimitiveKind.INTEGER_SMALL || b.primitiveKind == OmniPrimitiveKind.LONG || b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.FLOAT || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
             return b;
           }
-        } else if (a.primitiveKind == GenericPrimitiveKind.CHAR) {
-          if (b.primitiveKind == GenericPrimitiveKind.STRING) {
+        } else if (a.primitiveKind == OmniPrimitiveKind.CHAR) {
+          if (b.primitiveKind == OmniPrimitiveKind.STRING) {
             return b;
           }
         }
       }
-    } else if (a.kind == GenericTypeKind.REFERENCE) {
-      if (b.kind == GenericTypeKind.REFERENCE) {
+    } else if (a.kind == OmniTypeKind.REFERENCE) {
+      if (b.kind == OmniTypeKind.REFERENCE) {
         return a.fqn === b.fqn ? a : undefined;
       }
-    } else if (a.kind == GenericTypeKind.ENUM) {
-      if (b.kind == GenericTypeKind.ENUM) {
+    } else if (a.kind == OmniTypeKind.ENUM) {
+      if (b.kind == OmniTypeKind.ENUM) {
         return Naming.unwrap(a.name) == Naming.unwrap(b.name) ? a : undefined;
       }
-    } else if (a.kind == GenericTypeKind.DICTIONARY) {
-      if (b.kind == GenericTypeKind.DICTIONARY) {
+    } else if (a.kind == OmniTypeKind.DICTIONARY) {
+      if (b.kind == OmniTypeKind.DICTIONARY) {
         const commonKey = JavaUtil.getCommonDenominator(a.keyType, b.keyType);
         if (commonKey) {
           const commonValue = JavaUtil.getCommonDenominator(a.valueType, b.valueType);
           if (commonValue) {
-            return <GenericDictionaryType>{
+            return <OmniDictionaryType>{
               name: () => `CommonBetween${Naming.safer(a)}And${Naming.safer(b)}`,
-              kind: GenericTypeKind.DICTIONARY,
+              kind: OmniTypeKind.DICTIONARY,
               keyType: commonKey,
               valueType: commonValue,
             };
           }
         }
       }
-    } else if (a.kind == GenericTypeKind.ARRAY) {
+    } else if (a.kind == OmniTypeKind.ARRAY) {
 
-    } else if (a.kind == GenericTypeKind.UNKNOWN) {
-      if (b.kind == GenericTypeKind.UNKNOWN) {
+    } else if (a.kind == OmniTypeKind.UNKNOWN) {
+      if (b.kind == OmniTypeKind.UNKNOWN) {
         return a;
       }
-    } else if (a.kind == GenericTypeKind.NULL) {
-      if (b.kind == GenericTypeKind.NULL) {
+    } else if (a.kind == OmniTypeKind.NULL) {
+      if (b.kind == OmniTypeKind.NULL) {
         return a;
       }
-    } else if (a.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-      if (b.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+    } else if (a.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+      if (b.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
         if (a.properties.length === b.properties.length) {
-          const commonTypes: GenericType[] = [];
+          const commonTypes: OmniType[] = [];
           for (let i = 0; i < a.properties.length; i++) {
             if (a.properties[i].name !== b.properties[i].name) {
               return undefined;
@@ -356,7 +356,7 @@ export class JavaUtil {
           return a;
         }
       }
-    } else if (a.kind == GenericTypeKind.OBJECT) {
+    } else if (a.kind == OmniTypeKind.OBJECT) {
 
       // Is there ever *anything* we can do here?
     }
@@ -429,7 +429,7 @@ export class JavaUtil {
     }
   }
 
-  public static getClassDeclaration(root: CstRootNode, type: GenericType): Java.ClassDeclaration | undefined {
+  public static getClassDeclaration(root: CstRootNode, type: OmniType): Java.ClassDeclaration | undefined {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
     const holder: { ref?: Java.ClassDeclaration } = {};
@@ -444,17 +444,17 @@ export class JavaUtil {
     return holder.ref;
   }
 
-  public static getExtendType(type: GenericType): GenericType | undefined {
+  public static getExtendType(type: OmniType): OmniType | undefined {
 
     // TODO: Implement! Should have *one* if possible, the best common denominator between most types.
-    if (type.kind == GenericTypeKind.OBJECT) {
+    if (type.kind == OmniTypeKind.OBJECT) {
 
       if (type.extendedBy) {
 
         // TODO: This is probably VERY wrong at the moment. Need to figure out which SINGLE type in probable composition to extend from
-        if (type.extendedBy.kind == GenericTypeKind.OBJECT) {
+        if (type.extendedBy.kind == OmniTypeKind.OBJECT) {
           return type.extendedBy;
-        } else if (type.extendedBy.kind == GenericTypeKind.COMPOSITION) {
+        } else if (type.extendedBy.kind == OmniTypeKind.COMPOSITION) {
 
           // TODO: Need to figure out which one it is we should actually *extend* from. It can only be one.
         }
@@ -469,16 +469,16 @@ export class JavaUtil {
     return undefined;
   }
 
-  public static getImplementsTypes(type: GenericType): GenericType[] {
+  public static getImplementsTypes(type: OmniType): OmniType[] {
 
     // TODO: Implement! Should be any number of types that will be inherited from as interfaces.
     return [];
   }
 
-  public static getExtendHierarchy(type: GenericType): GenericType[] {
+  public static getExtendHierarchy(type: OmniType): OmniType[] {
 
-    const path: GenericType[] = [];
-    let pointer: GenericType | undefined = type;
+    const path: OmniType[] = [];
+    let pointer: OmniType | undefined = type;
     while (pointer = JavaUtil.getExtendType(pointer)) {
       path.push(pointer);
     }

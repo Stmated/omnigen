@@ -2,12 +2,12 @@ import AbstractNode from '@cst/AbstractNode';
 import AbstractToken from '@cst/AbstractToken';
 import {JavaOptions, JavaUtil, UnknownType} from '@java';
 import {
-  GenericClassType,
-  GenericDictionaryType,
-  GenericPrimitiveKind,
-  GenericPrimitiveType,
-  GenericType,
-  GenericTypeKind
+  OmniClassType,
+  OmniDictionaryType,
+  OmniPrimitiveKind,
+  OmniPrimitiveType,
+  OmniType,
+  OmniTypeKind
 } from '@parse';
 import {VisitResult} from '@visit';
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
@@ -47,11 +47,11 @@ export abstract class AbstractJavaNode extends AbstractNode {
 }
 
 export class Type extends AbstractJavaNode {
-  genericType: GenericType;
+  genericType: OmniType;
   private _localName?: string;
 
   get array(): boolean {
-    return this.genericType.kind == GenericTypeKind.ARRAY;
+    return this.genericType.kind == OmniTypeKind.ARRAY;
   }
 
   getFQN(options: JavaOptions, relativeTo?: string): string {
@@ -70,7 +70,7 @@ export class Type extends AbstractJavaNode {
     this._localName = value;
   }
 
-  constructor(genericType: GenericType) {
+  constructor(genericType: OmniType) {
     super();
     this.genericType = genericType;
   }
@@ -576,10 +576,10 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 
 export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
   get type(): Type {
-    return new Type(<GenericPrimitiveType>{
+    return new Type(<OmniPrimitiveType>{
       name: () => 'void',
-      kind: GenericTypeKind.PRIMITIVE,
-      primitiveKind: GenericPrimitiveKind.VOID,
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: OmniPrimitiveKind.VOID,
     });
   }
 
@@ -760,22 +760,22 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     super();
 
     // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
-    const keyType: GenericPrimitiveType = {
+    const keyType: OmniPrimitiveType = {
       name: () => 'AdditionalPropertiesKeyType',
-      kind: GenericTypeKind.PRIMITIVE,
-      primitiveKind: GenericPrimitiveKind.STRING
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: OmniPrimitiveKind.STRING
     };
 
     // TODO: Should this be "Unknown" or another type that is "Any"?
     //  Difference between rendering as JsonNode and Object in some cases.
-    const valueType: GenericClassType = {
+    const valueType: OmniClassType = {
       name: () => 'AdditionalPropertiesValueType',
-      kind: GenericTypeKind.UNKNOWN,
+      kind: OmniTypeKind.UNKNOWN,
       additionalProperties: false
     }
-    const mapType: GenericDictionaryType = {
+    const mapType: OmniDictionaryType = {
       name: () => 'AdditionalProperties',
-      kind: GenericTypeKind.DICTIONARY,
+      kind: OmniTypeKind.DICTIONARY,
       keyType: keyType,
       valueType: valueType
     };
@@ -792,10 +792,10 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     );
 
     const addMethod = new MethodDeclaration(
-      new Type(<GenericPrimitiveType>{
+      new Type(<OmniPrimitiveType>{
         name: () => '',
-        kind: GenericTypeKind.PRIMITIVE,
-        primitiveKind: GenericPrimitiveKind.VOID
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.VOID
       }),
       new Identifier('addAdditionalProperty'),
       new ArgumentDeclarationList(
@@ -821,7 +821,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       new Annotation(
         new Type({
           name: () => 'AnySetter',
-          kind: GenericTypeKind.REFERENCE,
+          kind: OmniTypeKind.REFERENCE,
           fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
         }),
       )
@@ -835,7 +835,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
         new AnnotationList(new Annotation(
           new Type({
             name: () => 'AnyGetter',
-            kind: GenericTypeKind.REFERENCE,
+            kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
           }),
         ))
@@ -1043,15 +1043,15 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
   getters: FieldBackedGetter[];
   methods: MethodDeclaration[];
 
-  constructor(types: GenericType[], options: JavaOptions, commentSupplier: {(type: GenericType): Comment[]}) {
+  constructor(types: OmniType[], options: JavaOptions, commentSupplier: {(type: OmniType): Comment[]}) {
     super();
 
     this.fields = [];
     this.getters = [];
     this.methods = [];
 
-    const unknownType: GenericClassType = {
-      kind: GenericTypeKind.UNKNOWN,
+    const unknownType: OmniClassType = {
+      kind: OmniTypeKind.UNKNOWN,
       name: 'unknown'
     };
 
@@ -1065,7 +1065,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       undefined,
       new AnnotationList(
         new Java.Annotation(
-          new Java.Type({kind: GenericTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue', name: 'JsonValue'}),
+          new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue', name: 'JsonValue'}),
         )
       )
     );
@@ -1091,7 +1091,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
         const objectMapperReference = new Identifier('objectMapper');
         argumentDeclarationList.children.push(
           new ArgumentDeclaration(
-            new Type({kind: GenericTypeKind.REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper", name: 'om'}),
+            new Type({kind: OmniTypeKind.REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper", name: 'om'}),
             objectMapperReference
           )
         );

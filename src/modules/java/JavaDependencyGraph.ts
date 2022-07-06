@@ -1,4 +1,4 @@
-import {GenericClassType, GenericCompositionType, GenericType, GenericTypeKind} from '@parse';
+import {OmniClassType, OmniCompositionType, OmniType, OmniTypeKind} from '@parse';
 import {DependencyGraph} from '@parse/DependencyGraphBuilder';
 
 export class JavaDependencyGraph {
@@ -7,20 +7,20 @@ export class JavaDependencyGraph {
   //   return graph.abstracts.includes(type);
   // }
 
-  public static isInterface(graph: DependencyGraph, type: GenericType): boolean {
+  public static isInterface(graph: DependencyGraph, type: OmniType): boolean {
     return graph.interfaces.includes(type);
   }
 
-  public static isClass(graph: DependencyGraph, type: GenericType): boolean {
+  public static isClass(graph: DependencyGraph, type: OmniType): boolean {
     return !JavaDependencyGraph.isInterface(graph, type);
   }
 
-  public static getExtends(graph: DependencyGraph, type: GenericClassType | GenericCompositionType): GenericClassType | undefined {
+  public static getExtends(graph: DependencyGraph, type: OmniClassType | OmniCompositionType): OmniClassType | undefined {
 
     const uses = graph.uses.get(type);
     if (uses) {
       for (const use of uses) {
-        if (use.kind == GenericTypeKind.OBJECT && JavaDependencyGraph.isClass(graph, use)) {
+        if (use.kind == OmniTypeKind.OBJECT && JavaDependencyGraph.isClass(graph, use)) {
 
           // It is not an interface. So either an abstract class or a concrete class. Either works.
           return use;
@@ -31,9 +31,9 @@ export class JavaDependencyGraph {
     return undefined;
   }
 
-  public static getImplements(graph: DependencyGraph, type: GenericClassType | GenericCompositionType): GenericType[] {
+  public static getImplements(graph: DependencyGraph, type: OmniClassType | OmniCompositionType): OmniType[] {
 
-    const interfaces: GenericType[] = [];
+    const interfaces: OmniType[] = [];
     const uses = graph.uses.get(type);
     if (uses) {
       for (const use of uses) {
@@ -50,9 +50,9 @@ export class JavaDependencyGraph {
     return interfaces;
   }
 
-  public static superMatches(graph: DependencyGraph, type: GenericClassType, callback: { (classType: GenericClassType): boolean}): boolean {
+  public static superMatches(graph: DependencyGraph, type: OmniClassType, callback: { (classType: OmniClassType): boolean}): boolean {
 
-    let pointer: GenericClassType | undefined = type;
+    let pointer: OmniClassType | undefined = type;
     while (pointer = JavaDependencyGraph.getExtends(graph, pointer)) {
       if (callback(pointer)) {
         return true;

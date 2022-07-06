@@ -1,10 +1,10 @@
 import {
   CompositionKind,
-  GenericClassType,
-  GenericCompositionType,
-  GenericPrimitiveKind,
-  GenericType,
-  GenericTypeKind
+  OmniClassType,
+  OmniCompositionType,
+  OmniPrimitiveKind,
+  OmniType,
+  OmniTypeKind
 } from '@parse';
 import {
   DEFAULT_GRAPH_OPTIONS,
@@ -21,7 +21,7 @@ describe('Test CompositionDependencyUtil', () => {
     ...{}
   };
 
-  function java(namedTypes: GenericType[]): DependencyGraph {
+  function java(namedTypes: OmniType[]): DependencyGraph {
     return DependencyGraphBuilder.build(namedTypes, javaOptions);
   }
 
@@ -39,8 +39,8 @@ describe('Test CompositionDependencyUtil', () => {
   test('One Primitive', async () => {
     const result = java([{
       name: () => 'number',
-      kind: GenericTypeKind.PRIMITIVE,
-      primitiveKind: GenericPrimitiveKind.NUMBER,
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: OmniPrimitiveKind.NUMBER,
     }]);
 
     expect(result).toBeDefined();
@@ -227,10 +227,10 @@ describe('Test CompositionDependencyUtil', () => {
   });
 });
 
-type MapArg = Array<[GenericType, Array<GenericType>]>;
+type MapArg = Array<[OmniType, Array<OmniType>]>;
 
-function getUsedBy(original: Map<GenericType, GenericType[]>): Map<GenericType, GenericType[]> {
-  const map = new Map<GenericType, GenericType[]>();
+function getUsedBy(original: Map<OmniType, OmniType[]>): Map<OmniType, OmniType[]> {
+  const map = new Map<OmniType, OmniType[]>();
   for (const e of original.entries()) {
     for (const key of e[1]) {
       map.set(key, (map.get(key) || []).concat(e[0]));
@@ -240,8 +240,8 @@ function getUsedBy(original: Map<GenericType, GenericType[]>): Map<GenericType, 
   return map;
 }
 
-function map(arg: MapArg): Map<GenericType, GenericType[]> {
-  const map = new Map<GenericType, GenericType[]>();
+function map(arg: MapArg): Map<OmniType, OmniType[]> {
+  const map = new Map<OmniType, OmniType[]>();
   for (const array of arg) {
     map.set(array[0], array[1]);
   }
@@ -249,27 +249,27 @@ function map(arg: MapArg): Map<GenericType, GenericType[]> {
   return map;
 }
 
-function obj(name: string, extendedBy?: GenericType): GenericClassType {
+function obj(name: string, extendedBy?: OmniType): OmniClassType {
   return {
     name: name,
-    kind: GenericTypeKind.OBJECT,
+    kind: OmniTypeKind.OBJECT,
     extendedBy: extendedBy,
     additionalProperties: false,
   };
 }
 
-function and(...types: GenericType[]): GenericCompositionType {
+function and(...types: OmniType[]): OmniCompositionType {
   return {
     name: types.map(it => Naming.unwrap(it.name)).join('And'),
-    kind: GenericTypeKind.COMPOSITION,
+    kind: OmniTypeKind.COMPOSITION,
     compositionKind: CompositionKind.AND,
     types: types,
   };
 }
 
 function inlineClassWithProp(name: string,) {
-  const inline: GenericClassType = {
-    kind: GenericTypeKind.OBJECT,
+  const inline: OmniClassType = {
+    kind: OmniTypeKind.OBJECT,
     properties: [],
     name: `${name}Class`,
   };
@@ -277,7 +277,7 @@ function inlineClassWithProp(name: string,) {
     {
       name: `${name}Property`,
       owner: inline,
-      type: {name: "integer", kind: GenericTypeKind.PRIMITIVE, primitiveKind: GenericPrimitiveKind.INTEGER}
+      type: {name: "integer", kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER}
     }
   ];
   return inline;

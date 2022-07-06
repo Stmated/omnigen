@@ -1,4 +1,4 @@
-import {GenericTypeKind, OpenRpcParser, SchemaFile} from '@parse';
+import {OmniTypeKind, OpenRpcParser, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import assert = require('assert');
@@ -39,9 +39,9 @@ describe('Test Generic Model Creation', () => {
     expect(Naming.unwrap(model.endpoints[0].responses[0].type.name)).toEqual('GetPetsResponse'); // Should this be 'pet' since is name of `result`?
 
     const response0 = model.endpoints[0].responses[0];
-    expect(response0.type.kind).toEqual(GenericTypeKind.OBJECT);
+    expect(response0.type.kind).toEqual(OmniTypeKind.OBJECT);
 
-    const response0properties = ((response0.type.kind == GenericTypeKind.OBJECT) ? response0.type.properties : []) || [];
+    const response0properties = ((response0.type.kind == OmniTypeKind.OBJECT) ? response0.type.properties : []) || [];
     expect(response0properties).toBeDefined();
     expect(response0properties).toHaveLength(3);
     expect(response0properties[0].name).toEqual('result');

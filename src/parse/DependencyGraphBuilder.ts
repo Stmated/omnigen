@@ -1,4 +1,4 @@
-import {GenericClassType, GenericType, GenericTypeKind} from '@parse/GenericModel';
+import {OmniClassType, OmniType, OmniTypeKind} from '@parse/OmniModel';
 
 /**
  * Used for building a dependency graph from a list of existing types.
@@ -16,18 +16,18 @@ export class DependencyGraphBuilder {
    *
    * @param namedTypes The types that are named. All other types are inline/anonymous
    */
-  public static build(namedTypes: GenericType[], options = DEFAULT_GRAPH_OPTIONS): DependencyGraph {
+  public static build(namedTypes: OmniType[], options = DEFAULT_GRAPH_OPTIONS): DependencyGraph {
 
     const graph: DependencyGraph = {
       // usedBy: new Map<GenericType, GenericType[]>(),
-      uses: new Map<GenericType, GenericType[]>(),
+      uses: new Map<OmniType, OmniType[]>(),
       // abstracts: [], // TODO: Always empty for now. Need to implement later
       concretes: [],
       interfaces: []
     };
 
     for (const type of namedTypes) {
-      if (type.kind == GenericTypeKind.OBJECT) {
+      if (type.kind == OmniTypeKind.OBJECT) {
         graph.concretes.push(type);
 
         if (type.extendedBy) {
@@ -35,7 +35,7 @@ export class DependencyGraphBuilder {
             this.addUseToGraph(graph, type, expanded);
           }
         }
-      } else if (type.kind == GenericTypeKind.COMPOSITION) {
+      } else if (type.kind == OmniTypeKind.COMPOSITION) {
         graph.concretes.push(type);
         for (const expanded of DependencyGraphBuilder.expand(type)) {
           this.addUseToGraph(graph, type, expanded);
@@ -51,7 +51,7 @@ export class DependencyGraphBuilder {
       for (let i = 0; i < ancestors.length; i++) {
         for (let n = i + 1; n < ancestors.length; n++) {
 
-          const found: GenericType[] = [];
+          const found: OmniType[] = [];
           for (let a = 0; a < ancestors[i].length; a++) {
             for (let b = 0; b < ancestors[n].length; b++) {
               if (ancestors[i][a] == ancestors[n][b]) {
@@ -88,7 +88,7 @@ export class DependencyGraphBuilder {
     return graph;
   }
 
-  private static getCommonAncestors(graph: DependencyGraph, a: GenericType, b: GenericType): GenericType[] {
+  private static getCommonAncestors(graph: DependencyGraph, a: OmniType, b: OmniType): OmniType[] {
 
     const aAncestors = DependencyGraphBuilder.getAncestors(graph, a);
     const bAncestors = DependencyGraphBuilder.getAncestors(graph, b);
@@ -96,11 +96,11 @@ export class DependencyGraphBuilder {
     return this.getCommon(aAncestors, bAncestors);
   }
 
-  private static getCommon(a: GenericType[], b: GenericType[]): GenericType[] {
+  private static getCommon(a: OmniType[], b: OmniType[]): OmniType[] {
     return a.filter(value => b.includes(value));
   }
 
-  private static getAncestors(graph: DependencyGraph, type: GenericType): GenericType[] {
+  private static getAncestors(graph: DependencyGraph, type: OmniType): OmniType[] {
 
     const ancestors = graph.uses.get(type);
     if (ancestors) {
@@ -110,7 +110,7 @@ export class DependencyGraphBuilder {
     }
   }
 
-  private static addUseToGraph(graph: DependencyGraph, usedBy: GenericType, uses: GenericType): void {
+  private static addUseToGraph(graph: DependencyGraph, usedBy: OmniType, uses: OmniType): void {
     if (!graph.uses.get(usedBy)) {
       graph.uses.set(usedBy, []);
     }
@@ -119,9 +119,9 @@ export class DependencyGraphBuilder {
     graph.uses.set(usedBy, existingUses.concat(uses));
   }
 
-  private static expand(type: GenericType): GenericType[] {
+  private static expand(type: OmniType): OmniType[] {
 
-    if (type.kind == GenericTypeKind.COMPOSITION) {
+    if (type.kind == OmniTypeKind.COMPOSITION) {
       return type.types;
     } else {
       return [type];
@@ -140,8 +140,8 @@ export const DEFAULT_GRAPH_OPTIONS: DependencyGraphOptions = {
 export interface DependencyGraph {
 
   // usedBy: Map<GenericType, GenericType[]>;
-  uses: Map<GenericType, GenericType[]>;
-  concretes: GenericType[];
-  interfaces: GenericType[];
+  uses: Map<OmniType, OmniType[]>;
+  concretes: OmniType[];
+  interfaces: OmniType[];
   // abstracts: GenericType[];
 }

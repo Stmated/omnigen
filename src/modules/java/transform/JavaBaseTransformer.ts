@@ -2,17 +2,17 @@ import {AbstractJavaTransformer} from './AbstractJavaTransformer';
 import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
   CompositionKind,
-  GenericClassType,
-  GenericCompositionType,
-  GenericContinuationMapping,
-  GenericEnumType,
-  GenericExamplePairing,
-  GenericModel,
-  GenericOutput,
-  GenericPrimitiveType,
-  GenericProperty,
-  GenericType,
-  GenericTypeKind
+  OmniClassType,
+  OmniCompositionType,
+  OmniLinkMapping,
+  OmniEnumType,
+  OmniExamplePairing,
+  OmniModel,
+  OmniOutput,
+  OmniPrimitiveType,
+  OmniProperty,
+  OmniType,
+  OmniTypeKind
 } from '@parse';
 import * as Java from '@java/cst';
 import {camelCase, constantCase} from 'change-case';
@@ -24,7 +24,7 @@ import {GenericModelUtil} from '@parse/GenericModelUtil';
 export class JavaBaseTransformer extends AbstractJavaTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
 
-  transform(model: GenericModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
+  transform(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
@@ -34,7 +34,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     for (const type of exportableTypes.all) {
 
       if (!type.nameClassifier) {
-        if (type.kind == GenericTypeKind.PRIMITIVE) {
+        if (type.kind == OmniTypeKind.PRIMITIVE) {
 
           // Help with potential naming collisions.
           let fqn = JavaUtil.getFullyQualifiedName(type);
@@ -58,7 +58,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // The type has a valid name, but we will make sure it is in PascalCase for Java.
         // Also replace the callback with a new one, so it is set in stone from now on.
         type.name = Naming.safer(type, (v) => typeNames.includes(v));
-        if (type.kind != GenericTypeKind.PRIMITIVE) {
+        if (type.kind != OmniTypeKind.PRIMITIVE) {
 
           // If the type is primitive, then we don't care if it clashes with something else.
           // That is because the type will not be generated into a Compilation Unit anyway.
@@ -67,7 +67,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
-    const removedTypes: GenericType[] = [];
+    const removedTypes: OmniType[] = [];
     for (const type of exportableTypes.all) {
       removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
     }
@@ -82,13 +82,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     for (const type of exportableTypes.all) {
 
-      if (type.kind == GenericTypeKind.ARRAY) {
+      if (type.kind == OmniTypeKind.ARRAY) {
 
         // What do we do here?
 
-      } else if (type.kind == GenericTypeKind.ENUM) {
+      } else if (type.kind == OmniTypeKind.ENUM) {
         this.transformEnum(model, type, root, options);
-      } else if (type.kind == GenericTypeKind.COMPOSITION) {
+      } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
         // A composition type is likely just like any other object.
         // Just that has no real content in itself, but made up of the different parts.
@@ -96,26 +96,26 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // Then it should be extending A, and implementing B interface, and rendering B properties
         this.transformComposition(model, type, options, root, graph)
 
-      } else if (type.kind == GenericTypeKind.OBJECT) {
+      } else if (type.kind == OmniTypeKind.OBJECT) {
         this.transformObject(model, type, options, root, graph);
-      } else if (type.kind == GenericTypeKind.NULL) {
+      } else if (type.kind == OmniTypeKind.NULL) {
 
-      } else if (type.kind == GenericTypeKind.PRIMITIVE) {
+      } else if (type.kind == OmniTypeKind.PRIMITIVE) {
 
         // This is a primitive
-      } else if (type.kind == GenericTypeKind.DICTIONARY) {
+      } else if (type.kind == OmniTypeKind.DICTIONARY) {
 
         // This is a map. What to do here? It's a top-level type, so...?
-      } else if (type.kind == GenericTypeKind.REFERENCE) {
+      } else if (type.kind == OmniTypeKind.REFERENCE) {
 
         // This is a map in the target language, which we have zero control over.
-      } else if (type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+      } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
 
         // This is a list of static properties. This should modify the model, creating a marker interface?
         // Like an ISomethingOrOtherOrDifferent that contains the common properties, or is just empty?
         // (preferably they contain the ones in common, just because it's Nice).
 
-      } else if (type.kind == GenericTypeKind.ARRAY_TYPES_BY_POSITION) {
+      } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
 
         // This is a list of static types. This should modify the model, creating a marker interface?
         // Like an ISomethingOrOtherOrDifferent that contains the common properties, or is just empty?
@@ -128,7 +128,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return Promise.resolve();
   }
 
-  private transformEnum(model: GenericModel, type: GenericEnumType, root: JavaCstRootNode, options: JavaOptions): void {
+  private transformEnum(model: OmniModel, type: OmniEnumType, root: JavaCstRootNode, options: JavaOptions): void {
     const body = new Java.Block();
 
     const enumDeclaration = new Java.EnumDeclaration(
@@ -154,9 +154,9 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
       // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
       //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
-      const itemType: GenericPrimitiveType = {
+      const itemType: OmniPrimitiveType = {
         name: `ValueOfEnum${Naming.unwrap(type.name)}`,
-        kind: GenericTypeKind.PRIMITIVE,
+        kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: type.primitiveKind
       };
 
@@ -201,8 +201,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
   }
 
   private transformComposition(
-    model: GenericModel,
-    type: GenericCompositionType,
+    model: OmniModel,
+    type: OmniCompositionType,
     options: JavaOptions,
     root: JavaCstRootNode,
     graph: DependencyGraph
@@ -275,8 +275,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
   }
 
   private transformObject(
-    model: GenericModel,
-    type: GenericClassType,
+    model: OmniModel,
+    type: OmniClassType,
     options: JavaOptions,
     root: JavaCstRootNode,
     graph: DependencyGraph
@@ -311,7 +311,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     // TODO: Move into a separate transformer, and make it an option
     javaClass.annotations = new Java.AnnotationList(
       new Java.Annotation(
-        new Java.Type({kind: GenericTypeKind.REFERENCE, fqn: 'javax.annotation.Generated', name: 'Generated'}),
+        new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'javax.annotation.Generated', name: 'Generated'}),
         new Java.AnnotationKeyValuePairList(
           new Java.AnnotationKeyValuePair(
             new Java.Identifier('value'),
@@ -354,17 +354,17 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     ));
   }
 
-  private transformObjectProperty(model: GenericModel, body: Block, property: GenericProperty, options: JavaOptions): void {
+  private transformObjectProperty(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {
 
     const comments: Java.Comment[] = [];
-    if (property.type.kind != GenericTypeKind.OBJECT) {
+    if (property.type.kind != OmniTypeKind.OBJECT) {
 
       // If the type is not an object, then we will never create a class just for its sake.
       // So we should propagate all the examples and all other data we can find about it, to the property's comments.
 
       comments.push(...this.getCommentsForType(property.type, model, options));
 
-      if (property.type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+      if (property.type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
 
         const staticArrayStrings = property.type.properties.map((prop, idx) => {
           const typeName = JavaUtil.getFullyQualifiedName(prop.type);
@@ -397,7 +397,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     const commentList = (comments.length > 0) ? new Java.CommentList(...comments) : undefined;
 
-    if (property.type.kind == GenericTypeKind.NULL) {
+    if (property.type.kind == OmniTypeKind.NULL) {
 
       if (options.includeAlwaysNullProperties) {
 
@@ -419,7 +419,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       return;
     }
 
-    if (property.type.kind == GenericTypeKind.PRIMITIVE && property.type.valueConstant) {
+    if (property.type.kind == OmniTypeKind.PRIMITIVE && property.type.valueConstant) {
 
       const methodDeclaration = new Java.MethodDeclaration(
         new Java.Type(property.type),
@@ -442,7 +442,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     if (property.fieldName || property.propertyName) {
       getterAnnotations.push(
         new Java.Annotation(
-          new Java.Type({kind: GenericTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonProperty', name: 'JsonProperty'}),
+          new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonProperty', name: 'JsonProperty'}),
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
               undefined,
@@ -485,11 +485,11 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
   }
 
-  private getCommentsDescribingExtensions(type: GenericType): string {
+  private getCommentsDescribingExtensions(type: OmniType): string {
     return Naming.unwrap(type.name);
   }
 
-  private getCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {
+  private getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.Comment[] {
     const comments: Java.Comment[] = [];
     if (type.description) {
       comments.push(new Java.Comment(type.description));
@@ -498,13 +498,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       comments.push(new Java.Comment(type.summary));
     }
 
-    const handledResponse: GenericOutput[] = [];
+    const handledResponse: OmniOutput[] = [];
     for (const endpoint of model.endpoints) {
 
       // TODO: Redo so they are only linked by "@see" and stuff?
       // TODO: Is it even correct to go through the properties?
       // TODO: Should this be more generic, to have a sort of "visitor" for all types of a GenericModel?
-      if (endpoint.request.type.kind == GenericTypeKind.OBJECT && endpoint.request.type.properties) {
+      if (endpoint.request.type.kind == OmniTypeKind.OBJECT && endpoint.request.type.properties) {
         for (const property of endpoint.request.type.properties) {
           if (property.type == type) {
             if (property.description) {
@@ -553,13 +553,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return comments;
   }
 
-  private getLinkCommentsForType(type: GenericType, model: GenericModel, options: JavaOptions): Java.Comment[] {
+  private getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.Comment[] {
     const comments: Java.Comment[] = [];
     if (!options.includeLinksOnType) {
       return comments;
     }
 
-    if (type.kind == GenericTypeKind.OBJECT || type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+    if (type.kind == OmniTypeKind.OBJECT || type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
       for (const continuation of (model.continuations || [])) {
 
         // Look if any of the continuation source or targets use this type as root.
@@ -597,7 +597,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return comments;
   }
 
-  private getLinkCommentsForProperty(property: GenericProperty, model: GenericModel, options: JavaOptions): Java.Comment[] {
+  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): Java.Comment[] {
     const comments: Java.Comment[] = [];
     if (!options.includeLinksOnProperty) {
       return comments;
@@ -627,13 +627,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return comments;
   }
 
-  private getLink(propertyOwner: GenericType, property: GenericProperty, options: JavaOptions): string {
+  private getLink(propertyOwner: OmniType, property: OmniProperty, options: JavaOptions): string {
 
     const memberName = `${JavaUtil.getGetterName(property.name, property.type)}()`;
     return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
   }
 
-  private getExampleComments(example: GenericExamplePairing, options: JavaOptions): Java.Comment[] {
+  private getExampleComments(example: OmniExamplePairing, options: JavaOptions): Java.Comment[] {
 
     const commentLines: string[] = [];
     commentLines.push(`<h2>Example - ${example.name}</h2>`);
@@ -688,7 +688,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
   }
 
   private getMappingSourceTargetComment(
-    mapping: GenericContinuationMapping,
+    mapping: OmniLinkMapping,
     options: JavaOptions,
     only: 'source' | 'target' | undefined = undefined
   ): Java.Comment {
@@ -740,11 +740,11 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
   }
 
-  private toJavaType(type: GenericType): Java.Type {
+  private toJavaType(type: OmniType): Java.Type {
     return new Java.Type(type);
   }
 
-  private simplifyTypeAndReturnUnwanted(type: GenericType): GenericType[] {
+  private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
 
     // TODO: Below should not be needed, this "should not happen" -- it should have been normalized by the source
 
@@ -758,13 +758,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     //   }
     // }
 
-    if (type.kind == GenericTypeKind.COMPOSITION) {
+    if (type.kind == OmniTypeKind.COMPOSITION) {
       if (type.compositionKind == CompositionKind.XOR) {
         if (type.types.length == 2) {
-          const nullType = type.types.find(it => it.kind == GenericTypeKind.NULL);
+          const nullType = type.types.find(it => it.kind == OmniTypeKind.NULL);
           if (nullType) {
-            const otherType = type.types.find(it => it.kind != GenericTypeKind.NULL);
-            if (otherType && otherType.kind == GenericTypeKind.PRIMITIVE) {
+            const otherType = type.types.find(it => it.kind != OmniTypeKind.NULL);
+            if (otherType && otherType.kind == OmniTypeKind.PRIMITIVE) {
 
               // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
               this.clearProperties(type);
@@ -775,7 +775,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
                 }
               });
               return [otherType];
-            } else if (otherType && otherType.kind == GenericTypeKind.OBJECT) {
+            } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
 
               // For Java, any object can always be null.
               // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
@@ -791,7 +791,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return [];
   }
 
-  private clearProperties(type: GenericType): void {
+  private clearProperties(type: OmniType): void {
     for (const key of Object.keys(type)) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       delete (type as any)[key];

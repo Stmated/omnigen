@@ -1,4 +1,4 @@
-import {GenericModel, OpenRpcParser, SchemaFile} from '../src';
+import {OmniModel, OpenRpcParser, SchemaFile} from '../src';
 import fs from 'fs/promises';
 
 type KnownSchemaNames = 'openrpc';
@@ -17,7 +17,7 @@ export class TestUtils {
     });
   }
 
-  static async readExample(type: KnownSchemaNames, fileName: string): Promise<GenericModel> {
+  static async readExample(type: KnownSchemaNames, fileName: string): Promise<OmniModel> {
 
     const parser = new OpenRpcParser();
     const path = `./test/examples/${type}/${fileName}`;

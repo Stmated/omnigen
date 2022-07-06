@@ -1,35 +1,35 @@
 import {AbstractParser} from '@parse/AbstractParser';
 
 import {
-  AllowedEnumGenericPrimitiveTypes,
+  AllowedEnumOmniPrimitiveTypes,
   AllowedEnumTsTypes,
-  ComparisonOperator,
-  GenericAccessLevel,
-  GenericArrayPropertiesByPositionType,
-  GenericArrayTypes,
-  GenericArrayTypesByPositionType,
-  GenericClassType,
-  GenericContact,
-  GenericContinuation,
-  GenericContinuationMapping,
-  GenericContinuationSourceParameter,
-  GenericContinuationTargetParameter,
-  GenericEndpoint,
-  GenericExamplePairing,
-  GenericExampleParam,
-  GenericExampleResult,
-  GenericExternalDocumentation,
-  GenericLicense,
-  GenericModel,
-  GenericOutput,
-  GenericPayloadPathQualifier,
-  GenericPrimitiveKind,
-  GenericPrimitiveType,
-  GenericProperty,
-  GenericPropertyOwner,
-  GenericServer,
-  GenericType,
-  GenericTypeKind,
+  OmniComparisonOperator,
+  OmniAccessLevel,
+  OmniArrayPropertiesByPositionType,
+  OmniArrayTypes,
+  OmniArrayTypesByPositionType,
+  OmniClassType,
+  OmniContact,
+  OmniLink,
+  OmniLinkMapping,
+  OmniLinkSourceParameter,
+  OmniLinkTargetParameter,
+  OmniEndpoint,
+  OmniExamplePairing,
+  OmniExampleParam,
+  OmniExampleResult,
+  OmniExternalDocumentation,
+  OmniLicense,
+  OmniModel,
+  OmniOutput,
+  OmniPayloadPathQualifier,
+  OmniPrimitiveKind,
+  OmniPrimitiveType,
+  OmniProperty,
+  OmniPropertyOwner,
+  OmniServer,
+  OmniType,
+  OmniTypeKind,
   JSONSchema7Items,
   SchemaFile,
   TypeName,
@@ -64,14 +64,14 @@ import {JsonObject} from 'json-pointer';
 
 export const logger = LoggerFactory.create(__filename);
 
-type SchemaToTypeResult = { type: GenericType; canInline: boolean };
+type SchemaToTypeResult = { type: OmniType; canInline: boolean };
 
-type OutputAndType = { output: GenericOutput; type: GenericType };
-type TypeAndProperties = { type: GenericType; properties: GenericProperty[] | undefined };
+type OutputAndType = { output: OmniOutput; type: OmniType };
+type TypeAndProperties = { type: OmniType; properties: OmniProperty[] | undefined };
 
 export class OpenRpcParser extends AbstractParser {
 
-  async parse(schemaFile: SchemaFile): Promise<GenericModel> {
+  async parse(schemaFile: SchemaFile): Promise<OmniModel> {
     const schemaObject = await schemaFile.asObject();
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
       dereference: false,
@@ -104,7 +104,7 @@ class OpenRpcParserImpl {
 
   private readonly _options: IParserOptions;
 
-  private _unknownError?: GenericOutput;
+  private _unknownError?: OmniOutput;
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typePromiseMap = new Map<string, SchemaToTypeResult>();
@@ -155,7 +155,7 @@ class OpenRpcParserImpl {
     }
   }
 
-  docToGenericModel(): GenericModel {
+  docToGenericModel(): OmniModel {
 
     const endpoints = this.doc.methods.map(it => this.methodToGenericEndpoint(this._deref.get(it, this._deref.getFirstRoot())));
     const contact = this.doc.info.contact ? this.contactToGenericContact(this.doc.info.contact) : undefined;
@@ -181,22 +181,22 @@ class OpenRpcParserImpl {
     };
   }
 
-  licenseToGenericLicense(license: LicenseObject): GenericLicense {
-    return <GenericLicense>{
+  licenseToGenericLicense(license: LicenseObject): OmniLicense {
+    return <OmniLicense>{
       name: license.name,
       url: license.url,
     };
   }
 
-  contactToGenericContact(contact: ContactObject): GenericContact {
-    return <GenericContact>{
+  contactToGenericContact(contact: ContactObject): OmniContact {
+    return <OmniContact>{
       name: contact.name,
       url: contact.url,
       email: contact.email,
     };
   }
 
-  methodToGenericEndpoint(method: Dereferenced<MethodObject>): GenericEndpoint {
+  methodToGenericEndpoint(method: Dereferenced<MethodObject>): OmniEndpoint {
 
     const input = this.methodToGenericInputType(method);
 
@@ -205,7 +205,7 @@ class OpenRpcParserImpl {
       this._deref.get(method.obj.result, method.root)
     );
 
-    const responses: GenericOutput[] = [];
+    const responses: OmniOutput[] = [];
 
     // One regular response
     responses.push(resultResponse.output);
@@ -250,7 +250,7 @@ class OpenRpcParserImpl {
       requestQualifiers: [
         {
           path: ['method'],
-          operator: ComparisonOperator.EQUALS,
+          operator: OmniComparisonOperator.EQUALS,
           value: method.obj.name,
         },
       ],
@@ -303,8 +303,8 @@ class OpenRpcParserImpl {
       return {
         type: {
           name: 'boolean',
-          kind: GenericTypeKind.PRIMITIVE,
-          primitiveKind: GenericPrimitiveKind.BOOL,
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.BOOL,
         },
         canInline: false
       };
@@ -319,10 +319,10 @@ class OpenRpcParserImpl {
       };
     }
 
-    const type: GenericClassType = {
+    const type: OmniClassType = {
       name: () => names.map(it => Naming.unwrap(it)).join('_'),
       nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : String(schema.obj.type),
-      kind: GenericTypeKind.OBJECT,
+      kind: OmniTypeKind.OBJECT,
       description: schema.obj.description,
       title: schema.obj.title,
       readOnly: schema.obj.readOnly,
@@ -337,8 +337,8 @@ class OpenRpcParserImpl {
       )
     };
 
-    const genericProperties: GenericProperty[] = [];
-    const requiredProperties: GenericProperty[] = [];
+    const genericProperties: OmniProperty[] = [];
+    const requiredProperties: OmniProperty[] = [];
     if (schema.obj.properties) {
       for (const key of Object.keys(schema.obj.properties)) {
         const propertySchema = schema.obj.properties[key];
@@ -372,7 +372,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private jsonSchemaToNonClassType(schema: Dereferenced<JSONSchema7Definition>, names: TypeName[]): GenericType | undefined {
+  private jsonSchemaToNonClassType(schema: Dereferenced<JSONSchema7Definition>, names: TypeName[]): OmniType | undefined {
 
     if (typeof schema.obj == 'boolean') {
       return undefined;
@@ -416,7 +416,7 @@ class OpenRpcParserImpl {
     }
   }
 
-  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: GenericClassType, names: TypeName[]): GenericType {
+  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: OmniClassType, names: TypeName[]): OmniType {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -427,10 +427,10 @@ class OpenRpcParserImpl {
       throw new Error(`Not allowed to be a boolea`);
     }
 
-    const compositionsOneOfOr: GenericType[] = [];
-    const compositionsAllOfAnd: GenericType[] = [];
-    const compositionsAnyOfOr: GenericType[] = [];
-    let compositionsNot: GenericType | undefined;
+    const compositionsOneOfOr: OmniType[] = [];
+    const compositionsAllOfAnd: OmniType[] = [];
+    const compositionsAnyOfOr: OmniType[] = [];
+    let compositionsNot: OmniType | undefined;
 
     if (schema.obj.oneOf) {
 
@@ -499,7 +499,7 @@ class OpenRpcParserImpl {
     return type;
   }
 
-  private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, names: TypeName[]): GenericArrayTypes {
+  private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, names: TypeName[]): OmniArrayTypes {
 
     if (typeof schema.obj == 'boolean') {
       throw new Error(`The schema object should not be able to be a boolean`);
@@ -513,13 +513,13 @@ class OpenRpcParserImpl {
 
       return {
         name: arrayTypeName,
-        kind: GenericTypeKind.ARRAY,
+        kind: OmniTypeKind.ARRAY,
         minLength: schema.obj.minItems,
         maxLength: schema.obj.maxItems,
         description: schema.obj.description,
         of: {
           name: () => `UnknownItemOf${Naming.unwrap(arrayTypeName)}`,
-          kind: GenericTypeKind.UNKNOWN,
+          kind: OmniTypeKind.UNKNOWN,
           additionalProperties: true,
         },
       };
@@ -538,11 +538,11 @@ class OpenRpcParserImpl {
 
       const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
-      return <GenericArrayTypesByPositionType>{
+      return <OmniArrayTypesByPositionType>{
         name: names.length > 0
           ? () => names.map(it => Naming.unwrap(it)).join('_')
           : `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
-        kind: GenericTypeKind.ARRAY_TYPES_BY_POSITION,
+        kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
         description: schema.obj.description,
         commonDenominator: commonDenominator,
@@ -568,7 +568,7 @@ class OpenRpcParserImpl {
       return {
         name: arrayTypeName,
         nameClassifier: 'Array',
-        kind: GenericTypeKind.ARRAY,
+        kind: OmniTypeKind.ARRAY,
         minLength: schema.obj.minItems,
         maxLength: schema.obj.maxItems,
         description: schema.obj.description,
@@ -577,9 +577,9 @@ class OpenRpcParserImpl {
     }
   }
 
-  private mergeType(from: GenericType, to: GenericType, lossless = true): GenericType {
+  private mergeType(from: OmniType, to: OmniType, lossless = true): OmniType {
 
-    if (from.kind == GenericTypeKind.OBJECT && to.kind == GenericTypeKind.OBJECT) {
+    if (from.kind == OmniTypeKind.OBJECT && to.kind == OmniTypeKind.OBJECT) {
 
       for (const fromProperty of (from.properties || [])) {
         const toProperty = to.properties?.find(p => p.name == fromProperty.name);
@@ -600,7 +600,7 @@ class OpenRpcParserImpl {
     return to;
   }
 
-  private mergeTwoPropertiesAndAddToClassType(a: GenericProperty, b: GenericProperty, to: GenericClassType): void {
+  private mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniClassType): void {
     const common = JavaUtil.getCommonDenominatorBetween(a.type, b.type);
     if (common) {
       if (to.properties) {
@@ -617,7 +617,7 @@ class OpenRpcParserImpl {
     }
   }
 
-  private addPropertyToClassType(property: GenericProperty, toType: GenericClassType, as?: GenericType): void {
+  private addPropertyToClassType(property: OmniProperty, toType: OmniClassType, as?: OmniType): void {
 
     if (!toType.properties) {
       toType.properties = [];
@@ -632,7 +632,7 @@ class OpenRpcParserImpl {
     });
   }
 
-  private jsonSchema7ToGenericProperty(owner: GenericPropertyOwner, propertyName: string, schemaOrRef: Dereferenced<JSONSchema7Definition>): GenericProperty {
+  private jsonSchema7ToGenericProperty(owner: OmniPropertyOwner, propertyName: string, schemaOrRef: Dereferenced<JSONSchema7Definition>): OmniProperty {
     // This is ugly, but they should hopefully be the same.
 
     // The type name will be replaced if the schema is a $ref to another type.
@@ -697,9 +697,9 @@ class OpenRpcParserImpl {
     const preferredName = derefSchema.obj.title || methodResult.obj.name;
     const resultParameterType = this.jsonSchemaToType([preferredName], derefSchema, methodResult.hash);
 
-    const resultType: GenericType = {
+    const resultType: OmniType = {
       name: `${typeNamePrefix}Response`,
-      kind: GenericTypeKind.OBJECT,
+      kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
       description: method.description,
       summary: method.summary,
@@ -709,8 +709,8 @@ class OpenRpcParserImpl {
       {
         name: this._options.jsonRpcPropertyName,
         type: {
-          kind: GenericTypeKind.PRIMITIVE,
-          primitiveKind: GenericPrimitiveKind.STRING,
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
           name: `${typeNamePrefix}ResultJsonRpc`
         },
         owner: resultType
@@ -724,7 +724,7 @@ class OpenRpcParserImpl {
         name: 'error',
         type: {
           name: `${typeNamePrefix}ResultError`,
-          kind: GenericTypeKind.NULL,
+          kind: OmniTypeKind.NULL,
         },
         owner: resultType
       },
@@ -735,15 +735,15 @@ class OpenRpcParserImpl {
         name: 'id',
         type: {
           name: `${typeNamePrefix}ResultId`,
-          kind: GenericTypeKind.PRIMITIVE,
-          primitiveKind: GenericPrimitiveKind.STRING,
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
         },
         owner: resultType,
       });
     }
 
     return {
-      output: <GenericOutput>{
+      output: <OmniOutput>{
         name: methodResult.obj.name,
         description: methodResult.obj.description,
         summary: methodResult.obj.summary,
@@ -754,7 +754,7 @@ class OpenRpcParserImpl {
         qualifiers: [
           {
             path: ['result'],
-            operator: ComparisonOperator.DEFINED,
+            operator: OmniComparisonOperator.DEFINED,
           },
         ],
       },
@@ -762,7 +762,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private errorToGenericOutput(parentName: string, error: Dereferenced<ErrorObject>): GenericOutput {
+  private errorToGenericOutput(parentName: string, error: Dereferenced<ErrorObject>): OmniOutput {
 
     const isUnknownCode = (error.obj.code === -1234567890);
     if (isUnknownCode && this._unknownError) {
@@ -781,14 +781,14 @@ class OpenRpcParserImpl {
     }
   }
 
-  private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): GenericOutput {
+  private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): OmniOutput {
     const typeName = isUnknownCode
       ? `ErrorUnknown`
       : `${parentName}Error${error.code}`;
 
-    const errorPropertyType: GenericClassType = {
+    const errorPropertyType: OmniClassType = {
       name: `${typeName}Error`,
-      kind: GenericTypeKind.OBJECT,
+      kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
     };
 
@@ -799,8 +799,8 @@ class OpenRpcParserImpl {
         type: {
           name: `${typeName}CodeInteger`,
           valueConstant: isUnknownCode ? undefined : error.code,
-          kind: GenericTypeKind.PRIMITIVE,
-          primitiveKind: GenericPrimitiveKind.INTEGER,
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.INTEGER,
         },
         owner: errorPropertyType,
       },
@@ -809,8 +809,8 @@ class OpenRpcParserImpl {
         type: {
           name: `${typeName}MessageString`,
           valueConstant: error.message,
-          kind: GenericTypeKind.PRIMITIVE,
-          primitiveKind: GenericPrimitiveKind.STRING,
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
         },
         owner: errorPropertyType,
       },
@@ -822,21 +822,21 @@ class OpenRpcParserImpl {
         type: {
           name: `${typeName}UnknownData`,
           valueConstant: error.data,
-          kind: GenericTypeKind.UNKNOWN,
+          kind: OmniTypeKind.UNKNOWN,
           additionalProperties: true,
         },
         owner: errorPropertyType,
       },
     ];
 
-    const errorType: GenericClassType = {
+    const errorType: OmniClassType = {
       name: typeName,
-      accessLevel: GenericAccessLevel.PUBLIC,
-      kind: GenericTypeKind.OBJECT,
+      accessLevel: OmniAccessLevel.PUBLIC,
+      kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
     };
 
-    const errorProperty: GenericProperty = {
+    const errorProperty: OmniProperty = {
       name: 'error',
       type: errorPropertyType,
       owner: errorType,
@@ -847,7 +847,7 @@ class OpenRpcParserImpl {
         name: 'result',
         type: {
           name: () => `${Naming.unwrap(errorPropertyType.name)}AlwaysNullResultBody`,
-          kind: GenericTypeKind.NULL,
+          kind: OmniTypeKind.NULL,
         },
         owner: errorType,
       },
@@ -856,23 +856,23 @@ class OpenRpcParserImpl {
         name: 'id',
         type: {
           name: `${typeName}IdString`,
-          kind: GenericTypeKind.PRIMITIVE,
-          primitiveKind: GenericPrimitiveKind.STRING,
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
         },
         owner: errorType,
       },
     ];
     errorType.requiredProperties = [errorProperty];
 
-    const qualifiers: GenericPayloadPathQualifier[] = [{
+    const qualifiers: OmniPayloadPathQualifier[] = [{
       path: ['error'],
-      operator: ComparisonOperator.DEFINED,
+      operator: OmniComparisonOperator.DEFINED,
     }];
 
     if (!isUnknownCode) {
       qualifiers.push({
         path: ['error', 'code'],
-        operator: ComparisonOperator.EQUALS,
+        operator: OmniComparisonOperator.EQUALS,
         value: error.code,
       });
     }
@@ -887,14 +887,14 @@ class OpenRpcParserImpl {
     };
   }
 
-  private examplePairingToGenericExample(valueType: GenericType, inputProperties: GenericProperty[], example: Dereferenced<ExamplePairingObject>): GenericExamplePairing {
+  private examplePairingToGenericExample(valueType: OmniType, inputProperties: OmniProperty[], example: Dereferenced<ExamplePairingObject>): OmniExamplePairing {
 
     const params = example.obj.params.map((paramOrRef, idx) => {
       const param = this._deref.get(paramOrRef, example.root);
       return this.exampleParamToGenericExampleParam(inputProperties, param, idx);
     });
 
-    return <GenericExamplePairing>{
+    return <OmniExamplePairing>{
       name: example.obj.name,
       description: example.obj.description,
       summary: example.obj['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
@@ -903,7 +903,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private exampleParamToGenericExampleParam(inputProperties: GenericProperty[], param: Dereferenced<ExampleObject>, paramIndex: number): GenericExampleParam {
+  private exampleParamToGenericExampleParam(inputProperties: OmniProperty[], param: Dereferenced<ExampleObject>, paramIndex: number): OmniExampleParam {
 
     // If the name of the example param is the same as the property name, it will match here.
     let property = inputProperties.find(it => it.name == param.obj.name);
@@ -914,11 +914,11 @@ class OpenRpcParserImpl {
       property = inputProperties[paramIndex];
     }
 
-    let valueType: GenericType;
+    let valueType: OmniType;
     if (property) {
       valueType = property.type;
     } else {
-      valueType = <GenericClassType>{kind: GenericTypeKind.UNKNOWN};
+      valueType = <OmniClassType>{kind: OmniTypeKind.UNKNOWN};
     }
 
     return {
@@ -931,7 +931,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private exampleResultToGenericExampleResult(valueType: GenericType, example: Dereferenced<ExampleObject>): GenericExampleResult {
+  private exampleResultToGenericExampleResult(valueType: OmniType, example: Dereferenced<ExampleObject>): OmniExampleResult {
 
     if (example.obj['externalValue']) {
       // This is part of the specification, but not part of the OpenRPC interface.
@@ -946,15 +946,15 @@ class OpenRpcParserImpl {
     };
   }
 
-  externalDocToGenericExternalDoc(documentation: ExternalDocumentationObject): GenericExternalDocumentation {
-    return <GenericExternalDocumentation>{
+  externalDocToGenericExternalDoc(documentation: ExternalDocumentationObject): OmniExternalDocumentation {
+    return <OmniExternalDocumentation>{
       url: documentation.url,
       description: documentation.description,
     };
   }
 
-  serverToGenericServer(server: ServerObject): GenericServer {
-    return <GenericServer>{
+  serverToGenericServer(server: ServerObject): OmniServer {
+    return <OmniServer>{
       name: server.name,
       description: server.description,
       summary: server.summary,
@@ -963,7 +963,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private contentDescriptorToGenericProperty(owner: GenericPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): GenericProperty {
+  private contentDescriptorToGenericProperty(owner: OmniPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): OmniProperty {
 
     const derefSchema = this.unwrapJsonSchema({
       obj: descriptor.obj.schema,
@@ -984,97 +984,97 @@ class OpenRpcParserImpl {
   }
 
   private typeToGenericKnownType(type: string, format?: string, enumValues?: unknown[]):
-    [GenericTypeKind.NULL]
-    | [GenericTypeKind.PRIMITIVE, GenericPrimitiveKind]
-    | [GenericTypeKind.ENUM, AllowedEnumGenericPrimitiveTypes, AllowedEnumTsTypes[]] {
+    [OmniTypeKind.NULL]
+    | [OmniTypeKind.PRIMITIVE, OmniPrimitiveKind]
+    | [OmniTypeKind.ENUM, AllowedEnumOmniPrimitiveTypes, AllowedEnumTsTypes[]] {
 
     // TODO: Need to take heed to 'schema.format' for some primitive and/or known types!
     const lcType = type.toLowerCase();
     if (lcType == 'null') {
-      return [GenericTypeKind.NULL];
+      return [OmniTypeKind.NULL];
     }
 
-    let primitiveType: GenericPrimitiveKind;
+    let primitiveType: OmniPrimitiveKind;
     switch (lcType) {
       case 'number':
-        primitiveType = GenericPrimitiveKind.NUMBER;
+        primitiveType = OmniPrimitiveKind.NUMBER;
         break;
       case 'int':
       case 'integer':
-        primitiveType = GenericPrimitiveKind.INTEGER;
+        primitiveType = OmniPrimitiveKind.INTEGER;
         break;
       case 'decimal':
       case 'double':
-        primitiveType = GenericPrimitiveKind.DECIMAL;
+        primitiveType = OmniPrimitiveKind.DECIMAL;
         break;
       case 'float':
-        primitiveType = GenericPrimitiveKind.FLOAT;
+        primitiveType = OmniPrimitiveKind.FLOAT;
         break;
       case 'bool':
       case 'boolean':
-        primitiveType = GenericPrimitiveKind.BOOL;
+        primitiveType = OmniPrimitiveKind.BOOL;
         break;
       case 'string':
-        primitiveType = GenericPrimitiveKind.STRING;
+        primitiveType = OmniPrimitiveKind.STRING;
         break;
       default:
         logger.warn(`Do not know how to handle primitive type '${lcType}', will assume String`);
-        primitiveType = GenericPrimitiveKind.STRING;
+        primitiveType = OmniPrimitiveKind.STRING;
         break;
     }
 
     if (enumValues && enumValues.length > 0) {
 
       let allowedValues: AllowedEnumTsTypes[];
-      if (primitiveType == GenericPrimitiveKind.STRING) {
+      if (primitiveType == OmniPrimitiveKind.STRING) {
         allowedValues = enumValues.map(it => `${String(it)}`);
-      } else if (primitiveType == GenericPrimitiveKind.DECIMAL || primitiveType == GenericPrimitiveKind.FLOAT || primitiveType == GenericPrimitiveKind.NUMBER) {
+      } else if (primitiveType == OmniPrimitiveKind.DECIMAL || primitiveType == OmniPrimitiveKind.FLOAT || primitiveType == OmniPrimitiveKind.NUMBER) {
         allowedValues = enumValues.map(it => Number.parseFloat(`${String(it)}`));
       } else {
         allowedValues = enumValues.map(it => Number.parseInt(`${String(it)}`));
-        primitiveType = GenericPrimitiveKind.STRING;
+        primitiveType = OmniPrimitiveKind.STRING;
       }
 
       // TODO: Try to convert the ENUM values into the specified primitive type.
-      return [GenericTypeKind.ENUM, primitiveType, allowedValues];
+      return [OmniTypeKind.ENUM, primitiveType, allowedValues];
     } else {
-      return [GenericTypeKind.PRIMITIVE, primitiveType];
+      return [OmniTypeKind.PRIMITIVE, primitiveType];
     }
   }
 
   private methodToGenericInputType(method: Dereferenced<MethodObject>): TypeAndProperties {
 
     const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
-    const requestJsonRpcType: GenericPrimitiveType = {
+    const requestJsonRpcType: OmniPrimitiveType = {
       name: `${method.obj.name}RequestVersion`,
-      kind: GenericTypeKind.PRIMITIVE,
-      primitiveKind: GenericPrimitiveKind.STRING,
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: OmniPrimitiveKind.STRING,
       valueConstant: hasConstantVersion ? this._options.jsonRpcRequestVersion : undefined,
       nullable: false
     };
 
-    const requestMethodType: GenericPrimitiveType = {
+    const requestMethodType: OmniPrimitiveType = {
       name: `${method.obj.name}RequestMethod`,
-      kind: GenericTypeKind.PRIMITIVE,
-      primitiveKind: GenericPrimitiveKind.STRING,
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: OmniPrimitiveKind.STRING,
       valueConstant: method.obj.name,
       nullable: false
     };
 
     // TODO: This should be able to be a String OR Number -- need to make this more generic
-    const requestIdType: GenericPrimitiveType = {
+    const requestIdType: OmniPrimitiveType = {
       name: `${method.obj.name}RequestId`,
-      kind: GenericTypeKind.PRIMITIVE,
-      primitiveKind: GenericPrimitiveKind.STRING,
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: OmniPrimitiveKind.STRING,
       nullable: false
     };
 
-    let requestParamsType: GenericPropertyOwner;
+    let requestParamsType: OmniPropertyOwner;
     if (method.obj.paramStructure == 'by-position') {
       // The params is an array values, and not a map nor properties.
-      requestParamsType = <GenericArrayPropertiesByPositionType>{
+      requestParamsType = <OmniArrayPropertiesByPositionType>{
         name: `${method.obj.name}RequestParams`,
-        kind: GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION
+        kind: OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION
       };
 
       requestParamsType.properties = method.obj.params.map((it) => {
@@ -1085,9 +1085,9 @@ class OpenRpcParserImpl {
       requestParamsType.commonDenominator = JavaUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type));
 
     } else {
-      requestParamsType = <GenericClassType>{
+      requestParamsType = <OmniClassType>{
         name: `${method.obj.name}RequestParams`,
-        kind: GenericTypeKind.OBJECT,
+        kind: OmniTypeKind.OBJECT,
         additionalProperties: false
       };
 
@@ -1100,28 +1100,28 @@ class OpenRpcParserImpl {
       }
     }
 
-    const requestType = <GenericClassType>{
+    const requestType = <OmniClassType>{
       name: `${method.obj.name}Request`,
-      kind: GenericTypeKind.OBJECT,
+      kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
       description: method.obj.description,
       summary: method.obj.summary,
     };
 
     requestType.properties = [
-      <GenericProperty>{
+      <OmniProperty>{
         name: this._options.jsonRpcPropertyName,
         type: requestJsonRpcType,
         required: true,
         owner: requestType,
       },
-      <GenericProperty>{
+      <OmniProperty>{
         name: "method",
         type: requestMethodType,
         required: true,
         owner: requestType,
       },
-      <GenericProperty>{
+      <OmniProperty>{
         name: "params",
         type: requestParamsType,
         owner: requestType,
@@ -1130,7 +1130,7 @@ class OpenRpcParserImpl {
 
     if (this._options.jsonRpcIdIncluded) {
       requestType.properties.push(
-        <GenericProperty>{
+        <OmniProperty>{
           name: "id",
           type: requestIdType,
           required: true,
@@ -1145,9 +1145,9 @@ class OpenRpcParserImpl {
     };
   }
 
-  private linkToGenericContinuations(endpoint: GenericEndpoint, endpoints: GenericEndpoint[]): GenericContinuation[] {
+  private linkToGenericContinuations(endpoint: OmniEndpoint, endpoints: OmniEndpoint[]): OmniLink[] {
 
-    const continuations: GenericContinuation[] = [];
+    const continuations: OmniLink[] = [];
     for (const methodOrRef of this.doc.methods) {
 
       // TODO: This is probably wrong! The reference can exist in another file; in the file that contains the endpoint
@@ -1167,7 +1167,7 @@ class OpenRpcParserImpl {
     return continuations;
   }
 
-  private getTargetEndpoint(name: string, endpoints: GenericEndpoint[]): GenericEndpoint {
+  private getTargetEndpoint(name: string, endpoints: OmniEndpoint[]): OmniEndpoint {
     let targetEndpoint = endpoints.find(it => it.name == name);
     if (!targetEndpoint) {
       const options = endpoints.map(it => it.name);
@@ -1200,27 +1200,27 @@ class OpenRpcParserImpl {
     return targetEndpoint;
   }
 
-  private linkToGenericContinuation(sourceEndpoint: GenericEndpoint, endpoints: GenericEndpoint[], link: LinkObject, refName?: string): GenericContinuation {
+  private linkToGenericContinuation(sourceEndpoint: OmniEndpoint, endpoints: OmniEndpoint[], link: LinkObject, refName?: string): OmniLink {
 
     const targetEndpoint = this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
     const paramNames: string[] = Object.keys(link.params as object);
 
     // The request type is always a class type, since it is created as such by us.
-    const requestClass = targetEndpoint.request.type as GenericClassType;
+    const requestClass = targetEndpoint.request.type as OmniClassType;
     const requestParamsParameter = requestClass.properties?.find(it => it.name == 'params');
     if (!requestParamsParameter) {
       throw new Error(`The target request type must be Class and have a 'params' property`);
     }
-    const requestResultClass = requestParamsParameter.type as GenericClassType;
+    const requestResultClass = requestParamsParameter.type as OmniClassType;
 
-    const mappings: GenericContinuationMapping[] = [];
+    const mappings: OmniLinkMapping[] = [];
     for (const linkParamName of paramNames) {
 
       const requestResultParamParameter = requestResultClass.properties?.find(prop => prop.name == linkParamName);
 
       if (requestResultParamParameter) {
 
-        const sourceParameter: GenericContinuationSourceParameter = this.getLinkSourceParameter(
+        const sourceParameter: OmniLinkSourceParameter = this.getLinkSourceParameter(
           // The first response is the Result, not Error or otherwise.
           sourceEndpoint.responses[0].type,
           sourceEndpoint.request.type,
@@ -1228,7 +1228,7 @@ class OpenRpcParserImpl {
           linkParamName
         );
 
-        const targetParameter: GenericContinuationTargetParameter = {
+        const targetParameter: OmniLinkTargetParameter = {
           propertyPath: [
             requestParamsParameter,
             requestResultParamParameter,
@@ -1244,7 +1244,7 @@ class OpenRpcParserImpl {
       }
     }
 
-    return <GenericContinuation>{
+    return <OmniLink>{
       name: link.name || refName,
       mappings: mappings,
       description: link.description,
@@ -1253,11 +1253,11 @@ class OpenRpcParserImpl {
   }
 
   private getLinkSourceParameter(
-    primaryType: GenericType,
-    secondaryType: GenericType,
+    primaryType: OmniType,
+    secondaryType: OmniType,
     link: LinkObject,
     linkParamName: string
-  ): GenericContinuationSourceParameter {
+  ): OmniLinkSourceParameter {
 
     const params = link.params as Record<string, unknown>;
     const value = params[linkParamName];
@@ -1307,11 +1307,11 @@ class OpenRpcParserImpl {
     };
   }
 
-  private getPropertyPath(type: GenericType, pathParts: string[]): GenericProperty[] {
-    const propertyPath: GenericProperty[] = [];
+  private getPropertyPath(type: OmniType, pathParts: string[]): OmniProperty[] {
+    const propertyPath: OmniProperty[] = [];
     let pointer = type;
     for (let i = 0; i < pathParts.length; i++) {
-      if (pointer.kind == GenericTypeKind.OBJECT) {
+      if (pointer.kind == OmniTypeKind.OBJECT) {
 
         const property = pointer.properties?.find(it => it.name == pathParts[i]);
         if (property) {
@@ -1320,7 +1320,7 @@ class OpenRpcParserImpl {
         } else {
           return propertyPath;
         }
-      } else if (pointer.kind == GenericTypeKind.ARRAY) {
+      } else if (pointer.kind == OmniTypeKind.ARRAY) {
 
         // The target is an array.
         const indexIndex = pathParts[i].indexOf('[');

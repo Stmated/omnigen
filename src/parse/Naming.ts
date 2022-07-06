@@ -1,5 +1,5 @@
 import {pascalCase} from 'change-case';
-import {GenericType, GenericTypeKind, TypeName} from '@parse/GenericModel';
+import {OmniType, OmniTypeKind, TypeName} from '@parse/OmniModel';
 import {LoggerFactory} from '@util';
 import {JavaUtil} from '@java';
 
@@ -11,7 +11,7 @@ export class Naming {
     return (typeof name == 'string') ? name : name();
   }
 
-  public static safer(type: GenericType, hasDuplicateFn?: (value: string) => boolean): string {
+  public static safer(type: OmniType, hasDuplicateFn?: (value: string) => boolean): string {
     return Naming.safe(type.name, type.nameClassifier, hasDuplicateFn);
   }
 

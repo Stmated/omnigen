@@ -1,30 +1,30 @@
 import {
   CompositionKind,
-  GenericCompositionType,
-  GenericCompositionXORType,
-  GenericType,
-  GenericTypeKind
-} from '@parse/GenericModel';
+  OmniCompositionType,
+  OmniCompositionXORType,
+  OmniType,
+  OmniTypeKind
+} from '@parse/OmniModel';
 import {Naming} from '@parse/Naming';
 
 export class CompositionUtil {
 
   public static getCompositionOrExtensionType(
-    compositionsAnyOfOr: GenericType[] = [],
-    compositionsAllOfAnd: GenericType[] = [],
-    compositionsOneOfOr: GenericType[] = [],
-    compositionNot?: GenericType
-  ): GenericType | undefined {
+    compositionsAnyOfOr: OmniType[] = [],
+    compositionsAllOfAnd: OmniType[] = [],
+    compositionsOneOfOr: OmniType[] = [],
+    compositionNot?: OmniType
+  ): OmniType | undefined {
 
-    let composition: GenericType | undefined;
+    let composition: OmniType | undefined;
 
     if (compositionsAnyOfOr.length == 1 && !composition) {
       composition = compositionsAnyOfOr[0];
     } else if (compositionsAnyOfOr.length > 0) {
-      const or: GenericType = (compositionsAnyOfOr.length > 1)
-        ? <GenericCompositionType>{
+      const or: OmniType = (compositionsAnyOfOr.length > 1)
+        ? <OmniCompositionType>{
           name: () => compositionsAnyOfOr.map(it => Naming.safer(it)).join('Or'),
-          kind: GenericTypeKind.COMPOSITION,
+          kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.OR,
           types: compositionsAnyOfOr
         }
@@ -36,20 +36,20 @@ export class CompositionUtil {
         const finalType = composition;
         composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.safer(or)}`,
-          kind: GenericTypeKind.COMPOSITION,
+          kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, or]
-        } as GenericCompositionType;
+        } as OmniCompositionType;
       }
     }
 
     if (compositionsAllOfAnd.length == 1 && !composition) {
       composition = compositionsAllOfAnd[0];
     } else if (compositionsAllOfAnd.length > 0) {
-      const and: GenericType = (compositionsAllOfAnd.length > 1)
-        ? <GenericCompositionType>{
+      const and: OmniType = (compositionsAllOfAnd.length > 1)
+        ? <OmniCompositionType>{
           name: () => compositionsAllOfAnd.map(it => Naming.safer(it)).join('And'),
-          kind: GenericTypeKind.COMPOSITION,
+          kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: compositionsAllOfAnd
         }
@@ -61,24 +61,24 @@ export class CompositionUtil {
         const finalType = composition;
         composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.safer(and)}`,
-          kind: GenericTypeKind.COMPOSITION,
+          kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, and]
-        } as GenericCompositionType;
+        } as OmniCompositionType;
       }
     }
 
     if (compositionsOneOfOr.length == 1 && !composition) {
       composition = compositionsOneOfOr[0];
     } else if (compositionsOneOfOr.length > 1) {
-      const xor: GenericType = (compositionsOneOfOr.length > 1)
-        ? <GenericCompositionXORType>{
+      const xor: OmniType = (compositionsOneOfOr.length > 1)
+        ? <OmniCompositionXORType>{
           name: () => compositionsOneOfOr.map(it => Naming.safer(it)).join('XOr'),
-          kind: GenericTypeKind.COMPOSITION,
+          kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.XOR,
 
           mappingPropertyName: '',
-          mappings: new Map<string, GenericType>(),
+          mappings: new Map<string, OmniType>(),
 
           types: compositionsOneOfOr
         }
@@ -90,20 +90,20 @@ export class CompositionUtil {
         const finalType = composition;
         composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.safer(xor)}`,
-          kind: GenericTypeKind.COMPOSITION,
+          kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, xor]
-        } as GenericCompositionType;
+        } as OmniCompositionType;
       }
     }
 
     if (compositionNot) {
       const not = {
         name: () => `Not${Naming.unwrap(compositionNot.name)}`,
-        kind: GenericTypeKind.COMPOSITION,
+        kind: OmniTypeKind.COMPOSITION,
         compositionKind: CompositionKind.NOT,
         types: [compositionNot]
-      } as GenericCompositionType;
+      } as OmniCompositionType;
 
       if (!composition) {
         composition = not;
@@ -111,10 +111,10 @@ export class CompositionUtil {
         const finalType = composition;
         composition = {
           name: () => `${Naming.safer(finalType)}And${Naming.unwrap(not.name)}`,
-          kind: GenericTypeKind.COMPOSITION,
+          kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, not]
-        } as GenericCompositionType;
+        } as OmniCompositionType;
       }
     }
 

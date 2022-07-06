@@ -1,12 +1,12 @@
 import {AbstractJavaTransformer} from '@java/transform/AbstractJavaTransformer';
-import {GenericModel} from '@parse';
+import {OmniModel} from '@parse';
 import {JavaCstRootNode, JavaOptions, JavaUtil} from '@java';
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 
 export class PackageImportTransformer extends AbstractJavaTransformer {
 
-  transform(model: GenericModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
+  transform(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 
     const usedTypes: Java.Type[] = [];
     const compilationUnitStack: Java.CompilationUnit[] = [];

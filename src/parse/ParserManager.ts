@@ -1,4 +1,4 @@
-import {GenericModel} from '@parse';
+import {OmniModel} from '@parse';
 import {Parser} from '@parse/Parser';
 import {PathLike} from 'fs';
 import {SchemaFile} from '@parse/SchemaFile';
@@ -11,7 +11,7 @@ export interface ParseInputOptions {
 }
 
 export interface IParseManager {
-  parse(options: ParseInputOptions): Promise<GenericModel>;
+  parse(options: ParseInputOptions): Promise<OmniModel>;
 }
 
 export class ParserManager implements IParseManager {
@@ -32,7 +32,7 @@ export class ParserManager implements IParseManager {
     return true;
   }
 
-  async parse(options: ParseInputOptions): Promise<GenericModel> {
+  async parse(options: ParseInputOptions): Promise<OmniModel> {
 
     const schemaFile = new SchemaFile(options.input, options.fileName);
 

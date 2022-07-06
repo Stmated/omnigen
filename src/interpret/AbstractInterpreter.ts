@@ -1,5 +1,5 @@
 import {Interpreter} from '@interpret';
-import {GenericModel} from '@parse';
+import {OmniModel} from '@parse';
 import {ICstVisitor} from '@visit';
 import {CstRootNode} from '@cst/CstRootNode';
 import {ITransformer} from '@transform';
@@ -18,7 +18,7 @@ export abstract class AbstractInterpreter<TVisitor extends ICstVisitor<void>, TO
 
   abstract newRootNode(): Promise<CstRootNode>;
 
-  public async interpret(model: GenericModel, options: TOptions): Promise<CstRootNode> {
+  public async interpret(model: OmniModel, options: TOptions): Promise<CstRootNode> {
     const rootNode = await this.newRootNode();
 
     for (const transformer of this.getTransformers()) {

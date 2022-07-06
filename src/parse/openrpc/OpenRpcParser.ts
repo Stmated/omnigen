@@ -108,7 +108,6 @@ class OpenRpcParserImpl {
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typePromiseMap = new Map<string, SchemaToTypeResult>();
-  private readonly _contentDescriptorPromiseMap = new Map<string, Promise<GenericProperty>>();
 
   private readonly _deref: Dereferencer<OpenrpcDocument>;
 

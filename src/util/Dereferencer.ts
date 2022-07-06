@@ -378,7 +378,7 @@ export class Dereferencer<T> {
             return (options?.clone !== false && options && options?.isMergeableObject(element as object))
               ? deepmerge.default(this.emptyTarget(element), element, options)
               : element;
-          })
+          });
         }
       });
     }

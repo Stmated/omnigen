@@ -1,6 +1,6 @@
 import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
-import {DEFAULT_JAVA_OPTIONS} from '@java';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '@java';
 import {JavaRenderer} from '@java/render/JavaRenderer';
 import {CompilationUnit} from '@cst/CompilationUnitCallback';
 import * as JavaParser from 'java-parser';
@@ -14,6 +14,8 @@ import {GenericEndpoint, GenericModel, GenericOutput, GenericProperty, GenericTy
 // SegfaultHandler.registerHandler('crash.log');
 
 describe('Test the rendering of a CST tree to string', () => {
+
+  const javaOptions: JavaOptions = DEFAULT_JAVA_OPTIONS;
 
   test('Test that all examples can be rendered and parsed', async () => {
 
@@ -51,7 +53,7 @@ describe('Test the rendering of a CST tree to string', () => {
 
         await fs.mkdir(outDir, {recursive: true});
 
-        const renderer = new JavaRenderer(async (cu) => {
+        const renderer = new JavaRenderer(javaOptions, async (cu) => {
 
           if (cu.fileName.indexOf('#') !== -1) {
             throw new Error(`# not allowed in CU '${cu.fileName}'`);
@@ -94,7 +96,7 @@ describe('Test the rendering of a CST tree to string', () => {
     expect(interpretation.children).toHaveLength(allTypes1.all.length);
 
     const compilationUnits: CompilationUnit[] = [];
-    const renderer = new JavaRenderer((cu) => {
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
       compilationUnits.push(cu);
     });
 
@@ -115,7 +117,7 @@ describe('Test the rendering of a CST tree to string', () => {
     const model = await TestUtils.readExample('openrpc', 'bank.json');
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
-    const renderer = new JavaRenderer((cu) => {
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
     });
 
     const content = renderer.render(interpretation);
@@ -148,7 +150,7 @@ describe('Test the rendering of a CST tree to string', () => {
 
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
-    const renderer = new JavaRenderer((cu) => {
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
     });
 
     const content = renderer.render(interpretation);

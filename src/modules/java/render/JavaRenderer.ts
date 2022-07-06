@@ -6,6 +6,7 @@ import {ICstNode} from '@cst';
 import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
+import {JavaOptions, JavaUtil} from '@java';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>; 
 
@@ -14,16 +15,14 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   private readonly pattern_lineStart = new RegExp(/(?<!$)^/mg);
   private tokenPrefix = ' ';
   private tokenSuffix = ' ';
+  private readonly _options: JavaOptions;
 
   private readonly cuCallback: CompilationUnitCallback;
 
-  constructor(callback: CompilationUnitCallback) {
+  constructor(options: JavaOptions, callback: CompilationUnitCallback) {
     super();
+    this._options = options;
     this.cuCallback = callback;
-  }
-
-  private static getTypeName(type: Java.Type): string {
-    return type.fqn;
   }
 
   private getIndentation(d: number = this.blockDepth): string {
@@ -174,11 +173,19 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitImportList: JavaRendererVisitFn<Java.ImportList> = (node, visitor) => {
-    return `${node.children.map(it => this.render(it, visitor)).join('\n')}\n`;
+    return `${node.children.map(it => this.render(it, visitor)).join('\n')}\n\n`;
   }
 
   visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = (node, visitor) => {
-    return `import ${this.render(node.type, visitor)};\n`;
+    // We always render the Fully Qualified Name here, and not the relative nor local name.
+    // But we remove any generics that the import might have.
+    const fqn = JavaUtil.getName({
+      type: node.type.genericType,
+      withSuffix: false,
+      options: this._options
+    });
+
+    return `import ${fqn};`;
   }
 
   visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
@@ -331,7 +338,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitType: JavaRendererVisitFn<Java.Type> = (node, visitor) => {
-    return JavaRenderer.getTypeName(node);
+    return node.getLocalName() || node.getFQN(this._options);
   }
 
   visitModifierList: JavaRendererVisitFn<Java.ModifierList> = (node, visitor) => {

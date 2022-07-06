@@ -2,12 +2,9 @@ import {AbstractJavaTransformer} from '@java/transform/AbstractJavaTransformer';
 import {GenericModel} from '@parse';
 import {JavaCstRootNode, JavaOptions, JavaUtil} from '@java';
 import * as Java from '@java/cst';
-import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 
 export class AddConstructorTransformer extends AbstractJavaTransformer {
-
-  private readonly _javaVisitor = new JavaVisitor<void>();
 
   transform(model: GenericModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 

@@ -48,13 +48,26 @@ export abstract class AbstractJavaNode extends AbstractNode {
 
 export class Type extends AbstractJavaNode {
   genericType: GenericType;
+  private _localName?: string;
 
   get array(): boolean {
     return this.genericType.kind == GenericTypeKind.ARRAY;
   }
 
-  get fqn(): string {
-    return JavaUtil.getFullyQualifiedName(this.genericType);
+  getFQN(options: JavaOptions, relativeTo?: string): string {
+    return JavaUtil.getFullyQualifiedName({
+      type: this.genericType,
+      options: options,
+      relativeTo: relativeTo
+    });
+  }
+
+  getLocalName(): string | undefined {
+    return this._localName; // ?? this.getFQN(options);
+  }
+
+  setLocalName(value: string): void {
+    this._localName = value;
   }
 
   constructor(genericType: GenericType) {

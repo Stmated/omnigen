@@ -1,97 +1,223 @@
 import * as Java from './cst/types';
 import {ModifierType} from '@java/cst';
 import {pascalCase} from 'change-case';
-import {GenericDictionaryType, GenericPrimitiveKind, GenericType, GenericTypeKind} from '@parse';
+import {GenericDictionaryType, GenericPrimitiveKind, GenericPrimitiveType, GenericType, GenericTypeKind} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
 import {Naming} from '@parse/Naming';
 
+interface FqnOptions {
+  type: GenericType,
+  withSuffix?: boolean;
+  options?: JavaOptions;
+  relativeTo?: string;
+}
+
+export type FqnArgs = GenericType | FqnOptions;
+
 export class JavaUtil {
 
   /**
    * TODO: Return TypeName instead?
    */
-  public static getFullyQualifiedName(type: GenericType, options?: JavaOptions): string {
+  public static getFullyQualifiedName(args: FqnArgs): string {
+    if ('type' in args) {
+      return JavaUtil.getName(args);
+    } else {
+      return JavaUtil.getName({
+        type: args
+      });
+    }
+  }
 
-    if (type.kind == GenericTypeKind.ARRAY) {
-      return JavaUtil.getFullyQualifiedName(type.of, options) + '[]';
-    } else if (type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+  public static getRelativeName(type: GenericType, options: JavaOptions, relativeTo = options.package): string {
+    return JavaUtil.getName({
+      type: type,
+      withSuffix: true,
+      options: options,
+      relativeTo: relativeTo
+    });
+  }
+
+  public static getImportName(type: GenericType, options: JavaOptions): string {
+    return JavaUtil.getName({
+      type: type,
+      options: options,
+      withSuffix: false
+    });
+  }
+
+  /**
+   * Ugly. It should not be based on if relativeTo is set or not if this should return an FQN or just Name.
+   */
+  public static getName(args: FqnOptions): string {
+
+    if (args.type.kind == GenericTypeKind.ARRAY) {
+      if (args.withSuffix === false) {
+        return JavaUtil.getName({...args, ...{type: args.type.of}});
+      } else {
+        return JavaUtil.getName({...args, ...{type: args.type.of}}) + '[]';
+      }
+    } else if (args.type.kind == GenericTypeKind.ARRAY_PROPERTIES_BY_POSITION || args.type.kind == GenericTypeKind.ARRAY_TYPES_BY_POSITION) {
 
       // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
-
-      if (type.commonDenominator) {
-
-        // Return the common denominator instead. That is this static type array's "representation" in the code.
-        return JavaUtil.getFullyQualifiedName(type.commonDenominator, options) + "[]";
-      } else {
-        return this.getUnknownType(UnknownType.OBJECT) + "[]"; // options?.unknownType);
-      }
-
-    } else if (type.kind == GenericTypeKind.ARRAY_TYPES_BY_POSITION) {
 
       // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
       //        There must be a better of saying "this is an array with objects of this type in this order"
       //        We should be generating a helper class that wraps an array and gives us managed getters? Getter0() Getter1()???
       //        "commonDenominator" is a *REALLY* crappy way of handling it.
 
-      if (type.commonDenominator) {
+      let javaType: string;
+      if (args.type.commonDenominator) {
 
         // Return the common denominator instead. That is this static type array's "representation" in the code.
-        return JavaUtil.getFullyQualifiedName(type.commonDenominator, options) + "[]";
+        javaType = JavaUtil.getName({...args, ...{type: args.type.commonDenominator}});
       } else {
-        return this.getUnknownType(UnknownType.OBJECT) + "[]";
+        javaType = this.getUnknownType(UnknownType.OBJECT);
       }
 
-    } else if (type.kind == GenericTypeKind.NULL) {
+      if (args.withSuffix === false) {
+        return javaType;
+      } else {
+        return `${javaType}[]`;
+      }
+
+    } else if (args.type.kind == GenericTypeKind.NULL) {
       // The type is "No Type. Void." It is not even really an Object.
       // But we return it as an Object in case we really need to display it somewhere.
-      return 'java.lang.Object';
-    } else if (type.kind == GenericTypeKind.PRIMITIVE) {
-
-      switch (type.primitiveKind) {
-        case GenericPrimitiveKind.BOOL:
-          return type.nullable ? 'java.lang.Boolean' : 'boolean';
-        case GenericPrimitiveKind.VOID:
-          return 'void';
-        case GenericPrimitiveKind.CHAR:
-          return type.nullable ? 'java.lang.Character' : 'char';
-        case GenericPrimitiveKind.STRING:
-          return 'String';
-        case GenericPrimitiveKind.FLOAT:
-          return type.nullable ? 'java.lang.Float' : 'float';
-        case GenericPrimitiveKind.INTEGER:
-          return type.nullable ? 'java.lang.Integer' : 'int';
-        case GenericPrimitiveKind.INTEGER_SMALL:
-          return type.nullable ? 'java.lang.Short' : 'short';
-        case GenericPrimitiveKind.LONG:
-          return type.nullable ? 'java.lang.Long' : 'long';
-        case GenericPrimitiveKind.DECIMAL:
-        case GenericPrimitiveKind.DOUBLE:
-        case GenericPrimitiveKind.NUMBER:
-          return type.nullable ? 'java.lang.Double' : 'double';
+      if (args.relativeTo) {
+        return 'Object';
+      } else {
+        return 'java.lang.Object';
       }
-    } else if (type.kind == GenericTypeKind.UNKNOWN) {
-      return this.getUnknownType(options?.unknownType);
-    } else if (type.kind == GenericTypeKind.DICTIONARY) {
+    } else if (args.type.kind == GenericTypeKind.PRIMITIVE) {
+      if (args.relativeTo) {
+        return JavaUtil.getClassName(this.getPrimitiveKindName(args.type), args.withSuffix);
+      } else {
+        return JavaUtil.getCleanedFullyQualifiedName(this.getPrimitiveKindName(args.type), args.withSuffix);
+      }
+    } else if (args.type.kind == GenericTypeKind.UNKNOWN) {
+      if (args.relativeTo) {
+        return JavaUtil.getClassName(this.getUnknownType(args.options?.unknownType), args.withSuffix);
+      } else {
+        return JavaUtil.getCleanedFullyQualifiedName(this.getUnknownType(args.options?.unknownType), args.withSuffix);
+      }
+    } else if (args.type.kind == GenericTypeKind.DICTIONARY) {
 
-      const keyString = JavaUtil.getFullyQualifiedName(type.keyType);
-      const valueString = JavaUtil.getFullyQualifiedName(type.valueType);
-      return `java.lang.HashMap<${keyString}, ${valueString}>`;
+      const mapClass = args.relativeTo ? `HashMap` : `java.lang.HashMap`;
+      if (args.withSuffix === false) {
+        return mapClass;
+      } else {
+        const keyString = JavaUtil.getName({...args, ...{type: args.type.keyType}});
+        const valueString = JavaUtil.getName({...args, ...{type: args.type.valueType}});
+        return `${mapClass}<${keyString}, ${valueString}>`;
+      }
 
-    } else if (type.kind == GenericTypeKind.REFERENCE) {
-      return type.fqn;
-    } else if (type.kind == GenericTypeKind.ENUM) {
+    } else if (args.type.kind == GenericTypeKind.REFERENCE) {
 
-      // TODO: This might need to be prefixed with the package name?
-      return Naming.safer(type);
+      if (args.relativeTo) {
+        return JavaUtil.getClassName(args.type.fqn, args.withSuffix);
+      }
+
+      return JavaUtil.getCleanedFullyQualifiedName(args.type.fqn, !!args.withSuffix);
     } else {
 
-      // This is a generated type's name.
-      // TODO: We might need to look into doing some work here, if it should be the FQN or relative path?
-      // TODO: This might need to be prefixed with the package name?
-      return Naming.safer(type);
+      // Are we sure all of these will be in the same package?
+      // TODO: Use some kind of "groupName" where the group can be the package? "model", "api", "server", etc?
+      const name = Naming.safer(args.type);
+      if (args.relativeTo == args.options?.package) {
+        return name;
+      } else {
+        return (args.options ? `${args.options.package}.${name}` : name);
+      }
+    }
+  }
+
+  private static getPrimitiveKindName(type: GenericPrimitiveType): string {
+    switch (type.primitiveKind) {
+      case GenericPrimitiveKind.BOOL:
+        return type.nullable ? 'java.lang.Boolean' : 'boolean';
+      case GenericPrimitiveKind.VOID:
+        return 'void';
+      case GenericPrimitiveKind.CHAR:
+        return type.nullable ? 'java.lang.Character' : 'char';
+      case GenericPrimitiveKind.STRING:
+        return 'String';
+      case GenericPrimitiveKind.FLOAT:
+        return type.nullable ? 'java.lang.Float' : 'float';
+      case GenericPrimitiveKind.INTEGER:
+        return type.nullable ? 'java.lang.Integer' : 'int';
+      case GenericPrimitiveKind.INTEGER_SMALL:
+        return type.nullable ? 'java.lang.Short' : 'short';
+      case GenericPrimitiveKind.LONG:
+        return type.nullable ? 'java.lang.Long' : 'long';
+      case GenericPrimitiveKind.DECIMAL:
+      case GenericPrimitiveKind.DOUBLE:
+      case GenericPrimitiveKind.NUMBER:
+        return type.nullable ? 'java.lang.Double' : 'double';
+    }
+  }
+
+  private static getCleanedFullyQualifiedName(fqn: string, withSuffix = true): string {
+    if (withSuffix) {
+      return fqn;
+    } else {
+      const genericIdx = fqn.indexOf('<');
+      if (genericIdx !== -1) {
+        return fqn.substring(0, genericIdx);
+      }
+      const arrayIdx = fqn.indexOf('[');
+      if (arrayIdx !== -1) {
+        return fqn.substring(0, arrayIdx);
+      }
+
+      return fqn;
+    }
+  }
+
+  public static getPackageName(fqn: string): string {
+    const genericIdx = fqn.indexOf('<');
+    if (genericIdx !== -1) {
+      fqn = fqn.substring(0, genericIdx);
+    }
+    const idx = fqn.lastIndexOf('.');
+    if (idx !== -1) {
+      return fqn.substring(0, idx);
+    }
+
+    return fqn;
+  }
+
+  public static getClassName(fqn: string, withSuffix = true): string {
+    // const cleanedName = JavaUtil.getCleanedFullyQualifiedName(fqn, withSuffix);
+
+    const genericIdx = fqn.indexOf('<');
+    if (!withSuffix) {
+      if (genericIdx !== -1) {
+        fqn = fqn.substring(0, genericIdx);
+      }
+
+      const idx = fqn.lastIndexOf('.');
+      if (idx == -1) {
+        return fqn;
+      } else {
+        return fqn.substring(idx + 1);
+      }
+    } else {
+
+      let suffix = '';
+      if (genericIdx !== -1) {
+        suffix = fqn.substring(genericIdx);
+        fqn = fqn.substring(0, genericIdx);
+      }
+      const idx = fqn.lastIndexOf('.');
+      if (idx == -1) {
+        return fqn + suffix;
+      } else {
+        return fqn.substring(idx + 1) + suffix;
+      }
     }
   }
 
@@ -306,7 +432,7 @@ export class JavaUtil {
   public static getClassDeclaration(root: CstRootNode, type: GenericType): Java.ClassDeclaration | undefined {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
-    const holder: {ref?: Java.ClassDeclaration} = {};
+    const holder: { ref?: Java.ClassDeclaration } = {};
     root.visit(VisitorFactoryManager.create(JavaUtil._javaVisitor, {
       visitClassDeclaration: (node) => {
         if (node.type.genericType == type) {

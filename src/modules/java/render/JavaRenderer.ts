@@ -180,7 +180,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     // We always render the Fully Qualified Name here, and not the relative nor local name.
     // But we remove any generics that the import might have.
     const fqn = JavaUtil.getName({
-      type: node.type.genericType,
+      type: node.type.omniType,
       withSuffix: false,
       options: this._options
     });

@@ -1,7 +1,7 @@
 import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {DEFAULT_JAVA_OPTIONS} from '@java';
-import {GenericModelUtil} from '@parse/GenericModelUtil';
+import {OmniModelUtil} from '../../../../src/parse/OmniModelUtil';
 
 describe('Test the structuring of GenericModel into a Java CST', () => {
 
@@ -13,7 +13,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(interpretation).toBeDefined();
 
-    const allTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
+    const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
     expect(interpretation.children).toHaveLength(allTypes.length);
 
 

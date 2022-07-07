@@ -7,7 +7,7 @@ import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {GenericModelUtil} from '@parse/GenericModelUtil';
+import {OmniModelUtil} from '../../../../src/parse/OmniModelUtil';
 import {OmniEndpoint, OmniModel, OmniOutput, OmniProperty, OmniTypeKind} from '@parse';
 
 // const SegfaultHandler = require('segfault-handler');
@@ -92,7 +92,7 @@ describe('Test the rendering of a CST tree to string', () => {
 
     expect(interpretation).toBeDefined();
 
-    const allTypes1 = GenericModelUtil.getAllExportableTypes(model, model.types);
+    const allTypes1 = OmniModelUtil.getAllExportableTypes(model, model.types);
     expect(interpretation.children).toHaveLength(allTypes1.all.length);
 
     const compilationUnits: CompilationUnit[] = [];
@@ -104,7 +104,7 @@ describe('Test the rendering of a CST tree to string', () => {
 
     expect(compilationUnits).toBeDefined();
 
-    const allTypes2 = GenericModelUtil.getAllExportableTypes(model, model.types);
+    const allTypes2 = OmniModelUtil.getAllExportableTypes(model, model.types);
     expect(compilationUnits).toHaveLength(allTypes2.all.length);
 
     // TODO: We should assert actual useful stuff here :)

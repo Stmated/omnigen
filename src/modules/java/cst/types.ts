@@ -47,16 +47,16 @@ export abstract class AbstractJavaNode extends AbstractNode {
 }
 
 export class Type extends AbstractJavaNode {
-  genericType: OmniType;
+  omniType: OmniType;
   private _localName?: string;
 
   get array(): boolean {
-    return this.genericType.kind == OmniTypeKind.ARRAY;
+    return this.omniType.kind == OmniTypeKind.ARRAY;
   }
 
   getFQN(options: JavaOptions, relativeTo?: string): string {
     return JavaUtil.getFullyQualifiedName({
-      type: this.genericType,
+      type: this.omniType,
       options: options,
       relativeTo: relativeTo
     });
@@ -72,7 +72,7 @@ export class Type extends AbstractJavaNode {
 
   constructor(genericType: OmniType) {
     super();
-    this.genericType = genericType;
+    this.omniType = genericType;
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
@@ -555,7 +555,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
       return this.getterName;
     }
 
-    return new Identifier(JavaUtil.getGetterName(this.field.identifier.value, this.type.genericType));
+    return new Identifier(JavaUtil.getGetterName(this.field.identifier.value, this.type.omniType));
   }
 
   get parameters(): ArgumentDeclarationList | undefined {
@@ -585,7 +585,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
 
   // The name needs to be capitalized properly, etc, etc
   get name(): Identifier {
-    return new Identifier(JavaUtil.getSetterName(this.field.identifier.value, this.type.genericType));
+    return new Identifier(JavaUtil.getSetterName(this.field.identifier.value, this.type.omniType));
   }
 
   get parameters(): ArgumentDeclarationList {
@@ -1109,7 +1109,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
 
       const typedGetter = new MethodDeclaration(
         typedField.type,
-        new Identifier(JavaUtil.getGetterName(Naming.unwrap(type.name), typedField.type.genericType)),
+        new Identifier(JavaUtil.getGetterName(Naming.unwrap(type.name), typedField.type.omniType)),
         argumentDeclarationList,
         undefined,
         new Block(
@@ -1140,7 +1140,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
           )
         )
       );
-      typedGetter.comments = new CommentList(...commentSupplier(typedGetter.type.genericType));
+      typedGetter.comments = new CommentList(...commentSupplier(typedGetter.type.omniType));
 
       this.fields.push(typedField);
       this.methods.push(typedGetter);

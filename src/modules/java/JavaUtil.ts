@@ -257,7 +257,7 @@ export class JavaUtil {
     for (let i = 1; i < types.length; i++) {
       common = JavaUtil.getCommonDenominatorBetween(common, types[i]);
       if (!common) {
-        return common;
+        return undefined;
       }
     }
 
@@ -369,7 +369,11 @@ export class JavaUtil {
    */
   private static readonly _javaVisitor: JavaVisitor<void> = new JavaVisitor<void>();
 
-  public static getFieldsRequiredInConstructor(root: CstRootNode, node: Java.AbstractObjectDeclaration, followSupertype = false): [Java.Field[], Java.Field[]] {
+  public static getFieldsRequiredInConstructor(
+    root: CstRootNode,
+    node: Java.AbstractObjectDeclaration,
+    followSupertype = false
+  ): [Java.Field[], Java.Field[]] {
 
     const fields: Java.Field[] = [];
     const setters: Java.FieldBackedSetter[] = [];
@@ -411,7 +415,7 @@ export class JavaUtil {
       // TODO: Find any class we extend, and then do this same thing to that class.
 
       const supertypeRequired: Java.Field[] = [];
-      const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.genericType);
+      const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.omniType);
       if (extendedBy) {
         supertypeRequired.push(...JavaUtil.getFieldsRequiredInConstructor(root, extendedBy, false)[0]);
       }
@@ -435,7 +439,7 @@ export class JavaUtil {
     const holder: { ref?: Java.ClassDeclaration } = {};
     root.visit(VisitorFactoryManager.create(JavaUtil._javaVisitor, {
       visitClassDeclaration: (node) => {
-        if (node.type.genericType == type) {
+        if (node.type.omniType == type) {
           holder.ref = node;
         }
       }

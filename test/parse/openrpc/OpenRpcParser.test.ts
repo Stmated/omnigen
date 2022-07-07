@@ -3,7 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import assert = require('assert');
 import {Naming} from '../../../src/parse/Naming';
-import {GenericModelUtil} from '../../../src/parse/GenericModelUtil';
+import {OmniModelUtil} from '../../../src/parse/OmniModelUtil';
 
 describe('Test Generic Model Creation', () => {
   const parser = new OpenRpcParser();
@@ -48,7 +48,7 @@ describe('Test Generic Model Creation', () => {
     expect(response0properties[1].name).toEqual('error');
     expect(response0properties[2].name).toEqual('id');
 
-    const allTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
+    const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
     expect(allTypes.map(it => Naming.unwrap(it.name))).toContain('DeletePetByIdErrorUnknownError');
   });
 });

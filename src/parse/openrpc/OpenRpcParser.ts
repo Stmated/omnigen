@@ -3,23 +3,24 @@ import {AbstractParser} from '@parse/AbstractParser';
 import {
   AllowedEnumOmniPrimitiveTypes,
   AllowedEnumTsTypes,
-  OmniComparisonOperator,
+  JSONSchema7Items,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniArrayTypes,
   OmniArrayTypesByPositionType,
   OmniClassType,
+  OmniComparisonOperator,
   OmniContact,
-  OmniLink,
-  OmniLinkMapping,
-  OmniLinkSourceParameter,
-  OmniLinkTargetParameter,
   OmniEndpoint,
   OmniExamplePairing,
   OmniExampleParam,
   OmniExampleResult,
   OmniExternalDocumentation,
   OmniLicense,
+  OmniLink,
+  OmniLinkMapping,
+  OmniLinkSourceParameter,
+  OmniLinkTargetParameter,
   OmniModel,
   OmniOutput,
   OmniPayloadPathQualifier,
@@ -30,7 +31,6 @@ import {
   OmniServer,
   OmniType,
   OmniTypeKind,
-  JSONSchema7Items,
   SchemaFile,
   TypeName,
 } from '@parse';
@@ -55,7 +55,7 @@ import {camelCase, pascalCase} from 'change-case';
 import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
-import {LoggerFactory, Dereferencer, RefAware, Dereferenced} from '@util';
+import {Dereferenced, Dereferencer, LoggerFactory} from '@util';
 import {DEFAULT_PARSER_OPTIONS, IParserOptions} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
 import {Naming} from '@parse/Naming';
@@ -86,7 +86,7 @@ export class OpenRpcParser extends AbstractParser {
     const traverser = await Dereferencer.create<OpenrpcDocument>(baseUri, absolutePath, document);
 
     const parserImpl = new OpenRpcParserImpl(traverser);
-    return parserImpl.docToGenericModel();
+    return Promise.resolve(parserImpl.docToGenericModel());
   }
 
   canHandle(schemaFile: SchemaFile): Promise<boolean> {
@@ -105,6 +105,20 @@ class OpenRpcParserImpl {
   private readonly _options: IParserOptions;
 
   private _unknownError?: OmniOutput;
+
+  // These classes should be optionally created.
+  // Used (only?) if:
+  // * we are going to automatically try and create generics.
+  // * some setting is set to create helper classes
+  // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
+  private _jsonRpcRequestClass?: OmniClassType;
+  private _jsonRpcResponseClass?: OmniClassType;
+  private _jsonRpcErrorClass?: OmniClassType;
+
+  // This class should be optionally created if we are going to try and create generics.
+  // It is only going to work like a marker interface, so we can know that all the classes are related.
+  // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
+  private _requestParamsClass?: OmniClassType; // Used
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typePromiseMap = new Map<string, SchemaToTypeResult>();
@@ -480,7 +494,7 @@ class OpenRpcParserImpl {
       // NOTE: This might be "inaccurate" and should maybe be more selective (like ONLY replacing COMPOSITIONS)
       if (extendedBy) {
 
-        return {
+        return <OmniType>{
           ...extendedBy,
           ...{
             // The name should be kept the same, since it is likely much more specific.
@@ -705,42 +719,58 @@ class OpenRpcParserImpl {
       summary: method.summary,
     };
 
-    resultType.properties = [
-      {
-        name: this._options.jsonRpcPropertyName,
-        type: {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
-          name: `${typeNamePrefix}ResultJsonRpc`
+    if (!this._jsonRpcResponseClass) {
+
+      // TODO: Ability to set this is "abstract", since it should never be used directly
+      this._jsonRpcResponseClass = {
+        name: 'JsonRpcResponse', // TODO: Make it a setting
+        kind: OmniTypeKind.OBJECT,
+        description: `Generic class to describe the JsonRpc response package`,
+        additionalProperties: false,
+      }
+
+      this._jsonRpcResponseClass.properties = [
+        {
+          name: this._options.jsonRpcPropertyName,
+          type: {
+            kind: OmniTypeKind.PRIMITIVE,
+            primitiveKind: OmniPrimitiveKind.STRING,
+            name: `ResultJsonRpc`
+          },
+          owner: this._jsonRpcResponseClass
         },
-        owner: resultType
-      },
+        {
+          name: 'error',
+          type: {
+            name: `ResultError`,
+            kind: OmniTypeKind.NULL,
+          },
+          owner: this._jsonRpcResponseClass
+        },
+      ];
+
+      if (this._options.jsonRpcIdIncluded) {
+        this._jsonRpcResponseClass.properties.push({
+          name: 'id',
+          type: {
+            name: `ResultId`,
+            kind: OmniTypeKind.PRIMITIVE,
+            primitiveKind: OmniPrimitiveKind.STRING,
+          },
+          owner: this._jsonRpcResponseClass,
+        });
+      }
+    }
+
+    resultType.properties = [
       {
         name: 'result',
         type: resultParameterType.type,
         owner: resultType
-      },
-      {
-        name: 'error',
-        type: {
-          name: `${typeNamePrefix}ResultError`,
-          kind: OmniTypeKind.NULL,
-        },
-        owner: resultType
-      },
+      }
     ];
 
-    if (this._options.jsonRpcIdIncluded) {
-      resultType.properties.push({
-        name: 'id',
-        type: {
-          name: `${typeNamePrefix}ResultId`,
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
-        },
-        owner: resultType,
-      });
-    }
+    resultType.extendedBy = this._jsonRpcResponseClass;
 
     return {
       output: <OmniOutput>{
@@ -791,6 +821,37 @@ class OpenRpcParserImpl {
       kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
     };
+
+    if (!this._jsonRpcErrorClass) {
+      this._jsonRpcErrorClass = {
+        name: 'JsonRpcError', // TODO: Make it a setting
+        kind: OmniTypeKind.OBJECT,
+        description: `Generic class to describe the JsonRpc error response package`,
+        additionalProperties: false,
+      };
+
+      this._jsonRpcErrorClass.properties = [
+        {
+          name: 'result',
+          type: {
+            name: `JsonRpcErrorAlwaysNullResultBody`,
+            kind: OmniTypeKind.NULL,
+          },
+          owner: this._jsonRpcErrorClass,
+        },
+        {
+          name: 'id',
+          type: {
+            name: `JsonRpcErrorIdString`,
+            kind: OmniTypeKind.PRIMITIVE,
+            primitiveKind: OmniPrimitiveKind.STRING,
+          },
+          owner: this._jsonRpcErrorClass,
+        },
+      ];
+    }
+
+    errorPropertyType.extendedBy = this._jsonRpcErrorClass;
 
     errorPropertyType.properties = [
       // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
@@ -843,24 +904,7 @@ class OpenRpcParserImpl {
     };
 
     errorType.properties = [
-      {
-        name: 'result',
-        type: {
-          name: () => `${Naming.unwrap(errorPropertyType.name)}AlwaysNullResultBody`,
-          kind: OmniTypeKind.NULL,
-        },
-        owner: errorType,
-      },
       errorProperty,
-      {
-        name: 'id',
-        type: {
-          name: `${typeName}IdString`,
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
-        },
-        owner: errorType,
-      },
     ];
     errorType.requiredProperties = [errorProperty];
 
@@ -1044,23 +1088,6 @@ class OpenRpcParserImpl {
 
   private methodToGenericInputType(method: Dereferenced<MethodObject>): TypeAndProperties {
 
-    const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
-    const requestJsonRpcType: OmniPrimitiveType = {
-      name: `${method.obj.name}RequestVersion`,
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.STRING,
-      valueConstant: hasConstantVersion ? this._options.jsonRpcRequestVersion : undefined,
-      nullable: false
-    };
-
-    const requestMethodType: OmniPrimitiveType = {
-      name: `${method.obj.name}RequestMethod`,
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.STRING,
-      valueConstant: method.obj.name,
-      nullable: false
-    };
-
     // TODO: This should be able to be a String OR Number -- need to make this more generic
     const requestIdType: OmniPrimitiveType = {
       name: `${method.obj.name}RequestId`,
@@ -1098,29 +1125,84 @@ class OpenRpcParserImpl {
       if (properties.length > 0) {
         requestParamsType.properties = properties;
       }
+
+      if (!this._requestParamsClass) {
+        this._requestParamsClass = {
+          name: 'JsonRpcRequestParams', // TODO: Make it a setting
+          kind: OmniTypeKind.OBJECT,
+          description: `Generic class to describe the JsonRpc request params`,
+          additionalProperties: false,
+        }
+      }
+
+      requestParamsType.extendedBy = this._requestParamsClass;
     }
 
     const requestType = <OmniClassType>{
       name: `${method.obj.name}Request`,
+      title: method.obj.name,
       kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
       description: method.obj.description,
       summary: method.obj.summary,
     };
 
+    if (!this._jsonRpcRequestClass) {
+
+      this._jsonRpcRequestClass = {
+        name: 'JsonRpcRequest', // TODO: Make it a setting
+        kind: OmniTypeKind.OBJECT,
+        description: `Generic class to describe the JsonRpc request package`,
+        additionalProperties: false,
+      };
+
+      const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
+      const requestJsonRpcType: OmniPrimitiveType = {
+        name: `JsonRpcRequestVersion`,
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.STRING,
+        valueConstant: hasConstantVersion ? this._options.jsonRpcRequestVersion : undefined,
+        nullable: false
+      };
+
+      // TODO: This should be moved to the abstract parent class somehow, then sent down through constructor
+      //        Maybe this can be done automatically through GenericOmniModelTransformer?
+      //        Or can we do this in some other way? Maybe have valueConstant be string OR callback
+      //        Then if callback, it takes the method object, and is put inside the constructor without a given parameter?
+      const requestMethodType: OmniPrimitiveType = {
+        name: `JsonRpcRequestMethod`,
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.STRING,
+        readOnly: true,
+        valueConstant: (sub) => {
+          if (sub.title) {
+            return sub.title;
+          }
+
+          throw new Error(`The title must be set`);
+        },
+        nullable: false
+      };
+
+      this._jsonRpcRequestClass.properties = [
+        {
+          name: this._options.jsonRpcPropertyName,
+          type: requestJsonRpcType,
+          required: true,
+          owner: requestType,
+        },
+        {
+          name: "method",
+          type: requestMethodType,
+          required: true,
+          owner: requestType,
+        }
+      ];
+    }
+
+    requestType.extendedBy = this._jsonRpcRequestClass;
+
     requestType.properties = [
-      <OmniProperty>{
-        name: this._options.jsonRpcPropertyName,
-        type: requestJsonRpcType,
-        required: true,
-        owner: requestType,
-      },
-      <OmniProperty>{
-        name: "method",
-        type: requestMethodType,
-        required: true,
-        owner: requestType,
-      },
       <OmniProperty>{
         name: "params",
         type: requestParamsType,

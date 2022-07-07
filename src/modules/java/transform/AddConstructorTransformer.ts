@@ -1,5 +1,5 @@
 import {AbstractJavaTransformer} from '@java/transform/AbstractJavaTransformer';
-import {OmniModel} from '@parse';
+import {OmniModel, OmniTypeKind} from '@parse';
 import {JavaCstRootNode, JavaOptions, JavaUtil} from '@java';
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
@@ -29,8 +29,8 @@ export class AddConstructorTransformer extends AbstractJavaTransformer {
       } else if (a.extends && b.extends) {
 
         // TODO: This is probably wrong? We should build an actual tree, and sort based on it?
-        const aHierarchy = JavaUtil.getExtendHierarchy(a.type.genericType);
-        const bHierarchy = JavaUtil.getExtendHierarchy(a.type.genericType);
+        const aHierarchy = JavaUtil.getExtendHierarchy(a.type.omniType);
+        const bHierarchy = JavaUtil.getExtendHierarchy(a.type.omniType);
         return aHierarchy.length - bHierarchy.length;
       }
 
@@ -50,24 +50,38 @@ export class AddConstructorTransformer extends AbstractJavaTransformer {
         //  This is much more dynamic and could be called by an implementor at another stage.
 
         const blockExpressions: Java.AbstractJavaNode[] = [];
+        const requiredSuperFields: Java.Field[] = [];
         if (constructorFields[1].length > 0) {
+
+          const superConstructorArguments: Java.AbstractExpression[] = [];
+          for (const requiredField of constructorFields[1]) {
+            const omniType = requiredField.type.omniType;
+            if (omniType.kind == OmniTypeKind.PRIMITIVE && typeof omniType.valueConstant == 'function') {
+              const requiredConstant = omniType.valueConstant(node.type.omniType);
+              superConstructorArguments.push(new Java.Literal(requiredConstant));
+            } else {
+              superConstructorArguments.push(new Java.VariableReference(requiredField.identifier));
+              requiredSuperFields.push(requiredField);
+            }
+          }
+
           blockExpressions.push(
             new Java.Statement(
               new Java.SuperConstructorCall(
-                new Java.ArgumentList(
-                  ...constructorFields[1].map(it => new Java.VariableReference(it.identifier))
-                )
+                new Java.ArgumentList(...superConstructorArguments)
               )
             )
           )
         }
 
-        blockExpressions.push(...constructorFields[0].map(it => new Java.Statement(new Java.AssignExpression(
-          new Java.FieldReference(it),
-          new Java.VariableReference(it.identifier)
-        ))));
+        for (const constructorField of constructorFields[0]) {
+          blockExpressions.push(new Java.Statement(new Java.AssignExpression(
+            new Java.FieldReference(constructorField),
+            new Java.VariableReference(constructorField.identifier)
+          )));
+        }
 
-        const allParameters = constructorFields[0].concat(constructorFields[1]);
+        const allParameters = constructorFields[0].concat(requiredSuperFields);
 
         node.body.children.push(new Java.ConstructorDeclaration(
           node,

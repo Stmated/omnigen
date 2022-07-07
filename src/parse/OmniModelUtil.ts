@@ -2,12 +2,11 @@ import {OmniModel, OmniType, OmniTypeKind} from '@parse/OmniModel';
 
 export interface TypeCollection {
 
-  // edge: GenericType[];
   named: OmniType[];
   all: OmniType[];
 }
 
-export class GenericModelUtil {
+export class OmniModelUtil {
 
   public static getAllExportableTypes(model: OmniModel, refTypes?: OmniType[]): TypeCollection {
 
@@ -21,21 +20,21 @@ export class GenericModelUtil {
     }
 
     model.endpoints.forEach(e => {
-      GenericModelUtil.getTypesRecursively(e.request.type, set, setEdge, true);
+      OmniModelUtil.getTypesRecursively(e.request.type, set, setEdge, true);
 
       e.responses.forEach(r => {
-        GenericModelUtil.getTypesRecursively(r.type, set, setEdge, true);
+        OmniModelUtil.getTypesRecursively(r.type, set, setEdge, true);
       });
     });
     (model.continuations || []).forEach(c => {
       c.mappings.forEach(m => {
         (m.source.propertyPath || []).forEach(p => {
-          GenericModelUtil.getTypesRecursively(p.owner, set, setEdge, false);
-          GenericModelUtil.getTypesRecursively(p.type, set, setEdge, false);
+          OmniModelUtil.getTypesRecursively(p.owner, set, setEdge, false);
+          OmniModelUtil.getTypesRecursively(p.type, set, setEdge, false);
         });
         (m.target.propertyPath || []).forEach(p => {
-          GenericModelUtil.getTypesRecursively(p.owner, set, setEdge, false);
-          GenericModelUtil.getTypesRecursively(p.type, set, setEdge, false);
+          OmniModelUtil.getTypesRecursively(p.owner, set, setEdge, false);
+          OmniModelUtil.getTypesRecursively(p.type, set, setEdge, false);
         });
       })
     });

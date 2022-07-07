@@ -18,8 +18,8 @@ export class PackageImportTransformer extends AbstractJavaTransformer {
         compilationUnitStack.pop();
 
         node.imports.children.sort((a, b) => {
-          const aPackage = JavaUtil.getImportName(a.type.genericType, options);
-          const bPackage = JavaUtil.getImportName(b.type.genericType, options);
+          const aPackage = JavaUtil.getImportName(a.type.omniType, options);
+          const bPackage = JavaUtil.getImportName(b.type.omniType, options);
           return aPackage.localeCompare(bPackage);
         });
       },
@@ -34,14 +34,14 @@ export class PackageImportTransformer extends AbstractJavaTransformer {
         const cuFqn = cu.object.type.getFQN(options);
         const cuPackage = JavaUtil.getPackageName(cuFqn);
 
-        const nodeImportName = JavaUtil.getImportName(node.genericType, options);
+        const nodeImportName = JavaUtil.getImportName(node.omniType, options);
 
         if (nodeImportName.indexOf('.') !== -1) {
 
           // If it contains a dot, then it is a class path and not a primitive.
           // We should also make the type local based on the current compilation unit's package.
           if (!node.getLocalName()) {
-            node.setLocalName(JavaUtil.getRelativeName(node.genericType, options));
+            node.setLocalName(JavaUtil.getRelativeName(node.omniType, options));
           }
 
           const nodePackage = JavaUtil.getPackageName(nodeImportName);
@@ -49,7 +49,7 @@ export class PackageImportTransformer extends AbstractJavaTransformer {
           if (nodePackage != cuPackage) {
             const existing = cu.imports.children.find(it => {
               // TODO: Cache this inside the import node? Set it in stone?
-              const otherImportName = JavaUtil.getImportName(it.type.genericType, options);
+              const otherImportName = JavaUtil.getImportName(it.type.omniType, options);
               return otherImportName == nodeImportName;
             });
 

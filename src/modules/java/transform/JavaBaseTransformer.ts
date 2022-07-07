@@ -19,7 +19,7 @@ import {camelCase, constantCase} from 'change-case';
 import {Naming} from '@parse/Naming';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
-import {GenericModelUtil} from '@parse/GenericModelUtil';
+import {OmniModelUtil} from '@parse/OmniModelUtil';
 
 export class JavaBaseTransformer extends AbstractJavaTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
@@ -29,7 +29,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
 
-    const exportableTypes = GenericModelUtil.getAllExportableTypes(model, model.types);
+    const exportableTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
 
     for (const type of exportableTypes.all) {
 
@@ -74,8 +74,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     // NOTE: Is this actually correct? Could it not delete types we actually want?
     exportableTypes.all = exportableTypes.all.filter(it => !removedTypes.includes(it));
-
-    // const edge = exportableTypes.all.filter(it => GenericModelUtil.isNotPrimitive(it));
 
     // TODO: Incorrect call signature, need to separate edge and named types.
     const graph = DependencyGraphBuilder.build(exportableTypes.all, DEFAULT_GRAPH_OPTIONS);
@@ -361,7 +359,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
       // If the type is not an object, then we will never create a class just for its sake.
       // So we should propagate all the examples and all other data we can find about it, to the property's comments.
-
       comments.push(...this.getCommentsForType(property.type, model, options));
 
       if (property.type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
@@ -421,18 +418,48 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     if (property.type.kind == OmniTypeKind.PRIMITIVE && property.type.valueConstant) {
 
-      const methodDeclaration = new Java.MethodDeclaration(
-        new Java.Type(property.type),
-        new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-        undefined,
-        undefined,
-        new Java.Block(
-          new Java.Statement(new Java.ReturnStatement(new Java.Literal(property.type.valueConstant))),
-        )
-      );
+      if (typeof property.type.valueConstant == 'function') {
 
-      methodDeclaration.comments = commentList;
-      body.children.push(methodDeclaration);
+        // This constant is dynamic based on the type that the property is owned by.
+        const field = new Java.Field(
+          new Java.Type(property.type),
+          new Java.Identifier(`_${camelCase(property.name)}`),
+          new Java.ModifierList(
+            new Java.Modifier(Java.ModifierType.PRIVATE),
+            new Java.Modifier(Java.ModifierType.FINAL)
+          )
+        )
+
+        const methodDeclaration = new Java.MethodDeclaration(
+          new Java.Type(property.type),
+          new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
+          undefined,
+          undefined,
+          new Java.Block(
+            new Java.Statement(new Java.ReturnStatement(
+              new Java.FieldReference(field)
+            )),
+          )
+        );
+
+        methodDeclaration.comments = commentList;
+        body.children.push(field);
+        body.children.push(methodDeclaration);
+
+      } else {
+        const methodDeclaration = new Java.MethodDeclaration(
+          new Java.Type(property.type),
+          new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
+          undefined,
+          undefined,
+          new Java.Block(
+            new Java.Statement(new Java.ReturnStatement(new Java.Literal(property.type.valueConstant))),
+          )
+        );
+
+        methodDeclaration.comments = commentList;
+        body.children.push(methodDeclaration);
+      }
 
       return;
     }

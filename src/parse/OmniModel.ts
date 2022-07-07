@@ -64,6 +64,8 @@ export enum OmniTypeKind {
   ARRAY_PROPERTIES_BY_POSITION,
   ARRAY_TYPES_BY_POSITION,
   COMPOSITION,
+  GENERIC_SOURCE,
+  GENERIC_TARGET,
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
@@ -102,7 +104,9 @@ export type OmniType = OmniNullType
   | OmniReferenceType
   | OmniPrimitiveType
   | OmniCompositionType
-  | OmniEnumType;
+  | OmniEnumType
+  | OmniGenericSourceType
+  | OmniGenericTargetType;
 
 export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType | OmniArrayTypesByPositionType;
 export type OmniCompositionType = OmniCompositionDefaultType | OmniCompositionXORType;
@@ -116,6 +120,10 @@ export interface OmniBaseType<T> {
   title?: string;
   description?: string;
   summary?: string;
+  /**
+   * TODO: Delete? It is up to more exact properties in more exact types if it is readonly or not?
+   *        Like Literal's "constantValue"
+   */
   readOnly?: boolean;
   writeOnly?: boolean;
 
@@ -175,7 +183,6 @@ export interface OmniReferenceType extends OmniBaseType<OmniReferenceKnownKind> 
 }
 
 type OmniArrayKnownKind = OmniTypeKind.ARRAY;
-
 export interface OmniArrayType extends OmniBaseType<OmniArrayKnownKind> {
   of: OmniType;
   minLength?: number;
@@ -232,15 +239,16 @@ export interface OmniClassType extends OmniBaseType<OmniClassKnownKind> {
 }
 
 type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
+export type OmniPrimitiveConstantValue = string | boolean | number
+export type OmniPrimitiveConstantValueOrLazySubTypeValue = OmniPrimitiveConstantValue | {(subtype: OmniType): OmniPrimitiveConstantValue};
 
-// Exclude<GenericKnownType, GenericKnownType.OBJECT | GenericKnownType.UNKNOWN | GenericKnownType.ENUM>;
 export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKnownKind> {
   primitiveKind: OmniPrimitiveKind;
   /**
    * Nullable means the primitive is for example not a "boolean" but a nullable "Boolean"
    */
   nullable?: boolean;
-  valueConstant?: string | boolean | number;
+  valueConstant?: OmniPrimitiveConstantValueOrLazySubTypeValue;
 }
 
 type OmniEnumKnownKind = OmniTypeKind.ENUM;
@@ -267,6 +275,18 @@ export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind> {
    * For Java this would mean we should not render as an Enum, but as a class with static public final fields.
    */
   otherValues?: boolean;
+}
+
+type OmniGenericTargetKnownKind = OmniTypeKind.GENERIC_TARGET;
+export interface OmniGenericTargetType extends OmniBaseType<OmniGenericTargetKnownKind> {
+  of: OmniType;
+  generics: {[key: string]: OmniType};
+}
+
+type OmniGenericSourceKnownKind = OmniTypeKind.GENERIC_SOURCE;
+export interface OmniGenericSourceType extends OmniBaseType<OmniGenericSourceKnownKind> {
+  of: OmniClassType;
+  generics: {[key: string]: OmniType};
 }
 
 export interface OmniInput {

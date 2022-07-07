@@ -19,7 +19,6 @@ export class DependencyGraphBuilder {
   public static build(namedTypes: OmniType[], options = DEFAULT_GRAPH_OPTIONS): DependencyGraph {
 
     const graph: DependencyGraph = {
-      // usedBy: new Map<GenericType, GenericType[]>(),
       uses: new Map<OmniType, OmniType[]>(),
       // abstracts: [], // TODO: Always empty for now. Need to implement later
       concretes: [],
@@ -139,9 +138,7 @@ export const DEFAULT_GRAPH_OPTIONS: DependencyGraphOptions = {
 
 export interface DependencyGraph {
 
-  // usedBy: Map<GenericType, GenericType[]>;
   uses: Map<OmniType, OmniType[]>;
   concretes: OmniType[];
   interfaces: OmniType[];
-  // abstracts: GenericType[];
 }

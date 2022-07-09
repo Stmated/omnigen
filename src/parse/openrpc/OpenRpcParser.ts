@@ -8,7 +8,7 @@ import {
   OmniArrayPropertiesByPositionType,
   OmniArrayTypes,
   OmniArrayTypesByPositionType,
-  OmniClassType,
+  OmniObjectType,
   OmniComparisonOperator,
   OmniContact,
   OmniEndpoint,
@@ -30,7 +30,7 @@ import {
   OmniPropertyOwner,
   OmniServer,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, OmniUnknownType,
   SchemaFile,
   TypeName,
 } from '@parse';
@@ -90,6 +90,12 @@ export class OpenRpcParser extends AbstractParser {
   }
 
   canHandle(schemaFile: SchemaFile): Promise<boolean> {
+
+    const path = schemaFile.getAbsolutePath() || '';
+    if (path.endsWith('.json')) {
+      return Promise.resolve(true);
+    }
+
     return Promise.resolve(false);
   }
 }
@@ -111,14 +117,14 @@ class OpenRpcParserImpl {
   // * we are going to automatically try and create generics.
   // * some setting is set to create helper classes
   // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
-  private _jsonRpcRequestClass?: OmniClassType;
-  private _jsonRpcResponseClass?: OmniClassType;
-  private _jsonRpcErrorClass?: OmniClassType;
+  private _jsonRpcRequestClass?: OmniObjectType;
+  private _jsonRpcResponseClass?: OmniObjectType;
+  private _jsonRpcErrorClass?: OmniObjectType;
 
   // This class should be optionally created if we are going to try and create generics.
   // It is only going to work like a marker interface, so we can know that all the classes are related.
   // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
-  private _requestParamsClass?: OmniClassType; // Used
+  private _requestParamsClass?: OmniObjectType; // Used
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typePromiseMap = new Map<string, SchemaToTypeResult>();
@@ -333,14 +339,15 @@ class OpenRpcParserImpl {
       };
     }
 
-    const type: OmniClassType = {
+    const type: OmniObjectType = {
       name: () => names.map(it => Naming.unwrap(it)).join('_'),
-      nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : String(schema.obj.type),
+      nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : (schema.obj.type ? String(schema.obj.type) : undefined),
       kind: OmniTypeKind.OBJECT,
       description: schema.obj.description,
       title: schema.obj.title,
       readOnly: schema.obj.readOnly,
       writeOnly: schema.obj.writeOnly,
+      properties: [],
 
       // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
       additionalProperties: (schema.obj.additionalProperties == undefined
@@ -365,7 +372,7 @@ class OpenRpcParserImpl {
       }
     }
 
-    type.properties = genericProperties.length ? genericProperties : undefined;
+    type.properties = genericProperties.length ? genericProperties : [];
     type.requiredProperties = requiredProperties;
 
     if (schema.obj.not) {
@@ -430,7 +437,7 @@ class OpenRpcParserImpl {
     }
   }
 
-  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: OmniClassType, names: TypeName[]): OmniType {
+  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: OmniObjectType, names: TypeName[]): OmniType {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -534,7 +541,6 @@ class OpenRpcParserImpl {
         of: {
           name: () => `UnknownItemOf${Naming.unwrap(arrayTypeName)}`,
           kind: OmniTypeKind.UNKNOWN,
-          additionalProperties: true,
         },
       };
 
@@ -614,7 +620,7 @@ class OpenRpcParserImpl {
     return to;
   }
 
-  private mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniClassType): void {
+  private mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniObjectType): void {
     const common = JavaUtil.getCommonDenominatorBetween(a.type, b.type);
     if (common) {
       if (to.properties) {
@@ -631,7 +637,7 @@ class OpenRpcParserImpl {
     }
   }
 
-  private addPropertyToClassType(property: OmniProperty, toType: OmniClassType, as?: OmniType): void {
+  private addPropertyToClassType(property: OmniProperty, toType: OmniObjectType, as?: OmniType): void {
 
     if (!toType.properties) {
       toType.properties = [];
@@ -715,6 +721,7 @@ class OpenRpcParserImpl {
       name: `${typeNamePrefix}Response`,
       kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
+      properties: [],
       description: method.description,
       summary: method.summary,
     };
@@ -727,6 +734,7 @@ class OpenRpcParserImpl {
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc response package`,
         additionalProperties: false,
+        properties: [],
       }
 
       this._jsonRpcResponseClass.properties = [
@@ -816,10 +824,11 @@ class OpenRpcParserImpl {
       ? `ErrorUnknown`
       : `${parentName}Error${error.code}`;
 
-    const errorPropertyType: OmniClassType = {
+    const errorPropertyType: OmniObjectType = {
       name: `${typeName}Error`,
       kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
+      properties: [],
     };
 
     if (!this._jsonRpcErrorClass) {
@@ -828,6 +837,7 @@ class OpenRpcParserImpl {
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc error response package`,
         additionalProperties: false,
+        properties: [],
       };
 
       this._jsonRpcErrorClass.properties = [
@@ -884,17 +894,17 @@ class OpenRpcParserImpl {
           name: `${typeName}UnknownData`,
           valueConstant: error.data,
           kind: OmniTypeKind.UNKNOWN,
-          additionalProperties: true,
         },
         owner: errorPropertyType,
       },
     ];
 
-    const errorType: OmniClassType = {
+    const errorType: OmniObjectType = {
       name: typeName,
       accessLevel: OmniAccessLevel.PUBLIC,
       kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
+      properties: [],
     };
 
     const errorProperty: OmniProperty = {
@@ -962,7 +972,7 @@ class OpenRpcParserImpl {
     if (property) {
       valueType = property.type;
     } else {
-      valueType = <OmniClassType>{kind: OmniTypeKind.UNKNOWN};
+      valueType = <OmniUnknownType>{kind: OmniTypeKind.UNKNOWN};
     }
 
     return {
@@ -1112,11 +1122,15 @@ class OpenRpcParserImpl {
       requestParamsType.commonDenominator = JavaUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type));
 
     } else {
-      requestParamsType = <OmniClassType>{
+
+      const objectRequestParamsType: OmniObjectType = {
         name: `${method.obj.name}RequestParams`,
         kind: OmniTypeKind.OBJECT,
-        additionalProperties: false
+        properties: [],
+        additionalProperties: false,
       };
+
+      requestParamsType = objectRequestParamsType;
 
       const properties = method.obj.params.map((it) => {
         return this.contentDescriptorToGenericProperty(requestParamsType, this._deref.get(it, method.root))
@@ -1132,20 +1146,24 @@ class OpenRpcParserImpl {
           kind: OmniTypeKind.OBJECT,
           description: `Generic class to describe the JsonRpc request params`,
           additionalProperties: false,
+          properties: [],
         }
       }
 
       requestParamsType.extendedBy = this._requestParamsClass;
     }
 
-    const requestType = <OmniClassType>{
+    const objectRequestType: OmniObjectType = {
       name: `${method.obj.name}Request`,
       title: method.obj.name,
       kind: OmniTypeKind.OBJECT,
+      properties: [],
       additionalProperties: false,
       description: method.obj.description,
       summary: method.obj.summary,
     };
+
+    const requestType = objectRequestType;
 
     if (!this._jsonRpcRequestClass) {
 
@@ -1154,6 +1172,7 @@ class OpenRpcParserImpl {
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc request package`,
         additionalProperties: false,
+        properties: [],
       };
 
       const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
@@ -1288,12 +1307,12 @@ class OpenRpcParserImpl {
     const paramNames: string[] = Object.keys(link.params as object);
 
     // The request type is always a class type, since it is created as such by us.
-    const requestClass = targetEndpoint.request.type as OmniClassType;
+    const requestClass = targetEndpoint.request.type as OmniObjectType;
     const requestParamsParameter = requestClass.properties?.find(it => it.name == 'params');
     if (!requestParamsParameter) {
       throw new Error(`The target request type must be Class and have a 'params' property`);
     }
-    const requestResultClass = requestParamsParameter.type as OmniClassType;
+    const requestResultClass = requestParamsParameter.type as OmniObjectType;
 
     const mappings: OmniLinkMapping[] = [];
     for (const linkParamName of paramNames) {

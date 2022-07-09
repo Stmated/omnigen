@@ -12,9 +12,8 @@ export class AddConstructorTransformer extends AbstractJavaTransformer {
     root.visit(VisitorFactoryManager.create(this._javaVisitor, {
       visitClassDeclaration: (node, visitor) => {
         this._javaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
-
         classDeclarations.push(node);
-      }
+      },
     }));
 
     // TODO: Re-order the nodes, so that those that have no superclasses are first

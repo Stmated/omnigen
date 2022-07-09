@@ -2,12 +2,13 @@ import {AbstractJavaTransformer} from './AbstractJavaTransformer';
 import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
   CompositionKind,
-  OmniClassType,
   OmniCompositionType,
-  OmniLinkMapping,
   OmniEnumType,
   OmniExamplePairing,
+  OmniGenericSourceIdentifierType,
+  OmniLinkMapping,
   OmniModel,
+  OmniObjectType,
   OmniOutput,
   OmniPrimitiveType,
   OmniProperty,
@@ -92,10 +93,15 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // Just that has no real content in itself, but made up of the different parts.
         // If the composition is a "extends A and B"
         // Then it should be extending A, and implementing B interface, and rendering B properties
-        this.transformComposition(model, type, options, root, graph)
+        this.transformObject(model, type, options, root, graph)
 
       } else if (type.kind == OmniTypeKind.OBJECT) {
         this.transformObject(model, type, options, root, graph);
+      } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
+        this.transformObject(model, type.of, options, root, graph, type.sourceIdentifiers);
+      } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+        // This is a target, it can/should never exist outside another type/as a top-level type.
+        // It will checked for when adding/rendering the extension declarations.
       } else if (type.kind == OmniTypeKind.NULL) {
 
       } else if (type.kind == OmniTypeKind.PRIMITIVE) {
@@ -198,116 +204,68 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     ));
   }
 
-  private transformComposition(
-    model: OmniModel,
-    type: OmniCompositionType,
-    options: JavaOptions,
-    root: JavaCstRootNode,
-    graph: DependencyGraph
-  ): void {
-
-    // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
-    //        Make use of the DependencyGraph to figure things out...
-    const body = new Java.Block();
-
-    const javaClass = new Java.ClassDeclaration(
-      new Java.Type(type),
-      new Java.Identifier(Naming.unwrap(type.name)),
-      body,
-    );
-
-    const comments = this.getCommentsForType(type, model, options);
-
-    if (type.compositionKind == CompositionKind.XOR) {
-      // The composition type is XOR, it can only be one of them.
-      // That is not possible to represent in Java, so we need another way of representing it.
-      // Order of importance is:
-      // 1. Using discriminator.propertyName and mapping (By Json fasterxml subtypes)
-      // 2. Using discriminator.propertyName and schema ref name (if mapping does not exist) (By Json fasterxml subtypes)
-      // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
-
-      const mappedTypes = [...type.mappings.values()];
-      const unmapped = type.types.filter(it => !mappedTypes.includes(it));
-      if (unmapped.length > 0) {
-
-        // This means the specification did not have any discriminators.
-        // Instead we need to figure out what it is in runtime. To be improved.
-        body.children.push(
-          new Java.RuntimeTypeMapping(type.types, options, (t) => this.getCommentsForType(t, model, options))
-        );
-
-      } else {
-
-        // The specification did map all types using a discriminator.
-        // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
-        comments.push(new Java.Comment(`This bad boy can be mapped so hard`));
-      }
-
-    } else {
-      const typeExtends = JavaDependencyGraph.getExtends(graph, type);
-      if (typeExtends) {
-        javaClass.extends = new Java.ExtendsDeclaration(
-          new Java.Type(typeExtends)
-        );
-      }
-
-      const typeImplements = JavaDependencyGraph.getImplements(graph, type);
-      if (typeImplements.length > 0) {
-        javaClass.implements = new Java.ImplementsDeclaration(
-          new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
-        );
-      }
-    }
-
-    if (comments.length > 0) {
-      javaClass.comments = new Java.CommentList(...comments);
-    }
-
-    root.children.push(new Java.CompilationUnit(
-      new Java.PackageDeclaration(options.package),
-      new Java.ImportList(
-        [] // TODO: Add the actual imports here. Visit all nodes of 'javaClass' and gather all types!
-      ),
-      javaClass
-    ));
-  }
-
+  /**
+   * TODO: Merge functionality for object and composition
+   */
   private transformObject(
     model: OmniModel,
-    type: OmniClassType,
+    type: OmniObjectType | OmniCompositionType,
     options: JavaOptions,
     root: JavaCstRootNode,
-    graph: DependencyGraph
+    graph: DependencyGraph,
+    genericTypes?: OmniGenericSourceIdentifierType[]
   ): void {
 
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
     //        Make use of the DependencyGraph to figure things out...
     const body = new Java.Block();
 
-    if (type.properties) {
-      for (const property of type.properties) {
-        this.transformObjectProperty(model, body, property, options);
+    if (type.kind == OmniTypeKind.OBJECT) {
+
+      if (type.properties) {
+        for (const property of type.properties) {
+          this.transformObjectProperty(model, body, property, options);
+        }
       }
-    }
 
-    if (type.additionalProperties) {
+      if (type.additionalProperties) {
 
-      if (!JavaDependencyGraph.superMatches(graph, type, parent => parent.additionalProperties == true)) {
+        if (!JavaDependencyGraph.superMatches(graph, type, parent => parent.additionalProperties == true)) {
 
-        // No parent implements additional properties, so we should.
-        body.children.push(new Java.AdditionalPropertiesDeclaration());
+          // No parent implements additional properties, so we should.
+          body.children.push(new Java.AdditionalPropertiesDeclaration());
+        }
       }
     }
 
     const javaClassName = Naming.unwrap(type.name);
-    const javaClass = new Java.ClassDeclaration(
-      new Java.Type(type),
-      new Java.Identifier(javaClassName),
-      body,
-    );
+    const javaType = new Java.Type(type);
+
+    let declaration: Java.ClassDeclaration | Java.GenericClassDeclaration;
+    if (genericTypes) {
+      declaration = new Java.GenericClassDeclaration(
+        new Java.Identifier(javaClassName),
+        javaType,
+        new Java.GenericTypeDeclarationList(
+          genericTypes.map(it => new Java.GenericTypeDeclaration(
+            new Java.Identifier(Naming.unwrap(it.name)),
+            it.lowerBound ? new Java.Type(it.lowerBound) : undefined,
+            it.upperBound ? new Java.Type(it.upperBound) : undefined,
+            // TODO: Add lower and upper bounds
+          ))
+        ),
+        body,
+      );
+    } else {
+      declaration = new Java.ClassDeclaration(
+        javaType,
+        new Java.Identifier(javaClassName),
+        body,
+      );
+    }
 
     // TODO: Move into a separate transformer, and make it an option
-    javaClass.annotations = new Java.AnnotationList(
+    declaration.annotations = new Java.AnnotationList(
       new Java.Annotation(
         new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'javax.annotation.Generated', name: 'Generated'}),
         new Java.AnnotationKeyValuePairList(
@@ -325,22 +283,50 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     const comments = this.getCommentsForType(type, model, options);
 
-    const typeExtends = JavaDependencyGraph.getExtends(graph, type);
-    if (typeExtends) {
-      javaClass.extends = new Java.ExtendsDeclaration(
-        new Java.Type(typeExtends)
-      );
-    }
+    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
 
-    const typeImplements = JavaDependencyGraph.getImplements(graph, type);
-    if (typeImplements.length > 0) {
-      javaClass.implements = new Java.ImplementsDeclaration(
-        new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
-      );
+        // The composition type is XOR, it can only be one of them.
+        // That is not possible to represent in Java, so we need another way of representing it.
+        // Order of importance is:
+        // 1. Using discriminator.propertyName and mapping (By Json fasterxml subtypes)
+        // 2. Using discriminator.propertyName and schema ref name (if mapping does not exist) (By Json fasterxml subtypes)
+        // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
+
+        const mappedTypes = [...type.mappings.values()];
+        const unmapped = type.types.filter(it => !mappedTypes.includes(it));
+        if (unmapped.length > 0) {
+
+          // This means the specification did not have any discriminators.
+          // Instead we need to figure out what it is in runtime. To be improved.
+          body.children.push(
+            new Java.RuntimeTypeMapping(type.types, options, (t) => this.getCommentsForType(t, model, options))
+          );
+
+        } else {
+
+          // The specification did map all types using a discriminator.
+          // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
+          comments.push(new Java.Comment(`This bad boy can be mapped so hard`));
+        }
+    } else {
+
+      const typeExtends = JavaDependencyGraph.getExtends(graph, type);
+      if (typeExtends) {
+        declaration.extends = new Java.ExtendsDeclaration(
+          this.getTypeNodeWithGenerics(typeExtends)
+        );
+      }
+
+      const typeImplements = JavaDependencyGraph.getImplements(graph, type);
+      if (typeImplements.length > 0) {
+        declaration.implements = new Java.ImplementsDeclaration(
+          new Java.TypeList(typeImplements.map(it => this.getTypeNodeWithGenerics(it)))
+        );
+      }
     }
 
     if (comments.length > 0) {
-      javaClass.comments = new Java.CommentList(...comments);
+      declaration.comments = new Java.CommentList(...comments);
     }
 
     root.children.push(new Java.CompilationUnit(
@@ -348,8 +334,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       new Java.ImportList(
         [] // TODO: Add the actual imports here. Visit all nodes of 'javaClass' and gather all types!
       ),
-      javaClass
+      declaration
     ));
+  }
+
+  private getTypeNodeWithGenerics(typeExtends: OmniType): Java.Type {
+
+    return new Java.Type(typeExtends);
   }
 
   private transformObjectProperty(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {
@@ -510,10 +501,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         getterIdentifier
       ));
     }
-  }
-
-  private getCommentsDescribingExtensions(type: OmniType): string {
-    return Naming.unwrap(type.name);
   }
 
   private getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.Comment[] {

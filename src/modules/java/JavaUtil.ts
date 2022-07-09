@@ -1,7 +1,7 @@
 import * as Java from './cst/types';
 import {ModifierType} from '@java/cst';
 import {pascalCase} from 'change-case';
-import {OmniDictionaryType, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from '@parse';
+import {OmniArrayType, OmniDictionaryType, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
@@ -51,10 +51,24 @@ export class JavaUtil {
 
   /**
    * Ugly. It should not be based on if relativeTo is set or not if this should return an FQN or just Name.
+   * TODO: This should be delayed until rendering. It is up to the rendering to render a type. Should still be general.
    */
   public static getName(args: FqnOptions): string {
 
-    if (args.type.kind == OmniTypeKind.ARRAY) {
+    if (args.type.kind == OmniTypeKind.GENERIC_TARGET) {
+
+      // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
+      //        Right now this is locked to this part, and difficult to change
+      const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});;
+      const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
+      const genericTypeString = genericTypes.join(', ');
+      return `${rawName}<${genericTypeString}>`;
+
+    } else if (args.type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER || args.type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
+
+      // The local name of a generic type is always just the generic type name.
+      return Naming.unwrap(args.type.name);
+    } else if (args.type.kind == OmniTypeKind.ARRAY) {
       if (args.withSuffix === false) {
         return JavaUtil.getName({...args, ...{type: args.type.of}});
       } else {
@@ -87,6 +101,7 @@ export class JavaUtil {
     } else if (args.type.kind == OmniTypeKind.NULL) {
       // The type is "No Type. Void." It is not even really an Object.
       // But we return it as an Object in case we really need to display it somewhere.
+      // TODO: Should this be Void? Especially when used as a generic?
       if (args.relativeTo) {
         return 'Object';
       } else {
@@ -264,6 +279,13 @@ export class JavaUtil {
     return common;
   }
 
+  /**
+   * If the two types are in essence equal, 'a' is the one that is returned.
+   * This can be used to check if 'a' and 'b' are the same (by value, not necessarily reference)
+   *
+   * @param a
+   * @param b
+   */
   public static getCommonDenominatorBetween(a: OmniType, b: OmniType): OmniType | undefined {
 
     if (a == b) {
@@ -316,17 +338,38 @@ export class JavaUtil {
         if (commonKey) {
           const commonValue = JavaUtil.getCommonDenominator(a.valueType, b.valueType);
           if (commonValue) {
+            if (commonKey == a.keyType && commonValue == a.valueType) {
+              return a;
+            }
+
             return <OmniDictionaryType>{
-              name: () => `CommonBetween${Naming.safer(a)}And${Naming.safer(b)}`,
-              kind: OmniTypeKind.DICTIONARY,
-              keyType: commonKey,
-              valueType: commonValue,
+              ...b,
+              ...a,
+              ...{
+                name: () => `CommonBetween${Naming.safer(a)}And${Naming.safer(b)}`,
+                kind: OmniTypeKind.DICTIONARY,
+                keyType: commonKey,
+                valueType: commonValue,
+              }
             };
           }
         }
       }
     } else if (a.kind == OmniTypeKind.ARRAY) {
+      if (b.kind == OmniTypeKind.ARRAY) {
+        const common = JavaUtil.getCommonDenominator(a.of, b.of);
+        if (common == a.of) {
+          return a;
+        }
 
+        return <OmniArrayType>{
+          ...b,
+          ...a,
+          ...{
+            of: common
+          }
+        }
+      }
     } else if (a.kind == OmniTypeKind.UNKNOWN) {
       if (b.kind == OmniTypeKind.UNKNOWN) {
         return a;
@@ -357,8 +400,37 @@ export class JavaUtil {
         }
       }
     } else if (a.kind == OmniTypeKind.OBJECT) {
+      if (b.kind == OmniTypeKind.OBJECT) {
 
-      // Is there ever *anything* we can do here?
+        // If this fails, we should check the inheritance hierarchy.
+        // If they have anything at all in common here, then we can use that.
+        // TODO: We *maybe* could allow returning a composition here, but it's not really "legal" in Java.
+        if (b.extendedBy) {
+
+          // This will recursively search downwards in B's hierarchy.
+          const common = JavaUtil.getCommonDenominator(a, b.extendedBy);
+          if (common) {
+            return common;
+          }
+        }
+
+        if (a.extendedBy) {
+          const common = JavaUtil.getCommonDenominator(a.extendedBy, b);
+          if (common) {
+            return common;
+          }
+        }
+
+        // Is there ever anything better we can do here? Like check if signatures are matching.
+        return {
+          name: () => `${Naming.safer(a)}Or${Naming.safer(b)}`,
+          kind: OmniTypeKind.UNKNOWN
+        };
+      }
+    } else if (a.kind == OmniTypeKind.COMPOSITION) {
+
+      // TODO: Do something here. There might be parts of 'a' and 'b' that are similar.
+      // TODO: Should we then create a new composition type, or just return the first match?
     }
 
     return undefined;
@@ -488,5 +560,35 @@ export class JavaUtil {
     }
 
     return path;
+  }
+
+  public static toGenericAllowedType(type: OmniType): OmniType {
+    // Same thing for now, might change in the future.
+    return JavaUtil.toNullableType(type);
+  }
+
+  public static isGenericAllowedType(type: OmniType): boolean {
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+      return type.nullable ?? false;
+    }
+
+    return true;
+  }
+
+  public static toNullableType(type: OmniType): OmniType {
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+      if (type.nullable) {
+        return type;
+      }
+
+      const nullablePrimitive: OmniPrimitiveType = {
+        ...type,
+        ...{nullable: true}
+      };
+
+      return nullablePrimitive;
+    }
+
+    return type;
   }
 }

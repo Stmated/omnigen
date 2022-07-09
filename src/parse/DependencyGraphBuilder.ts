@@ -1,4 +1,4 @@
-import {OmniClassType, OmniType, OmniTypeKind} from '@parse/OmniModel';
+import {OmniObjectType, OmniType, OmniTypeKind} from '@parse/OmniModel';
 
 /**
  * Used for building a dependency graph from a list of existing types.

@@ -1,6 +1,6 @@
 import {
   CompositionKind,
-  OmniClassType,
+  OmniObjectType,
   OmniCompositionType,
   OmniPrimitiveKind,
   OmniType,
@@ -13,6 +13,7 @@ import {
   DependencyGraphOptions
 } from '../../src/parse/DependencyGraphBuilder';
 import {Naming} from '../../src/parse/Naming';
+import {TestUtils} from '../TestUtils';
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -249,26 +250,16 @@ function map(arg: MapArg): Map<OmniType, OmniType[]> {
   return map;
 }
 
-function obj(name: string, extendedBy?: OmniType): OmniClassType {
-  return {
-    name: name,
-    kind: OmniTypeKind.OBJECT,
-    extendedBy: extendedBy,
-    additionalProperties: false,
-  };
+function obj(name: string, extendedBy?: OmniType): OmniObjectType {
+  return TestUtils.obj(name, extendedBy);
 }
 
 function and(...types: OmniType[]): OmniCompositionType {
-  return {
-    name: types.map(it => Naming.unwrap(it.name)).join('And'),
-    kind: OmniTypeKind.COMPOSITION,
-    compositionKind: CompositionKind.AND,
-    types: types,
-  };
+  return TestUtils.and(...types);
 }
 
 function inlineClassWithProp(name: string,) {
-  const inline: OmniClassType = {
+  const inline: OmniObjectType = {
     kind: OmniTypeKind.OBJECT,
     properties: [],
     name: `${name}Class`,

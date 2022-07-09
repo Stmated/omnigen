@@ -46,14 +46,6 @@ export class OmniModelUtil {
     };
   }
 
-  public static isNotPrimitive(it: OmniType): boolean {
-
-      // Is this enough?
-      return it.kind == OmniTypeKind.OBJECT
-        || it.kind == OmniTypeKind.ENUM
-        || it.kind == OmniTypeKind.COMPOSITION;
-  }
-
   private static getTypesRecursively(type: OmniType, target: Set<OmniType>, edge: Set<OmniType>, isEdge: boolean): void {
 
     // Add self, and then try to find recursive types.
@@ -74,12 +66,12 @@ export class OmniModelUtil {
       }
 
     } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
-      type.types.forEach(t =>  this.getTypesRecursively(t, target, edge, isEdge));
+      type.types.forEach(t => this.getTypesRecursively(t, target, edge, isEdge));
       if (type.commonDenominator) {
         this.getTypesRecursively(type.commonDenominator, target, edge, isEdge);
       }
     } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-      type.properties.forEach(p =>  this.getTypesRecursively(p.type, target, edge, isEdge));
+      type.properties.forEach(p => this.getTypesRecursively(p.type, target, edge, isEdge));
       if (type.commonDenominator) {
         this.getTypesRecursively(type.commonDenominator, target, edge, isEdge);
       }
@@ -90,6 +82,20 @@ export class OmniModelUtil {
     } else if (type.kind == OmniTypeKind.DICTIONARY) {
       this.getTypesRecursively(type.keyType, target, edge, isEdge);
       this.getTypesRecursively(type.valueType, target, edge, isEdge);
+    } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
+      this.getTypesRecursively(type.of, target, edge, isEdge);
+      type.sourceIdentifiers.forEach(g => this.getTypesRecursively(g, target, edge, isEdge));
+    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+      type.targetIdentifiers.forEach(g => this.getTypesRecursively(g, target, edge, isEdge));
+    } else if (type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
+      this.getTypesRecursively(type.type, target, edge, isEdge);
+    } else if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
+      if (type.lowerBound) {
+        this.getTypesRecursively(type.lowerBound, target, edge, isEdge);
+      }
+      if (type.upperBound) {
+        this.getTypesRecursively(type.upperBound, target, edge, isEdge);
+      }
     }
   }
 }

@@ -7,8 +7,8 @@ import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {OmniModelUtil} from '../../../../src/parse/OmniModelUtil';
-import {OmniEndpoint, OmniModel, OmniOutput, OmniProperty, OmniTypeKind} from '@parse';
+import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniEndpoint, OmniModel, OmniOutput} from '@parse';
 
 // const SegfaultHandler = require('segfault-handler');
 // SegfaultHandler.registerHandler('crash.log');
@@ -30,7 +30,7 @@ describe('Test the rendering of a CST tree to string', () => {
 
       for (const fileName of fileNames) {
 
-        const model = await TestUtils.readExample(schemaName, fileName);
+        const model = await TestUtils.readExample(schemaName, fileName, DEFAULT_JAVA_OPTIONS);
 
         const interpreter = new JavaInterpreter();
         const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
@@ -87,7 +87,7 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test basic rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json');
+    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_JAVA_OPTIONS);
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     expect(interpretation).toBeDefined();
@@ -114,7 +114,7 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'bank.json');
+    const model = await TestUtils.readExample('openrpc', 'bank.json', DEFAULT_JAVA_OPTIONS);
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer(javaOptions, (cu) => {
@@ -128,7 +128,7 @@ describe('Test the rendering of a CST tree to string', () => {
   test('Test inheritance of descriptions', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'description-inheritance.json');
+    const model = await TestUtils.readExample('openrpc', 'description-inheritance.json', DEFAULT_JAVA_OPTIONS);
 
     // TODO: Assert every single description, make sure things are inherited just as we want them to be
     // TODO: There are *LOTS* of bugs here, we should make sure it is EXACTLY like we want it to be
@@ -176,20 +176,3 @@ function getEndpointResult(model: OmniModel, endpointName: string): OmniOutput {
 
   return endpoint.responses[0];
 }
-
-function getEndpointResultProperty(model: OmniModel, endpointName: string, propertyName: string): OmniProperty {
-  const result = getEndpointResult(model, endpointName);
-  if (result.type.kind != OmniTypeKind.OBJECT) {
-    throw new Error(`Cannot get property from ${endpointName} result since it's not an object`);
-  }
-
-  const property = result.type.properties?.find(it => it.name == propertyName);
-  if (!property) {
-    throw new Error(`There is no property called ${propertyName} in ${endpointName}`);
-  }
-
-  return property;
-}
-
-// TODO:
-// result.name = Name of the content that is being described. If the content described is a method parameter assignable by-name, this field SHALL define the parameter’s key (ie name).

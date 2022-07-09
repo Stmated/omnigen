@@ -187,6 +187,16 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
     };
 
     this.visitClassDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
+    this.visitGenericClassDeclaration = (node, visitor) => {
+      return [
+        visitor.visitClassDeclaration(node, visitor),
+        visitor.visitGenericTypeDeclarationList(node.typeList, visitor)
+      ];
+    }
+    this.visitGenericTypeDeclarationList = (node, visitor) => node.types.map(it => it.visit(visitor));
+    this.visitGenericTypeDeclaration = (node, visitor) => undefined;
+    this.visitGenericTypeUseList = (node, visitor) => node.types.map(it => it.visit(visitor));
+    this.visitGenericTypeUse = (node, visitor) => undefined;
     this.visitInterfaceDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
     this.visitEnumDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
     this.visitFieldReference = (node, visitor) => undefined;
@@ -268,6 +278,11 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
   visitCast: JavaVisitFn<Java.Cast, R>;
   visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
   visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
+  visitGenericClassDeclaration: JavaVisitFn<Java.GenericClassDeclaration, R>;
+  visitGenericTypeDeclarationList: JavaVisitFn<Java.GenericTypeDeclarationList, R>;
+  visitGenericTypeDeclaration: JavaVisitFn<Java.GenericTypeDeclaration, R>;
+  visitGenericTypeUseList: JavaVisitFn<Java.GenericTypeUseList, R>;
+  visitGenericTypeUse: JavaVisitFn<Java.GenericTypeUse, R>;
   visitInterfaceDeclaration: JavaVisitFn<Java.InterfaceDeclaration, R>;
   visitEnumDeclaration: JavaVisitFn<Java.EnumDeclaration, R>;
   visitEnumItem: JavaVisitFn<Java.EnumItem, R>;

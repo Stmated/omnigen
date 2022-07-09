@@ -1,4 +1,4 @@
-import {OmniClassType, OmniCompositionType, OmniType, OmniTypeKind} from '@parse';
+import {OmniCompositionType, OmniInheritableType, OmniObjectType, OmniType, OmniTypeKind} from '@parse';
 import {DependencyGraph} from '@parse/DependencyGraphBuilder';
 
 export class JavaDependencyGraph {
@@ -11,12 +11,12 @@ export class JavaDependencyGraph {
     return !JavaDependencyGraph.isInterface(graph, type);
   }
 
-  public static getExtends(graph: DependencyGraph, type: OmniClassType | OmniCompositionType): OmniClassType | undefined {
+  public static getExtends(graph: DependencyGraph, type: OmniInheritableType): OmniInheritableType | undefined {
 
     const uses = graph.uses.get(type);
     if (uses) {
       for (const use of uses) {
-        if (use.kind == OmniTypeKind.OBJECT && JavaDependencyGraph.isClass(graph, use)) {
+        if ((use.kind == OmniTypeKind.OBJECT || use.kind == OmniTypeKind.GENERIC_TARGET) && JavaDependencyGraph.isClass(graph, use)) {
 
           // It is not an interface. So either an abstract class or a concrete class. Either works.
           return use;
@@ -27,7 +27,7 @@ export class JavaDependencyGraph {
     return undefined;
   }
 
-  public static getImplements(graph: DependencyGraph, type: OmniClassType | OmniCompositionType): OmniType[] {
+  public static getImplements(graph: DependencyGraph, type: OmniObjectType | OmniCompositionType): OmniType[] {
 
     const interfaces: OmniType[] = [];
     const uses = graph.uses.get(type);
@@ -46,12 +46,25 @@ export class JavaDependencyGraph {
     return interfaces;
   }
 
-  public static superMatches(graph: DependencyGraph, type: OmniClassType, callback: { (classType: OmniClassType): boolean}): boolean {
+  public static superMatches(
+    graph: DependencyGraph,
+    type: OmniObjectType,
+    callback: { (classType: OmniObjectType): boolean}
+  ): boolean {
 
-    let pointer: OmniClassType | undefined = type;
+    let pointer: OmniInheritableType | undefined = type;
     while (pointer = JavaDependencyGraph.getExtends(graph, pointer)) {
-      if (callback(pointer)) {
-        return true;
+      // TODO: Is this even correct?
+      if (pointer.kind == OmniTypeKind.GENERIC_TARGET) {
+        if (callback(pointer.source.of)) {
+          return true;
+        }
+      } else if (pointer.kind == OmniTypeKind.COMPOSITION) {
+        // ???
+      } else {
+        if (callback(pointer)) {
+          return true;
+        }
       }
     }
 

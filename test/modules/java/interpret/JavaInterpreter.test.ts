@@ -8,7 +8,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
   test('Test basic structuring', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json');
+    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_JAVA_OPTIONS);
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     expect(interpretation).toBeDefined();

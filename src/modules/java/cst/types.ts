@@ -2,12 +2,12 @@ import AbstractNode from '@cst/AbstractNode';
 import AbstractToken from '@cst/AbstractToken';
 import {JavaOptions, JavaUtil, UnknownType} from '@java';
 import {
-  OmniClassType,
+  OmniObjectType,
   OmniDictionaryType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniType,
-  OmniTypeKind
+  OmniTypeKind, OmniUnknownType, OmniGenericSourceType, OmniGenericType, OmniGenericSourceIdentifierType
 } from '@parse';
 import {VisitResult} from '@visit';
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
@@ -70,9 +70,9 @@ export class Type extends AbstractJavaNode {
     this._localName = value;
   }
 
-  constructor(genericType: OmniType) {
+  constructor(omniType: OmniType) {
     super();
-    this.omniType = genericType;
+    this.omniType = omniType;
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
@@ -768,10 +768,9 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     // TODO: Should this be "Unknown" or another type that is "Any"?
     //  Difference between rendering as JsonNode and Object in some cases.
-    const valueType: OmniClassType = {
+    const valueType: OmniUnknownType = {
       name: () => 'AdditionalPropertiesValueType',
       kind: OmniTypeKind.UNKNOWN,
-      additionalProperties: false
     }
     const mapType: OmniDictionaryType = {
       name: () => 'AdditionalProperties',
@@ -865,6 +864,75 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration {
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitInterfaceDeclaration(this, visitor);
+  }
+}
+
+export class GenericClassDeclaration extends ClassDeclaration {
+  typeList: GenericTypeDeclarationList;
+
+  constructor(name: Identifier, type: Type, typeList: GenericTypeDeclarationList, body: Block) {
+    super(type, name, body);
+    this.typeList = typeList;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitGenericClassDeclaration(this, visitor);
+  }
+}
+
+export class GenericTypeDeclaration extends AbstractNode {
+  name: Identifier;
+  lowerBounds?: AbstractNode;
+  upperBounds?: AbstractNode;
+
+  constructor(name: Identifier, lowerBounds?: AbstractNode, upperBounds?: AbstractNode) {
+    super();
+    this.name = name;
+    this.lowerBounds = lowerBounds;
+    this.upperBounds = upperBounds;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitGenericTypeDeclaration(this, visitor);
+  }
+}
+
+export class GenericTypeDeclarationList extends AbstractJavaNode {
+  types: GenericTypeDeclaration[];
+
+  constructor(types: GenericTypeDeclaration[]) {
+    super();
+    this.types = types;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitGenericTypeDeclarationList(this, visitor);
+  }
+}
+
+export class GenericTypeUse extends AbstractNode {
+  name: Identifier;
+
+  constructor(name: Identifier) {
+    super();
+    this.name = name;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitGenericTypeUse(this, visitor);
+  }
+}
+
+export class GenericTypeUseList extends AbstractJavaNode {
+  types: GenericTypeUse[];
+
+  constructor(types: GenericTypeUse[]) {
+    super();
+    this.types = types;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitGenericTypeUseList(this, visitor);
   }
 }
 
@@ -1050,9 +1118,9 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
     this.getters = [];
     this.methods = [];
 
-    const unknownType: OmniClassType = {
+    const unknownType: OmniUnknownType = {
       kind: OmniTypeKind.UNKNOWN,
-      name: 'unknown'
+      name: 'unknown',
     };
 
     const untypedField = new Field(

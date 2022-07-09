@@ -23,7 +23,7 @@ export class SchemaFile {
   public getAbsolutePath(): string | undefined {
     if (typeof this._input === 'string') {
       if (this._input.indexOf('\n') !== -1) {
-        return this._fileName;
+        return this._fileName ? path.resolve(this._fileName) : undefined;
       }
     }
 
@@ -35,7 +35,7 @@ export class SchemaFile {
       return this._input.toString();
     }
 
-    return this._fileName;
+    return this._fileName ? path.resolve(this._fileName) : undefined;
   }
 
   public async asObject<R>(): Promise<R> {

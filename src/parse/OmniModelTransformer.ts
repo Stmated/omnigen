@@ -1,6 +1,6 @@
 import {OmniModel} from '@parse/OmniModel';
-import {DependencyGraph} from '@parse/DependencyGraphBuilder';
+import {IOptions} from '@options';
 
-export interface OmniModelTransformer {
-  transform(model: OmniModel, dependencies: DependencyGraph): void;
+export interface OmniModelTransformer<O extends IOptions> {
+  transform(model: OmniModel, options: O): void;
 }

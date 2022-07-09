@@ -7,8 +7,11 @@ import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
 import {JavaOptions, JavaUtil} from '@java';
+import {OmniTypeKind} from '@parse';
+import {Naming} from '@parse/Naming';
+import {GenericTypeDeclarationList, TypeList} from '@java/cst/types';
 
-type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>; 
+type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>;
 
 export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   private blockDepth = 0;
@@ -123,21 +126,76 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return blockContent.replace(this.pattern_lineStart, indentation);
   }
 
-  visitCommonTypeDeclaration(visitor: IJavaCstVisitor<string>, node: Java.AbstractObjectDeclaration, typeType: string): VisitResult<string> {
+  visitCommonTypeDeclaration(visitor: IJavaCstVisitor<string>, node: Java.AbstractObjectDeclaration, typeString: string, generics?: GenericTypeDeclarationList): VisitResult<string> {
 
     const modifiers = this.render(node.modifiers, visitor);
     const name = this.render(node.name, visitor);
+    const genericsString = generics ? this.render(generics, visitor) : '';
     const classExtension = node.extends ? ` extends ${this.render(node.extends, visitor)}` : '';
     const classImplementations = node.implements ? ` implements ${this.render(node.implements, visitor)}` : '';
 
     let typeDeclarationContent = '';
     typeDeclarationContent += (node.comments ? `${this.render(node.comments, visitor)}\n` : '');
     typeDeclarationContent += (node.annotations ? `${this.render(node.annotations, visitor)}\n` : '');
-    typeDeclarationContent += (`${modifiers} ${typeType} ${name}${classExtension}${classImplementations} {\n`);
+    typeDeclarationContent += (`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
     typeDeclarationContent += (this.render(node.body, visitor));
     typeDeclarationContent += ('}\n');
 
     return typeDeclarationContent;
+  }
+
+  visitClassDeclaration: JavaRendererVisitFn<Java.ClassDeclaration> = (node, visitor) => {
+    return this.visitCommonTypeDeclaration(visitor, node, 'class');
+  }
+
+  visitGenericClassDeclaration: JavaRendererVisitFn<Java.GenericClassDeclaration> = (node, visitor) => {
+    const filtered = node.typeList.types.length > 0 ? node.typeList : undefined;
+    return this.visitCommonTypeDeclaration(visitor, node, 'class', filtered);
+  }
+
+  visitInterfaceDeclaration: JavaRendererVisitFn<Java.InterfaceDeclaration> = (node, visitor) => {
+    return this.visitCommonTypeDeclaration(visitor, node, 'interface');
+  }
+
+  visitEnumDeclaration: JavaRendererVisitFn<Java.EnumDeclaration> = (node, visitor) => {
+    return this.visitCommonTypeDeclaration(visitor, node, 'enum');
+  }
+
+  visitGenericTypeDeclaration: JavaRendererVisitFn<Java.GenericTypeDeclaration> = (node, visitor) => {
+
+    let str = this.render(node.name, visitor);
+    if (node.lowerBounds) {
+      str += ` extends ${this.render(node.lowerBounds, visitor)}`;
+    }
+    if (node.upperBounds) {
+      str += ` super ${this.render(node.upperBounds, visitor)}`;
+    }
+
+    return str;
+  }
+
+  visitGenericTypeDeclarationList: JavaRendererVisitFn<Java.GenericTypeDeclarationList> = (node, visitor) => {
+
+    const genericTypes = node.types.map(it => this.render(it, visitor));
+    if (genericTypes.length == 0) {
+      // TODO: This should not happen. Fix the location that puts in the empty generics.
+      return '';
+    }
+
+    return `<${genericTypes.join(', ')}>`;
+  }
+
+  visitGenericTypeUseList: JavaRendererVisitFn<Java.GenericTypeUseList> = (node, visitor) => {
+    const genericTypes = node.types.map(it => this.render(it, visitor));
+    if (genericTypes.length == 0) {
+      return '';
+    }
+
+    return genericTypes;
+  }
+
+  visitGenericTypeUse: JavaRendererVisitFn<Java.GenericTypeUse> = (node, visitor) => {
+    return this.render(node.name, visitor);
   }
 
   visitCommentList: JavaRendererVisitFn<Java.CommentList> = (node, visitor) => {
@@ -190,18 +248,6 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
 
   visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
     return (node.types.children.map(it => this.escapeImplements(this.render(it, visitor))).join(', '));
-  }
-
-  visitClassDeclaration: JavaRendererVisitFn<Java.ClassDeclaration> = (node, visitor) => {
-    return this.visitCommonTypeDeclaration(visitor, node, 'class');
-  }
-
-  visitInterfaceDeclaration: JavaRendererVisitFn<Java.InterfaceDeclaration> = (node, visitor) => {
-    return this.visitCommonTypeDeclaration(visitor, node, 'interface');
-  }
-
-  visitEnumDeclaration: JavaRendererVisitFn<Java.EnumDeclaration> = (node, visitor) => {
-    return this.visitCommonTypeDeclaration(visitor, node, 'enum');
   }
 
   visitEnumItem: JavaRendererVisitFn<Java.EnumItem> = (node, visitor) => {

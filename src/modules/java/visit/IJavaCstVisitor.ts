@@ -58,4 +58,9 @@ export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
   visitRuntimeTypeMapping: JavaVisitFn<Java.RuntimeTypeMapping, R>;
   visitClassReference: JavaVisitFn<Java.ClassReference, R>;
+  visitGenericClassDeclaration:  JavaVisitFn<Java.GenericClassDeclaration, R>;
+  visitGenericTypeDeclarationList:  JavaVisitFn<Java.GenericTypeDeclarationList, R>;
+  visitGenericTypeDeclaration:  JavaVisitFn<Java.GenericTypeDeclaration, R>;
+  visitGenericTypeUse:  JavaVisitFn<Java.GenericTypeUse, R>;
+  visitGenericTypeUseList:  JavaVisitFn<Java.GenericTypeUseList, R>;
 }

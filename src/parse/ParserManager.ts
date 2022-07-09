@@ -2,12 +2,18 @@ import {OmniModel} from '@parse';
 import {Parser} from '@parse/Parser';
 import {PathLike} from 'fs';
 import {SchemaFile} from '@parse/SchemaFile';
+import {OmniModelTransformer} from '@parse/OmniModelTransformer';
+import {IOptions} from '@options';
 
 export type ParseManagerInput = string | PathLike;
 
 export interface ParseInputOptions {
   input: ParseManagerInput;
   fileName?: string;
+
+  // TODO: This is ugly and shows a reverse in responsibilities.
+  //        Should be able to send exactly "JavaOptions" for Java, and only send that to the transformers supporting it.
+  languageOptions: IOptions;
 }
 
 export interface IParseManager {
@@ -17,6 +23,7 @@ export interface IParseManager {
 export class ParserManager implements IParseManager {
 
   private readonly _parsers: Parser[] = [];
+  private readonly _modelTransformers: OmniModelTransformer<IOptions>[] = [];
 
   public register(parser: Parser): void {
     this._parsers.push(parser);
@@ -32,13 +39,24 @@ export class ParserManager implements IParseManager {
     return true;
   }
 
+  public registerTransformer(transformer: OmniModelTransformer<IOptions>): void {
+    this._modelTransformers.push(transformer);
+  }
+
   async parse(options: ParseInputOptions): Promise<OmniModel> {
 
     const schemaFile = new SchemaFile(options.input, options.fileName);
 
     for (const parser of this._parsers) {
       if (await parser.canHandle(schemaFile)) {
-        return parser.parse(schemaFile);
+        return parser.parse(schemaFile)
+          .then(model => {
+            for (const transformer of this._modelTransformers) {
+              transformer.transform(model, options.languageOptions);
+            }
+
+            return model;
+          });
       }
     }
 

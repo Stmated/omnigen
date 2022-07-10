@@ -256,12 +256,18 @@ type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
 export type OmniPrimitiveConstantValue = string | boolean | number
 export type OmniPrimitiveConstantValueOrLazySubTypeValue = OmniPrimitiveConstantValue | {(subtype: OmniType): OmniPrimitiveConstantValue};
 
+export enum PrimitiveNullableKind {
+  NOT_NULLABLE,
+  NULLABLE,
+  NOT_NULLABLE_PRIMITIVE,
+}
+
 export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKnownKind> {
   primitiveKind: OmniPrimitiveKind;
   /**
    * Nullable means the primitive is for example not a "boolean" but a nullable "Boolean"
    */
-  nullable?: boolean;
+  nullable?: PrimitiveNullableKind;
   valueConstant?: OmniPrimitiveConstantValueOrLazySubTypeValue;
 }
 

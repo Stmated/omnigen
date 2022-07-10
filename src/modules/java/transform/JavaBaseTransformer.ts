@@ -10,13 +10,16 @@ import {
   OmniModel,
   OmniObjectType,
   OmniOutput,
+  OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
+  OmniReferenceType,
   OmniType,
-  OmniTypeKind
+  OmniTypeKind,
+  PrimitiveNullableKind
 } from '@parse';
 import * as Java from '@java/cst';
-import {camelCase, constantCase} from 'change-case';
+import {camelCase, constantCase, pascalCase} from 'change-case';
 import {Naming} from '@parse/Naming';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
@@ -24,6 +27,8 @@ import {OmniModelUtil} from '@parse/OmniModelUtil';
 
 export class JavaBaseTransformer extends AbstractJavaTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
+
+  private static readonly _primitiveWrapperMap = new Map<OmniPrimitiveKind, Java.ClassDeclaration>();
 
   transform(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 
@@ -46,6 +51,57 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
           type.nameClassifier = fqn;
         }
+      }
+    }
+
+    for (const type of exportableTypes.all) {
+      if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable == PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE) {
+
+        // The primitive is said to not be nullable, but to still be a primitive.
+        // This is not really possible in Java, so we need to wrap it inside a custom class.
+        let primitiveClass = JavaBaseTransformer._primitiveWrapperMap.get(type.primitiveKind);
+        if (!primitiveClass) {
+
+          const kindName = pascalCase(JavaUtil.getPrimitiveKindName(type));
+          const valueType: OmniPrimitiveType = {kind: OmniTypeKind.PRIMITIVE, primitiveKind: type.primitiveKind, name: `NullSafe${kindName}`};
+          const valueIdentifier = new Java.Identifier('value');
+          const valueField = new Java.Field(
+            new Java.Type(valueType),
+            valueIdentifier,
+            new Java.ModifierList(
+              new Java.Modifier(ModifierType.PRIVATE),
+              new Java.Modifier(ModifierType.FINAL)
+            ),
+            undefined,
+            new Java.AnnotationList(
+              new Java.Annotation(
+                new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue', name: 'JsonValue'})
+              )
+            )
+          );
+
+          primitiveClass = new Java.ClassDeclaration(
+            new Java.Type(valueType),
+            new Java.Identifier(`Primitive${kindName}`),
+            new Java.Block(
+              valueField,
+              // Force the name to be "getValue" so that it does not become "isValue" for a primitive boolean.
+              new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue'))
+            ),
+          );
+
+          root.children.push(
+            new Java.CompilationUnit(
+              new Java.PackageDeclaration(options.package),
+              new Java.ImportList([]),
+              primitiveClass
+            )
+          );
+
+          JavaBaseTransformer._primitiveWrapperMap.set(type.primitiveKind, primitiveClass);
+        }
+
+        this.replaceTypeWithReference(type, type, primitiveClass, options);
       }
     }
 
@@ -251,7 +307,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
             new Java.Identifier(Naming.unwrap(it.name)),
             it.lowerBound ? new Java.Type(it.lowerBound) : undefined,
             it.upperBound ? new Java.Type(it.upperBound) : undefined,
-            // TODO: Add lower and upper bounds
           ))
         ),
         body,
@@ -810,5 +865,16 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       delete (type as any)[key];
     }
+  }
+
+  private replaceTypeWithReference(target: OmniType, primitiveType: OmniPrimitiveType, primitiveClass: Java.ClassDeclaration, options: JavaOptions): void {
+
+    // TODO: Replace this with something else? REFERENCE should be for native classes, but this is sort of not?
+    target.kind = OmniTypeKind.REFERENCE;
+
+    const referenceType = target as OmniReferenceType;
+
+    //
+    referenceType.fqn = `${options.package}.Primitive${JavaUtil.getPrimitiveKindName(primitiveType)}`;
   }
 }

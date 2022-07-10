@@ -8,7 +8,6 @@ import {
   OmniArrayPropertiesByPositionType,
   OmniArrayTypes,
   OmniArrayTypesByPositionType,
-  OmniObjectType,
   OmniComparisonOperator,
   OmniContact,
   OmniEndpoint,
@@ -22,6 +21,7 @@ import {
   OmniLinkSourceParameter,
   OmniLinkTargetParameter,
   OmniModel,
+  OmniObjectType,
   OmniOutput,
   OmniPayloadPathQualifier,
   OmniPrimitiveKind,
@@ -30,7 +30,9 @@ import {
   OmniPropertyOwner,
   OmniServer,
   OmniType,
-  OmniTypeKind, OmniUnknownType,
+  OmniTypeKind,
+  OmniUnknownType,
+  PrimitiveNullableKind,
   SchemaFile,
   TypeName,
 } from '@parse';
@@ -1103,7 +1105,7 @@ class OpenRpcParserImpl {
       name: `${method.obj.name}RequestId`,
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING,
-      nullable: false
+      nullable: PrimitiveNullableKind.NOT_NULLABLE
     };
 
     let requestParamsType: OmniPropertyOwner;
@@ -1181,7 +1183,7 @@ class OpenRpcParserImpl {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
         valueConstant: hasConstantVersion ? this._options.jsonRpcRequestVersion : undefined,
-        nullable: false
+        nullable: PrimitiveNullableKind.NOT_NULLABLE
       };
 
       // TODO: This should be moved to the abstract parent class somehow, then sent down through constructor
@@ -1200,7 +1202,7 @@ class OpenRpcParserImpl {
 
           throw new Error(`The title must be set`);
         },
-        nullable: false
+        nullable: PrimitiveNullableKind.NOT_NULLABLE
       };
 
       this._jsonRpcRequestClass.properties = [

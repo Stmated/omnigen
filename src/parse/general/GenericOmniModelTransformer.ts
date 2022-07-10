@@ -5,11 +5,12 @@ import {
   OmniGenericTargetType,
   OmniModel,
   OmniObjectType,
+  OmniProperty,
   OmniType,
   OmniTypeKind
 } from '@parse';
 import {Naming} from '@parse/Naming';
-import {JavaOptions, JavaUtil} from '@java';
+import {JavaOptions, JavaUtil, PrimitiveGenerificationChoice} from '@java';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {LoggerFactory} from '@util';
 
@@ -83,7 +84,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
       // This could be a class that we can generify.
       // Need to investigate the properties and see if the types are different.
-      const newType = this.handleSignatureInfo(e[1]);
+      const newType = this.handleSignatureInfo(e[1], options);
       if (newType) {
         const idx = model.types.indexOf(newType.of);
         if (idx !== -1) {
@@ -96,7 +97,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     }
   }
 
-  private handleSignatureInfo(info: SignatureInfo): OmniGenericSourceType | undefined {
+  private handleSignatureInfo(info: SignatureInfo, options: JavaOptions): OmniGenericSourceType | undefined {
 
     const genericTargets: OmniGenericTargetType[] = [];
     const genericEntries: SourceIdentifierAndPropertyName[] = [];
@@ -109,6 +110,8 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
       sourceIdentifiers: [],
     }
 
+    const wrapPrimitives = (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE);
+    const genericPropertiesToAdd: OmniProperty[] = [];
     for (const propertyName of info.propertyNames) {
       const uniqueTypesOnIndex = this.getUniqueTypes(info, propertyName);
 
@@ -120,13 +123,19 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
       const genericName = (genericEntries.length == 0) ? 'T' : `T${genericEntries.length}`;
       const commonDenominator = JavaUtil.getCommonDenominator(...uniqueTypesOnIndex);
+      const genericCommonDenominator = commonDenominator
+        ? JavaUtil.toGenericAllowedType(commonDenominator, wrapPrimitives)
+        : undefined;
+      const lowerBound = (genericCommonDenominator?.kind == OmniTypeKind.UNKNOWN)
+        ? undefined
+        : genericCommonDenominator;
 
       // Set the common denominator to the generic index.
       // The common denominator could be undefined, then it has no type constraints.
       const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
         name: genericName,
         kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-        lowerBound: (commonDenominator?.kind == OmniTypeKind.UNKNOWN) ? undefined : commonDenominator,
+        lowerBound: lowerBound,
       };
 
       genericSource.sourceIdentifiers.push(genericSourceIdentifier);
@@ -138,7 +147,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
       });
 
       // Is this the best way of doing it? Placing a generic property inside the original type?
-      genericSource.of.properties.push({
+      genericPropertiesToAdd.push({
         name: propertyName,
         type: genericSourceIdentifier,
         owner: genericSource.of
@@ -152,6 +161,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     }
 
     const subTypesToRemove: OmniType[] = [];
+    const extensionsToSet: {target: OmniObjectType, extension: OmniType}[] = [];
     for (const subType of info.subTypes) {
 
       const genericTarget: OmniGenericTargetType = {
@@ -172,16 +182,44 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
         const generic = genericEntries.find(it => it.propertyName == propertyName);
         if (generic) {
+
+          let genericTargetType = actualProperty.type;
+          if (!JavaUtil.isGenericAllowedType(genericTargetType)) {
+
+            switch (options.onPrimitiveGenerification) {
+              case PrimitiveGenerificationChoice.ABORT:
+                const targetName = Naming.safer(genericSource);
+                const ownerName = Naming.safer(subType);
+                logger.warn(
+                  `Aborting generification of ${targetName}', since '${ownerName}' has primitive non-null property '${propertyName}'`
+                );
+                return undefined;
+              case PrimitiveGenerificationChoice.WRAP_OR_BOX:
+              case PrimitiveGenerificationChoice.SPECIALIZE:
+                const allowedGenericTargetType = JavaUtil.toGenericAllowedType(
+                  genericTargetType,
+                  (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
+                );
+                allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
+
+                const from = Naming.safer(genericTargetType);
+                const to = Naming.safer(allowedGenericTargetType);
+                logger.warn(`Changing generic type from ${from} to ${to}`);
+                genericTargetType = allowedGenericTargetType;
+                break;
+            }
+          }
+
           genericTarget.targetIdentifiers.push({
             name: `GenericTargetTo${propertyName}`,
             kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-            type: actualProperty.type,
+            type: genericTargetType,
             sourceIdentifier: generic.identifier
           });
         }
       }
 
-      if(genericTarget.targetIdentifiers.length == 0) {
+      if (genericTarget.targetIdentifiers.length == 0) {
 
         // For some reason we could not find any target identifiers.
         // Let's remove this type from removal and keep things as they are.
@@ -191,12 +229,25 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
         // We should now replace the type this classType is extended by.
         // We replace it with a generic target to the generic source.
-        subType.extendedBy = genericTarget;
+        extensionsToSet.push({
+          target: subType,
+          extension: genericTarget
+        });
       }
     }
 
+    // The actual mutation of the original types are done here at the end.
+    // This is because it might have been aborted because of a partial error.
     if (subTypesToRemove.length > 0) {
       info.subTypes = info.subTypes.filter(it => !subTypesToRemove.includes(it));
+    }
+
+    for (const extensionToSet of extensionsToSet) {
+      extensionToSet.target.extendedBy = extensionToSet.extension;
+    }
+
+    for (const sourceProperty of genericPropertiesToAdd) {
+      genericSource.of.properties.push(sourceProperty);
     }
 
     // Remove the properties from the subtypes, since the generic property now exists in the supertype.

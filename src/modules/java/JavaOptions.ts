@@ -6,6 +6,12 @@ export enum UnknownType {
   OBJECT
 }
 
+export enum PrimitiveGenerificationChoice {
+  ABORT,
+  WRAP_OR_BOX,
+  SPECIALIZE
+}
+
 export interface JavaOptions extends IOptions {
   immutableModels: boolean;
   package: string;
@@ -13,6 +19,7 @@ export interface JavaOptions extends IOptions {
   unknownType: UnknownType;
   includeLinksOnType: boolean;
   includeLinksOnProperty: boolean;
+  onPrimitiveGenerification: PrimitiveGenerificationChoice;
 }
 
 export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
@@ -22,4 +29,5 @@ export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
   unknownType: UnknownType.JSON,
   includeLinksOnType: false,
   includeLinksOnProperty: true,
+  onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
 }

@@ -1,7 +1,15 @@
 import * as Java from './cst/types';
 import {ModifierType} from '@java/cst';
 import {pascalCase} from 'change-case';
-import {OmniArrayType, OmniDictionaryType, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from '@parse';
+import {
+  OmniArrayType,
+  OmniDictionaryType,
+  OmniPrimitiveKind,
+  OmniPrimitiveType,
+  OmniType,
+  OmniTypeKind,
+  PrimitiveNullableKind
+} from '@parse';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
@@ -59,7 +67,7 @@ export class JavaUtil {
 
       // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
       //        Right now this is locked to this part, and difficult to change
-      const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});;
+      const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});
       const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
       const genericTypeString = genericTypes.join(', ');
       return `${rawName}<${genericTypeString}>`;
@@ -150,28 +158,33 @@ export class JavaUtil {
     }
   }
 
-  private static getPrimitiveKindName(type: OmniPrimitiveType): string {
+  public static getPrimitiveKindName(type: OmniPrimitiveType): string {
+
+    // The primitive nullable kind might be NOT_NULLABLE_PRIMITIVE.
+    // Then in the end it will probably be a completely other type, depending on the language.
+    // In Java, we cannot use a primitive as a generic parameter, but we want to be able to say it cannot be null.
+    const boxed = (type.nullable && type.nullable == PrimitiveNullableKind.NULLABLE);
     switch (type.primitiveKind) {
       case OmniPrimitiveKind.BOOL:
-        return type.nullable ? 'java.lang.Boolean' : 'boolean';
+        return boxed ? 'java.lang.Boolean' : 'boolean';
       case OmniPrimitiveKind.VOID:
         return 'void';
       case OmniPrimitiveKind.CHAR:
-        return type.nullable ? 'java.lang.Character' : 'char';
+        return boxed ? 'java.lang.Character' : 'char';
       case OmniPrimitiveKind.STRING:
         return 'String';
       case OmniPrimitiveKind.FLOAT:
-        return type.nullable ? 'java.lang.Float' : 'float';
+        return boxed ? 'java.lang.Float' : 'float';
       case OmniPrimitiveKind.INTEGER:
-        return type.nullable ? 'java.lang.Integer' : 'int';
+        return boxed? 'java.lang.Integer' : 'int';
       case OmniPrimitiveKind.INTEGER_SMALL:
-        return type.nullable ? 'java.lang.Short' : 'short';
+        return boxed ? 'java.lang.Short' : 'short';
       case OmniPrimitiveKind.LONG:
-        return type.nullable ? 'java.lang.Long' : 'long';
+        return boxed ? 'java.lang.Long' : 'long';
       case OmniPrimitiveKind.DECIMAL:
       case OmniPrimitiveKind.DOUBLE:
       case OmniPrimitiveKind.NUMBER:
-        return type.nullable ? 'java.lang.Double' : 'double';
+        return boxed ? 'java.lang.Double' : 'double';
     }
   }
 
@@ -562,20 +575,26 @@ export class JavaUtil {
     return path;
   }
 
-  public static toGenericAllowedType(type: OmniType): OmniType {
+  public static toGenericAllowedType(type: OmniType, wrap: boolean): OmniType {
     // Same thing for now, might change in the future.
-    return JavaUtil.toNullableType(type);
+    return JavaUtil.toNullableType(type, wrap);
   }
 
   public static isGenericAllowedType(type: OmniType): boolean {
     if (type.kind == OmniTypeKind.PRIMITIVE) {
-      return type.nullable ?? false;
+      switch (type.nullable) {
+        case PrimitiveNullableKind.NULLABLE:
+        case PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE:
+          return true;
+        default:
+          return false;
+      }
     }
 
     return true;
   }
 
-  public static toNullableType(type: OmniType): OmniType {
+  public static toNullableType(type: OmniType, wrap: boolean): OmniType {
     if (type.kind == OmniTypeKind.PRIMITIVE) {
       if (type.nullable) {
         return type;
@@ -583,7 +602,9 @@ export class JavaUtil {
 
       const nullablePrimitive: OmniPrimitiveType = {
         ...type,
-        ...{nullable: true}
+        ...{
+          nullable: (wrap ? PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE : PrimitiveNullableKind.NULLABLE)
+        }
       };
 
       return nullablePrimitive;

@@ -3,6 +3,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {Naming} from '@parse/Naming';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {DEFAULT_JAVA_OPTIONS} from '@java';
+import {TestUtils} from '../../TestUtils';
 
 describe('Test Generic Model Creation', () => {
   const parser = new OpenRpcParser();
@@ -51,4 +53,13 @@ describe('Test Generic Model Creation', () => {
     expect(allTypes.all.map(it => Naming.safer(it))).toContain('DeletePetByIdResponse');
     expect(allTypes.all.map(it => Naming.safer(it))).toContain('ErrorUnknownError');
   });
+
+  test('Ethereum XOrNull', async () => {
+
+    const model = await TestUtils.readExample('openrpc', 'ethereum.json', DEFAULT_JAVA_OPTIONS);
+
+    expect(model).toBeDefined();
+  });
 });
+
+

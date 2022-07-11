@@ -3,7 +3,6 @@ import {LoggerUtils} from '..';
 LoggerUtils.registerLoggerFix();
 
 import {LoggerFactory, Dereferencer} from '@util';
-import assert = require('assert');
 import * as fs from 'fs/promises';
 import nock from 'nock';
 

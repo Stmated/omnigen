@@ -16,7 +16,7 @@ describe('Java Rendering', () => {
 
   const javaOptions: JavaOptions = DEFAULT_JAVA_OPTIONS;
 
-  test('Test that all examples can be rendered and parsed', async () => {
+  test('parseRenderOutputAll', async () => {
 
     for (const schemaName of TestUtils.getKnownSchemaNames()) {
 

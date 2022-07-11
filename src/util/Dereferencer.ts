@@ -9,7 +9,7 @@ const logger = LoggerFactory.create(__filename);
 
 export type RefAware = { $ref: string };
 
-export type Dereferenced<out T> = { obj: T, root: object, hash?: string };
+export type Dereferenced<out T> = { obj: T, root: object, hash?: string, mix?: boolean; };
 
 export type UriHash = { uri: string, hash: string };
 
@@ -240,6 +240,7 @@ export class Dereferencer<T> {
         obj: given,
         hash: undefined,
         root: root,
+        mix: false,
       };
     }
   }
@@ -295,12 +296,21 @@ export class Dereferencer<T> {
       }
     }
 
+    let wasMixed = false;
     if (given) {
 
       // The given object might have $ref AND extra properties.
       // So we might need to mix the given object and the resolved object together.
       // NOTE: This should be an option and not always done. Strict/Lenient option.
-      resolvedObject = this.mix<R>(given, resolvedObject);
+      const beforeMix = resolvedObject;
+      const mixed = this.mix<R>(given, beforeMix);
+      resolvedObject = mixed[0];
+
+      // This means that the JSONSchema is actually invalid, but we want to be helpful.
+      // It means there was a $ref property *and* other properties.
+      // The specification disallows this, but it is way too useful to not allow.
+      // There are also specifications out there on the Internet that use this trick.
+      wasMixed = mixed[1];
     }
 
     if (typeof resolvedObject == 'object' && '$ref' in resolvedObject) {
@@ -314,6 +324,7 @@ export class Dereferencer<T> {
         obj: resolvedObject,
         hash: path,
         root: root,
+        mix: wasMixed,
       };
     }
   }
@@ -335,54 +346,55 @@ export class Dereferencer<T> {
     return map;
   }
 
-  private mix<R>(object: RefAware, resolved: R | RefAware): R | RefAware {
+  private mix<R>(object: RefAware, resolved: R | RefAware): [R | RefAware, boolean] {
 
     const keys = Object.keys(object);
-    if (keys.length > 1) {
-
-      const extraKeys = keys.filter(it => (it != '$ref'));
-      const copy = {...object};
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      delete (copy as never)['$ref'];
-      logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
-
-      resolved = deepmerge.default(resolved, copy, <deepmerge.Options>{
-
-        arrayMerge: (source, target, options) => {
-
-          const namedSource: ReduceMap = source.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
-          const namedTarget: ReduceMap = target.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
-
-          const replacements: any[] = [];
-          for (const key of Object.keys(namedSource)) {
-            if (key.length > 0) {
-              if (!namedTarget[key]) {
-                replacements.push(namedSource[key]);
-              } else {
-                // Other takes precedence
-              }
-            }
-          }
-
-          for (const key of Object.keys(namedTarget)) {
-            if (key.length > 0) {
-              replacements.push(namedTarget[key]);
-            }
-          }
-
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          return replacements.concat(namedTarget['']).concat(namedSource['']).map((element: any) => {
-
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            return (options?.clone !== false && options && options?.isMergeableObject(element as object))
-              ? deepmerge.default(this.emptyTarget(element), element, options)
-              : element;
-          });
-        }
-      });
+    if (keys.length <= 1) {
+      return [resolved, false];
     }
 
-    return resolved;
+    const extraKeys = keys.filter(it => (it != '$ref'));
+    const copy = {...object};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    delete (copy as never)['$ref'];
+    logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
+
+    const merged = deepmerge.default(resolved, copy, <deepmerge.Options>{
+
+      arrayMerge: (source, target, options) => {
+
+        const namedSource: ReduceMap = source.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
+        const namedTarget: ReduceMap = target.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
+
+        const replacements: any[] = [];
+        for (const key of Object.keys(namedSource)) {
+          if (key.length > 0) {
+            if (!namedTarget[key]) {
+              replacements.push(namedSource[key]);
+            } else {
+              // Other takes precedence
+            }
+          }
+        }
+
+        for (const key of Object.keys(namedTarget)) {
+          if (key.length > 0) {
+            replacements.push(namedTarget[key]);
+          }
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        return replacements.concat(namedTarget['']).concat(namedSource['']).map((element: any) => {
+
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          return (options?.clone !== false && options && options?.isMergeableObject(element as object))
+            ? deepmerge.default(this.emptyTarget(element), element, options)
+            : element;
+        });
+      }
+    });
+
+    return [merged, true];
   }
 }

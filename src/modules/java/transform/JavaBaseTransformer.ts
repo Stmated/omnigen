@@ -211,7 +211,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     const comments = this.getCommentsForType(type, model, options);
     if (comments.length > 0) {
-      enumDeclaration.comments = new Java.CommentList(...comments);
+      enumDeclaration.comments = new Java.CommentList(...comments.map(it => new Java.Comment(it)));
     }
 
     if (type.enumConstants) {
@@ -366,14 +366,18 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           // This means the specification did not have any discriminators.
           // Instead we need to figure out what it is in runtime. To be improved.
           body.children.push(
-            new Java.RuntimeTypeMapping(type.types, options, (t) => this.getCommentsForType(t, model, options))
+            new Java.RuntimeTypeMapping(
+              type.types,
+              options,
+              (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
+            )
           );
 
         } else {
 
           // The specification did map all types using a discriminator.
           // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
-          comments.push(new Java.Comment(`This bad boy can be mapped so hard`));
+          comments.push(`This bad boy can be mapped so hard`);
         }
     } else {
 
@@ -393,7 +397,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
 
     if (comments.length > 0) {
-      declaration.comments = new Java.CommentList(...comments);
+      declaration.comments = new Java.CommentList(...comments.map(it => new Java.Comment(it)));
     }
 
     root.children.push(new Java.CompilationUnit(
@@ -412,7 +416,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
   private transformObjectProperty(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {
 
-    const comments: Java.Comment[] = [];
+    const comments: string[] = [];
     if (property.type.kind != OmniTypeKind.OBJECT) {
 
       // If the type is not an object, then we will never create a class just for its sake.
@@ -428,29 +432,32 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
         });
 
-        comments.push(new Java.Comment(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`));
+        comments.push(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`);
       }
     }
 
-    if (property.description) {
-      comments.push(new Java.Comment(property.description));
+    if (property.description && !comments.includes(property.description)) {
+
+      // Sometimes a description can be set both to the property itself and its type.
+      comments.push(property.description);
     }
 
-    if (property.summary) {
-      comments.push(new Java.Comment(property.summary));
+    if (property.summary && !comments.includes(property.summary)) {
+      comments.push(property.summary);
     }
 
     if (property.deprecated) {
-      comments.push(new Java.Comment('@deprecated'));
+      comments.push('@deprecated');
     }
 
     if (property.required) {
-      comments.push(new Java.Comment('Required'));
+      // TODO: Remove this, it should be apparent by the type of the property, no?
+      comments.push('Required');
     }
 
     comments.push(...this.getLinkCommentsForProperty(property, model, options));
 
-    const commentList = (comments.length > 0) ? new Java.CommentList(...comments) : undefined;
+    const commentList = (comments.length > 0) ? new Java.CommentList(...comments.map(it => new Java.Comment(it))) : undefined;
 
     if (property.type.kind == OmniTypeKind.NULL) {
 
@@ -570,13 +577,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
   }
 
-  private getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.Comment[] {
-    const comments: Java.Comment[] = [];
+  private getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
+    const comments: string[] = [];
     if (type.description) {
-      comments.push(new Java.Comment(type.description));
+      comments.push(type.description);
     }
     if (type.summary) {
-      comments.push(new Java.Comment(type.summary));
+      comments.push(type.summary);
     }
 
     const handledResponse: OmniOutput[] = [];
@@ -589,10 +596,10 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         for (const property of endpoint.request.type.properties) {
           if (property.type == type) {
             if (property.description) {
-              comments.push(new Java.Comment(property.description));
+              comments.push(property.description);
             }
             if (property.summary) {
-              comments.push(new Java.Comment(property.summary));
+              comments.push(property.summary);
             }
           }
         }
@@ -606,16 +613,16 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           handledResponse.push(response);
 
           if (response.description || response.summary) {
-            comments.push(new Java.Comment(`<section>\n<h2>${response.name}</h2>`));
+            comments.push(`<section>\n<h2>${response.name}</h2>`);
 
             if (response.description) {
-              comments.push(new Java.Comment(response.description));
+              comments.push(response.description);
             }
             if (response.summary) {
-              comments.push(new Java.Comment(response.summary));
+              comments.push(response.summary);
             }
 
-            comments.push(new Java.Comment(`</section>`));
+            comments.push(`</section>`);
           }
         }
       }
@@ -624,7 +631,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
         const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
         if (example.result.type == type || parameterHasType) {
-          comments.push(...this.getExampleComments(example, options));
+          comments.push(this.getExampleComments(example, options));
         }
       }
     }
@@ -634,8 +641,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return comments;
   }
 
-  private getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.Comment[] {
-    const comments: Java.Comment[] = [];
+  private getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
+    const comments: string[] = [];
     if (!options.includeLinksOnType) {
       return comments;
     }
@@ -666,11 +673,11 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         if (firstMatch) {
 
           // There are links between different servers/methods
-          comments.push(new Java.Comment("<section>\n<h2>Links</h2>"));
+          comments.push("<section>\n<h2>Links</h2>");
           comments.push(...continuation.mappings.map(mapping => {
             return this.getMappingSourceTargetComment(mapping, options);
           }));
-          comments.push(new Java.Comment("</section>"));
+          comments.push("</section>");
         }
       }
     }
@@ -678,8 +685,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return comments;
   }
 
-  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): Java.Comment[] {
-    const comments: Java.Comment[] = [];
+  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): string[] {
+    const comments: string[] = [];
     if (!options.includeLinksOnProperty) {
       return comments;
     }
@@ -689,20 +696,20 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       for (const mapping of continuation.mappings) {
         if (mapping.source.propertyPath?.length) {
           if (mapping.source.propertyPath[mapping.source.propertyPath.length - 1] == property) {
-            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'target').text);
+            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'target'));
           }
         }
 
         if (mapping.target.propertyPath.length) {
           if (mapping.target.propertyPath[mapping.target.propertyPath.length - 1] == property) {
-            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'source').text);
+            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'source'));
           }
         }
       }
     }
 
     if (linkComments.length > 0) {
-      comments.push(new Java.Comment(linkComments.join('\n')));
+      comments.push(linkComments.join('\n'));
     }
 
     return comments;
@@ -714,7 +721,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
   }
 
-  private getExampleComments(example: OmniExamplePairing, options: JavaOptions): Java.Comment[] {
+  private getExampleComments(example: OmniExamplePairing, options: JavaOptions): string {
 
     const commentLines: string[] = [];
     commentLines.push(`<h2>Example - ${example.name}</h2>`);
@@ -763,16 +770,14 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
-    return [
-      new Java.Comment(commentLines.join('\n  ')),
-    ];
+    return commentLines.join('\n  ');
   }
 
   private getMappingSourceTargetComment(
     mapping: OmniLinkMapping,
     options: JavaOptions,
     only: 'source' | 'target' | undefined = undefined
-  ): Java.Comment {
+  ): string {
 
     const sourceLinks: string[] = [];
     const targetLinks: string[] = [];
@@ -813,11 +818,11 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
 
     if (only == 'source') {
-      return new Java.Comment(`@see Source ${sourceLinks.join('.')}`);
+      return `@see Source ${sourceLinks.join('.')}`;
     } else if (only == 'target') {
-      return new Java.Comment(`@see Use ${targetLinks.join('.')}`);
+      return `@see Use ${targetLinks.join('.')}`;
     } else {
-      return new Java.Comment(`Source: ${sourceLinks.join('.')}\nTarget: ${targetLinks.join('.')}`);
+      return `Source: ${sourceLinks.join('.')}\nTarget: ${targetLinks.join('.')}`;
     }
   }
 

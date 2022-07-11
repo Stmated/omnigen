@@ -1,12 +1,22 @@
 import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
-import {CompilationUnit, DEFAULT_JAVA_OPTIONS, JavaOptions, JavaVisitor, PrimitiveGenerificationChoice} from '@java';
+import {
+  AbstractMethodDeclaration,
+  CompilationUnit,
+  DEFAULT_JAVA_OPTIONS,
+  FieldBackedGetter,
+  JavaOptions,
+  JavaVisitor, MethodDeclaration,
+  PrimitiveGenerificationChoice
+} from '@java';
 import {OmniModelUtil} from '../../../../src/parse/OmniModelUtil';
 import {CstRootNode} from '../../../../src/cst/CstRootNode';
 import {VisitorFactoryManager} from '../../../../src/visit/VisitorFactoryManager';
 import {VisitResult} from '../../../../src/visit';
 import {OmniTypeKind} from '../../../../src';
 import {Naming} from '../../../../src/parse/Naming';
+import {JavaRenderer} from '../../../../src/modules/java/render/JavaRenderer';
+import AbstractNode from '../../../../src/cst/AbstractNode';
 
 describe('Test the structuring of GenericModel into a Java CST', () => {
 
@@ -38,7 +48,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(root).toBeDefined();
 
-    const compilationUnits = getCompilationUnits(root);
+    const compilationUnits = TestUtils.getCompilationUnits(root);
     const fileNames = compilationUnits.map(it => it.object.name.value);
 
     expect(fileNames.sort())
@@ -63,7 +73,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
         'PrimitiveInt',
       ]);
 
-    const giveNumberGetCharResponse = getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
+    const giveNumberGetCharResponse = TestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
     expect(giveNumberGetCharResponse.object.extends).toBeDefined();
 
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
@@ -93,7 +103,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(root).toBeDefined();
 
-    const compilationUnits = getCompilationUnits(root);
+    const compilationUnits = TestUtils.getCompilationUnits(root);
     const fileNames = compilationUnits.map(it => it.object.name.value);
 
     expect(fileNames.sort())
@@ -115,7 +125,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
         'JsonRpcResponse'
       ]);
 
-    const giveNumberGetCharResponse = getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
+    const giveNumberGetCharResponse = TestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
     expect(giveNumberGetCharResponse.object.extends).toBeDefined();
 
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
@@ -141,7 +151,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(root).toBeDefined();
 
-    const compilationUnits = getCompilationUnits(root);
+    const compilationUnits = TestUtils.getCompilationUnits(root);
     const fileNames = compilationUnits.map(it => it.object.name.value);
 
     expect(fileNames.sort())
@@ -163,64 +173,10 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
         'JsonRpcResponse'
       ]);
 
-    const giveNumberGetCharResponse = getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
+    const giveNumberGetCharResponse = TestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
     expect(giveNumberGetCharResponse.object.extends).toBeDefined();
 
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
     expect(type?.kind).toEqual(OmniTypeKind.OBJECT);
   });
 });
-
-function getCompilationUnits(root: CstRootNode): CompilationUnit[] {
-
-  const array: CompilationUnit[] = [];
-  const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
-    visitCompilationUnit: (node, visitor) => {
-      array.push(node);
-    }
-  });
-
-  root.visit(visitor);
-
-  return array;
-}
-
-function getCompilationUnit(root: CstRootNode, name: string): CompilationUnit {
-
-  // const array: CompilationUnit[] = [];
-  const visitor = VisitorFactoryManager.create(new JavaVisitor<CompilationUnit>(), {
-    visitCompilationUnit: (node, visitor) => {
-      if (node.object.name.value == name) {
-        return node;
-      } else {
-        return undefined;
-      }
-    }
-  });
-
-  const result = flatten(root.visit(visitor));
-  if (!result) {
-    throw new Error(`Could not find '${name}'`);
-  }
-
-  return result;
-}
-
-function flatten<T>(result: VisitResult<T>): T | undefined {
-
-  if (!result) {
-    return undefined;
-  }
-
-  if (Array.isArray(result)) {
-    for (const item of result) {
-      if (item) {
-        return flatten(item);
-      }
-    }
-
-    return undefined;
-  }
-
-  return result;
-}

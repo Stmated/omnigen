@@ -179,12 +179,12 @@ class OpenRpcParserImpl {
 
   docToGenericModel(): OmniModel {
 
-    const endpoints = this.doc.methods.map(it => this.methodToGenericEndpoint(this._deref.get(it, this._deref.getFirstRoot())));
-    const contact = this.doc.info.contact ? this.contactToGenericContact(this.doc.info.contact) : undefined;
-    const license = this.doc.info.license ? this.licenseToGenericLicense(this.doc.info.license) : undefined;
-    const servers = (this.doc.servers || []).map((server) => this.serverToGenericServer(server));
-    const docs = this.doc.externalDocs ? [this.externalDocToGenericExternalDoc(this.doc.externalDocs)] : [];
-    const continuations = endpoints.flatMap(it => this.linkToGenericContinuations(it, endpoints));
+    const endpoints = this.doc.methods.map(it => this.toOmniEndpointFromMethod(this._deref.get(it, this._deref.getFirstRoot())));
+    const contact = this.doc.info.contact ? this.toOmniContactFromContact(this.doc.info.contact) : undefined;
+    const license = this.doc.info.license ? this.toOmniLicenseFromLicense(this.doc.info.license) : undefined;
+    const servers = (this.doc.servers || []).map((server) => this.toOmniServerFromServerObject(server));
+    const docs = this.doc.externalDocs ? [this.toOmniExternalDocumentationFromExternalDocumentationObject(this.doc.externalDocs)] : [];
+    const continuations = endpoints.flatMap(it => this.toOmniLinkFromDocMethods(it, endpoints));
 
     return {
       schemaType: 'openrpc',
@@ -203,14 +203,14 @@ class OpenRpcParserImpl {
     };
   }
 
-  licenseToGenericLicense(license: LicenseObject): OmniLicense {
+  toOmniLicenseFromLicense(license: LicenseObject): OmniLicense {
     return <OmniLicense>{
       name: license.name,
       url: license.url,
     };
   }
 
-  contactToGenericContact(contact: ContactObject): OmniContact {
+  toOmniContactFromContact(contact: ContactObject): OmniContact {
     return <OmniContact>{
       name: contact.name,
       url: contact.url,
@@ -218,11 +218,11 @@ class OpenRpcParserImpl {
     };
   }
 
-  methodToGenericEndpoint(method: Dereferenced<MethodObject>): OmniEndpoint {
+  toOmniEndpointFromMethod(method: Dereferenced<MethodObject>): OmniEndpoint {
 
-    const input = this.methodToGenericInputType(method);
+    const typeAndProperties = this.toTypeAndPropertiesFromMethod(method);
 
-    const resultResponse = this.resultToGenericOutputAndResultParamType(
+    const resultResponse = this.toOmniOutputFromContentDescriptor(
       method.obj,
       this._deref.get(method.obj.result, method.root)
     );
@@ -251,7 +251,7 @@ class OpenRpcParserImpl {
 
     const examples = (method.obj.examples || []).map(it => {
       const deref = this._deref.get(it, method.root);
-      return this.examplePairingToGenericExample(resultResponse.type, input.properties || [], deref);
+      return this.examplePairingToGenericExample(resultResponse.type, typeAndProperties.properties || [], deref);
     })
 
     // TODO: Remake so that the request body is another type!
@@ -267,7 +267,7 @@ class OpenRpcParserImpl {
       path: '',
       request: {
         contentType: 'application/json',
-        type: input.type
+        type: typeAndProperties.type
       },
       requestQualifiers: [
         {
@@ -279,16 +279,31 @@ class OpenRpcParserImpl {
       responses: responses,
       deprecated: method.obj.deprecated,
       examples: examples,
-      externalDocumentations: method.obj.externalDocs ? [this.externalDocToGenericExternalDoc(method.obj.externalDocs)] : [],
+      externalDocumentations: method.obj.externalDocs
+        ? [this.toOmniExternalDocumentationFromExternalDocumentationObject(method.obj.externalDocs)]
+        : [],
     };
   }
 
-  private jsonSchemaToType(names: TypeName[], schema: Dereferenced<JSONSchema7Definition>, fallbackRef: string | undefined): SchemaToTypeResult {
+  private jsonSchemaToType(
+    name: TypeName,
+    schema: Dereferenced<JSONSchema7Definition>,
+    fallbackRef: string | undefined
+  ): SchemaToTypeResult {
 
     // If contentDescriptor contains an anonymous schema,
     // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
     // That way we will not get duplicates of the schema when called from different locations.
-    const actualRef = schema.hash || fallbackRef;
+    let actualRef: string | undefined;
+    if (schema.hash && !schema.mix) {
+
+      // We can only use the hash as the unique key if the schema was not from a mix.
+      actualRef = schema.hash;
+    } else if (fallbackRef) {
+
+      // The fallback ref can be used if a nested schema should use the ref of a parent as the unique type name.
+      actualRef = fallbackRef;
+    }
 
     if (actualRef) {
       const existing = this._typePromiseMap.get(actualRef);
@@ -297,16 +312,16 @@ class OpenRpcParserImpl {
       }
 
       // The ref is the much better unique name of the type.
-      if (schema.hash) {
+      if (schema.hash && !schema.mix) {
+
         // We only use the ref as a replacement name if the actual element has a ref.
         // We do not include the fallback ref here, since it might not be the best name.
-        names = [schema.hash];
+        // We also cannot use the hash as the name
+        name = schema.hash;
       }
     }
 
-    // const promise: Promise<SchemaToTypeResult> = new Promise((resolve, reject) => {
-    //   this.dereference(schemaOrRef, schema => {
-    const schemaType = this.jsonSchemaToTypeUncached(schema, names, schema.hash == undefined);
+    const schemaType = this.jsonSchemaToTypeUncached(schema, name, schema.hash == undefined);
 
     if (actualRef) {
       this._typePromiseMap.set(actualRef, schemaType);
@@ -317,7 +332,7 @@ class OpenRpcParserImpl {
 
   private jsonSchemaToTypeUncached(
     schema: Dereferenced<JSONSchema7Definition>,
-    names: TypeName[],
+    name: TypeName,
     canInline: boolean
   ): SchemaToTypeResult {
 
@@ -332,7 +347,7 @@ class OpenRpcParserImpl {
       };
     }
 
-    const nonClassType = this.jsonSchemaToNonClassType(schema, names);
+    const nonClassType = this.jsonSchemaToNonClassType(schema, name);
 
     if (nonClassType) {
       return {
@@ -342,7 +357,7 @@ class OpenRpcParserImpl {
     }
 
     const type: OmniObjectType = {
-      name: () => names.map(it => Naming.unwrap(it)).join('_'),
+      name: name, // () => names.map(it => Naming.unwrap(it)).join('_'),
       nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : (schema.obj.type ? String(schema.obj.type) : undefined),
       kind: OmniTypeKind.OBJECT,
       description: schema.obj.description,
@@ -360,21 +375,20 @@ class OpenRpcParserImpl {
       )
     };
 
-    const genericProperties: OmniProperty[] = [];
+    const properties: OmniProperty[] = [];
     const requiredProperties: OmniProperty[] = [];
     if (schema.obj.properties) {
       for (const key of Object.keys(schema.obj.properties)) {
-        const propertySchema = schema.obj.properties[key];
-        const derefPropertySchema = this._deref.get(propertySchema, schema.root);
-        const genericProperty = this.jsonSchema7ToGenericProperty(type, key, derefPropertySchema);
-        genericProperties.push(genericProperty);
+        const propertySchemaOrRef = this._deref.get(schema.obj.properties[key], schema.root);
+        const omniProperty = this.toOmniPropertyFromJsonSchema7(type, key, propertySchemaOrRef);
+        properties.push(omniProperty);
         if (schema.obj.required?.indexOf(key) !== -1) {
-          requiredProperties.push(genericProperty);
+          requiredProperties.push(omniProperty);
         }
       }
     }
 
-    type.properties = genericProperties.length ? genericProperties : [];
+    type.properties = properties;
     type.requiredProperties = requiredProperties;
 
     if (schema.obj.not) {
@@ -385,7 +399,7 @@ class OpenRpcParserImpl {
       // TODO: Make this general, so that all other places call it.
     }
 
-    const extended = this.extendOrEnhanceClassType(schema, type, names);
+    const extended = this.extendOrEnhanceClassType(schema, type, name);
     return {
       type: extended,
 
@@ -395,7 +409,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private jsonSchemaToNonClassType(schema: Dereferenced<JSONSchema7Definition>, names: TypeName[]): OmniType | undefined {
+  private jsonSchemaToNonClassType(schema: Dereferenced<JSONSchema7Definition>, name: TypeName): OmniType | undefined {
 
     if (typeof schema.obj == 'boolean') {
       return undefined;
@@ -403,7 +417,7 @@ class OpenRpcParserImpl {
 
     if (typeof schema.obj.type === 'string') {
       if (schema.obj.type === 'array') {
-        return this.getArrayItemType(schema, schema.obj.items, names);
+        return this.getArrayItemType(schema, schema.obj.items, name);
       } else if (schema.obj.type !== 'object') {
 
         // TODO: This is not lossless if the primitive has comments/summary/etc
@@ -411,13 +425,13 @@ class OpenRpcParserImpl {
         const schemaType = schema.obj.type;
         if (t.length == 1) {
           return {
-            name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
+            name: name ?? schemaType,
             kind: t[0],
             description: schema.obj.description,
           };
         } else if (t.length == 3) {
           return {
-            name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
+            name: name ?? schemaType,
             kind: t[0],
             primitiveKind: t[1],
             enumConstants: t[2],
@@ -425,7 +439,7 @@ class OpenRpcParserImpl {
           };
         } else {
           return {
-            name: names.length ? () => names.map(it => Naming.unwrap(it)).join('_') : schemaType,
+            name: name ?? schemaType,
             kind: t[0],
             primitiveKind: t[1],
             description: schema.obj.description,
@@ -439,7 +453,7 @@ class OpenRpcParserImpl {
     }
   }
 
-  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: OmniObjectType, names: TypeName[]): OmniType {
+  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: OmniObjectType, name: TypeName): OmniType {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -447,7 +461,7 @@ class OpenRpcParserImpl {
 
     // TODO: Make it optional to "simplify" types that inherit from a primitive -- instead make it use @JsonValue (and maybe @JsonCreator)
     if (typeof schema.obj == 'boolean') {
-      throw new Error(`Not allowed to be a boolea`);
+      throw new Error(`Not allowed to be a boolean`);
     }
 
     const compositionsOneOfOr: OmniType[] = [];
@@ -464,13 +478,13 @@ class OpenRpcParserImpl {
       } else {
         for (const oneOf of schema.obj.oneOf) {
           const deref = this._deref.get(oneOf, schema.root);
-          compositionsOneOfOr.push(this.jsonSchemaToType(names, deref, undefined).type);
+          compositionsOneOfOr.push(this.jsonSchemaToType(name, deref, undefined).type);
         }
       }
     }
 
     // todo: fix back the commented out mergeType -- probable problem
-    for (const subType of (schema.obj.allOf || []).map(it => this.jsonSchemaToType(names, this._deref.get(it, schema.root), undefined))) {
+    for (const subType of (schema.obj.allOf || []).map(it => this.jsonSchemaToType(name, this._deref.get(it, schema.root), undefined))) {
       if (subType.canInline) {
         // This schema can actually just be consumed by the parent type.
         // This happens if the sub-schema is anonymous and never used by anyone else.
@@ -480,13 +494,13 @@ class OpenRpcParserImpl {
       }
     }
 
-    for (const subType of (schema.obj.anyOf || []).map(it => this.jsonSchemaToType(names, this._deref.get(it, schema.root), undefined))) {
+    for (const subType of (schema.obj.anyOf || []).map(it => this.jsonSchemaToType(name, this._deref.get(it, schema.root), undefined))) {
       compositionsAnyOfOr.push(subType.type);
     }
 
-    // TODO: This is wrong--it needs to be done in order
+    // TODO: This is wrong -- it needs to be done in order
     if (schema.obj.not && typeof schema.obj.not !== 'boolean') {
-      compositionsNot = (this.jsonSchemaToType(names, {obj: schema.obj.not, root: schema.root}, undefined)).type;
+      compositionsNot = (this.jsonSchemaToType(name, {obj: schema.obj.not, root: schema.root}, undefined)).type;
     }
 
     const extendedBy = CompositionUtil.getCompositionOrExtensionType(
@@ -497,7 +511,7 @@ class OpenRpcParserImpl {
     );
 
     // TODO: Remove this? It should be up to the final language to decide how to handle it, right?
-    if (type.additionalProperties == undefined && type.properties == undefined) {
+    if (type.additionalProperties == undefined && type.properties.length == 0) {
 
       // If there object is "empty" but we inherit from something, then just use the inherited type instead.
       // NOTE: This might be "inaccurate" and should maybe be more selective (like ONLY replacing COMPOSITIONS)
@@ -522,7 +536,7 @@ class OpenRpcParserImpl {
     return type;
   }
 
-  private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, names: TypeName[]): OmniArrayTypes {
+  private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, name: TypeName | undefined): OmniArrayTypes {
 
     if (typeof schema.obj == 'boolean') {
       throw new Error(`The schema object should not be able to be a boolean`);
@@ -530,8 +544,8 @@ class OpenRpcParserImpl {
 
     if (!items) {
       // No items, so the schema for the array items is undefined.
-      const arrayTypeName: TypeName = (names.length > 0)
-        ? () => names.map(it => Naming.unwrap(it)).join('_')
+      const arrayTypeName: TypeName = (name)
+        ? name
         : `ArrayOfUnknowns`;
 
       return {
@@ -547,7 +561,7 @@ class OpenRpcParserImpl {
       };
 
     } else if (typeof items == 'boolean') {
-      throw new Error(`Do not know how to handle a boolean items '${names.map(it => Naming.unwrap(it)).join('.')}'`);
+      throw new Error(`Do not know how to handle a boolean items '${name ? Naming.unwrap(name) : ''}'`);
     } else if (Array.isArray(items)) {
 
       // TODO: We should be introducing interfaces that describe the common denominators between the different items?
@@ -555,15 +569,15 @@ class OpenRpcParserImpl {
       // TODO: What do we do here if the type can be inlined? Just ignore I guess?
 
       const staticArrayTypes = items.map(it => {
-        return this.jsonSchemaToType([], this._deref.get(it, schema.root), undefined);
+        const derefArrayItem = this._deref.get(it, schema.root);
+        // NOTE: The name below is probably extremely wrong. Fix once we notice a problem.
+        return this.jsonSchemaToType(derefArrayItem.hash || 'UnknownArrayItem', derefArrayItem,undefined);
       });
 
       const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
       return <OmniArrayTypesByPositionType>{
-        name: names.length > 0
-          ? () => names.map(it => Naming.unwrap(it)).join('_')
-          : `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
+        name: name ?? `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
         kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
         description: schema.obj.description,
@@ -574,17 +588,17 @@ class OpenRpcParserImpl {
 
       // items is a single JSONSchemaObject
       const itemsSchema = this.unwrapJsonSchema({obj: items, root: schema.root});
-      let itemTypeNames: TypeName[];
+      let itemTypeName: TypeName;
       if (itemsSchema.obj.title) {
-        itemTypeNames = [pascalCase(itemsSchema.obj.title)];
+        itemTypeName = pascalCase(itemsSchema.obj.title);
       } else {
-        itemTypeNames = names.map(it => () => `${Naming.unwrap(it)}Item`);
+        itemTypeName = () => `${name ? Naming.unwrap(name) : ''}Item`;
       }
 
-      const itemType = this.jsonSchemaToType(itemTypeNames, itemsSchema, undefined);
+      const itemType = this.jsonSchemaToType(itemTypeName, itemsSchema, undefined);
 
-      const arrayTypeName: TypeName = (names.length > 0)
-        ? () => `${names.map(it => Naming.unwrap(it)).join('_')}`
+      const arrayTypeName: TypeName = (name)
+        ? name
         : () => `ArrayOf${Naming.safer(itemType.type)}`;
 
       return {
@@ -654,24 +668,6 @@ class OpenRpcParserImpl {
     });
   }
 
-  private jsonSchema7ToGenericProperty(owner: OmniPropertyOwner, propertyName: string, schemaOrRef: Dereferenced<JSONSchema7Definition>): OmniProperty {
-    // This is ugly, but they should hopefully be the same.
-
-    // The type name will be replaced if the schema is a $ref to another type.
-    const schema = this.unwrapJsonSchema(schemaOrRef);
-
-    const propertyTypeName = (schema.obj.title ? camelCase(schema.obj.title) : undefined) || propertyName;
-    const propertyType = this.jsonSchemaToType([propertyTypeName], schema, undefined);
-
-    return {
-      name: propertyName,
-      fieldName: this.getVendorExtension(schema.obj, 'field-name'),
-      propertyName: this.getVendorExtension(schema.obj, 'property-name'),
-      type: propertyType.type,
-      owner: owner
-    };
-  }
-
   private getVendorExtension<R>(obj: Dereferenced<JsonObject> | JsonObject, key: string): R | undefined {
 
     if ('obj' in obj && 'root' in obj) {
@@ -690,9 +686,9 @@ class OpenRpcParserImpl {
   private unwrapJsonSchema(schema: Dereferenced<JSONSchema7Definition | JSONSchema>): Dereferenced<JSONSchema7> {
     if (typeof schema.obj == 'boolean') {
       if (schema.obj) {
-        return {obj: {}, root: schema.root, hash: schema.hash};
+        return {obj: {}, root: schema.root, hash: schema.hash, mix: schema.mix};
       } else {
-        return {obj: {not: {}}, root: schema.root, hash: schema.hash};
+        return {obj: {not: {}}, root: schema.root, hash: schema.hash, mix: schema.mix};
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
@@ -700,24 +696,35 @@ class OpenRpcParserImpl {
       return {
         obj: deref.obj,
         hash: deref.hash || schema.hash,
-        root: deref.root || schema.root
+        root: deref.root || schema.root,
+        mix: deref.mix || schema.mix, // If one is mix, result is mix
       };
     }
   }
 
-  private resultToGenericOutputAndResultParamType(method: MethodObject, methodResult: Dereferenced<ContentDescriptorObject>): OutputAndType {
+  private toOmniTypeFromContentDescriptor(contentDescriptor: Dereferenced<ContentDescriptorObject>): SchemaToTypeResult {
+
+    const derefSchema = this.unwrapJsonSchema({
+      obj: contentDescriptor.obj.schema,
+      root: contentDescriptor.root
+    });
+
+
+    const preferredName = this.getPreferredName(derefSchema, contentDescriptor, contentDescriptor.obj.name);
+    return this.jsonSchemaToType(preferredName, derefSchema, contentDescriptor.hash);
+  }
+
+  private getPreferredName(schema: Dereferenced<JSONSchema7>, dereferenced: Dereferenced<unknown>, fallback: string): string {
+    return dereferenced.hash || schema.obj.title || fallback;
+  }
+
+  private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: Dereferenced<ContentDescriptorObject>): OutputAndType {
 
     const typeNamePrefix = pascalCase(method.name);
 
     // TODO: Should this always be unique, or should we ever use a common inherited method type?
     // TODO: Reuse the code from contentDescriptorToGenericProperty -- so they are ALWAYS THE SAME
-    const derefSchema = this.unwrapJsonSchema({
-      obj: methodResult.obj.schema,
-      root: methodResult.root
-    });
-
-    const preferredName = derefSchema.obj.title || methodResult.obj.name;
-    const resultParameterType = this.jsonSchemaToType([preferredName], derefSchema, methodResult.hash);
+    const resultParameterType = this.toOmniTypeFromContentDescriptor(contentDescriptor);
 
     const resultType: OmniType = {
       name: `${typeNamePrefix}Response`,
@@ -784,11 +791,11 @@ class OpenRpcParserImpl {
 
     return {
       output: <OmniOutput>{
-        name: methodResult.obj.name,
-        description: methodResult.obj.description,
-        summary: methodResult.obj.summary,
-        deprecated: methodResult.obj.deprecated || false,
-        required: methodResult.obj.required,
+        name: contentDescriptor.obj.name,
+        description: contentDescriptor.obj.description,
+        summary: contentDescriptor.obj.summary,
+        deprecated: contentDescriptor.obj.deprecated || false,
+        required: contentDescriptor.obj.required,
         type: resultType,
         contentType: 'application/json',
         qualifiers: [
@@ -955,7 +962,7 @@ class OpenRpcParserImpl {
       description: example.obj.description,
       summary: example.obj['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
       params: params,
-      result: this.exampleResultToGenericExampleResult(valueType, this._deref.get(example.obj.result, example.root)),
+      result: this.toOmniExampleResultFromExampleObject(valueType, this._deref.get(example.obj.result, example.root)),
     };
   }
 
@@ -987,7 +994,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private exampleResultToGenericExampleResult(valueType: OmniType, example: Dereferenced<ExampleObject>): OmniExampleResult {
+  private toOmniExampleResultFromExampleObject(valueType: OmniType, example: Dereferenced<ExampleObject>): OmniExampleResult {
 
     if (example.obj['externalValue']) {
       // This is part of the specification, but not part of the OpenRPC interface.
@@ -1002,14 +1009,14 @@ class OpenRpcParserImpl {
     };
   }
 
-  externalDocToGenericExternalDoc(documentation: ExternalDocumentationObject): OmniExternalDocumentation {
+  toOmniExternalDocumentationFromExternalDocumentationObject(documentation: ExternalDocumentationObject): OmniExternalDocumentation {
     return <OmniExternalDocumentation>{
       url: documentation.url,
       description: documentation.description,
     };
   }
 
-  serverToGenericServer(server: ServerObject): OmniServer {
+  toOmniServerFromServerObject(server: ServerObject): OmniServer {
     return <OmniServer>{
       name: server.name,
       description: server.description,
@@ -1019,15 +1026,10 @@ class OpenRpcParserImpl {
     };
   }
 
-  private contentDescriptorToGenericProperty(owner: OmniPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): OmniProperty {
+  private toOmniPropertyFromContentDescriptor(owner: OmniPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): OmniProperty {
 
-    const derefSchema = this.unwrapJsonSchema({
-      obj: descriptor.obj.schema,
-      root: descriptor.root
-    });
+    const propertyType = this.toOmniTypeFromContentDescriptor(descriptor);
 
-    const preferredName = derefSchema.obj.title || descriptor.obj.name;
-    const propertyType = this.jsonSchemaToType([preferredName], derefSchema, descriptor.hash);
     return {
       name: descriptor.obj.name,
       description: descriptor.obj.description,
@@ -1036,6 +1038,28 @@ class OpenRpcParserImpl {
       required: descriptor.obj.required || false,
       type: propertyType.type,
       owner: owner,
+    };
+  }
+
+  private toOmniPropertyFromJsonSchema7(
+    owner: OmniPropertyOwner,
+    propertyName: string,
+    schemaOrRef: Dereferenced<JSONSchema7Definition>
+  ): OmniProperty {
+
+    // The type name will be replaced if the schema is a $ref to another type.
+    const schema = this.unwrapJsonSchema(schemaOrRef);
+
+    const propertyTypeName = this.getPreferredName(schema, schemaOrRef, propertyName);
+    const propertyType = this.jsonSchemaToType(propertyTypeName, schema, undefined);
+
+    return {
+      name: propertyName,
+      fieldName: this.getVendorExtension(schema.obj, 'field-name'),
+      propertyName: this.getVendorExtension(schema.obj, 'property-name'),
+      type: propertyType.type,
+      owner: owner,
+      description: schema.obj.description,
     };
   }
 
@@ -1124,7 +1148,7 @@ class OpenRpcParserImpl {
     }
   }
 
-  private methodToGenericInputType(method: Dereferenced<MethodObject>): TypeAndProperties {
+  private toTypeAndPropertiesFromMethod(method: Dereferenced<MethodObject>): TypeAndProperties {
 
     // TODO: This should be able to be a String OR Number -- need to make this more generic
     const requestIdType: OmniPrimitiveType = {
@@ -1143,7 +1167,7 @@ class OpenRpcParserImpl {
       };
 
       requestParamsType.properties = method.obj.params.map((it) => {
-        return this.contentDescriptorToGenericProperty(requestParamsType, this._deref.get(it, method.root));
+        return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._deref.get(it, method.root));
       });
 
       // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
@@ -1161,7 +1185,7 @@ class OpenRpcParserImpl {
       requestParamsType = objectRequestParamsType;
 
       const properties = method.obj.params.map((it) => {
-        return this.contentDescriptorToGenericProperty(requestParamsType, this._deref.get(it, method.root))
+        return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._deref.get(it, method.root))
       });
 
       if (properties.length > 0) {
@@ -1274,7 +1298,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private linkToGenericContinuations(endpoint: OmniEndpoint, endpoints: OmniEndpoint[]): OmniLink[] {
+  private toOmniLinkFromDocMethods(endpoint: OmniEndpoint, endpoints: OmniEndpoint[]): OmniLink[] {
 
     const continuations: OmniLink[] = [];
     for (const methodOrRef of this.doc.methods) {
@@ -1286,7 +1310,7 @@ class OpenRpcParserImpl {
         const link = this._deref.get(linkOrRef, this._deref.getFirstRoot());
 
         try {
-          continuations.push(this.linkToGenericContinuation(endpoint, endpoints, link.obj, link.hash));
+          continuations.push(this.toOmniLinkFromLinkObject(endpoint, endpoints, link.obj, link.hash));
         } catch (ex) {
           logger.error(`Could not build link for ${endpoint.name}: ${ex instanceof Error ? ex.message : ''}`);
         }
@@ -1329,7 +1353,7 @@ class OpenRpcParserImpl {
     return targetEndpoint;
   }
 
-  private linkToGenericContinuation(sourceEndpoint: OmniEndpoint, endpoints: OmniEndpoint[], link: LinkObject, refName?: string): OmniLink {
+  private toOmniLinkFromLinkObject(sourceEndpoint: OmniEndpoint, endpoints: OmniEndpoint[], link: LinkObject, refName?: string): OmniLink {
 
     const targetEndpoint = this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
     const paramNames: string[] = Object.keys(link.params as object);
@@ -1349,7 +1373,7 @@ class OpenRpcParserImpl {
 
       if (requestResultParamParameter) {
 
-        const sourceParameter: OmniLinkSourceParameter = this.getLinkSourceParameter(
+        const sourceParameter: OmniLinkSourceParameter = this.toOmniLinkSourceParameterFromLinkObject(
           // The first response is the Result, not Error or otherwise.
           sourceEndpoint.responses[0].type,
           sourceEndpoint.request.type,
@@ -1381,7 +1405,7 @@ class OpenRpcParserImpl {
     };
   }
 
-  private getLinkSourceParameter(
+  private toOmniLinkSourceParameterFromLinkObject(
     primaryType: OmniType,
     secondaryType: OmniType,
     link: LinkObject,
@@ -1436,6 +1460,9 @@ class OpenRpcParserImpl {
     };
   }
 
+  /**
+   * TODO: Move somewhere more generic
+   */
   private getPropertyPath(type: OmniType, pathParts: string[]): OmniProperty[] {
     const propertyPath: OmniProperty[] = [];
     let pointer = type;

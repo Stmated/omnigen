@@ -10,7 +10,6 @@ import {
   OmniModel,
   OmniObjectType,
   OmniOutput,
-  OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
   OmniReferenceType,
@@ -28,7 +27,7 @@ import {OmniModelUtil} from '@parse/OmniModelUtil';
 export class JavaBaseTransformer extends AbstractJavaTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
 
-  private static readonly _primitiveWrapperMap = new Map<OmniPrimitiveKind, Java.ClassDeclaration>();
+  private static readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 
   transform(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 
@@ -59,36 +58,12 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
         // The primitive is said to not be nullable, but to still be a primitive.
         // This is not really possible in Java, so we need to wrap it inside a custom class.
-        let primitiveClass = JavaBaseTransformer._primitiveWrapperMap.get(type.primitiveKind);
+        const kindName = pascalCase(JavaUtil.getPrimitiveKindName(type));
+        let primitiveClass = JavaBaseTransformer._primitiveWrapperMap.get(kindName);
         if (!primitiveClass) {
 
-          const kindName = pascalCase(JavaUtil.getPrimitiveKindName(type));
-          const valueType: OmniPrimitiveType = {kind: OmniTypeKind.PRIMITIVE, primitiveKind: type.primitiveKind, name: `NullSafe${kindName}`};
-          const valueIdentifier = new Java.Identifier('value');
-          const valueField = new Java.Field(
-            new Java.Type(valueType),
-            valueIdentifier,
-            new Java.ModifierList(
-              new Java.Modifier(ModifierType.PRIVATE),
-              new Java.Modifier(ModifierType.FINAL)
-            ),
-            undefined,
-            new Java.AnnotationList(
-              new Java.Annotation(
-                new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue', name: 'JsonValue'})
-              )
-            )
-          );
-
-          primitiveClass = new Java.ClassDeclaration(
-            new Java.Type(valueType),
-            new Java.Identifier(`Primitive${kindName}`),
-            new Java.Block(
-              valueField,
-              // Force the name to be "getValue" so that it does not become "isValue" for a primitive boolean.
-              new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue'))
-            ),
-          );
+          primitiveClass = this.createNotNullablePrimitiveWrapper(type, kindName);
+          JavaBaseTransformer._primitiveWrapperMap.set(kindName, primitiveClass);
 
           root.children.push(
             new Java.CompilationUnit(
@@ -97,8 +72,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
               primitiveClass
             )
           );
-
-          JavaBaseTransformer._primitiveWrapperMap.set(type.primitiveKind, primitiveClass);
         }
 
         this.replaceTypeWithReference(type, type, primitiveClass, options);
@@ -186,6 +159,45 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     }
 
     return Promise.resolve();
+  }
+
+  private createNotNullablePrimitiveWrapper(type: OmniPrimitiveType, kindName: string): Java.ClassDeclaration {
+
+    const valueType: OmniPrimitiveType = {
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: type.primitiveKind,
+      name: `NullSafe${kindName}`
+    };
+
+    const valueIdentifier = new Java.Identifier('value');
+    const valueField = new Java.Field(
+      new Java.Type(valueType),
+      valueIdentifier,
+      new Java.ModifierList(
+        new Java.Modifier(ModifierType.PRIVATE),
+        new Java.Modifier(ModifierType.FINAL)
+      ),
+      undefined,
+      new Java.AnnotationList(
+        new Java.Annotation(
+          new Java.Type({
+            kind: OmniTypeKind.REFERENCE,
+            fqn: 'com.fasterxml.jackson.annotation.JsonValue',
+            name: 'JsonValue'
+          })
+        )
+      )
+    );
+
+    return new Java.ClassDeclaration(
+      new Java.Type(valueType),
+      new Java.Identifier(`Primitive${kindName}`),
+      new Java.Block(
+        valueField,
+        // Force the name to be "getValue" so that it does not become "isValue" for a primitive boolean.
+        new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue'))
+      ),
+    );
   }
 
   private transformEnum(model: OmniModel, type: OmniEnumType, root: JavaCstRootNode, options: JavaOptions): void {
@@ -815,17 +827,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
   private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
 
-    // TODO: Below should not be needed, this "should not happen" -- it should have been normalized by the source
-
     // TODO: ComponentsSchemasIntegerOrNull SHOULD NOT HAVE BEEN CREATED! IT SHOULD NOT BE AN OBJECT! IT SHOULD BE A COMPOSITION OF XOR!
-
-    // if (type.kind == GenericTypeKind.OBJECT) {
-    //   if (type.extendedBy && !type.properties?.length && !type.nestedTypes?.length) {
-    //     // If this class extends a class, but it has no content of itself...
-    //     // Then we can just "simplify" the type by returning the extended class.
-    //     type = type.extendedBy;
-    //   }
-    // }
 
     if (type.kind == OmniTypeKind.COMPOSITION) {
       if (type.compositionKind == CompositionKind.XOR) {
@@ -874,7 +876,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     const referenceType = target as OmniReferenceType;
 
-    //
-    referenceType.fqn = `${options.package}.Primitive${JavaUtil.getPrimitiveKindName(primitiveType)}`;
+    referenceType.fqn = `${options.package}.Primitive${pascalCase(JavaUtil.getPrimitiveKindName(primitiveType))}`;
   }
 }

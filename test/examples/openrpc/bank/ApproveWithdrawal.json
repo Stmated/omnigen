@@ -33,7 +33,7 @@
         ],
         "properties": {
           "orderid": {
-            "type": "int",
+            "type": "integer",
             "x-property-name": "OrderId"
           }
         },
@@ -50,7 +50,7 @@
           {
             "properties": {
               "orderid": {
-                "type": "int",
+                "type": "integer",
                 "x-property-name": "OrderId"
               },
               "result": {

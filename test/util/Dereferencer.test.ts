@@ -57,7 +57,7 @@ describe('Test ObjectRefTraverser', () => {
 
     const obj = (await readFile('a.json')) as any;
 
-    const traverser = await Dereferencer.create('./test/examples/json', obj);
+    const traverser = await Dereferencer.create('./test/examples/json', './test/examples/json/a.json', obj);
 
     const c = traverser.get(obj.a_e, obj);
     expect(c.obj.c_a.value).toEqual("z");

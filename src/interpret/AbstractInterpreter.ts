@@ -5,14 +5,14 @@ import {CstRootNode} from '@cst/CstRootNode';
 import {ITransformer} from '@transform';
 import {IOptions} from '@options';
 
-export abstract class AbstractInterpreter<TVisitor extends ICstVisitor<void>, TOptions extends IOptions> implements Interpreter<TVisitor, TOptions> {
-  private readonly _transformers: ITransformer<TVisitor, CstRootNode, TOptions>[] = [];
+export abstract class AbstractInterpreter<TOptions extends IOptions> implements Interpreter<TOptions> {
+  private readonly _transformers: ITransformer<CstRootNode, TOptions>[] = [];
 
-  protected getTransformers(): ITransformer<TVisitor, CstRootNode, TOptions>[] {
+  protected getTransformers(): ITransformer<CstRootNode, TOptions>[] {
     return this._transformers;
   }
 
-  protected registerTransformer(transformer: ITransformer<TVisitor, CstRootNode, TOptions>): void {
+  protected registerTransformer(transformer: ITransformer<CstRootNode, TOptions>): void {
     this._transformers.push(transformer);
   }
 

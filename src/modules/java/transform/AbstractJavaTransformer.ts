@@ -3,7 +3,7 @@ import {OmniModel} from '@parse';
 import {AbstractTransformer} from '@transform';
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
 
-export abstract class AbstractJavaTransformer implements AbstractTransformer<IJavaCstVisitor<void>, JavaCstRootNode, JavaOptions> {
+export abstract class AbstractJavaTransformer implements AbstractTransformer<JavaCstRootNode, JavaOptions> {
 
   protected readonly _javaVisitor = new JavaVisitor<void>();
 

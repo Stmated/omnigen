@@ -582,6 +582,10 @@ export class JavaUtil {
 
   public static isGenericAllowedType(type: OmniType): boolean {
     if (type.kind == OmniTypeKind.PRIMITIVE) {
+      if (type.primitiveKind == OmniPrimitiveKind.STRING) {
+        return true;
+      }
+      
       switch (type.nullable) {
         case PrimitiveNullableKind.NULLABLE:
         case PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE:
@@ -596,7 +600,7 @@ export class JavaUtil {
 
   public static toNullableType(type: OmniType, wrap: boolean): OmniType {
     if (type.kind == OmniTypeKind.PRIMITIVE) {
-      if (type.nullable) {
+      if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
         return type;
       }
 

@@ -6,7 +6,7 @@ import {AddConstructorTransformer} from '@java/transform/AddConstructorTransform
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
 import {PackageImportTransformer} from '@java/transform/PackageImportTransformer';
 
-export class JavaInterpreter extends AbstractInterpreter<IJavaCstVisitor<void>, JavaOptions> {
+export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
   constructor() {
     super();
     this.registerTransformer(new JavaBaseTransformer());

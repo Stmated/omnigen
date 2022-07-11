@@ -13,6 +13,7 @@ import {Naming} from '@parse/Naming';
 import {JavaOptions, JavaUtil, PrimitiveGenerificationChoice} from '@java';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {LoggerFactory} from '@util';
+import {pascalCase} from 'change-case';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -104,7 +105,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
     const genericSource: OmniGenericSourceType = {
       // TODO: There should not be a name here, it should always be the name of the inner class
-      name: info.extendedBy.name,
+      name: () => `Source${Naming.safer(info.extendedBy)}`,
       kind: OmniTypeKind.GENERIC_SOURCE,
       of: info.extendedBy,
       sourceIdentifiers: [],
@@ -164,8 +165,9 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     const extensionsToSet: {target: OmniObjectType, extension: OmniType}[] = [];
     for (const subType of info.subTypes) {
 
+      const originalExtension = subType.extendedBy;
       const genericTarget: OmniGenericTargetType = {
-        name: subType.extendedBy.name,
+        name: () => `${Naming.safer(originalExtension)}For${Naming.safer(subType)}`,
         kind: OmniTypeKind.GENERIC_TARGET,
         source: genericSource,
         targetIdentifiers: [],
@@ -211,7 +213,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
           }
 
           genericTarget.targetIdentifiers.push({
-            name: `GenericTargetTo${propertyName}`,
+            name: `GenericTargetFor${Naming.safer(subType)}${pascalCase(propertyName)}`,
             kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
             type: genericTargetType,
             sourceIdentifier: generic.identifier

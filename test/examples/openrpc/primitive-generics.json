@@ -1,0 +1,63 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "title": "primitive_generics",
+    "version": "2.0.0"
+  },
+  "methods": [
+    {
+      "name": "give_string_get_string",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "give_string_get_string_result",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "name": "give_int_get_double",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "type": "integer",
+            "nullable": "true"
+          }
+        }
+      ],
+      "result": {
+        "name": "give_string_get_string_result",
+        "schema": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    {
+      "name": "give_number_get_char",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "type": "number"
+          }
+        }
+      ],
+      "result": {
+        "name": "give_string_get_string_result",
+        "schema": {
+          "type": "string",
+          "format": "char"
+        }
+      }
+    }
+  ]
+}

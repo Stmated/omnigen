@@ -7,13 +7,12 @@ import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {OmniEndpoint, OmniModel, OmniOutput} from '@parse';
 
 // const SegfaultHandler = require('segfault-handler');
 // SegfaultHandler.registerHandler('crash.log');
 
-describe('Test the rendering of a CST tree to string', () => {
+describe('Java Rendering', () => {
 
   const javaOptions: JavaOptions = DEFAULT_JAVA_OPTIONS;
 
@@ -92,8 +91,8 @@ describe('Test the rendering of a CST tree to string', () => {
 
     expect(interpretation).toBeDefined();
 
-    const allTypes1 = OmniModelUtil.getAllExportableTypes(model, model.types);
-    expect(interpretation.children).toHaveLength(allTypes1.all.length);
+    // const allTypes1 = OmniModelUtil.getAllExportableTypes(model, model.types);
+    expect(interpretation.children).toHaveLength(21);
 
     const compilationUnits: CompilationUnit[] = [];
     const renderer = new JavaRenderer(javaOptions, (cu) => {
@@ -104,11 +103,10 @@ describe('Test the rendering of a CST tree to string', () => {
 
     expect(compilationUnits).toBeDefined();
 
-    const allTypes2 = OmniModelUtil.getAllExportableTypes(model, model.types);
-    expect(compilationUnits).toHaveLength(allTypes2.all.length);
+    // const allTypes2 = OmniModelUtil.getAllExportableTypes(model, model.types);
+    expect(compilationUnits).toHaveLength(21);
 
     // TODO: We should assert actual useful stuff here :)
-
   });
 
   test('Test specific rendering', async () => {

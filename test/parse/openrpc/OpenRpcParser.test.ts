@@ -1,20 +1,21 @@
 import {OmniTypeKind, OpenRpcParser, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import assert = require('assert');
-import {Naming} from '../../../src/parse/Naming';
-import {OmniModelUtil} from '../../../src/parse/OmniModelUtil';
+import {Naming} from '@parse/Naming';
+import {OmniModelUtil} from '@parse/OmniModelUtil';
 
 describe('Test Generic Model Creation', () => {
   const parser = new OpenRpcParser();
 
   test('Test basic loading', async () => {
     const dirPath = './test/examples/openrpc/';
-    const files = await fs.readdir(dirPath);
+    const files = await fs.readdir(dirPath, {withFileTypes: true});
     for (const file of files) {
-      const filePath = path.join(dirPath, file);
-      const model = await parser.parse(new SchemaFile(filePath));
-      expect(model).toBeDefined();
+      if (file.isFile()) {
+        const filePath = path.join(dirPath, file.name);
+        const model = await parser.parse(new SchemaFile(filePath));
+        expect(model).toBeDefined();
+      }
     }
   });
 
@@ -43,12 +44,11 @@ describe('Test Generic Model Creation', () => {
 
     const response0properties = ((response0.type.kind == OmniTypeKind.OBJECT) ? response0.type.properties : []) || [];
     expect(response0properties).toBeDefined();
-    expect(response0properties).toHaveLength(3);
+    expect(response0properties).toHaveLength(1); // The others are in abstract supertype
     expect(response0properties[0].name).toEqual('result');
-    expect(response0properties[1].name).toEqual('error');
-    expect(response0properties[2].name).toEqual('id');
 
     const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
-    expect(allTypes.map(it => Naming.unwrap(it.name))).toContain('DeletePetByIdErrorUnknownError');
+    expect(allTypes.all.map(it => Naming.safer(it))).toContain('DeletePetByIdResponse');
+    expect(allTypes.all.map(it => Naming.safer(it))).toContain('ErrorUnknownError');
   });
 });

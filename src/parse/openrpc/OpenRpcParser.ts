@@ -1050,28 +1050,41 @@ class OpenRpcParserImpl {
       return [OmniTypeKind.NULL];
     }
 
+    const lcFormat = format?.toLowerCase() ?? '';
     let primitiveType: OmniPrimitiveKind;
     switch (lcType) {
       case 'number':
-        primitiveType = OmniPrimitiveKind.NUMBER;
+        switch (lcFormat) {
+          case 'decimal':
+            primitiveType = OmniPrimitiveKind.DECIMAL;
+            break;
+          case 'double':
+            primitiveType = OmniPrimitiveKind.DOUBLE;
+            break;
+          case 'float':
+            primitiveType = OmniPrimitiveKind.FLOAT;
+            break;
+          default:
+            primitiveType = this.getIntegerPrimitiveFromFormat(lcFormat, OmniPrimitiveKind.NUMBER);
+            break;
+        }
         break;
-      case 'int':
       case 'integer':
-        primitiveType = OmniPrimitiveKind.INTEGER;
+        primitiveType = this.getIntegerPrimitiveFromFormat(lcFormat, OmniPrimitiveKind.INTEGER);
         break;
-      case 'decimal':
-      case 'double':
-        primitiveType = OmniPrimitiveKind.DECIMAL;
-        break;
-      case 'float':
-        primitiveType = OmniPrimitiveKind.FLOAT;
-        break;
-      case 'bool':
       case 'boolean':
         primitiveType = OmniPrimitiveKind.BOOL;
         break;
       case 'string':
-        primitiveType = OmniPrimitiveKind.STRING;
+        switch (lcFormat) {
+          case 'char':
+          case 'character':
+            primitiveType = OmniPrimitiveKind.CHAR;
+            break;
+          default:
+            primitiveType = OmniPrimitiveKind.STRING;
+            break;
+        }
         break;
       default:
         logger.warn(`Do not know how to handle primitive type '${lcType}', will assume String`);
@@ -1095,6 +1108,19 @@ class OpenRpcParserImpl {
       return [OmniTypeKind.ENUM, primitiveType, allowedValues];
     } else {
       return [OmniTypeKind.PRIMITIVE, primitiveType];
+    }
+  }
+
+  private getIntegerPrimitiveFromFormat(format: string, fallback: OmniPrimitiveKind.INTEGER | OmniPrimitiveKind.NUMBER): OmniPrimitiveKind {
+    switch (format) {
+      case 'integer':
+      case 'int':
+        return OmniPrimitiveKind.INTEGER;
+      case 'long':
+      case 'int64':
+        return OmniPrimitiveKind.LONG;
+      default:
+        return fallback;
     }
   }
 

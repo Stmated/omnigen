@@ -10,7 +10,7 @@ import {
 } from '../src';
 import fs from 'fs/promises';
 import {Naming} from '../src/parse/Naming';
-import {AbstractMethodDeclaration, CompilationUnit, DEFAULT_JAVA_OPTIONS, JavaVisitor} from '../src/modules/java';
+import {MethodDeclaration, CompilationUnit, DEFAULT_JAVA_OPTIONS, JavaVisitor} from '../src/modules/java';
 import {IOptions} from '../src/options';
 import AbstractNode from '../src/cst/AbstractNode';
 import {VisitorFactoryManager} from '../src/visit/VisitorFactoryManager';
@@ -74,7 +74,7 @@ export class TestUtils {
       name: types.map(it => Naming.unwrap(it.name)).join('And'),
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
-      types: types,
+      andTypes: types,
     };
   }
 
@@ -86,11 +86,11 @@ export class TestUtils {
     };
   }
 
-  public static getMethod(node: AbstractNode, name: string): AbstractMethodDeclaration {
+  public static getMethod(node: AbstractNode, name: string): MethodDeclaration {
 
-    const visitor = VisitorFactoryManager.create(new JavaVisitor<AbstractMethodDeclaration>(), {
+    const visitor = VisitorFactoryManager.create(new JavaVisitor<MethodDeclaration>(), {
       visitMethodDeclaration: (node, visitor) => {
-        if (node.name.value == name) {
+        if (node.signature.identifier.value == name) {
           return node;
         } else {
           return undefined;

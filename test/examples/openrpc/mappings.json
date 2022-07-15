@@ -1,0 +1,92 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "title": "primitive_generics",
+    "version": "2.0.0"
+  },
+  "methods": [
+    {
+      "name": "give_a_get_b",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "$ref": "#/components/schemas/in"
+          }
+        }
+      ],
+      "result": {
+        "name": "give_string_get_string_result",
+        "schema": {
+          "$ref": "#/components/schemas/out"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "in": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/in_a"
+          },
+          {
+            "$ref": "#/components/schemas/in_b"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        }
+      },
+      "abs_in_type": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "in_a": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/abs_in_type"
+          }
+        ],
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        }
+      },
+      "in_b": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/abs_in_type"
+          }
+        ],
+        "properties": {
+          "bar": {
+            "type": "string"
+          }
+        }
+      },
+
+      "out": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

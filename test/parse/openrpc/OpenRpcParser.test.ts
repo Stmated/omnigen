@@ -58,6 +58,8 @@ describe('Test Generic Model Creation', () => {
 
     const model = await TestUtils.readExample('openrpc', 'ethereum.json', DEFAULT_JAVA_OPTIONS);
 
+    // TODO: Add expectations
+
     expect(model).toBeDefined();
   });
 });

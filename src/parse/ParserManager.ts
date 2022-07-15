@@ -52,7 +52,7 @@ export class ParserManager implements IParseManager {
         return parser.parse(schemaFile)
           .then(model => {
             for (const transformer of this._modelTransformers) {
-              transformer.transform(model, options.languageOptions);
+              transformer.transformModel(model, options.languageOptions);
             }
 
             return model;

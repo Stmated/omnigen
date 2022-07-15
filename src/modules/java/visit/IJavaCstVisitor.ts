@@ -19,7 +19,9 @@ export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitComment: JavaVisitFn<Java.Comment, R>;
   visitFieldBackedGetter: JavaVisitFn<Java.FieldBackedGetter, R>;
   visitFieldBackedSetter: JavaVisitFn<Java.FieldBackedSetter, R>;
-  visitMethodDeclaration: JavaVisitFn<Java.AbstractMethodDeclaration, R>;
+  visitMethodDeclaration: JavaVisitFn<Java.MethodDeclaration, R>;
+  visitAbstractMethodDeclaration: JavaVisitFn<Java.AbstractMethodDeclaration, R>;
+  visitMethodDeclarationSignature: JavaVisitFn<Java.MethodDeclarationSignature, R>;
   visitExtendsDeclaration: JavaVisitFn<Java.ExtendsDeclaration, R>;
   visitImplementsDeclaration: JavaVisitFn<Java.ImplementsDeclaration, R>;
   visitTypeList: JavaVisitFn<Java.TypeList, R>;

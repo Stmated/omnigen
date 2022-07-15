@@ -1,10 +1,15 @@
-import {OmniModel, OmniType, OmniTypeKind} from '@parse/OmniModel';
+import {CompositionKind, OmniInheritableType, OmniModel, OmniProperty, OmniType, OmniTypeKind} from '@parse/OmniModel';
 
 export interface TypeCollection {
 
   named: OmniType[];
   all: OmniType[];
+  edge: OmniType[];
 }
+
+export type TraverseInput = OmniType | OmniType[] | undefined;
+export type TraverseCallbackResult = 'abort' | 'skip' | void;
+export type TraverseCallback = {(type: OmniType, depth: number): TraverseCallbackResult};
 
 export class OmniModelUtil {
 
@@ -20,82 +25,135 @@ export class OmniModelUtil {
     }
 
     model.endpoints.forEach(e => {
-      OmniModelUtil.getTypesRecursively(e.request.type, set, setEdge, true);
+      OmniModelUtil.getTypesRecursively(e.request.type, set, setEdge, 0);
 
       e.responses.forEach(r => {
-        OmniModelUtil.getTypesRecursively(r.type, set, setEdge, true);
+        OmniModelUtil.getTypesRecursively(r.type, set, setEdge, 0);
       });
     });
     (model.continuations || []).forEach(c => {
       c.mappings.forEach(m => {
         (m.source.propertyPath || []).forEach(p => {
-          OmniModelUtil.getTypesRecursively(p.owner, set, setEdge, false);
-          OmniModelUtil.getTypesRecursively(p.type, set, setEdge, false);
+          OmniModelUtil.getTypesRecursively(p.owner, set, setEdge, 1);
+          OmniModelUtil.getTypesRecursively(p.type, set, setEdge, 1);
         });
         (m.target.propertyPath || []).forEach(p => {
-          OmniModelUtil.getTypesRecursively(p.owner, set, setEdge, false);
-          OmniModelUtil.getTypesRecursively(p.type, set, setEdge, false);
+          OmniModelUtil.getTypesRecursively(p.owner, set, setEdge, 1);
+          OmniModelUtil.getTypesRecursively(p.type, set, setEdge, 1);
         });
       })
     });
 
     return {
       all: [...set],
-      // edge: [...setEdge].filter(it => GenericModelUtil.isNotPrimitive(it)),
+      edge: [...setEdge],
       named: [],
     };
   }
 
-  private static getTypesRecursively(type: OmniType, target: Set<OmniType>, edge: Set<OmniType>, isEdge: boolean): void {
+  public static traverseTypes(type: TraverseInput, callback: TraverseCallback): void {
+    OmniModelUtil.traverseTypesInternal(type, 0, callback);
+  }
 
-    // Add self, and then try to find recursive types.
-    target.add(type);
-    if (isEdge) {
-      edge.add(type);
+  private static traverseTypesInternal(type: TraverseInput, depth: number, callback: TraverseCallback): TraverseCallbackResult {
+
+    if (!type) return;
+    if (Array.isArray(type)) {
+      for (const entry of type) {
+        const entryResult = OmniModelUtil.traverseTypesInternal(entry, depth, callback);
+        if (entryResult == 'abort'){
+          return 'abort';
+        }
+      }
+      return;
+    }
+
+    // Callback self, and then try to find recursive types.
+    switch (callback(type, depth)) {
+      case 'abort':
+        return 'abort';
+      case 'skip':
+        // 'skip' will not be propagated, but will simply not go deeper.
+        return 'skip';
     }
 
     if (type.kind == OmniTypeKind.OBJECT) {
-      if (type.extendedBy) {
-        this.getTypesRecursively(type.extendedBy, target, edge, false);
+      if (this.traverseTypesInternal(type.extendedBy, depth + 1, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.nestedTypes, depth + 1, callback) == 'abort') return 'abort';
+      for (const p of type.properties) {
+        if (this.traverseTypesInternal(p.type, depth, callback) == 'abort') return 'abort';
       }
-      if (type.nestedTypes) {
-        type.nestedTypes.forEach(nested => this.getTypesRecursively(nested, target, edge, false));
-      }
-      if (type.properties) {
-        type.properties.forEach(p => this.getTypesRecursively(p.type, target, edge, isEdge));
-      }
-
     } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
-      type.types.forEach(t => this.getTypesRecursively(t, target, edge, isEdge));
-      if (type.commonDenominator) {
-        this.getTypesRecursively(type.commonDenominator, target, edge, isEdge);
-      }
+      if (this.traverseTypesInternal(type.types, depth, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.commonDenominator, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-      type.properties.forEach(p => this.getTypesRecursively(p.type, target, edge, isEdge));
-      if (type.commonDenominator) {
-        this.getTypesRecursively(type.commonDenominator, target, edge, isEdge);
+      for (const p of type.properties) {
+        if (this.traverseTypesInternal(p.type, depth, callback) == 'abort') return 'abort';
       }
+      if (this.traverseTypesInternal(type.commonDenominator, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
-      type.types.forEach(it => this.getTypesRecursively(it, target, edge, isEdge));
+      if (type.compositionKind == CompositionKind.AND) {
+        if (this.traverseTypesInternal(type.andTypes, depth + 1, callback) == 'abort') return 'abort';
+      } else if (type.compositionKind == CompositionKind.OR) {
+        if (this.traverseTypesInternal(type.orTypes, depth + 1, callback) == 'abort') return 'abort';
+      } else if (type.compositionKind == CompositionKind.XOR) {
+        if (this.traverseTypesInternal(type.xorTypes, depth + 1, callback) == 'abort') return 'abort';
+      } else if (type.compositionKind == CompositionKind.NOT) {
+        if (this.traverseTypesInternal(type.notTypes, depth + 1, callback) == 'abort') return 'abort';
+      }
     } else if (type.kind == OmniTypeKind.ARRAY) {
-      this.getTypesRecursively(type.of, target, edge, isEdge);
+      if (this.traverseTypesInternal(type.of, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.DICTIONARY) {
-      this.getTypesRecursively(type.keyType, target, edge, isEdge);
-      this.getTypesRecursively(type.valueType, target, edge, isEdge);
+      if (this.traverseTypesInternal(type.keyType, depth, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.valueType, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-      this.getTypesRecursively(type.of, target, edge, isEdge);
-      type.sourceIdentifiers.forEach(g => this.getTypesRecursively(g, target, edge, isEdge));
+      if (this.traverseTypesInternal(type.of, depth, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.sourceIdentifiers, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      type.targetIdentifiers.forEach(g => this.getTypesRecursively(g, target, edge, isEdge));
+      if (this.traverseTypesInternal(type.targetIdentifiers, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-      this.getTypesRecursively(type.type, target, edge, isEdge);
+      if (this.traverseTypesInternal(type.type, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-      if (type.lowerBound) {
-        this.getTypesRecursively(type.lowerBound, target, edge, isEdge);
-      }
-      if (type.upperBound) {
-        this.getTypesRecursively(type.upperBound, target, edge, isEdge);
-      }
+      if (this.traverseTypesInternal(type.lowerBound, depth, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.upperBound, depth, callback) == 'abort') return 'abort';
     }
+  }
+
+  private static getTypesRecursively(type: TraverseInput, target: Set<OmniType>, edge: Set<OmniType>, depth: number): void {
+    OmniModelUtil.traverseTypesInternal(type, depth, (localType, depth) => {
+      target.add(localType);
+      if (depth == 0) {
+        edge.add(localType);
+      }
+    });
+  }
+
+  public static asInheritableType(type: OmniType): OmniInheritableType | undefined {
+    if (type.kind == OmniTypeKind.OBJECT
+      || type.kind == OmniTypeKind.GENERIC_TARGET
+      || type.kind == OmniTypeKind.COMPOSITION) {
+      return type;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Not recursive
+   */
+  public static getPropertiesOf(type: OmniType): OmniProperty[] {
+
+    if (type.kind == OmniTypeKind.OBJECT) {
+      return type.properties;
+    }
+
+    if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+
+      // This could quickly become very wonky if the properties are simply added to an interface?
+      // Or is this handled by some other code, to convert it properly with index to the correct setter/constructor?
+      return type.properties;
+    }
+
+    return [];
   }
 }

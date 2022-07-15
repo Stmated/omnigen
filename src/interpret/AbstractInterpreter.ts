@@ -25,7 +25,7 @@ export abstract class AbstractInterpreter<TOptions extends IOptions> implements 
 
       // We do the transformers in order.
       // Later we might batch them together based on "type" or "group" or whatever.
-      await transformer.transform(model, rootNode, options);
+      await transformer.transformCst(model, rootNode, options);
     }
 
     return Promise.resolve(rootNode);

@@ -1,3 +1,3 @@
 
-export * from './types';
+export * from './JavaCstTypes';
 export * from './JavaCstRootNode';

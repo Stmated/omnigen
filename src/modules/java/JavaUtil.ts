@@ -1,4 +1,4 @@
-import * as Java from './cst/types';
+import * as Java from './cst/JavaCstTypes';
 import {ModifierType} from '@java/cst';
 import {pascalCase} from 'change-case';
 import {
@@ -6,6 +6,7 @@ import {
   OmniDictionaryType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
+  OmniProperty,
   OmniType,
   OmniTypeKind,
   PrimitiveNullableKind
@@ -15,6 +16,7 @@ import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
 import {Naming} from '@parse/Naming';
+import {OmniModelUtil} from '@parse/OmniModelUtil';
 
 interface FqnOptions {
   type: OmniType,
@@ -67,7 +69,7 @@ export class JavaUtil {
 
       // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
       //        Right now this is locked to this part, and difficult to change
-      const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});
+      const rawName = JavaUtil.getName({...args, ...{type: args.type.source.of}});
       const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
       const genericTypeString = genericTypes.join(', ');
       return `${rawName}<${genericTypeString}>`;
@@ -117,9 +119,9 @@ export class JavaUtil {
       }
     } else if (args.type.kind == OmniTypeKind.PRIMITIVE) {
       if (args.relativeTo) {
-        return JavaUtil.getClassName(this.getPrimitiveKindName(args.type), args.withSuffix);
+        return JavaUtil.getClassName(this.getPrimitiveTypeName(args.type), args.withSuffix);
       } else {
-        return JavaUtil.getCleanedFullyQualifiedName(this.getPrimitiveKindName(args.type), args.withSuffix);
+        return JavaUtil.getCleanedFullyQualifiedName(this.getPrimitiveTypeName(args.type), args.withSuffix);
       }
     } else if (args.type.kind == OmniTypeKind.UNKNOWN) {
       if (args.relativeTo) {
@@ -158,13 +160,19 @@ export class JavaUtil {
     }
   }
 
-  public static getPrimitiveKindName(type: OmniPrimitiveType): string {
+  public static getPrimitiveTypeName(type: OmniPrimitiveType): string {
 
     // The primitive nullable kind might be NOT_NULLABLE_PRIMITIVE.
     // Then in the end it will probably be a completely other type, depending on the language.
     // In Java, we cannot use a primitive as a generic parameter, but we want to be able to say it cannot be null.
-    const boxed = (type.nullable && type.nullable == PrimitiveNullableKind.NULLABLE);
-    switch (type.primitiveKind) {
+    const boxed: boolean = (type.nullable !== undefined && type.nullable == PrimitiveNullableKind.NULLABLE);
+    const primitiveKind = type.primitiveKind;
+    return JavaUtil.getPrimitiveKindName(primitiveKind, boxed);
+  }
+
+  public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean): string {
+
+    switch (kind) {
       case OmniPrimitiveKind.BOOL:
         return boxed ? 'java.lang.Boolean' : 'boolean';
       case OmniPrimitiveKind.VOID:
@@ -454,11 +462,11 @@ export class JavaUtil {
    */
   private static readonly _javaVisitor: JavaVisitor<void> = new JavaVisitor<void>();
 
-  public static getFieldsRequiredInConstructor(
+  public static getConstructorRequirements(
     root: CstRootNode,
     node: Java.AbstractObjectDeclaration,
     followSupertype = false
-  ): [Java.Field[], Java.Field[]] {
+  ): [Java.Field[], Java.ArgumentDeclaration[]] {
 
     const fields: Java.Field[] = [];
     const setters: Java.FieldBackedSetter[] = [];
@@ -497,17 +505,24 @@ export class JavaUtil {
 
     if (followSupertype && node.extends) {
 
-      // TODO: Find any class we extend, and then do this same thing to that class.
-
-      const supertypeRequired: Java.Field[] = [];
+      const supertypeArguments: Java.ArgumentDeclaration[] = [];
       const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.omniType);
       if (extendedBy) {
-        supertypeRequired.push(...JavaUtil.getFieldsRequiredInConstructor(root, extendedBy, false)[0]);
+
+        const constructorVisitor = VisitorFactoryManager.create(JavaUtil._javaVisitor, {
+          visitConstructor: (node) => {
+            if (node.parameters) {
+              supertypeArguments.push(...node.parameters.children);
+            }
+          }
+        });
+
+        extendedBy.visit(constructorVisitor);
       }
 
       return [
         immediateRequired,
-        supertypeRequired
+        supertypeArguments
       ];
 
     } else {
@@ -585,7 +600,7 @@ export class JavaUtil {
       if (type.primitiveKind == OmniPrimitiveKind.STRING) {
         return true;
       }
-      
+
       switch (type.nullable) {
         case PrimitiveNullableKind.NULLABLE:
         case PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE:
@@ -615,5 +630,23 @@ export class JavaUtil {
     }
 
     return type;
+  }
+
+  public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
+
+    const properties: OmniProperty[] = [];
+
+    OmniModelUtil.traverseTypes(type, (localType) => {
+
+      if (localType.kind == OmniTypeKind.OBJECT) {
+        return 'skip';
+      } else if (localType.kind == OmniTypeKind.INTERFACE) {
+        properties.push(...OmniModelUtil.getPropertiesOf(localType.of));
+      }
+
+      return undefined;
+    });
+
+    return properties;
   }
 }

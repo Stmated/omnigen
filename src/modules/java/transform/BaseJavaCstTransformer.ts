@@ -1,11 +1,19 @@
-import {AbstractJavaTransformer} from './AbstractJavaTransformer';
-import {Block, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
+import {AbstractJavaCstTransformer} from './AbstractJavaCstTransformer';
+import {
+  Block,
+  JavaCstRootNode,
+  JavaOptions,
+  JavaUtil,
+  ModifierType
+} from '@java';
 import {
   CompositionKind,
   OmniCompositionType,
+  OmniCompositionXORType,
   OmniEnumType,
   OmniExamplePairing,
   OmniGenericSourceIdentifierType,
+  OmniInterfaceType,
   OmniLinkMapping,
   OmniModel,
   OmniObjectType,
@@ -24,12 +32,12 @@ import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@p
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
 
-export class JavaBaseTransformer extends AbstractJavaTransformer {
+export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
 
   private static readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 
-  transform(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
+  transformCst(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
 
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
@@ -58,12 +66,12 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
         // The primitive is said to not be nullable, but to still be a primitive.
         // This is not really possible in Java, so we need to wrap it inside a custom class.
-        const kindName = pascalCase(JavaUtil.getPrimitiveKindName(type));
-        let primitiveClass = JavaBaseTransformer._primitiveWrapperMap.get(kindName);
+        const kindName = pascalCase(JavaUtil.getPrimitiveTypeName(type));
+        let primitiveClass = BaseJavaCstTransformer._primitiveWrapperMap.get(kindName);
         if (!primitiveClass) {
 
           primitiveClass = this.createNotNullablePrimitiveWrapper(type, kindName);
-          JavaBaseTransformer._primitiveWrapperMap.set(kindName, primitiveClass);
+          BaseJavaCstTransformer._primitiveWrapperMap.set(kindName, primitiveClass);
 
           root.children.push(
             new Java.CompilationUnit(
@@ -81,7 +89,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     const typeNames: string[] = [];
     for (const type of exportableTypes.all) {
       const typeName = Naming.unwrap(type.name);
-      if (!JavaBaseTransformer.PATTERN_IDENTIFIER.test(typeName)) {
+      if (!BaseJavaCstTransformer.PATTERN_IDENTIFIER.test(typeName)) {
         // The type does not have a valid name; what can we do about it?
         throw new Error(`Type name '${typeName}' (${type.description || type.summary || type.kind}) is not valid`);
       } else {
@@ -122,10 +130,21 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         // Just that has no real content in itself, but made up of the different parts.
         // If the composition is a "extends A and B"
         // Then it should be extending A, and implementing B interface, and rendering B properties
-        this.transformObject(model, type, options, root, graph)
+        if (type.compositionKind == CompositionKind.XOR) {
+
+          // In Java only the XOR composition is rendered as a separate compilation unit.
+          // That is because multiple inheritance does not exist, so it needs to be done manually.
+          this.transformObject(model, type, options, root, graph);
+        }
 
       } else if (type.kind == OmniTypeKind.OBJECT) {
         this.transformObject(model, type, options, root, graph);
+      } else if (type.kind == OmniTypeKind.INTERFACE) {
+        if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
+          throw new Error(`Do not know yet how to handle a generic interface. Fix it.`)
+        } else {
+          this.transformInterface(model, type, options, root, graph);
+        }
       } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
         this.transformObject(model, type.of, options, root, graph, type.sourceIdentifiers);
       } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -266,9 +285,56 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(options.package),
       new Java.ImportList(
-        [] // TODO: Add the actual imports here. Visit all nodes of 'javaClass' and gather all types!
+        []
       ),
       enumDeclaration
+    ));
+  }
+
+
+  private transformInterface(
+    model: OmniModel,
+    type: OmniInterfaceType,
+    options: JavaOptions,
+    root: JavaCstRootNode,
+    graph: DependencyGraph,
+  ): void {
+
+    const javaClassName = Naming.unwrap(type.name);
+    const javaType = new Java.Type(type);
+
+    const body = new Java.Block(
+      // TODO: Add all the method declarations (without bodies, since it's an interface)
+      // TODO: To make this a bit prettier, we should try and re-use as much of the rendering as possible.
+    );
+
+    const declaration = new Java.InterfaceDeclaration(
+      javaType,
+      new Java.Identifier(javaClassName),
+      body,
+    );
+
+    if (type.of.kind == OmniTypeKind.OBJECT) {
+
+      // Transform the object, but add no fields and only add the abstract method declaration (signature only)
+      for (const property of type.of.properties) {
+        body.children.push(
+          new Java.AbstractMethodDeclaration(
+            new Java.MethodDeclarationSignature(
+              new Java.Identifier(JavaUtil.getGetterName(property.propertyName || property.name, property.type)),
+              new Java.Type(property.type)
+            )
+          )
+        );
+      }
+    }
+
+    root.children.push(new Java.CompilationUnit(
+      new Java.PackageDeclaration(options.package),
+      new Java.ImportList(
+        []
+      ),
+      declaration
     ));
   }
 
@@ -281,7 +347,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     options: JavaOptions,
     root: JavaCstRootNode,
     graph: DependencyGraph,
-    genericTypes?: OmniGenericSourceIdentifierType[]
+    genericSourceIdentifiers?: OmniGenericSourceIdentifierType[]
   ): void {
 
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
@@ -290,10 +356,8 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     if (type.kind == OmniTypeKind.OBJECT) {
 
-      if (type.properties) {
-        for (const property of type.properties) {
-          this.transformObjectProperty(model, body, property, options);
-        }
+      for (const property of type.properties) {
+        this.addOmniPropertyToBody(model, body, property, options);
       }
 
       if (type.additionalProperties) {
@@ -306,17 +370,17 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
       }
     }
 
-    const javaClassName = Naming.unwrap(type.name);
+    const javaClassName = Naming.safer(type);
     const javaType = new Java.Type(type);
 
-    let declaration: Java.ClassDeclaration | Java.GenericClassDeclaration;
-    if (genericTypes) {
+    let declaration: Java.ClassDeclaration | Java.InterfaceDeclaration | Java.GenericClassDeclaration;
+    if (genericSourceIdentifiers) {
       declaration = new Java.GenericClassDeclaration(
         new Java.Identifier(javaClassName),
         javaType,
         new Java.GenericTypeDeclarationList(
-          genericTypes.map(it => new Java.GenericTypeDeclaration(
-            new Java.Identifier(Naming.unwrap(it.name)),
+          genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
+            new Java.Identifier(Naming.safer(it)),
             it.lowerBound ? new Java.Type(it.lowerBound) : undefined,
             it.upperBound ? new Java.Type(it.upperBound) : undefined,
           ))
@@ -328,7 +392,7 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         javaType,
         new Java.Identifier(javaClassName),
         body,
-      );
+        );
     }
 
     // TODO: Move into a separate transformer, and make it an option
@@ -351,49 +415,13 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     const comments = this.getCommentsForType(type, model, options);
 
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
-
-        // The composition type is XOR, it can only be one of them.
-        // That is not possible to represent in Java, so we need another way of representing it.
-        // Order of importance is:
-        // 1. Using discriminator.propertyName and mapping (By Json fasterxml subtypes)
-        // 2. Using discriminator.propertyName and schema ref name (if mapping does not exist) (By Json fasterxml subtypes)
-        // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
-
-        const mappedTypes = [...type.mappings.values()];
-        const unmapped = type.types.filter(it => !mappedTypes.includes(it));
-        if (unmapped.length > 0) {
-
-          // This means the specification did not have any discriminators.
-          // Instead we need to figure out what it is in runtime. To be improved.
-          body.children.push(
-            new Java.RuntimeTypeMapping(
-              type.types,
-              options,
-              (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
-            )
-          );
-
-        } else {
-
-          // The specification did map all types using a discriminator.
-          // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
-          comments.push(`This bad boy can be mapped so hard`);
-        }
+      this.addXOrMappingToBody(type, model, body, comments, options);
     } else {
+      this.addExtendsAndImplements(graph, type, declaration);
+    }
 
-      const typeExtends = JavaDependencyGraph.getExtends(graph, type);
-      if (typeExtends) {
-        declaration.extends = new Java.ExtendsDeclaration(
-          this.getTypeNodeWithGenerics(typeExtends)
-        );
-      }
-
-      const typeImplements = JavaDependencyGraph.getImplements(graph, type);
-      if (typeImplements.length > 0) {
-        declaration.implements = new Java.ImplementsDeclaration(
-          new Java.TypeList(typeImplements.map(it => this.getTypeNodeWithGenerics(it)))
-        );
-      }
+    for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
+      this.addOmniPropertyToBody(model, body, property, options);
     }
 
     if (comments.length > 0) {
@@ -403,18 +431,82 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(options.package),
       new Java.ImportList(
-        [] // TODO: Add the actual imports here. Visit all nodes of 'javaClass' and gather all types!
+        []
       ),
       declaration
     ));
   }
 
-  private getTypeNodeWithGenerics(typeExtends: OmniType): Java.Type {
+  private addExtendsAndImplements(
+    graph: DependencyGraph,
+    type: OmniObjectType | OmniCompositionType,
+    declaration: Java.AbstractObjectDeclaration
+  ): void {
 
-    return new Java.Type(typeExtends);
+    const typeExtends = JavaDependencyGraph.getExtends(graph, type);
+    if (typeExtends) {
+      declaration.extends = new Java.ExtendsDeclaration(
+        new Java.Type(typeExtends)
+      );
+    }
+
+    const typeImplements = JavaDependencyGraph.getImplements(graph, type);
+    if (typeImplements.length > 0) {
+      declaration.implements = new Java.ImplementsDeclaration(
+        new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
+      );
+    }
+
+    if (type.kind == OmniTypeKind.OBJECT && type.extendedBy) {
+      const ext = type.extendedBy;
+      if (ext.kind == OmniTypeKind.COMPOSITION && ext.compositionKind == CompositionKind.XOR && ext.mappingPropertyName) {
+        // If this is true, then we should
+      }
+    }
   }
 
-  private transformObjectProperty(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {
+  private addXOrMappingToBody(
+    type: OmniCompositionXORType,
+    model: OmniModel,
+    body: Block,
+    comments: string[],
+    options: JavaOptions
+  ): void {
+
+    // The composition type is XOR, it can only be one of them.
+    // That is not possible to represent in Java, so we need another way of representing it.
+    // Order of importance is:
+    // 1. Using discriminator.propertyName and mapping (By Json fasterxml subtypes)
+    // 2. Using discriminator.propertyName and schema ref name (if mapping does not exist) (By Json fasterxml subtypes)
+    // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
+
+    if (!type.mappingPropertyName) {
+
+      const mappedTypes = [...(type.mappings || new Map<string, OmniType>()).values()];
+      const unmapped = type.xorTypes.filter(it => !mappedTypes.includes(it));
+      if (unmapped.length > 0) {
+
+        // This means the specification did not have any discriminators.
+        // Instead we need to figure out what it is in runtime. To be improved.
+        body.children.push(
+          new Java.RuntimeTypeMapping(
+            type.xorTypes,
+            options,
+            (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
+          )
+        );
+      } else {
+        comments.push(`This bad boy can be mapped but we need to automatically find them based on name`);
+      }
+    } else {
+
+      // The specification did map all types using a discriminator.
+      // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
+      comments.push(`This bad boy can be mapped so hard based on only property name`);
+    }
+  }
+
+  private addOmniPropertyToBody(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {
 
     const comments: string[] = [];
     if (property.type.kind != OmniTypeKind.OBJECT) {
@@ -465,16 +557,16 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
         // We're told to include it, even though it always returns null.
         const methodDeclaration = new Java.MethodDeclaration(
-          this.toJavaType(property.type),
-          new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-          undefined,
-          undefined,
+          new Java.MethodDeclarationSignature(
+            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
+            this.toJavaType(property.type),
+          ),
           new Java.Block(
             new Java.Statement(new Java.ReturnStatement(new Java.Literal(null))),
           )
         );
 
-        methodDeclaration.comments = commentList;
+        methodDeclaration.signature.comments = commentList;
         body.children.push(methodDeclaration);
       }
 
@@ -496,10 +588,10 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
         )
 
         const methodDeclaration = new Java.MethodDeclaration(
-          new Java.Type(property.type),
-          new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-          undefined,
-          undefined,
+          new Java.MethodDeclarationSignature(
+            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
+            new Java.Type(property.type),
+          ),
           new Java.Block(
             new Java.Statement(new Java.ReturnStatement(
               new Java.FieldReference(field)
@@ -507,22 +599,22 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
           )
         );
 
-        methodDeclaration.comments = commentList;
+        methodDeclaration.signature.comments = commentList;
         body.children.push(field);
         body.children.push(methodDeclaration);
 
       } else {
         const methodDeclaration = new Java.MethodDeclaration(
-          new Java.Type(property.type),
-          new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-          undefined,
-          undefined,
+          new Java.MethodDeclarationSignature(
+            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
+            new Java.Type(property.type),
+          ),
           new Java.Block(
             new Java.Statement(new Java.ReturnStatement(new Java.Literal(property.type.valueConstant))),
           )
         );
 
-        methodDeclaration.comments = commentList;
+        methodDeclaration.signature.comments = commentList;
         body.children.push(methodDeclaration);
       }
 
@@ -836,10 +928,10 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     if (type.kind == OmniTypeKind.COMPOSITION) {
       if (type.compositionKind == CompositionKind.XOR) {
-        if (type.types.length == 2) {
-          const nullType = type.types.find(it => it.kind == OmniTypeKind.NULL);
+        if (type.xorTypes.length == 2) {
+          const nullType = type.xorTypes.find(it => it.kind == OmniTypeKind.NULL);
           if (nullType) {
-            const otherType = type.types.find(it => it.kind != OmniTypeKind.NULL);
+            const otherType = type.xorTypes.find(it => it.kind != OmniTypeKind.NULL);
             if (otherType && otherType.kind == OmniTypeKind.PRIMITIVE) {
 
               // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
@@ -881,6 +973,6 @@ export class JavaBaseTransformer extends AbstractJavaTransformer {
 
     const referenceType = target as OmniReferenceType;
 
-    referenceType.fqn = `${options.package}.Primitive${pascalCase(JavaUtil.getPrimitiveKindName(primitiveType))}`;
+    referenceType.fqn = `${options.package}.Primitive${pascalCase(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
   }
 }

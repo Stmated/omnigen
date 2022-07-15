@@ -1,22 +1,12 @@
 import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {
-  AbstractMethodDeclaration,
-  CompilationUnit,
   DEFAULT_JAVA_OPTIONS,
-  FieldBackedGetter,
   JavaOptions,
-  JavaVisitor, MethodDeclaration,
   PrimitiveGenerificationChoice
 } from '@java';
-import {OmniModelUtil} from '../../../../src/parse/OmniModelUtil';
-import {CstRootNode} from '../../../../src/cst/CstRootNode';
-import {VisitorFactoryManager} from '../../../../src/visit/VisitorFactoryManager';
-import {VisitResult} from '../../../../src/visit';
-import {OmniTypeKind} from '../../../../src';
-import {Naming} from '../../../../src/parse/Naming';
-import {JavaRenderer} from '../../../../src/modules/java/render/JavaRenderer';
-import AbstractNode from '../../../../src/cst/AbstractNode';
+import {OmniTypeKind} from '@parse';
+import {Naming} from '@parse/Naming';
 
 describe('Test the structuring of GenericModel into a Java CST', () => {
 
@@ -178,5 +168,31 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
     expect(type?.kind).toEqual(OmniTypeKind.OBJECT);
+  });
+
+  test('Interfaces', async () => {
+
+    const model = await TestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_JAVA_OPTIONS);
+    const interpreter = new JavaInterpreter();
+    const root = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    expect(root).toBeDefined();
+
+    expect(root.children).toHaveLength(21);
+
+    expect(model).toBeDefined();
+  });
+
+  test('Mappings', async () => {
+
+    const model = await TestUtils.readExample('openrpc', 'mappings.json', DEFAULT_JAVA_OPTIONS);
+    const interpreter = new JavaInterpreter();
+    const root = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    expect(root).toBeDefined();
+
+    expect(root.children).toHaveLength(21);
+
+    expect(model).toBeDefined();
   });
 });

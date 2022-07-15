@@ -22,7 +22,7 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    transformer.transform(model, DEFAULT_JAVA_OPTIONS);
+    transformer.transformModel(model, DEFAULT_JAVA_OPTIONS);
 
     expect(model.types).toHaveLength(1);
 
@@ -75,7 +75,7 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    transformer.transform(model, DEFAULT_JAVA_OPTIONS);
+    transformer.transformModel(model, DEFAULT_JAVA_OPTIONS);
 
     expect(model.types).toHaveLength(3);
 

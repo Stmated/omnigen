@@ -1,4 +1,4 @@
-import * as Java from '@java/cst/types';
+import * as Java from '@java/cst/JavaCstTypes';
 import {CompilationUnitCallback} from '@cst/CompilationUnitCallback';
 import {ICstVisitor, VisitResult} from '@visit';
 import {IRenderer} from '@render';
@@ -7,9 +7,7 @@ import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
 import {JavaOptions, JavaUtil} from '@java';
-import {OmniTypeKind} from '@parse';
-import {Naming} from '@parse/Naming';
-import {GenericTypeDeclarationList, TypeList} from '@java/cst/types';
+import {GenericTypeDeclarationList, TypeList} from '@java/cst/JavaCstTypes';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>;
 
@@ -231,7 +229,13 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitImportList: JavaRendererVisitFn<Java.ImportList> = (node, visitor) => {
-    return `${node.children.map(it => this.render(it, visitor)).join('\n')}\n\n`;
+
+    const importStrings = node.children.map(it => this.render(it, visitor));
+    if (importStrings.length == 0) {
+      return '';
+    }
+
+    return `${importStrings.join('\n')}\n\n`;
   }
 
   visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = (node, visitor) => {
@@ -260,22 +264,36 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `${node.children.map(it => this.render(it)).join(',\n')};\n`;
   }
 
-  visitMethodDeclaration: JavaRendererVisitFn<Java.AbstractMethodDeclaration> = (node, visitor) => {
-    const comments = node.comments ? `${this.render(node.comments, visitor)}\n` : '';
+  visitMethodDeclaration: JavaRendererVisitFn<Java.MethodDeclaration> = (node, visitor) => {
+    const signature = this.render(node.signature, visitor);
+    const body = node.body ? this.render(node.body, visitor) : '';
+
+    return [
+      `${signature} {\n`,
+      body,
+      '}\n\n',
+    ];
+  }
+
+  visitMethodDeclarationSignature: JavaRendererVisitFn<Java.MethodDeclarationSignature> = (node, visitor) => {
+    const comments = node.comments && node.comments.children.length > 0 ? `${this.render(node.comments, visitor)}\n` : '';
     const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
     const modifiers = this.render(node.modifiers, visitor);
     const type = this.render(node.type, visitor);
-    const name = this.render(node.name, visitor);
+    const name = this.render(node.identifier, visitor);
     const parameters = node.parameters ? this.render(node.parameters, visitor) : '';
-    const body = node.body ? this.render(node.body, visitor) : '';
 
     return [
       comments,
       annotations,
-      `${modifiers} ${type} ${name}(${parameters}) {\n`,
-      body,
-      '}\n\n',
+      `${modifiers} ${type} ${name}(${parameters})`,
     ];
+  }
+
+  visitAbstractMethodDeclaration: JavaRendererVisitFn<Java.AbstractMethodDeclaration> = (node, visitor) => {
+
+    const superVisitor = {...visitor, ...{visitAbstractMethodDeclaration: this.visitor_java.visitAbstractMethodDeclaration}};
+    return `${this.render(node.signature, superVisitor)};\n`;
   }
 
   visitMethodCall: JavaRendererVisitFn<Java.MethodCall> = (node, visitor) => {

@@ -2,18 +2,20 @@ import AbstractNode from '@cst/AbstractNode';
 import AbstractToken from '@cst/AbstractToken';
 import {JavaOptions, JavaUtil, UnknownType} from '@java';
 import {
-  OmniObjectType,
   OmniDictionaryType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniType,
-  OmniTypeKind, OmniUnknownType, OmniGenericSourceType, OmniGenericType, OmniGenericSourceIdentifierType
+  OmniTypeKind,
+  OmniUnknownType
 } from '@parse';
 import {VisitResult} from '@visit';
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
 import {Naming} from '@parse/Naming';
 import {camelCase} from 'change-case';
 import * as Java from '@java/cst/index';
+import {sign} from 'crypto';
+import {JavaCstVisitor} from 'java-parser';
 
 export enum TokenType {
   ASSIGN,
@@ -390,20 +392,56 @@ export class Field extends AbstractJavaNode {
   }
 }
 
-export abstract class AbstractMethodDeclaration extends AbstractJavaNode {
-  abstract get comments(): CommentList | undefined;
+export class MethodDeclarationSignature extends AbstractJavaNode {
 
-  abstract get annotations(): AnnotationList | undefined;
+  identifier: Identifier;
+  type: Type;
+  comments?: CommentList;
+  annotations?: AnnotationList;
+  modifiers: ModifierList;
+  parameters?: ArgumentDeclarationList;
 
-  abstract get modifiers(): ModifierList;
+  constructor(identifier: Identifier, type: Type, parameters?: ArgumentDeclarationList, modifiers?: ModifierList, annotations?: AnnotationList, comments?: CommentList) {
+    super();
+    this.modifiers = modifiers ?? new ModifierList(new Modifier(ModifierType.PUBLIC));
+    this.type = type;
+    this.identifier = identifier;
+    this.parameters = parameters;
+    this.annotations = annotations;
+    this.comments = comments;
+  }
 
-  abstract get type(): Type;
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitMethodDeclarationSignature(this, visitor);
+  }
+}
 
-  abstract get name(): Identifier;
+export class AbstractMethodDeclaration extends AbstractJavaNode {
+  signature: MethodDeclarationSignature;
 
-  abstract get parameters(): ArgumentDeclarationList | undefined;
+  constructor(signature: MethodDeclarationSignature) {
+    super();
+    this.signature = signature;
+  }
 
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitAbstractMethodDeclaration(this, visitor);
+  }
+}
+
+export class MethodDeclaration extends AbstractJavaNode {
+  signature: MethodDeclarationSignature;
   body?: Block;
+
+  constructor(signature: MethodDeclarationSignature, body?: Block) {
+    super();
+    this.signature = signature;
+    this.body = body;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitMethodDeclaration(this, visitor);
+  }
 }
 
 export class ReturnStatement extends AbstractJavaNode {
@@ -445,128 +483,31 @@ export class VariableReference extends AbstractJavaNode {
   }
 }
 
-export class MethodDeclaration extends AbstractMethodDeclaration {
-  private pComments: CommentList | undefined;
-  private pAnnotations: AnnotationList | undefined;
-  private pModifiers: ModifierList;
-  private pType: Type;
-  private pName: Identifier;
-  private pParameters: ArgumentDeclarationList | undefined;
+export abstract class AbstractFieldBackedMethodDeclaration extends MethodDeclaration {
+  readonly field: Field;
 
-  get comments(): CommentList | undefined {
-    return this.pComments;
-  }
-
-  set comments(value: CommentList | undefined) {
-    this.pComments = value;
-  }
-
-  get annotations(): AnnotationList | undefined {
-    return this.pAnnotations;
-  }
-
-  set annotations(value: AnnotationList | undefined) {
-    this.pAnnotations = value;
-  }
-
-  get modifiers(): ModifierList {
-    return this.pModifiers;
-  }
-
-  set modifiers(value: ModifierList) {
-    this.pModifiers = value;
-  }
-
-  get type(): Type {
-    return this.pType;
-  }
-
-  set type(value: Type) {
-    this.pType = value;
-  }
-
-  get name(): Identifier {
-    return this.pName;
-  }
-
-  set name(value: Identifier) {
-    this.pName = value;
-  }
-
-  get parameters(): ArgumentDeclarationList | undefined {
-    return this.pParameters;
-  }
-
-  set parameters(value: ArgumentDeclarationList | undefined) {
-    this.pParameters = value;
-  }
-
-  constructor(type: Type, name: Identifier, parameters?: ArgumentDeclarationList, modifiers?: ModifierList, body?: Block) {
-    super();
-    this.pType = type;
-    this.pName = name;
-    this.pParameters = parameters;
-    this.pModifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
-    this.body = body;
-  }
-
-  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
-    return visitor.visitMethodDeclaration(this, visitor);
-  }
-}
-
-export abstract class AbstractFieldBackedMethodDeclaration extends AbstractMethodDeclaration {
-  protected readonly field: Field;
-  private readonly pAnnotations: AnnotationList | undefined;
-  private readonly pComments?: CommentList;
-
-  get comments(): CommentList | undefined {
-    return this.pComments;
-  }
-
-  get annotations(): AnnotationList | undefined {
-    return this.pAnnotations;
-  }
-
-  get modifiers(): ModifierList {
-    return new ModifierList(new Modifier(ModifierType.PUBLIC));
-  }
-
-  protected constructor(pField: Field, pAnnotations?: AnnotationList, pComments?: CommentList, body?: Block) {
-    super();
+  protected constructor(pField: Field, signature: MethodDeclarationSignature, body?: Block) {
+    super(signature, body);
     this.field = pField;
-    this.pAnnotations = pAnnotations;
-    this.pComments = pComments;
-    this.body = body;
   }
 }
 
 export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 
-  private readonly getterName?: Identifier;
-
-  get type(): Type {
-    return this.field.type;
-  }
-
-  // The name needs to be capitalized properly, etc, etc
-  get name(): Identifier {
-    if (this.getterName) {
-      return this.getterName;
-    }
-
-    return new Identifier(JavaUtil.getGetterName(this.field.identifier.value, this.type.omniType));
-  }
-
-  get parameters(): ArgumentDeclarationList | undefined {
-    return undefined;
-  }
-
   constructor(field: Field, annotations?: AnnotationList, comments?: CommentList, getterName?: Identifier) {
-    super(field, annotations, comments, new Block(
-      new Statement(new ReturnStatement(new FieldReference(field))),
-    ));
-    this.getterName = getterName;
+    super(
+      field,
+      new MethodDeclarationSignature(
+        getterName ?? new Identifier(JavaUtil.getGetterName(field.identifier.value, field.type.omniType)),
+        field.type,
+        undefined,
+        undefined,
+        annotations,
+        comments
+      ),
+      new Block(
+        new Statement(new ReturnStatement(new FieldReference(field))),
+      ));
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
@@ -575,41 +516,34 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 }
 
 export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
-  get type(): Type {
-    return new Type(<OmniPrimitiveType>{
-      name: () => 'void',
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.VOID,
-    });
-  }
-
-  // The name needs to be capitalized properly, etc, etc
-  get name(): Identifier {
-    return new Identifier(JavaUtil.getSetterName(this.field.identifier.value, this.type.omniType));
-  }
-
-  get parameters(): ArgumentDeclarationList {
-    return new ArgumentDeclarationList(
-      new ArgumentDeclaration(
-        this.field.type,
-        this.field.identifier,
-      ),
-    );
-  }
-
-  field: Field;
 
   constructor(field: Field, annotations?: AnnotationList, comments?: CommentList) {
-    super(field, annotations, comments, new Block(
-      new AssignExpression(
-        new FieldReference(field),
-        // TODO: Change, so that "value" is not hard-coded! Or is "identifier" enough?
-        new VariableReference(new Identifier('value')),
+    super(
+      field,
+      new MethodDeclarationSignature(
+        new Identifier(JavaUtil.getSetterName(field.identifier.value, field.type.omniType)),
+        new Type({
+          name: 'void',
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.VOID,
+        }),
+        new ArgumentDeclarationList(
+          new ArgumentDeclaration(
+            field.type,
+            field.identifier,
+          ),
+        ),
+        undefined,
+        annotations,
+        comments
       ),
-    ));
-
-    // Should be possible to remove, and fetched from the block assign reference?
-    this.field = field;
+      new Block(
+        new AssignExpression(
+          new FieldReference(field),
+          // TODO: Change, so that "value" is not hard-coded! Or is "identifier" enough?
+          new VariableReference(new Identifier('value')),
+        ),
+      ));
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
@@ -689,11 +623,11 @@ export class ImplementsDeclaration extends AbstractJavaNode {
 }
 
 export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
+  name: Identifier;
   type: Type;
   comments?: CommentList;
   annotations?: AnnotationList;
   modifiers: ModifierList;
-  name: Identifier;
   extends?: ExtendsDeclaration;
   implements?: ImplementsDeclaration;
   body: Block;
@@ -712,9 +646,9 @@ export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
 }
 
 export class CompilationUnit extends AbstractJavaNode {
+  object: AbstractObjectDeclaration;
   packageDeclaration: PackageDeclaration;
   imports: ImportList;
-  object: AbstractObjectDeclaration;
 
   constructor(packageDeclaration: PackageDeclaration, imports: ImportList, object: AbstractObjectDeclaration) {
     super();
@@ -791,17 +725,18 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     );
 
     const addMethod = new MethodDeclaration(
-      new Type(<OmniPrimitiveType>{
-        name: () => '',
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.VOID
-      }),
-      new Identifier('addAdditionalProperty'),
-      new ArgumentDeclarationList(
-        new ArgumentDeclaration(new Type(keyType), keyParameterIdentifier),
-        new ArgumentDeclaration(new Type(valueType), valueParameterIdentifier)
+      new MethodDeclarationSignature(
+        new Identifier('addAdditionalProperty'),
+        new Type(<OmniPrimitiveType>{
+          name: () => '',
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.VOID
+        }),
+        new ArgumentDeclarationList(
+          new ArgumentDeclaration(new Type(keyType), keyParameterIdentifier),
+          new ArgumentDeclaration(new Type(valueType), valueParameterIdentifier)
+        ),
       ),
-      undefined,
       new Block(
         new Statement(
           new MethodCall(
@@ -816,7 +751,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       ),
     );
 
-    addMethod.annotations = new AnnotationList(
+    addMethod.signature.annotations = new AnnotationList(
       new Annotation(
         new Type({
           name: () => 'AnySetter',
@@ -857,6 +792,9 @@ export class ClassDeclaration extends AbstractObjectDeclaration {
   }
 }
 
+/**
+ * TODO: Remove this and instead just add a boolean to the ClassDeclaration and GenericClassDeclaration?
+ */
 export class InterfaceDeclaration extends AbstractObjectDeclaration {
   constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
@@ -1146,7 +1084,8 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
 
     for (const type of types) {
 
-      const typedFieldName = camelCase(Naming.unwrap(type.name));
+      const typedFieldName = this.getFieldName(type);
+
       const typedField = new Field(
         new Type(type),
         new Identifier(`_${typedFieldName}`)
@@ -1176,10 +1115,11 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       }
 
       const typedGetter = new MethodDeclaration(
-        typedField.type,
-        new Identifier(JavaUtil.getGetterName(Naming.unwrap(type.name), typedField.type.omniType)),
-        argumentDeclarationList,
-        undefined,
+        new MethodDeclarationSignature(
+          new Identifier(JavaUtil.getGetterName(typedFieldName, typedField.type.omniType)),
+          typedField.type,
+          argumentDeclarationList,
+        ),
         new Block(
           // First check if we have already cached the result.
           new IfStatement(
@@ -1208,7 +1148,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
           )
         )
       );
-      typedGetter.comments = new CommentList(...commentSupplier(typedGetter.type.omniType));
+      typedGetter.signature.comments = new CommentList(...commentSupplier(typedGetter.signature.type.omniType));
 
       this.fields.push(typedField);
       this.methods.push(typedGetter);
@@ -1217,5 +1157,18 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitRuntimeTypeMapping(this, visitor);
+  }
+
+  private getFieldName(type: OmniType): string {
+
+    // if (type.kind == OmniTypeKind.PRIMITIVE) {
+    //
+    //   // If it is a primitive, we do not care about the 'name' of the type.
+    //   // We only care about what it actually is.
+    //   // This is a preference, but might be wrong. Maybe make it an option?
+    //   return camelCase(JavaUtil.getPrimitiveKindName(type.primitiveKind, true));
+    // }
+
+    return camelCase(Naming.unwrap(type.name));
   }
 }

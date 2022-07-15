@@ -1,5 +1,9 @@
-import {OmniCompositionType, OmniInheritableType, OmniObjectType, OmniType, OmniTypeKind} from '@parse';
+import {CompositionKind, OmniInheritableType, OmniObjectType, OmniType, OmniTypeKind} from '@parse';
 import {DependencyGraph} from '@parse/DependencyGraphBuilder';
+import {LoggerFactory} from '@util';
+import {Naming} from '@parse/Naming';
+
+export const logger = LoggerFactory.create(__filename);
 
 export class JavaDependencyGraph {
 
@@ -13,32 +17,77 @@ export class JavaDependencyGraph {
 
   public static getExtends(graph: DependencyGraph, type: OmniInheritableType): OmniInheritableType | undefined {
 
+    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
+      // The XOR composition class does in Java not actually extend anything.
+      // Instead it solves things by becoming a manual mapping class with different getters.
+      return undefined;
+    }
+
     const uses = graph.uses.get(type);
     if (uses) {
       for (const use of uses) {
-        if ((use.kind == OmniTypeKind.OBJECT || use.kind == OmniTypeKind.GENERIC_TARGET) && JavaDependencyGraph.isClass(graph, use)) {
+        if (!JavaDependencyGraph.isClass(graph, use)) {
+          continue;
+        }
 
-          // It is not an interface. So either an abstract class or a concrete class. Either works.
+        if (use.kind == OmniTypeKind.OBJECT || use.kind == OmniTypeKind.GENERIC_TARGET) {
           return use;
         }
+        if (use.kind == OmniTypeKind.COMPOSITION && use.compositionKind == CompositionKind.XOR) {
+
+          // If the supertype is an XOR, then we should allow it to be extended
+          return use;
+        }
+
+        logger.warn(`Said to inherit from '${Naming.safer(use)}', but that does not seem possible in Java. Is this okay?`)
       }
     }
 
     return undefined;
   }
 
-  public static getImplements(graph: DependencyGraph, type: OmniObjectType | OmniCompositionType): OmniType[] {
+  public static getImplements(graph: DependencyGraph, type: OmniInheritableType): OmniType[] {
 
     const interfaces: OmniType[] = [];
+    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
+      // The XOR composition class does in Java not actually implement anything.
+      // Instead it solves things by becoming a manual mapping class with different getters.
+      return interfaces;
+    }
+
     const uses = graph.uses.get(type);
     if (uses) {
       for (const use of uses) {
         if (JavaDependencyGraph.isInterface(graph, use)) {
-
-          // It is an interface, so we push it onto the array.
-          // TODO: This is actually INVALID -- this WILL become a CLASS WHEN RENDERED
-          //        We need some kind of functionality that makes it possible to know *which* one we are referring to.
           interfaces.push(use);
+        }
+      }
+    }
+
+    return interfaces;
+  }
+
+  /**
+   * Get the types that implement the given class.
+   * There is a difference between implementing (interface) and extending (class)
+   *
+   * @param graph
+   * @param type
+   */
+  public static getTypesThatImplement(graph: DependencyGraph, type: OmniInheritableType): OmniType[] {
+
+    const interfaces: OmniType[] = [];
+    if (JavaDependencyGraph.isInterface(graph, type)) {
+      for (const e of graph.uses.entries()) {
+        if (e[0].kind == OmniTypeKind.COMPOSITION && e[0].compositionKind == CompositionKind.XOR) {
+          // In Java this is not a thing, and we need to not count it as such.
+          // TODO: Need to generalize the dependency graph more, so it's easier to understand.
+          //        Saying it is an interface, but then not using it as an interface, is just WEIRD.
+          continue;
+        }
+
+        if (e[1].includes(type)) {
+          interfaces.push(e[0]);
         }
       }
     }

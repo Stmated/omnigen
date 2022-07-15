@@ -1,0 +1,133 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "title": "primitive_generics",
+    "version": "2.0.0"
+  },
+  "methods": [
+    {
+      "name": "give_in_get_out",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "$ref": "#/components/schemas/in"
+          }
+        }
+      ],
+      "result": {
+        "name": "give_string_get_string_result",
+        "schema": {
+          "$ref": "#/components/schemas/out"
+        }
+      }
+    },
+    {
+      "name": "give_in_get_out2",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "$ref": "#/components/schemas/in"
+          }
+        }
+      ],
+      "result": {
+        "name": "give_string_get_string_result",
+        "schema": {
+          "$ref": "#/components/schemas/out_2"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "in": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/a"
+          },
+          {
+            "$ref": "#/components/schemas/b"
+          }
+        ]
+      },
+      "Abs": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "a": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Abs"
+          }
+        ],
+        "properties": {
+          "foo": {
+            "type": "string"
+          }
+        }
+      },
+      "b": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Abs"
+          }
+        ],
+        "properties": {
+          "bar": {
+            "type": "string"
+          }
+        }
+      },
+      "c": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Abs"
+          }
+        ],
+        "properties": {
+          "xyz": {
+            "type": "string"
+          }
+        }
+      },
+
+      "out": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "out_2": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/a"
+          },
+          {
+            "$ref": "#/components/schemas/b"
+          },
+          {
+            "$ref": "#/components/schemas/c"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import {OmniObjectType, OmniType, OmniTypeKind} from '@parse/OmniModel';
+import {CompositionKind, OmniType, OmniTypeKind} from '@parse/OmniModel';
 
 /**
  * Used for building a dependency graph from a list of existing types.
@@ -15,6 +15,7 @@ export class DependencyGraphBuilder {
    * In for example Java, it should output type as two files: Abstract[XYZ] and I[XYZ], then replace use with both.
    *
    * @param namedTypes The types that are named. All other types are inline/anonymous
+   * @param options The graph options based on the target language
    */
   public static build(namedTypes: OmniType[], options = DEFAULT_GRAPH_OPTIONS): DependencyGraph {
 
@@ -30,8 +31,12 @@ export class DependencyGraphBuilder {
         graph.concretes.push(type);
 
         if (type.extendedBy) {
-          for (const expanded of DependencyGraphBuilder.expand(type.extendedBy)) {
-            this.addUseToGraph(graph, type, expanded);
+          if (type.extendedBy.kind == OmniTypeKind.COMPOSITION && type.extendedBy.compositionKind == CompositionKind.XOR) {
+            this.addUseToGraph(graph, type, type.extendedBy);
+          } else {
+            for (const expanded of DependencyGraphBuilder.expand(type.extendedBy)) {
+              this.addUseToGraph(graph, type, expanded);
+            }
           }
         }
       } else if (type.kind == OmniTypeKind.COMPOSITION) {
@@ -121,7 +126,16 @@ export class DependencyGraphBuilder {
   private static expand(type: OmniType): OmniType[] {
 
     if (type.kind == OmniTypeKind.COMPOSITION) {
-      return type.types;
+      switch (type.compositionKind) {
+        case CompositionKind.AND:
+          return type.andTypes;
+        case CompositionKind.OR:
+          return type.orTypes;
+        case CompositionKind.XOR:
+          return type.xorTypes;
+        case CompositionKind.NOT:
+          return type.notTypes;
+      }
     } else {
       return [type];
     }

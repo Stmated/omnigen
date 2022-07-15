@@ -223,18 +223,7 @@ export class Dereferencer<T> {
   public get<R>(given: RefAware | R, root: JsonObject): Dereferenced<R> {
 
     if ('$ref' in given) {
-      const parts = this.getPointerParts(given.$ref);
-
-      if (parts.uri.length > 0) {
-        const externalDocument = this._documents.get(parts.uri);
-        if (!externalDocument || externalDocument instanceof Promise) {
-          throw new Error(`There is no document cached for '${parts.uri}`);
-        }
-
-        return this.resolveJsonPointer(given, externalDocument, parts.hash);
-      } else {
-        return this.resolveJsonPointer<RefAware, R>(given, root, parts.hash);
-      }
+      return this.getFromRef<R>(given.$ref, given, root);
     } else {
       return {
         obj: given,
@@ -242,6 +231,21 @@ export class Dereferencer<T> {
         root: root,
         mix: false,
       };
+    }
+  }
+
+  public getFromRef<R>(ref: string, given: RefAware | undefined, root: JsonObject): Dereferenced<R> {
+    const parts = this.getPointerParts(ref);
+
+    if (parts.uri.length > 0) {
+      const externalDocument = this._documents.get(parts.uri);
+      if (!externalDocument || externalDocument instanceof Promise) {
+        throw new Error(`There is no document cached for '${parts.uri}`);
+      }
+
+      return this.resolveJsonPointer(given, externalDocument, parts.hash);
+    } else {
+      return this.resolveJsonPointer<RefAware, R>(given, root, parts.hash);
     }
   }
 
@@ -282,7 +286,7 @@ export class Dereferencer<T> {
     });
   }
 
-  private resolveJsonPointer<T extends RefAware, R>(given: T, root: object, path: string): Dereferenced<R> {
+  private resolveJsonPointer<T extends RefAware, R>(given: T | undefined, root: object, path: string): Dereferenced<R> {
 
     let resolvedObject: RefAware | R;
     if (path == '') {

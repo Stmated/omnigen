@@ -1,6 +1,6 @@
 import {ICstVisitor, VisitFn, VisitResult} from '@visit';
 import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
-import * as Java from '@java/cst/types';
+import * as Java from '@java/cst/JavaCstTypes';
 import {CstRootNode} from '@cst/CstRootNode';
 
 export class JavaVisitor<R> implements IJavaCstVisitor<R> {
@@ -66,6 +66,17 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
     this.visitFieldBackedSetter = (node, visitor) => visitor.visitMethodDeclaration(node, visitor);
 
     this.visitMethodDeclaration = (node, visitor) => {
+      if (node.body) {
+        return [
+          node.signature.visit(visitor),
+          node.body.visit(visitor),
+        ];
+      } else {
+        return node.signature.visit(visitor);
+      }
+    };
+
+    this.visitMethodDeclarationSignature = (node, visitor) => {
       const results: VisitResult<R>[] = [];
       if (node.comments) {
         results.push(node.comments.visit(visitor));
@@ -77,15 +88,14 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
         results.push(node.modifiers.visit(visitor));
       }
       results.push(node.type.visit(visitor));
-      results.push(node.name.visit(visitor));
+      results.push(node.identifier.visit(visitor));
       if (node.parameters) {
         results.push(node.parameters.visit(visitor));
       }
-      if (node.body) {
-        results.push(node.body.visit(visitor));
-      }
       return results;
     };
+
+    this.visitAbstractMethodDeclaration = (node, visitor) => node.signature.visit(visitor);
 
     this.visitExtendsDeclaration = (node, visitor) => node.type.visit(visitor);
     this.visitImplementsDeclaration = (node, visitor) => node.types.visit(visitor);
@@ -252,7 +262,9 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
   visitComment: JavaVisitFn<Java.Comment, R>;
   visitFieldBackedGetter: JavaVisitFn<Java.FieldBackedGetter, R>;
   visitFieldBackedSetter: JavaVisitFn<Java.FieldBackedSetter, R>;
-  visitMethodDeclaration: JavaVisitFn<Java.AbstractMethodDeclaration, R>;
+  visitMethodDeclaration: JavaVisitFn<Java.MethodDeclaration, R>;
+  visitMethodDeclarationSignature: JavaVisitFn<Java.MethodDeclarationSignature, R>;
+  visitAbstractMethodDeclaration: JavaVisitFn<Java.AbstractMethodDeclaration, R>;
   visitExtendsDeclaration: JavaVisitFn<Java.ExtendsDeclaration, R>;
   visitImplementsDeclaration: JavaVisitFn<Java.ImplementsDeclaration, R>;
   visitTypeList: JavaVisitFn<Java.TypeList, R>;

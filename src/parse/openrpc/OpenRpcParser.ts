@@ -63,6 +63,7 @@ import {CompositionUtil} from '@parse/CompositionUtil';
 import {Naming} from '@parse/Naming';
 import * as path from 'path';
 import {JsonObject} from 'json-pointer';
+import {OpenApiJSONSchema7, OpenApiJSONSchema7Definition} from '@parse/openrpc/OpenApiExtendedJsonSchema';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -331,7 +332,7 @@ class OpenRpcParserImpl {
   }
 
   private jsonSchemaToTypeUncached(
-    schema: Dereferenced<JSONSchema7Definition>,
+    schema: Dereferenced<JSONSchema7Definition | OpenApiJSONSchema7Definition>,
     name: TypeName,
     canInline: boolean
   ): SchemaToTypeResult {
@@ -453,7 +454,11 @@ class OpenRpcParserImpl {
     }
   }
 
-  public extendOrEnhanceClassType(schema: Dereferenced<JSONSchema7Definition>, type: OmniObjectType, name: TypeName): OmniType {
+  public extendOrEnhanceClassType(
+    schema: Dereferenced<JSONSchema7Definition | OpenApiJSONSchema7Definition>,
+    type: OmniObjectType,
+    name: TypeName
+  ): OmniType {
 
     // TODO: Work needs to be done here which merges types if possible.
     //        If the type has no real content of its own, and only inherits,
@@ -484,18 +489,22 @@ class OpenRpcParserImpl {
     }
 
     // todo: fix back the commented out mergeType -- probable problem
-    for (const subType of (schema.obj.allOf || []).map(it => this.jsonSchemaToType(name, this._deref.get(it, schema.root), undefined))) {
-      if (subType.canInline) {
-        // This schema can actually just be consumed by the parent type.
-        // This happens if the sub-schema is anonymous and never used by anyone else.
-        this.mergeType(subType.type, type);
-      } else {
-        compositionsAllOfAnd.push(subType.type);
+    if (schema.obj.allOf) {
+      for (const subType of schema.obj.allOf.map(it => this.jsonSchemaToType(name, this._deref.get(it, schema.root), undefined))) {
+        if (subType.canInline) {
+          // This schema can actually just be consumed by the parent type.
+          // This happens if the sub-schema is anonymous and never used by anyone else.
+          this.mergeType(subType.type, type);
+        } else {
+          compositionsAllOfAnd.push(subType.type);
+        }
       }
     }
 
-    for (const subType of (schema.obj.anyOf || []).map(it => this.jsonSchemaToType(name, this._deref.get(it, schema.root), undefined))) {
-      compositionsAnyOfOr.push(subType.type);
+    if (schema.obj.anyOf) {
+      for (const subType of schema.obj.anyOf.map(it => this.jsonSchemaToType(name, this._deref.get(it, schema.root), undefined))) {
+        compositionsAnyOfOr.push(subType.type);
+      }
     }
 
     // TODO: This is wrong -- it needs to be done in order
@@ -503,11 +512,25 @@ class OpenRpcParserImpl {
       compositionsNot = (this.jsonSchemaToType(name, {obj: schema.obj.not, root: schema.root}, undefined)).type;
     }
 
+    let mappingPropertyName: string | undefined;
+    let discriminatorMapping: Map<string, OmniType> | undefined;
+    const discriminatorAware = this.getDiscriminatorAware(schema);
+    if (discriminatorAware) {
+
+      // This is an OpenApi JSON Schema.
+      // Discriminators do not actually exist in JSONSchema, but it is way too useful to not make use of.
+      // I think most people would think that this is supported for OpenRpc as well, as it should be.
+      mappingPropertyName = discriminatorAware.obj.discriminator.propertyName;
+      discriminatorMapping = this.getDiscriminatorMapping(discriminatorAware);
+    }
+
     const extendedBy = CompositionUtil.getCompositionOrExtensionType(
       compositionsAnyOfOr,
       compositionsAllOfAnd,
       compositionsOneOfOr,
-      compositionsNot
+      compositionsNot,
+      mappingPropertyName,
+      discriminatorMapping,
     );
 
     // TODO: Remove this? It should be up to the final language to decide how to handle it, right?
@@ -515,15 +538,13 @@ class OpenRpcParserImpl {
 
       // If there object is "empty" but we inherit from something, then just use the inherited type instead.
       // NOTE: This might be "inaccurate" and should maybe be more selective (like ONLY replacing COMPOSITIONS)
-      if (extendedBy) {
+      if (extendedBy && extendedBy.kind != OmniTypeKind.COMPOSITION) {
 
         return <OmniType>{
           ...extendedBy,
           ...{
             // The name should be kept the same, since it is likely much more specific.
             name: type.name,
-
-            // TODO: Should the two types' descriptions be merged if both exist?
             description: extendedBy.description || type.description,
             summary: extendedBy.summary || type.summary,
             title: extendedBy.title || type.title,
@@ -534,6 +555,68 @@ class OpenRpcParserImpl {
 
     type.extendedBy = extendedBy;
     return type;
+  }
+
+  private getDiscriminatorAware(
+    schema: Dereferenced<JSONSchema7Definition | OpenApiJSONSchema7Definition>
+  ): Dereferenced<OpenApiJSONSchema7> | undefined {
+
+    if (typeof schema.obj == 'boolean') {
+      return undefined;
+    }
+
+    if ('discriminator' in schema.obj) {
+      return {
+        obj: schema.obj,
+        hash: schema.hash,
+        root: schema.root,
+        mix: schema.mix
+      };
+    }
+
+    return undefined;
+  }
+
+  private getDiscriminatorMapping(schema: Dereferenced<OpenApiJSONSchema7Definition>): Map<string, OmniType> {
+
+    const discriminatorMapping = new Map<string, OmniType>();
+
+    if (typeof schema.obj == 'boolean') {
+      return discriminatorMapping;
+    }
+
+    const mapping = schema.obj.discriminator.mapping;
+    if (mapping) {
+
+      // We have manual mappings. That's good, makes things a bit easier.
+      // If we receive a propertyName that is not in this mapping, then the type lookup must be done at runtime.
+      // That should be done by building a ref to '#/components/schemas/${propertyValue}
+      for (const key of Object.keys(mapping)) {
+        const ref = mapping[key];
+        try {
+
+          const deref = this._deref.getFromRef<JSONSchema7>(ref, undefined, schema.root);
+          // if (!discriminatorMapping) {
+          //   discriminatorMapping = new Map<string, OmniType>();
+          // }
+
+          const type = this.jsonSchemaToType(deref.hash || ref, deref, undefined);
+          discriminatorMapping.set(key, type.type);
+
+          // TODO: If "mappings" is given, then add that class as extension to all classes being pointed to
+          // TODO: If no "mappings" is given, then that must be part of the runtime mapping instead
+          // TODO: ... do this later? And focus on fully functional interfaces code first, without complexity of mappings? YES!!!! DO IT!
+
+        } catch (ex) {
+          throw new Error(
+            `Could not find schema for mapping ${ref}`,
+            {cause: (ex instanceof Error) ? ex : undefined}
+          );
+        }
+      }
+    }
+
+    return discriminatorMapping;
   }
 
   private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, name: TypeName | undefined): OmniArrayTypes {
@@ -647,6 +730,8 @@ class OpenRpcParserImpl {
       }
       this.addPropertyToClassType(a, to, common);
     } else {
+
+      // TODO: Can we introduce generics here in some way?
       const vsString = `${Naming.safer(a.type)} vs ${Naming.safer(b.type)}`;
       const errMessage = `No common type for merging properties ${a.name}. ${vsString}`;
       throw new Error(errMessage);

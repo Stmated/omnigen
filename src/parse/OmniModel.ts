@@ -68,6 +68,7 @@ export enum OmniTypeKind {
   GENERIC_TARGET,
   GENERIC_SOURCE_IDENTIFIER,
   GENERIC_TARGET_IDENTIFIER,
+  INTERFACE,
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
@@ -100,7 +101,7 @@ export type OmniNullType = OmniBaseType<OmniAlwaysNullKnownKind>;
 // TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
 
 export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType | OmniArrayTypesByPositionType;
-export type OmniCompositionType = OmniCompositionDefaultType | OmniCompositionXORType;
+export type OmniCompositionType = OmniCompositionAndType | OmniCompositionXORType | OmniCompositionORType | OmniCompositionNotType;
 export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
 export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
 export type OmniInheritableType = OmniObjectType | OmniGenericTargetType | OmniCompositionType;
@@ -114,9 +115,10 @@ export type OmniType = OmniNullType
   | OmniPrimitiveType
   | OmniCompositionType
   | OmniEnumType
-  | OmniGenericType;
+  | OmniGenericType
+  | OmniInterfaceType;
 
-export type TypeName = string | { (): string };
+export type TypeName = string | { (hasDuplicateFn?: (value: string) => boolean): string };
 
 export interface OmniBaseType<T> {
 
@@ -165,19 +167,36 @@ export interface OmniCompositionBaseType<T> extends OmniBaseType<GenericComposit
   compositionKind: T;
 }
 
-export interface OmniCompositionDefaultType extends OmniCompositionBaseType<CompositionKind.AND | CompositionKind.OR | CompositionKind.NOT> {
-  types: OmniType[];
+export interface OmniCompositionAndType extends OmniCompositionBaseType<CompositionKind.AND> {
+  andTypes: OmniType[];
 }
 
-export interface OmniCompositionXORType extends OmniCompositionBaseType<CompositionKind.XOR> {
-  mappingPropertyName: string;
-  mappings: Map<string, OmniType>;
-
+export interface OmniCompositionNotType extends OmniCompositionBaseType<CompositionKind.NOT> {
   /**
-   * This array is for keeping all the types of the composition, but for XOR it should mainly be used
-   * to figure out which types have specific mappings, and which are unmapped and need runtime solutions.
+   * Only one is allowed.
+   * But kept as an array to make it more similar to the other composition kinds.
    */
-  types: OmniType[];
+  notTypes: [OmniType];
+}
+
+/**
+ * The composition types that inherit this interface can help with the mapping of the runtime types.
+ * If there is a runtime mapping, then we do not need to do it manually in the target language's code.
+ * This is predicated on the language having some other method of doing it, though. Like Java @JsonTypeInfo and @JsonSubTypes
+ */
+export interface OmniMappedCompositionType {
+  mappingPropertyName?: string;
+  mappings?: Map<string, OmniType>;
+}
+
+export interface OmniCompositionORType extends OmniCompositionBaseType<CompositionKind.OR>, OmniMappedCompositionType {
+  orTypes: OmniType[];
+}
+
+export interface OmniCompositionXORType extends OmniCompositionBaseType<CompositionKind.XOR>, OmniMappedCompositionType {
+  // mappingPropertyName?: string;
+  // mappings?: Map<string, OmniType>;
+  xorTypes: OmniType[];
 }
 
 type OmniDictionaryKnownKind = OmniTypeKind.DICTIONARY;
@@ -218,7 +237,6 @@ export interface OmniArrayPropertiesByPositionType extends OmniBaseType<OmniArra
 }
 
 type OmniArrayTypesByPositionKnownKind = OmniTypeKind.ARRAY_TYPES_BY_POSITION;
-
 export interface OmniArrayTypesByPositionType extends OmniBaseType<OmniArrayTypesByPositionKnownKind> {
 
   types: OmniType[];
@@ -226,12 +244,24 @@ export interface OmniArrayTypesByPositionType extends OmniBaseType<OmniArrayType
   implementationType?: OmniArrayImplementationType;
 }
 
+type OmniInterfaceTypeKnownKind = OmniTypeKind.INTERFACE;
+export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKind> {
+  of: OmniInheritableType;
+
+  /**
+   * This is a replacement of any potential 'extendedBy' inside the original type inside 'of'.
+   * That is because all the subtypes of the interface must also be converted into an interface.
+   * We cannot change the 'extendedBy' of the original type.
+   */
+  extendedBy?: OmniType;
+}
 
 type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
 export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
   valueConstant?: unknown;
 }
 
+type OmniNestableType = OmniObjectType | OmniEnumType;
 type OmniObjectKnownKind = OmniTypeKind.OBJECT;
 export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind> {
 
@@ -248,8 +278,7 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind> {
   additionalProperties?: boolean;
 
   annotations?: OmniAnnotation[];
-
-  nestedTypes?: OmniObjectType[];
+  nestedTypes?: OmniNestableType[];
 }
 
 type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
@@ -298,6 +327,7 @@ export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind> {
 }
 
 type OmniGenericSourceIdentifierKnownKind = OmniTypeKind.GENERIC_SOURCE_IDENTIFIER;
+// TODO: Should this actually be a type, and not just something simpler? Since it can ONLY exist inside a OmniGenericSourceType...
 export interface OmniGenericSourceIdentifierType extends OmniBaseType<OmniGenericSourceIdentifierKnownKind> {
   lowerBound?: OmniType;
   upperBound?: OmniType;

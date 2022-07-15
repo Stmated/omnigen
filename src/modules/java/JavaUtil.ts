@@ -643,7 +643,10 @@ export class JavaUtil {
           return 'skip';
         }
       } else if (localType.kind == OmniTypeKind.INTERFACE) {
-        properties.push(...OmniModelUtil.getPropertiesOf(localType.of));
+        // The interface might be the interface of the calling type. Filter it out below.
+        if (localType.of != type) {
+          properties.push(...OmniModelUtil.getPropertiesOf(localType.of));
+        }
       }
 
       return undefined;

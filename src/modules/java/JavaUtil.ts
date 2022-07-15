@@ -636,10 +636,12 @@ export class JavaUtil {
 
     const properties: OmniProperty[] = [];
 
-    OmniModelUtil.traverseTypes(type, (localType) => {
+    OmniModelUtil.traverseTypes(type, (localType, depth) => {
 
       if (localType.kind == OmniTypeKind.OBJECT) {
-        return 'skip';
+        if (depth > 0) {
+          return 'skip';
+        }
       } else if (localType.kind == OmniTypeKind.INTERFACE) {
         properties.push(...OmniModelUtil.getPropertiesOf(localType.of));
       }

@@ -535,11 +535,10 @@ class OpenRpcParserImpl {
 
     // TODO: Remove this? It should be up to the final language to decide how to handle it, right?
     if (type.additionalProperties == undefined && type.properties.length == 0) {
-
-      // If there object is "empty" but we inherit from something, then just use the inherited type instead.
-      // NOTE: This might be "inaccurate" and should maybe be more selective (like ONLY replacing COMPOSITIONS)
       if (extendedBy && extendedBy.kind != OmniTypeKind.COMPOSITION) {
 
+        // Simplify empty types by only returning the inner content.
+        // This is likely a bad idea... will see how it works in the future.
         return <OmniType>{
           ...extendedBy,
           ...{

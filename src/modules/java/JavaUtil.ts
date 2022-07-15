@@ -542,13 +542,28 @@ export class JavaUtil {
         if (node.type.omniType == type) {
           holder.ref = node;
         }
+      },
+      visitGenericClassDeclaration: (node) => {
+        if (node.type.omniType == type) {
+          holder.ref = node;
+        } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+          if (node.type.omniType == type.source.of) {
+            // Return the class declaration; which will be generic.
+            // It is up to the calling code to map the generic arguments to real types.
+            holder.ref = node;
+          }
+        }
       }
     }));
 
     return holder.ref;
   }
 
-  public static getExtendType(type: OmniType): OmniType | undefined {
+  // TODO: Generalize a method for unwrapping a type and getting the "real" one -- likely it is needed in many places
+  // const actualType = (type.kind == OmniTypeKind.GENERIC_TARGET)
+  //   ? type.source
+
+    public static getExtendType(type: OmniType): OmniType | undefined {
 
     // TODO: Implement! Should have *one* if possible, the best common denominator between most types.
     if (type.kind == OmniTypeKind.OBJECT) {

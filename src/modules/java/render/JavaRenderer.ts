@@ -7,7 +7,7 @@ import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
 import {JavaOptions, JavaUtil} from '@java';
-import {GenericTypeDeclarationList, TypeList} from '@java/cst/JavaCstTypes';
+import {AbstractJavaNode, GenericTypeDeclarationList, TypeList} from '@java/cst/JavaCstTypes';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>;
 
@@ -308,7 +308,10 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitAnnotationList: JavaRendererVisitFn<Java.AnnotationList> = (node, visitor) => {
-    return (node.children.map(it => this.render(it, visitor)).join('\n'));
+    // TODO: The "multiline" should be contextual and automatic in my opinion.
+    //        There should be different methods:
+    //        visitClassAnnotationList, visitFieldAnnotationList, visitMethodAnnotationList, visitArgumentAnnotationList
+    return (node.children.map(it => this.render(it, visitor)).join(node.multiline ? '\n' : ' '));
   }
 
   visitAnnotation: JavaRendererVisitFn<Java.Annotation> = (node, visitor) => {
@@ -384,8 +387,8 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   visitArgumentDeclarationList: JavaRendererVisitFn<Java.ArgumentDeclarationList> = (node, visitor) => {
 
     const listString = node.children.map(it => this.render(it, visitor)).join(', ');
-    if (listString.length > 140) {
-      // TODO: Make 140 an option
+    if (listString.length > 100) {
+      // TODO: Make 100 an option
       const spaces = this.getIndentation(1);
       return `\n${spaces}${listString.replaceAll(/, /g, `,\n${spaces}`)}\n`;
     }
@@ -444,8 +447,24 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     ];
   }
 
+  visitClassName: JavaRendererVisitFn<Java.ClassName> = (node, visitor) => {
+    return `${this.render(node.type, visitor)}`;
+  }
+
   visitClassReference: JavaRendererVisitFn<Java.ClassReference> = (node, visitor) => {
-    return `${this.render(node.type, visitor)}.class`;
+    return `${this.render(node.className, visitor)}.class`;
+  }
+
+  visitArrayInitializer: JavaRendererVisitFn<Java.ArrayInitializer<AbstractJavaNode>> = (node, visitor) => {
+
+    // TODO: This needs to support multiple levels. Right now it only supports one. Or is that up to end-user to add blocks?
+    const entries = node.children.map(it => this.render(it, visitor));
+    const indentation = this.getIndentation(1);
+    return `{\n${indentation}${entries.join(',\n' + indentation)}\n}`;
+  }
+
+  visitStaticMemberReference: JavaRendererVisitFn<Java.StaticMemberReference> = (node, visitor) => {
+    return `${this.render(node.target, visitor)}.${this.render(node.member, visitor)}`;
   }
 
   private escapeImplements(value: string): string {

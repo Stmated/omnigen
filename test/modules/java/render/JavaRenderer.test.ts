@@ -112,7 +112,7 @@ describe('Java Rendering', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'bank.json', DEFAULT_JAVA_OPTIONS);
+    const model = await TestUtils.readExample('openrpc', 'mappings.json', DEFAULT_JAVA_OPTIONS);
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer(javaOptions, (cu) => {

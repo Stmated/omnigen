@@ -1,5 +1,5 @@
 import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
-import {OmniModel, OmniTypeKind} from '@parse';
+import {OmniModel, OmniTypeKind, ValueConstantMode} from '@parse';
 import {
   ArgumentDeclaration,
   ClassDeclaration,
@@ -65,14 +65,23 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
 
     const ourArguments = this.addSuperConstructorCall(superArguments, node, blockExpressions);
 
-    for (const constructorField of fields) {
+    const typeArguments = fields.map(it => {
+      let required = false;
+      if (it.type.omniType.kind == OmniTypeKind.PRIMITIVE) {
+        required = (it.type.omniType.valueConstantOptional == false);
+      }
+      return this.createArgumentDeclaration(it.type, it.identifier, required);
+    });
+
+    for (let i = 0; i < fields.length; i++) {
+      const constructorField = fields[i];
+      const argumentDeclaration = typeArguments[i];
       blockExpressions.push(new Java.Statement(new Java.AssignExpression(
         new Java.FieldReference(constructorField),
-        new Java.VariableReference(constructorField.identifier)
+        new Java.VariableReference(argumentDeclaration.identifier)
       )));
     }
 
-    const typeArguments = fields.map(it => new Java.ArgumentDeclaration(it.type, it.identifier));
     const allArguments = ourArguments.concat(typeArguments);
 
     return new Java.ConstructorDeclaration(
@@ -110,7 +119,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
     blockExpressions: Java.AbstractJavaNode[]
   ): Java.ArgumentDeclaration[] {
 
-    if (superTypeRequirements.length > 0) {
+    if (superTypeRequirements.length == 0) {
       return [];
     }
 
@@ -124,19 +133,82 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
       } else {
         superConstructorArguments.push(new Java.VariableReference(requiredArgument.identifier));
         const actualType = this.getResolvedGenericArgumentType(requiredArgument, node);
-        requiredSuperArguments.push(new Java.ArgumentDeclaration(actualType, requiredArgument.identifier));
+        requiredSuperArguments.push(this.createArgumentDeclaration(actualType, requiredArgument.identifier, false));
       }
     }
 
-    blockExpressions.push(
-      new Java.Statement(
-        new Java.SuperConstructorCall(
-          new Java.ArgumentList(...superConstructorArguments)
+    if (superConstructorArguments.length > 0) {
+      blockExpressions.push(
+        new Java.Statement(
+          new Java.SuperConstructorCall(
+            new Java.ArgumentList(...superConstructorArguments)
+          )
         )
-      )
-    );
+      );
+    }
 
     return requiredSuperArguments;
+  }
+
+
+  private createArgumentDeclaration(type: Java.Type, identifier: Java.Identifier, required: boolean): Java.ArgumentDeclaration {
+
+    const annotations: Java.Annotation[] = [];
+    const schemaIdentifier = identifier.original || identifier.value;
+    const safeName = JavaUtil.getPrettyArgumentName(schemaIdentifier);
+    if (schemaIdentifier != safeName || (identifier.original && identifier.original != safeName)) {
+
+      // TODO: Need to test if this actually works -- currently there is no test for it
+      annotations.push(
+        new Java.Annotation(
+          new Java.Type({
+            kind: OmniTypeKind.REFERENCE,
+            fqn: "com.fasterxml.jackson.annotation.JsonProperty",
+            name: 'NameOverrideProperty'
+          }),
+          new Java.AnnotationKeyValuePairList(
+            new Java.AnnotationKeyValuePair(
+              undefined,
+              new Java.Literal(schemaIdentifier)
+            ),
+          )
+        )
+      );
+    }
+
+    let usedIdentifier = identifier;
+    if (identifier.value != safeName) {
+      usedIdentifier = new Java.Identifier(safeName, schemaIdentifier);
+    }
+
+    if (required) {
+
+      if (JavaUtil.isNullable(type.omniType)) {
+
+        // TODO: Add the "required" to the JsonProperty annotation above!
+        annotations.push(
+          new Java.Annotation(
+            new Java.Type({
+              kind: OmniTypeKind.REFERENCE,
+              fqn: "javax.validation.constraints.NotNull",
+              name: 'RequiredAnnotation'
+            }),
+          )
+        );
+      }
+    }
+
+    let annotationList: Java.AnnotationList | undefined = undefined;
+    if (annotations.length > 0) {
+      annotationList = new Java.AnnotationList(...annotations);
+      annotationList.multiline = false;
+    }
+
+    return new Java.ArgumentDeclaration(
+      type,
+      usedIdentifier,
+      annotationList
+    );
   }
 
   private getResolvedGenericArgumentType(requiredArgument: Java.ArgumentDeclaration, node: Java.ClassDeclaration): Java.Type {

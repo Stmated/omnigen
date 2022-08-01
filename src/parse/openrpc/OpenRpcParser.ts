@@ -3,12 +3,13 @@ import {AbstractParser} from '@parse/AbstractParser';
 import {
   AllowedEnumOmniPrimitiveTypes,
   AllowedEnumTsTypes,
+  CompositionKind,
   JSONSchema7Items,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniArrayTypes,
   OmniArrayTypesByPositionType,
-  OmniComparisonOperator,
+  OmniComparisonOperator, OmniCompositionMapping,
   OmniContact,
   OmniEndpoint,
   OmniExamplePairing,
@@ -64,6 +65,7 @@ import {Naming} from '@parse/Naming';
 import * as path from 'path';
 import {JsonObject} from 'json-pointer';
 import {OpenApiJSONSchema7, OpenApiJSONSchema7Definition} from '@parse/openrpc/OpenApiExtendedJsonSchema';
+import {OmniModelUtil} from '@parse/OmniModelUtil';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -512,15 +514,13 @@ class OpenRpcParserImpl {
       compositionsNot = (this.jsonSchemaToType(name, {obj: schema.obj.not, root: schema.root}, undefined)).type;
     }
 
-    let mappingPropertyName: string | undefined;
-    let discriminatorMapping: Map<string, OmniType> | undefined;
+    let discriminatorMapping: OmniCompositionMapping[] = [];
     const discriminatorAware = this.getDiscriminatorAware(schema);
     if (discriminatorAware) {
 
       // This is an OpenApi JSON Schema.
       // Discriminators do not actually exist in JSONSchema, but it is way too useful to not make use of.
       // I think most people would think that this is supported for OpenRpc as well, as it should be.
-      mappingPropertyName = discriminatorAware.obj.discriminator.propertyName;
       discriminatorMapping = this.getDiscriminatorMapping(discriminatorAware);
     }
 
@@ -529,31 +529,37 @@ class OpenRpcParserImpl {
       compositionsAllOfAnd,
       compositionsOneOfOr,
       compositionsNot,
-      mappingPropertyName,
-      discriminatorMapping,
+      discriminatorMapping.length > 0 ? discriminatorMapping : undefined,
     );
 
-    // TODO: Remove this? It should be up to the final language to decide how to handle it, right?
-    if (type.additionalProperties == undefined && type.properties.length == 0) {
-      if (extendedBy && extendedBy.kind != OmniTypeKind.COMPOSITION) {
-
-        // Simplify empty types by only returning the inner content.
-        // This is likely a bad idea... will see how it works in the future.
-        return <OmniType>{
-          ...extendedBy,
-          ...{
-            // The name should be kept the same, since it is likely much more specific.
-            name: type.name,
-            description: extendedBy.description || type.description,
-            summary: extendedBy.summary || type.summary,
-            title: extendedBy.title || type.title,
-          }
-        };
-      }
+    if (extendedBy && this.canBeReplacedWithExtension(type, extendedBy)) {
+      // Simplify empty types by only returning the inner content.
+      // This is likely a bad idea... will see how it works in the future.
+      return <OmniType>{
+        ...extendedBy,
+        ...{
+          // The name should be kept the same, since it is likely much more specific.
+          name: type.name,
+          description: extendedBy.description || type.description,
+          summary: extendedBy.summary || type.summary,
+          title: extendedBy.title || type.title,
+        }
+      };
     }
 
     type.extendedBy = extendedBy;
     return type;
+  }
+
+  private canBeReplacedWithExtension(type: OmniObjectType, extension: OmniType): boolean {
+
+    if (type.additionalProperties == undefined && type.properties.length == 0) {
+      if (extension.kind != OmniTypeKind.COMPOSITION) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private getDiscriminatorAware(
@@ -576,15 +582,17 @@ class OpenRpcParserImpl {
     return undefined;
   }
 
-  private getDiscriminatorMapping(schema: Dereferenced<OpenApiJSONSchema7Definition>): Map<string, OmniType> {
+  private getDiscriminatorMapping(schema: Dereferenced<OpenApiJSONSchema7Definition>): OmniCompositionMapping[] {
 
-    const discriminatorMapping = new Map<string, OmniType>();
+    const mappings: OmniCompositionMapping[] = [];
 
     if (typeof schema.obj == 'boolean') {
-      return discriminatorMapping;
+      return mappings;
     }
 
     const mapping = schema.obj.discriminator.mapping;
+    const discriminatorPropertyName = schema.obj.discriminator.propertyName;
+
     if (mapping) {
 
       // We have manual mappings. That's good, makes things a bit easier.
@@ -595,12 +603,14 @@ class OpenRpcParserImpl {
         try {
 
           const deref = this._deref.getFromRef<JSONSchema7>(ref, undefined, schema.root);
-          // if (!discriminatorMapping) {
-          //   discriminatorMapping = new Map<string, OmniType>();
-          // }
 
           const type = this.jsonSchemaToType(deref.hash || ref, deref, undefined);
-          discriminatorMapping.set(key, type.type);
+
+          mappings.push({
+            type: type.type,
+            propertyName: discriminatorPropertyName, // TODO: Change this to just the property name string, let it be resolved later?
+            propertyValue: key,
+          });
 
           // TODO: If "mappings" is given, then add that class as extension to all classes being pointed to
           // TODO: If no "mappings" is given, then that must be part of the runtime mapping instead
@@ -615,7 +625,29 @@ class OpenRpcParserImpl {
       }
     }
 
-    return discriminatorMapping;
+    const subSchemas = (schema.obj.anyOf || []).concat(schema.obj.oneOf || []);
+    if (subSchemas.length > 0) {
+
+      for (const subSchema of subSchemas) {
+
+        const deref = this._deref.get(subSchema, schema.root);
+        if (deref.hash) {
+
+          const lastSlashIndex = deref.hash.lastIndexOf('/');
+          const supposedPropertyValue = deref.hash.substring(lastSlashIndex + 1);
+          const existingMapping = mappings.find(it => it.propertyValue == supposedPropertyValue);
+          if (!existingMapping) {
+            mappings.push({
+              type: this.jsonSchemaToType(deref.hash, deref, undefined).type,
+              propertyName: discriminatorPropertyName,
+              propertyValue: supposedPropertyValue,
+            })
+          }
+        }
+      }
+    }
+
+    return mappings;
   }
 
   private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, name: TypeName | undefined): OmniArrayTypes {
@@ -961,19 +993,22 @@ class OpenRpcParserImpl {
       {
         name: 'code',
         type: {
-          name: `${typeName}CodeInteger`,
-          valueConstant: isUnknownCode ? undefined : error.code,
           kind: OmniTypeKind.PRIMITIVE,
+          name: `${typeName}CodeInteger`,
+          valueConstant: isUnknownCode ? -1 : error.code,
+          valueConstantOptional: isUnknownCode ? true : undefined,
           primitiveKind: OmniPrimitiveKind.INTEGER,
+          nullable: PrimitiveNullableKind.NULLABLE
         },
         owner: errorPropertyType,
       },
       {
         name: 'message',
         type: {
+          kind: OmniTypeKind.PRIMITIVE,
           name: `${typeName}MessageString`,
           valueConstant: error.message,
-          kind: OmniTypeKind.PRIMITIVE,
+          valueConstantOptional: true,
           primitiveKind: OmniPrimitiveKind.STRING,
         },
         owner: errorPropertyType,

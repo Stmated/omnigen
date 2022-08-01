@@ -6,7 +6,7 @@
   },
   "methods": [
     {
-      "name": "give_a_get_b",
+      "name": "give_in_get_out",
       "params": [
         {
           "name": "param",
@@ -27,24 +27,19 @@
     "schemas": {
       "in": {
         "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string"
-          }
-        },
         "oneOf": [
           {
-            "$ref": "#/components/schemas/in_a"
+            "$ref": "#/components/schemas/a"
           },
           {
-            "$ref": "#/components/schemas/in_b"
+            "$ref": "#/components/schemas/b"
           }
         ],
         "discriminator": {
           "propertyName": "kind"
         }
       },
-      "abs_in_type": {
+      "abs": {
         "type": "object",
         "properties": {
           "kind": {
@@ -52,11 +47,11 @@
           }
         }
       },
-      "in_a": {
+      "a": {
         "type": "object",
         "allOf": [
           {
-            "$ref": "#/components/schemas/abs_in_type"
+            "$ref": "#/components/schemas/abs"
           }
         ],
         "properties": {
@@ -65,11 +60,11 @@
           }
         }
       },
-      "in_b": {
+      "b": {
         "type": "object",
         "allOf": [
           {
-            "$ref": "#/components/schemas/abs_in_type"
+            "$ref": "#/components/schemas/abs"
           }
         ],
         "properties": {

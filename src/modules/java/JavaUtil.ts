@@ -1,6 +1,6 @@
 import * as Java from './cst/JavaCstTypes';
 import {ModifierType} from '@java/cst';
-import {pascalCase} from 'change-case';
+import {camelCase, pascalCase} from 'change-case';
 import {
   OmniArrayType,
   OmniDictionaryType,
@@ -300,6 +300,34 @@ export class JavaUtil {
     return common;
   }
 
+  public static getMostCommonTypeInHierarchies(hierarchies: OmniType[][]): OmniType | undefined {
+
+    if (hierarchies.length > 0) {
+
+      const firstHierarchy = hierarchies[0];
+      for (let typeIndex = firstHierarchy.length - 1; typeIndex >= 0; typeIndex--) {
+
+        let common: OmniType | undefined = firstHierarchy[typeIndex];
+        for (let n = 1; n < hierarchies.length; n++) {
+
+          const indexOfInOtherHierarchy = hierarchies[n].indexOf(common);
+          if (indexOfInOtherHierarchy == -1) {
+
+            // Could not find this type in the other's hierarchy. Need to search deeper.
+            common = undefined;
+            break;
+          }
+        }
+
+        if (common) {
+          return common;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
   /**
    * If the two types are in essence equal, 'a' is the one that is returned.
    * This can be used to check if 'a' and 'b' are the same (by value, not necessarily reference)
@@ -559,10 +587,6 @@ export class JavaUtil {
     return holder.ref;
   }
 
-  // TODO: Generalize a method for unwrapping a type and getting the "real" one -- likely it is needed in many places
-  // const actualType = (type.kind == OmniTypeKind.GENERIC_TARGET)
-  //   ? type.source
-
     public static getExtendType(type: OmniType): OmniType | undefined {
 
     // TODO: Implement! Should have *one* if possible, the best common denominator between most types.
@@ -628,7 +652,19 @@ export class JavaUtil {
     return true;
   }
 
-  public static toNullableType(type: OmniType, wrap: boolean): OmniType {
+  public static isNullable(type: OmniType): boolean {
+    // NOTE: If changed, make sure toNullableType is updated
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+      if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public static toNullableType<T extends OmniType>(type: T, wrap: boolean): T | OmniPrimitiveType {
+    // NOTE: If changed, make sure isNullable is updated
     if (type.kind == OmniTypeKind.PRIMITIVE) {
       if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
         return type;
@@ -642,6 +678,19 @@ export class JavaUtil {
       };
 
       return nullablePrimitive;
+    }
+
+    return type;
+  }
+
+  public static toUnboxedPrimitiveType<T extends OmniPrimitiveType>(type: T): T | OmniPrimitiveType {
+    if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable == PrimitiveNullableKind.NULLABLE) {
+      return {
+        ...type,
+        ...{
+          nullable: PrimitiveNullableKind.NOT_NULLABLE,
+        }
+      };
     }
 
     return type;
@@ -668,5 +717,27 @@ export class JavaUtil {
     });
 
     return properties;
+  }
+
+  private static readonly PATTERN_STARTS_WITH_NUMBER = new RegExp(/^[^a-zA-Z$_]/);
+  private static readonly PATTERN_INVALID_CHARS = new RegExp(/[^a-zA-Z0-9$_]/g);
+  private static readonly PATTERN_WITH_PREFIX = new RegExp(/^[_$]+/g);
+
+  public static getSafeIdentifierName(name: string): string {
+
+    if (JavaUtil.PATTERN_STARTS_WITH_NUMBER.test(name)) {
+      name = `_${name}`;
+    }
+
+    return name.replaceAll(JavaUtil.PATTERN_INVALID_CHARS, "_");
+  }
+
+  /**
+   * Takes the given name and makes it safe and then makes it into a proper argument name.
+   */
+  public static getPrettyArgumentName(name: string): string {
+
+    const safeName = JavaUtil.getSafeIdentifierName(name);
+    return camelCase(safeName.replaceAll(JavaUtil.PATTERN_WITH_PREFIX, ""));
   }
 }

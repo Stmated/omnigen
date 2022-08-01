@@ -1,5 +1,5 @@
 import {
-  CompositionKind, OmniCompositionORType,
+  CompositionKind, OmniCompositionMapping, OmniCompositionORType,
   OmniCompositionType,
   OmniCompositionXORType,
   OmniType,
@@ -14,8 +14,7 @@ export class CompositionUtil {
     compositionsAllOfAnd: OmniType[] = [],
     compositionsOneOfOr: OmniType[] = [],
     compositionNot?: OmniType,
-    mappingPropertyName?: string,
-    mapping?: Map<string, OmniType>
+    mapping?: OmniCompositionMapping[]
   ): OmniType | undefined {
 
     let composition: OmniType | undefined;
@@ -29,7 +28,6 @@ export class CompositionUtil {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.OR,
           orTypes: compositionsAnyOfOr,
-          mappingPropertyName: mappingPropertyName,
           mappings: mapping,
         }
         : compositionsAnyOfOr[0];
@@ -80,8 +78,6 @@ export class CompositionUtil {
           name: (duplicateFn) => compositionsOneOfOr.map(it => Naming.safer(it, duplicateFn)).join('XOr'),
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.XOR,
-
-          mappingPropertyName: mappingPropertyName,
           mappings: mapping,
 
           xorTypes: compositionsOneOfOr

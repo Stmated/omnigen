@@ -2,6 +2,7 @@ import {ICstVisitor, VisitFn, VisitResult} from '@visit';
 import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import * as Java from '@java/cst/JavaCstTypes';
 import {CstRootNode} from '@cst/CstRootNode';
+import {AbstractJavaNode} from '@java/cst/JavaCstTypes';
 
 export class JavaVisitor<R> implements IJavaCstVisitor<R> {
 
@@ -242,9 +243,14 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
       ...node.methods.flatMap(it => it.visit(visitor))
     ];
 
-    this.visitClassReference = (node, visitor) => {
-      node.type.visit(visitor);
-    }
+    this.visitClassName = (node, visitor) => node.type.visit(visitor);
+    this.visitClassReference = (node, visitor) => node.className.visit(visitor);
+
+    this.visitArrayInitializer = (node, visitor) => node.children.map(it => it.visit(visitor));
+    this.visitStaticMemberReference = (node, visitor) => [
+      node.target.visit(visitor),
+      node.member.visit(visitor)
+    ];
   }
 
   visitor_java: IJavaCstVisitor<R>;
@@ -307,5 +313,8 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
   visitRuntimeTypeMapping: JavaVisitFn<Java.RuntimeTypeMapping, R>;
+  visitClassName: JavaVisitFn<Java.ClassName, R>;
   visitClassReference: JavaVisitFn<Java.ClassReference, R>;
+  visitArrayInitializer: JavaVisitFn<Java.ArrayInitializer<AbstractJavaNode>, R>;
+  visitStaticMemberReference: JavaVisitFn<Java.StaticMemberReference, R>;
 }

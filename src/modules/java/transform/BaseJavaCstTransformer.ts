@@ -1,13 +1,8 @@
 import {AbstractJavaCstTransformer} from './AbstractJavaCstTransformer';
-import {
-  Block,
-  JavaCstRootNode,
-  JavaOptions,
-  JavaUtil,
-  ModifierType
-} from '@java';
+import {Block, CommentList, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
   CompositionKind,
+  OmniCompositionMapping,
   OmniCompositionType,
   OmniCompositionXORType,
   OmniEnumType,
@@ -392,7 +387,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         javaType,
         new Java.Identifier(javaClassName),
         body,
-        );
+      );
     }
 
     // TODO: Move into a separate transformer, and make it an option
@@ -437,6 +432,27 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     ));
   }
 
+  /**
+   * If this returns true, then the compilation unit we are creating should be replaced with its extension.
+   * It should still retain the same name as the original class though.
+   */
+  private canBeCompressedAndMappedIntoExtension(extension: OmniType): OmniCompositionMapping[] | undefined {
+
+    if (extension.kind != OmniTypeKind.COMPOSITION) {
+      return undefined;
+    }
+
+    if (extension.compositionKind != CompositionKind.XOR && extension.compositionKind != CompositionKind.OR) {
+      return undefined;
+    }
+
+    if (extension.mappings) {
+      return extension.mappings;
+    }
+
+    return undefined;
+  }
+
   private addExtendsAndImplements(
     graph: DependencyGraph,
     type: OmniObjectType | OmniCompositionType,
@@ -444,7 +460,93 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   ): void {
 
     const typeExtends = JavaDependencyGraph.getExtends(graph, type);
+
     if (typeExtends) {
+
+      const inheritanceMappings = this.canBeCompressedAndMappedIntoExtension(typeExtends);
+      if (inheritanceMappings && inheritanceMappings.length > 0) {
+
+        // Instead of making the current class inherit from something,
+        // We will with the help of external libraries note what kind of class this might be.
+        // Goes against how polymorphism is supposed to work, in a way, but some webservices do it this way.
+        // That way methods can receive an Abstract class, but be deserialized as the correct implementation.
+
+        // We make use the the same property for all, since it is not supported in Java to have many different ones anyway.
+        const propertyName = inheritanceMappings[0].propertyName;
+        // const property = OmniModelUtil.getClosestProperty(type.type, propertyName);
+
+        declaration.annotations?.children.push(
+          new Java.Annotation(
+            new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo', name: 'JsonTypeInfo'}),
+            new Java.AnnotationKeyValuePairList(
+              new Java.AnnotationKeyValuePair(
+                new Java.Identifier('use'),
+                new Java.StaticMemberReference(
+                  new Java.ClassName(
+                    new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id', name: 'JsonTypeInfoIdNone'})
+                  ),
+                  new Java.Identifier(
+                    'NAME'
+                  )
+                )
+              ),
+              new Java.AnnotationKeyValuePair(
+                new Java.Identifier('property'),
+                new Java.Literal(propertyName)
+              ),
+            )
+          )
+        );
+
+        const subTypes: Java.Annotation[] = [];
+        for (const mapping of inheritanceMappings) {
+          subTypes.push(new Java.Annotation(
+            new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type', name: 'JsonSubType'}),
+            new Java.AnnotationKeyValuePairList(
+              new Java.AnnotationKeyValuePair(
+                new Java.Identifier('name'),
+                new Java.Literal(mapping.propertyValue)
+              ),
+              new Java.AnnotationKeyValuePair(
+                new Java.Identifier('value'),
+                new Java.ClassReference(new Java.Type(mapping.type))
+              )
+            )
+          ));
+        }
+
+        declaration.annotations?.children.push(
+          new Java.Annotation(
+            new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes', name: 'JsonSubTypes'}),
+            new Java.AnnotationKeyValuePairList(
+              new Java.AnnotationKeyValuePair(
+                undefined,
+                new Java.ArrayInitializer<Java.Annotation>(
+                  ...subTypes
+                )
+              )
+            )
+          )
+        );
+
+
+        // @JsonSubTypes({
+        //   @JsonSubTypes.Type(value = Square.class, name = "square"),
+        //   @JsonSubTypes.Type(value = Circle.class, name = "circle")
+        // })
+
+        // TODO: Find the most common denominator of all the classes that all the mappings point towards, then extend THAT.
+        const hierarchies = inheritanceMappings.map(it => JavaUtil.getExtendHierarchy(it.type));
+        const common = JavaUtil.getMostCommonTypeInHierarchies(hierarchies);
+        if (common) {
+          declaration.extends = new Java.ExtendsDeclaration(
+            new Java.Type(common)
+          );
+        }
+
+        return;
+      }
+
       declaration.extends = new Java.ExtendsDeclaration(
         new Java.Type(typeExtends)
       );
@@ -455,13 +557,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       declaration.implements = new Java.ImplementsDeclaration(
         new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
       );
-    }
-
-    if (type.kind == OmniTypeKind.OBJECT && type.extendedBy) {
-      const ext = type.extendedBy;
-      if (ext.kind == OmniTypeKind.COMPOSITION && ext.compositionKind == CompositionKind.XOR && ext.mappingPropertyName) {
-        // If this is true, then we should
-      }
     }
   }
 
@@ -480,30 +575,30 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     // 2. Using discriminator.propertyName and schema ref name (if mapping does not exist) (By Json fasterxml subtypes)
     // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
 
-    if (!type.mappingPropertyName) {
+    // if (!type.mappings) {
 
-      const mappedTypes = [...(type.mappings || new Map<string, OmniType>()).values()];
-      const unmapped = type.xorTypes.filter(it => !mappedTypes.includes(it));
-      if (unmapped.length > 0) {
+    const mappedTypes = [...(type.mappings || new Map<string, OmniType>()).values()];
+    const unmapped = type.xorTypes.filter(it => !mappedTypes.includes(it));
+    if (unmapped.length > 0) {
 
-        // This means the specification did not have any discriminators.
-        // Instead we need to figure out what it is in runtime. To be improved.
-        body.children.push(
-          new Java.RuntimeTypeMapping(
-            type.xorTypes,
-            options,
-            (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
-          )
-        );
-      } else {
-        comments.push(`This bad boy can be mapped but we need to automatically find them based on name`);
-      }
+      // This means the specification did not have any discriminators.
+      // Instead we need to figure out what it is in runtime. To be improved.
+      body.children.push(
+        new Java.RuntimeTypeMapping(
+          type.xorTypes,
+          options,
+          (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
+        )
+      );
     } else {
-
-      // The specification did map all types using a discriminator.
-      // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
-      comments.push(`This bad boy can be mapped so hard based on only property name`);
+      comments.push(`This bad boy can be mapped but we need to automatically find them based on name`);
     }
+    // } else {
+    //
+    //   // The specification did map all types using a discriminator.
+    //   // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
+    //   comments.push(`This bad boy can be mapped so hard based on only property name`);
+    // }
   }
 
   private addOmniPropertyToBody(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {
@@ -574,72 +669,11 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     if (property.type.kind == OmniTypeKind.PRIMITIVE && property.type.valueConstant) {
-
-      if (typeof property.type.valueConstant == 'function') {
-
-        // This constant is dynamic based on the type that the property is owned by.
-        const field = new Java.Field(
-          new Java.Type(property.type),
-          new Java.Identifier(`_${camelCase(property.name)}`),
-          new Java.ModifierList(
-            new Java.Modifier(Java.ModifierType.PRIVATE),
-            new Java.Modifier(Java.ModifierType.FINAL)
-          )
-        )
-
-        const methodDeclaration = new Java.MethodDeclaration(
-          new Java.MethodDeclarationSignature(
-            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-            new Java.Type(property.type),
-          ),
-          new Java.Block(
-            new Java.Statement(new Java.ReturnStatement(
-              new Java.FieldReference(field)
-            )),
-          )
-        );
-
-        methodDeclaration.signature.comments = commentList;
-        body.children.push(field);
-        body.children.push(methodDeclaration);
-
-      } else {
-        const methodDeclaration = new Java.MethodDeclaration(
-          new Java.MethodDeclarationSignature(
-            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-            new Java.Type(property.type),
-          ),
-          new Java.Block(
-            new Java.Statement(new Java.ReturnStatement(new Java.Literal(property.type.valueConstant))),
-          )
-        );
-
-        methodDeclaration.signature.comments = commentList;
-        body.children.push(methodDeclaration);
-      }
-
+      this.addPrimitivePropertyAsField(property, property.type, body, commentList);
       return;
     }
 
-    // TODO: Move this to another transformer which checks for differences between field name and original name.
-    const getterAnnotations: Java.Annotation[] = [];
-    if (property.fieldName || property.propertyName) {
-      getterAnnotations.push(
-        new Java.Annotation(
-          new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonProperty', name: 'JsonProperty'}),
-          new Java.AnnotationKeyValuePairList(
-            new Java.AnnotationKeyValuePair(
-              undefined,
-              new Java.Literal(property.name)
-            )
-          )
-        )
-      );
-    }
-
-    const getterAnnotationList = (getterAnnotations.length > 0)
-      ? new Java.AnnotationList(...getterAnnotations)
-      : undefined;
+    const getterAnnotationList = this.getGetterAnnotations(property);
 
     const fieldType = this.toJavaType(property.type);
     const fieldIdentifier = new Java.Identifier(property.fieldName || camelCase(property.name), property.name);
@@ -666,6 +700,113 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         commentList,
         getterIdentifier
       ));
+    }
+  }
+
+  private getGetterAnnotations(property: OmniProperty): Java.AnnotationList | undefined {
+
+    // TODO: Move this to another transformer which checks for differences between field name and original name.
+    const getterAnnotations: Java.Annotation[] = [];
+    if (property.fieldName || property.propertyName) {
+      getterAnnotations.push(
+        new Java.Annotation(
+          new Java.Type({
+            kind: OmniTypeKind.REFERENCE,
+            fqn: 'com.fasterxml.jackson.annotation.JsonProperty',
+            name: 'JsonProperty'
+          }),
+          new Java.AnnotationKeyValuePairList(
+            new Java.AnnotationKeyValuePair(
+              undefined,
+              new Java.Literal(property.name)
+            )
+          )
+        )
+      );
+    }
+
+    return (getterAnnotations.length > 0)
+      ? new Java.AnnotationList(...getterAnnotations)
+      : undefined;
+  }
+
+  private addPrimitivePropertyAsField(
+    property: OmniProperty,
+    type: OmniPrimitiveType,
+    body: Block,
+    commentList?: CommentList
+  ): void {
+
+    const fieldModifiers = new Java.ModifierList(
+      new Java.Modifier(Java.ModifierType.PRIVATE),
+      new Java.Modifier(Java.ModifierType.FINAL)
+    );
+
+    const field = new Java.Field(
+      new Java.Type(type),
+      new Java.Identifier(`${JavaUtil.getSafeIdentifierName(property.fieldName || property.name)}`, property.name),
+      fieldModifiers
+    );
+
+    const methodDeclarationReturnType = type.valueConstant && JavaUtil.isNullable(type)
+      ? new Java.Type(JavaUtil.toUnboxedPrimitiveType(type))
+      : new Java.Type(type);
+
+    const methodDeclarationSignature = new Java.MethodDeclarationSignature(
+      new Java.Identifier(JavaUtil.getGetterName(property.name, type), property.name),
+      methodDeclarationReturnType,
+      undefined,
+      undefined,
+      this.getGetterAnnotations(property)
+    );
+
+    if (typeof type.valueConstant == 'function') {
+
+      // This constant is dynamic based on the type that the property is owned by.
+      const methodDeclaration = new Java.MethodDeclaration(
+        methodDeclarationSignature,
+        new Java.Block(
+          new Java.Statement(new Java.ReturnStatement(
+            new Java.FieldReference(field)
+          )),
+        )
+      );
+
+      methodDeclaration.signature.comments = commentList;
+      body.children.push(field);
+      body.children.push(methodDeclaration);
+
+    } else {
+
+      let methodBlock: Java.Block;
+      if (type.valueConstant && type.valueConstantOptional !== false) {
+        methodBlock = new Java.Block(
+          new Java.IfStatement(
+            new Java.Predicate(
+              new Java.FieldReference(field),
+              Java.TokenType.NOT_EQUALS,
+              new Java.Literal(null)
+            ),
+            new Java.Block(
+              new Java.Statement(new Java.ReturnStatement(new Java.FieldReference(field))),
+            )
+          ),
+          new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.valueConstant))),
+        );
+      } else {
+        methodBlock = new Java.Block(
+          new Java.Statement(new Java.ReturnStatement(new Java.FieldReference(field))),
+        );
+      }
+
+      const methodDeclaration = new Java.MethodDeclaration(
+        methodDeclarationSignature,
+        methodBlock,
+      );
+
+      methodDeclaration.signature.comments = commentList;
+      body.children.push(field);
+      body.children.push(methodDeclaration);
     }
   }
 

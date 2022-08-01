@@ -120,8 +120,9 @@ export class Literal extends AbstractExpression {
   }
 }
 
+// TODO: "ArrayInitializer" can in turn contain anything! It should on
 // eslint-disable-next-line no-use-before-define
-type AnnotationValue = Literal | Annotation;
+type AnnotationValue = Literal | Annotation | ArrayInitializer<Annotation> | ClassReference | StaticMemberReference;
 
 export class AnnotationKeyValuePair extends AbstractJavaNode {
   key: Identifier | undefined;
@@ -168,6 +169,7 @@ export class Annotation extends AbstractJavaNode {
 
 export class AnnotationList extends AbstractJavaNode {
   children: Annotation[];
+  multiline = true;
 
   constructor(...children: Annotation[]) {
     super();
@@ -176,6 +178,36 @@ export class AnnotationList extends AbstractJavaNode {
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitAnnotationList(this, visitor);
+  }
+}
+
+export class ArrayInitializer<T extends AbstractJavaNode> extends AbstractJavaNode {
+  children: T[];
+
+  constructor(...children: T[]) {
+    super();
+    this.children = children;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitArrayInitializer(this, visitor);
+  }
+}
+
+export type StaticTarget = ClassName;
+
+export class StaticMemberReference extends AbstractJavaNode {
+  target: StaticTarget;
+  member: AbstractExpression
+
+  constructor(target: StaticTarget, member: AbstractExpression) {
+    super();
+    this.target = target;
+    this.member = member;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitStaticMemberReference(this, visitor);
   }
 }
 
@@ -1031,12 +1063,25 @@ export class HardCoded extends AbstractJavaNode {
   }
 }
 
-export class ClassReference extends AbstractExpression {
+export class ClassName extends AbstractExpression {
   type: Type;
 
   constructor(type: Type) {
     super();
     this.type = type;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitClassName(this, visitor);
+  }
+}
+
+export class ClassReference extends AbstractExpression {
+  className: ClassName;
+
+  constructor(type: Type) {
+    super();
+    this.className = new ClassName(type);
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
@@ -1063,7 +1108,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
 
     const untypedField = new Field(
       new Type(unknownType),
-      new Identifier('_raw'),
+      new Identifier('_raw', 'raw'),
       new ModifierList(
         new Modifier(ModifierType.PRIVATE),
         new Modifier(ModifierType.FINAL),

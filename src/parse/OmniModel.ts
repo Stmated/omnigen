@@ -126,6 +126,8 @@ export interface OmniBaseType<T> {
    * The name of the type.
    * The name is not necessarily unique. There might be many types with the same name.
    * Generally, only the OmniClassType is generally more certain to be unique.
+   *
+   * TODO: Remove someday, and only keep on those types that require it
    */
   name: TypeName;
   kind: T;
@@ -179,14 +181,19 @@ export interface OmniCompositionNotType extends OmniCompositionBaseType<Composit
   notTypes: [OmniType];
 }
 
+export interface OmniCompositionMapping {
+  propertyName: string;
+  propertyValue: string;
+  type: OmniType;
+}
+
 /**
  * The composition types that inherit this interface can help with the mapping of the runtime types.
  * If there is a runtime mapping, then we do not need to do it manually in the target language's code.
  * This is predicated on the language having some other method of doing it, though. Like Java @JsonTypeInfo and @JsonSubTypes
  */
 export interface OmniMappedCompositionType {
-  mappingPropertyName?: string;
-  mappings?: Map<string, OmniType>;
+  mappings?: OmniCompositionMapping[];
 }
 
 export interface OmniCompositionORType extends OmniCompositionBaseType<CompositionKind.OR>, OmniMappedCompositionType {
@@ -194,8 +201,6 @@ export interface OmniCompositionORType extends OmniCompositionBaseType<Compositi
 }
 
 export interface OmniCompositionXORType extends OmniCompositionBaseType<CompositionKind.XOR>, OmniMappedCompositionType {
-  // mappingPropertyName?: string;
-  // mappings?: Map<string, OmniType>;
   xorTypes: OmniType[];
 }
 
@@ -256,6 +261,11 @@ export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKi
   extendedBy?: OmniType;
 }
 
+export enum ValueConstantMode {
+  FORCED,
+  FALLBACK
+}
+
 type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
 export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
   valueConstant?: unknown;
@@ -270,6 +280,8 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind> {
    * But this one thing can be a GenericAndType or GenericOrType or anything else.
    * This extension property tries to follow the originating specification as much as possible.
    * It is up to the target language what to do with it/how to transform it to something useful.
+   *
+   * TODO: This should be OmniInheritableType -- but the infrastructure doesn't handle it well right now.
    */
   extendedBy?: OmniType;
 
@@ -298,6 +310,7 @@ export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKnownKind> 
    */
   nullable?: PrimitiveNullableKind;
   valueConstant?: OmniPrimitiveConstantValueOrLazySubTypeValue;
+  valueConstantOptional?: boolean;
 }
 
 type OmniEnumKnownKind = OmniTypeKind.ENUM;

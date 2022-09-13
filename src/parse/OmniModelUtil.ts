@@ -7,6 +7,8 @@ import {
   OmniTypeKind,
   TypeName
 } from '@parse/OmniModel';
+import {LiteralType} from 'ts-json-schema-generator';
+import {LiteralValue} from 'ts-json-schema-generator/src/Type/LiteralType';
 
 export interface TypeCollection {
 
@@ -28,7 +30,7 @@ export class OmniModelUtil {
     const setEdge = new Set<OmniType>();
     if (refTypes) {
       for (const refType of refTypes) {
-        set.add(refType);
+        OmniModelUtil.getTypesRecursively(refType, set, setEdge, 0);
       }
     }
 
@@ -233,5 +235,39 @@ export class OmniModelUtil {
     }
 
     return '';
+  }
+
+  public static getTypesThatInheritFrom(model: OmniModel, type: OmniType): OmniType[] {
+
+    const types: OmniType[] = [];
+
+    // TODO: Make a visitor version of getAllExportableTypes? Less useless memory consumption.
+    const exportableTypes = OmniModelUtil.getAllExportableTypes(model);
+
+    // TODO: getAllExportableTypes should already include all model.types???
+    const allTypes = new Set(exportableTypes.all.concat(model.types));
+
+    for (const localType of allTypes) {
+      if (localType.kind == OmniTypeKind.OBJECT) {
+        if (localType.extendedBy == type) {
+          types.push(localType);
+        }
+      }
+    }
+
+    return types;
+  }
+
+  public static toLiteralValue(value: unknown): LiteralValue {
+
+    if (typeof value == 'string') {
+      return value;
+    } else if (typeof value == 'number') {
+      return value;
+    } else if (typeof value == 'boolean') {
+      return value;
+    } else {
+      return String(value);
+    }
   }
 }

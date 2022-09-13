@@ -181,26 +181,17 @@ export interface OmniCompositionNotType extends OmniCompositionBaseType<Composit
   notTypes: [OmniType];
 }
 
-export interface OmniCompositionMapping {
-  propertyName: string;
-  propertyValue: string;
-  type: OmniType;
-}
+// export interface OmniCompositionMapping {
+//   propertyName: string;
+//   propertyValue: string;
+//   type: OmniType;
+// }
 
-/**
- * The composition types that inherit this interface can help with the mapping of the runtime types.
- * If there is a runtime mapping, then we do not need to do it manually in the target language's code.
- * This is predicated on the language having some other method of doing it, though. Like Java @JsonTypeInfo and @JsonSubTypes
- */
-export interface OmniMappedCompositionType {
-  mappings?: OmniCompositionMapping[];
-}
-
-export interface OmniCompositionORType extends OmniCompositionBaseType<CompositionKind.OR>, OmniMappedCompositionType {
+export interface OmniCompositionORType extends OmniCompositionBaseType<CompositionKind.OR> {
   orTypes: OmniType[];
 }
 
-export interface OmniCompositionXORType extends OmniCompositionBaseType<CompositionKind.XOR>, OmniMappedCompositionType {
+export interface OmniCompositionXORType extends OmniCompositionBaseType<CompositionKind.XOR> {
   xorTypes: OmniType[];
 }
 
@@ -273,6 +264,13 @@ export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
 
 type OmniNestableType = OmniObjectType | OmniEnumType;
 type OmniObjectKnownKind = OmniTypeKind.OBJECT;
+
+export interface OmniSubTypeHint {
+
+  type: OmniType;
+  qualifiers:  OmniPayloadPathQualifier[];
+}
+
 export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind> {
 
   /**
@@ -284,6 +282,13 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind> {
    * TODO: This should be OmniInheritableType -- but the infrastructure doesn't handle it well right now.
    */
   extendedBy?: OmniType;
+
+  /**
+   * The composition types that inherit this interface can help with the mapping of the runtime types.
+   * If there is a runtime mapping, then we do not need to do it manually in the target language's code.
+   * This is predicated on the language having some other method of doing it, though. Like Java @JsonTypeInfo and @JsonSubTypes
+   */
+  subTypeHints?: OmniSubTypeHint[];
 
   properties: OmniProperty[];
   requiredProperties?: OmniProperty[];

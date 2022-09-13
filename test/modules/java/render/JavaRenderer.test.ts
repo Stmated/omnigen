@@ -9,9 +9,6 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {OmniEndpoint, OmniModel, OmniOutput} from '@parse';
 
-// const SegfaultHandler = require('segfault-handler');
-// SegfaultHandler.registerHandler('crash.log');
-
 describe('Java Rendering', () => {
 
   const javaOptions: JavaOptions = DEFAULT_JAVA_OPTIONS;

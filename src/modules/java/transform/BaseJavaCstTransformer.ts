@@ -2,7 +2,6 @@ import {AbstractJavaCstTransformer} from './AbstractJavaCstTransformer';
 import {Block, CommentList, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
 import {
   CompositionKind,
-  OmniCompositionMapping,
   OmniCompositionType,
   OmniCompositionXORType,
   OmniEnumType,
@@ -411,9 +410,10 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
       this.addXOrMappingToBody(type, model, body, comments, options);
-    } else {
-      this.addExtendsAndImplements(graph, type, declaration);
     }
+    // else {
+      this.addExtendsAndImplements(graph, type, declaration);
+    // }
 
     for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
       this.addOmniPropertyToBody(model, body, property, options);
@@ -432,120 +432,111 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     ));
   }
 
-  /**
-   * If this returns true, then the compilation unit we are creating should be replaced with its extension.
-   * It should still retain the same name as the original class though.
-   */
-  private canBeCompressedAndMappedIntoExtension(extension: OmniType): OmniCompositionMapping[] | undefined {
-
-    if (extension.kind != OmniTypeKind.COMPOSITION) {
-      return undefined;
-    }
-
-    if (extension.compositionKind != CompositionKind.XOR && extension.compositionKind != CompositionKind.OR) {
-      return undefined;
-    }
-
-    if (extension.mappings) {
-      return extension.mappings;
-    }
-
-    return undefined;
-  }
-
   private addExtendsAndImplements(
     graph: DependencyGraph,
     type: OmniObjectType | OmniCompositionType,
     declaration: Java.AbstractObjectDeclaration
   ): void {
 
+    if (type.kind == OmniTypeKind.OBJECT && type.subTypeHints) {
+
+      // Instead of making the current class inherit from something,
+      // We will with the help of external libraries note what kind of class this might be.
+      // Goes against how polymorphism is supposed to work, in a way, but some webservices do it this way.
+      // That way methods can receive an Abstract class, but be deserialized as the correct implementation.
+
+      // We make use the the same property for all, since it is not supported in Java to have many different ones anyway.
+      const propertyName = type.subTypeHints[0].qualifiers[0].path[0];
+
+      // TODO: Need to figure out an actual way of handling the inheritance
+      //         If "In" is itself empty and only inherits, then use "Abs" directly instead?
+      //         What to do if that is not possible? Need to make it work as if "In" also has properties!
+
+      declaration.annotations?.children.push(
+        new Java.Annotation(
+          new Java.Type({
+            kind: OmniTypeKind.REFERENCE,
+            fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
+            name: 'JsonTypeInfo'
+          }),
+          new Java.AnnotationKeyValuePairList(
+            new Java.AnnotationKeyValuePair(
+              new Java.Identifier('use'),
+              new Java.StaticMemberReference(
+                new Java.ClassName(
+                  new Java.Type({
+                    kind: OmniTypeKind.REFERENCE,
+                    fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
+                    name: 'JsonTypeInfoIdNone'
+                  })
+                ),
+                new Java.Identifier(
+                  'NAME'
+                )
+              )
+            ),
+            new Java.AnnotationKeyValuePair(
+              new Java.Identifier('property'),
+              new Java.Literal(propertyName)
+            ),
+          )
+        )
+      );
+
+      const subTypes: Java.Annotation[] = [];
+      for (const subTypeHint of type.subTypeHints) {
+
+        const qualifier = subTypeHint.qualifiers[0];
+        subTypes.push(new Java.Annotation(
+          new Java.Type({
+            kind: OmniTypeKind.REFERENCE,
+            fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
+            name: 'JsonSubType'
+          }),
+          new Java.AnnotationKeyValuePairList(
+            new Java.AnnotationKeyValuePair(
+              new Java.Identifier('name'),
+              new Java.Literal(OmniModelUtil.toLiteralValue(qualifier.value))
+            ),
+            new Java.AnnotationKeyValuePair(
+              new Java.Identifier('value'),
+              new Java.ClassReference(new Java.Type(subTypeHint.type))
+            )
+          )
+        ));
+      }
+
+      declaration.annotations?.children.push(
+        new Java.Annotation(
+          new Java.Type({
+            kind: OmniTypeKind.REFERENCE,
+            fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
+            name: 'JsonSubTypes'
+          }),
+          new Java.AnnotationKeyValuePairList(
+            new Java.AnnotationKeyValuePair(
+              undefined,
+              new Java.ArrayInitializer<Java.Annotation>(
+                ...subTypes
+              )
+            )
+          )
+        )
+      );
+
+      // TODO: When is this still needed? When does the discriminators influence the inheritance hierarchy?
+      // const hierarchies = inheritanceMappings.map(it => JavaUtil.getExtendHierarchy(it.type));
+      // const common = JavaUtil.getMostCommonTypeInHierarchies(hierarchies);
+      // if (common) {
+      //   declaration.extends = new Java.ExtendsDeclaration(
+      //     new Java.Type(common)
+      //   );
+      // }
+    }
+
     const typeExtends = JavaDependencyGraph.getExtends(graph, type);
 
     if (typeExtends) {
-
-      const inheritanceMappings = this.canBeCompressedAndMappedIntoExtension(typeExtends);
-      if (inheritanceMappings && inheritanceMappings.length > 0) {
-
-        // Instead of making the current class inherit from something,
-        // We will with the help of external libraries note what kind of class this might be.
-        // Goes against how polymorphism is supposed to work, in a way, but some webservices do it this way.
-        // That way methods can receive an Abstract class, but be deserialized as the correct implementation.
-
-        // We make use the the same property for all, since it is not supported in Java to have many different ones anyway.
-        const propertyName = inheritanceMappings[0].propertyName;
-        // const property = OmniModelUtil.getClosestProperty(type.type, propertyName);
-
-        declaration.annotations?.children.push(
-          new Java.Annotation(
-            new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo', name: 'JsonTypeInfo'}),
-            new Java.AnnotationKeyValuePairList(
-              new Java.AnnotationKeyValuePair(
-                new Java.Identifier('use'),
-                new Java.StaticMemberReference(
-                  new Java.ClassName(
-                    new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id', name: 'JsonTypeInfoIdNone'})
-                  ),
-                  new Java.Identifier(
-                    'NAME'
-                  )
-                )
-              ),
-              new Java.AnnotationKeyValuePair(
-                new Java.Identifier('property'),
-                new Java.Literal(propertyName)
-              ),
-            )
-          )
-        );
-
-        const subTypes: Java.Annotation[] = [];
-        for (const mapping of inheritanceMappings) {
-          subTypes.push(new Java.Annotation(
-            new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type', name: 'JsonSubType'}),
-            new Java.AnnotationKeyValuePairList(
-              new Java.AnnotationKeyValuePair(
-                new Java.Identifier('name'),
-                new Java.Literal(mapping.propertyValue)
-              ),
-              new Java.AnnotationKeyValuePair(
-                new Java.Identifier('value'),
-                new Java.ClassReference(new Java.Type(mapping.type))
-              )
-            )
-          ));
-        }
-
-        declaration.annotations?.children.push(
-          new Java.Annotation(
-            new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes', name: 'JsonSubTypes'}),
-            new Java.AnnotationKeyValuePairList(
-              new Java.AnnotationKeyValuePair(
-                undefined,
-                new Java.ArrayInitializer<Java.Annotation>(
-                  ...subTypes
-                )
-              )
-            )
-          )
-        );
-
-
-        // @JsonSubTypes({
-        //   @JsonSubTypes.Type(value = Square.class, name = "square"),
-        //   @JsonSubTypes.Type(value = Circle.class, name = "circle")
-        // })
-
-        // TODO: Find the most common denominator of all the classes that all the mappings point towards, then extend THAT.
-        const hierarchies = inheritanceMappings.map(it => JavaUtil.getExtendHierarchy(it.type));
-        const common = JavaUtil.getMostCommonTypeInHierarchies(hierarchies);
-        if (common) {
-          declaration.extends = new Java.ExtendsDeclaration(
-            new Java.Type(common)
-          );
-        }
-
-        return;
-      }
 
       declaration.extends = new Java.ExtendsDeclaration(
         new Java.Type(typeExtends)
@@ -577,9 +568,9 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     // if (!type.mappings) {
 
-    const mappedTypes = [...(type.mappings || new Map<string, OmniType>()).values()];
-    const unmapped = type.xorTypes.filter(it => !mappedTypes.includes(it));
-    if (unmapped.length > 0) {
+    // const mappedTypes = (type.mappings || []).map(it => it.type);
+    // const unmapped = type.xorTypes.filter(it => !mappedTypes.includes(it));
+    // if (unmapped.length > 0) {
 
       // This means the specification did not have any discriminators.
       // Instead we need to figure out what it is in runtime. To be improved.
@@ -590,9 +581,9 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
         )
       );
-    } else {
-      comments.push(`This bad boy can be mapped but we need to automatically find them based on name`);
-    }
+    // } else {
+    //   comments.push(`This bad boy can be mapped but we need to automatically find them based on name`);
+    // }
     // } else {
     //
     //   // The specification did map all types using a discriminator.

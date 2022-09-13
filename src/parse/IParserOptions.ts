@@ -6,6 +6,7 @@ export interface IParserOptions {
   jsonRpcPropertyName: string;
   jsonRpcRequestVersion: string;
   jsonRpcIdIncluded: boolean;
+  autoTypeHints: boolean;
 }
 
 export const DEFAULT_PARSER_OPTIONS: IParserOptions = {
@@ -16,4 +17,5 @@ export const DEFAULT_PARSER_OPTIONS: IParserOptions = {
   jsonRpcPropertyName: 'jsonrpc',
   jsonRpcRequestVersion: "2.0",
   jsonRpcIdIncluded: true,
+  autoTypeHints: true,
 }

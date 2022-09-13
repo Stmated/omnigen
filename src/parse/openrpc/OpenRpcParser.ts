@@ -3,13 +3,12 @@ import {AbstractParser} from '@parse/AbstractParser';
 import {
   AllowedEnumOmniPrimitiveTypes,
   AllowedEnumTsTypes,
-  CompositionKind,
   JSONSchema7Items,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniArrayTypes,
   OmniArrayTypesByPositionType,
-  OmniComparisonOperator, OmniCompositionMapping,
+  OmniComparisonOperator,
   OmniContact,
   OmniEndpoint,
   OmniExamplePairing,
@@ -30,6 +29,7 @@ import {
   OmniProperty,
   OmniPropertyOwner,
   OmniServer,
+  OmniSubTypeHint,
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
@@ -46,6 +46,7 @@ import {
   ExamplePairingObject,
   ExternalDocumentationObject,
   JSONSchema,
+  JSONSchemaObject,
   LicenseObject,
   LinkObject,
   MethodObject,
@@ -73,6 +74,11 @@ type SchemaToTypeResult = { type: OmniType; canInline: boolean };
 
 type OutputAndType = { output: OmniOutput; type: OmniType };
 type TypeAndProperties = { type: OmniType; properties: OmniProperty[] | undefined };
+
+interface PostDiscriminatorMapping {
+  type: OmniObjectType;
+  schema: Dereferenced<OpenApiJSONSchema7Definition>;
+}
 
 export class OpenRpcParser extends AbstractParser {
 
@@ -132,7 +138,9 @@ class OpenRpcParserImpl {
   private _requestParamsClass?: OmniObjectType; // Used
 
   // TODO: Move this to the root? But always have the key be the absolute path?
-  private readonly _typePromiseMap = new Map<string, SchemaToTypeResult>();
+  private readonly _typeMap = new Map<string, OmniType>();
+
+  private readonly _postDiscriminatorMapping: PostDiscriminatorMapping[] = [];
 
   private readonly _deref: Dereferencer<OpenrpcDocument>;
 
@@ -189,7 +197,22 @@ class OpenRpcParserImpl {
     const docs = this.doc.externalDocs ? [this.toOmniExternalDocumentationFromExternalDocumentationObject(this.doc.externalDocs)] : [];
     const continuations = endpoints.flatMap(it => this.toOmniLinkFromDocMethods(it, endpoints));
 
-    return {
+    // Now find all the types that were not referenced by a method, but is in the contract.
+    // We mos likely still want those types to be included.
+    // const extraTypes: OmniType[] = [];
+    if (this.doc.components?.schemas) {
+      for (const key of Object.keys(this.doc.components.schemas)) {
+        const schema = this.doc.components.schemas[key] as JSONSchemaObject;
+        const deref = this._deref.get(schema, this._deref.getFirstRoot());
+        const unwrapped = this.unwrapJsonSchema(deref);
+
+        // Call to get the type from the schema.
+        // That way we make sure it's in the type map.
+        this.jsonSchemaToType(deref.hash || key, unwrapped, `/components/schemas/${key}`);
+      }
+    }
+
+    const model: OmniModel = {
       schemaType: 'openrpc',
       schemaVersion: this.doc.openrpc,
       name: this.doc.info.title,
@@ -202,8 +225,55 @@ class OpenRpcParserImpl {
       externalDocumentations: docs,
       endpoints: endpoints,
       continuations: continuations,
-      types: [...this._typePromiseMap.values()].map(it => it.type),
+      types: [...this._typeMap.values()],
     };
+
+    // Let's do the discriminator mapping which could not be done earlier in the process.
+    // If we got here, then the type does not have any other mappings specified.
+    for (const postDiscriminator of this._postDiscriminatorMapping) {
+
+      if (typeof postDiscriminator.schema.obj == 'boolean') {
+        continue;
+      }
+
+      const inheritors = OmniModelUtil.getTypesThatInheritFrom(model, postDiscriminator.type);
+      const propertyName = postDiscriminator.schema.obj.discriminator.propertyName;
+
+      const subTypeHints: OmniSubTypeHint[] = [];
+      for (const inheritor of inheritors) {
+
+        subTypeHints.push({
+          type: inheritor,
+          qualifiers: [
+            {
+              path: [propertyName],
+              operator: OmniComparisonOperator.EQUALS,
+              // TODO: This might be INVALID! Need to get a hold of the originating reference name or something!
+              value: Naming.unwrap(inheritor.name),
+            }
+          ]
+        })
+      }
+
+      if (subTypeHints.length > 0) {
+
+        // TODO: Do not replace, instead add the new ones that we found.
+        const existingHints = postDiscriminator.type.subTypeHints;
+        if (existingHints) {
+          const newSubTypeHints = subTypeHints.filter(it => {
+            return !existingHints.find(existing => existing.type == it.type);
+          });
+
+          logger.info(`Adding ${newSubTypeHints.length} additional sub-type hints`);
+          existingHints.push(...newSubTypeHints);
+
+        } else {
+          postDiscriminator.type.subTypeHints = subTypeHints;
+        }
+      }
+    }
+
+    return model;
   }
 
   toOmniLicenseFromLicense(license: LicenseObject): OmniLicense {
@@ -309,9 +379,12 @@ class OpenRpcParserImpl {
     }
 
     if (actualRef) {
-      const existing = this._typePromiseMap.get(actualRef);
+      const existing = this._typeMap.get(actualRef);
       if (existing) {
-        return existing;
+        return {
+          type: existing,
+          canInline: schema.hash == undefined
+        };
       }
 
       // The ref is the much better unique name of the type.
@@ -324,43 +397,40 @@ class OpenRpcParserImpl {
       }
     }
 
-    const schemaType = this.jsonSchemaToTypeUncached(schema, name, schema.hash == undefined);
+    const schemaType = this.jsonSchemaToTypeUncached(schema, name, actualRef);
 
     if (actualRef) {
-      this._typePromiseMap.set(actualRef, schemaType);
+      this._typeMap.set(actualRef, schemaType);
     }
 
-    return schemaType;
+    return {
+      type: schemaType,
+      canInline: schema.hash == undefined
+    };
   }
 
   private jsonSchemaToTypeUncached(
     schema: Dereferenced<JSONSchema7Definition | OpenApiJSONSchema7Definition>,
     name: TypeName,
-    canInline: boolean
-  ): SchemaToTypeResult {
+    actualRef: string | undefined
+  ): OmniType {
 
     if (typeof schema.obj == 'boolean') {
       return {
-        type: {
           name: 'boolean',
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.BOOL,
-        },
-        canInline: false
       };
     }
 
     const nonClassType = this.jsonSchemaToNonClassType(schema, name);
 
     if (nonClassType) {
-      return {
-        type: nonClassType,
-        canInline: canInline,
-      };
+      return nonClassType;
     }
 
     const type: OmniObjectType = {
-      name: name, // () => names.map(it => Naming.unwrap(it)).join('_'),
+      name: name,
       nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : (schema.obj.type ? String(schema.obj.type) : undefined),
       kind: OmniTypeKind.OBJECT,
       description: schema.obj.description,
@@ -377,6 +447,14 @@ class OpenRpcParserImpl {
             : true
       )
     };
+
+    if (actualRef) {
+
+      // Need to save it to the type map as soon as we can.
+      // Otherwise we might end up with recursive loops in the schema.
+      // This way we might be able to mitigate most of them.
+      this._typeMap.set(actualRef, type);
+    }
 
     const properties: OmniProperty[] = [];
     const requiredProperties: OmniProperty[] = [];
@@ -402,14 +480,7 @@ class OpenRpcParserImpl {
       // TODO: Make this general, so that all other places call it.
     }
 
-    const extended = this.extendOrEnhanceClassType(schema, type, name);
-    return {
-      type: extended,
-
-      // If this type is inline in the JSON Schema, without being referenced as a ref:
-      // Then we might possibly be able to merge this type with the caller, if it wants to.
-      canInline: canInline
-    };
+    return this.extendOrEnhanceClassType(schema, type, name);
   }
 
   private jsonSchemaToNonClassType(schema: Dereferenced<JSONSchema7Definition>, name: TypeName): OmniType | undefined {
@@ -490,9 +561,9 @@ class OpenRpcParserImpl {
       }
     }
 
-    // todo: fix back the commented out mergeType -- probable problem
     if (schema.obj.allOf) {
-      for (const subType of schema.obj.allOf.map(it => this.jsonSchemaToType(name, this._deref.get(it, schema.root), undefined))) {
+      for (const entry of schema.obj.allOf) {
+        const subType = this.jsonSchemaToType(name, this._deref.get(entry, schema.root), undefined);
         if (subType.canInline) {
           // This schema can actually just be consumed by the parent type.
           // This happens if the sub-schema is anonymous and never used by anyone else.
@@ -514,24 +585,39 @@ class OpenRpcParserImpl {
       compositionsNot = (this.jsonSchemaToType(name, {obj: schema.obj.not, root: schema.root}, undefined)).type;
     }
 
-    let discriminatorMapping: OmniCompositionMapping[] = [];
+    let subTypeHints: OmniSubTypeHint[] | undefined = undefined;
     const discriminatorAware = this.getDiscriminatorAware(schema);
     if (discriminatorAware) {
 
       // This is an OpenApi JSON Schema.
       // Discriminators do not actually exist in JSONSchema, but it is way too useful to not make use of.
       // I think most people would think that this is supported for OpenRpc as well, as it should be.
-      discriminatorMapping = this.getDiscriminatorMapping(discriminatorAware);
+      subTypeHints = this.getSubTypeHints(discriminatorAware, type);
     }
 
-    const extendedBy = CompositionUtil.getCompositionOrExtensionType(
+    let extendedBy = CompositionUtil.getCompositionOrExtensionType(
       compositionsAnyOfOr,
       compositionsAllOfAnd,
       compositionsOneOfOr,
-      compositionsNot,
-      discriminatorMapping.length > 0 ? discriminatorMapping : undefined,
+      compositionsNot
     );
 
+    if (extendedBy && subTypeHints && subTypeHints.length > 0) {
+
+      // We have subTypeHints, and also an extension.
+      // Right now we will skip the extension if it is a composition type.
+      // NOTE: This is most likely incorrect
+      // TODO: Need to figure out a better and more reliable way of handling this
+      // TODO: Need a way to "minimize" tbe given composition, by removing the types that are mapped
+      //        Then we keep what is left, if anything is left.
+      if (extendedBy.kind == OmniTypeKind.COMPOSITION) {
+        extendedBy = undefined;
+      }
+    }
+
+    // TODO: Reintroduce this someday? Should we ever do this to the OmniModel,
+    //        and not delegate specific cleanup to the target language?
+    /*
     if (extendedBy && this.canBeReplacedWithExtension(type, extendedBy)) {
       // Simplify empty types by only returning the inner content.
       // This is likely a bad idea... will see how it works in the future.
@@ -546,21 +632,23 @@ class OpenRpcParserImpl {
         }
       };
     }
+    */
 
+    type.subTypeHints = subTypeHints;
     type.extendedBy = extendedBy;
     return type;
   }
 
-  private canBeReplacedWithExtension(type: OmniObjectType, extension: OmniType): boolean {
-
-    if (type.additionalProperties == undefined && type.properties.length == 0) {
-      if (extension.kind != OmniTypeKind.COMPOSITION) {
-        return true;
-      }
-    }
-
-    return false;
-  }
+  // private canBeReplacedWithExtension(type: OmniObjectType, extension: OmniType): boolean {
+  //
+  //   if (type.additionalProperties == undefined && type.properties.length == 0) {
+  //     if (extension.kind != OmniTypeKind.COMPOSITION) {
+  //       return true;
+  //     }
+  //   }
+  //
+  //   return false;
+  // }
 
   private getDiscriminatorAware(
     schema: Dereferenced<JSONSchema7Definition | OpenApiJSONSchema7Definition>
@@ -582,12 +670,12 @@ class OpenRpcParserImpl {
     return undefined;
   }
 
-  private getDiscriminatorMapping(schema: Dereferenced<OpenApiJSONSchema7Definition>): OmniCompositionMapping[] {
+  private getSubTypeHints(schema: Dereferenced<OpenApiJSONSchema7Definition>, type: OmniObjectType): OmniSubTypeHint[] | undefined {
 
-    const mappings: OmniCompositionMapping[] = [];
+    const subTypeHints: OmniSubTypeHint[] = [];
 
     if (typeof schema.obj == 'boolean') {
-      return mappings;
+      return undefined;
     }
 
     const mapping = schema.obj.discriminator.mapping;
@@ -603,13 +691,17 @@ class OpenRpcParserImpl {
         try {
 
           const deref = this._deref.getFromRef<JSONSchema7>(ref, undefined, schema.root);
-
           const type = this.jsonSchemaToType(deref.hash || ref, deref, undefined);
 
-          mappings.push({
+          subTypeHints.push({
             type: type.type,
-            propertyName: discriminatorPropertyName, // TODO: Change this to just the property name string, let it be resolved later?
-            propertyValue: key,
+            qualifiers: [
+              {
+                path: [discriminatorPropertyName],
+                operator: OmniComparisonOperator.EQUALS,
+                value: key
+              }
+            ]
           });
 
           // TODO: If "mappings" is given, then add that class as extension to all classes being pointed to
@@ -618,7 +710,7 @@ class OpenRpcParserImpl {
 
         } catch (ex) {
           throw new Error(
-            `Could not find schema for mapping ${ref}`,
+            `Could not find schema for mapping ${ref}: ${String(ex)}`,
             {cause: (ex instanceof Error) ? ex : undefined}
           );
         }
@@ -628,29 +720,64 @@ class OpenRpcParserImpl {
     const subSchemas = (schema.obj.anyOf || []).concat(schema.obj.oneOf || []);
     if (subSchemas.length > 0) {
 
+      // TODO: If if is "oneOf" and no other, then those should become SUB-TYPES! Make sure it is so!
       for (const subSchema of subSchemas) {
 
         const deref = this._deref.get(subSchema, schema.root);
-        if (deref.hash) {
-
-          const lastSlashIndex = deref.hash.lastIndexOf('/');
-          const supposedPropertyValue = deref.hash.substring(lastSlashIndex + 1);
-          const existingMapping = mappings.find(it => it.propertyValue == supposedPropertyValue);
-          if (!existingMapping) {
-            mappings.push({
-              type: this.jsonSchemaToType(deref.hash, deref, undefined).type,
-              propertyName: discriminatorPropertyName,
-              propertyValue: supposedPropertyValue,
-            })
-          }
+        if (!deref.hash) {
+          continue;
         }
+
+        const lastSlashIndex = deref.hash.lastIndexOf('/');
+        const supposedPropertyValue = deref.hash.substring(lastSlashIndex + 1);
+        const existingMapping = subTypeHints.find(it => it.qualifiers.find(q => (q.value == supposedPropertyValue)));
+        if (existingMapping) {
+          continue;
+        }
+
+        const subType = this.jsonSchemaToType(deref.hash, deref, undefined).type;
+        if (subTypeHints.find(it => it.type == subType)) {
+          logger.debug(`Skipping ${discriminatorPropertyName} as ${Naming.unwrap(subType.name)} since it has a custom key`);
+          continue;
+        }
+
+        subTypeHints.push({
+          type: subType,
+          qualifiers: [
+            {
+              path: [discriminatorPropertyName],
+              operator: OmniComparisonOperator.EQUALS,
+              value: supposedPropertyValue
+            }
+          ]
+        })
+
+      }
+    } else {
+
+      // This schema does not contain any sub-schemas, so we cannot know which types that uses this schema.
+      // HOWEVER, we can do that in post, after all other processing has been done.
+      // NOTE: It might be beneficial to do this every time, even if there are sub-schemas provided.
+      if (this._options.autoTypeHints) {
+        this._postDiscriminatorMapping.push({
+          type: type,
+          schema: schema
+        });
       }
     }
 
-    return mappings;
+    if (subTypeHints.length == 0) {
+      return undefined;
+    }
+
+    return subTypeHints;
   }
 
-  private getArrayItemType(schema: Dereferenced<JSONSchema7Definition>, items: JSONSchema7Items, name: TypeName | undefined): OmniArrayTypes {
+  private getArrayItemType(
+    schema: Dereferenced<JSONSchema7Definition>,
+    items: JSONSchema7Items,
+    name: TypeName | undefined
+  ): OmniArrayTypes {
 
     if (typeof schema.obj == 'boolean') {
       throw new Error(`The schema object should not be able to be a boolean`);
@@ -685,7 +812,7 @@ class OpenRpcParserImpl {
       const staticArrayTypes = items.map(it => {
         const derefArrayItem = this._deref.get(it, schema.root);
         // NOTE: The name below is probably extremely wrong. Fix once we notice a problem.
-        return this.jsonSchemaToType(derefArrayItem.hash || 'UnknownArrayItem', derefArrayItem,undefined);
+        return this.jsonSchemaToType(derefArrayItem.hash || 'UnknownArrayItem', derefArrayItem, undefined);
       });
 
       const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));

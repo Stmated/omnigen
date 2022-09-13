@@ -5,12 +5,11 @@ import {
   OmniModel, OmniProperty, OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
-  OpenRpcParser, ParserManager,
-  SchemaFile, TypeName
+  TypeName
 } from '../src';
 import fs from 'fs/promises';
 import {Naming} from '../src/parse/Naming';
-import {MethodDeclaration, CompilationUnit, DEFAULT_JAVA_OPTIONS, JavaVisitor} from '../src/modules/java';
+import {MethodDeclaration, CompilationUnit, JavaVisitor} from '../src/modules/java';
 import {IOptions} from '../src/options';
 import AbstractNode from '../src/cst/AbstractNode';
 import {VisitorFactoryManager} from '../src/visit/VisitorFactoryManager';

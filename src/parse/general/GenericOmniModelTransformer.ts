@@ -1,7 +1,7 @@
 import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {
   OmniGenericSourceIdentifierType,
-  OmniGenericSourceType,
+  OmniGenericSourceType, OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniModel,
   OmniObjectType,
@@ -39,8 +39,8 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
   transformModel(model: OmniModel, options: JavaOptions): void {
 
     // Go through all types.
-    // If many types have the exact same properties with the same names
-    // But if the only thing differing are the types, then replace with generic source and target types.
+    // If many types have the exact same properties with the same names,
+    // but the only thing differing are the types, then replace with generic source and target types.
 
     const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
     const signatureMap = new Map<string, SignatureInfo>();
@@ -104,7 +104,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
     const genericSource: OmniGenericSourceType = {
       // TODO: There should not be a name here, it should always be the name of the inner class
-      name: (duplicateFn) => `Source${Naming.safer(info.extendedBy, duplicateFn)}`,
+      name: info.extendedBy.name, // (duplicateFn) => `Source${Naming.safer(info.extendedBy, duplicateFn)}`,
       kind: OmniTypeKind.GENERIC_SOURCE,
       of: info.extendedBy,
       sourceIdentifiers: [],
@@ -203,20 +203,24 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
               );
               allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
 
-              const from = Naming.safer(genericTargetType);
-              const to = Naming.safer(allowedGenericTargetType);
-              logger.warn(`Changing generic type from ${from} to ${to}`);
-              genericTargetType = allowedGenericTargetType;
+              if (JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType) != genericTargetType) {
+                const from = Naming.safer(genericTargetType);
+                const to = Naming.safer(allowedGenericTargetType);
+                logger.warn(`Changing generic type from ${from} (${genericTargetType.kind}) to ${to} (${allowedGenericTargetType.kind})`);
+                genericTargetType = allowedGenericTargetType;
+              }
               break;
           }
         }
 
-        genericTarget.targetIdentifiers.push({
+        const targetIdentifier: OmniGenericTargetIdentifierType = {
           name: `GenericTargetFor${Naming.safer(subType)}${pascalCase(propertyName)}`,
           kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
           type: genericTargetType,
           sourceIdentifier: generic.identifier
-        });
+        };
+
+        genericTarget.targetIdentifiers.push(targetIdentifier);
       }
 
       if (genericTarget.targetIdentifiers.length == 0) {
@@ -256,7 +260,10 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     return genericSource;
   }
 
-  private removeStaticTypePropertyFromSubType(info: SignatureInfo, sourceIdentifierAndPropertyNames: SourceIdentifierAndPropertyName[]): void {
+  private removeStaticTypePropertyFromSubType(
+    info: SignatureInfo,
+    sourceIdentifierAndPropertyNames: SourceIdentifierAndPropertyName[]
+  ): void {
 
     for (const classType of info.subTypes) {
       for (const propertyName of info.propertyNames) {

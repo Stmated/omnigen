@@ -69,10 +69,12 @@ export class JavaUtil {
 
       // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
       //        Right now this is locked to this part, and difficult to change
-      const rawName = JavaUtil.getName({...args, ...{type: args.type.source.of}});
+      const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});
       const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
       const genericTypeString = genericTypes.join(', ');
       return `${rawName}<${genericTypeString}>`;
+
+      // TODO: Fix the replacement of recursive generics -- look at JsonRpcRequest, it it pointing to the wrong type
 
     } else if (args.type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER || args.type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
 
@@ -342,7 +344,8 @@ export class JavaUtil {
     }
 
     if (a.kind == OmniTypeKind.PRIMITIVE) {
-      if (b.kind == OmniTypeKind.PRIMITIVE) {
+      // NOTE: Must nullable be equal? Or do we return the nullable type (if exists) as the common denominator?
+      if (b.kind == OmniTypeKind.PRIMITIVE && a.nullable == b.nullable) {
         if (a.primitiveKind == b.primitiveKind) {
           return a;
         }

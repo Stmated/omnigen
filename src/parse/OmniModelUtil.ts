@@ -117,7 +117,7 @@ export class OmniModelUtil {
       if (this.traverseTypesInternal(type.keyType, depth, callback) == 'abort') return 'abort';
       if (this.traverseTypesInternal(type.valueType, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-      if (this.traverseTypesInternal(type.of, depth, callback) == 'abort') return 'abort';
+      //if (this.traverseTypesInternal(type.of, depth, callback) == 'abort') return 'abort';
       if (this.traverseTypesInternal(type.sourceIdentifiers, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       if (this.traverseTypesInternal(type.targetIdentifiers, depth, callback) == 'abort') return 'abort';

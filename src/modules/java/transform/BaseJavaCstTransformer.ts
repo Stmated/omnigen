@@ -6,7 +6,7 @@ import {
   OmniCompositionXORType,
   OmniEnumType,
   OmniExamplePairing,
-  OmniGenericSourceIdentifierType,
+  OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniGenericTargetType,
   OmniInterfaceType,
   OmniLinkMapping,
   OmniModel,
@@ -17,7 +17,7 @@ import {
   OmniReferenceType,
   OmniType,
   OmniTypeKind,
-  PrimitiveNullableKind
+  PrimitiveNullableKind, TypeName
 } from '@parse';
 import * as Java from '@java/cst';
 import {camelCase, constantCase, pascalCase} from 'change-case';
@@ -82,6 +82,10 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const typeNames: string[] = [];
     for (const type of exportableTypes.all) {
+      if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
+        continue;
+      }
+
       const typeName = Naming.unwrap(type.name);
       if (!BaseJavaCstTransformer.PATTERN_IDENTIFIER.test(typeName)) {
         // The type does not have a valid name; what can we do about it?
@@ -128,11 +132,11 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
           // In Java only the XOR composition is rendered as a separate compilation unit.
           // That is because multiple inheritance does not exist, so it needs to be done manually.
-          this.transformObject(model, type, options, root, graph);
+          this.transformObject(model, type, undefined, options, root, graph);
         }
 
       } else if (type.kind == OmniTypeKind.OBJECT) {
-        this.transformObject(model, type, options, root, graph);
+        this.transformObject(model, type, undefined, options, root, graph);
       } else if (type.kind == OmniTypeKind.INTERFACE) {
         if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
           throw new Error(`Do not know yet how to handle a generic interface. Fix it.`)
@@ -140,7 +144,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           this.transformInterface(model, type, options, root, graph);
         }
       } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-        this.transformObject(model, type.of, options, root, graph, type.sourceIdentifiers);
+        this.transformObject(model, type.of, type, options, root, graph, type.sourceIdentifiers);
       } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
         // This is a target, it can/should never exist outside another type/as a top-level type.
         // It will checked for when adding/rendering the extension declarations.
@@ -294,6 +298,12 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     graph: DependencyGraph,
   ): void {
 
+    // const javaClassName = JavaUtil.getName({
+    //   type: type,
+    //   options: options,
+    //   relativeTo: options.package, // TODO: Bad and ugly, it might be a different package here
+    //   withSuffix: false
+    // });
     const javaClassName = Naming.unwrap(type.name);
     const javaType = new Java.Type(type);
 
@@ -338,6 +348,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   private transformObject(
     model: OmniModel,
     type: OmniObjectType | OmniCompositionType,
+    originalType: OmniGenericSourceType | undefined,
     options: JavaOptions,
     root: JavaCstRootNode,
     graph: DependencyGraph,
@@ -364,7 +375,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       }
     }
 
-    const javaClassName = Naming.safer(type);
+    const javaClassName = Naming.safer(originalType || type);
     const javaType = new Java.Type(type);
 
     let declaration: Java.ClassDeclaration | Java.InterfaceDeclaration | Java.GenericClassDeclaration;

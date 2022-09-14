@@ -4,6 +4,8 @@ import {camelCase, pascalCase} from 'change-case';
 import {
   OmniArrayType,
   OmniDictionaryType,
+  OmniGenericTargetIdentifierType,
+  OmniGenericTargetType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
@@ -451,38 +453,91 @@ export class JavaUtil {
           return a;
         }
       }
-    } else if (a.kind == OmniTypeKind.OBJECT) {
-      if (b.kind == OmniTypeKind.OBJECT) {
+    } else if (b.kind == OmniTypeKind.OBJECT || a.kind == OmniTypeKind.OBJECT) {
+      if (b.kind == OmniTypeKind.OBJECT && b.extendedBy) {
 
-        // If this fails, we should check the inheritance hierarchy.
-        // If they have anything at all in common here, then we can use that.
-        // TODO: We *maybe* could allow returning a composition here, but it's not really "legal" in Java.
-        if (b.extendedBy) {
-
-          // This will recursively search downwards in B's hierarchy.
-          const common = JavaUtil.getCommonDenominator(a, b.extendedBy);
-          if (common) {
-            return common;
-          }
+        // This will recursively search downwards in B's hierarchy.
+        const common = JavaUtil.getCommonDenominatorBetween(a, b.extendedBy);
+        if (common) {
+          return common;
         }
-
-        if (a.extendedBy) {
-          const common = JavaUtil.getCommonDenominator(a.extendedBy, b);
-          if (common) {
-            return common;
-          }
-        }
-
-        // Is there ever anything better we can do here? Like check if signatures are matching.
-        return {
-          name: () => `${Naming.safer(a)}Or${Naming.safer(b)}`,
-          kind: OmniTypeKind.UNKNOWN
-        };
       }
+
+      if (a.kind == OmniTypeKind.OBJECT && a.extendedBy) {
+        const common = JavaUtil.getCommonDenominatorBetween(a.extendedBy, b);
+        if (common) {
+          return common;
+        }
+      }
+
+      // Is there ever anything better we can do here? Like check if signatures are matching?
+      return {
+        name: () => `${Naming.safer(a)}Or${Naming.safer(b)}`,
+        kind: OmniTypeKind.UNKNOWN
+      };
     } else if (a.kind == OmniTypeKind.COMPOSITION) {
 
       // TODO: Do something here. There might be parts of 'a' and 'b' that are similar.
       // TODO: Should we then create a new composition type, or just return the first match?
+    } else if (a.kind == OmniTypeKind.GENERIC_TARGET) {
+      if (b.kind == OmniTypeKind.GENERIC_TARGET) {
+
+        // TODO: Improve! Right now we might need to move the generic target types into external types.
+        //        <T extends generated.omnigen.JsonRpcRequestParams<generated.omnigen.AccountLedgerRequestParamsData>>
+        //        <T extends generated.omnigen.JsonRpcRequestParams<generated.omnigen.AccountPayoutParamsData>>
+        //        =
+        //        <TData extends generated.omnigen.AbstractToTrustlyRequestParamsData, T extends generated.omnigen.JsonRpcRequestParams<TData>>
+        //        Then "params" should be of type T
+        //        So if they differ, we need to explode the types
+        //        Hopefully this will automatically be done recursively per level of inheritance so it's less complex to code!
+
+        if (a.source == b.source) {
+
+          const commonIdentifiers: OmniGenericTargetIdentifierType[] = [];
+
+          for (const aIdentifier of a.targetIdentifiers) {
+            for (const bIdentifier of b.targetIdentifiers) {
+              if (aIdentifier.sourceIdentifier == bIdentifier.sourceIdentifier) {
+                const commonIdentifierType = JavaUtil.getCommonDenominatorBetween(aIdentifier.type, bIdentifier.type);
+                if (!commonIdentifierType) {
+                  return undefined;
+                }
+
+                if (commonIdentifierType != aIdentifier.type) {
+
+                  commonIdentifiers.push({
+                    kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
+                    type: commonIdentifierType,
+                    name: (fn) => 'TData', // TODO: Figure out the name automatically based on... something
+                    sourceIdentifier: {
+                      // TODO: What? Is this even remotely correct?
+                      kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
+                      name: (fn) => 'TDataSource',
+                      lowerBound: commonIdentifierType,
+                    }
+                  });
+                }
+
+                commonIdentifiers.push({
+                  kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
+                  type: commonIdentifierType,
+                  name: commonIdentifierType.name,
+                  sourceIdentifier: aIdentifier.sourceIdentifier,
+                });
+              }
+            }
+          }
+
+          const commonGenericTarget: OmniGenericTargetType = {
+            ...a,
+            ...{
+              targetIdentifiers: commonIdentifiers,
+            }
+          };
+
+          return commonGenericTarget;
+        }
+      }
     }
 
     return undefined;

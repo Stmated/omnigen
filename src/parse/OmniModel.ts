@@ -358,6 +358,10 @@ export interface OmniGenericTargetIdentifierType extends OmniBaseType<OmniGeneri
 }
 
 type OmniGenericSourceKnownKind = OmniTypeKind.GENERIC_SOURCE;
+
+/**
+ * TODO: Rename this into a GenericDeclaration?
+ */
 export interface OmniGenericSourceType extends OmniBaseType<OmniGenericSourceKnownKind> {
   of: OmniObjectType;
   sourceIdentifiers: OmniGenericSourceIdentifierType[];

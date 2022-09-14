@@ -385,7 +385,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         javaType,
         new Java.GenericTypeDeclarationList(
           genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
-            new Java.Identifier(Naming.safer(it)),
+            new Java.Identifier(Naming.unwrap(it.name)),
             it.lowerBound ? new Java.Type(it.lowerBound) : undefined,
             it.upperBound ? new Java.Type(it.upperBound) : undefined,
           ))

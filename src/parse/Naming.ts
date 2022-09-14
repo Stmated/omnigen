@@ -31,14 +31,14 @@ export class Naming {
       // The type name contains a slash, which means it is probably a ref name.
       const nameParts = resolvedName.split('/');
       for (let i = nameParts.length - 1; i >= 0; i--) {
-        safeName = (pascalCase(nameParts[i]) + safeName);
+        safeName = (Naming.prefixedPascalCase(nameParts[i]) + safeName);
 
         if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
           return safeName;
         }
       }
     } else {
-      safeName = pascalCase(resolvedName);
+      safeName = Naming.prefixedPascalCase(resolvedName);
     }
 
     if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
@@ -48,7 +48,7 @@ export class Naming {
     if (classifier) {
 
       // Add the classifier, which might make class "Pet" into "ResponsePet"
-      safeName = `${pascalCase(classifier)}${safeName}`;
+      safeName = `${Naming.prefixedPascalCase(classifier)}${safeName}`;
       if (!hasDuplicateFn(safeName)) {
         return safeName;
       }
@@ -65,5 +65,14 @@ export class Naming {
     }
 
     throw new Error(`Could not build a safe unique name for '${safeName}'`);
+  }
+
+  private static prefixedPascalCase(name: string): string {
+
+    if (name.startsWith('_')) {
+      return `_${pascalCase(name)}`;
+    } else {
+      return pascalCase(name);
+    }
   }
 }

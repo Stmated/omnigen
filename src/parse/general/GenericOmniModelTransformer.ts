@@ -1,13 +1,14 @@
 import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {
   OmniGenericSourceIdentifierType,
-  OmniGenericSourceType, OmniGenericTargetIdentifierType,
+  OmniGenericSourceType,
+  OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniModel,
   OmniObjectType,
   OmniProperty,
   OmniType,
-  OmniTypeKind
+  OmniTypeKind, TypeName
 } from '@parse';
 import {Naming} from '@parse/Naming';
 import {JavaOptions, JavaUtil, PrimitiveGenerificationChoice} from '@java';
@@ -43,6 +44,10 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     // but the only thing differing are the types, then replace with generic source and target types.
 
     const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
+
+    // TODO: Need to sort the types so that the leaf types are done first
+    //        Otherwise we will find the wrong types when doing the "find common denominator" stuff
+
     const signatureMap = new Map<string, SignatureInfo>();
     for (const type of allTypes.all) {
 
@@ -103,8 +108,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     const genericEntries: SourceIdentifierAndPropertyName[] = [];
 
     const genericSource: OmniGenericSourceType = {
-      // TODO: There should not be a name here, it should always be the name of the inner class
-      name: info.extendedBy.name, // (duplicateFn) => `Source${Naming.safer(info.extendedBy, duplicateFn)}`,
+      name: info.extendedBy.name,
       kind: OmniTypeKind.GENERIC_SOURCE,
       of: info.extendedBy,
       sourceIdentifiers: [],
@@ -112,6 +116,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
     const wrapPrimitives = (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE);
     const genericPropertiesToAdd: OmniProperty[] = [];
+    const propertyNameExpansions = new Map<string, OmniGenericSourceIdentifierType[]>();
     for (const propertyName of info.propertyNames) {
       const uniqueTypesOnIndex = this.getUniqueTypes(info, propertyName);
 
@@ -121,7 +126,8 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
         continue;
       }
 
-      const genericName = (genericEntries.length == 0) ? 'T' : `T${genericEntries.length}`;
+      // TODO: There is a possibility that the generic identifiers could clash. We should suffix with numbers then.
+      const genericName = (genericEntries.length == 0) ? 'T' : `T${pascalCase(propertyName)}`;
       const commonDenominator = JavaUtil.getCommonDenominator(...uniqueTypesOnIndex);
       const genericCommonDenominator = commonDenominator
         ? JavaUtil.toGenericAllowedType(commonDenominator, wrapPrimitives)
@@ -129,6 +135,15 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
       const lowerBound = (genericCommonDenominator?.kind == OmniTypeKind.UNKNOWN)
         ? undefined
         : genericCommonDenominator;
+
+      if (lowerBound) {
+
+        const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfPossible(lowerBound, genericSource);
+
+        if (expandedGenericSourceIdentifier) {
+          propertyNameExpansions.set(propertyName, [expandedGenericSourceIdentifier]);
+        }
+      }
 
       // Set the common denominator to the generic index.
       // The common denominator could be undefined, then it has no type constraints.
@@ -184,33 +199,16 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
           continue;
         }
 
-        let genericTargetType = actualProperty.type;
-        if (!JavaUtil.isGenericAllowedType(genericTargetType)) {
+        const genericTargetType = this.getAllowedGenericPropertyType(
+          actualProperty.type,
+          genericSource,
+          subType,
+          propertyName,
+          options
+        );
 
-          switch (options.onPrimitiveGenerification) {
-            case PrimitiveGenerificationChoice.ABORT:
-              const targetName = Naming.safer(genericSource);
-              const ownerName = Naming.safer(subType);
-              logger.warn(
-                `Aborting generification of ${targetName}', since '${ownerName}' has primitive non-null property '${propertyName}'`
-              );
-              return undefined;
-            case PrimitiveGenerificationChoice.WRAP_OR_BOX:
-            case PrimitiveGenerificationChoice.SPECIALIZE:
-              const allowedGenericTargetType = JavaUtil.toGenericAllowedType(
-                genericTargetType,
-                (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
-              );
-              allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
-
-              if (JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType) != genericTargetType) {
-                const from = Naming.safer(genericTargetType);
-                const to = Naming.safer(allowedGenericTargetType);
-                logger.warn(`Changing generic type from ${from} (${genericTargetType.kind}) to ${to} (${allowedGenericTargetType.kind})`);
-                genericTargetType = allowedGenericTargetType;
-              }
-              break;
-          }
+        if (genericTargetType == undefined) {
+          return undefined;
         }
 
         const targetIdentifier: OmniGenericTargetIdentifierType = {
@@ -219,6 +217,20 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
           type: genericTargetType,
           sourceIdentifier: generic.identifier
         };
+
+        const expansions = propertyNameExpansions.get(propertyName);
+        if (expansions && expansions.length > 0) {
+
+          if (actualProperty.type.kind == OmniTypeKind.OBJECT) {
+            if (actualProperty.type.extendedBy && actualProperty.type.extendedBy.kind == OmniTypeKind.GENERIC_TARGET) {
+
+              // Let's expand the property's generic target identifiers into this current generic type.
+              // TODO: This should probably be done recursively somehow, so any depth is handled.
+              const targets = actualProperty.type.extendedBy.targetIdentifiers;
+              genericTarget.targetIdentifiers.push(...targets);
+            }
+          }
+        }
 
         genericTarget.targetIdentifiers.push(targetIdentifier);
       }
@@ -258,6 +270,68 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     this.removeStaticTypePropertyFromSubType(info, genericEntries);
 
     return genericSource;
+  }
+
+  private expandLowerBoundGenericIfPossible(
+    lowerBound: OmniType,
+    genericSource: OmniGenericSourceType
+  ): OmniGenericSourceIdentifierType | undefined {
+
+    if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
+
+      // We only expand the bound if it is a generic target
+      return undefined;
+    }
+
+    if (lowerBound.targetIdentifiers.length != 1) {
+
+      // For now we only support if there is one, for simplicity. Needs improvement in the future.
+      return undefined;
+    }
+
+    // The property generic type is itself a generic target.
+    // This can for example be: <T extends JsonRpcRequest<AbstractRequestParams>>
+    // To make it better and more exact to work with, we should replace with his:
+    // <TData extends AbstractRequestParams, T extends JsonRpcRequest<TData>>
+    const targetIdentifier = lowerBound.targetIdentifiers[0];
+    const sourceIdentifier: OmniGenericSourceIdentifierType = {
+      // TODO: The name should be automatically figure out somehow, unless specified in spec
+      //        Right now the name usually becomes 'TT' and easily clashes
+      name: this.getExplodedSourceIdentifierName(targetIdentifier.sourceIdentifier),
+      kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
+      lowerBound: targetIdentifier.type,
+    };
+
+    genericSource.sourceIdentifiers.push(sourceIdentifier);
+    lowerBound.targetIdentifiers[0] = {
+      kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
+      type: sourceIdentifier,
+      sourceIdentifier: sourceIdentifier,
+      name: sourceIdentifier.name
+    };
+
+    return sourceIdentifier;
+  }
+
+  private getExplodedSourceIdentifierName(identifier: OmniGenericSourceIdentifierType): TypeName {
+
+    return (fn) => {
+
+      if (identifier.lowerBound) {
+
+        // TODO: This needs to be improved someday. It should be based on the property name, and not guessed from type.
+        const lowerName = Naming.safer(identifier.lowerBound, fn);
+        const words = lowerName.split(/(?=[A-Z])/);
+        if (words.length > 2) {
+          return `T${words[words.length - 2]}${words[words.length - 1]}`;
+        } else if (words.length > 1) {
+          return `T${words[words.length - 1]}`;
+        }
+      }
+
+      const actualName = Naming.safer(identifier, fn);
+      return `TExploded${actualName}`;
+    };
   }
 
   private removeStaticTypePropertyFromSubType(
@@ -300,5 +374,45 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     }
 
     return propertyTypes;
+  }
+
+  private getAllowedGenericPropertyType(
+    genericTargetType: OmniType,
+    genericSource: OmniGenericSourceType,
+    subType: OmniObjectTypeWithExtension,
+    propertyName: string,
+    options: JavaOptions
+  ): OmniType | undefined {
+
+    if (!JavaUtil.isGenericAllowedType(genericTargetType)) {
+
+      switch (options.onPrimitiveGenerification) {
+        case PrimitiveGenerificationChoice.ABORT:
+          const targetName = Naming.safer(genericSource);
+          const ownerName = Naming.safer(subType);
+          logger.warn(
+            `Aborting generification of ${targetName}', since '${ownerName}' has primitive non-null property '${propertyName}'`
+          );
+          return undefined;
+        case PrimitiveGenerificationChoice.WRAP_OR_BOX:
+        case PrimitiveGenerificationChoice.SPECIALIZE:
+          const allowedGenericTargetType = JavaUtil.toGenericAllowedType(
+            genericTargetType,
+            (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
+          );
+          allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
+
+          if (JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType) != genericTargetType) {
+            const from = Naming.safer(genericTargetType);
+            const to = Naming.safer(allowedGenericTargetType);
+            logger.warn(`Changing generic type from ${from} (${genericTargetType.kind}) to ${to} (${allowedGenericTargetType.kind})`);
+            genericTargetType = allowedGenericTargetType;
+          }
+          break;
+      }
+    }
+
+    // TODO: Replace with multiple return points instead of replacing variable
+    return genericTargetType;
   }
 }

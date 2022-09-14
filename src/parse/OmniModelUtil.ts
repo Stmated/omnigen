@@ -78,14 +78,7 @@ export class OmniModelUtil {
       return;
     }
 
-    // Callback self, and then try to find recursive types.
-    switch (callback(type, depth)) {
-      case 'abort':
-        return 'abort';
-      case 'skip':
-        // 'skip' will not be propagated, but will simply not go deeper.
-        return 'skip';
-    }
+
 
     if (type.kind == OmniTypeKind.OBJECT) {
       if (this.traverseTypesInternal(type.extendedBy, depth + 1, callback) == 'abort') return 'abort';
@@ -126,6 +119,15 @@ export class OmniModelUtil {
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
       if (this.traverseTypesInternal(type.lowerBound, depth, callback) == 'abort') return 'abort';
       if (this.traverseTypesInternal(type.upperBound, depth, callback) == 'abort') return 'abort';
+    }
+
+    // Callback self, and then try to find recursive types.
+    switch (callback(type, depth)) {
+      case 'abort':
+        return 'abort';
+      case 'skip':
+        // 'skip' will not be propagated, but will simply not go deeper.
+        return 'skip';
     }
   }
 

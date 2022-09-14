@@ -178,7 +178,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(root).toBeDefined();
 
-    expect(root.children).toHaveLength(21);
+    expect(root.children).toHaveLength(22);
 
     expect(model).toBeDefined();
   });
@@ -191,7 +191,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(root).toBeDefined();
 
-    expect(root.children).toHaveLength(21);
+    expect(root.children).toHaveLength(16);
 
     expect(model).toBeDefined();
   });

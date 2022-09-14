@@ -1,19 +1,29 @@
 import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
-  BooleanLiteralCtx,
+  BooleanLiteralCtx, ExtendsInterfacesCtx,
   FieldDeclarationCtx,
   FloatingPointLiteralCtx,
   IntegerLiteralCtx,
-  LiteralCtx, MethodDeclaratorCtx, NormalInterfaceDeclarationCtx
+  LiteralCtx,
+  MethodDeclaratorCtx,
+  NormalInterfaceDeclarationCtx,
+  SuperclassCtx,
+  SuperinterfacesCtx,
+  VariableDeclaratorIdCtx
 } from 'java-parser';
+
+export type FoundField = {names: string[], ctx: FieldDeclarationCtx};
 
 export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   readonly foundInterfaces: string[] = [];
   readonly foundMethods: string[] = [];
   readonly foundMethodArguments: any[][] = [];
-  readonly foundFields: FieldDeclarationCtx[] = [];
+  readonly foundFields: FoundField[] = [];
   readonly foundLiterals: any[] = [];
+
+  readonly foundSuperClasses: string[] = [];
+  readonly foundSuperInterfaces: string[] = [];
 
   normalInterfaceDeclaration(ctx: NormalInterfaceDeclarationCtx, param?: any): any {
     if (ctx.typeIdentifier) {
@@ -24,11 +34,6 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
     }
     return super.normalInterfaceDeclaration(ctx, param);
   }
-
-  // methodDeclaration(ctx: MethodDeclarationCtx, param?: any): any {
-  //   this.foundMethods.push(ctx.methodHeader[0].children.methodDeclarator[0].children.Identifier[0].image);
-  //   return super.methodDeclaration(ctx, param);
-  // }
 
   methodDeclarator(ctx: MethodDeclaratorCtx, param?: any): any {
     this.foundMethods.push(ctx.Identifier[0].image);
@@ -41,8 +46,52 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   }
 
   fieldDeclaration(ctx: FieldDeclarationCtx, param?: any): any {
-    this.foundFields.push(ctx);
+
+    // TODO: Find the name of the field, and add it along with the found fields as a meta type!
+    const identifiers: string[] = [];
+    for (const list of ctx.variableDeclaratorList) {
+      for (const dec of list.children.variableDeclarator) {
+        for (const id of dec.children.variableDeclaratorId) {
+          for (const identifier of id.children.Identifier) {
+            identifiers.push(identifier.image);
+          }
+        }
+      }
+    }
+
+    this.foundFields.push({
+      names: identifiers,
+      ctx: ctx
+    });
+
     return super.fieldDeclaration(ctx, param);
+  }
+
+  extendsInterfaces(ctx: ExtendsInterfacesCtx, param?: any): any {
+
+    return super.extendsInterfaces(ctx, param);
+  }
+
+  superclass(ctx: SuperclassCtx, param?: any): any {
+    for (const parent of ctx.classType) {
+      for (const identifier of parent.children.Identifier) {
+        this.foundSuperClasses.push(identifier.image);
+      }
+    }
+    return super.superclass(ctx, param);
+  }
+
+  superinterfaces(ctx: SuperinterfacesCtx, param?: any): any {
+    for (const parent of ctx.interfaceTypeList) {
+      for (const interfaceType of parent.children.interfaceType) {
+        for (const classType of interfaceType.children.classType) {
+          for (const identifier of classType.children.Identifier) {
+            this.foundSuperInterfaces.push(identifier.image);
+          }
+        }
+      }
+    }
+    return super.superinterfaces(ctx, param);
   }
 
   literal(ctx: LiteralCtx, param?: any): any {

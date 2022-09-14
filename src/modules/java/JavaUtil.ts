@@ -2,6 +2,7 @@ import * as Java from './cst/JavaCstTypes';
 import {ModifierType} from '@java/cst';
 import {camelCase, pascalCase} from 'change-case';
 import {
+  CompositionKind,
   OmniArrayType,
   OmniDictionaryType,
   OmniGenericTargetIdentifierType,
@@ -757,6 +758,11 @@ export class JavaUtil {
   public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
 
     const properties: OmniProperty[] = [];
+    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
+
+      // Collecting properties from an XOR composition makes no sense, since we cannot know which needs implementing.
+      return properties;
+    }
 
     OmniModelUtil.traverseTypes(type, (localType, depth) => {
 
@@ -769,6 +775,8 @@ export class JavaUtil {
         if (localType.of != type) {
           properties.push(...OmniModelUtil.getPropertiesOf(localType.of));
         }
+      } else if (localType.kind == OmniTypeKind.COMPOSITION && localType.compositionKind == CompositionKind.XOR) {
+        return 'skip';
       }
 
       return undefined;

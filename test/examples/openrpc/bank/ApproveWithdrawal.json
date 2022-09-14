@@ -15,7 +15,7 @@
           }
         ],
         "result": {
-          "name": "ApproveWithdrawalResponse",
+          "name": "ApproveWithdrawalResponseData",
           "schema": {
             "$ref": "#/components/schemas/ApproveWithdrawalResponseData"
           }

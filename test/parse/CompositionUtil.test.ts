@@ -34,9 +34,9 @@ describe('Test Composition Types', () => {
     assert(result);
     assert(result.kind == OmniTypeKind.COMPOSITION);
     assert(result.compositionKind == CompositionKind.AND);
-    assert(result.types.length == 2);
-    assert(result.types[0].kind == OmniTypeKind.PRIMITIVE);
-    assert(result.types[1].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes.length == 2);
+    assert(result.andTypes[0].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes[1].kind == OmniTypeKind.PRIMITIVE);
   });
 
   test('allOf1+anyOf1', async () => {
@@ -48,9 +48,9 @@ describe('Test Composition Types', () => {
     assert(result);
     assert(result.kind == OmniTypeKind.COMPOSITION);
     assert(result.compositionKind == CompositionKind.AND);
-    assert(result.types.length == 2);
-    assert(result.types[0].kind == OmniTypeKind.PRIMITIVE);
-    assert(result.types[1].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes.length == 2);
+    assert(result.andTypes[0].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes[1].kind == OmniTypeKind.PRIMITIVE);
   });
 
   test('allOf1+anyOf2', async () => {
@@ -65,11 +65,11 @@ describe('Test Composition Types', () => {
     assert(result);
     assert(result.kind == OmniTypeKind.COMPOSITION);
     assert(result.compositionKind == CompositionKind.AND);
-    assert(result.types.length == 2);
-    assert(result.types[0].kind == OmniTypeKind.COMPOSITION);
-    assert(result.types[0].types.length == 2);
-    assert(result.types[0].compositionKind == CompositionKind.OR);
-    assert(result.types[1].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes.length == 2);
+    assert(result.andTypes[0].kind == OmniTypeKind.COMPOSITION);
+    assert(result.andTypes[0].compositionKind == CompositionKind.OR);
+    assert(result.andTypes[0].orTypes.length == 2);
+    assert(result.andTypes[1].kind == OmniTypeKind.PRIMITIVE);
   });
 
   test('allOf1+oneOf2', async () => {
@@ -85,11 +85,11 @@ describe('Test Composition Types', () => {
     assert(result);
     assert(result.kind == OmniTypeKind.COMPOSITION);
     assert(result.compositionKind == CompositionKind.AND);
-    assert(result.types.length == 2);
-    assert(result.types[0].kind == OmniTypeKind.PRIMITIVE);
-    assert(result.types[1].kind == OmniTypeKind.COMPOSITION);
-    assert(result.types[1].types.length == 2);
-    assert(result.types[1].compositionKind == CompositionKind.XOR);
+    assert(result.andTypes.length == 2);
+    assert(result.andTypes[0].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes[1].kind == OmniTypeKind.COMPOSITION);
+    assert(result.andTypes[1].compositionKind == CompositionKind.XOR);
+    assert(result.andTypes[1].xorTypes.length == 2);
   });
 
   test('allOf1+oneOf2+not', async () => {
@@ -106,15 +106,17 @@ describe('Test Composition Types', () => {
     assert(result);
     assert(result.kind == OmniTypeKind.COMPOSITION);
     assert(result.compositionKind == CompositionKind.AND);
-    assert(result.types.length == 2);
-    assert(result.types[0].kind == OmniTypeKind.COMPOSITION);
-    assert(result.types[0].types[0].kind == OmniTypeKind.PRIMITIVE);
-    assert(result.types[0].types[1].kind == OmniTypeKind.COMPOSITION);
-    assert(result.types[0].types[1].types.length == 2);
-    assert(result.types[0].types[1].types[0].kind == OmniTypeKind.PRIMITIVE);
-    assert(result.types[0].types[1].types[1].kind == OmniTypeKind.PRIMITIVE);
-    assert(result.types[1].kind == OmniTypeKind.COMPOSITION);
-    assert(result.types[1].compositionKind == CompositionKind.NOT);
-    assert(result.types[1].types.length == 1);
+    assert(result.andTypes.length == 2);
+    assert(result.andTypes[0].kind == OmniTypeKind.COMPOSITION);
+    assert(result.andTypes[0].compositionKind == CompositionKind.AND);
+    assert(result.andTypes[0].andTypes[0].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes[0].andTypes[1].kind == OmniTypeKind.COMPOSITION);
+    assert(result.andTypes[0].andTypes[1].compositionKind == CompositionKind.XOR);
+    assert(result.andTypes[0].andTypes[1].xorTypes.length == 2);
+    assert(result.andTypes[0].andTypes[1].xorTypes[0].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes[0].andTypes[1].xorTypes[1].kind == OmniTypeKind.PRIMITIVE);
+    assert(result.andTypes[1].kind == OmniTypeKind.COMPOSITION);
+    assert(result.andTypes[1].compositionKind == CompositionKind.NOT);
+    assert(result.andTypes[1].notTypes.length == 1);
   });
 });

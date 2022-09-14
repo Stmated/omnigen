@@ -78,8 +78,6 @@ export class OmniModelUtil {
       return;
     }
 
-
-
     if (type.kind == OmniTypeKind.OBJECT) {
       if (this.traverseTypesInternal(type.extendedBy, depth + 1, callback) == 'abort') return 'abort';
       if (this.traverseTypesInternal(type.nestedTypes, depth + 1, callback) == 'abort') return 'abort';

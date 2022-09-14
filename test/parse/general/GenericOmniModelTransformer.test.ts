@@ -83,7 +83,7 @@ describe('Test CompositionDependencyUtil', () => {
     if (model.types[1].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
     if (model.types[2].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
 
-    expect(Naming.unwrap(model.types[0].name)).toEqual('SourceA');
+    expect(Naming.unwrap(model.types[0].name)).toEqual('A');
     expect(Naming.unwrap(model.types[0].of.name)).toEqual('A');
     expect(model.types[0].of).toEqual(a);
 

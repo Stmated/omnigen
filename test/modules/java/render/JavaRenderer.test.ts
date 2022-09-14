@@ -109,7 +109,7 @@ describe('Java Rendering', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'bank.json', DEFAULT_JAVA_OPTIONS);
+    const model = await TestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_JAVA_OPTIONS);
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer(javaOptions, (cu) => {
@@ -118,6 +118,71 @@ describe('Java Rendering', () => {
     const content = renderer.render(interpretation);
 
     expect(content).toBeDefined();
+  });
+
+  test('Test multiple inheritance (interfaces)', async () => {
+
+    const interpreter = new JavaInterpreter();
+    const model = await TestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_JAVA_OPTIONS);
+    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    const fileContents = new Map<string, string>();
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
+      fileContents.set(cu.fileName, cu.content);
+    });
+    renderer.render(interpretation);
+
+    const fileNames = [...fileContents.keys()];
+    expect(fileNames).toContain('A.java');
+    expect(fileNames).toContain('Abs.java');
+    expect(fileNames).toContain('AxOrB.java'); // TODO: Bad naming, it looks weird. Fix?
+    expect(fileNames).toContain('B.java');
+    expect(fileNames).toContain('C.java');
+    expect(fileNames).not.toContain('InterfaceOfA.java');
+    expect(fileNames).toContain('InterfaceOfB.java');
+    expect(fileNames).toContain('InterfaceOfC.java');
+    expect(fileNames).toContain('Out_2.java');
+
+    const a = getParsedContent(fileContents, 'A.java');
+    expect(a.foundFields).toHaveLength(1);
+    expect(a.foundFields[0].names).toHaveLength(1);
+    expect(a.foundFields[0].names[0]).toEqual('foo');
+    expect(a.foundMethods).toHaveLength(1);
+    expect(a.foundMethods[0]).toEqual('getFoo');
+    expect(a.foundSuperClasses).toHaveLength(1);
+    expect(a.foundSuperInterfaces).toHaveLength(0);
+
+    const b = getParsedContent(fileContents, 'B.java');
+    expect(b.foundSuperClasses).toHaveLength(1);
+    expect(b.foundSuperInterfaces).toHaveLength(1);
+    expect(b.foundMethods).toHaveLength(1);
+    expect(b.foundSuperClasses).toContain('Abs');
+    expect(b.foundSuperInterfaces).toContain('InterfaceOfB');
+
+    const c = getParsedContent(fileContents, 'C.java');
+    expect(c.foundSuperClasses).toHaveLength(1);
+    expect(c.foundSuperInterfaces).toHaveLength(1);
+    expect(c.foundMethods).toHaveLength(1);
+    expect(c.foundSuperClasses).toContain('Abs');
+    expect(c.foundSuperInterfaces).toContain('InterfaceOfC');
+
+    const eitherAorB = getParsedContent(fileContents, 'AxOrB.java');
+    expect(eitherAorB.foundFields).toHaveLength(3);
+    expect(eitherAorB.foundFields[0].names[0]).toEqual('_raw');
+    expect(eitherAorB.foundFields[1].names[0]).toEqual('_a');
+    expect(eitherAorB.foundFields[2].names[0]).toEqual('_b');
+    expect(eitherAorB.foundSuperClasses).toHaveLength(0);
+    expect(eitherAorB.foundSuperInterfaces).toHaveLength(0);
+
+    const out2 = getParsedContent(fileContents, 'Out_2.java');
+    expect(out2.foundFields).toHaveLength(2);
+    expect(out2.foundFields[0].names[0]).toEqual('bar');
+    expect(out2.foundFields[1].names[0]).toEqual('xyz');
+    expect(out2.foundSuperClasses).toHaveLength(1);
+    expect(out2.foundSuperInterfaces).toHaveLength(2);
+    expect(out2.foundSuperClasses[0]).toEqual('A');
+    expect(out2.foundSuperInterfaces[0]).toEqual('InterfaceOfB');
+    expect(out2.foundSuperInterfaces[1]).toEqual('InterfaceOfC');
   });
 
   test('Test inheritance of descriptions', async () => {
@@ -170,4 +235,20 @@ function getEndpointResult(model: OmniModel, endpointName: string): OmniOutput {
   }
 
   return endpoint.responses[0];
+}
+
+function getParsedContent(fileContents: Map<string, string>, fileName: string): ParsedJavaTestVisitor {
+
+  let cst: JavaParser.CstNode;
+  try {
+    cst = JavaParser.parse(fileContents.get(fileName) || '');
+    expect(cst).toBeDefined();
+  } catch (ex) {
+    throw new Error(`Could not parse '${fileName}'': ${ex}`, {cause: ex instanceof Error ? ex : undefined});
+  }
+
+  const visitor = new ParsedJavaTestVisitor();
+  visitor.visit(cst);
+
+  return visitor;
 }

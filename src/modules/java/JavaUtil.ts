@@ -26,6 +26,7 @@ interface FqnOptions {
   withSuffix?: boolean;
   options?: JavaOptions;
   relativeTo?: string;
+  implementation?: boolean;
 }
 
 export type FqnArgs = OmniType | FqnOptions;
@@ -45,12 +46,13 @@ export class JavaUtil {
     }
   }
 
-  public static getRelativeName(type: OmniType, options: JavaOptions, relativeTo = options.package): string {
+  public static getRelativeName(type: OmniType, options: JavaOptions, relativeTo = options.package, implementation?: boolean): string {
     return JavaUtil.getName({
       type: type,
       withSuffix: true,
       options: options,
-      relativeTo: relativeTo
+      relativeTo: relativeTo,
+      implementation: implementation
     });
   }
 
@@ -140,7 +142,8 @@ export class JavaUtil {
       }
     } else if (args.type.kind == OmniTypeKind.DICTIONARY) {
 
-      const mapClass = args.relativeTo ? `HashMap` : `java.lang.HashMap`;
+      const mapClassOrInterface = args.implementation == false ? 'Map' : 'HashMap';
+      const mapClass = args.relativeTo ? mapClassOrInterface : `java.lang.${mapClassOrInterface}`;
       if (args.withSuffix === false) {
         return mapClass;
       } else {

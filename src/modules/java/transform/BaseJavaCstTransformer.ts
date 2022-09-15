@@ -37,6 +37,7 @@ import {Naming} from '@parse/Naming';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 
 export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
@@ -153,7 +154,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
           throw new Error(`Do not know yet how to handle a generic interface. Fix it.`)
         } else {
-          this.transformInterface(model, type, options, root, graph);
+          this.transformInterface(type, options, root);
         }
       } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
         this.transformObject(model, type.of, type, options, root, graph, type.sourceIdentifiers);
@@ -244,8 +245,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       body,
     );
 
-    enumDeclaration.annotations = new Java.AnnotationList(...[]);
-    this.addGeneratedAnnotation(enumDeclaration.annotations);
+    JavaCstUtils.addGeneratedAnnotation(enumDeclaration);
 
     const comments = this.getCommentsForType(type, model, options);
     if (comments.length > 0) {
@@ -305,50 +305,20 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   }
 
   private transformInterface(
-    model: OmniModel,
     type: OmniInterfaceType,
     options: JavaOptions,
     root: JavaCstRootNode,
-    graph: DependencyGraph,
   ): void {
 
-    // const javaClassName = JavaUtil.getName({
-    //   type: type,
-    //   options: options,
-    //   relativeTo: options.package, // TODO: Bad and ugly, it might be a different package here
-    //   withSuffix: false
-    // });
-    const javaClassName = Naming.unwrap(type.name);
-    const javaType = new Java.Type(type);
-
-    const body = new Java.Block(
-      // TODO: Add all the method declarations (without bodies, since it's an interface)
-      // TODO: To make this a bit prettier, we should try and re-use as much of the rendering as possible.
-    );
-
     const declaration = new Java.InterfaceDeclaration(
-      javaType,
-      new Java.Identifier(javaClassName),
-      body,
+      new Java.Type(type),
+      new Java.Identifier(Naming.unwrap(type.name)),
+      new Java.Block(),
     );
 
-    declaration.annotations = new Java.AnnotationList(...[]);
-    this.addGeneratedAnnotation(declaration.annotations);
+    JavaCstUtils.addGeneratedAnnotation(declaration);
 
-    if (type.of.kind == OmniTypeKind.OBJECT) {
-
-      // Transform the object, but add no fields and only add the abstract method declaration (signature only)
-      for (const property of type.of.properties) {
-        body.children.push(
-          new Java.AbstractMethodDeclaration(
-            new Java.MethodDeclarationSignature(
-              new Java.Identifier(JavaUtil.getGetterName(property.propertyName || property.name, property.type)),
-              new Java.Type(property.type)
-            )
-          )
-        );
-      }
-    }
+    JavaCstUtils.addInterfaceProperties(type, declaration.body);
 
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(options.package),
@@ -432,8 +402,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     // TODO: Move into a separate transformer, and make it an option
-    declaration.annotations = new Java.AnnotationList(...[]);
-    this.addGeneratedAnnotation(declaration.annotations);
+    JavaCstUtils.addGeneratedAnnotation(declaration);
 
     const comments = this.getCommentsForType(type, model, options);
 
@@ -458,25 +427,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       ),
       declaration
     ));
-  }
-
-  private addGeneratedAnnotation(annotations: Java.AnnotationList): void {
-
-    annotations.children.push(
-      new Java.Annotation(
-        new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'javax.annotation.Generated', name: 'Generated'}),
-        new Java.AnnotationKeyValuePairList(
-          new Java.AnnotationKeyValuePair(
-            new Java.Identifier('value'),
-            new Java.Literal('omnigen')
-          ),
-          new Java.AnnotationKeyValuePair(
-            new Java.Identifier('date'),
-            new Java.Literal(new Date().toISOString())
-          )
-        )
-      )
-    );
   }
 
   private addExtendsAndImplements(

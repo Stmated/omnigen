@@ -402,10 +402,11 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
           );
           allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
 
-          if (JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType) != genericTargetType) {
+          const common = JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType);
+          if (common != genericTargetType) {
             const from = Naming.safer(genericTargetType);
             const to = Naming.safer(allowedGenericTargetType);
-            logger.warn(`Changing generic type from ${from} (${genericTargetType.kind}) to ${to} (${allowedGenericTargetType.kind})`);
+            logger.debug(`Changing generic type from ${from} (${genericTargetType.kind}) to ${to} (${allowedGenericTargetType.kind})`);
             genericTargetType = allowedGenericTargetType;
           }
           break;

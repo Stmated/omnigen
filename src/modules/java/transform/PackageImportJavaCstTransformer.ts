@@ -41,7 +41,7 @@ export class PackageImportJavaCstTransformer extends AbstractJavaCstTransformer 
           // If it contains a dot, then it is a class path and not a primitive.
           // We should also make the type local based on the current compilation unit's package.
           if (!node.getLocalName()) {
-            node.setLocalName(JavaUtil.getRelativeName(node.omniType, options));
+            node.setLocalName(JavaUtil.getRelativeName(node.omniType, options, options.package, node.implementation));
           }
 
           const nodePackage = JavaUtil.getPackageName(nodeImportName);

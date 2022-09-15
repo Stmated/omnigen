@@ -14,8 +14,6 @@ import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
 import {Naming} from '@parse/Naming';
 import {camelCase} from 'change-case';
 import * as Java from '@java/cst/index';
-import {sign} from 'crypto';
-import {JavaCstVisitor} from 'java-parser';
 
 export enum TokenType {
   ASSIGN,
@@ -54,6 +52,7 @@ export abstract class AbstractJavaNode extends AbstractNode {
 export class Type extends AbstractJavaNode {
   omniType: OmniType;
   private _localName?: string;
+  readonly implementation?: boolean;
 
   get array(): boolean {
     return this.omniType.kind == OmniTypeKind.ARRAY;
@@ -63,7 +62,8 @@ export class Type extends AbstractJavaNode {
     return JavaUtil.getFullyQualifiedName({
       type: this.omniType,
       options: options,
-      relativeTo: relativeTo
+      relativeTo: relativeTo,
+      implementation: this.implementation,
     });
   }
 
@@ -75,18 +75,15 @@ export class Type extends AbstractJavaNode {
     this._localName = value;
   }
 
-  constructor(omniType: OmniType) {
+  constructor(omniType: OmniType, implementation?: boolean) {
     super();
     this.omniType = omniType;
+    this.implementation = implementation;
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitType(this, visitor);
   }
-}
-
-export interface IWithChildren<T extends AbstractJavaNode> {
-  children: T;
 }
 
 export class Identifier extends AbstractJavaNode {
@@ -756,14 +753,38 @@ export class ConstructorDeclaration extends AbstractJavaNode {
   }
 }
 
+// export const AdditionalPropertiesKeyType: OmniPrimitiveType = {
+//   name: 'AdditionalPropertiesKeyType',
+//   kind: OmniTypeKind.PRIMITIVE,
+//   primitiveKind: OmniPrimitiveKind.STRING
+// };
+//
+// // TODO: Should this be "Unknown" or another type that is "Any"?
+// //  Difference between rendering as JsonNode and Object in some cases.
+// export const AdditionalPropertiesValueType: OmniUnknownType = {
+//   name: 'AdditionalPropertiesValueType',
+//   kind: OmniTypeKind.UNKNOWN,
+// }
+//
+// export const AdditionalPropertiesMapType: OmniDictionaryType = {
+//   name: 'AdditionalProperties',
+//   kind: OmniTypeKind.DICTIONARY,
+//   keyType: AdditionalPropertiesKeyType,
+//   valueType: AdditionalPropertiesValueType
+// };
+
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
+
+  readonly keyType: OmniPrimitiveType;
+  readonly valueType: OmniUnknownType;
+  readonly mapType: OmniDictionaryType;
 
   constructor() {
     super();
 
     // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
-    const keyType: OmniPrimitiveType = {
+    this.keyType = {
       name: () => 'AdditionalPropertiesKeyType',
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING
@@ -771,15 +792,15 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     // TODO: Should this be "Unknown" or another type that is "Any"?
     //  Difference between rendering as JsonNode and Object in some cases.
-    const valueType: OmniUnknownType = {
+    this.valueType = {
       name: () => 'AdditionalPropertiesValueType',
       kind: OmniTypeKind.UNKNOWN,
     }
-    const mapType: OmniDictionaryType = {
+    this.mapType = {
       name: () => 'AdditionalProperties',
       kind: OmniTypeKind.DICTIONARY,
-      keyType: keyType,
-      valueType: valueType
+      keyType: this.keyType,
+      valueType: this.valueType
     };
 
     const additionalPropertiesFieldIdentifier = new Identifier('_additionalProperties');
@@ -787,10 +808,13 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     const valueParameterIdentifier = new Identifier('value');
 
     const additionalPropertiesField = new Field(
-      new Type(mapType),
+      new Type(this.mapType, false),
       additionalPropertiesFieldIdentifier,
-      undefined,
-      new NewStatement(new Type(mapType))
+      new ModifierList(
+        new Modifier(ModifierType.PRIVATE),
+        new Modifier(ModifierType.FINAL)
+      ),
+      new NewStatement(new Type(this.mapType))
     );
 
     const addMethod = new MethodDeclaration(
@@ -802,8 +826,8 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
           primitiveKind: OmniPrimitiveKind.VOID
         }),
         new ArgumentDeclarationList(
-          new ArgumentDeclaration(new Type(keyType), keyParameterIdentifier),
-          new ArgumentDeclaration(new Type(valueType), valueParameterIdentifier)
+          new ArgumentDeclaration(new Type(this.keyType), keyParameterIdentifier),
+          new ArgumentDeclaration(new Type(this.valueType), valueParameterIdentifier)
         ),
       ),
       new Block(

@@ -252,10 +252,6 @@ export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKi
   extendedBy?: OmniType;
 }
 
-export enum OmniUnknownMode {
-
-}
-
 type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
 export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
   valueConstant?: unknown;

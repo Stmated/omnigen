@@ -13,8 +13,9 @@ describe('Java Rendering', () => {
 
   const javaOptions: JavaOptions = DEFAULT_JAVA_OPTIONS;
 
-  test('parseRenderOutputAll', async () => {
+  test('renderAll', async () => {
 
+    jest.setTimeout(10_000);
     for (const schemaName of TestUtils.getKnownSchemaNames()) {
 
       let fileNames: string[];
@@ -109,7 +110,7 @@ describe('Java Rendering', () => {
   test('Test specific rendering', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_JAVA_OPTIONS);
+    const model = await TestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_JAVA_OPTIONS);
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
     const renderer = new JavaRenderer(javaOptions, (cu) => {
@@ -238,6 +239,43 @@ describe('Java Rendering', () => {
     expect(tagOrString.foundLiterals[6]).toEqual("\"SpeciesB\"");
     expect(tagOrString.foundLiterals[7]).toEqual("\"foo\"");
     expect(tagOrString.foundLiterals[8]).toEqual(1337);
+  });
+
+  test('AdditionalProperties', async () => {
+
+    const interpreter = new JavaInterpreter();
+    const model = await TestUtils.readExample('openrpc', 'additional-properties.json', DEFAULT_JAVA_OPTIONS);
+    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    const fileContents = new Map<string, string>();
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
+      fileContents.set(cu.fileName, cu.content);
+    });
+
+    renderer.render(interpretation);
+
+    const filenames = [...fileContents.keys()];
+    expect(filenames).toHaveLength(11);
+    expect(filenames).toContain('Thing.java');
+    expect(filenames).toContain('IAdditionalProperties.java');
+
+    const thing = getParsedContent(fileContents, 'Thing.java');
+    expect(thing.foundMethods).toHaveLength(3);
+    expect(thing.foundMethods[0]).toEqual('getId');
+    expect(thing.foundMethods[1]).toEqual('addAdditionalProperty');
+    expect(thing.foundMethods[2]).toEqual('getAdditionalProperties');
+    expect(thing.foundSuperInterfaces).toHaveLength(1);
+    expect(thing.foundSuperInterfaces[0]).toEqual('IAdditionalProperties');
+    expect(thing.foundFields).toHaveLength(2);
+    expect(thing.foundFields[0].names[0]).toEqual('id');
+    expect(thing.foundFields[1].names[0]).toEqual('_additionalProperties');
+
+    const additional = getParsedContent(fileContents, 'IAdditionalProperties.java');
+    expect(additional.foundMethods).toHaveLength(1);
+    expect(additional.foundMethods[0]).toEqual('getAdditionalProperties');
+    expect(additional.foundSuperClasses).toHaveLength(0);
+    expect(additional.foundSuperInterfaces).toHaveLength(0);
+    expect(additional.foundFields).toHaveLength(0);
   });
 
   test('Test inheritance of descriptions', async () => {

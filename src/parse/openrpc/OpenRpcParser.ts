@@ -3,6 +3,7 @@ import {AbstractParser} from '@parse/AbstractParser';
 import {
   AllowedEnumOmniPrimitiveTypes,
   AllowedEnumTsTypes,
+  CompositionKind,
   JSONSchema7Items,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
@@ -24,6 +25,7 @@ import {
   OmniObjectType,
   OmniOutput,
   OmniPayloadPathQualifier,
+  OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
@@ -54,7 +56,7 @@ import {
   OpenrpcDocument,
   ServerObject,
 } from '@open-rpc/meta-schema';
-import {JSONSchema7, JSONSchema7Definition} from 'json-schema';
+import {JSONSchema7, JSONSchema7Definition, JSONSchema7Type} from 'json-schema';
 import {camelCase, pascalCase} from 'change-case';
 import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
@@ -198,7 +200,7 @@ class OpenRpcParserImpl {
     const continuations = endpoints.flatMap(it => this.toOmniLinkFromDocMethods(it, endpoints));
 
     // Now find all the types that were not referenced by a method, but is in the contract.
-    // We mos likely still want those types to be included.
+    // We most likely still want those types to be included.
     // const extraTypes: OmniType[] = [];
     if (this.doc.components?.schemas) {
       for (const key of Object.keys(this.doc.components.schemas)) {
@@ -495,30 +497,30 @@ class OpenRpcParserImpl {
       } else if (schema.obj.type !== 'object') {
 
         // TODO: This is not lossless if the primitive has comments/summary/etc
-        const t = this.typeToGenericKnownType(schema.obj.type, schema.obj.format, schema.obj.enum);
-        const schemaType = schema.obj.type;
-        if (t.length == 1) {
-          return {
-            name: name ?? schemaType,
-            kind: t[0],
-            description: schema.obj.description,
-          };
-        } else if (t.length == 3) {
-          return {
-            name: name ?? schemaType,
-            kind: t[0],
-            primitiveKind: t[1],
-            enumConstants: t[2],
-            description: schema.obj.description,
-          };
-        } else {
-          return {
-            name: name ?? schemaType,
-            kind: t[0],
-            primitiveKind: t[1],
-            description: schema.obj.description,
-          };
-        }
+        const enumValues = schema.obj.const ? [schema.obj.const] : schema.obj.enum;
+        return this.typeToGenericKnownType(name, schema.obj.type, schema.obj.format, schema.obj.description, enumValues);
+        // const schemaType = schema.obj.type;
+        // if (t.length == 1) {
+        //   // return ;
+        // } else if (t.length == 3) {
+        //   if (t[0] == OmniTypeKind.ENUM) {
+        //     return {
+        //       name: name ?? schemaType,
+        //       kind: t[0],
+        //       primitiveKind: t[1],
+        //       enumConstants: t[2],
+        //       description: schema.obj.description,
+        //     };
+        //   } else {
+        //     return {
+        //       name: name ?? schemaType,
+        //       kind: t[0],
+        //       primitiveKind: t[1],
+        //       valueConstant: t[2],
+        //       description: schema.obj.description,
+        //     };
+        //   }
+        // }
       } else {
         return undefined;
       }
@@ -556,7 +558,15 @@ class OpenRpcParserImpl {
       } else {
         for (const oneOf of schema.obj.oneOf) {
           const deref = this._deref.get(oneOf, schema.root);
-          compositionsOneOfOr.push(this.jsonSchemaToType(name, deref, undefined).type);
+
+          // TODO: Make this simpler. Create a new method for getting preferred name of a class!
+          //        It needs to take care of the dereferencing if needed, and the fallback from hash, etc, etc
+          //        The automatic fallback of the schema should be able to be multiple things, like the type name
+          //        ALSO! For Java, the composite class should be merged with parent if it is empty!
+          //        It is just stupid to have TagOrString extend TagXOrString
+          const unwrapped = this.unwrapJsonSchema(deref);
+          const oneOfTitle = this.getPreferredName(unwrapped, unwrapped, '');
+          compositionsOneOfOr.push(this.jsonSchemaToType(oneOfTitle, deref, undefined).type);
         }
       }
     }
@@ -617,7 +627,6 @@ class OpenRpcParserImpl {
 
     // TODO: Reintroduce this someday? Should we ever do this to the OmniModel,
     //        and not delegate specific cleanup to the target language?
-    /*
     if (extendedBy && this.canBeReplacedWithExtension(type, extendedBy)) {
       // Simplify empty types by only returning the inner content.
       // This is likely a bad idea... will see how it works in the future.
@@ -632,23 +641,25 @@ class OpenRpcParserImpl {
         }
       };
     }
-    */
 
     type.subTypeHints = subTypeHints;
+
+    // NOTE: "extendedBy" could be an ENUM, while "type" is an Object.
+    // This is not allowed in some languages. But it is up to the target language to decide how to handle it.
     type.extendedBy = extendedBy;
     return type;
   }
 
-  // private canBeReplacedWithExtension(type: OmniObjectType, extension: OmniType): boolean {
-  //
-  //   if (type.additionalProperties == undefined && type.properties.length == 0) {
-  //     if (extension.kind != OmniTypeKind.COMPOSITION) {
-  //       return true;
-  //     }
-  //   }
-  //
-  //   return false;
-  // }
+  private canBeReplacedWithExtension(type: OmniObjectType, extension: OmniType): boolean {
+
+    if (OmniModelUtil.isEmptyType(type)) {
+      if (extension.kind == OmniTypeKind.COMPOSITION && extension.compositionKind == CompositionKind.XOR) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   private getDiscriminatorAware(
     schema: Dereferenced<JSONSchema7Definition | OpenApiJSONSchema7Definition>
@@ -958,7 +969,26 @@ class OpenRpcParserImpl {
   }
 
   private getPreferredName(schema: Dereferenced<JSONSchema7>, dereferenced: Dereferenced<unknown>, fallback: string): string {
-    return dereferenced.hash || schema.obj.title || fallback;
+    const name = dereferenced.hash || schema.obj.title;
+    if (name) {
+      return name;
+    }
+
+    if (fallback.length > 0) {
+      return fallback;
+    }
+
+    if (schema.obj.type) {
+      if (Array.isArray(schema.obj.type)) {
+        return pascalCase(schema.obj.type.join('_'));
+      } else {
+        if (schema.obj.type) {
+          return pascalCase(schema.obj.type);
+        }
+      }
+    }
+
+    return fallback;
   }
 
   private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: Dereferenced<ContentDescriptorObject>): OutputAndType {
@@ -1309,15 +1339,22 @@ class OpenRpcParserImpl {
     };
   }
 
-  private typeToGenericKnownType(type: string, format?: string, enumValues?: unknown[]):
-    [OmniTypeKind.NULL]
-    | [OmniTypeKind.PRIMITIVE, OmniPrimitiveKind]
-    | [OmniTypeKind.ENUM, AllowedEnumOmniPrimitiveTypes, AllowedEnumTsTypes[]] {
+  private typeToGenericKnownType(
+    name: TypeName,
+    schemaType: string,
+    format?: string,
+    description?: string,
+    enumValues?: JSONSchema7Type[]
+  ): OmniType {
 
     // TODO: Need to take heed to 'schema.format' for some primitive and/or known types!
-    const lcType = type.toLowerCase();
+    const lcType = schemaType.toLowerCase();
     if (lcType == 'null') {
-      return [OmniTypeKind.NULL];
+      return {
+        name: name ?? schemaType,
+        kind: OmniTypeKind.NULL,
+        description: description,
+      };
     }
 
     const lcFormat = format?.toLowerCase() ?? '';
@@ -1364,6 +1401,18 @@ class OpenRpcParserImpl {
 
     if (enumValues && enumValues.length > 0) {
 
+      if (enumValues.length == 1) {
+
+        // En ENUM with just one value is the same as a regular constant
+        return {
+          name: name ?? schemaType,
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: primitiveType,
+          valueConstant: this.getLiteralValueOfSchema(enumValues[0]),
+          description: description,
+        };
+      }
+
       let allowedValues: AllowedEnumTsTypes[];
       if (primitiveType == OmniPrimitiveKind.STRING) {
         allowedValues = enumValues.map(it => `${String(it)}`);
@@ -1375,10 +1424,37 @@ class OpenRpcParserImpl {
       }
 
       // TODO: Try to convert the ENUM values into the specified primitive type.
-      return [OmniTypeKind.ENUM, primitiveType, allowedValues];
+      return {
+        name: name ?? schemaType,
+        kind: OmniTypeKind.ENUM,
+        primitiveKind: primitiveType,
+        enumConstants: allowedValues,
+        description: description,
+      };
     } else {
-      return [OmniTypeKind.PRIMITIVE, primitiveType];
+      return {
+        name: name ?? schemaType,
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: primitiveType,
+        valueConstant: undefined,
+        description: description,
+      };
     }
+  }
+
+  private getLiteralValueOfSchema(schema: JSONSchema7Type): OmniPrimitiveConstantValue | undefined {
+
+    if (typeof schema == 'string') {
+      return schema;
+    } else if (typeof schema == 'number') {
+      return schema;
+    } else if (typeof schema == 'boolean') {
+      return schema;
+    }
+
+    // TODO: How should we handle if an object or a whole schema structure is given here?
+    //        That should be possible to be used as a literal constant as well, no?
+    return undefined;
   }
 
   private getIntegerPrimitiveFromFormat(format: string, fallback: OmniPrimitiveKind.INTEGER | OmniPrimitiveKind.NUMBER): OmniPrimitiveKind {

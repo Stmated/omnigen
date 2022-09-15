@@ -131,6 +131,14 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
 
     this.visitReturnStatement = (node, visitor) => node.expression.visit(visitor);
 
+    this.visitVariableDeclaration = (node, visitor) => {
+      return [
+        node.variableType?.visit(visitor),
+        node.variableName.visit(visitor),
+        node.initializer?.visit(visitor)
+      ];
+    }
+
     this.visitVariableReference = (node, visitor) => node.variableName.visit(visitor);
 
     this.visitAnnotation = (node, visitor) => {
@@ -251,6 +259,8 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
       node.target.visit(visitor),
       node.member.visit(visitor)
     ];
+
+    this.visitSelfReference = (node, visitor) => [];
   }
 
   visitor_java: IJavaCstVisitor<R>;
@@ -283,6 +293,7 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
   visitNewStatement: JavaVisitFn<Java.NewStatement, R>;
   visitArgumentList: JavaVisitFn<Java.ArgumentList, R>;
   visitReturnStatement: JavaVisitFn<Java.ReturnStatement, R>;
+  visitVariableDeclaration: JavaVisitFn<Java.VariableDeclaration, R>;
   visitVariableReference: JavaVisitFn<Java.VariableReference, R>;
   visitAnnotation: JavaVisitFn<Java.Annotation, R>;
   visitAnnotationKeyValuePairList: JavaVisitFn<Java.AnnotationKeyValuePairList, R>;
@@ -317,4 +328,5 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
   visitClassReference: JavaVisitFn<Java.ClassReference, R>;
   visitArrayInitializer: JavaVisitFn<Java.ArrayInitializer<AbstractJavaNode>, R>;
   visitStaticMemberReference: JavaVisitFn<Java.StaticMemberReference, R>;
+  visitSelfReference: JavaVisitFn<Java.SelfReference, R>;
 }

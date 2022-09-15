@@ -5,6 +5,9 @@ import {Naming} from '@parse/Naming';
 
 export const logger = LoggerFactory.create(__filename);
 
+/**
+ * TODO: This class sucks -- it feels like pre-optimization, and just makes things more complex than they need to be
+ */
 export class JavaDependencyGraph {
 
   public static isInterface(graph: DependencyGraph, type: OmniType): boolean {
@@ -30,7 +33,7 @@ export class JavaDependencyGraph {
           continue;
         }
 
-        if (use.kind == OmniTypeKind.OBJECT || use.kind == OmniTypeKind.GENERIC_TARGET) {
+        if (use.kind == OmniTypeKind.OBJECT || use.kind == OmniTypeKind.GENERIC_TARGET || use.kind == OmniTypeKind.ENUM) {
           return use;
         }
         if (use.kind == OmniTypeKind.COMPOSITION && use.compositionKind == CompositionKind.XOR) {
@@ -39,7 +42,7 @@ export class JavaDependencyGraph {
           return use;
         }
 
-        logger.warn(`Said to inherit from '${Naming.safer(use)}', but that does not seem possible in Java. Is this okay?`)
+        throw new Error(`Said '${Naming.safer(type)}' inherit '${Naming.safer(use)}', but does not seem Java-compatible`)
       }
     }
 
@@ -109,6 +112,8 @@ export class JavaDependencyGraph {
           return true;
         }
       } else if (pointer.kind == OmniTypeKind.COMPOSITION) {
+        // ???
+      }  else if (pointer.kind == OmniTypeKind.ENUM) {
         // ???
       } else {
         if (callback(pointer)) {

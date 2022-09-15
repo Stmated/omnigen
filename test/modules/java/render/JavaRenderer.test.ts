@@ -185,6 +185,30 @@ describe('Java Rendering', () => {
     expect(out2.foundSuperInterfaces[1]).toEqual('InterfaceOfC');
   });
 
+  test('Enum', async () => {
+
+    const interpreter = new JavaInterpreter();
+    const model = await TestUtils.readExample('openrpc', 'enum.json', DEFAULT_JAVA_OPTIONS);
+    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    const fileContents = new Map<string, string>();
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
+      fileContents.set(cu.fileName, cu.content);
+    });
+
+    renderer.render(interpretation);
+
+    // TODO: Make special handling for enums + primitive value, so instead of composite class, we do something smarter!
+
+    const filenames = [...fileContents.keys()];
+    expect(filenames).toHaveLength(15);
+    expect(filenames).toContain('Tag.java');
+    expect(filenames).toContain('TagCopy.java');
+    expect(filenames).toContain('TagOrString.java');
+    // If it contains the below one, then the composite class has been incorrectly named
+    expect(filenames).not.toContain('TagXOrTagOrString.java');
+  });
+
   test('Test inheritance of descriptions', async () => {
 
     const interpreter = new JavaInterpreter();

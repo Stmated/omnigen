@@ -28,7 +28,10 @@ export enum TokenType {
   GTE,
   LTE,
   MULTIPLY,
-  SUBTRACT
+  SUBTRACT,
+
+  OR,
+  AND
 }
 
 export class JavaToken extends AbstractToken {
@@ -489,6 +492,17 @@ export class ReturnStatement extends AbstractJavaNode {
   }
 }
 
+export class SelfReference extends AbstractExpression {
+
+  constructor() {
+    super();
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitSelfReference(this, visitor);
+  }
+}
+
 export class FieldReference extends AbstractExpression {
   field: Field;
 
@@ -512,6 +526,29 @@ export class VariableReference extends AbstractJavaNode {
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
     return visitor.visitVariableReference(this, visitor);
+  }
+}
+
+export class VariableDeclaration extends AbstractJavaNode {
+  variableName: Identifier;
+  variableType?: Type;
+  initializer?: AbstractExpression;
+  constant?: boolean;
+
+  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: Type, constant?: boolean) {
+    super();
+    if (!type && !initializer) {
+      throw new Error(`Either a type or an initializer must be given to the field declaration`);
+    }
+
+    this.variableName = variableName;
+    this.variableType = type;
+    this.initializer = initializer;
+    this.constant = constant;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitVariableDeclaration(this, visitor);
   }
 }
 

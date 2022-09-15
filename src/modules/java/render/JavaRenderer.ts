@@ -71,6 +71,23 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return (`this.${this.render(node.field.identifier, visitor)}`);
   }
 
+  /**
+   * TODO: Should this be used together with the field reference above?
+   */
+  visitSelfReference: JavaRendererVisitFn<Java.SelfReference> = (node, visitor) => {
+    return `this`;
+  }
+
+  visitVariableDeclaration: JavaRendererVisitFn<Java.VariableDeclaration> = (node, visitor) => {
+
+    const constant = (node.constant) ? 'final ' : '';
+    const type = node.variableType ? this.render(node.variableType) : 'var ';
+    const name = this.render(node.variableName);
+    const initializer = node.initializer ? ` = ${this.render(node.initializer)}` : '';
+
+    return `${constant}${type}${name}${initializer}`;
+  }
+
   visitReturnStatement: JavaRendererVisitFn<Java.ReturnStatement> = (node, visitor) => {
     return (`return ${this.render(node.expression, visitor)}`);
   }
@@ -79,7 +96,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return (`${this.tokenPrefix}${JavaRenderer.getTokenTypeString(node.type)}${this.tokenSuffix}`);
   }
 
-  private static getTokenTypeString(type: Java.TokenType): '=' | '==' | '!=' | '<' | '>' | '<=' | '>=' | '+' | '-' | '*' | ',' {
+  private static getTokenTypeString(type: Java.TokenType): '=' | '==' | '!=' | '<' | '>' | '<=' | '>=' | '+' | '-' | '*' | ',' | '||' | '&&' {
     switch (type) {
       case Java.TokenType.ASSIGN:
         return '=';
@@ -103,6 +120,10 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
         return '*';
       case Java.TokenType.COMMA:
         return ',';
+      case Java.TokenType.OR:
+        return '||';
+      case Java.TokenType.AND:
+        return '&&';
       default:
         throw new Error('Unknown token type');
     }
@@ -111,8 +132,9 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   visitConstructor: JavaRendererVisitFn<Java.ConstructorDeclaration> = (node, visitor) => {
     const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
     const body = node.body ? `\n${this.render(node.body, visitor)}` : '';
+    const modifiers = node.modifiers.modifiers.length > 0 ? `${this.render(node.modifiers, visitor)} ` : '';
 
-    return `${annotations}${this.render(node.modifiers, visitor)} ${this.render(node.owner.name, visitor)}(${this.render(node.parameters, visitor)}) {${body}}\n\n`;
+    return `${annotations}${modifiers}${this.render(node.owner.name, visitor)}(${this.render(node.parameters, visitor)}) {${body}}\n\n`;
   }
 
   visitBlock: JavaRendererVisitFn<Java.Block> = (node, visitor) => {
@@ -433,7 +455,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   visitIfElseStatement: JavaRendererVisitFn<Java.IfElseStatement> = (node, visitor) => {
 
     const ifs = node.ifStatements.map(it => this.render(it, visitor));
-    const el = node.elseBlock ? `\nelse {\n${this.render(node.elseBlock)}\n}` : '';
+    const el = node.elseBlock ? `else {\n${this.render(node.elseBlock)}}\n` : '';
 
     return `${ifs.join('else ')}${el}`;
   }

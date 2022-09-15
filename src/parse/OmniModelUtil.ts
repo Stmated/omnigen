@@ -270,4 +270,19 @@ export class OmniModelUtil {
       return String(value);
     }
   }
+
+  /**
+   * Does not take into account any type that this type extends from.
+   * Only checks the direct type, if it is empty and could in theory be removed.
+   */
+  public static isEmptyType(type: OmniType): boolean {
+
+    if (type.kind == OmniTypeKind.OBJECT) {
+      if (type.properties.length == 0 && (type.additionalProperties == undefined || !type.additionalProperties)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }

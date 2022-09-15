@@ -35,6 +35,7 @@ export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitNewStatement: JavaVisitFn<Java.NewStatement, R>;
   visitArgumentList: JavaVisitFn<Java.ArgumentList, R>;
   visitReturnStatement: JavaVisitFn<Java.ReturnStatement, R>;
+  visitVariableDeclaration: JavaVisitFn<Java.VariableDeclaration, R>;
   visitVariableReference: JavaVisitFn<Java.VariableReference, R>;
   visitAnnotation: JavaVisitFn<Java.Annotation, R>;
   visitAnnotationKeyValuePairList: JavaVisitFn<Java.AnnotationKeyValuePairList, R>;
@@ -69,4 +70,5 @@ export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitGenericTypeUseList:  JavaVisitFn<Java.GenericTypeUseList, R>;
   visitArrayInitializer:  JavaVisitFn<Java.ArrayInitializer<AbstractJavaNode>, R>;
   visitStaticMemberReference: JavaVisitFn<Java.StaticMemberReference, R>;
+  visitSelfReference: JavaVisitFn<Java.SelfReference, R>;
 }

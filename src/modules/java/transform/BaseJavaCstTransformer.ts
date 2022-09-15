@@ -1,23 +1,34 @@
 import {AbstractJavaCstTransformer} from './AbstractJavaCstTransformer';
-import {Block, CommentList, JavaCstRootNode, JavaOptions, JavaUtil, ModifierType} from '@java';
+import {
+  AbstractObjectDeclaration,
+  Block,
+  CommentList,
+  JavaCstRootNode,
+  JavaOptions,
+  JavaUtil,
+  ModifierType,
+  TokenType
+} from '@java';
 import {
   CompositionKind,
   OmniCompositionType,
   OmniCompositionXORType,
   OmniEnumType,
   OmniExamplePairing,
-  OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniGenericTargetType,
+  OmniGenericSourceIdentifierType,
+  OmniGenericSourceType,
   OmniInterfaceType,
   OmniLinkMapping,
   OmniModel,
   OmniObjectType,
-  OmniOutput,
+  OmniOutput, OmniPrimitiveConstantValue,
+  OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
   OmniReferenceType,
   OmniType,
   OmniTypeKind,
-  PrimitiveNullableKind, TypeName
+  PrimitiveNullableKind
 } from '@parse';
 import * as Java from '@java/cst';
 import {camelCase, constantCase, pascalCase} from 'change-case';
@@ -121,7 +132,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         // What do we do here?
 
       } else if (type.kind == OmniTypeKind.ENUM) {
-        this.transformEnum(model, type, root, options);
+        this.transformEnum(model, type, undefined, root, options);
       } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
         // A composition type is likely just like any other object.
@@ -217,12 +228,18 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     );
   }
 
-  private transformEnum(model: OmniModel, type: OmniEnumType, root: JavaCstRootNode, options: JavaOptions): void {
+  private transformEnum(
+    model: OmniModel,
+    type: OmniEnumType,
+    originalType: OmniType | undefined,
+    root: JavaCstRootNode,
+    options: JavaOptions
+  ): void {
     const body = new Java.Block();
 
     const enumDeclaration = new Java.EnumDeclaration(
       new Java.Type(type),
-      new Java.Identifier(Naming.unwrap(type.name)),
+      new Java.Identifier(Naming.safer(originalType || type)),
       body,
     );
 
@@ -232,6 +249,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     if (type.enumConstants) {
+
       body.children.push(
         new Java.EnumItemList(
           ...type.enumConstants.map(item => new Java.EnumItem(
@@ -262,20 +280,13 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       body.children.push(
         new Java.ConstructorDeclaration(
           enumDeclaration,
-          new Java.ArgumentDeclarationList(
-            new Java.ArgumentDeclaration(
-              fieldType,
-              fieldIdentifier
-            )
-          ),
+          new Java.ArgumentDeclarationList(new Java.ArgumentDeclaration(fieldType, fieldIdentifier)),
           new Java.Block(
             new Java.Statement(
-              new Java.AssignExpression(
-                new Java.FieldReference(field),
-                new Java.VariableReference(fieldIdentifier)
-              )
+              new Java.AssignExpression(new Java.FieldReference(field), new Java.VariableReference(fieldIdentifier))
             )
-          )
+          ),
+          new Java.ModifierList()
         )
       );
     }
@@ -288,7 +299,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       enumDeclaration
     ));
   }
-
 
   private transformInterface(
     model: OmniModel,
@@ -361,6 +371,20 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     if (type.kind == OmniTypeKind.OBJECT) {
 
+      if (type.extendedBy && type.extendedBy.kind == OmniTypeKind.ENUM) {
+
+        // TODO: Maybe this could be removed and instead simplified elsewhere, where we compress/fix "incorrect" types?
+        // In Java we cannot extend from an enum. So we will try and redirect the output.
+        if (OmniModelUtil.isEmptyType(type)) {
+
+          // TODO: The NAME of the resulting enum should still be the name of the current type, and not the extended class!
+          this.transformEnum(model, type.extendedBy, type, root, options);
+          return;
+        } else {
+          throw new Error("Do not know how to handle this type, since Java cannot inherit from en Enum");
+        }
+      }
+
       for (const property of type.properties) {
         this.addOmniPropertyToBody(model, body, property, options);
       }
@@ -378,7 +402,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     const javaClassName = Naming.safer(originalType || type);
     const javaType = new Java.Type(type);
 
-    let declaration: Java.ClassDeclaration | Java.InterfaceDeclaration | Java.GenericClassDeclaration;
+    let declaration: Java.ClassDeclaration | Java.GenericClassDeclaration | Java.InterfaceDeclaration;
     if (genericSourceIdentifiers) {
       declaration = new Java.GenericClassDeclaration(
         new Java.Identifier(javaClassName),
@@ -420,11 +444,10 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     const comments = this.getCommentsForType(type, model, options);
 
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
-      this.addXOrMappingToBody(type, model, body, comments, options);
+      this.addXOrMappingToBody(type, model, declaration, comments, options);
     }
-    // else {
-      this.addExtendsAndImplements(graph, type, declaration);
-    // }
+
+    this.addExtendsAndImplements(graph, type, declaration);
 
     for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
       this.addOmniPropertyToBody(model, body, property, options);
@@ -565,7 +588,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   private addXOrMappingToBody(
     type: OmniCompositionXORType,
     model: OmniModel,
-    body: Block,
+    declaration: AbstractObjectDeclaration,
     comments: string[],
     options: JavaOptions
   ): void {
@@ -577,30 +600,355 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     // 2. Using discriminator.propertyName and schema ref name (if mapping does not exist) (By Json fasterxml subtypes)
     // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
 
-    // if (!type.mappings) {
+    // TODO: If it is a composition of multiple ENUM, then we need to simplify and merge them
+    const enumTypes: OmniEnumType[] = [];
+    const primitiveTypes: OmniPrimitiveType[] = [];
+    let otherTypeCount = 0;
+    for (const xor of type.xorTypes) {
+      if (xor.kind == OmniTypeKind.ENUM) {
+        enumTypes.push(xor);
+      } else if (xor.kind == OmniTypeKind.PRIMITIVE) {
+        primitiveTypes.push(xor);
+      } else {
+        otherTypeCount++;
+      }
+    }
 
-    // const mappedTypes = (type.mappings || []).map(it => it.type);
-    // const unmapped = type.xorTypes.filter(it => !mappedTypes.includes(it));
-    // if (unmapped.length > 0) {
+    if (enumTypes.length > 0 && primitiveTypes.length > 0 && otherTypeCount == 0) {
+      this.addEnumAndPrimitivesAsObjectEnum(enumTypes, primitiveTypes, declaration);
+    } else {
 
       // This means the specification did not have any discriminators.
       // Instead we need to figure out what it is in runtime. To be improved.
-      body.children.push(
+      declaration.body.children.push(
         new Java.RuntimeTypeMapping(
           type.xorTypes,
           options,
           (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
         )
       );
-    // } else {
-    //   comments.push(`This bad boy can be mapped but we need to automatically find them based on name`);
-    // }
-    // } else {
-    //
-    //   // The specification did map all types using a discriminator.
-    //   // So we can just Jackson annotations (or whatever) to hint what class it should be deserialized as.
-    //   comments.push(`This bad boy can be mapped so hard based on only property name`);
-    // }
+    }
+  }
+
+  private addEnumAndPrimitivesAsObjectEnum(
+    enumTypes: OmniEnumType[],
+    primitiveTypes: OmniPrimitiveType[],
+    declaration: AbstractObjectDeclaration
+  ): void {
+
+    // Java does not support advanced enums. We need to handle it some other way.
+    // There are two different solutions that I can see:
+    // 1. @JsonValue and a string field and a getter which converts to the Enum, and another getter for unknown values
+    // 2. Convert the enum into an object with public static final fields which represent the enum values
+
+    const primitiveKinds = new Set<OmniPrimitiveKind>();
+
+    const singletonFactoryMethodIdentifier = new Java.Identifier('get');
+    const knownValueFields: Java.Field[] = [];
+
+    for (const enumType of enumTypes) {
+      primitiveKinds.add(enumType.primitiveKind);
+      if (enumType.enumConstants) {
+        for (const enumValue of enumType.enumConstants) {
+
+          // TODO: Instead use a constructor and each field should be a singleton instance
+          let fieldIdentifier: Java.Identifier;
+          if (typeof enumValue == 'string') {
+            fieldIdentifier = new Java.Identifier(constantCase(enumValue));
+          } else {
+            fieldIdentifier = new Java.Identifier(constantCase(`_${String(enumValue)}`));
+          }
+
+          const field = new Java.Field(
+            declaration.type,
+            fieldIdentifier,
+            new Java.ModifierList(
+              new Java.Modifier(ModifierType.PUBLIC),
+              new Java.Modifier(ModifierType.STATIC),
+              new Java.Modifier(ModifierType.FINAL),
+            ),
+            new Java.MethodCall(
+              new Java.ClassName(declaration.type),
+              singletonFactoryMethodIdentifier,
+              new Java.ArgumentList(
+                new Java.Literal(enumValue)
+              )
+            ),
+          );
+
+          knownValueFields.push(field);
+          declaration.body.children.push(field);
+        }
+      }
+    }
+
+    for (const primitiveType of primitiveTypes) {
+
+      if (primitiveType.valueConstant) {
+
+        // This primitive type has a value constant, so we can treat it as a known value, like an ENUM.
+        let fieldIdentifier: Java.Identifier;
+        let valueConstant: OmniPrimitiveConstantValue;
+        if (typeof primitiveType.valueConstant == 'function') {
+          valueConstant = primitiveType.valueConstant(primitiveType); // TODO: Check if this is correct
+        } else {
+          valueConstant = primitiveType.valueConstant;
+        }
+
+        if (typeof valueConstant == 'string') {
+          fieldIdentifier = new Java.Identifier(JavaUtil.getSafeIdentifierName(constantCase(valueConstant)));
+        } else {
+          fieldIdentifier = new Java.Identifier(`_${constantCase(String(valueConstant))}`);
+        }
+
+        const field = new Java.Field(
+          declaration.type,
+          fieldIdentifier,
+          new Java.ModifierList(
+            new Java.Modifier(ModifierType.PUBLIC),
+            new Java.Modifier(ModifierType.STATIC),
+            new Java.Modifier(ModifierType.FINAL),
+          ),
+          new Java.MethodCall(
+            new Java.ClassName(declaration.type),
+            singletonFactoryMethodIdentifier,
+            new Java.ArgumentList(
+              new Java.Literal(valueConstant)
+            )
+          ),
+        );
+
+        knownValueFields.push(field);
+        declaration.body.children.push(field);
+      } else {
+
+        // primitiveType.valueConstantOptional
+        // We have no idea what the value is supposed to contain.
+        // So there is not really much we can do here. It will be up to the user to check the "isKnown()" method.
+      }
+    }
+
+    const fieldValueType = new Java.Type({
+      kind: OmniTypeKind.UNKNOWN,
+      isAny: true,
+      name: "Object"
+    });
+
+    const dictionaryIdentifier = new Java.Identifier(`_values`);
+    const fieldValuesType = new Java.Type({
+      kind: OmniTypeKind.DICTIONARY,
+      keyType: fieldValueType.omniType,
+      valueType: declaration.type.omniType,
+      name: 'SingletonDictionary',
+    });
+
+    const fieldValues = new Java.Field(
+      fieldValuesType,
+      dictionaryIdentifier,
+      new Java.ModifierList(
+        new Java.Modifier(ModifierType.PRIVATE),
+        new Java.Modifier(ModifierType.STATIC),
+        new Java.Modifier(ModifierType.FINAL)
+      ),
+      new Java.NewStatement(fieldValuesType)
+    );
+    declaration.body.children.push(fieldValues);
+
+    const fieldValuesStaticTarget = new Java.StaticMemberReference(
+      new Java.ClassName(declaration.type),
+      fieldValues.identifier
+    );
+
+    const singletonFactoryParamIdentifier = new Java.Identifier('value');
+    const createdIdentifier = new Java.Identifier('created');
+
+    const singletonFactory = new Java.MethodDeclaration(
+      new Java.MethodDeclarationSignature(
+        singletonFactoryMethodIdentifier,
+        declaration.type,
+        new Java.ArgumentDeclarationList(
+          new Java.ArgumentDeclaration(
+            fieldValueType,
+            singletonFactoryParamIdentifier
+          )
+        ),
+        new Java.ModifierList(
+          new Java.Modifier(ModifierType.PUBLIC),
+          new Java.Modifier(ModifierType.STATIC)
+        ),
+        new Java.AnnotationList(
+          new Java.Annotation(
+            // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
+            new Java.Type({
+              kind: OmniTypeKind.REFERENCE,
+              fqn: 'com.fasterxml.jackson.annotation.JsonCreator',
+              name: 'Creator'
+            })
+          )
+        )
+      ),
+      new Java.Block(
+        new Java.IfElseStatement(
+          [
+            new Java.IfStatement(
+              new Java.BinaryExpression(
+                new Java.MethodCall(
+                  fieldValuesStaticTarget,
+                  new Java.Identifier('containsKey'),
+                  new Java.ArgumentList(
+                    new Java.VariableReference(singletonFactoryParamIdentifier)
+                  )
+                ),
+                new Java.JavaToken(TokenType.EQUALS),
+                new Java.Literal(true)
+              ),
+              new Java.Block(
+                new Java.Statement(
+                  new Java.ReturnStatement(
+                    new Java.MethodCall(
+                      fieldValuesStaticTarget,
+                      new Java.Identifier('get'),
+                      new Java.ArgumentList(
+                        new Java.VariableReference(singletonFactoryParamIdentifier)
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+          ],
+          new Java.Block(
+            new Java.Statement(
+              new Java.VariableDeclaration(
+                createdIdentifier,
+                new Java.NewStatement(
+                  declaration.type,
+                  new Java.ArgumentList(
+                    new Java.VariableReference(singletonFactoryParamIdentifier)
+                  )
+                ),
+                undefined,
+                true
+              )
+            ),
+            new Java.Statement(
+              new Java.MethodCall(
+                fieldValuesStaticTarget,
+                new Java.Identifier('set'),
+                new Java.ArgumentList(
+                  new Java.VariableReference(singletonFactoryParamIdentifier),
+                  new Java.VariableReference(createdIdentifier)
+                )
+              )
+            ),
+            new Java.Statement(
+              new Java.ReturnStatement(
+                new Java.VariableReference(createdIdentifier)
+              )
+            )
+          )
+        )
+      )
+    )
+    declaration.body.children.push(singletonFactory);
+
+    const fieldIdentifier = new Java.Identifier(`_value`);
+    const fieldValue = new Java.Field(
+      fieldValueType,
+      fieldIdentifier,
+      new Java.ModifierList(
+        new Java.Modifier(ModifierType.PRIVATE),
+        new Java.Modifier(ModifierType.FINAL)
+      ),
+      undefined,
+      new Java.AnnotationList(
+        new Java.Annotation(
+          // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
+          new Java.Type({
+            kind: OmniTypeKind.REFERENCE,
+            fqn: 'com.fasterxml.jackson.annotation.JsonValue',
+            name: 'JsonValue'
+          })
+        )
+      )
+    );
+    declaration.body.children.push(fieldValue);
+
+    declaration.body.children.push(
+      new Java.FieldBackedGetter(
+        fieldValue
+      )
+    );
+
+    this.addSelfIsOfOneOfStaticFieldsMethod(knownValueFields, declaration);
+
+    // NOTE: This might be better to handle so we have one constructor per known primitive kind.
+    // for (const primitiveKind of primitiveKinds) {
+    // const typeName = JavaUtil.getPrimitiveKindName(primitiveKind, false);
+
+    const parameterIdentifier = new Java.Identifier('value');
+
+    declaration.body.children.push(
+      new Java.ConstructorDeclaration(
+        declaration,
+        new Java.ArgumentDeclarationList(new Java.ArgumentDeclaration(fieldValueType, parameterIdentifier)),
+        new Java.Block(
+          new Java.Statement(
+            new Java.AssignExpression(new Java.FieldReference(fieldValue), new Java.VariableReference(parameterIdentifier))
+          )
+        ),
+        // Private constructor, since all creation should go through the singleton method.
+        new Java.ModifierList(
+          new Java.Modifier(ModifierType.PRIVATE)
+        )
+      )
+    );
+  }
+
+  private addSelfIsOfOneOfStaticFieldsMethod(
+    knownValueFields: Java.Field[],
+    declaration: Java.AbstractObjectDeclaration
+  ): void {
+
+    let knownBinary: Java.BinaryExpression | undefined = undefined;
+    for (let i = 0; i < knownValueFields.length; i++) {
+
+      const binaryExpression = new Java.BinaryExpression(
+        new Java.SelfReference(),
+        new Java.JavaToken(TokenType.EQUALS),
+        new Java.StaticMemberReference(
+          new Java.ClassName(declaration.type),
+          knownValueFields[i].identifier
+        )
+      );
+
+      if (knownBinary) {
+        knownBinary = new Java.BinaryExpression(knownBinary, new Java.JavaToken(TokenType.OR), binaryExpression);
+      } else {
+        knownBinary = binaryExpression;
+      }
+    }
+
+    if (knownBinary) {
+      declaration.body.children.push(
+        new Java.MethodDeclaration(
+          new Java.MethodDeclarationSignature(
+            new Java.Identifier('isKnown'),
+            new Java.Type({
+              kind: OmniTypeKind.PRIMITIVE,
+              primitiveKind: OmniPrimitiveKind.BOOL,
+              nullable: PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE,
+              name: 'boolean'
+            }),
+          ),
+          new Java.Block(
+            new Java.Statement(
+              new Java.ReturnStatement(knownBinary)
+            )
+          )
+        )
+      )
+    }
   }
 
   private addOmniPropertyToBody(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {

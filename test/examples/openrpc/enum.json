@@ -1,0 +1,107 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "version": "1.0.0",
+    "title": "Enum",
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "methods": [
+    {
+      "name": "list_things",
+      "summary": "List all things",
+      "tags": [
+        {
+          "name": "things"
+        }
+      ],
+      "params": [],
+      "result": {
+        "name": "things",
+        "description": "An array of things",
+        "schema": {
+          "$ref": "#/components/schemas/Things"
+        }
+      },
+      "errors": [
+        {
+          "code": 100,
+          "message": "Server is busy"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Thing": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "TypeA",
+              "TypeB",
+              "TypeC"
+            ]
+          },
+          "tag": {
+            "$ref": "#/components/schemas/Tag"
+          }
+        }
+      },
+      "Things": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Thing"
+        }
+      },
+      "Tag": {
+        "type": "string",
+        "enum": [
+          "TagA",
+          "TagB",
+          "TagC"
+        ]
+      },
+      "TagCopy": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Tag"
+          }
+        ]
+      },
+      "TagOrString": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Tag"
+          },
+          {
+            "type": "string",
+            "const": "foo"
+          },
+          {
+            "type": "number",
+            "enum": [1337]
+          },
+          {
+            "type": "string",
+            "description": "An unknown freetext value"
+          }
+        ]
+      }
+    }
+  }
+}

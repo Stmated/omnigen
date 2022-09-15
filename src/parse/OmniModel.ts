@@ -104,7 +104,7 @@ export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType |
 export type OmniCompositionType = OmniCompositionAndType | OmniCompositionXORType | OmniCompositionORType | OmniCompositionNotType;
 export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
 export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
-export type OmniInheritableType = OmniObjectType | OmniGenericTargetType | OmniCompositionType;
+export type OmniInheritableType = OmniObjectType | OmniGenericTargetType | OmniCompositionType | OmniEnumType;
 
 export type OmniType = OmniNullType
   | OmniArrayTypes
@@ -252,14 +252,14 @@ export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKi
   extendedBy?: OmniType;
 }
 
-export enum ValueConstantMode {
-  FORCED,
-  FALLBACK
+export enum OmniUnknownMode {
+
 }
 
 type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
 export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
   valueConstant?: unknown;
+  isAny?: boolean;
 }
 
 type OmniNestableType = OmniObjectType | OmniEnumType;
@@ -300,6 +300,11 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind> {
 
 type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
 export type OmniPrimitiveConstantValue = string | boolean | number
+
+/**
+ * This means that it is either directly a constant value,
+ * or it is a lazy value that should be produced as late as possible in the code generation.
+ */
 export type OmniPrimitiveConstantValueOrLazySubTypeValue = OmniPrimitiveConstantValue | {(subtype: OmniType): OmniPrimitiveConstantValue};
 
 export enum PrimitiveNullableKind {
@@ -318,8 +323,6 @@ export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKnownKind> 
   valueConstantOptional?: boolean;
 }
 
-type OmniEnumKnownKind = OmniTypeKind.ENUM;
-
 export type OmniPrimitiveTypeKinds = OmniPrimitiveKind.INTEGER
   | OmniPrimitiveKind.INTEGER_SMALL
   | OmniPrimitiveKind.DOUBLE
@@ -330,6 +333,7 @@ export type OmniPrimitiveTypeKinds = OmniPrimitiveKind.INTEGER
 export type AllowedEnumTsTypes = number | string;
 export type AllowedEnumOmniPrimitiveTypes = OmniPrimitiveKind.STRING | OmniPrimitiveTypeKinds;
 
+type OmniEnumKnownKind = OmniTypeKind.ENUM;
 export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind> {
   enumConstants?: AllowedEnumTsTypes[];
   primitiveKind: AllowedEnumOmniPrimitiveTypes;

@@ -129,10 +129,14 @@ export class JavaUtil {
         return JavaUtil.getCleanedFullyQualifiedName(this.getPrimitiveTypeName(args.type), args.withSuffix);
       }
     } else if (args.type.kind == OmniTypeKind.UNKNOWN) {
+      const unknownType = args.type.isAny
+        ? UnknownType.OBJECT
+        : args.options?.unknownType;
+
       if (args.relativeTo) {
-        return JavaUtil.getClassName(this.getUnknownType(args.options?.unknownType), args.withSuffix);
+        return JavaUtil.getClassName(this.getUnknownType(unknownType), args.withSuffix);
       } else {
-        return JavaUtil.getCleanedFullyQualifiedName(this.getUnknownType(args.options?.unknownType), args.withSuffix);
+        return JavaUtil.getCleanedFullyQualifiedName(this.getUnknownType(unknownType), args.withSuffix);
       }
     } else if (args.type.kind == OmniTypeKind.DICTIONARY) {
 
@@ -555,10 +559,14 @@ export class JavaUtil {
     followSupertype = false
   ): [Java.Field[], Java.ArgumentDeclaration[]] {
 
+    const constructors: Java.ConstructorDeclaration[] = [];
     const fields: Java.Field[] = [];
     const setters: Java.FieldBackedSetter[] = [];
 
     const fieldVisitor = VisitorFactoryManager.create(JavaUtil._javaVisitor, {
+      visitConstructor: (n) => {
+        constructors.push(n);
+      },
       visitObjectDeclaration: () => {
         // Do not go into any nested objects.
       },
@@ -571,6 +579,13 @@ export class JavaUtil {
     });
 
     node.body.visit(fieldVisitor);
+
+    if (constructors.length > 0) {
+
+      // This class already has a constructor, so we will trust that it is correct.
+      // NOTE: In this future this could be improved into modifying the existing constructor as-needed.
+      return [[], []];
+    }
 
     const fieldsWithSetters = setters.map(setter => setter.field);
     const fieldsWithFinal = fields.filter(field => field.modifiers.modifiers.some(m => m.type == ModifierType.FINAL));

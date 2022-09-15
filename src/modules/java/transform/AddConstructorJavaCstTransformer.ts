@@ -1,5 +1,5 @@
 import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
-import {OmniModel, OmniTypeKind, ValueConstantMode} from '@parse';
+import {OmniModel, OmniTypeKind} from '@parse';
 import {
   ArgumentDeclaration,
   ClassDeclaration,

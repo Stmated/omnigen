@@ -489,6 +489,10 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `${this.render(node.target, visitor)}.${this.render(node.member, visitor)}`;
   }
 
+  visitCast: JavaRendererVisitFn<Java.Cast> = (node, visitor) => {
+    return `((${this.render(node.toType)}) ${this.render(node.expression, visitor)})`;
+  }
+
   private escapeImplements(value: string): string {
 
     // This will most likely result in *INCORRECT* Java Code, since it will refer to other type that intended.

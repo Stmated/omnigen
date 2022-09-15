@@ -198,15 +198,46 @@ describe('Java Rendering', () => {
 
     renderer.render(interpretation);
 
-    // TODO: Make special handling for enums + primitive value, so instead of composite class, we do something smarter!
-
     const filenames = [...fileContents.keys()];
     expect(filenames).toHaveLength(15);
     expect(filenames).toContain('Tag.java');
     expect(filenames).toContain('TagCopy.java');
-    expect(filenames).toContain('TagOrString.java');
+    expect(filenames).toContain('TagOrSpeciesOrString.java');
     // If it contains the below one, then the composite class has been incorrectly named
     expect(filenames).not.toContain('TagXOrTagOrString.java');
+
+    const tag = getParsedContent(fileContents, 'Tag.java');
+    expect(tag.foundMethods).toHaveLength(0);
+    expect(tag.foundSuperClasses).toHaveLength(0);
+    expect(tag.foundSuperInterfaces).toHaveLength(0);
+    expect(tag.foundFields).toHaveLength(1);
+    expect(tag.foundFields[0].names).toHaveLength(1);
+    expect(tag.foundFields[0].names[0]).toEqual('value');
+    expect(tag.foundLiterals).toHaveLength(5);
+    expect(tag.foundLiterals[2]).toEqual("\"TagA\"");
+    expect(tag.foundLiterals[3]).toEqual("\"TagB\"");
+    expect(tag.foundLiterals[4]).toEqual("\"TagC\"");
+
+    const tagOrString = getParsedContent(fileContents, 'TagOrSpeciesOrString.java');
+    expect(tagOrString.foundMethods).toHaveLength(7);
+    expect(tagOrString.foundMethods[0]).toEqual("get");
+    expect(tagOrString.foundMethods[1]).toEqual("getValue");
+    expect(tagOrString.foundMethods[2]).toEqual("isKnown");
+    expect(tagOrString.foundMethods[3]).toEqual("isTag");
+    expect(tagOrString.foundMethods[4]).toEqual("getAsTag");
+    expect(tagOrString.foundMethods[5]).toEqual("isSpecies");
+    expect(tagOrString.foundMethods[6]).toEqual("getAsSpecies");
+    expect(tagOrString.foundSuperClasses).toHaveLength(0);
+    expect(tagOrString.foundSuperInterfaces).toHaveLength(0);
+    expect(tagOrString.foundFields).toHaveLength(9);
+    expect(tagOrString.foundLiterals).toHaveLength(10);
+    expect(tagOrString.foundLiterals[2]).toEqual("\"TagA\"");
+    expect(tagOrString.foundLiterals[3]).toEqual("\"TagB\"");
+    expect(tagOrString.foundLiterals[4]).toEqual("\"TagC\"");
+    expect(tagOrString.foundLiterals[5]).toEqual("\"SpeciesA\"");
+    expect(tagOrString.foundLiterals[6]).toEqual("\"SpeciesB\"");
+    expect(tagOrString.foundLiterals[7]).toEqual("\"foo\"");
+    expect(tagOrString.foundLiterals[8]).toEqual(1337);
   });
 
   test('Test inheritance of descriptions', async () => {

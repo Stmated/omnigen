@@ -76,6 +76,13 @@
           "TagC"
         ]
       },
+      "Species": {
+        "type": "string",
+        "enum": [
+          "SpeciesA",
+          "SpeciesB"
+        ]
+      },
       "TagCopy": {
         "oneOf": [
           {
@@ -83,10 +90,13 @@
           }
         ]
       },
-      "TagOrString": {
+      "TagOrSpeciesOrString": {
         "oneOf": [
           {
             "$ref": "#/components/schemas/Tag"
+          },
+          {
+            "$ref": "#/components/schemas/Species"
           },
           {
             "type": "string",

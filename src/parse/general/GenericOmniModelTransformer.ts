@@ -8,7 +8,8 @@ import {
   OmniObjectType,
   OmniProperty,
   OmniType,
-  OmniTypeKind, TypeName
+  OmniTypeKind,
+  TypeName
 } from '@parse';
 import {Naming} from '@parse/Naming';
 import {JavaOptions, JavaUtil, PrimitiveGenerificationChoice} from '@java';
@@ -56,6 +57,21 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
         if (extendedBy && extendedBy.kind == OmniTypeKind.OBJECT) {
           const t = type as OmniObjectTypeWithExtension;
           const propertyNames = type.properties.map(it => it.name).sort();
+          // // TODO: Signature should contain "default value" if exists -- since it makes it unique
+          // const propertyNames = type.properties.map(it => {
+          //   let propertyIdentifier = it.name;
+          //   if (it.type.kind == OmniTypeKind.PRIMITIVE) {
+          //     if (it.type.valueConstant) {
+          //       if (typeof it.type.valueConstant == 'function') {
+          //         // TODO: Check if this actually works. Move this code into a util method does does 'is function' check
+          //         propertyIdentifier += `[${String(it.type.valueConstant(it.type))}]`;
+          //       } else {
+          //         propertyIdentifier += `[${String(it.type.valueConstant)}]`;
+          //       }
+          //     }
+          //   }
+          //   return propertyIdentifier;
+          // }).sort();
           const signature = `${propertyNames.join(',')},${Naming.safer(t.extendedBy)}`;
 
           let types = signatureMap.get(signature);
@@ -112,7 +128,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
       kind: OmniTypeKind.GENERIC_SOURCE,
       of: info.extendedBy,
       sourceIdentifiers: [],
-    }
+    };
 
     const wrapPrimitives = (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE);
     const genericPropertiesToAdd: OmniProperty[] = [];
@@ -155,7 +171,6 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
       genericSource.sourceIdentifiers.push(genericSourceIdentifier);
 
-      // TODO: This property should be removed from this type and moved to the type we are extending from.
       genericEntries.push({
         identifier: genericSourceIdentifier,
         propertyName: propertyName,
@@ -359,7 +374,9 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     const propertyTypes: OmniType[] = [];
     for (const classType of info.subTypes) {
       const property = classType.properties.find(it => it.name == propertyName);
-      if (!property) throw new Error(`The property did not exist`);
+      if (!property) {
+        throw new Error(`The property did not exist`);
+      }
 
       const sameType = propertyTypes.find(it => {
         const common = JavaUtil.getCommonDenominatorBetween(property.type, it);

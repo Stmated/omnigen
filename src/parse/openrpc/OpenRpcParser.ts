@@ -132,7 +132,8 @@ class OpenRpcParserImpl {
   // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
   private _jsonRpcRequestClass?: OmniObjectType;
   private _jsonRpcResponseClass?: OmniObjectType;
-  private _jsonRpcErrorClass?: OmniObjectType;
+  private _jsonRpcErrorResponseClass?: OmniObjectType;
+  private _jsonRpcErrorInstanceClass?: OmniObjectType;
 
   // This class should be optionally created if we are going to try and create generics.
   // It is only going to work like a marker interface, so we can know that all the classes are related.
@@ -151,7 +152,7 @@ class OpenRpcParserImpl {
   }
 
   constructor(doc: Dereferencer<OpenrpcDocument>, options = DEFAULT_PARSER_OPTIONS) {
-    this._options = options;
+    this._options = {...options}; // Copy the options, so we do not manipulate the given object.
 
     this._deref = doc;
     this.updateOptionsFromDocument(doc.getFirstRoot());
@@ -308,14 +309,14 @@ class OpenRpcParserImpl {
     responses.push(resultResponse.output);
 
     // And then one response for each potential error
-    let errorsOrReferences: MethodObjectErrors = method.obj.errors || [];
-    if (errorsOrReferences.length == 0) {
-      // If there were no known errors specified, then we will add a generic fallback.
-      errorsOrReferences = [{
-        code: -1234567890,
-        message: 'Unknown Error',
-      }];
-    }
+    const errorsOrReferences: MethodObjectErrors = method.obj.errors || [];
+    // if (errorsOrReferences.length == 0) {
+    // We will always add the generic error classes, since we can never trust that the server will be truthful.
+    errorsOrReferences.push({
+      code: -1234567890,
+      message: 'Unknown Error',
+    });
+    // }
 
     const errorOutputs = errorsOrReferences.map(it => {
       const deref = this._deref.get(it, method.root);
@@ -1018,26 +1019,30 @@ class OpenRpcParserImpl {
         additionalProperties: false,
         properties: [],
       }
+      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcResponseClass.name)}`, this._jsonRpcResponseClass);
 
-      this._jsonRpcResponseClass.properties = [
-        {
+      this._jsonRpcResponseClass.properties = [];
+
+      if (this._options.jsonRpcPropertyName) {
+        this._jsonRpcResponseClass.properties.push({
           name: this._options.jsonRpcPropertyName,
           type: {
             kind: OmniTypeKind.PRIMITIVE,
             primitiveKind: OmniPrimitiveKind.STRING,
-            name: `ResultJsonRpc`
+            name: `ResultJsonRpc`,
           },
           owner: this._jsonRpcResponseClass
+        });
+      }
+
+      this._jsonRpcResponseClass.properties.push({
+        name: 'error',
+        type: {
+          name: `ResultError`,
+          kind: OmniTypeKind.NULL,
         },
-        {
-          name: 'error',
-          type: {
-            name: `ResultError`,
-            kind: OmniTypeKind.NULL,
-          },
-          owner: this._jsonRpcResponseClass
-        },
-      ];
+        owner: this._jsonRpcResponseClass
+      });
 
       if (this._options.jsonRpcIdIncluded) {
         this._jsonRpcResponseClass.properties.push({
@@ -1052,13 +1057,11 @@ class OpenRpcParserImpl {
       }
     }
 
-    resultType.properties = [
-      {
-        name: 'result',
-        type: resultParameterType.type,
-        owner: resultType
-      }
-    ];
+    resultType.properties.push({
+      name: 'result',
+      type: resultParameterType.type,
+      owner: resultType
+    });
 
     resultType.extendedBy = this._jsonRpcResponseClass;
 
@@ -1113,37 +1116,65 @@ class OpenRpcParserImpl {
       properties: [],
     };
 
-    if (!this._jsonRpcErrorClass) {
-      this._jsonRpcErrorClass = {
-        name: 'JsonRpcError', // TODO: Make it a setting
+    if (!this._jsonRpcErrorResponseClass) {
+      this._jsonRpcErrorResponseClass = {
+        name: 'JsonRpcErrorResponse', // TODO: Make it a setting
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc error response package`,
         additionalProperties: false,
         properties: [],
       };
+      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcErrorResponseClass.name)}`, this._jsonRpcErrorResponseClass);
 
-      this._jsonRpcErrorClass.properties = [
-        {
-          name: 'result',
+      this._jsonRpcErrorResponseClass.properties = [];
+      if (this._options.jsonRpcPropertyName) {
+        this._jsonRpcErrorResponseClass.properties.push({
+          name: this._options.jsonRpcPropertyName,
           type: {
-            name: `JsonRpcErrorAlwaysNullResultBody`,
-            kind: OmniTypeKind.NULL,
+            kind: OmniTypeKind.PRIMITIVE,
+            primitiveKind: OmniPrimitiveKind.STRING,
+            name: `ResultJsonRpc`,
           },
-          owner: this._jsonRpcErrorClass,
+          owner: this._jsonRpcErrorResponseClass
+        });
+      }
+
+      this._jsonRpcErrorResponseClass.properties.push({
+        name: 'result',
+        type: {
+          name: `JsonRpcErrorAlwaysNullResultBody`,
+          kind: OmniTypeKind.NULL,
         },
-        {
+        owner: this._jsonRpcErrorResponseClass,
+      });
+
+      if (this._options.jsonRpcIdIncluded) {
+        this._jsonRpcErrorResponseClass.properties.push({
           name: 'id',
           type: {
             name: `JsonRpcErrorIdString`,
             kind: OmniTypeKind.PRIMITIVE,
             primitiveKind: OmniPrimitiveKind.STRING,
           },
-          owner: this._jsonRpcErrorClass,
-        },
-      ];
+          owner: this._jsonRpcErrorResponseClass,
+        });
+      }
     }
 
-    errorPropertyType.extendedBy = this._jsonRpcErrorClass;
+    if (!this._jsonRpcErrorInstanceClass) {
+      this._jsonRpcErrorInstanceClass = {
+        name: 'JsonRpcError', // TODO: Make it a setting
+        kind: OmniTypeKind.OBJECT,
+        description: `Generic class to describe the JsonRpc error inside an error response`,
+        additionalProperties: false,
+        properties: [],
+      };
+      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcErrorInstanceClass.name)}`, this._jsonRpcErrorInstanceClass);
+
+      // TODO: Add any properties here? Or rely on the generic and property compressor transformers?
+    }
+
+    errorPropertyType.extendedBy = this._jsonRpcErrorInstanceClass;
 
     errorPropertyType.properties = [
       // For Trustly we also have something called "Name", which is always "name": "JSONRPCError",
@@ -1171,8 +1202,6 @@ class OpenRpcParserImpl {
         owner: errorPropertyType,
       },
       {
-        // For Trustly this is called "error" and not "data",
-        // then inside "error" we have "uuid", "method", "data": {"code", "message"}
         // TODO: We need a way to specify the error structure -- which OpenRPC currently *cannot*
         name: 'data',
         type: {
@@ -1188,6 +1217,7 @@ class OpenRpcParserImpl {
       name: typeName,
       accessLevel: OmniAccessLevel.PUBLIC,
       kind: OmniTypeKind.OBJECT,
+      extendedBy: this._jsonRpcErrorResponseClass,
       additionalProperties: false,
       properties: [],
     };
@@ -1548,6 +1578,7 @@ class OpenRpcParserImpl {
         additionalProperties: false,
         properties: [],
       };
+      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcRequestClass.name)}`, this._jsonRpcRequestClass);
 
       const hasConstantVersion = (this._options.jsonRpcRequestVersion || '').length > 0;
       const requestJsonRpcType: OmniPrimitiveType = {
@@ -1577,20 +1608,23 @@ class OpenRpcParserImpl {
         nullable: PrimitiveNullableKind.NOT_NULLABLE
       };
 
-      this._jsonRpcRequestClass.properties = [
-        {
+      this._jsonRpcRequestClass.properties = [];
+
+      if (this._options.jsonRpcPropertyName) {
+        this._jsonRpcRequestClass.properties.push({
           name: this._options.jsonRpcPropertyName,
           type: requestJsonRpcType,
           required: true,
           owner: requestType,
-        },
-        {
-          name: "method",
-          type: requestMethodType,
-          required: true,
-          owner: requestType,
-        }
-      ];
+        });
+      }
+
+      this._jsonRpcRequestClass.properties.push({
+        name: "method",
+        type: requestMethodType,
+        required: true,
+        owner: requestType,
+      });
     }
 
     requestType.extendedBy = this._jsonRpcRequestClass;

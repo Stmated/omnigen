@@ -278,6 +278,80 @@ describe('Java Rendering', () => {
     expect(additional.foundFields).toHaveLength(0);
   });
 
+  test('ErrorStructure', async () => {
+
+    const interpreter = new JavaInterpreter();
+    const model = await TestUtils.readExample('openrpc', 'error-structure.json', DEFAULT_JAVA_OPTIONS);
+    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    const fileContents = new Map<string, string>();
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
+      fileContents.set(cu.fileName, cu.content);
+    });
+
+    renderer.render(interpretation);
+
+    const filenames = [...fileContents.keys()];
+    expect(filenames).toHaveLength(11);
+    expect(filenames).toContain('Thing.java');
+
+    // Error according to spec 2.0:
+    // {"jsonrpc": "2.0", "result": 19, "id": 3}
+    // {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}, "id": null},
+
+    // Error according to spec 1.1:
+    // {"version": "1.1", "result": "done", "error": null, "id": "194521489"}
+
+    // Error according to spec 1.0:
+    // {"result": "Hello JSON-RPC", "error": null, "id": 1}
+
+    const thing = getParsedContent(fileContents, 'Thing.java');
+
+    // Reserved: -32768 to -32000
+    // -32700	Parse error	Invalid JSON was received by the server.  An error occurred on the server while parsing the JSON text.
+    // -32600	Invalid Request	The JSON sent is not a valid Request object.
+    // -32601	Method not found	The method does not exist / is not available.
+    // -32602	Invalid params	Invalid method parameter(s).
+    // -32603	Internal error	Internal JSON-RPC error.
+    // -32000 to -32099	Server error	Reserved for implementation-defined server-errors.
+  });
+
+  test('ErrorStructure-Custom', async () => {
+
+    const interpreter = new JavaInterpreter();
+    const model = await TestUtils.readExample('openrpc', 'error-structure-custom.json', DEFAULT_JAVA_OPTIONS);
+    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+
+    const fileContents = new Map<string, string>();
+    const renderer = new JavaRenderer(javaOptions, (cu) => {
+      fileContents.set(cu.fileName, cu.content);
+    });
+
+    renderer.render(interpretation);
+
+    const filenames = [...fileContents.keys()];
+    expect(filenames).toHaveLength(11);
+    expect(filenames).toContain('Thing.java');
+
+    // Error according to corporate:
+    // {
+    //   "version": "1.1",
+    //   "error": {
+    //   "name": "JSONRPCError",
+    //     "code": 616,
+    //     "message": "ERROR_INVALID_CREDENTIALS",
+    //     "error": {
+    //     "signature": "R9+hjuMqbsH0Ku ... S16VbzRsw==",
+    //       "uuid": "258a2184-2842-b485-25ca-293525152425",
+    //       "method": "Deposit",
+    //       "data": {
+    //       "code" : 616,
+    //         "message" : "ERROR_INVALID_CREDENTIALS"
+    //     }
+    //   }
+    // }
+  });
+
   test('Test inheritance of descriptions', async () => {
 
     const interpreter = new JavaInterpreter();

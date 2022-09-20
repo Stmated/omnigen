@@ -2,16 +2,14 @@ import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '@java';
 import {JavaRenderer} from '@java/render/JavaRenderer';
-import {CompilationUnit} from '@cst/CompilationUnitCallback';
 import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {OmniEndpoint, OmniModel, OmniOutput} from '@parse';
+import {CstRootNode} from '@cst/CstRootNode';
+import exp = require('constants');
 
 describe('Java Rendering', () => {
-
-  const javaOptions: JavaOptions = DEFAULT_JAVA_OPTIONS;
 
   test('renderAll', async () => {
 
@@ -50,7 +48,7 @@ describe('Java Rendering', () => {
 
         await fs.mkdir(outDir, {recursive: true});
 
-        const renderer = new JavaRenderer(javaOptions, async (cu) => {
+        const renderer = new JavaRenderer(DEFAULT_JAVA_OPTIONS, async (cu) => {
 
           if (cu.fileName.indexOf('#') !== -1) {
             throw new Error(`# not allowed in CU '${cu.fileName}'`);
@@ -69,7 +67,10 @@ describe('Java Rendering', () => {
             cst = JavaParser.parse(cu.content);
             expect(cst).toBeDefined();
           } catch (ex) {
-            throw new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}`, {cause: ex instanceof Error ? ex : undefined});
+            throw new Error(
+              `Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}`,
+              {cause: ex instanceof Error ? ex : undefined}
+            );
           }
 
           const visitor = new ParsedJavaTestVisitor();
@@ -81,57 +82,9 @@ describe('Java Rendering', () => {
     }
   });
 
-  test('Test basic rendering', async () => {
-
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    expect(interpretation).toBeDefined();
-
-    // const allTypes1 = OmniModelUtil.getAllExportableTypes(model, model.types);
-    expect(interpretation.children).toHaveLength(21);
-
-    const compilationUnits: CompilationUnit[] = [];
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
-      compilationUnits.push(cu);
-    });
-
-    renderer.render(interpretation);
-
-    expect(compilationUnits).toBeDefined();
-
-    // const allTypes2 = OmniModelUtil.getAllExportableTypes(model, model.types);
-    expect(compilationUnits).toHaveLength(21);
-
-    // TODO: We should assert actual useful stuff here :)
-  });
-
-  test('Test specific rendering', async () => {
-
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
-    });
-
-    const content = renderer.render(interpretation);
-
-    expect(content).toBeDefined();
-  });
-
   test('Test multiple inheritance (interfaces)', async () => {
 
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    const fileContents = new Map<string, string>();
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
-      fileContents.set(cu.fileName, cu.content);
-    });
-    renderer.render(interpretation);
+    const fileContents = await getFileContentsFromFile('multiple-inheritance.json');
 
     const fileNames = [...fileContents.keys()];
     expect(fileNames).toContain('A.java');
@@ -188,19 +141,10 @@ describe('Java Rendering', () => {
 
   test('Enum', async () => {
 
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'enum.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    const fileContents = new Map<string, string>();
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
-      fileContents.set(cu.fileName, cu.content);
-    });
-
-    renderer.render(interpretation);
+    const fileContents = await getFileContentsFromFile('enum.json');
 
     const filenames = [...fileContents.keys()];
-    expect(filenames).toHaveLength(15);
+    expect(filenames).toHaveLength(18);
     expect(filenames).toContain('Tag.java');
     expect(filenames).toContain('TagCopy.java');
     expect(filenames).toContain('TagOrSpeciesOrString.java');
@@ -243,19 +187,10 @@ describe('Java Rendering', () => {
 
   test('AdditionalProperties', async () => {
 
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'additional-properties.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    const fileContents = new Map<string, string>();
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
-      fileContents.set(cu.fileName, cu.content);
-    });
-
-    renderer.render(interpretation);
+    const fileContents = await getFileContentsFromFile('additional-properties.json');
 
     const filenames = [...fileContents.keys()];
-    expect(filenames).toHaveLength(11);
+    expect(filenames).toHaveLength(12);
     expect(filenames).toContain('Thing.java');
     expect(filenames).toContain('IAdditionalProperties.java');
 
@@ -278,78 +213,79 @@ describe('Java Rendering', () => {
     expect(additional.foundFields).toHaveLength(0);
   });
 
+  // Error according to spec 2.0:
+  // {"jsonrpc": "2.0", "result": 19, "id": 3}
+  // {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}, "id": null},
+
+  // Error according to spec 1.1:
+  // {"version": "1.1", "result": "done", "error": null, "id": "194521489"}
+
+  // Error according to spec 1.0:
+  // {"result": "Hello JSON-RPC", "error": null, "id": 1}
+
   test('ErrorStructure', async () => {
 
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'error-structure.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    const fileContents = new Map<string, string>();
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
-      fileContents.set(cu.fileName, cu.content);
-    });
-
-    renderer.render(interpretation);
+    const fileContents = await getFileContentsFromFile('error-structure.json');
 
     const filenames = [...fileContents.keys()];
-    expect(filenames).toHaveLength(11);
-    expect(filenames).toContain('Thing.java');
+    expect(filenames).toHaveLength(13);
+    expect(filenames).toContain('ErrorUnknown.java');
+    expect(filenames).toContain('ErrorUnknownError.java');
+    expect(filenames).toContain('JsonRpcError.java');
+    expect(filenames).toContain('JsonRpcErrorResponse.java');
+    expect(filenames).toContain('ListThingsError100.java');
+    expect(filenames).toContain('ListThingsError100Error.java');
 
-    // Error according to spec 2.0:
-    // {"jsonrpc": "2.0", "result": 19, "id": 3}
-    // {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}, "id": null},
+    const errorResponse = getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
+    expect(errorResponse.foundFields[0].names[0]).toEqual("jsonrpc");
 
-    // Error according to spec 1.1:
-    // {"version": "1.1", "result": "done", "error": null, "id": "194521489"}
+    const error100 = getParsedContent(fileContents, 'ListThingsError100Error.java');
+    expect(error100.foundFields).toHaveLength(3);
+    expect(error100.foundFields[0].names[0]).toEqual("code");
+    expect(error100.foundFields[1].names[0]).toEqual("message");
+    expect(error100.foundFields[2].names[0]).toEqual("data");
+  });
 
-    // Error according to spec 1.0:
-    // {"result": "Hello JSON-RPC", "error": null, "id": 1}
+  test('ErrorStructure-1.1', async () => {
 
-    const thing = getParsedContent(fileContents, 'Thing.java');
+    const fileContents = await getFileContentsFromFile('error-structure-1.1.json');
+    const errorResponse = getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
 
-    // Reserved: -32768 to -32000
-    // -32700	Parse error	Invalid JSON was received by the server.  An error occurred on the server while parsing the JSON text.
-    // -32600	Invalid Request	The JSON sent is not a valid Request object.
-    // -32601	Method not found	The method does not exist / is not available.
-    // -32602	Invalid params	Invalid method parameter(s).
-    // -32603	Internal error	Internal JSON-RPC error.
-    // -32000 to -32099	Server error	Reserved for implementation-defined server-errors.
+    expect(errorResponse.foundFields[0].names[0]).toEqual("version");
+
+    const error100 = getParsedContent(fileContents, 'ListThingsError100Error.java');
+    expect(error100.foundFields).toHaveLength(4);
   });
 
   test('ErrorStructure-Custom', async () => {
 
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'error-structure-custom.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    const fileContents = new Map<string, string>();
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
-      fileContents.set(cu.fileName, cu.content);
-    });
-
-    renderer.render(interpretation);
-
+    const fileContents = await getFileContentsFromFile('error-structure-custom.json');
     const filenames = [...fileContents.keys()];
-    expect(filenames).toHaveLength(11);
-    expect(filenames).toContain('Thing.java');
 
-    // Error according to corporate:
-    // {
-    //   "version": "1.1",
-    //   "error": {
-    //   "name": "JSONRPCError",
-    //     "code": 616,
-    //     "message": "ERROR_INVALID_CREDENTIALS",
-    //     "error": {
-    //     "signature": "R9+hjuMqbsH0Ku ... S16VbzRsw==",
-    //       "uuid": "258a2184-2842-b485-25ca-293525152425",
-    //       "method": "Deposit",
-    //       "data": {
-    //       "code" : 616,
-    //         "message" : "ERROR_INVALID_CREDENTIALS"
-    //     }
-    //   }
-    // }
+    expect(filenames).toContain('ListThingsError100Error.java');
+    expect(filenames).toContain('JsonRpcCustomError.java');
+    expect(filenames).not.toContain('Data.java'); // The generated class for property 'Data' should be better
+    expect(filenames).toContain('JsonRpcCustomErrorData.java');
+
+    const error100 = getParsedContent(fileContents, 'ListThingsError100Error.java');
+    expect(error100.foundFields).toHaveLength(4);
+    expect(error100.foundFields[0].names[0]).toEqual("code");
+    expect(error100.foundFields[1].names[0]).toEqual("message");
+    expect(error100.foundFields[2].names[0]).toEqual("error");
+    expect(error100.foundFields[3].names[0]).toEqual("name");
+    expect(error100.foundLiterals[7]).toEqual("\"JSONRPCError\"");
+
+    const customError = getParsedContent(fileContents, 'JsonRpcCustomError.java');
+    expect(customError.foundFields).toHaveLength(5);
+    expect(customError.foundFields[0].names[0]).toEqual('signature');
+    expect(customError.foundFields[1].names[0]).toEqual('uuid');
+    expect(customError.foundFields[2].names[0]).toEqual('method');
+    expect(customError.foundFields[3].names[0]).toEqual('data');
+    expect(customError.foundFields[4].names[0]).toEqual('_additionalProperties');
+
+    const data = getParsedContent(fileContents, 'JsonRpcCustomErrorData.java');
+    expect(data.foundFields).toHaveLength(1);
+    expect(data.foundFields[0].names[0]).toEqual('_additionalProperties');
   });
 
   test('Test inheritance of descriptions', async () => {
@@ -377,7 +313,7 @@ describe('Java Rendering', () => {
 
     const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
 
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
+    const renderer = new JavaRenderer(DEFAULT_JAVA_OPTIONS, (cu) => {
     });
 
     const content = renderer.render(interpretation);
@@ -386,22 +322,21 @@ describe('Java Rendering', () => {
   });
 });
 
-function getEndpoint(model: OmniModel, endpointName: string): OmniEndpoint {
-  const endpoint = model.endpoints.find(it => it.name == endpointName);
-  if (!endpoint) {
-    throw new Error(`No endpoint called ${endpointName}`);
-  }
+async function getFileContentsFromFile(fileName: string) {
 
-  return endpoint;
+  const interpreter = new JavaInterpreter();
+  const model = await TestUtils.readExample('openrpc', fileName, DEFAULT_JAVA_OPTIONS);
+  const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+  return getFileContents(DEFAULT_JAVA_OPTIONS, interpretation);
 }
 
-function getEndpointResult(model: OmniModel, endpointName: string): OmniOutput {
-  const endpoint = getEndpoint(model, endpointName);
-  if (endpoint.responses.length == 0) {
-    throw new Error(`There are no responses in ${endpointName}`);
-  }
-
-  return endpoint.responses[0];
+function getFileContents(javaOptions: JavaOptions, interpretation: CstRootNode) {
+  const fileContents = new Map<string, string>();
+  const renderer = new JavaRenderer(javaOptions, (cu) => {
+    fileContents.set(cu.fileName, cu.content);
+  });
+  renderer.render(interpretation);
+  return fileContents;
 }
 
 function getParsedContent(fileContents: Map<string, string>, fileName: string): ParsedJavaTestVisitor {

@@ -6,7 +6,7 @@
   },
   "x-omnigen": {
     "jsonRpcPropertyName": "version",
-    "jsonRpcRequestVersion": "1.1",
+    "jsonRpcVersion": "1.1",
     "jsonRpcIdIncluded": false
   },
   "servers": [

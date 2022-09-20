@@ -2,32 +2,13 @@
   "openrpc": "1.0.0-rc1",
   "info": {
     "version": "1.0.0",
-    "title": "error-structure-custom",
+    "title": "error-structure",
     "license": {
       "name": "MIT"
     }
   },
   "x-omnigen": {
-    "jsonRpcVersion": "1.1",
-    "jsonRpcErrorDataSchema": {
-      "type": "object",
-      "properties": {
-        "signature": {
-          "type": "string"
-        },
-        "uuid": {
-          "type": "string"
-        },
-        "method": {
-          "type": "string"
-        },
-        "data": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true
-    }
+    "jsonRpcVersion": "1.1"
   },
   "servers": [
     {

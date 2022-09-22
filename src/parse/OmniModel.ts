@@ -52,6 +52,9 @@ export interface OmniProperty {
   annotations?: OmniAnnotation[];
 }
 
+/**
+ * TODO: Change this into the values being strings instead. Maybe a bit more memory, but easier to read
+ */
 export enum OmniTypeKind {
   PRIMITIVE,
 
@@ -118,29 +121,22 @@ export type OmniType = OmniNullType
   | OmniGenericType
   | OmniInterfaceType;
 
-export type TypeName = string | { (hasDuplicateFn?: (value: string) => boolean): string };
+export type TypeNameFn = (value: string) => boolean;
+export type TypeNameCallback = { (hasDuplicateFn?: TypeNameFn): string | undefined };
+export type TypeNameSingle = string | TypeNameCallback | undefined;
+export type TypeName = TypeNameSingle | Array<TypeName>;
 
-export interface OmniBaseType<T> {
+export interface IOmniNamedType {
 
   /**
    * The name of the type.
    * The name is not necessarily unique. There might be many types with the same name.
    * Generally, only the OmniClassType is generally more certain to be unique.
    *
-   * TODO: Remove someday, and only keep on those types that require it
+   * TODO: Make this into a possibility of being an array as well, and remove "nameClassifier"
+   *        Maybe remake TypeName so that the array is lazily calculated, to decrease load
    */
   name: TypeName;
-  kind: T;
-  accessLevel?: OmniAccessLevel;
-  title?: string;
-  description?: string;
-  summary?: string;
-  /**
-   * TODO: Delete? It is up to more exact properties in more exact types if it is readonly or not?
-   *        Like Literal's "constantValue"
-   */
-  readOnly?: boolean;
-  writeOnly?: boolean;
 
   /**
    * Can be used to classify the type with something extra.
@@ -153,7 +149,27 @@ export interface OmniBaseType<T> {
    *        Or remove and make "name" able to return an array of possible names in ascending specificity?
    *          "Data" "DataObject" "DataSchemaObject" etc
    */
-  nameClassifier?: string;
+  //nameClassifier?: string;
+}
+
+export interface IOmniOptionallyNamedType {
+  name?: TypeName;
+  //nameClassifier?: string;
+}
+
+export interface OmniBaseType<T> {
+
+  kind: T;
+  accessLevel?: OmniAccessLevel;
+  title?: string;
+  description?: string;
+  summary?: string;
+  /**
+   * TODO: Delete? It is up to more exact properties in more exact types if it is readonly or not?
+   *        Like Literal's "constantValue"
+   */
+  readOnly?: boolean;
+  writeOnly?: boolean;
 }
 
 export enum CompositionKind {
@@ -165,7 +181,7 @@ export enum CompositionKind {
 
 type GenericCompositionKnownKind = OmniTypeKind.COMPOSITION;
 
-export interface OmniCompositionBaseType<T> extends OmniBaseType<GenericCompositionKnownKind> {
+export interface OmniCompositionBaseType<T> extends OmniBaseType<GenericCompositionKnownKind>, IOmniOptionallyNamedType {
   compositionKind: T;
 }
 
@@ -180,12 +196,6 @@ export interface OmniCompositionNotType extends OmniCompositionBaseType<Composit
    */
   notTypes: [OmniType];
 }
-
-// export interface OmniCompositionMapping {
-//   propertyName: string;
-//   propertyValue: string;
-//   type: OmniType;
-// }
 
 export interface OmniCompositionORType extends OmniCompositionBaseType<CompositionKind.OR> {
   orTypes: OmniType[];
@@ -241,7 +251,8 @@ export interface OmniArrayTypesByPositionType extends OmniBaseType<OmniArrayType
 }
 
 type OmniInterfaceTypeKnownKind = OmniTypeKind.INTERFACE;
-export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKind> {
+// NOTE: Should interface really implement IOmniNamedType? Or should it be based on 'of'?
+export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKind>, IOmniOptionallyNamedType {
   of: OmniInheritableType;
 
   /**
@@ -267,7 +278,7 @@ export interface OmniSubTypeHint {
   qualifiers:  OmniPayloadPathQualifier[];
 }
 
-export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind> {
+export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind>, IOmniNamedType {
 
   /**
    * This type can only be extended by "one" thing.
@@ -330,7 +341,7 @@ export type AllowedEnumTsTypes = number | string;
 export type AllowedEnumOmniPrimitiveTypes = OmniPrimitiveKind.STRING | OmniPrimitiveTypeKinds;
 
 type OmniEnumKnownKind = OmniTypeKind.ENUM;
-export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind> {
+export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind>, IOmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];
   primitiveKind: AllowedEnumOmniPrimitiveTypes;
 
@@ -347,12 +358,19 @@ export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind> {
 type OmniGenericSourceIdentifierKnownKind = OmniTypeKind.GENERIC_SOURCE_IDENTIFIER;
 // TODO: Should this actually be a type, and not just something simpler? Since it can ONLY exist inside a OmniGenericSourceType...
 export interface OmniGenericSourceIdentifierType extends OmniBaseType<OmniGenericSourceIdentifierKnownKind> {
+
+  placeholderName: string;
   lowerBound?: OmniType;
   upperBound?: OmniType;
 }
 
 type OmniGenericTargetIdentifierKnownKind = OmniTypeKind.GENERIC_TARGET_IDENTIFIER;
 export interface OmniGenericTargetIdentifierType extends OmniBaseType<OmniGenericTargetIdentifierKnownKind> {
+
+  /**
+   * If no placeholder name is set, then it has the same placeholder name as the sourceIdentifier.
+   */
+  placeholderName?: string;
   sourceIdentifier: OmniGenericSourceIdentifierType;
   type: OmniType;
 }

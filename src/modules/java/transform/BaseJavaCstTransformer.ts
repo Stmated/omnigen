@@ -51,22 +51,22 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const exportableTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
 
-    for (const type of exportableTypes.all) {
-
-      if (!type.nameClassifier) {
-        if (type.kind == OmniTypeKind.PRIMITIVE) {
-
-          // Help with potential naming collisions.
-          let fqn = JavaUtil.getFullyQualifiedName(type);
-          const fqnLastDotIndex = fqn.lastIndexOf('.');
-          if (fqnLastDotIndex != -1) {
-            fqn = fqn.substring(fqnLastDotIndex + 1);
-          }
-
-          type.nameClassifier = fqn;
-        }
-      }
-    }
+    // for (const type of exportableTypes.all) {
+    //
+    //   if ('name' in type && !type.nameClassifier) {
+    //     if (type.kind == OmniTypeKind.PRIMITIVE) {
+    //
+    //       // Help with potential naming collisions.
+    //       let fqn = JavaUtil.getFullyQualifiedName(type);
+    //       const fqnLastDotIndex = fqn.lastIndexOf('.');
+    //       if (fqnLastDotIndex != -1) {
+    //         fqn = fqn.substring(fqnLastDotIndex + 1);
+    //       }
+    //
+    //       type.nameClassifier = fqn;
+    //     }
+    //   }
+    // }
 
     for (const type of exportableTypes.all) {
       if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable == PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE) {
@@ -98,22 +98,14 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
         continue;
       }
-
-      const typeName = Naming.unwrap(type.name);
-      if (!BaseJavaCstTransformer.PATTERN_IDENTIFIER.test(typeName)) {
-        // The type does not have a valid name; what can we do about it?
-        throw new Error(`Type name '${typeName}' (${type.description || type.summary || type.kind}) is not valid`);
-      } else {
-        // The type has a valid name, but we will make sure it is in PascalCase for Java.
-        // Also replace the callback with a new one, so it is set in stone from now on.
-        type.name = Naming.safer(type, (v) => typeNames.includes(v));
-        if (type.kind != OmniTypeKind.PRIMITIVE) {
-
-          // If the type is primitive, then we don't care if it clashes with something else.
-          // That is because the type will not be generated into a Compilation Unit anyway.
-          typeNames.push(type.name);
-        }
+      if (!('name' in type) || !type.name) {
+        continue;
       }
+
+      // NOTE: Make sure it is in pascalCase, or just use what is given?
+      type.name = Naming.safe(type.name, (v) => typeNames.includes(v));
+
+      typeNames.push(type.name);
     }
 
     const removedTypes: OmniType[] = [];
@@ -196,7 +188,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     const valueType: OmniPrimitiveType = {
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: type.primitiveKind,
-      name: `NullSafe${kindName}`
     };
 
     const valueIdentifier = new Java.Identifier('value');
@@ -213,7 +204,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.Type({
             kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
-            name: 'JsonValue'
           })
         )
       )
@@ -241,7 +231,8 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const enumDeclaration = new Java.EnumDeclaration(
       new Java.Type(type),
-      new Java.Identifier(Naming.safer(originalType || type)),
+      // Naming.safer(originalType || type)
+      new Java.Identifier(JavaUtil.getClassName(originalType || type, options)),
       body,
     );
 
@@ -258,7 +249,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         new Java.EnumItemList(
           ...type.enumConstants.map(item => new Java.EnumItem(
             new Java.Identifier(constantCase(String(item))),
-            new Java.Literal(item)
+            new Java.Literal(item, type.primitiveKind)
           ))
         )
       );
@@ -266,7 +257,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
       //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
       const itemType: OmniPrimitiveType = {
-        name: `ValueOfEnum${Naming.unwrap(type.name)}`,
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: type.primitiveKind
       };
@@ -312,7 +302,9 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const declaration = new Java.InterfaceDeclaration(
       new Java.Type(type),
-      new Java.Identifier(Naming.unwrap(type.name)),
+      // TODO: This probably needs improvement, where if no interface name, then create new with "I${underlyingType}"
+      // .name || OmniModelUtil.getVirtualTypeName(type.of)
+      new Java.Identifier(JavaUtil.getClassName(type, options)),
       new Java.Block(),
     );
 
@@ -376,7 +368,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       }
     }
 
-    const javaClassName = Naming.safer(originalType || type);
+    const javaClassName = JavaUtil.getClassName(originalType || type, options);
     const javaType = new Java.Type(type);
 
     let declaration: Java.ClassDeclaration | Java.GenericClassDeclaration | Java.InterfaceDeclaration;
@@ -386,7 +378,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         javaType,
         new Java.GenericTypeDeclarationList(
           genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
-            new Java.Identifier(Naming.unwrap(it.name)),
+            new Java.Identifier(it.placeholderName),
             it.lowerBound ? new Java.Type(it.lowerBound) : undefined,
             it.upperBound ? new Java.Type(it.upperBound) : undefined,
           ))
@@ -454,7 +446,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.Type({
             kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
-            name: 'JsonTypeInfo'
           }),
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
@@ -464,7 +455,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
                   new Java.Type({
                     kind: OmniTypeKind.REFERENCE,
                     fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
-                    name: 'JsonTypeInfoIdNone'
                   })
                 ),
                 new Java.Identifier(
@@ -488,7 +478,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.Type({
             kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
-            name: 'JsonSubType'
           }),
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
@@ -508,7 +497,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.Type({
             kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
-            name: 'JsonSubTypes'
           }),
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
@@ -615,7 +603,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     const fieldValueType = new Java.Type({
       kind: OmniTypeKind.UNKNOWN,
       isAny: true,
-      name: "Object"
     });
     const fieldValue = new Java.Field(
       fieldValueType,
@@ -631,7 +618,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.Type({
             kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
-            name: 'JsonValue'
           })
         )
       )
@@ -669,7 +655,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
             singletonFactoryMethodIdentifier,
             new Java.ArgumentList(
               // TODO: Somehow in the future reference the Enum item instead of the string value
-              new Java.Literal(enumValue)
+              new Java.Literal(enumValue, enumType.primitiveKind)
             )
           ),
         );
@@ -681,11 +667,11 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       const knownBinary = this.createSelfIsOneOfStaticFieldsBinary(knownEnumFields, declaration.type);
       if (knownBinary) {
 
-        const enumTypeName = pascalCase(Naming.unwrap(enumType.name));
+        const enumTypeName = pascalCase(Naming.safe(enumType.name));
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`is${enumTypeName}`),
-            new Java.Type({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL, name: 'boolean'}),
+            new Java.Type({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}),
           ),
           new Java.Block(
             new Java.Statement(
@@ -713,7 +699,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
                       new Java.Type({
                         kind: OmniTypeKind.PRIMITIVE,
                         primitiveKind: enumType.primitiveKind,
-                        name: JavaUtil.getPrimitiveKindName(enumType.primitiveKind, false)
                       }),
                       new Java.FieldReference(fieldValue)
                     )
@@ -764,7 +749,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.ClassName(declaration.type),
           singletonFactoryMethodIdentifier,
           new Java.ArgumentList(
-            new Java.Literal(valueConstant)
+            new Java.Literal(valueConstant, primitiveType.primitiveKind)
           )
         ),
       );
@@ -778,7 +763,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       kind: OmniTypeKind.DICTIONARY,
       keyType: fieldValueType.omniType,
       valueType: declaration.type.omniType,
-      name: 'SingletonDictionary',
     });
 
     const fieldValues = new Java.Field(
@@ -821,7 +805,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
             new Java.Type({
               kind: OmniTypeKind.REFERENCE,
               fqn: 'com.fasterxml.jackson.annotation.JsonCreator',
-              name: 'Creator'
             })
           )
         )
@@ -941,7 +924,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
               kind: OmniTypeKind.PRIMITIVE,
               primitiveKind: OmniPrimitiveKind.BOOL,
               nullable: PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE,
-              name: 'boolean'
             }),
           ),
           new Java.Block(
@@ -1093,7 +1075,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.Type({
             kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonProperty',
-            name: 'JsonProperty'
           }),
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
@@ -1171,7 +1152,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
               new Java.Statement(new Java.ReturnStatement(new Java.FieldReference(field))),
             )
           ),
-          new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.valueConstant))),
+          new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.valueConstant, type.primitiveKind))),
         );
       } else {
         methodBlock = new Java.Block(

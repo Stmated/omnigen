@@ -1,7 +1,7 @@
 import {GenericOmniModelTransformer} from '@parse/general/GenericOmniModelTransformer';
 import {OmniModel, OmniPrimitiveKind, OmniTypeKind} from '@parse';
 import {TestUtils} from '../../TestUtils';
-import {DEFAULT_JAVA_OPTIONS} from '@java';
+import {DEFAULT_JAVA_OPTIONS, JavaUtil} from '@java';
 import {Naming} from '../../../src/parse/Naming';
 
 describe('Test CompositionDependencyUtil', () => {
@@ -28,7 +28,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const type = model.types[0];
 
-    expect(type.name).toEqual('A');
+    expect(JavaUtil.getClassName(type)).toEqual('A');
     if (type.kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
 
     expect(type.properties).toEqual([]);
@@ -40,7 +40,6 @@ describe('Test CompositionDependencyUtil', () => {
 
     const a = TestUtils.obj('A', undefined, [
       TestUtils.prop('propA', {
-        name: 'propAType',
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.INTEGER
       })
@@ -48,14 +47,12 @@ describe('Test CompositionDependencyUtil', () => {
 
     const aa = TestUtils.obj('aa', a, [
       TestUtils.prop('propX', {
-        name: 'propAType',
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.INTEGER
       })
     ]);
     const ab = TestUtils.obj('ab', a, [
       TestUtils.prop('propX', {
-        name: 'propAType',
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.DOUBLE
       })
@@ -83,8 +80,8 @@ describe('Test CompositionDependencyUtil', () => {
     if (model.types[1].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
     if (model.types[2].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
 
-    expect(Naming.unwrap(model.types[0].name)).toEqual('A');
-    expect(Naming.unwrap(model.types[0].of.name)).toEqual('A');
+    expect(JavaUtil.getClassName(model.types[0])).toEqual('A');
+    expect(JavaUtil.getClassName(model.types[0].of)).toEqual('A');
     expect(model.types[0].of).toEqual(a);
 
     if (model.types[1].extendedBy?.kind != OmniTypeKind.GENERIC_TARGET) throw new Error(`Wrong kind`);

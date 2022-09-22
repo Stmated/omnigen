@@ -15,7 +15,6 @@ describe('Test Composition Types', () => {
 
   test('Merging primitive allOf composition type', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [{
-      name: 'a',
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.NUMBER
     }]);
@@ -27,8 +26,8 @@ describe('Test Composition Types', () => {
   test('Merging primitive allOf composition type', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [
       // This is invalid, it is not possible to be a Number AND String, but this method should not validate.
-      {name: 'a', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
-      {name: 'b', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}
+      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
+      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}
     ]);
 
     assert(result);
@@ -41,8 +40,8 @@ describe('Test Composition Types', () => {
 
   test('allOf1+anyOf1', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
-      [{name: 'a', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}],
-      [{name: 'b', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}]
+      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}],
+      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}]
     );
 
     assert(result);
@@ -56,10 +55,10 @@ describe('Test Composition Types', () => {
   test('allOf1+anyOf2', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [
-        {name: 'a', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        {name: 'b', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}
+        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}
       ],
-      [{name: 'c', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}]
+      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}]
     );
 
     assert(result);
@@ -75,10 +74,10 @@ describe('Test Composition Types', () => {
   test('allOf1+oneOf2', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
-      [{name: 'a', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
+      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
       [
-        {name: 'b', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        {name: 'c', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}
+        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}
       ]
     );
 
@@ -95,12 +94,12 @@ describe('Test Composition Types', () => {
   test('allOf1+oneOf2+not', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
-      [{name: 'a', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
+      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
       [
-        {name: 'b', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        {name: 'c', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}
+        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}
       ],
-      {name: 'd', kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.FLOAT}
+      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.FLOAT}
     );
 
     assert(result);

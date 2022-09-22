@@ -90,8 +90,7 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<JavaOpt
 
     const interfaceType: OmniInterfaceType = {
       kind: OmniTypeKind.INTERFACE,
-      name: (duplicateFn) => `InterfaceOf${Naming.safer(type, duplicateFn)}`,
-      of: type
+      of: type,
     };
 
     if ('extendedBy' in type) {
@@ -119,7 +118,6 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<JavaOpt
         const composition: OmniCompositionType = {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          name: (duplicateFn) => `${Naming.safer(originalExtension, duplicateFn)}And${Naming.safer(interfaceType, duplicateFn)}`,
           andTypes: [
             originalExtension,
             interfaceType

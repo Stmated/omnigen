@@ -7,7 +7,6 @@ import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {CstRootNode} from '@cst/CstRootNode';
-import exp = require('constants');
 
 describe('Java Rendering', () => {
 
@@ -89,12 +88,12 @@ describe('Java Rendering', () => {
     const fileNames = [...fileContents.keys()];
     expect(fileNames).toContain('A.java');
     expect(fileNames).toContain('Abs.java');
-    expect(fileNames).toContain('AxOrB.java'); // TODO: Bad naming, it looks weird. Fix?
+    expect(fileNames).toContain('AXOrB.java'); // TODO: Bad naming, it looks weird. Fix?
     expect(fileNames).toContain('B.java');
     expect(fileNames).toContain('C.java');
-    expect(fileNames).not.toContain('InterfaceOfA.java');
-    expect(fileNames).toContain('InterfaceOfB.java');
-    expect(fileNames).toContain('InterfaceOfC.java');
+    expect(fileNames).not.toContain('IA.java');
+    expect(fileNames).toContain('IB.java');
+    expect(fileNames).toContain('IC.java');
     expect(fileNames).toContain('Out_2.java');
 
     const a = getParsedContent(fileContents, 'A.java');
@@ -111,16 +110,16 @@ describe('Java Rendering', () => {
     expect(b.foundSuperInterfaces).toHaveLength(1);
     expect(b.foundMethods).toHaveLength(1);
     expect(b.foundSuperClasses).toContain('Abs');
-    expect(b.foundSuperInterfaces).toContain('InterfaceOfB');
+    expect(b.foundSuperInterfaces).toContain('IB');
 
     const c = getParsedContent(fileContents, 'C.java');
     expect(c.foundSuperClasses).toHaveLength(1);
     expect(c.foundSuperInterfaces).toHaveLength(1);
     expect(c.foundMethods).toHaveLength(1);
     expect(c.foundSuperClasses).toContain('Abs');
-    expect(c.foundSuperInterfaces).toContain('InterfaceOfC');
+    expect(c.foundSuperInterfaces).toContain('IC');
 
-    const eitherAorB = getParsedContent(fileContents, 'AxOrB.java');
+    const eitherAorB = getParsedContent(fileContents, 'AXOrB.java');
     expect(eitherAorB.foundFields).toHaveLength(3);
     expect(eitherAorB.foundFields[0].names[0]).toEqual('_raw');
     expect(eitherAorB.foundFields[1].names[0]).toEqual('_a');
@@ -135,8 +134,8 @@ describe('Java Rendering', () => {
     expect(out2.foundSuperClasses).toHaveLength(1);
     expect(out2.foundSuperInterfaces).toHaveLength(2);
     expect(out2.foundSuperClasses[0]).toEqual('A');
-    expect(out2.foundSuperInterfaces[0]).toEqual('InterfaceOfB');
-    expect(out2.foundSuperInterfaces[1]).toEqual('InterfaceOfC');
+    expect(out2.foundSuperInterfaces[0]).toEqual('IB');
+    expect(out2.foundSuperInterfaces[1]).toEqual('IC');
   });
 
   test('Enum', async () => {
@@ -213,16 +212,6 @@ describe('Java Rendering', () => {
     expect(additional.foundFields).toHaveLength(0);
   });
 
-  // Error according to spec 2.0:
-  // {"jsonrpc": "2.0", "result": 19, "id": 3}
-  // {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}, "id": null},
-
-  // Error according to spec 1.1:
-  // {"version": "1.1", "result": "done", "error": null, "id": "194521489"}
-
-  // Error according to spec 1.0:
-  // {"result": "Hello JSON-RPC", "error": null, "id": 1}
-
   test('ErrorStructure', async () => {
 
     const fileContents = await getFileContentsFromFile('error-structure.json');
@@ -263,9 +252,9 @@ describe('Java Rendering', () => {
     const filenames = [...fileContents.keys()];
 
     expect(filenames).toContain('ListThingsError100Error.java');
-    expect(filenames).toContain('JsonRpcCustomError.java');
-    expect(filenames).not.toContain('Data.java'); // The generated class for property 'Data' should be better
-    expect(filenames).toContain('JsonRpcCustomErrorData.java');
+    expect(filenames).toContain('JsonRpcCustomErrorPayload.java');
+    expect(filenames).not.toContain('Data.java'); // Class for property 'Data' should be better named
+    expect(filenames).toContain('JsonRpcCustomErrorPayload.java');
 
     const error100 = getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toHaveLength(4);
@@ -275,18 +264,27 @@ describe('Java Rendering', () => {
     expect(error100.foundFields[3].names[0]).toEqual("name");
     expect(error100.foundLiterals[7]).toEqual("\"JSONRPCError\"");
 
-    const customError = getParsedContent(fileContents, 'JsonRpcCustomError.java');
+    const customError = getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
     expect(customError.foundFields).toHaveLength(5);
     expect(customError.foundFields[0].names[0]).toEqual('signature');
     expect(customError.foundFields[1].names[0]).toEqual('uuid');
     expect(customError.foundFields[2].names[0]).toEqual('method');
     expect(customError.foundFields[3].names[0]).toEqual('data');
     expect(customError.foundFields[4].names[0]).toEqual('_additionalProperties');
-
-    const data = getParsedContent(fileContents, 'JsonRpcCustomErrorData.java');
-    expect(data.foundFields).toHaveLength(1);
-    expect(data.foundFields[0].names[0]).toEqual('_additionalProperties');
   });
+
+  test('PetStore-Expanded-ClassNames', async () => {
+
+    const fileContents = await getFileContentsFromFile('petstore-expanded.json');
+    const filenames = [...fileContents.keys()];
+
+    expect(filenames).toContain('Pet.java');
+    expect(filenames).toContain('DeletePetByIdResponse.java');
+    expect(filenames).not.toContain('Pet1.java');
+  });
+
+  // test('PetStore should create expected model', async () => {
+  //   const model = await parser.parse(new SchemaFile('./test/examples/openrpc/petstore-expanded.json'));
 
   test('Test inheritance of descriptions', async () => {
 

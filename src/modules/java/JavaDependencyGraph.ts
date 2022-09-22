@@ -2,6 +2,7 @@ import {CompositionKind, OmniInheritableType, OmniObjectType, OmniType, OmniType
 import {DependencyGraph} from '@parse/DependencyGraphBuilder';
 import {LoggerFactory} from '@util';
 import {Naming} from '@parse/Naming';
+import {OmniModelUtil} from '@parse/OmniModelUtil';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -42,7 +43,7 @@ export class JavaDependencyGraph {
           return use;
         }
 
-        throw new Error(`Said '${Naming.safer(type)}' inherit '${Naming.safer(use)}', but does not seem Java-compatible`)
+        throw new Error(`Said '${OmniModelUtil.getTypeDescription(type)}' inherit '${OmniModelUtil.getTypeDescription(use)}', but does not seem Java-compatible`)
       }
     }
 

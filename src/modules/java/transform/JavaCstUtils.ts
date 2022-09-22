@@ -30,7 +30,7 @@ export class JavaCstUtils {
 
     declaration.annotations.children.push(
       new Java.Annotation(
-        new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'javax.annotation.Generated', name: 'Generated'}),
+        new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'javax.annotation.Generated'}),
         new Java.AnnotationKeyValuePairList(
           new Java.AnnotationKeyValuePair(
             new Java.Identifier('value'),

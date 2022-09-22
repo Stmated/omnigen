@@ -1,18 +1,34 @@
 import {pascalCase} from 'change-case';
-import {OmniType, OmniTypeKind, TypeName} from '@parse/OmniModel';
+import {TypeName, TypeNameFn, TypeNameSingle} from '@parse/OmniModel';
 import {LoggerFactory} from '@util';
-import {JavaUtil} from '@java';
 
 export const logger = LoggerFactory.create(__filename);
 
 export class Naming {
 
-  public static unwrap(name: TypeName): string {
-    return (typeof name == 'string') ? name : name();
+  /**
+   * TODO: Make this private, since it is dangerous and easier to understand with only ONE resolving entrypoint
+   */
+  public static unwrap(name: TypeNameSingle): string {
+
+    const resolvedName = Naming.unwrapOptional(name);
+    if (resolvedName == undefined) {
+      throw new Error(`Cannot unwrap a name that resolves to undefined. Use safer methods of resolving the name`);
+    }
+
+    return resolvedName;
   }
 
-  public static safer(type: OmniType, hasDuplicateFn?: (value: string) => boolean): string {
-    return Naming.safe(type.name, type.nameClassifier, hasDuplicateFn);
+  private static unwrapOptional(name: TypeNameSingle): string | undefined {
+    if (name == undefined) {
+      return name;
+    }
+
+    if (typeof name == 'string') {
+      return name;
+    }
+
+    return name();
   }
 
   /**
@@ -23,48 +39,77 @@ export class Naming {
    *        Maybe make the name property a callback which can alter during the execution?
    *        (And then finalize it at the end, at the cleanup)
    */
-  public static safe(name: TypeName, classifier?: string, hasDuplicateFn?: (value: string) => boolean): string {
+  public static safe(name: TypeName, hasDuplicateFn?: TypeNameFn): string {
 
-    let safeName = '';
-    const resolvedName = Naming.unwrap(name);
-    if (resolvedName.indexOf('/') !== -1) {
-      // The type name contains a slash, which means it is probably a ref name.
-      const nameParts = resolvedName.split('/');
-      for (let i = nameParts.length - 1; i >= 0; i--) {
-        safeName = (Naming.prefixedPascalCase(nameParts[i]) + safeName);
+    if (name == undefined) {
+      throw new Error(`Not allowed to give an undefined name`);
+    }
 
-        if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
-          return safeName;
+    const resolved = Naming.safeInternal(name, hasDuplicateFn);
+    if (resolved) {
+      return resolved;
+    }
+
+    const firstResolvedWithoutDuplicateCheck = Naming.safeInternal(name, undefined);
+    if (firstResolvedWithoutDuplicateCheck) {
+
+      if (hasDuplicateFn) {
+
+        // If we have come this far, then we will have to attempt to add a numbered suffix.
+        // We should *really* try to avoid this by some other naming.
+        for (let i = 1; i < 50; i++) {
+          const safeSuffixedName = `${firstResolvedWithoutDuplicateCheck}${i}`;
+          if (!hasDuplicateFn(safeSuffixedName)) {
+            logger.warn(`Created fallback naming '${safeSuffixedName}', this should be avoided`);
+            return safeSuffixedName;
+          }
+        }
+      } else {
+
+        // TODO: Do something here? Create a random number or set of character and append to the name?
+      }
+    }
+
+    throw new Error(`Could not build a safe unique name for '${firstResolvedWithoutDuplicateCheck || ''}'`);
+  }
+
+  private static safeInternal(name: TypeName, hasDuplicateFn?: TypeNameFn): string | undefined {
+
+    if (Array.isArray(name)) {
+      for (const entry of name) {
+        const resolved = Naming.safeInternal(entry, hasDuplicateFn);
+        if (resolved) {
+          return resolved;
         }
       }
     } else {
-      safeName = Naming.prefixedPascalCase(resolvedName);
-    }
 
-    if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
-      return safeName;
-    }
+      // TODO: Should this be removed and instead up to the caller to have a longer list of potential names?
+      //       Feels like that is the better choice; gives more freedom to where we should use the slash (/) fallback.
+      let safeName = '';
+      const resolvedName = Naming.unwrapOptional(name);
+      if (resolvedName) {
+        if (resolvedName.indexOf('/') !== -1) {
+          // The type name contains a slash, which means it is probably a ref name.
+          const nameParts = resolvedName.split('/');
+          for (let i = nameParts.length - 1; i >= 0; i--) {
+            safeName = (Naming.prefixedPascalCase(nameParts[i]) + safeName);
 
-    if (classifier) {
+            if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
+              return safeName;
+            }
+          }
+        } else {
+          safeName = Naming.prefixedPascalCase(resolvedName);
+        }
+      }
 
-      // Add the classifier, which might make class "Pet" into "ResponsePet"
-      safeName = `${Naming.prefixedPascalCase(classifier)}${safeName}`;
-      if (!hasDuplicateFn(safeName)) {
+      if (!hasDuplicateFn || (safeName.length > 0 && !hasDuplicateFn(safeName))) {
         return safeName;
       }
     }
 
-    // If we have come this far, then we will have to attempt to add a numbered suffix.
-    // We should *really* try to avoid this by some other naming.
-    for (let i = 1; i < 50; i++) {
-      const safeSuffixedName = `${safeName}${i}`;
-      if (!hasDuplicateFn(safeSuffixedName)) {
-        logger.warn(`Created fallback naming '${safeSuffixedName}', this should be avoided`);
-        return safeSuffixedName;
-      }
-    }
-
-    throw new Error(`Could not build a safe unique name for '${safeName}'`);
+    return undefined;
   }
 
   private static prefixedPascalCase(name: string): string {

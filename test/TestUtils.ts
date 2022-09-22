@@ -70,7 +70,6 @@ export class TestUtils {
 
   public static and(...types: OmniType[]): OmniCompositionType {
     return {
-      name: types.map(it => Naming.unwrap(it.name)).join('And'),
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
       andTypes: types,

@@ -104,6 +104,7 @@
           },
           {
             "type": "number",
+            "format": "double",
             "enum": [1337]
           },
           {

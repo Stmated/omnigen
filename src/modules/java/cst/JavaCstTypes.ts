@@ -105,14 +105,16 @@ export abstract class AbstractExpression extends AbstractJavaNode {
 }
 
 // Split this into different types of constant depending on the type?
-type LiteralType = boolean | number | string | null;
+type LiteralValue = boolean | number | string | null;
 
 export class Literal extends AbstractExpression {
-  value: LiteralType;
+  value: LiteralValue;
+  primitiveKind?: OmniPrimitiveKind;
 
-  constructor(value: LiteralType) {
+  constructor(value: LiteralValue, primitiveKind?: OmniPrimitiveKind) {
     super();
     this.value = value;
+    this.primitiveKind = primitiveKind;
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
@@ -589,7 +591,6 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
       new MethodDeclarationSignature(
         new Identifier(JavaUtil.getSetterName(field.identifier.value, field.type.omniType)),
         new Type({
-          name: 'void',
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
         }),
@@ -785,7 +786,6 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
     this.keyType = {
-      name: () => 'AdditionalPropertiesKeyType',
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING
     };
@@ -793,11 +793,9 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     // TODO: Should this be "Unknown" or another type that is "Any"?
     //  Difference between rendering as JsonNode and Object in some cases.
     this.valueType = {
-      name: () => 'AdditionalPropertiesValueType',
       kind: OmniTypeKind.UNKNOWN,
     }
     this.mapType = {
-      name: () => 'AdditionalProperties',
       kind: OmniTypeKind.DICTIONARY,
       keyType: this.keyType,
       valueType: this.valueType
@@ -847,7 +845,6 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     addMethod.signature.annotations = new AnnotationList(
       new Annotation(
         new Type({
-          name: () => 'AnySetter',
           kind: OmniTypeKind.REFERENCE,
           fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
         }),
@@ -861,7 +858,6 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
         additionalPropertiesField,
         new AnnotationList(new Annotation(
           new Type({
-            name: () => 'AnyGetter',
             kind: OmniTypeKind.REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
           }),
@@ -1164,7 +1160,6 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
 
     const unknownType: OmniUnknownType = {
       kind: OmniTypeKind.UNKNOWN,
-      name: 'unknown',
     };
 
     const untypedField = new Field(
@@ -1177,7 +1172,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       undefined,
       new AnnotationList(
         new Java.Annotation(
-          new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue', name: 'JsonValue'}),
+          new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue'}),
         )
       )
     );
@@ -1204,7 +1199,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
         const objectMapperReference = new Identifier('objectMapper');
         argumentDeclarationList.children.push(
           new ArgumentDeclaration(
-            new Type({kind: OmniTypeKind.REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper", name: 'om'}),
+            new Type({kind: OmniTypeKind.REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper"}),
             objectMapperReference
           )
         );
@@ -1275,6 +1270,11 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
     //   return camelCase(JavaUtil.getPrimitiveKindName(type.primitiveKind, true));
     // }
 
-    return camelCase(Naming.unwrap(type.name));
+    // TODO: This is most likely wrong, will give name with package and whatnot.
+    const javaName = JavaUtil.getName({
+      type: type,
+    })
+
+    return camelCase(javaName); // camelCase(Naming.unwrap(type.name));
   }
 }

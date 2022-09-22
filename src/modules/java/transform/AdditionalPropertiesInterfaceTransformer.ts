@@ -40,13 +40,13 @@ export class AdditionalPropertiesInterfaceTransformer extends AbstractJavaCstTra
 
           const interfaceType: OmniInterfaceType = {
             kind: OmniTypeKind.INTERFACE,
+            name: 'IAdditionalProperties',
             of: additionalPropertiesObjectType,
-            name: 'IAdditionalProperties'
           };
 
           createdInterface.obj = new Java.InterfaceDeclaration(
             new Java.Type(interfaceType, false),
-            new Java.Identifier(Naming.unwrap(interfaceType.name)),
+            new Java.Identifier(Naming.safe([interfaceType.name, additionalPropertiesObjectType.name])),
             new Java.Block()
           );
 

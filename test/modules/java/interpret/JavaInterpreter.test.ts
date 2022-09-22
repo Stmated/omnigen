@@ -2,7 +2,7 @@ import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {
   DEFAULT_JAVA_OPTIONS,
-  JavaOptions,
+  JavaOptions, JavaUtil,
   PrimitiveGenerificationChoice
 } from '@java';
 import {OmniTypeKind} from '@parse';
@@ -18,7 +18,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(interpretation).toBeDefined();
 
-    expect(interpretation.children).toHaveLength(21);
+    expect(interpretation.children).toHaveLength(22);
 
     // TODO: We should assert stuff here :)
   });
@@ -55,6 +55,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
         'GiveStringGetStringRequestParams',
         'GiveStringGetStringResponse',
         'JsonRpcError',
+        'JsonRpcErrorResponse',
         'JsonRpcRequest',
         'JsonRpcRequestParams',
         'JsonRpcResponse',
@@ -69,7 +70,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind`);
 
-    expect(Naming.unwrap(type.source.of.name)).toEqual("JsonRpcRequestParams");
+    expect(JavaUtil.getClassName(type.source.of)).toEqual("JsonRpcRequestParams");
     expect(type.targetIdentifiers).toHaveLength(1);
 
     // NOTE: This is currently "REFERENCE" -- but might change later.
@@ -110,6 +111,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
         'GiveStringGetStringRequestParams',
         'GiveStringGetStringResponse',
         'JsonRpcError',
+        'JsonRpcErrorResponse',
         'JsonRpcRequest',
         'JsonRpcRequestParams',
         'JsonRpcResponse'
@@ -121,7 +123,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind`);
 
-    expect(Naming.unwrap(type.source.of.name)).toEqual("JsonRpcRequestParams");
+    expect(JavaUtil.getClassName(type.source.of)).toEqual("JsonRpcRequestParams");
     expect(type.targetIdentifiers).toHaveLength(1);
     expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.PRIMITIVE);
   });
@@ -158,6 +160,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
         'GiveStringGetStringRequestParams',
         'GiveStringGetStringResponse',
         'JsonRpcError',
+        'JsonRpcErrorResponse',
         'JsonRpcRequest',
         'JsonRpcRequestParams',
         'JsonRpcResponse'
@@ -178,7 +181,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(root).toBeDefined();
 
-    expect(root.children).toHaveLength(22);
+    expect(root.children).toHaveLength(23);
 
     expect(model).toBeDefined();
   });
@@ -191,7 +194,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
     expect(root).toBeDefined();
 
-    expect(root.children).toHaveLength(16);
+    expect(root.children).toHaveLength(17);
 
     expect(model).toBeDefined();
   });

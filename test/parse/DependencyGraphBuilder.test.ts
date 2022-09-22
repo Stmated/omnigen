@@ -1,5 +1,4 @@
 import {
-  CompositionKind,
   OmniObjectType,
   OmniCompositionType,
   OmniPrimitiveKind,
@@ -12,7 +11,6 @@ import {
   DependencyGraphBuilder,
   DependencyGraphOptions
 } from '../../src/parse/DependencyGraphBuilder';
-import {Naming} from '../../src/parse/Naming';
 import {TestUtils} from '../TestUtils';
 
 describe('Test CompositionDependencyUtil', () => {
@@ -39,7 +37,6 @@ describe('Test CompositionDependencyUtil', () => {
 
   test('One Primitive', async () => {
     const result = java([{
-      name: () => 'number',
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.NUMBER,
     }]);
@@ -268,7 +265,7 @@ function inlineClassWithProp(name: string,) {
     {
       name: `${name}Property`,
       owner: inline,
-      type: {name: "integer", kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER}
+      type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER}
     }
   ];
   return inline;

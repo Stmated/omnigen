@@ -1,4 +1,5 @@
 import * as Java from '@java/cst/JavaCstTypes';
+import {AbstractJavaNode, GenericTypeDeclarationList} from '@java/cst/JavaCstTypes';
 import {CompilationUnitCallback} from '@cst/CompilationUnitCallback';
 import {ICstVisitor, VisitResult} from '@visit';
 import {IRenderer} from '@render';
@@ -7,7 +8,7 @@ import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
 import {JavaOptions, JavaUtil} from '@java';
-import {AbstractJavaNode, GenericTypeDeclarationList, TypeList} from '@java/cst/JavaCstTypes';
+import {OmniPrimitiveKind} from '@parse';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>;
 
@@ -273,7 +274,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
-    return (node.types.children.map(it => this.escapeImplements(this.render(it, visitor))).join(', '));
+    return (node.types.children.map(it => this.render(it, visitor)).join(', '));
   }
 
   visitEnumItem: JavaRendererVisitFn<Java.EnumItem> = (node, visitor) => {
@@ -358,6 +359,19 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     } else if (node.value === null) {
       return (`null`);
     } else {
+      if (node.primitiveKind !== undefined) {
+        if (node.primitiveKind == OmniPrimitiveKind.DOUBLE) {
+          return (`${node.value}d`);
+        } else if (node.primitiveKind == OmniPrimitiveKind.FLOAT) {
+          return (`${node.value}f`);
+        } else if (node.primitiveKind == OmniPrimitiveKind.LONG) {
+          return (`${node.value}L`);
+        } else if (node.primitiveKind == OmniPrimitiveKind.INTEGER) {
+          return (`${node.value}`);
+        } else if (node.primitiveKind == OmniPrimitiveKind.NUMBER) {
+          // If the type is just 'number' we will have to hope type inference is good enough.
+        }
+      }
       return (`${node.value}`);
     }
   }

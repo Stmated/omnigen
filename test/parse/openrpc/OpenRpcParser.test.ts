@@ -3,7 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {Naming} from '@parse/Naming';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
-import {DEFAULT_JAVA_OPTIONS} from '@java';
+import {DEFAULT_JAVA_OPTIONS, JavaUtil} from '@java';
 import {TestUtils} from '../../TestUtils';
 
 describe('Test Generic Model Creation', () => {
@@ -39,7 +39,7 @@ describe('Test Generic Model Creation', () => {
     expect(model.endpoints[0].name).toEqual('get_pets');
     expect(model.endpoints[0].responses).toHaveLength(2); // 1 result, 1 error
     expect(model.endpoints[0].responses[0].name).toEqual('pet'); // Or should it be something else?
-    expect(Naming.unwrap(model.endpoints[0].responses[0].type.name)).toEqual('GetPetsResponse'); // Should this be 'pet' since is name of `result`?
+    expect(JavaUtil.getClassName(model.endpoints[0].responses[0].type)).toEqual('GetPetsResponse'); // Should this be 'pet' since is name of `result`?
 
     const response0 = model.endpoints[0].responses[0];
     expect(response0.type.kind).toEqual(OmniTypeKind.OBJECT);
@@ -50,8 +50,8 @@ describe('Test Generic Model Creation', () => {
     expect(response0properties[0].name).toEqual('result');
 
     const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
-    expect(allTypes.all.map(it => Naming.safer(it))).toContain('DeletePetByIdResponse');
-    expect(allTypes.all.map(it => Naming.safer(it))).toContain('ErrorUnknownError');
+    expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('DeletePetByIdResponse');
+    expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('ErrorUnknownError');
   });
 
   test('Ethereum XOrNull', async () => {

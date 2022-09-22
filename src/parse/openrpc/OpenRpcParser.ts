@@ -7,7 +7,7 @@ import {
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniArrayTypes,
-  OmniArrayTypesByPositionType, OmniBaseType,
+  OmniArrayTypesByPositionType,
   OmniComparisonOperator,
   OmniContact,
   OmniEndpoint,
@@ -240,15 +240,15 @@ class OpenRpcParserImpl {
 
     if (schema.hasOwnProperty('kind')) {
       const omniType = schema as OmniType;
-      logger.info(`Using the given omni type '${Naming.unwrap(omniType.name)}'`);
+      logger.info(`Using the given omni type '${OmniModelUtil.getTypeDescription(omniType)}'`);
       return omniType;
     }
 
     // The type is a JSONSchema7, though the type system seems unsure of that fact.
     const jsonSchema = schema as JSONSchema7;
     const derefJsonSchema = this._deref.get(jsonSchema, this.doc);
-    const omniType = this.jsonSchemaToType('JsonRpcCustomError', derefJsonSchema, undefined).type;
-    logger.info(`Using the from jsonschema converted omni type '${Naming.unwrap(omniType.name)}'`);
+    const omniType = this.jsonSchemaToType('JsonRpcCustomErrorPayload', derefJsonSchema, undefined).type;
+    logger.info(`Using the from jsonschema converted omni type '${OmniModelUtil.getTypeDescription(omniType)}'`);
     return omniType;
   }
 
@@ -345,8 +345,8 @@ class OpenRpcParserImpl {
             {
               path: [propertyName],
               operator: OmniComparisonOperator.EQUALS,
-              // TODO: This might be INVALID! Need to get a hold of the originating reference name or something!
-              value: Naming.unwrap(inheritor.name),
+              // TODO: This is VERY LIKELY INVALID! Must get the originating reference name or something!
+              value: OmniModelUtil.getVirtualTypeName(inheritor),
             }
           ]
         })
@@ -514,7 +514,6 @@ class OpenRpcParserImpl {
 
     if (typeof schema.obj == 'boolean') {
       return {
-          name: 'boolean',
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.BOOL,
       };
@@ -526,9 +525,28 @@ class OpenRpcParserImpl {
       return nonClassType;
     }
 
+    const schemaObj = schema.obj;
+    const names: TypeName = [
+      name,
+      (fn) => {
+        if (schemaObj.title) {
+          return `${pascalCase(schemaObj.title)}${Naming.safe(name, fn)}`;
+        } else {
+          return undefined;
+        }
+      },
+      (fn) => {
+        if (schemaObj.type) {
+          return `${pascalCase(String(schemaObj.type))}${Naming.safe(name, fn)}`;
+        } else {
+          return undefined;
+        }
+      }
+    ];
+
     const type: OmniObjectType = {
-      name: name,
-      nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : (schema.obj.type ? String(schema.obj.type) : undefined),
+      name: names,
+      // nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : (schema.obj.type ? String(schema.obj.type) : undefined),
       kind: OmniTypeKind.OBJECT,
       description: schema.obj.description,
       title: schema.obj.title,
@@ -720,21 +738,26 @@ class OpenRpcParserImpl {
       }
     }
 
-    // TODO: Reintroduce this someday? Should we ever do this to the OmniModel,
-    //        and not delegate specific cleanup to the target language?
-    if (extendedBy && this.canBeReplacedWithExtension(type, extendedBy)) {
+    if (extendedBy && this.canBeReplacedBy(type, extendedBy)) {
+
       // Simplify empty types by only returning the inner content.
-      // This is likely a bad idea... will see how it works in the future.
-      return <OmniType>{
+      const newType: OmniType = {
         ...extendedBy,
         ...{
-          // The name should be kept the same, since it is likely much more specific.
-          name: type.name,
           description: extendedBy.description || type.description,
           summary: extendedBy.summary || type.summary,
           title: extendedBy.title || type.title,
         }
       };
+
+      // TODO: A bit ugly? Is there a better way, or just a matter of introducing a helper method that does it for us?
+      if ('name' in newType || newType.kind == OmniTypeKind.COMPOSITION || newType.kind == OmniTypeKind.INTERFACE) {
+
+        // The name should be kept the same, since it is likely much more specific.
+        newType.name = type.name;
+      }
+
+      return newType;
     }
 
     type.subTypeHints = subTypeHints;
@@ -745,7 +768,7 @@ class OpenRpcParserImpl {
     return type;
   }
 
-  private canBeReplacedWithExtension(type: OmniObjectType, extension: OmniType): boolean {
+  private canBeReplacedBy(type: OmniObjectType, extension: OmniType): boolean {
 
     if (OmniModelUtil.isEmptyType(type)) {
       if (extension.kind == OmniTypeKind.COMPOSITION && extension.compositionKind == CompositionKind.XOR) {
@@ -843,7 +866,7 @@ class OpenRpcParserImpl {
 
         const subType = this.jsonSchemaToType(deref.hash, deref, undefined).type;
         if (subTypeHints.find(it => it.type == subType)) {
-          logger.debug(`Skipping ${discriminatorPropertyName} as ${Naming.unwrap(subType.name)} since it has a custom key`);
+          logger.debug(`Skipping ${discriminatorPropertyName} as ${OmniModelUtil.getTypeDescription(subType)} since it has a custom key`);
           continue;
         }
 
@@ -891,24 +914,18 @@ class OpenRpcParserImpl {
 
     if (!items) {
       // No items, so the schema for the array items is undefined.
-      const arrayTypeName: TypeName = (name)
-        ? name
-        : `ArrayOfUnknowns`;
-
       return {
-        name: arrayTypeName,
         kind: OmniTypeKind.ARRAY,
         minLength: schema.obj.minItems,
         maxLength: schema.obj.maxItems,
         description: schema.obj.description,
         of: {
-          name: () => `UnknownItemOf${Naming.unwrap(arrayTypeName)}`,
           kind: OmniTypeKind.UNKNOWN,
         },
       };
 
     } else if (typeof items == 'boolean') {
-      throw new Error(`Do not know how to handle a boolean items '${name ? Naming.unwrap(name) : ''}'`);
+      throw new Error(`Do not know how to handle a boolean items '${name ? Naming.safe(name) : ''}'`);
     } else if (Array.isArray(items)) {
 
       // TODO: We should be introducing interfaces that describe the common denominators between the different items?
@@ -923,13 +940,15 @@ class OpenRpcParserImpl {
 
       const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
-      return <OmniArrayTypesByPositionType>{
-        name: name ?? `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
+      const arrayByPositionType: OmniArrayTypesByPositionType = {
+        // name: name ?? `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
         kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
         description: schema.obj.description,
         commonDenominator: commonDenominator,
       };
+
+      return arrayByPositionType;
 
     } else {
 
@@ -939,18 +958,12 @@ class OpenRpcParserImpl {
       if (itemsSchema.obj.title) {
         itemTypeName = pascalCase(itemsSchema.obj.title);
       } else {
-        itemTypeName = () => `${name ? Naming.unwrap(name) : ''}Item`;
+        itemTypeName = (fn) => `${name ? Naming.safe(name, fn) : ''}Item`;
       }
 
       const itemType = this.jsonSchemaToType(itemTypeName, itemsSchema, undefined);
 
-      const arrayTypeName: TypeName = (name)
-        ? name
-        : () => `ArrayOf${Naming.safer(itemType.type)}`;
-
       return {
-        name: arrayTypeName,
-        nameClassifier: 'Array',
         kind: OmniTypeKind.ARRAY,
         minLength: schema.obj.minItems,
         maxLength: schema.obj.maxItems,
@@ -996,7 +1009,7 @@ class OpenRpcParserImpl {
     } else {
 
       // TODO: Can we introduce generics here in some way?
-      const vsString = `${Naming.safer(a.type)} vs ${Naming.safer(b.type)}`;
+      const vsString = `${OmniModelUtil.getTypeDescription(a.type)} vs ${OmniModelUtil.getTypeDescription(b.type)}`;
       const errMessage = `No common type for merging properties ${a.name}. ${vsString}`;
       throw new Error(errMessage);
     }
@@ -1051,39 +1064,85 @@ class OpenRpcParserImpl {
     }
   }
 
-  private toOmniTypeFromContentDescriptor(contentDescriptor: Dereferenced<ContentDescriptorObject>): SchemaToTypeResult {
+  private toOmniTypeFromContentDescriptor(
+    contentDescriptor: Dereferenced<ContentDescriptorObject>,
+    fallbackName?: TypeName
+  ): SchemaToTypeResult {
 
     const derefSchema = this.unwrapJsonSchema({
       obj: contentDescriptor.obj.schema,
       root: contentDescriptor.root
     });
 
-
-    const preferredName = this.getPreferredName(derefSchema, contentDescriptor, contentDescriptor.obj.name);
+    const preferredName = this.getPreferredContentDescriptorName(derefSchema, contentDescriptor, fallbackName);
     return this.jsonSchemaToType(preferredName, derefSchema, contentDescriptor.hash);
   }
 
-  private getPreferredName(schema: Dereferenced<JSONSchema7>, dereferenced: Dereferenced<unknown>, fallback: TypeName): TypeName {
-    const name = dereferenced.hash || schema.obj.title;
-    if (name) {
-      return name;
+  private getPreferredContentDescriptorName(
+    schema: Dereferenced<JSONSchema7>,
+    contentDescriptor: Dereferenced<ContentDescriptorObject>,
+    fallbackName?: TypeName
+  ): TypeName {
+
+    const names = this.getMostPreferredNames(contentDescriptor, schema);
+    names.push(contentDescriptor.obj.name);
+    if (fallbackName) {
+      names.push(fallbackName);
+    }
+    if (contentDescriptor.obj && contentDescriptor.obj.description && contentDescriptor.obj.description.length < 20) {
+      // Very ugly, but it's something?
+      names.push(pascalCase(contentDescriptor.obj.description));
+    }
+    names.push(...this.getFallbackNamesOfJsonSchemaType(schema));
+
+    return names;
+  }
+
+  private getPreferredName(
+    schema: Dereferenced<JSONSchema7>,
+    dereferenced: Dereferenced<unknown>,
+    fallback: TypeName
+  ): TypeName {
+
+    const names = this.getMostPreferredNames(dereferenced, schema);
+    names.push(...this.getFallbackNamesOfJsonSchemaType(schema));
+
+    if (fallback) {
+      names.push(fallback);
     }
 
-    if (fallback.length > 0) {
-      return fallback;
-    }
+    return names;
+  }
 
+  private getFallbackNamesOfJsonSchemaType(
+    schema: Dereferenced<JSONSchema7>
+  ): TypeName[] {
+
+    const names: TypeName[] = [];
     if (schema.obj.type) {
       if (Array.isArray(schema.obj.type)) {
-        return pascalCase(schema.obj.type.join('_'));
+        names.push(pascalCase(schema.obj.type.join('_')));
       } else {
         if (schema.obj.type) {
-          return pascalCase(schema.obj.type);
+          names.push(pascalCase(schema.obj.type));
         }
       }
     }
 
-    return fallback;
+    return names;
+  }
+
+  private getMostPreferredNames(dereferenced: Dereferenced<unknown>, schema: Dereferenced<JSONSchema7>): TypeName[] {
+    const names: TypeName[] = [];
+    if (dereferenced.hash) {
+      names.push(dereferenced.hash);
+    }
+
+    if (schema.obj.title) {
+      names.push(schema.obj.title);
+    }
+
+    return names;
   }
 
   private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: Dereferenced<ContentDescriptorObject>): OutputAndType {
@@ -1092,7 +1151,10 @@ class OpenRpcParserImpl {
 
     // TODO: Should this always be unique, or should we ever use a common inherited method type?
     // TODO: Reuse the code from contentDescriptorToGenericProperty -- so they are ALWAYS THE SAME
-    const resultParameterType = this.toOmniTypeFromContentDescriptor(contentDescriptor);
+    const resultParameterType = this.toOmniTypeFromContentDescriptor(
+      contentDescriptor,
+      `${typeNamePrefix}ResponsePayload`
+    );
 
     const resultType: OmniType = {
       name: `${typeNamePrefix}Response`,
@@ -1106,14 +1168,15 @@ class OpenRpcParserImpl {
     if (!this._jsonRpcResponseClass) {
 
       // TODO: Ability to set this is "abstract", since it should never be used directly
+      const jsonRpcResponseClassName = 'JsonRpcResponse'; // TODO: Make it a setting
       this._jsonRpcResponseClass = {
-        name: 'JsonRpcResponse', // TODO: Make it a setting
+        name: jsonRpcResponseClassName,
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc response package`,
         additionalProperties: false,
         properties: [],
       }
-      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcResponseClass.name)}`, this._jsonRpcResponseClass);
+      this._typeMap.set(`#/custom/schemes/${jsonRpcResponseClassName}`, this._jsonRpcResponseClass);
 
       this._jsonRpcResponseClass.properties = [];
 
@@ -1123,7 +1186,6 @@ class OpenRpcParserImpl {
           type: {
             kind: OmniTypeKind.PRIMITIVE,
             primitiveKind: OmniPrimitiveKind.STRING,
-            name: `ResultJsonRpc`,
           },
           owner: this._jsonRpcResponseClass
         });
@@ -1132,7 +1194,6 @@ class OpenRpcParserImpl {
       this._jsonRpcResponseClass.properties.push({
         name: 'error',
         type: {
-          name: `ResultError`,
           kind: OmniTypeKind.NULL,
         },
         owner: this._jsonRpcResponseClass
@@ -1142,7 +1203,6 @@ class OpenRpcParserImpl {
         this._jsonRpcResponseClass.properties.push({
           name: 'id',
           type: {
-            name: `ResultId`,
             kind: OmniTypeKind.PRIMITIVE,
             primitiveKind: OmniPrimitiveKind.STRING,
           },
@@ -1211,14 +1271,15 @@ class OpenRpcParserImpl {
     };
 
     if (!this._jsonRpcErrorResponseClass) {
+      const className = 'JsonRpcErrorResponse'; // TODO: Make it a setting
       this._jsonRpcErrorResponseClass = {
-        name: 'JsonRpcErrorResponse', // TODO: Make it a setting
+        name: className,
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc error response package`,
         additionalProperties: false,
         properties: [],
       };
-      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcErrorResponseClass.name)}`, this._jsonRpcErrorResponseClass);
+      this._typeMap.set(`#/custom/schemes/${className}`, this._jsonRpcErrorResponseClass);
 
       this._jsonRpcErrorResponseClass.properties = [];
       if (this._options.jsonRpcPropertyName) {
@@ -1226,8 +1287,7 @@ class OpenRpcParserImpl {
           name: this._options.jsonRpcPropertyName,
           type: {
             kind: OmniTypeKind.PRIMITIVE,
-            primitiveKind: OmniPrimitiveKind.STRING,
-            name: `ResultJsonRpc`,
+            primitiveKind: OmniPrimitiveKind.STRING
           },
           owner: this._jsonRpcErrorResponseClass
         });
@@ -1236,7 +1296,6 @@ class OpenRpcParserImpl {
       this._jsonRpcErrorResponseClass.properties.push({
         name: 'result',
         type: {
-          name: `JsonRpcErrorAlwaysNullResultBody`,
           kind: OmniTypeKind.NULL,
         },
         owner: this._jsonRpcErrorResponseClass,
@@ -1246,7 +1305,6 @@ class OpenRpcParserImpl {
         this._jsonRpcErrorResponseClass.properties.push({
           name: 'id',
           type: {
-            name: `JsonRpcErrorIdString`,
             kind: OmniTypeKind.PRIMITIVE,
             primitiveKind: OmniPrimitiveKind.STRING,
           },
@@ -1256,14 +1314,15 @@ class OpenRpcParserImpl {
     }
 
     if (!this._jsonRpcErrorInstanceClass) {
+      const className = 'JsonRpcError'; // TODO: Make it a setting
       this._jsonRpcErrorInstanceClass = {
-        name: 'JsonRpcError', // TODO: Make it a setting
+        name: className,
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc error inside an error response`,
         additionalProperties: false,
         properties: [],
       };
-      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcErrorInstanceClass.name)}`, this._jsonRpcErrorInstanceClass);
+      this._typeMap.set(`#/custom/schemes/${className}`, this._jsonRpcErrorInstanceClass);
 
       // TODO: Add any properties here? Or rely on the generic and property compressor transformers?
     }
@@ -1276,7 +1335,6 @@ class OpenRpcParserImpl {
         name: 'code',
         type: {
           kind: OmniTypeKind.PRIMITIVE,
-          name: `${typeName}CodeInteger`,
           valueConstant: isUnknownCode ? -1 : error.code,
           valueConstantOptional: isUnknownCode ? true : undefined,
           primitiveKind: OmniPrimitiveKind.INTEGER,
@@ -1288,7 +1346,6 @@ class OpenRpcParserImpl {
         name: 'message',
         type: {
           kind: OmniTypeKind.PRIMITIVE,
-          name: `${typeName}MessageString`,
           valueConstant: error.message,
           valueConstantOptional: true,
           primitiveKind: OmniPrimitiveKind.STRING,
@@ -1302,7 +1359,6 @@ class OpenRpcParserImpl {
       errorPropertyType.properties.push({
         name: this._options.jsonRpcErrorPropertyName,
         type: this._options.jsonRpcErrorDataSchema || {
-          name: `${typeName}UnknownData`,
           valueConstant: error.data,
           kind: OmniTypeKind.UNKNOWN,
         },
@@ -1321,7 +1377,6 @@ class OpenRpcParserImpl {
       errorPropertyType.properties.push({
         name: 'name',
         type: {
-          name: 'JSONRPCError',
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.STRING,
           valueConstant: 'JSONRPCError',
@@ -1475,7 +1530,16 @@ class OpenRpcParserImpl {
     const schema = this.unwrapJsonSchema(schemaOrRef);
 
     const propertyType = this.jsonSchemaToType(
-      this.getPreferredName(schema, schemaOrRef, (fn) => `${Naming.safer(owner, fn)}${pascalCase(propertyName)}`),
+      this.getPreferredName(
+        schema,
+        schemaOrRef,
+        (fn) => {
+          // NOTE: This might not be the best way to create the property name
+          // But for now it will have to do, since most type names will be a simple type.
+          const typeName = OmniModelUtil.getVirtualTypeName(owner);
+          return `${Naming.safe(typeName, fn)}${pascalCase(propertyName)}`;
+        }
+      ),
       schema,
       undefined
     );
@@ -1502,7 +1566,6 @@ class OpenRpcParserImpl {
     const lcType = schemaType.toLowerCase();
     if (lcType == 'null') {
       return {
-        name: name ?? schemaType,
         kind: OmniTypeKind.NULL,
         description: description,
       };
@@ -1556,7 +1619,6 @@ class OpenRpcParserImpl {
 
         // En ENUM with just one value is the same as a regular constant
         return {
-          name: name ?? schemaType,
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: primitiveType,
           valueConstant: this.getLiteralValueOfSchema(enumValues[0]),
@@ -1584,7 +1646,6 @@ class OpenRpcParserImpl {
       };
     } else {
       return {
-        name: name ?? schemaType,
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: primitiveType,
         valueConstant: undefined,
@@ -1625,7 +1686,6 @@ class OpenRpcParserImpl {
 
     // TODO: This should be able to be a String OR Number -- need to make this more generic
     const requestIdType: OmniPrimitiveType = {
-      name: `${method.obj.name}RequestId`,
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING,
       nullable: PrimitiveNullableKind.NOT_NULLABLE
@@ -1635,7 +1695,7 @@ class OpenRpcParserImpl {
     if (method.obj.paramStructure == 'by-position') {
       // The params is an array values, and not a map nor properties.
       requestParamsType = <OmniArrayPropertiesByPositionType>{
-        name: `${method.obj.name}RequestParams`,
+        // name: `${method.obj.name}RequestParams`,
         kind: OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION
       };
 
@@ -1692,18 +1752,18 @@ class OpenRpcParserImpl {
 
     if (!this._jsonRpcRequestClass) {
 
+      const className = 'JsonRpcRequest'; // TODO: Make it a setting
       this._jsonRpcRequestClass = {
-        name: 'JsonRpcRequest', // TODO: Make it a setting
+        name: className,
         kind: OmniTypeKind.OBJECT,
         description: `Generic class to describe the JsonRpc request package`,
         additionalProperties: false,
         properties: [],
       };
-      this._typeMap.set(`#/custom/schemes/${Naming.unwrap(this._jsonRpcRequestClass.name)}`, this._jsonRpcRequestClass);
+      this._typeMap.set(`#/custom/schemes/${className}`, this._jsonRpcRequestClass);
 
       const hasConstantVersion = (this._options.jsonRpcVersion || '').length > 0;
       const requestJsonRpcType: OmniPrimitiveType = {
-        name: `jsonRpcVersion`,
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
         valueConstant: hasConstantVersion ? this._options.jsonRpcVersion : undefined,
@@ -1715,7 +1775,6 @@ class OpenRpcParserImpl {
       //        Or can we do this in some other way? Maybe have valueConstant be string OR callback
       //        Then if callback, it takes the method object, and is put inside the constructor without a given parameter?
       const requestMethodType: OmniPrimitiveType = {
-        name: `JsonRpcRequestMethod`,
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
         readOnly: true,
@@ -1870,7 +1929,7 @@ class OpenRpcParserImpl {
           target: targetParameter,
         });
       } else {
-        logger.warn(`Could not find property '${linkParamName}' in '${Naming.safer(requestResultClass)}'`);
+        logger.warn(`Could not find property '${linkParamName}' in '${OmniModelUtil.getTypeDescription(requestResultClass)}'`);
       }
     }
 
@@ -1919,8 +1978,8 @@ class OpenRpcParserImpl {
           if (inputProperties.length > propertyPath.length) {
             propertyPath = inputProperties;
           } else {
-            const primaryName = Naming.safer(primaryType);
-            const secondaryName = Naming.safer(secondaryType);
+            const primaryName = OmniModelUtil.getTypeDescription(primaryType);
+            const secondaryName = OmniModelUtil.getTypeDescription(secondaryType);
             throw new Error(`There is no property path '${pathString}' in '${primaryName}' nor '${secondaryName}'`);
           }
         }
@@ -1966,7 +2025,7 @@ class OpenRpcParserImpl {
         pointer = pointer.of;
         i--;
       } else {
-        throw new Error(`Do not know how to handle '${Naming.safer(type)}' in property path '${pathParts.join('.')}'`);
+        throw new Error(`Do not know how to handle '${OmniModelUtil.getTypeDescription(type)}' in property path '${pathParts.join('.')}'`);
       }
     }
 

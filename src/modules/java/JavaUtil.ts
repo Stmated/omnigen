@@ -3,7 +3,7 @@ import {ModifierType} from '@java/cst';
 import {camelCase, pascalCase} from 'change-case';
 import {
   CompositionKind,
-  OmniArrayType,
+  OmniArrayType, OmniCompositionType,
   OmniDictionaryType,
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
@@ -25,8 +25,9 @@ interface FqnOptions {
   type: OmniType,
   withSuffix?: boolean;
   options?: JavaOptions;
-  relativeTo?: string;
+  relativeTo?: string | boolean;
   implementation?: boolean;
+  boxed?: boolean;
 }
 
 export type FqnArgs = OmniType | FqnOptions;
@@ -65,111 +66,188 @@ export class JavaUtil {
   }
 
   /**
+   * TODO: This should be able to return undefined OR the input type needs to be more restricted
+   */
+  public static getClassName(type: OmniType, options?: JavaOptions): string {
+    return JavaUtil.getName({
+      type: type,
+      options: options,
+      withSuffix: false,
+      implementation: true,
+      relativeTo: false,
+    })
+  }
+
+  /**
    * Ugly. It should not be based on if relativeTo is set or not if this should return an FQN or just Name.
    * TODO: This should be delayed until rendering. It is up to the rendering to render a type. Should still be general.
    */
   public static getName(args: FqnOptions): string {
 
-    if (args.type.kind == OmniTypeKind.GENERIC_TARGET) {
+    switch (args.type.kind) {
+      case OmniTypeKind.GENERIC_TARGET:
+        // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
+        //        Right now this is locked to this part, and difficult to change
 
-      // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
-      //        Right now this is locked to this part, and difficult to change
-      const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});
-      const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
-      const genericTypeString = genericTypes.join(', ');
-      return `${rawName}<${genericTypeString}>`;
+        // name: () => `${Naming.safer(originalExtension)}For${Naming.safer(subType)}`,
 
-      // TODO: Fix the replacement of recursive generics -- look at JsonRpcRequest, it it pointing to the wrong type
+        const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});
+        const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
+        const genericTypeString = genericTypes.join(', ');
 
-    } else if (args.type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER || args.type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
+        // TODO: Fix the replacement of recursive generics -- look at JsonRpcRequest, it it pointing to the wrong type
+        return `${rawName}<${genericTypeString}>`;
+      case OmniTypeKind.GENERIC_SOURCE_IDENTIFIER:
+        // The local name of a generic type is always just the generic type name.
+        return args.type.placeholderName;
+      case OmniTypeKind.GENERIC_TARGET_IDENTIFIER:
 
-      // The local name of a generic type is always just the generic type name.
-      return Naming.unwrap(args.type.name);
-    } else if (args.type.kind == OmniTypeKind.ARRAY) {
-      if (args.withSuffix === false) {
+        // name: `GenericTargetFor${Naming.safer(subType)}${pascalCase(propertyName)}`,
+
+        return args.type.placeholderName || args.type.sourceIdentifier.placeholderName;
+      case OmniTypeKind.ARRAY:
+        const arrayOf = JavaUtil.getName({...args, ...{type: args.type.of}});
+        return arrayOf + (args.withSuffix === false ? '' : '[]');
+      case OmniTypeKind.ARRAY_TYPES_BY_POSITION:
+      case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION:
+        // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
+
+        // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
+        //        There must be a better of saying "this is an array with objects of this type in this order"
+        //        We should be generating a helper class that wraps an array and gives us managed getters? Getter0() Getter1()???
+        //        "commonDenominator" is a *REALLY* crappy way of handling it.
+
+        let javaType: string;
+        if (args.type.commonDenominator) {
+
+          // Return the common denominator instead. That is this static type array's "representation" in the code.
+          javaType = JavaUtil.getName({...args, ...{type: args.type.commonDenominator}});
+        } else {
+          javaType = this.getUnknownType(UnknownType.OBJECT);
+        }
+
+        if (args.withSuffix === false) {
+          return javaType;
+        } else {
+          return `${javaType}[]`;
+        }
+      case OmniTypeKind.NULL:
+        // The type is "No Type. Void." It is not even really an Object.
+        // But we return it as an Object in case we really need to display it somewhere.
+        // TODO: Should this be Void? Especially when used as a generic?
+        if (args.relativeTo) {
+          return 'Object';
+        } else {
+          return 'java.lang.Object';
+        }
+      case OmniTypeKind.PRIMITIVE:
+        const isBoxed = args.boxed != undefined ? args.boxed : JavaUtil.isPrimitiveBoxed(args.type);
+        const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.primitiveKind, isBoxed);
+        // TODO: Make a central method that handles the relative names -- especially once multi-namespaces are added
+        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
+          return JavaUtil.cleanClassName(primitiveKindName, args.withSuffix);
+        } else {
+          return JavaUtil.getCleanedFullyQualifiedName(primitiveKindName, args.withSuffix);
+        }
+      case OmniTypeKind.UNKNOWN:
+        const unknownType = args.type.isAny ? UnknownType.OBJECT : args.options?.unknownType;
+        const unknownName = JavaUtil.getUnknownType(unknownType);
+        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
+          return JavaUtil.cleanClassName(unknownName, args.withSuffix);
+        } else {
+          return JavaUtil.getCleanedFullyQualifiedName(unknownName, args.withSuffix);
+        }
+      case OmniTypeKind.DICTIONARY:
+        const mapClassOrInterface = args.implementation == false ? 'Map' : 'HashMap';
+        const mapClass = args.relativeTo ? mapClassOrInterface : `java.lang.${mapClassOrInterface}`;
+        if (args.withSuffix === false) {
+          return mapClass;
+        } else {
+          const keyString = JavaUtil.getName({...args, ...{type: args.type.keyType}});
+          const valueString = JavaUtil.getName({...args, ...{type: args.type.valueType}});
+          return `${mapClass}<${keyString}, ${valueString}>`;
+        }
+      case OmniTypeKind.REFERENCE:
+        if (args.relativeTo) {
+          return JavaUtil.cleanClassName(args.type.fqn, args.withSuffix);
+        }
+
+        return JavaUtil.getCleanedFullyQualifiedName(args.type.fqn, !!args.withSuffix);
+      case OmniTypeKind.INTERFACE:
+
+        if (args.type.name) {
+          const name = Naming.safe(args.type.name);
+          if (args.relativeTo == args.options?.package) {
+            return name;
+          } else {
+            return (args.options ? `${args.options.package}.${name}` : name);
+          }
+        } else {
+          return `I${JavaUtil.getName({...args,...{  type: args.type.of}})}`;
+        }
+      case OmniTypeKind.ENUM:
+      case OmniTypeKind.OBJECT:
+        // Are we sure all of these will be in the same package?
+        // TODO: Use some kind of "groupName" where the group can be the package? "model", "api", "server", etc?
+        const name = Naming.safe(args.type.name);
+        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
+          return name;
+        } else {
+          return (args.options ? `${args.options.package}.${name}` : name);
+        }
+      case OmniTypeKind.COMPOSITION:
+
+        const compositionName = JavaUtil.getCompositionClassName(args.type, args);
+        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
+          return compositionName;
+        } else {
+          return (args.options ? `${args.options.package}.${compositionName}` : compositionName);
+        }
+      case OmniTypeKind.GENERIC_SOURCE:
         return JavaUtil.getName({...args, ...{type: args.type.of}});
-      } else {
-        return JavaUtil.getName({...args, ...{type: args.type.of}}) + '[]';
-      }
-    } else if (args.type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION || args.type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
-
-      // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
-
-      // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
-      //        There must be a better of saying "this is an array with objects of this type in this order"
-      //        We should be generating a helper class that wraps an array and gives us managed getters? Getter0() Getter1()???
-      //        "commonDenominator" is a *REALLY* crappy way of handling it.
-
-      let javaType: string;
-      if (args.type.commonDenominator) {
-
-        // Return the common denominator instead. That is this static type array's "representation" in the code.
-        javaType = JavaUtil.getName({...args, ...{type: args.type.commonDenominator}});
-      } else {
-        javaType = this.getUnknownType(UnknownType.OBJECT);
-      }
-
-      if (args.withSuffix === false) {
-        return javaType;
-      } else {
-        return `${javaType}[]`;
-      }
-
-    } else if (args.type.kind == OmniTypeKind.NULL) {
-      // The type is "No Type. Void." It is not even really an Object.
-      // But we return it as an Object in case we really need to display it somewhere.
-      // TODO: Should this be Void? Especially when used as a generic?
-      if (args.relativeTo) {
-        return 'Object';
-      } else {
-        return 'java.lang.Object';
-      }
-    } else if (args.type.kind == OmniTypeKind.PRIMITIVE) {
-      if (args.relativeTo) {
-        return JavaUtil.getClassName(this.getPrimitiveTypeName(args.type), args.withSuffix);
-      } else {
-        return JavaUtil.getCleanedFullyQualifiedName(this.getPrimitiveTypeName(args.type), args.withSuffix);
-      }
-    } else if (args.type.kind == OmniTypeKind.UNKNOWN) {
-      const unknownType = args.type.isAny
-        ? UnknownType.OBJECT
-        : args.options?.unknownType;
-
-      if (args.relativeTo) {
-        return JavaUtil.getClassName(this.getUnknownType(unknownType), args.withSuffix);
-      } else {
-        return JavaUtil.getCleanedFullyQualifiedName(this.getUnknownType(unknownType), args.withSuffix);
-      }
-    } else if (args.type.kind == OmniTypeKind.DICTIONARY) {
-
-      const mapClassOrInterface = args.implementation == false ? 'Map' : 'HashMap';
-      const mapClass = args.relativeTo ? mapClassOrInterface : `java.lang.${mapClassOrInterface}`;
-      if (args.withSuffix === false) {
-        return mapClass;
-      } else {
-        const keyString = JavaUtil.getName({...args, ...{type: args.type.keyType}});
-        const valueString = JavaUtil.getName({...args, ...{type: args.type.valueType}});
-        return `${mapClass}<${keyString}, ${valueString}>`;
-      }
-
-    } else if (args.type.kind == OmniTypeKind.REFERENCE) {
-
-      if (args.relativeTo) {
-        return JavaUtil.getClassName(args.type.fqn, args.withSuffix);
-      }
-
-      return JavaUtil.getCleanedFullyQualifiedName(args.type.fqn, !!args.withSuffix);
-    } else {
-
-      // Are we sure all of these will be in the same package?
-      // TODO: Use some kind of "groupName" where the group can be the package? "model", "api", "server", etc?
-      const name = Naming.safer(args.type);
-      if (args.relativeTo == args.options?.package) {
-        return name;
-      } else {
-        return (args.options ? `${args.options.package}.${name}` : name);
-      }
     }
+  }
+
+  private static getCompositionClassName(type: OmniCompositionType, args: FqnOptions): string {
+
+    if (type.name) {
+      return Naming.safe(type.name);
+    }
+
+    let compositionTypes: OmniType[];
+    let prefix = '';
+    let delimiter: string;
+    switch (type.compositionKind) {
+      case CompositionKind.AND:
+        compositionTypes = type.andTypes;
+        delimiter = 'And';
+        break;
+      case CompositionKind.OR:
+        compositionTypes = type.orTypes;
+        delimiter = 'Or';
+        break;
+      case CompositionKind.XOR:
+        compositionTypes = type.xorTypes;
+        delimiter = 'XOr';
+        break;
+      case CompositionKind.NOT:
+        compositionTypes = type.notTypes;
+        prefix = 'Not';
+        delimiter = '';
+        break;
+    }
+
+    const uniqueNames = new Set(compositionTypes.map(it => JavaUtil.getName({
+      ...args,
+      ...{
+        type: it,
+        relativeTo: false,
+        implementation: false,
+        boxed: true
+      }
+    })));
+
+    return `${prefix}${[...uniqueNames].join(delimiter)}`;
   }
 
   public static getPrimitiveTypeName(type: OmniPrimitiveType): string {
@@ -177,9 +255,11 @@ export class JavaUtil {
     // The primitive nullable kind might be NOT_NULLABLE_PRIMITIVE.
     // Then in the end it will probably be a completely other type, depending on the language.
     // In Java, we cannot use a primitive as a generic parameter, but we want to be able to say it cannot be null.
-    const boxed: boolean = (type.nullable !== undefined && type.nullable == PrimitiveNullableKind.NULLABLE);
-    const primitiveKind = type.primitiveKind;
-    return JavaUtil.getPrimitiveKindName(primitiveKind, boxed);
+    return JavaUtil.getPrimitiveKindName(type.primitiveKind, JavaUtil.isPrimitiveBoxed(type));
+  }
+
+  private static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
+    return (type.nullable !== undefined && type.nullable == PrimitiveNullableKind.NULLABLE);
   }
 
   public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean): string {
@@ -238,8 +318,7 @@ export class JavaUtil {
     return fqn;
   }
 
-  public static getClassName(fqn: string, withSuffix = true): string {
-    // const cleanedName = JavaUtil.getCleanedFullyQualifiedName(fqn, withSuffix);
+  public static cleanClassName(fqn: string, withSuffix = true): string {
 
     const genericIdx = fqn.indexOf('<');
     if (!withSuffix) {
@@ -392,7 +471,9 @@ export class JavaUtil {
       }
     } else if (a.kind == OmniTypeKind.ENUM) {
       if (b.kind == OmniTypeKind.ENUM) {
-        return Naming.unwrap(a.name) == Naming.unwrap(b.name) ? a : undefined;
+        // TODO: This can probably be VERY much improved -- like taking the entries that are similar between the two
+        // TODO: This comparison is also pretty stupid.
+        return Naming.safe(a.name) == Naming.safe(b.name) ? a : undefined;
       }
     } else if (a.kind == OmniTypeKind.DICTIONARY) {
       if (b.kind == OmniTypeKind.DICTIONARY) {
@@ -404,16 +485,13 @@ export class JavaUtil {
               return a;
             }
 
-            return <OmniDictionaryType>{
-              ...b,
-              ...a,
-              ...{
-                name: () => `CommonBetween${Naming.safer(a)}And${Naming.safer(b)}`,
-                kind: OmniTypeKind.DICTIONARY,
-                keyType: commonKey,
-                valueType: commonValue,
-              }
+            const newDictionary: OmniDictionaryType = {
+              kind: OmniTypeKind.DICTIONARY,
+              keyType: commonKey,
+              valueType: commonValue,
             };
+
+            return {...b, ...a, ...newDictionary};
           }
         }
       }
@@ -480,7 +558,7 @@ export class JavaUtil {
 
       // Is there ever anything better we can do here? Like check if signatures are matching?
       return {
-        name: () => `${Naming.safer(a)}Or${Naming.safer(b)}`,
+        // name: () => `${Naming.safer(a)}Or${Naming.safer(b)}`,
         kind: OmniTypeKind.UNKNOWN
       };
     } else if (a.kind == OmniTypeKind.COMPOSITION) {
@@ -516,11 +594,11 @@ export class JavaUtil {
                   commonIdentifiers.push({
                     kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
                     type: commonIdentifierType,
-                    name: (fn) => 'TData', // TODO: Figure out the name automatically based on... something
+                    placeholderName: 'TData', // TODO: Figure out the name automatically based on... something
                     sourceIdentifier: {
                       // TODO: What? Is this even remotely correct?
                       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-                      name: (fn) => 'TDataSource',
+                      placeholderName: 'TDataSource',
                       lowerBound: commonIdentifierType,
                     }
                   });
@@ -529,7 +607,7 @@ export class JavaUtil {
                 commonIdentifiers.push({
                   kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
                   type: commonIdentifierType,
-                  name: commonIdentifierType.name,
+                  // name: commonIdentifierType.name,
                   sourceIdentifier: aIdentifier.sourceIdentifier,
                 });
               }

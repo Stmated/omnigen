@@ -12,6 +12,7 @@ import {
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {Naming} from '@parse/Naming';
+import {OmniModelUtil} from '@parse/OmniModelUtil';
 
 export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer {
 
@@ -164,7 +165,6 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
           new Java.Type({
             kind: OmniTypeKind.REFERENCE,
             fqn: "com.fasterxml.jackson.annotation.JsonProperty",
-            name: 'NameOverrideProperty'
           }),
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
@@ -191,7 +191,6 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
             new Java.Type({
               kind: OmniTypeKind.REFERENCE,
               fqn: "javax.validation.constraints.NotNull",
-              name: 'RequiredAnnotation'
             }),
           )
         );
@@ -232,7 +231,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
             return new Java.Type(foundGenericType.type);
           } else {
             const typeName = requiredArgument.identifier.value;
-            const placeholderName = Naming.safer(requiredArgument.type.omniType);
+            const placeholderName = OmniModelUtil.getTypeDescription(requiredArgument.type.omniType);
             throw new Error(`Could not find the generic type of '${typeName}' ${placeholderName}`);
           }
         }

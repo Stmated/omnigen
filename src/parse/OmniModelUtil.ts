@@ -2,13 +2,15 @@ import {
   CompositionKind,
   OmniInheritableType,
   OmniModel,
+  OmniPrimitiveKind,
   OmniProperty,
   OmniType,
   OmniTypeKind,
+  PrimitiveNullableKind,
   TypeName
 } from '@parse/OmniModel';
-import {LiteralType} from 'ts-json-schema-generator';
 import {LiteralValue} from 'ts-json-schema-generator/src/Type/LiteralType';
+import {Naming} from '@parse/Naming';
 
 export interface TypeCollection {
 
@@ -71,7 +73,7 @@ export class OmniModelUtil {
     if (Array.isArray(type)) {
       for (const entry of type) {
         const entryResult = OmniModelUtil.traverseTypesInternal(entry, depth, callback);
-        if (entryResult == 'abort'){
+        if (entryResult == 'abort') {
           return 'abort';
         }
       }
@@ -108,7 +110,7 @@ export class OmniModelUtil {
       if (this.traverseTypesInternal(type.keyType, depth, callback) == 'abort') return 'abort';
       if (this.traverseTypesInternal(type.valueType, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-      //if (this.traverseTypesInternal(type.of, depth, callback) == 'abort') return 'abort';
+      // if (this.traverseTypesInternal(type.of, depth, callback) == 'abort') return 'abort';
       if (this.traverseTypesInternal(type.sourceIdentifiers, depth, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       if (this.traverseTypesInternal(type.targetIdentifiers, depth, callback) == 'abort') return 'abort';
@@ -173,7 +175,7 @@ export class OmniModelUtil {
     if (Array.isArray(type)) {
       for (const entry of type) {
         const entryResult = OmniModelUtil.traverseTypesInternal(entry, depth, callback);
-        if (entryResult == 'abort'){
+        if (entryResult == 'abort') {
           return 'abort';
         }
       }
@@ -214,7 +216,7 @@ export class OmniModelUtil {
 
   public static getClosestProperty(type: OmniType, propertyName: string): OmniProperty | undefined {
 
-    const reference: {property?: OmniProperty} = {};
+    const reference: { property?: OmniProperty } = {};
     OmniModelUtil.traverseHierarchy(type, 0, (localType) => {
       const property = OmniModelUtil.getPropertiesOf(localType).find(it => it.name == propertyName);
       if (property) {
@@ -226,15 +228,6 @@ export class OmniModelUtil {
     });
 
     return reference.property;
-  }
-
-  public static getName(type: OmniType): TypeName {
-
-    if (type.kind == OmniTypeKind.OBJECT) {
-      return type.name;
-    }
-
-    return '';
   }
 
   public static getTypesThatInheritFrom(model: OmniModel, type: OmniType): OmniType[] {
@@ -284,5 +277,86 @@ export class OmniModelUtil {
     }
 
     return false;
+  }
+
+  /**
+   * Returns a general name for the primitive.
+   * Does not translate into the actual target language's primitive type.
+   * Is used for generating property names or used in general logging.
+   */
+  public static getPrimitiveKindName(kind: OmniPrimitiveKind, nullable: boolean): string {
+
+    switch (kind) {
+      case OmniPrimitiveKind.BOOL:
+        return nullable ? 'Boolean' : 'bool';
+      case OmniPrimitiveKind.VOID:
+        return 'void';
+      case OmniPrimitiveKind.CHAR:
+        return nullable ? 'Character' : 'char';
+      case OmniPrimitiveKind.STRING:
+        return  nullable ? 'String' : 'string';
+      case OmniPrimitiveKind.FLOAT:
+        return nullable ? 'Float' : 'float';
+      case OmniPrimitiveKind.INTEGER:
+        return nullable? 'Integer' : 'int';
+      case OmniPrimitiveKind.INTEGER_SMALL:
+        return nullable ? 'Short' : 'short';
+      case OmniPrimitiveKind.LONG:
+        return nullable ? 'Long' : 'long';
+      case OmniPrimitiveKind.DECIMAL:
+        return nullable ? "Decimal": "decimal";
+      case OmniPrimitiveKind.DOUBLE:
+        return nullable ? "Double": "double";
+      case OmniPrimitiveKind.NUMBER:
+        return nullable ? 'Number' : 'number';
+    }
+  }
+
+  public static isNullable(nullableKind: PrimitiveNullableKind | undefined): boolean {
+    return (nullableKind == PrimitiveNullableKind.NULLABLE);
+  }
+
+  /**
+   * Gives the name of the type, or a description which describes the type.
+   * Should only ever be used for logging or comments or other non-essential things.
+   */
+  public static getTypeDescription(type: OmniType): string {
+
+    // TODO: Implement, and use for all logging instead of Naming.xyz
+    return Naming.safe(OmniModelUtil.getVirtualTypeName(type));
+  }
+
+  /**
+   * Gets the name of the type, or returns 'undefined' if the type is not named.
+   */
+  public static getTypeName(type: OmniType): TypeName | undefined {
+
+    if ('name' in type && type.name) {
+      return type.name;
+    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+      return OmniModelUtil.getTypeName(type.source);
+    } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
+      return OmniModelUtil.getTypeName(type.of);
+    } else if (type.kind == OmniTypeKind.INTERFACE) {
+      return OmniModelUtil.getTypeName(type.of);
+    }
+
+    return undefined;
+  }
+
+  public static getVirtualTypeName(type: OmniType): TypeName {
+
+    const typeName = OmniModelUtil.getTypeName(type);
+    if (typeName) {
+      return typeName;
+    } else if (type.kind == OmniTypeKind.ARRAY) {
+      return (fn) => `ArrayOf${Naming.safe(OmniModelUtil.getVirtualTypeName(type.of), fn)}`;
+    } else if (type.kind == OmniTypeKind.PRIMITIVE) {
+      const nullable = OmniModelUtil.isNullable(type.nullable);
+      return OmniModelUtil.getPrimitiveKindName(type.primitiveKind, nullable);
+    }
+
+    // TODO: All types should be able to return a "virtual" type name, which can be used for compositions or whatever!
+    return `[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`;
   }
 }

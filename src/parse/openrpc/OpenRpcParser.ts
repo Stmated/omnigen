@@ -546,7 +546,6 @@ class OpenRpcParserImpl {
 
     const type: OmniObjectType = {
       name: names,
-      // nameClassifier: schema.obj.title ? pascalCase(schema.obj.title) : (schema.obj.type ? String(schema.obj.type) : undefined),
       kind: OmniTypeKind.OBJECT,
       description: schema.obj.description,
       title: schema.obj.title,
@@ -764,7 +763,16 @@ class OpenRpcParserImpl {
 
     // NOTE: "extendedBy" could be an ENUM, while "type" is an Object.
     // This is not allowed in some languages. But it is up to the target language to decide how to handle it.
-    type.extendedBy = extendedBy;
+    if (extendedBy) {
+
+      const extendableType = OmniModelUtil.asInheritableType(extendedBy);
+      if (!extendableType) {
+        throw new Error(`Not allowed to use '${OmniModelUtil.getTypeDescription(extendedBy)}' as an extension type`);
+      }
+
+      type.extendedBy = extendableType;
+    }
+
     return type;
   }
 

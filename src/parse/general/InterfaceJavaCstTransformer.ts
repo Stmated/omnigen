@@ -13,7 +13,6 @@ import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
-import {Naming} from '@parse/Naming';
 
 /**
  * Checks for object types that are used as interfaces, and splits the type into two types.
@@ -81,7 +80,10 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<JavaOpt
     }
   }
 
-  private getOrCreateInterfaceType(type: OmniInheritableType, interfaceMap: Map<OmniType, OmniInterfaceType>): [OmniInterfaceType, 'existed' | 'new'] {
+  private getOrCreateInterfaceType(
+    type: OmniInheritableType,
+    interfaceMap: Map<OmniType, OmniInterfaceType>
+  ): [OmniInterfaceType, 'existed' | 'new'] {
 
     const existing = interfaceMap.get(type);
     if (existing) {
@@ -101,7 +103,7 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<JavaOpt
     return [interfaceType, 'new'];
   }
 
-  private addInterfaceToOriginalType(type: OmniObjectType, interfaceType: OmniInterfaceType): void {
+  private addInterfaceToOriginalType(type: OmniObjectType | OmniInterfaceType, interfaceType: OmniInterfaceType): void {
 
     if (type.extendedBy) {
 
@@ -178,7 +180,12 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<JavaOpt
       if (root.extendedBy) {
         const found = InterfaceJavaCstTransformer.swapType(root.extendedBy, needle, replacement, maxDepth - 1);
         if (found) {
-          root.extendedBy = replacement;
+          const inheritableReplacement = OmniModelUtil.asInheritableType(replacement);
+          if (!inheritableReplacement) {
+            throw new Error(`Not allowed to use '${OmniModelUtil.getTypeDescription(replacement)}' as extendable type`);
+          }
+
+          root.extendedBy = inheritableReplacement;
         }
       }
 

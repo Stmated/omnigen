@@ -57,9 +57,7 @@ export interface OmniProperty {
  */
 export enum OmniTypeKind {
   PRIMITIVE,
-
   ENUM,
-
   OBJECT,
   REFERENCE,
   DICTIONARY,
@@ -107,7 +105,11 @@ export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType |
 export type OmniCompositionType = OmniCompositionAndType | OmniCompositionXORType | OmniCompositionORType | OmniCompositionNotType;
 export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
 export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
-export type OmniInheritableType = OmniObjectType | OmniGenericTargetType | OmniCompositionType | OmniEnumType;
+export type OmniInheritableType = OmniObjectType
+  | OmniGenericTargetType
+  | OmniCompositionType
+  | OmniEnumType
+  | OmniInterfaceType;
 
 export type OmniType = OmniNullType
   | OmniArrayTypes
@@ -137,24 +139,10 @@ export interface IOmniNamedType {
    *        Maybe remake TypeName so that the array is lazily calculated, to decrease load
    */
   name: TypeName;
-
-  /**
-   * Can be used to classify the type with something extra.
-   * Can be helpful if there are multiple types that have the same "name",
-   * but are used for different things throughout the schema.
-   * For example "Pet" as a Param or "Pet" as a response.
-   * Then instead of naming the types Pet and Pet1, it could be Pet and ResponsePet.
-   *
-   * TODO: Rename this into "tag" and use that system throughout?
-   *        Or remove and make "name" able to return an array of possible names in ascending specificity?
-   *          "Data" "DataObject" "DataSchemaObject" etc
-   */
-  //nameClassifier?: string;
 }
 
 export interface IOmniOptionallyNamedType {
   name?: TypeName;
-  //nameClassifier?: string;
 }
 
 export interface OmniBaseType<T> {
@@ -251,7 +239,7 @@ export interface OmniArrayTypesByPositionType extends OmniBaseType<OmniArrayType
 }
 
 type OmniInterfaceTypeKnownKind = OmniTypeKind.INTERFACE;
-// NOTE: Should interface really implement IOmniNamedType? Or should it be based on 'of'?
+
 export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKind>, IOmniOptionallyNamedType {
   of: OmniInheritableType;
 
@@ -288,7 +276,7 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind>, IOmni
    *
    * TODO: This should be OmniInheritableType -- but the infrastructure doesn't handle it well right now.
    */
-  extendedBy?: OmniType;
+  extendedBy?: OmniInheritableType;
 
   /**
    * The composition types that inherit this interface can help with the mapping of the runtime types.

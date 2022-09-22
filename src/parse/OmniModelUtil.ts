@@ -143,7 +143,9 @@ export class OmniModelUtil {
   public static asInheritableType(type: OmniType): OmniInheritableType | undefined {
     if (type.kind == OmniTypeKind.OBJECT
       || type.kind == OmniTypeKind.GENERIC_TARGET
-      || type.kind == OmniTypeKind.COMPOSITION) {
+      || type.kind == OmniTypeKind.COMPOSITION
+      || type.kind == OmniTypeKind.ENUM
+      || type.kind == OmniTypeKind.INTERFACE) {
       return type;
     }
 

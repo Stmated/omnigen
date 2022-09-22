@@ -116,6 +116,8 @@ export class JavaDependencyGraph {
         // ???
       }  else if (pointer.kind == OmniTypeKind.ENUM) {
         // ???
+      }   else if (pointer.kind == OmniTypeKind.INTERFACE) {
+        // ???
       } else {
         if (callback(pointer)) {
           return true;

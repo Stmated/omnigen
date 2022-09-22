@@ -3,7 +3,7 @@ import {
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
-  OmniGenericTargetType,
+  OmniGenericTargetType, OmniInheritableType,
   OmniModel,
   OmniObjectType,
   OmniProperty,
@@ -191,7 +191,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     }
 
     const subTypesToRemove: OmniType[] = [];
-    const extensionsToSet: { target: OmniObjectType, extension: OmniType }[] = [];
+    const extensionsToSet: { target: OmniObjectType, extension: OmniInheritableType }[] = [];
     for (const subType of info.subTypes) {
 
       const genericTarget: OmniGenericTargetType = {

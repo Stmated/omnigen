@@ -5,10 +5,9 @@ import {
   OmniModel, OmniProperty, OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
-  TypeName
+  TypeName, OmniInheritableType
 } from '../src';
 import fs from 'fs/promises';
-import {Naming} from '../src/parse/Naming';
 import {MethodDeclaration, CompilationUnit, JavaVisitor} from '../src/modules/java';
 import {IOptions} from '../src/options';
 import AbstractNode from '../src/cst/AbstractNode';
@@ -45,7 +44,7 @@ export class TestUtils {
     });
   }
 
-  public static obj(name: TypeName, extendedBy?: OmniType, properties?: OmniPropertyOrphan[]): OmniObjectType {
+  public static obj(name: TypeName, extendedBy?: OmniInheritableType, properties?: OmniPropertyOrphan[]): OmniObjectType {
     const omniClass: OmniObjectType = {
       name: name,
       kind: OmniTypeKind.OBJECT,

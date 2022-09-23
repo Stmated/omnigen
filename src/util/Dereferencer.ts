@@ -13,12 +13,11 @@ export type Dereferenced<out T> = { obj: T, root: object, hash?: string, mix?: b
 
 export type UriHash = { uri: string, hash: string };
 
-// type ReduceMap = {[key: '']: Array<any>} | {[key: string]: any};
-
-interface ReduceMap {
-  '': Array<any>;
-  [key: string]: any;
+interface RecordMap {
+  [key: string]: Record<string, never>;
 }
+
+type ReduceMap = RecordMap & { '': Array<Record<string, never>> };
 
 type UriParts = {
   protocol: string | undefined;
@@ -317,7 +316,7 @@ export class Dereferencer<T> {
       wasMixed = mixed[1];
     }
 
-    if (typeof resolvedObject == 'object' && '$ref' in resolvedObject) {
+    if (typeof resolvedObject == 'object' && resolvedObject && '$ref' in resolvedObject) {
 
       // There are nested $ref, so we need to dive deeper.
       // NOTE: It should be an option for if we want to dive recursively.
@@ -333,11 +332,11 @@ export class Dereferencer<T> {
     }
   }
 
-  private emptyTarget(val: unknown): any {
+  private static emptyTarget(val: unknown): Partial<[] | Record<string, never>> {
     return Array.isArray(val) ? [] : {}
   }
 
-  private reduceArrayToIdMap(map: ReduceMap, obj: any): Record<string, any> {
+  private static reduceArrayToIdMap(map: ReduceMap, obj: Record<string, never>): ReduceMap {
 
     // If the items all contain 'name', 'id' or $id, we should merge and replace those respective items
     const id = obj['$id'] || obj['id'] || obj['name'];
@@ -350,11 +349,51 @@ export class Dereferencer<T> {
     return map;
   }
 
-  private mix<R>(object: RefAware, resolved: R | RefAware): [R | RefAware, boolean] {
+  private static readonly MERGE_OPTIONS: deepmerge.Options = {
+
+    arrayMerge: (source, target, options) => {
+
+      const namedSource: ReduceMap = source.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {'': []});
+      const namedTarget: ReduceMap = target.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {'': []});
+
+      const replacements: any[] = [];
+      for (const key of Object.keys(namedSource)) {
+        if (key.length > 0) {
+          if (!namedTarget[key]) {
+            replacements.push(namedSource[key]);
+          } else {
+            // Other takes precedence
+          }
+        }
+      }
+
+      for (const key of Object.keys(namedTarget)) {
+        if (key.length > 0) {
+          replacements.push(namedTarget[key]);
+        }
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      return replacements.concat(namedTarget['']).concat(namedSource['']).map((element: any) => {
+
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        if (options?.clone !== false && options && options?.isMergeableObject(element)) {
+          const emptyTarget = Dereferencer.emptyTarget(element);
+          return deepmerge.default(emptyTarget, element, options);
+        } else {
+          return element;
+        }
+      });
+    }
+  };
+
+  private mix<R>(object: RefAware, resolved: Partial<R | RefAware>): [R | RefAware, boolean] {
 
     const keys = Object.keys(object);
     if (keys.length <= 1) {
-      return [resolved, false];
+      // NOTE: The cast to R here is not correct, but for now we do not care. The generics should improve someday.
+      return [resolved as R, false];
     }
 
     const extraKeys = keys.filter(it => (it != '$ref'));
@@ -363,41 +402,7 @@ export class Dereferencer<T> {
     delete (copy as never)['$ref'];
     logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
 
-    const merged = deepmerge.default(resolved, copy, <deepmerge.Options>{
-
-      arrayMerge: (source, target, options) => {
-
-        const namedSource: ReduceMap = source.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
-        const namedTarget: ReduceMap = target.reduce((map, obj) => this.reduceArrayToIdMap(map, obj), {'': []});
-
-        const replacements: any[] = [];
-        for (const key of Object.keys(namedSource)) {
-          if (key.length > 0) {
-            if (!namedTarget[key]) {
-              replacements.push(namedSource[key]);
-            } else {
-              // Other takes precedence
-            }
-          }
-        }
-
-        for (const key of Object.keys(namedTarget)) {
-          if (key.length > 0) {
-            replacements.push(namedTarget[key]);
-          }
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        return replacements.concat(namedTarget['']).concat(namedSource['']).map((element: any) => {
-
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          return (options?.clone !== false && options && options?.isMergeableObject(element as object))
-            ? deepmerge.default(this.emptyTarget(element), element, options)
-            : element;
-        });
-      }
-    });
+    const merged = deepmerge.default(resolved, copy, Dereferencer.MERGE_OPTIONS);
 
     return [merged, true];
   }

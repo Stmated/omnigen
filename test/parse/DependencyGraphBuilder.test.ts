@@ -3,7 +3,7 @@ import {
   OmniCompositionType,
   OmniPrimitiveKind,
   OmniType,
-  OmniTypeKind
+  OmniTypeKind, OmniInheritableType
 } from '@parse';
 import {
   DEFAULT_GRAPH_OPTIONS,
@@ -247,7 +247,7 @@ function map(arg: MapArg): Map<OmniType, OmniType[]> {
   return map;
 }
 
-function obj(name: string, extendedBy?: OmniType): OmniObjectType {
+function obj(name: string, extendedBy?: OmniInheritableType): OmniObjectType {
   return TestUtils.obj(name, extendedBy);
 }
 

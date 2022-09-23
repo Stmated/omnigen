@@ -1813,28 +1813,26 @@ class OpenRpcParserImpl {
         required: true,
         owner: requestType,
       });
+
+      if (this._options.jsonRpcIdIncluded) {
+        this._jsonRpcRequestClass.properties.push({
+          name: "id",
+          type: requestIdType,
+          required: true,
+          owner: this._jsonRpcRequestClass,
+        });
+      }
     }
 
     requestType.extendedBy = this._jsonRpcRequestClass;
 
     requestType.properties = [
-      <OmniProperty>{
+      {
         name: "params",
         type: requestParamsType,
         owner: requestType,
       }
     ];
-
-    if (this._options.jsonRpcIdIncluded) {
-      requestType.properties.push(
-        <OmniProperty>{
-          name: "id",
-          type: requestIdType,
-          required: true,
-          owner: requestType,
-        },
-      );
-    }
 
     return {
       type: requestType,

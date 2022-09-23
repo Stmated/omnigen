@@ -1,0 +1,109 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "title": "compressable_types",
+    "version": "2.0.0"
+  },
+  "methods": [
+    {
+      "name": "give_in1_get_out1",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "$ref": "#/components/schemas/in1"
+          }
+        }
+      ],
+      "result": {
+        "name": "result_out1",
+        "schema": {
+          "$ref": "#/components/schemas/a"
+        }
+      }
+    },
+    {
+      "name": "give_in2_get_out2",
+      "params": [
+        {
+          "name": "param",
+          "schema": {
+            "$ref": "#/components/schemas/in2"
+          }
+        }
+      ],
+      "result": {
+        "name": "result_out2",
+        "schema": {
+          "$ref": "#/components/schemas/b"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "in1": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "in2": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "Abs": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "a": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Abs"
+          }
+        ],
+        "properties": {
+          "common": {
+            "type": "string"
+          },
+          "a": {
+            "type": "string"
+          },
+          "x": {
+            "type": "string"
+          }
+        }
+      },
+      "b": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Abs"
+          }
+        ],
+        "properties": {
+          "common": {
+            "type": "string"
+          },
+          "b": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

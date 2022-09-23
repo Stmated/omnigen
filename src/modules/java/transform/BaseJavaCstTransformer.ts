@@ -40,7 +40,6 @@ import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 
 export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
-  private static readonly PATTERN_IDENTIFIER = new RegExp(/\b[_a-zA-Z][_a-zA-Z0-9]*\b/);
 
   private static readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 

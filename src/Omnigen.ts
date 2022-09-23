@@ -3,6 +3,7 @@ import {OpenRpcParser} from '@parse/openrpc/OpenRpcParser';
 import {OmniModel} from '@parse';
 import {GenericOmniModelTransformer} from '@parse/general/GenericOmniModelTransformer';
 import {InterfaceJavaCstTransformer} from '@parse/general/InterfaceJavaCstTransformer';
+import {CompressionOmniModelTransformer} from '@parse/general/CompressionOmniModelTransformer';
 
 /**
  * Main entry class which handles the default use-case for all the conversion from scheme to output.
@@ -17,6 +18,7 @@ export class Omnigen implements IParseManager {
     this._parserManager.register(new OpenRpcParser());
 
     // TODO: This should not always be enabled -- should be optional, or language-dependant
+    this._parserManager.registerTransformer(new CompressionOmniModelTransformer());
     this._parserManager.registerTransformer(new GenericOmniModelTransformer());
     this._parserManager.registerTransformer(new InterfaceJavaCstTransformer());
   }

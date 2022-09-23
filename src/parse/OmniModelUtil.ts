@@ -1,7 +1,7 @@
 import {
   CompositionKind,
   OmniInheritableType,
-  OmniModel,
+  OmniModel, OmniPrimitiveConstantValue, OmniPrimitiveConstantValueOrLazySubTypeValue,
   OmniPrimitiveKind,
   OmniProperty,
   OmniType,
@@ -11,6 +11,7 @@ import {
 } from '@parse/OmniModel';
 import {LiteralValue} from 'ts-json-schema-generator/src/Type/LiteralType';
 import {Naming} from '@parse/Naming';
+import {Omnigen} from '../Omnigen';
 
 export interface TypeCollection {
 
@@ -325,7 +326,36 @@ export class OmniModelUtil {
   public static getTypeDescription(type: OmniType): string {
 
     // TODO: Implement, and use for all logging instead of Naming.xyz
-    return Naming.safe(OmniModelUtil.getVirtualTypeName(type));
+    const baseName = Naming.safe(OmniModelUtil.getVirtualTypeName(type));
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+      if (type.valueConstant) {
+        const resolved = OmniModelUtil.resolvePrimitiveConstantValue(type.valueConstant, type);
+        const resolvedString = OmniModelUtil.primitiveConstantValueToString(resolved);
+        return `[${baseName}=${resolvedString}]`;
+      }
+    }
+
+    return baseName;
+  }
+
+  public static primitiveConstantValueToString(value: OmniPrimitiveConstantValue): string {
+    if (typeof value == 'string') {
+      return value;
+    } else {
+      return String(value);
+    }
+  }
+
+  public static resolvePrimitiveConstantValue(
+    value: OmniPrimitiveConstantValueOrLazySubTypeValue,
+    subType: OmniType
+  ): OmniPrimitiveConstantValue {
+
+    if (typeof value == 'function') {
+      return value(subType); // TODO: Check if this is correct
+    } else {
+      return value;
+    }
   }
 
   /**
@@ -356,6 +386,14 @@ export class OmniModelUtil {
     } else if (type.kind == OmniTypeKind.PRIMITIVE) {
       const nullable = OmniModelUtil.isNullable(type.nullable);
       return OmniModelUtil.getPrimitiveKindName(type.primitiveKind, nullable);
+    } else if (type.kind == OmniTypeKind.UNKNOWN) {
+      if (type.valueConstant != undefined) {
+        return OmniModelUtil.primitiveConstantValueToString(type.valueConstant);
+      }
+      if (type.isAny) {
+        return '_any';
+      }
+      return "_unknown";
     }
 
     // TODO: All types should be able to return a "virtual" type name, which can be used for compositions or whatever!

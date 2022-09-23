@@ -3,13 +3,13 @@ import {
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
-  OmniGenericTargetType, OmniInheritableType,
+  OmniGenericTargetType,
+  OmniInheritableType,
   OmniModel,
   OmniObjectType,
   OmniProperty,
   OmniType,
   OmniTypeKind,
-  TypeName
 } from '@parse';
 import {Naming} from '@parse/Naming';
 import {JavaOptions, JavaUtil, PrimitiveGenerificationChoice} from '@java';
@@ -124,13 +124,11 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     const genericEntries: SourceIdentifierAndPropertyName[] = [];
 
     const genericSource: OmniGenericSourceType = {
-      // name: info.extendedBy.name,
       kind: OmniTypeKind.GENERIC_SOURCE,
       of: info.extendedBy,
       sourceIdentifiers: [],
     };
 
-    const wrapPrimitives = (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE);
     const genericPropertiesToAdd: OmniProperty[] = [];
     const propertyNameExpansions = new Map<string, OmniGenericSourceIdentifierType[]>();
     for (const propertyName of info.propertyNames) {
@@ -145,16 +143,11 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
       // TODO: There is a possibility that the generic identifiers could clash. We should suffix with numbers then.
       const genericName = (genericEntries.length == 0) ? 'T' : `T${pascalCase(propertyName)}`;
       const commonDenominator = JavaUtil.getCommonDenominator(...uniqueTypesOnIndex);
-      const genericCommonDenominator = commonDenominator
-        ? JavaUtil.toGenericAllowedType(commonDenominator, wrapPrimitives)
-        : undefined;
-      const lowerBound = (genericCommonDenominator?.kind == OmniTypeKind.UNKNOWN)
-        ? undefined
-        : genericCommonDenominator;
+      const lowerBound =  this.toGenericBoundType(commonDenominator, options);
 
       if (lowerBound) {
 
-        const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfPossible(lowerBound, genericSource);
+        const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfPossible(lowerBound, genericSource, options);
 
         if (expandedGenericSourceIdentifier) {
           propertyNameExpansions.set(propertyName, [expandedGenericSourceIdentifier]);
@@ -264,6 +257,8 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
       }
     }
 
+    // TODO: Figure out why JsonRpcRequest for compressable-types go completely bonkers
+
     // The actual mutation of the original types are done here at the end.
     // This is because it might have been aborted because of a partial error.
     if (subTypesToRemove.length > 0) {
@@ -286,7 +281,8 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
 
   private expandLowerBoundGenericIfPossible(
     lowerBound: OmniType,
-    genericSource: OmniGenericSourceType
+    genericSource: OmniGenericSourceType,
+    options: JavaOptions
   ): OmniGenericSourceIdentifierType | undefined {
 
     if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
@@ -306,12 +302,14 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     // To make it better and more exact to work with, we should replace with his:
     // <TData extends AbstractRequestParams, T extends JsonRpcRequest<TData>>
     const targetIdentifier = lowerBound.targetIdentifiers[0];
+    const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type, options);
+
     const sourceIdentifier: OmniGenericSourceIdentifierType = {
       // TODO: The name should be automatically figure out somehow, unless specified in spec
       //        Right now the name usually becomes 'TT' and easily clashes
       placeholderName: this.getExplodedSourceIdentifierName(targetIdentifier.sourceIdentifier),
       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-      lowerBound: targetIdentifier.type,
+      lowerBound: sourceIdentifierLowerBound,
     };
 
     genericSource.sourceIdentifiers.push(sourceIdentifier);
@@ -322,6 +320,20 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     };
 
     return sourceIdentifier;
+  }
+
+  private toGenericBoundType(targetIdentifierType: OmniType | undefined, options: JavaOptions): OmniType | undefined {
+
+    const wrapPrimitives = (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE);
+    const targetIdentifierGenericType = targetIdentifierType
+      ? JavaUtil.toGenericAllowedType(targetIdentifierType, wrapPrimitives)
+      : undefined;
+
+    if (!targetIdentifierGenericType || targetIdentifierGenericType?.kind == OmniTypeKind.UNKNOWN) {
+      return undefined;
+    }
+
+    return targetIdentifierGenericType;
   }
 
   private getExplodedSourceIdentifierName(identifier: OmniGenericSourceIdentifierType): string {
@@ -373,7 +385,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
       }
 
       const sameType = propertyTypes.find(it => {
-        const common = JavaUtil.getCommonDenominatorBetween(property.type, it);
+        const common = JavaUtil.getCommonDenominatorBetween(property.type, it, false);
 
         // If the output is the exact same as the first input, then the two types are the same.
         return common == property.type;

@@ -56,44 +56,44 @@ export interface OmniProperty {
  * TODO: Change this into the values being strings instead. Maybe a bit more memory, but easier to read
  */
 export enum OmniTypeKind {
-  PRIMITIVE,
-  ENUM,
-  OBJECT,
-  REFERENCE,
-  DICTIONARY,
-  ARRAY,
-  ARRAY_PROPERTIES_BY_POSITION,
-  ARRAY_TYPES_BY_POSITION,
-  COMPOSITION,
-  GENERIC_SOURCE,
-  GENERIC_TARGET,
-  GENERIC_SOURCE_IDENTIFIER,
-  GENERIC_TARGET_IDENTIFIER,
-  INTERFACE,
+  PRIMITIVE = "PRIMITIVE",
+  ENUM = "ENUM",
+  OBJECT = "OBJECT",
+  REFERENCE = "REFERENCE",
+  DICTIONARY = "DICTIONARY",
+  ARRAY = "ARRAY",
+  ARRAY_PROPERTIES_BY_POSITION = "ARRAY_PROPERTIES_BY_POSITION",
+  ARRAY_TYPES_BY_POSITION = "ARRAY_TYPES_BY_POSITION",
+  COMPOSITION = "COMPOSITION",
+  GENERIC_SOURCE = "GENERIC_SOURCE",
+  GENERIC_TARGET = "GENERIC_TARGET",
+  GENERIC_SOURCE_IDENTIFIER = "GENERIC_SOURCE_IDENTIFIER",
+  GENERIC_TARGET_IDENTIFIER = "GENERIC_TARGET_IDENTIFIER",
+  INTERFACE = "INTERFACE",
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
    */
-  UNKNOWN,
+  UNKNOWN = "UNKNOWN",
 
   /**
    * TODO: Should this be a primitive?
    */
-  NULL,
+  NULL = "NULL",
 }
 
 export enum OmniPrimitiveKind {
-  NUMBER,
-  INTEGER,
-  INTEGER_SMALL,
-  DECIMAL,
-  DOUBLE,
-  FLOAT,
-  LONG,
-  STRING,
-  CHAR,
-  BOOL,
-  VOID
+  NUMBER = "NUMBER",
+  INTEGER = "INTEGER",
+  INTEGER_SMALL = "INTEGER_SMALL",
+  DECIMAL = "DECIMAL",
+  DOUBLE = "DOUBLE",
+  FLOAT = "FLOAT",
+  LONG = "LONG",
+  STRING = "STRING",
+  CHAR = "CHAR",
+  BOOL = "BOOL",
+  VOID = "VOID",
 }
 
 type OmniAlwaysNullKnownKind = OmniTypeKind.NULL;
@@ -253,7 +253,7 @@ export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKi
 
 type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
 export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
-  valueConstant?: unknown;
+  valueConstant?: OmniPrimitiveConstantValue;
   isAny?: boolean;
 }
 

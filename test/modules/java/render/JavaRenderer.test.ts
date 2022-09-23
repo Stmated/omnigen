@@ -138,6 +138,58 @@ describe('Java Rendering', () => {
     expect(out2.foundSuperInterfaces[1]).toEqual('IC');
   });
 
+  test('Type compressions', async () => {
+
+    // Check that the property 'common' from A and B are moved into Abs.
+    const fileContents = await getFileContentsFromFile('compressable-types.json');
+
+    const fileNames = [...fileContents.keys()].sort();
+    // TODO: Make sure that JsonRpcRequest does not go completely bonkers with its generics
+    expect(fileNames).toEqual([
+      "A.java",
+      "Abs.java",
+      "B.java",
+      "ErrorUnknown.java",
+      "ErrorUnknownError.java",
+      "GiveIn1GetOut1Request.java",
+      "GiveIn1GetOut1RequestParams.java",
+      "GiveIn1GetOut1Response.java",
+      "GiveIn2GetOut2Request.java",
+      "GiveIn2GetOut2RequestParams.java",
+      "GiveIn2GetOut2Response.java",
+      "In1.java",
+      "In2.java",
+      "JsonRpcError.java",
+      "JsonRpcErrorResponse.java",
+      "JsonRpcRequest.java",
+      "JsonRpcRequestParams.java",
+      "JsonRpcResponse.java",
+    ]);
+
+    const a = getParsedContent(fileContents, 'A.java');
+    expect(a.foundSuperInterfaces).toHaveLength(0);
+    expect(a.foundSuperClasses).toHaveLength(1);
+    expect(a.foundSuperClasses[0]).toEqual('Abs');
+    expect(a.foundFields).toHaveLength(2);
+    expect(a.foundFields[0].names[0]).toEqual('a');
+    expect(a.foundFields[1].names[0]).toEqual('x');
+
+    const b = getParsedContent(fileContents, 'B.java');
+    expect(b.foundSuperInterfaces).toHaveLength(0);
+    expect(b.foundSuperClasses).toHaveLength(1);
+    expect(b.foundSuperClasses[0]).toEqual('Abs');
+    expect(b.foundFields).toHaveLength(2);
+    expect(b.foundFields[0].names[0]).toEqual('b');
+    expect(b.foundFields[1].names[0]).toEqual('x');
+
+    const abs = getParsedContent(fileContents, 'Abs.java');
+    expect(abs.foundSuperInterfaces).toHaveLength(0);
+    expect(abs.foundSuperClasses).toHaveLength(0);
+    expect(abs.foundFields).toHaveLength(2);
+    expect(abs.foundFields[0].names[0]).toEqual('kind');
+    expect(abs.foundFields[1].names[0]).toEqual('common');
+  });
+
   test('Enum', async () => {
 
     const fileContents = await getFileContentsFromFile('enum.json');

@@ -7,6 +7,8 @@ import {
 } from '@options';
 import {OmniType} from '@parse';
 import {IGenericTargetOptions} from '@interpret';
+import {IncomingConverters, OptionsUtil} from '@options/OptionsUtil';
+import {PackageResolverOptionsParser} from '@options/PackageResolverOptionsParser';
 
 export enum UnknownType {
   MAP,
@@ -46,3 +48,11 @@ export const DEFAULT_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
 }
 
 export type IPackageResolver = (type: OmniType, typeName: string, options: IPackageOptions) => string;
+
+export const JAVA_OPTIONS_CONVERTERS: IncomingConverters<IJavaOptions> = {
+  packageResolver: (v) => new PackageResolverOptionsParser().parse(v),
+  immutableModels: OptionsUtil.toBoolean,
+  includeAlwaysNullProperties: OptionsUtil.toBoolean,
+  includeLinksOnProperty: OptionsUtil.toBoolean,
+  includeLinksOnType: OptionsUtil.toBoolean,
+};

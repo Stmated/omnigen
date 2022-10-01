@@ -211,28 +211,10 @@ export class JavaUtil {
 
     const packageName = options ? JavaUtil.getPackageName(type, typeName, options) : undefined;
     if (packageName) {
-
-      // if (relativeTo && relativeTo == packageName) {
-      //
-      //   // If the package is the same as the one it should be relative to,
-      //   // then we will return the whole fully-qualified name.
-      //   // If the name is asked for from a location that needs the whole FQN, relativeTo will be false.
-      //   return typeName;
-      // }
-
       if (packageName && packageName.length > 0) {
         return `${packageName}.${typeName}`;
       }
     }
-
-    // if (options) {
-    //
-    //   const packageName = options.packageResolver
-    //     ? options.packageResolver(type, typeName, options)
-    //     : options.package;
-    //
-    //
-    // }
 
     return typeName;
   }

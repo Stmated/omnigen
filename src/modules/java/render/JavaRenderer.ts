@@ -1,6 +1,6 @@
 import * as Java from '@java/cst/JavaCstTypes';
 import {AbstractJavaNode, GenericTypeDeclarationList} from '@java/cst/JavaCstTypes';
-import {CompilationUnitCallback} from '@cst/CompilationUnitCallback';
+import {CompilationUnitRenderCallback} from '@cst/CompilationUnitRenderCallback';
 import {ICstVisitor, VisitResult} from '@visit';
 import {IRenderer} from '@render';
 import {ICstNode} from '@cst';
@@ -20,12 +20,12 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   private tokenSuffix = ' ';
   private readonly _options: RealOptions<IJavaOptions>;
 
-  private readonly cuCallback: CompilationUnitCallback;
+  private readonly _cuCallback: CompilationUnitRenderCallback;
 
-  constructor(options: RealOptions<IJavaOptions>, callback: CompilationUnitCallback) {
+  constructor(options: RealOptions<IJavaOptions>, callback: CompilationUnitRenderCallback) {
     super();
     this._options = options;
-    this.cuCallback = callback;
+    this._cuCallback = callback;
   }
 
   private getIndentation(d: number = this.blockDepth): string {
@@ -239,10 +239,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     ]);
 
     // This was a top-level class/interface, so we will output it as a compilation unit.
-    this.cuCallback({
+    this._cuCallback({
       content: content,
       name: node.object.name.value,
-      fileName: `${node.object.name.value}.java`
+      fileName: `${node.object.name.value}.java`,
+      directories: node.packageDeclaration.fqn.split('.'),
     });
 
     return content;

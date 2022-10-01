@@ -22,8 +22,8 @@ export type IncomingConverters<TOpt extends IOptions> = OmitNever<{
 
 export type Additions<TOpt extends IOptions> = {
   [Key in keyof TOpt]?: TOpt[Key] extends IncomingOrRealOption<infer TInc, infer TReal>
-    ? (value: NonNullable<TReal>) => IncomingOptions<TOpt> | undefined
-    : (value: NonNullable<TOpt[Key]>) => IncomingOptions<TOpt> | undefined
+    ? (value: TReal) => IncomingOptions<TOpt> | undefined
+    : (value: TOpt[Key]) => IncomingOptions<TOpt> | undefined
 };
 
 // TODO: THERE MUST BE SOME WAY TO GET RID OF ALL THE GENERIC HACKS!!! IT SHOULD BE LOGICALLY SOLVABLE!
@@ -37,9 +37,9 @@ export class OptionsUtil {
     TAdditions extends Additions<TOpt>,
     TReturn extends RealOptions<TOpt>,
   >(
-    base: TOpt,
-    incoming: TInc,
-    converters: TConverters,
+    base: Required<TOpt>,
+    incoming: TInc | undefined,
+    converters?: TConverters,
     additions?: TAdditions,
   ): TReturn {
 
@@ -51,36 +51,44 @@ export class OptionsUtil {
   private static replaceOptionsWithConverted<
     TOpt extends IOptions,
     TInc extends IncomingOptions<TOpt>,
-    TConverters extends IncomingConverters<TOpt>, // All dynamic properties are REQUIRED
+    TConverters extends IncomingConverters<TOpt>,
     TReturn extends RealOptions<TOpt>,
   >(
-    base: TOpt,
-    incoming: TInc,
-    converters: TConverters
+    base: Required<TOpt>,
+    incoming: TInc | undefined,
+    converters?: TConverters
   ): TReturn {
 
-    const real: Partial<RealOptions<TOpt>> = base;
-    for (const converterKey in converters) {
-      if (!converters.hasOwnProperty(converterKey)) {
+    for (const baseKey in base) {
+      if (!base.hasOwnProperty(baseKey)) {
         continue;
       }
-
-      const converter = converters[converterKey];
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const incomingValue = (converterKey in incoming) ? incoming[converterKey] : real[converterKey];
+      const converter: IncomingConverter<unknown, unknown> = converters?.[baseKey];
+      if (converter) {
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      real[converterKey] = converter(incomingValue);
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const rawValue = (incoming && baseKey in incoming) ? incoming[baseKey] : base[baseKey];
+
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        base[baseKey] = converter(rawValue);
+      } else if (incoming && baseKey in incoming) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        base[baseKey] = incoming[baseKey];
+      }
     }
 
     // At this point all properties should be set.
     // If this could be done *safely* with generics somehow, that would be absolutely awesome.
-    return real as TReturn;
+    return base as TReturn;
   }
 
   private static getBaseWithOptionalAdditions<
@@ -88,11 +96,10 @@ export class OptionsUtil {
     TInc extends IncomingOptions<TOpt>,
     TAdditions extends Additions<TOpt>,
     TConverters extends IncomingConverters<TOpt>,
-    // TReturn extends TOpt,
   >(
-    base: TOpt,
-    incoming: TInc,
-    converters: TConverters,
+    base: Required<TOpt>,
+    incoming: TInc | undefined,
+    converters?: TConverters,
     additions?: TAdditions,
   ): TOpt {
 
@@ -114,22 +121,20 @@ export class OptionsUtil {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const value = (incoming[additionKey] || real[additionKey]);
+      const value = (incoming?.[additionKey] || base[additionKey]);
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      const converter = converters[additionKey] as IncomingConverter<any, any> | undefined;
+      const converter = converters?.[additionKey] as IncomingConverter<any, any> | undefined;
       if (converter) {
 
-        if (value !== undefined) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          const converted = converter(value);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          const newBase = addition(converted);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const converted = converter(value);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        const newBase = addition(converted);
 
-          if (newBase) {
-            base = {...base, ...newBase};
-          }
+        if (newBase) {
+          base = {...base, ...newBase};
         }
       } else {
 
@@ -146,7 +151,11 @@ export class OptionsUtil {
     return base;
   }
 
-  public static toBoolean(value: Booleanish): boolean {
+  public static toBoolean(this: void, value: Booleanish | undefined): boolean {
+
+    if (value == undefined) {
+      return false;
+    }
 
     if (typeof value == 'boolean') {
       return value;

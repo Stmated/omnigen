@@ -60,7 +60,7 @@ import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {Dereferenced, Dereferencer, LoggerFactory} from '@util';
-import {IParserOptions} from '@parse/IParserOptions';
+import {DEFAULT_PARSER_OPTIONS, IParserOptions, PARSER_OPTIONS_CONVERTERS} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
 import {Naming} from '@parse/Naming';
 import * as path from 'path';
@@ -68,10 +68,11 @@ import {JsonObject} from 'json-pointer';
 import {OpenApiJSONSchema7, OpenApiJSONSchema7Definition} from '@parse/openrpc/OpenApiExtendedJsonSchema';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {
-  IJsonRpcOptions
+  DEFAULT_JSONRPC_OPTIONS,
+  IJsonRpcOptions, JSONRPC_OPTIONS_CONVERTERS
 } from '@parse/openrpc/JsonRpcOptions';
 import {IncomingOptions, IOptionsSource, RealOptions} from '@options';
-import {OptionsUtil} from '@options/OptionsUtil';
+import {IncomingConverters, OptionsUtil} from '@options/OptionsUtil';
 import {ITargetOptions} from '@interpret';
 
 export const logger = LoggerFactory.create(__filename);
@@ -87,6 +88,16 @@ interface PostDiscriminatorMapping {
 }
 
 export type IOpenRpcParserOptions = IParserOptions & IJsonRpcOptions;
+
+export const OPENRPC_OPTIONS_CONVERTERS: IncomingConverters<IOpenRpcParserOptions> = {
+  ...JSONRPC_OPTIONS_CONVERTERS,
+  ...PARSER_OPTIONS_CONVERTERS
+};
+
+export const DEFAULT_OPENRPC_OPTIONS: IOpenRpcParserOptions = {
+  ...DEFAULT_PARSER_OPTIONS,
+  ...DEFAULT_JSONRPC_OPTIONS
+};
 
 export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<IOpenRpcParserOptions> {
 
@@ -117,7 +128,7 @@ export class OpenRpcParserBootstrap implements ParserBootstrap<IOpenRpcParserOpt
     this._deref = deref;
   }
 
-  getIncomingOptions<TTargetOptions extends ITargetOptions>(): IncomingOptions<IOpenRpcParserOptions & TTargetOptions> {
+  getIncomingOptions<TTargetOptions extends ITargetOptions>(): IncomingOptions<IOpenRpcParserOptions & TTargetOptions> | undefined {
     const doc = this._deref.getFirstRoot();
     const customOptions = doc['x-omnigen'] as IncomingOptions<IOpenRpcParserOptions & TTargetOptions>;
 

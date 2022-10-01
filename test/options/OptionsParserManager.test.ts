@@ -20,6 +20,12 @@ export interface BoolOptions extends IOptions {
   c: IncomingOrRealOption<boolean, boolean>;
 }
 
+export interface NoDynamicOptions extends IOptions {
+  a: string;
+  b: number;
+  c: boolean;
+}
+
 describe('OptionsParserManager', () => {
 
   test('Booleanish', async () => {
@@ -87,6 +93,26 @@ describe('OptionsParserManager', () => {
 
     expect(real.a).toEqual(true);
     expect(real.b).toEqual(false);
+    expect(real.c).toEqual(true);
+  });
+
+  test('NoDynamics', async () => {
+
+    const base: NoDynamicOptions = {
+      a: 'string',
+      b: 1,
+      c: true,
+    };
+
+    const inc1: IncomingOptions<NoDynamicOptions> = {
+      a: 'replacement',
+    };
+
+    const real = OptionsUtil.updateOptions(base, inc1);
+
+    expect(real).toBeDefined();
+    expect(real.a).toEqual('replacement');
+    expect(real.b).toEqual(1);
     expect(real.c).toEqual(true);
   });
 

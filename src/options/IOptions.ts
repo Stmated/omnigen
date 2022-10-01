@@ -17,7 +17,7 @@ export type RealOptions<TOpt extends IOptions> = {
 };
 
 export interface IOptionsSource<TOpt extends IOptions> {
-  getIncomingOptions<TTargetOptions extends ITargetOptions>(): IncomingOptions<TOpt & TTargetOptions>;
+  getIncomingOptions<TTargetOptions extends ITargetOptions>(): IncomingOptions<TOpt & TTargetOptions> | undefined;
 }
 
 export interface IOptions {

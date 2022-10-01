@@ -10,10 +10,16 @@ import {
   OmniInheritableType,
   OpenRpcParserBootstrapFactory,
   SchemaFile,
-  IOpenRpcParserOptions, OmniModelParserResult
+  IOpenRpcParserOptions, OmniModelParserResult, OPENRPC_OPTIONS_CONVERTERS
 } from '../src';
 import fs from 'fs/promises';
-import {MethodDeclaration, CompilationUnit, JavaVisitor, IJavaOptions} from '../src/modules/java';
+import {
+  MethodDeclaration,
+  CompilationUnit,
+  JavaVisitor,
+  IJavaOptions,
+  JAVA_OPTIONS_CONVERTERS
+} from '../src/modules/java';
 import AbstractNode from '../src/cst/AbstractNode';
 import {VisitorFactoryManager} from '../src/visit/VisitorFactoryManager';
 import {CstRootNode} from '../src/cst/CstRootNode';
@@ -22,12 +28,9 @@ import {OmniModelTransformer} from '../src/parse/OmniModelTransformer';
 import {CompressionOmniModelTransformer} from '../src/parse/general/CompressionOmniModelTransformer';
 import {GenericsOmniModelTransformer} from '../src/parse/general/GenericsOmniModelTransformer';
 import {InterfaceJavaCstTransformer} from '../src/parse/general/InterfaceJavaCstTransformer';
-import {PackageResolverOptionsParser} from '../src/options/PackageResolverOptionsParser';
 import {OptionsUtil} from '../src/options/OptionsUtil';
 import {
-  JSONRPC_10_PARSER_OPTIONS,
-  JSONRPC_11_PARSER_OPTIONS,
-  JSONRPC_20_PARSER_OPTIONS
+  JSONRPC_OPTIONS_FALLBACK
 } from '../src/parse/openrpc/JsonRpcOptions';
 
 export type KnownSchemaNames = 'openrpc';
@@ -69,36 +72,17 @@ export class TestUtils {
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
     const openRpcParserBootstrap = await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile);
     const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<IJavaOptions>();
-    const openRpcRealOptions = OptionsUtil.updateOptions(openRpcOptions, schemaIncomingOptions, {
-      jsonRpcVersion: (v) => v || '2.0',
-      jsonRpcErrorDataSchema: (v) => undefined, // TODO: How do we solve this?
-      jsonRpcErrorNameIncluded: OptionsUtil.toBoolean,
-      jsonRpcIdIncluded: OptionsUtil.toBoolean,
-      autoTypeHints: OptionsUtil.toBoolean,
-      relaxedLookup: OptionsUtil.toBoolean,
-      relaxedPlaceholders: OptionsUtil.toBoolean,
-    }, {
-      jsonRpcVersion: (v) => {
-        switch (v) {
-          case '2.0': return JSONRPC_20_PARSER_OPTIONS;
-          case '1.1': return JSONRPC_11_PARSER_OPTIONS;
-          case '1.0': return JSONRPC_10_PARSER_OPTIONS;
-        }
-      }
-    });
+    const openRpcRealOptions = OptionsUtil.updateOptions(
+      openRpcOptions,
+      schemaIncomingOptions,
+      OPENRPC_OPTIONS_CONVERTERS,
+      JSONRPC_OPTIONS_FALLBACK,
+    );
 
     const openRpcParser = openRpcParserBootstrap.createParser(openRpcRealOptions);
-
     const parseResult = openRpcParser.parse();
-    // const allOptions = parseResult.options as Record<string, unknown>; // This is UGLY. Needs to be fixed.
 
-    const realJavaOptions = OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, {
-      packageResolver: (v) => new PackageResolverOptionsParser().parse(v),
-      immutableModels: OptionsUtil.toBoolean,
-      includeAlwaysNullProperties: OptionsUtil.toBoolean,
-      includeLinksOnProperty: OptionsUtil.toBoolean,
-      includeLinksOnType: OptionsUtil.toBoolean,
-    });
+    const realJavaOptions = OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_CONVERTERS);
 
     for (const transformer of transformers) {
       transformer.transformModel(parseResult.model, realJavaOptions);

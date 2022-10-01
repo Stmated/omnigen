@@ -4,9 +4,9 @@ import {DEFAULT_JAVA_OPTIONS} from '@java';
 import {JavaRenderer} from '@java/render/JavaRenderer';
 import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
-import * as fs from 'fs/promises';
+import * as fs from 'fs';
 import * as path from 'path';
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '../JavaTestUtils';
+import {JavaTestUtils} from '../JavaTestUtils';
 import {DEFAULT_OPENRPC_OPTIONS} from '../../../../src';
 
 describe('Java Rendering', () => {
@@ -28,34 +28,37 @@ describe('Java Rendering', () => {
         const result = await TestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_JAVA_OPTIONS);
         const interpretation = await new JavaInterpreter().buildSyntaxTree(result.model, result.options);
 
-        let outDir: string;
+        let baseDir: string;
 
         try {
-          outDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
+          baseDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
         } catch (ex) {
           throw new Error(`Could not resolve path of ${fileName}`)
         }
 
         try {
-          if ((await fs.stat(outDir)).isDirectory()) {
-            await fs.rm(outDir, {recursive: true, force: true});
+          if (fs.existsSync(baseDir)) {
+            fs.rmSync(baseDir, {recursive: true, force: true});
           }
         } catch (ex) {
           // Ignore any error here and just hope for the best
         }
 
-        await fs.mkdir(outDir, {recursive: true});
-
-        const renderer = new JavaRenderer(DEFAULT_TEST_JAVA_OPTIONS, async (cu) => {
+        const renderer = new JavaRenderer(DEFAULT_JAVA_OPTIONS, (cu) => {
 
           if (cu.fileName.indexOf('#') !== -1) {
             throw new Error(`# not allowed in CU '${cu.fileName}'`);
           }
 
+          const outDir = `${baseDir}/${cu.directories.join('/')}`;
+          if (!fs.existsSync(outDir)) {
+            fs.mkdirSync(outDir, {recursive: true});
+          }
+
           const outPath = `${outDir}/${cu.fileName}`;
 
           try {
-            await fs.writeFile(outPath, cu.content);
+            fs.writeFileSync(outPath, cu.content);
           } catch (ex) {
             throw new Error(`Could not write '${outPath}' of '${fileName}': ${ex}`, {cause: ex instanceof Error ? ex : undefined});
           }
@@ -71,6 +74,8 @@ describe('Java Rendering', () => {
             );
           }
 
+          // Visit the syntax tree, but do nothing with the result.
+          // It is only to see if any crashes can be found or not.
           const visitor = new ParsedJavaTestVisitor();
           visitor.visit(cst);
         });

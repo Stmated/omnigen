@@ -1,11 +1,10 @@
-import {Interpreter} from '@interpret';
+import {Interpreter, ITargetOptions} from '@interpret';
 import {OmniModel} from '@parse';
-import {ICstVisitor} from '@visit';
 import {CstRootNode} from '@cst/CstRootNode';
 import {ITransformer} from '@transform';
-import {IOptions} from '@options';
+import {RealOptions} from '@options';
 
-export abstract class AbstractInterpreter<TOptions extends IOptions> implements Interpreter<TOptions> {
+export abstract class AbstractInterpreter<TOptions extends ITargetOptions> implements Interpreter<TOptions> {
   private readonly _transformers: ITransformer<CstRootNode, TOptions>[] = [];
 
   protected getTransformers(): ITransformer<CstRootNode, TOptions>[] {
@@ -18,7 +17,7 @@ export abstract class AbstractInterpreter<TOptions extends IOptions> implements 
 
   abstract newRootNode(): Promise<CstRootNode>;
 
-  public async interpret(model: OmniModel, options: TOptions): Promise<CstRootNode> {
+  public async buildSyntaxTree(model: OmniModel, options: RealOptions<TOptions>): Promise<CstRootNode> {
     const rootNode = await this.newRootNode();
 
     for (const transformer of this.getTransformers()) {

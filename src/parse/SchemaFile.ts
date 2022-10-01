@@ -1,21 +1,23 @@
-import {ParseManagerInput} from '@parse/ParserManager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {LoggerFactory} from '@util';
+import {PathLike} from 'fs';
 
 export const logger = LoggerFactory.create(__filename);
+
+export type SchemaFileInput = string | PathLike;
 
 /**
  * Used for caching and converting a target file or string into a structure object.
  * Used so that each parser can attempt to read the file, without needing to redo the reading over and over.
  */
 export class SchemaFile {
-  private readonly _input: ParseManagerInput;
+  private readonly _input: SchemaFileInput;
   private readonly _fileName?: string;
   private _parsedObject?: unknown;
   private _readContent?: string;
 
-  constructor(input: ParseManagerInput, fileName?: string) {
+  constructor(input: SchemaFileInput, fileName?: string) {
     this._input = input;
     this._fileName = fileName;
   }

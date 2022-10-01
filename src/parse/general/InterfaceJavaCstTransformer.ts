@@ -8,20 +8,21 @@ import {
   OmniType,
   OmniTypeKind
 } from '@parse';
-import {JavaOptions} from '@java';
 import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {IncomingOptions, RealOptions} from '@options';
+import {ITargetOptions} from '@interpret';
 
 /**
  * Checks for object types that are used as interfaces, and splits the type into two types.
  * One that is the original, and one that is the interface version, pointing to the original.
  * It then replaces the types where needed.
  */
-export class InterfaceJavaCstTransformer implements OmniModelTransformer<JavaOptions> {
+export class InterfaceJavaCstTransformer implements OmniModelTransformer<ITargetOptions> {
 
-  transformModel(model: OmniModel, options: JavaOptions): void {
+  transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
 
     const exportableTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
     const graph = DependencyGraphBuilder.build(exportableTypes.all, DEFAULT_GRAPH_OPTIONS);

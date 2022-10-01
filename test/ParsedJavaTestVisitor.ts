@@ -1,16 +1,15 @@
 import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
-  BooleanLiteralCtx, ExtendsInterfacesCtx,
+  BooleanLiteralCtx, ClassOrInterfaceTypeCtx, ExtendsInterfacesCtx,
   FieldDeclarationCtx,
-  FloatingPointLiteralCtx,
-  IntegerLiteralCtx,
+  FloatingPointLiteralCtx, FloatingPointTypeCtx, ImportDeclarationCtx,
+  IntegerLiteralCtx, IntegralTypeCtx, IToken,
   LiteralCtx,
   MethodDeclaratorCtx,
-  NormalInterfaceDeclarationCtx,
+  NormalInterfaceDeclarationCtx, PackageDeclarationCtx,
   SuperclassCtx,
-  SuperinterfacesCtx,
-  VariableDeclaratorIdCtx
+  SuperinterfacesCtx, UnannClassTypeCtx, UnannPrimitiveTypeCtx
 } from 'java-parser';
 
 export type FoundField = {names: string[], ctx: FieldDeclarationCtx};
@@ -21,6 +20,11 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   readonly foundMethodArguments: any[][] = [];
   readonly foundFields: FoundField[] = [];
   readonly foundLiterals: any[] = [];
+
+  readonly foundImports: string[] = [];
+  readonly foundTypes: string[] = [];
+
+  public foundPackage: string | undefined;
 
   readonly foundSuperClasses: string[] = [];
   readonly foundSuperInterfaces: string[] = [];
@@ -33,6 +37,94 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
       }
     }
     return super.normalInterfaceDeclaration(ctx, param);
+  }
+
+  importDeclaration(ctx: ImportDeclarationCtx, param?: any): any {
+
+    if (ctx.packageOrTypeName) {
+      this.foundImports.push(ctx.packageOrTypeName[0].children.Identifier.map(it => it.image).join('.'));
+    }
+
+    return super.importDeclaration(ctx, param);
+  }
+
+  packageDeclaration(ctx: PackageDeclarationCtx, param?: any): any {
+
+    this.foundPackage = ctx.Identifier.map(it => it.image).join('.');
+    return super.packageDeclaration(ctx, param);
+  }
+
+  unannClassType(ctx: UnannClassTypeCtx, param?: any): any {
+
+    const name = ctx.Identifier.map(it => it.image).join('.');
+    if (!this.foundTypes.includes(name)) {
+      this.foundTypes.push(name);
+    }
+
+    return super.unannClassType(ctx, param);
+  }
+
+  unannPrimitiveType(ctx: UnannPrimitiveTypeCtx, param?: any): any {
+
+    if (ctx.numericType) {
+      for (const numericType of ctx.numericType) {
+
+        if (numericType.children.integralType) {
+
+        }
+
+        if (numericType.children.floatingPointType) {
+
+        }
+
+        // const name = ctx.numericType.map(it => it.children.integralType.image).join('.');
+        // if (!this.foundTypes.includes(name)) {
+        //   this.foundTypes.push(name);
+        // }
+      }
+    }
+
+    return super.unannPrimitiveType(ctx, param);
+  }
+
+  private addTokenAsType(token: IToken[] | undefined): void {
+    if (token) {
+      const name = token.map(it => it.image).join('');
+      if (!this.foundTypes.includes(name)) {
+        this.foundTypes.push(name);
+      }
+    }
+  }
+
+  integralType(ctx: IntegralTypeCtx, param?: any): any {
+
+    this.addTokenAsType(ctx.Int);
+    this.addTokenAsType(ctx.Byte);
+    this.addTokenAsType(ctx.Char);
+    this.addTokenAsType(ctx.Long);
+    this.addTokenAsType(ctx.Short);
+
+    return super.integralType(ctx, param);
+  }
+
+  floatingPointType(ctx: FloatingPointTypeCtx, param?: any): any {
+
+    this.addTokenAsType(ctx.Float);
+    this.addTokenAsType(ctx.Double);
+
+    return super.floatingPointType(ctx, param);
+  }
+
+  classOrInterfaceType(ctx: ClassOrInterfaceTypeCtx, param?: any): any {
+
+    for (const classType of ctx.classType) {
+      const name = classType.children.Identifier.map(it => it.image).join('.');
+      if (!this.foundTypes.includes(name)) {
+        this.foundTypes.push(name);
+      }
+    }
+
+    return super.classOrInterfaceType(ctx, param);
   }
 
   methodDeclarator(ctx: MethodDeclaratorCtx, param?: any): any {

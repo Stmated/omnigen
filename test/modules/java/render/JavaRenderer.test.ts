@@ -1,12 +1,13 @@
 import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '@java';
+import {DEFAULT_JAVA_OPTIONS} from '@java';
 import {JavaRenderer} from '@java/render/JavaRenderer';
 import * as JavaParser from 'java-parser';
 import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {CstRootNode} from '@cst/CstRootNode';
+import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '../JavaTestUtils';
+import {DEFAULT_OPENRPC_OPTIONS} from '../../../../src';
 
 describe('Java Rendering', () => {
 
@@ -24,10 +25,8 @@ describe('Java Rendering', () => {
 
       for (const fileName of fileNames) {
 
-        const model = await TestUtils.readExample(schemaName, fileName, DEFAULT_JAVA_OPTIONS);
-
-        const interpreter = new JavaInterpreter();
-        const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+        const result = await TestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_JAVA_OPTIONS);
+        const interpretation = await new JavaInterpreter().buildSyntaxTree(result.model, result.options);
 
         let outDir: string;
 
@@ -47,7 +46,7 @@ describe('Java Rendering', () => {
 
         await fs.mkdir(outDir, {recursive: true});
 
-        const renderer = new JavaRenderer(DEFAULT_JAVA_OPTIONS, async (cu) => {
+        const renderer = new JavaRenderer(DEFAULT_TEST_JAVA_OPTIONS, async (cu) => {
 
           if (cu.fileName.indexOf('#') !== -1) {
             throw new Error(`# not allowed in CU '${cu.fileName}'`);
@@ -83,7 +82,7 @@ describe('Java Rendering', () => {
 
   test('Test multiple inheritance (interfaces)', async () => {
 
-    const fileContents = await getFileContentsFromFile('multiple-inheritance.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json');
 
     const fileNames = [...fileContents.keys()];
     expect(fileNames).toContain('A.java');
@@ -96,7 +95,7 @@ describe('Java Rendering', () => {
     expect(fileNames).toContain('IC.java');
     expect(fileNames).toContain('Out_2.java');
 
-    const a = getParsedContent(fileContents, 'A.java');
+    const a = JavaTestUtils.getParsedContent(fileContents, 'A.java');
     expect(a.foundFields).toHaveLength(1);
     expect(a.foundFields[0].names).toHaveLength(1);
     expect(a.foundFields[0].names[0]).toEqual('foo');
@@ -105,21 +104,21 @@ describe('Java Rendering', () => {
     expect(a.foundSuperClasses).toHaveLength(1);
     expect(a.foundSuperInterfaces).toHaveLength(0);
 
-    const b = getParsedContent(fileContents, 'B.java');
+    const b = JavaTestUtils.getParsedContent(fileContents, 'B.java');
     expect(b.foundSuperClasses).toHaveLength(1);
     expect(b.foundSuperInterfaces).toHaveLength(1);
     expect(b.foundMethods).toHaveLength(1);
     expect(b.foundSuperClasses).toContain('Abs');
     expect(b.foundSuperInterfaces).toContain('IB');
 
-    const c = getParsedContent(fileContents, 'C.java');
+    const c = JavaTestUtils.getParsedContent(fileContents, 'C.java');
     expect(c.foundSuperClasses).toHaveLength(1);
     expect(c.foundSuperInterfaces).toHaveLength(1);
     expect(c.foundMethods).toHaveLength(1);
     expect(c.foundSuperClasses).toContain('Abs');
     expect(c.foundSuperInterfaces).toContain('IC');
 
-    const eitherAorB = getParsedContent(fileContents, 'AXOrB.java');
+    const eitherAorB = JavaTestUtils.getParsedContent(fileContents, 'AXOrB.java');
     expect(eitherAorB.foundFields).toHaveLength(3);
     expect(eitherAorB.foundFields[0].names[0]).toEqual('_raw');
     expect(eitherAorB.foundFields[1].names[0]).toEqual('_a');
@@ -127,7 +126,7 @@ describe('Java Rendering', () => {
     expect(eitherAorB.foundSuperClasses).toHaveLength(0);
     expect(eitherAorB.foundSuperInterfaces).toHaveLength(0);
 
-    const out2 = getParsedContent(fileContents, 'Out_2.java');
+    const out2 = JavaTestUtils.getParsedContent(fileContents, 'Out_2.java');
     expect(out2.foundFields).toHaveLength(2);
     expect(out2.foundFields[0].names[0]).toEqual('bar');
     expect(out2.foundFields[1].names[0]).toEqual('xyz');
@@ -141,7 +140,7 @@ describe('Java Rendering', () => {
   test('Type compressions', async () => {
 
     // Check that the property 'common' from A and B are moved into Abs.
-    const fileContents = await getFileContentsFromFile('compressable-types.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('compressable-types.json');
 
     const fileNames = [...fileContents.keys()].sort();
     // TODO: Make sure that JsonRpcRequest does not go completely bonkers with its generics
@@ -166,7 +165,7 @@ describe('Java Rendering', () => {
       "JsonRpcResponse.java",
     ]);
 
-    const a = getParsedContent(fileContents, 'A.java');
+    const a = JavaTestUtils.getParsedContent(fileContents, 'A.java');
     expect(a.foundSuperInterfaces).toHaveLength(0);
     expect(a.foundSuperClasses).toHaveLength(1);
     expect(a.foundSuperClasses[0]).toEqual('Abs');
@@ -174,7 +173,7 @@ describe('Java Rendering', () => {
     expect(a.foundFields[0].names[0]).toEqual('a');
     expect(a.foundFields[1].names[0]).toEqual('x');
 
-    const b = getParsedContent(fileContents, 'B.java');
+    const b = JavaTestUtils.getParsedContent(fileContents, 'B.java');
     expect(b.foundSuperInterfaces).toHaveLength(0);
     expect(b.foundSuperClasses).toHaveLength(1);
     expect(b.foundSuperClasses[0]).toEqual('Abs');
@@ -182,7 +181,7 @@ describe('Java Rendering', () => {
     expect(b.foundFields[0].names[0]).toEqual('b');
     expect(b.foundFields[1].names[0]).toEqual('x');
 
-    const abs = getParsedContent(fileContents, 'Abs.java');
+    const abs = JavaTestUtils.getParsedContent(fileContents, 'Abs.java');
     expect(abs.foundSuperInterfaces).toHaveLength(0);
     expect(abs.foundSuperClasses).toHaveLength(0);
     expect(abs.foundFields).toHaveLength(2);
@@ -192,7 +191,7 @@ describe('Java Rendering', () => {
 
   test('Enum', async () => {
 
-    const fileContents = await getFileContentsFromFile('enum.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json');
 
     const filenames = [...fileContents.keys()];
     expect(filenames).toHaveLength(18);
@@ -202,7 +201,7 @@ describe('Java Rendering', () => {
     // If it contains the below one, then the composite class has been incorrectly named
     expect(filenames).not.toContain('TagXOrTagOrString.java');
 
-    const tag = getParsedContent(fileContents, 'Tag.java');
+    const tag = JavaTestUtils.getParsedContent(fileContents, 'Tag.java');
     expect(tag.foundMethods).toHaveLength(0);
     expect(tag.foundSuperClasses).toHaveLength(0);
     expect(tag.foundSuperInterfaces).toHaveLength(0);
@@ -214,7 +213,7 @@ describe('Java Rendering', () => {
     expect(tag.foundLiterals[3]).toEqual("\"TagB\"");
     expect(tag.foundLiterals[4]).toEqual("\"TagC\"");
 
-    const tagOrString = getParsedContent(fileContents, 'TagOrSpeciesOrString.java');
+    const tagOrString = JavaTestUtils.getParsedContent(fileContents, 'TagOrSpeciesOrString.java');
     expect(tagOrString.foundMethods).toHaveLength(7);
     expect(tagOrString.foundMethods[0]).toEqual("get");
     expect(tagOrString.foundMethods[1]).toEqual("getValue");
@@ -238,14 +237,14 @@ describe('Java Rendering', () => {
 
   test('AdditionalProperties', async () => {
 
-    const fileContents = await getFileContentsFromFile('additional-properties.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json');
 
     const filenames = [...fileContents.keys()];
     expect(filenames).toHaveLength(12);
     expect(filenames).toContain('Thing.java');
     expect(filenames).toContain('IAdditionalProperties.java');
 
-    const thing = getParsedContent(fileContents, 'Thing.java');
+    const thing = JavaTestUtils.getParsedContent(fileContents, 'Thing.java');
     expect(thing.foundMethods).toHaveLength(3);
     expect(thing.foundMethods[0]).toEqual('getId');
     expect(thing.foundMethods[1]).toEqual('addAdditionalProperty');
@@ -256,7 +255,7 @@ describe('Java Rendering', () => {
     expect(thing.foundFields[0].names[0]).toEqual('id');
     expect(thing.foundFields[1].names[0]).toEqual('_additionalProperties');
 
-    const additional = getParsedContent(fileContents, 'IAdditionalProperties.java');
+    const additional = JavaTestUtils.getParsedContent(fileContents, 'IAdditionalProperties.java');
     expect(additional.foundMethods).toHaveLength(1);
     expect(additional.foundMethods[0]).toEqual('getAdditionalProperties');
     expect(additional.foundSuperClasses).toHaveLength(0);
@@ -266,7 +265,7 @@ describe('Java Rendering', () => {
 
   test('ErrorStructure', async () => {
 
-    const fileContents = await getFileContentsFromFile('error-structure.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json');
 
     const filenames = [...fileContents.keys()];
     expect(filenames).toHaveLength(13);
@@ -277,10 +276,10 @@ describe('Java Rendering', () => {
     expect(filenames).toContain('ListThingsError100.java');
     expect(filenames).toContain('ListThingsError100Error.java');
 
-    const errorResponse = getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
+    const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
     expect(errorResponse.foundFields[0].names[0]).toEqual("jsonrpc");
 
-    const error100 = getParsedContent(fileContents, 'ListThingsError100Error.java');
+    const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toHaveLength(3);
     expect(error100.foundFields[0].names[0]).toEqual("code");
     expect(error100.foundFields[1].names[0]).toEqual("message");
@@ -289,18 +288,18 @@ describe('Java Rendering', () => {
 
   test('ErrorStructure-1.1', async () => {
 
-    const fileContents = await getFileContentsFromFile('error-structure-1.1.json');
-    const errorResponse = getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json');
+    const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
 
     expect(errorResponse.foundFields[0].names[0]).toEqual("version");
 
-    const error100 = getParsedContent(fileContents, 'ListThingsError100Error.java');
+    const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toHaveLength(4);
   });
 
   test('ErrorStructure-Custom', async () => {
 
-    const fileContents = await getFileContentsFromFile('error-structure-custom.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-custom.json');
     const filenames = [...fileContents.keys()];
 
     expect(filenames).toContain('ListThingsError100Error.java');
@@ -308,7 +307,7 @@ describe('Java Rendering', () => {
     expect(filenames).not.toContain('Data.java'); // Class for property 'Data' should be better named
     expect(filenames).toContain('JsonRpcCustomErrorPayload.java');
 
-    const error100 = getParsedContent(fileContents, 'ListThingsError100Error.java');
+    const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toHaveLength(4);
     expect(error100.foundFields[0].names[0]).toEqual("code");
     expect(error100.foundFields[1].names[0]).toEqual("message");
@@ -316,7 +315,7 @@ describe('Java Rendering', () => {
     expect(error100.foundFields[3].names[0]).toEqual("name");
     expect(error100.foundLiterals[7]).toEqual("\"JSONRPCError\"");
 
-    const customError = getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
+    const customError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
     expect(customError.foundFields).toHaveLength(5);
     expect(customError.foundFields[0].names[0]).toEqual('signature');
     expect(customError.foundFields[1].names[0]).toEqual('uuid');
@@ -327,7 +326,7 @@ describe('Java Rendering', () => {
 
   test('PetStore-Expanded-ClassNames', async () => {
 
-    const fileContents = await getFileContentsFromFile('petstore-expanded.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('petstore-expanded.json');
     const filenames = [...fileContents.keys()];
 
     expect(filenames).toContain('Pet.java');
@@ -335,72 +334,8 @@ describe('Java Rendering', () => {
     expect(filenames).not.toContain('Pet1.java');
   });
 
-  // test('PetStore should create expected model', async () => {
-  //   const model = await parser.parse(new SchemaFile('./test/examples/openrpc/petstore-expanded.json'));
-
   test('Test inheritance of descriptions', async () => {
 
-    const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'description-inheritance.json', DEFAULT_JAVA_OPTIONS);
-
-    // TODO: Assert every single description, make sure things are inherited just as we want them to be
-    // TODO: There are *LOTS* of bugs here, we should make sure it is EXACTLY like we want it to be
-    // TODO: Comments can end up with the wrong names of classes, since they are not fully set until LATE
-
-    // const resultSchemaPropertyA = getEndpointResultProperty(model, 'method', 'ResultSchemaPropertyA');
-
-    // expect(resultSchemaPropertyA.description)
-    //   .toEqual('components_schemas_ResultSchema_allOf_inline_properties_ResultSchemaPropertyA_description');
-
-    // AbstractOne.description: components_schemas_AbstractOne_description
-    // ResultSchema.description: components_schemas_ResultSchema_description
-    // endpoint.method.description: methods_method_description
-
-    // endpoint.method.result.type.name = MethodResponse ---- but should be ResultDescriptor? Right??? Keep names as close to Spec IF POSSIBLE, yes?
-
-    // ResultDescriptor.name: ResultDescriptor (taken from $ref of methods/method/result/ref
-    //
-
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-
-    const renderer = new JavaRenderer(DEFAULT_JAVA_OPTIONS, (cu) => {
-    });
-
-    const content = renderer.render(interpretation);
-
-    expect(content).toBeDefined();
+    // TODO: Implement test case for 'openrpc', 'description-inheritance.json'
   });
 });
-
-async function getFileContentsFromFile(fileName: string) {
-
-  const interpreter = new JavaInterpreter();
-  const model = await TestUtils.readExample('openrpc', fileName, DEFAULT_JAVA_OPTIONS);
-  const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
-  return getFileContents(DEFAULT_JAVA_OPTIONS, interpretation);
-}
-
-function getFileContents(javaOptions: JavaOptions, interpretation: CstRootNode) {
-  const fileContents = new Map<string, string>();
-  const renderer = new JavaRenderer(javaOptions, (cu) => {
-    fileContents.set(cu.fileName, cu.content);
-  });
-  renderer.render(interpretation);
-  return fileContents;
-}
-
-function getParsedContent(fileContents: Map<string, string>, fileName: string): ParsedJavaTestVisitor {
-
-  let cst: JavaParser.CstNode;
-  try {
-    cst = JavaParser.parse(fileContents.get(fileName) || '');
-    expect(cst).toBeDefined();
-  } catch (ex) {
-    throw new Error(`Could not parse '${fileName}'': ${ex}`, {cause: ex instanceof Error ? ex : undefined});
-  }
-
-  const visitor = new ParsedJavaTestVisitor();
-  visitor.visit(cst);
-
-  return visitor;
-}

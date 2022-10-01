@@ -1,27 +1,40 @@
 import {
   CompositionKind,
   OmniObjectType,
-  OmniCompositionType, Omnigen,
-  OmniModel, OmniProperty, OmniPropertyOwner,
+  OmniCompositionType,
+  OmniProperty,
+  OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
-  TypeName, OmniInheritableType
+  TypeName,
+  OmniInheritableType,
+  OpenRpcParserBootstrapFactory,
+  SchemaFile,
+  IOpenRpcParserOptions, OmniModelParserResult
 } from '../src';
 import fs from 'fs/promises';
-import {MethodDeclaration, CompilationUnit, JavaVisitor} from '../src/modules/java';
-import {IOptions} from '../src/options';
+import {MethodDeclaration, CompilationUnit, JavaVisitor, IJavaOptions} from '../src/modules/java';
 import AbstractNode from '../src/cst/AbstractNode';
 import {VisitorFactoryManager} from '../src/visit/VisitorFactoryManager';
 import {CstRootNode} from '../src/cst/CstRootNode';
 import {VisitResult} from '../src/visit';
+import {OmniModelTransformer} from '../src/parse/OmniModelTransformer';
+import {CompressionOmniModelTransformer} from '../src/parse/general/CompressionOmniModelTransformer';
+import {GenericsOmniModelTransformer} from '../src/parse/general/GenericsOmniModelTransformer';
+import {InterfaceJavaCstTransformer} from '../src/parse/general/InterfaceJavaCstTransformer';
+import {PackageResolverOptionsParser} from '../src/options/PackageResolverOptionsParser';
+import {OptionsUtil} from '../src/options/OptionsUtil';
+import {
+  JSONRPC_10_PARSER_OPTIONS,
+  JSONRPC_11_PARSER_OPTIONS,
+  JSONRPC_20_PARSER_OPTIONS
+} from '../src/parse/openrpc/JsonRpcOptions';
 
-type KnownSchemaNames = 'openrpc';
+export type KnownSchemaNames = 'openrpc';
 
 type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<OmniProperty, 'owner'>>;
 
 export class TestUtils {
-
-  private static readonly _omnigen = new Omnigen();
 
   static getKnownSchemaNames(): KnownSchemaNames[] {
     return ['openrpc'];
@@ -30,18 +43,71 @@ export class TestUtils {
   static async listExampleFileNames(type: KnownSchemaNames): Promise<string[]> {
     const dirPath = `./test/examples/${type}/`;
     return await fs.readdir(dirPath, {withFileTypes: true})
-    .then(paths => {
-      return paths.filter(it => it.isFile()).map(it => it.name);
-    });
+      .then(paths => {
+        return paths.filter(it => it.isFile()).map(it => it.name);
+      });
   }
 
-  static async readExample(type: KnownSchemaNames, fileName: string, options: IOptions): Promise<OmniModel> {
+  static async readExample(
+    type: KnownSchemaNames,
+    fileName: string,
+    openRpcOptions: IOpenRpcParserOptions,
+    javaOptions: IJavaOptions
+  ): Promise<OmniModelParserResult<IJavaOptions>> {
 
-    return TestUtils._omnigen.parse({
-      input: `./test/examples/${type}/${fileName}`,
-      fileName: `./test/examples/${type}/${fileName}`,
-      languageOptions: options, // TODO: WRONG! We do NOT know what kind of options this is! The generics are wonky!
+    const schemaFile = new SchemaFile(
+      `./test/examples/${type}/${fileName}`,
+      `./test/examples/${type}/${fileName}`
+    );
+
+    const transformers: OmniModelTransformer<IJavaOptions>[] = [
+      new CompressionOmniModelTransformer(),
+      new GenericsOmniModelTransformer(),
+      new InterfaceJavaCstTransformer()
+    ];
+
+    const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
+    const openRpcParserBootstrap = await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile);
+    const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<IJavaOptions>();
+    const openRpcRealOptions = OptionsUtil.updateOptions(openRpcOptions, schemaIncomingOptions, {
+      jsonRpcVersion: (v) => v || '2.0',
+      jsonRpcErrorDataSchema: (v) => undefined, // TODO: How do we solve this?
+      jsonRpcErrorNameIncluded: OptionsUtil.toBoolean,
+      jsonRpcIdIncluded: OptionsUtil.toBoolean,
+      autoTypeHints: OptionsUtil.toBoolean,
+      relaxedLookup: OptionsUtil.toBoolean,
+      relaxedPlaceholders: OptionsUtil.toBoolean,
+    }, {
+      jsonRpcVersion: (v) => {
+        switch (v) {
+          case '2.0': return JSONRPC_20_PARSER_OPTIONS;
+          case '1.1': return JSONRPC_11_PARSER_OPTIONS;
+          case '1.0': return JSONRPC_10_PARSER_OPTIONS;
+        }
+      }
     });
+
+    const openRpcParser = openRpcParserBootstrap.createParser(openRpcRealOptions);
+
+    const parseResult = openRpcParser.parse();
+    // const allOptions = parseResult.options as Record<string, unknown>; // This is UGLY. Needs to be fixed.
+
+    const realJavaOptions = OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, {
+      packageResolver: (v) => new PackageResolverOptionsParser().parse(v),
+      immutableModels: OptionsUtil.toBoolean,
+      includeAlwaysNullProperties: OptionsUtil.toBoolean,
+      includeLinksOnProperty: OptionsUtil.toBoolean,
+      includeLinksOnType: OptionsUtil.toBoolean,
+    });
+
+    for (const transformer of transformers) {
+      transformer.transformModel(parseResult.model, realJavaOptions);
+    }
+
+    return {
+      model: parseResult.model,
+      options: realJavaOptions
+    };
   }
 
   public static obj(name: TypeName, extendedBy?: OmniInheritableType, properties?: OmniPropertyOrphan[]): OmniObjectType {

@@ -1,9 +1,15 @@
-import {OmniModel} from '@parse';
-import {SchemaFile} from '@parse/SchemaFile';
+import {OmniModelParserResult, SchemaFile} from '@parse';
+import {IParserOptions} from '@parse/IParserOptions';
+import {IOptionsSource, RealOptions} from '@options';
 
-export interface Parser {
+export interface ParserBootstrapFactory<TOpt extends IParserOptions> {
+  createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<TOpt>>;
+}
 
-  canHandle(schemaFile: SchemaFile): Promise<boolean>;
+export interface ParserBootstrap<TOpt extends IParserOptions> extends IOptionsSource<TOpt>{
+  createParser(options: RealOptions<TOpt>): Parser<TOpt>;
+}
 
-  parse(schemaFile: SchemaFile): Promise<OmniModel>;
+export interface Parser<TOpt extends IParserOptions> {
+  parse(): OmniModelParserResult<TOpt>;
 }

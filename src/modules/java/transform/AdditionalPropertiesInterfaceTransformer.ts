@@ -1,14 +1,15 @@
 import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
 import {OmniInterfaceType, OmniModel, OmniObjectType, OmniTypeKind} from '@parse';
-import {JavaCstRootNode, JavaOptions} from '@java';
+import {JavaCstRootNode, IJavaOptions, JavaUtil} from '@java';
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 import {Naming} from '@parse/Naming';
+import {RealOptions} from '@options';
 
 export class AdditionalPropertiesInterfaceTransformer extends AbstractJavaCstTransformer {
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
+  transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<IJavaOptions>): Promise<void> {
 
     const createdInterface: {obj?: Java.InterfaceDeclaration} = {};
     const currentClassDeclaration: {obj?: Java.ClassDeclaration} = {};
@@ -69,11 +70,14 @@ export class AdditionalPropertiesInterfaceTransformer extends AbstractJavaCstTra
       }
     }));
 
-    if (createdInterface.obj) {
+    const obj = createdInterface.obj;
+    if (obj) {
       root.children.push(new Java.CompilationUnit(
-        new Java.PackageDeclaration(options.package),
+        new Java.PackageDeclaration(
+          JavaUtil.getPackageName(obj.type.omniType, obj.name.value, options)
+        ),
         new Java.ImportList([]),
-        createdInterface.obj
+        obj
       ));
     }
 

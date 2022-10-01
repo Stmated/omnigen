@@ -1,6 +1,6 @@
 import AbstractNode from '@cst/AbstractNode';
 import AbstractToken from '@cst/AbstractToken';
-import {JavaOptions, JavaUtil, UnknownType} from '@java';
+import {IJavaOptions, JavaUtil, UnknownType} from '@java';
 import {
   OmniDictionaryType,
   OmniPrimitiveKind,
@@ -58,20 +58,20 @@ export class Type extends AbstractJavaNode {
     return this.omniType.kind == OmniTypeKind.ARRAY;
   }
 
-  getFQN(options: JavaOptions, relativeTo?: string): string {
-    return JavaUtil.getFullyQualifiedName({
-      type: this.omniType,
-      options: options,
-      relativeTo: relativeTo,
-      implementation: this.implementation,
-    });
-  }
+  // getFQN(options: JavaOptions, relativeTo?: string): string {
+  //   return JavaUtil.getFullyQualifiedName({
+  //     type: this.omniType,
+  //     options: options,
+  //     relativeTo: relativeTo,
+  //     implementation: this.implementation,
+  //   });
+  // }
 
   getLocalName(): string | undefined {
     return this._localName; // ?? this.getFQN(options);
   }
 
-  setLocalName(value: string): void {
+  setLocalName(value: string | undefined): void {
     this._localName = value;
   }
 
@@ -1151,7 +1151,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
   getters: FieldBackedGetter[];
   methods: MethodDeclaration[];
 
-  constructor(types: OmniType[], options: JavaOptions, commentSupplier: {(type: OmniType): Comment[]}) {
+  constructor(types: OmniType[], options: IJavaOptions, commentSupplier: {(type: OmniType): Comment[]}) {
     super();
 
     this.fields = [];

@@ -1,13 +1,12 @@
 import {AbstractInterpreter} from '@interpret/AbstractInterpreter';
-import {JavaCstRootNode, JavaOptions} from '@java';
+import {JavaCstRootNode, IJavaOptions} from '@java';
 import {CstRootNode} from '@cst/CstRootNode';
 import {BaseJavaCstTransformer} from '@java/transform';
 import {AddConstructorJavaCstTransformer} from '@java/transform/AddConstructorJavaCstTransformer';
-import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
 import {PackageImportJavaCstTransformer} from '@java/transform/PackageImportJavaCstTransformer';
 import {AdditionalPropertiesInterfaceTransformer} from '@java/transform/AdditionalPropertiesInterfaceTransformer';
 
-export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
+export class JavaInterpreter extends AbstractInterpreter<IJavaOptions> {
   constructor() {
     super();
     this.registerTransformer(new BaseJavaCstTransformer());

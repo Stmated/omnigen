@@ -12,10 +12,12 @@ import {
   OmniTypeKind,
 } from '@parse';
 import {Naming} from '@parse/Naming';
-import {JavaOptions, JavaUtil, PrimitiveGenerificationChoice} from '@java';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {LoggerFactory} from '@util';
 import {pascalCase} from 'change-case';
+import {IncomingOptions, PrimitiveGenerificationChoice, RealOptions} from '@options';
+import {IGenericTargetOptions} from '@interpret';
+import {JavaUtil} from '@java';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -35,10 +37,13 @@ type OmniObjectTypeWithExtension = Omit<OmniObjectType, 'extendedBy'> & Required
 /**
  * Takes an OmniModel, and tries to modify it to use generics where possible.
  * This will remove the need for a lot of extra types, and make code more readable.
+ *
+ * TODO: Uses JavaUtil right now -- needs to be rewritten to be more generic.
+ *        Abstract class and extend with a Java-variant that has implementation specifics?
  */
-export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOptions> {
+export class GenericsOmniModelTransformer implements OmniModelTransformer<IGenericTargetOptions> {
 
-  transformModel(model: OmniModel, options: JavaOptions): void {
+  transformModel(model: OmniModel, options: RealOptions<IGenericTargetOptions>): void {
 
     // Go through all types.
     // If many types have the exact same properties with the same names,
@@ -119,7 +124,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     }
   }
 
-  private handleSignatureInfo(info: SignatureInfo, options: JavaOptions): OmniGenericSourceType | undefined {
+  private handleSignatureInfo(info: SignatureInfo, options: IGenericTargetOptions): OmniGenericSourceType | undefined {
 
     const genericEntries: SourceIdentifierAndPropertyName[] = [];
 
@@ -282,7 +287,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
   private expandLowerBoundGenericIfPossible(
     lowerBound: OmniType,
     genericSource: OmniGenericSourceType,
-    options: JavaOptions
+    options: IGenericTargetOptions
   ): OmniGenericSourceIdentifierType | undefined {
 
     if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
@@ -322,11 +327,11 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     return sourceIdentifier;
   }
 
-  private toGenericBoundType(targetIdentifierType: OmniType | undefined, options: JavaOptions): OmniType | undefined {
+  private toGenericBoundType(targetIdentifierType: OmniType | undefined, options: IGenericTargetOptions): OmniType | undefined {
 
     const wrapPrimitives = (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE);
     const targetIdentifierGenericType = targetIdentifierType
-      ? JavaUtil.toGenericAllowedType(targetIdentifierType, wrapPrimitives)
+      ? OmniModelUtil.toGenericAllowedType(targetIdentifierType, wrapPrimitives)
       : undefined;
 
     if (!targetIdentifierGenericType || targetIdentifierGenericType?.kind == OmniTypeKind.UNKNOWN) {
@@ -404,7 +409,7 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
     genericSource: OmniGenericSourceType,
     subType: OmniObjectTypeWithExtension,
     propertyName: string,
-    options: JavaOptions
+    options: IGenericTargetOptions
   ): OmniType | undefined {
 
     if (!JavaUtil.isGenericAllowedType(genericTargetType)) {
@@ -419,13 +424,13 @@ export class GenericOmniModelTransformer implements OmniModelTransformer<JavaOpt
           return undefined;
         case PrimitiveGenerificationChoice.WRAP_OR_BOX:
         case PrimitiveGenerificationChoice.SPECIALIZE:
-          const allowedGenericTargetType = JavaUtil.toGenericAllowedType(
+          const allowedGenericTargetType = OmniModelUtil.toGenericAllowedType(
             genericTargetType,
             (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
           );
           allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
 
-          const common = JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType);
+          const common = JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType, false);
           if (common != genericTargetType) {
             const from = OmniModelUtil.getTypeDescription(genericTargetType);
             const to = OmniModelUtil.getTypeDescription(allowedGenericTargetType);

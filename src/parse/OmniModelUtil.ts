@@ -2,7 +2,7 @@ import {
   CompositionKind,
   OmniInheritableType,
   OmniModel, OmniPrimitiveConstantValue, OmniPrimitiveConstantValueOrLazySubTypeValue,
-  OmniPrimitiveKind,
+  OmniPrimitiveKind, OmniPrimitiveType,
   OmniProperty,
   OmniType,
   OmniTypeKind,
@@ -11,7 +11,7 @@ import {
 } from '@parse/OmniModel';
 import {LiteralValue} from 'ts-json-schema-generator/src/Type/LiteralType';
 import {Naming} from '@parse/Naming';
-import {Omnigen} from '../Omnigen';
+import {IParserOptions} from '@parse/IParserOptions';
 
 export interface TypeCollection {
 
@@ -398,5 +398,30 @@ export class OmniModelUtil {
 
     // TODO: All types should be able to return a "virtual" type name, which can be used for compositions or whatever!
     return `[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`;
+  }
+
+  public static toGenericAllowedType(type: OmniType, wrap: boolean): OmniType {
+    // Same thing for now, might change in the future.
+    return OmniModelUtil.toNullableType(type, wrap);
+  }
+
+  public static toNullableType<T extends OmniType>(type: T, wrap: boolean): T | OmniPrimitiveType {
+    // NOTE: If changed, make sure isNullable is updated
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+      if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
+        return type;
+      }
+
+      const nullablePrimitive: OmniPrimitiveType = {
+        ...type,
+        ...{
+          nullable: (wrap ? PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE : PrimitiveNullableKind.NULLABLE)
+        }
+      };
+
+      return nullablePrimitive;
+    }
+
+    return type;
   }
 }

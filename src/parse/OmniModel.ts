@@ -1,4 +1,7 @@
 import {JSONSchema7Definition} from 'json-schema';
+import {IOptions, RealOptions} from '@options';
+import {IParserOptions} from '@parse/IParserOptions';
+import {ITargetOptions} from '@interpret';
 
 export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
 
@@ -514,4 +517,9 @@ export interface OmniModel {
   servers: OmniServer[];
   externalDocumentations?: OmniExternalDocumentation[];
   continuations?: OmniLink[];
+}
+
+export interface OmniModelParserResult<TOpt extends IOptions> {
+  model: OmniModel;
+  options: RealOptions<TOpt>;
 }

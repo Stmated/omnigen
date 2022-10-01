@@ -1,9 +1,14 @@
 import {ITransformer} from './ITransformer';
 import {CstRootNode} from '@cst/CstRootNode';
 import {OmniModel} from '@parse';
-import {IOptions} from '@options';
+import {RealOptions} from '@options';
+import {ITargetOptions} from '@interpret';
 
-export abstract class AbstractCstTransformer<TRoot extends CstRootNode, TOptions extends IOptions>
-  implements ITransformer<TRoot, TOptions> {
-  abstract transformCst(model: OmniModel, root: TRoot, options: TOptions): Promise<void>;
+export abstract class AbstractCstTransformer<TRoot extends CstRootNode, TOpt extends ITargetOptions>
+  implements ITransformer<TRoot, TOpt> {
+
+  /**
+   * TODO: Remove "options" and instead use "options" given from model. Or think of some other way of doing it
+   */
+  abstract transformCst(model: OmniModel, root: TRoot, options: RealOptions<TOpt>): Promise<void>;
 }

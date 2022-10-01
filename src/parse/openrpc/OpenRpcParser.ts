@@ -1,4 +1,3 @@
-import {AbstractParser} from '@parse/AbstractParser';
 
 import {
   AllowedEnumTsTypes,
@@ -20,7 +19,7 @@ import {
   OmniLinkMapping,
   OmniLinkSourceParameter,
   OmniLinkTargetParameter,
-  OmniModel,
+  OmniModel, OmniModelParserResult,
   OmniObjectType,
   OmniOutput,
   OmniPayloadPathQualifier,
@@ -33,7 +32,7 @@ import {
   OmniSubTypeHint,
   OmniType,
   OmniTypeKind,
-  OmniUnknownType,
+  OmniUnknownType, Parser, ParserBootstrap, ParserBootstrapFactory,
   PrimitiveNullableKind,
   SchemaFile,
   TypeName,
@@ -56,18 +55,24 @@ import {
   ServerObject,
 } from '@open-rpc/meta-schema';
 import {JSONSchema7, JSONSchema7Definition, JSONSchema7Type} from 'json-schema';
-import {camelCase, pascalCase} from 'change-case';
+import {pascalCase} from 'change-case';
 import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {Dereferenced, Dereferencer, LoggerFactory} from '@util';
-import {DEFAULT_PARSER_OPTIONS, IParserOptions, IRequiredParserOptions} from '@parse/IParserOptions';
+import {IParserOptions} from '@parse/IParserOptions';
 import {CompositionUtil} from '@parse/CompositionUtil';
 import {Naming} from '@parse/Naming';
 import * as path from 'path';
 import {JsonObject} from 'json-pointer';
 import {OpenApiJSONSchema7, OpenApiJSONSchema7Definition} from '@parse/openrpc/OpenApiExtendedJsonSchema';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {
+  IJsonRpcOptions
+} from '@parse/openrpc/JsonRpcOptions';
+import {IncomingOptions, IOptionsSource, RealOptions} from '@options';
+import {OptionsUtil} from '@options/OptionsUtil';
+import {ITargetOptions} from '@interpret';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -81,9 +86,12 @@ interface PostDiscriminatorMapping {
   schema: Dereferenced<OpenApiJSONSchema7Definition>;
 }
 
-export class OpenRpcParser extends AbstractParser {
+export type IOpenRpcParserOptions = IParserOptions & IJsonRpcOptions;
 
-  async parse(schemaFile: SchemaFile): Promise<OmniModel> {
+export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<IOpenRpcParserOptions> {
+
+  async createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<IOpenRpcParserOptions>> {
+
     const schemaObject = await schemaFile.asObject();
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
       dereference: false,
@@ -95,71 +103,87 @@ export class OpenRpcParser extends AbstractParser {
     }
 
     const baseUri = path.dirname(absolutePath);
-    const traverser = await Dereferencer.create<OpenrpcDocument>(baseUri, absolutePath, document);
+    const dereferencer = await Dereferencer.create<OpenrpcDocument>(baseUri, absolutePath, document);
 
-    const parserImpl = new OpenRpcParserImpl(traverser);
-    return Promise.resolve(parserImpl.docToGenericModel());
-  }
-
-  canHandle(schemaFile: SchemaFile): Promise<boolean> {
-
-    const path = schemaFile.getAbsolutePath() || '';
-    if (path.endsWith('.json')) {
-      return Promise.resolve(true);
-    }
-
-    return Promise.resolve(false);
+    return new OpenRpcParserBootstrap(dereferencer);
   }
 }
 
-const JSONRPC_10_PARSER_OPTIONS: IRequiredParserOptions = {
-  ...DEFAULT_PARSER_OPTIONS,
-  ...{
-    jsonRpcPropertyName: undefined,
-    jsonRpcVersion: "1.0",
-    jsonRpcIdIncluded: false,
-    jsonRpcErrorPropertyName: 'error',
-    jsonRpcErrorNameIncluded: true,
-    jsonRpcErrorSchema: undefined,
-    jsonRpcErrorDataSchema: undefined,
-  }
-};
+export class OpenRpcParserBootstrap implements ParserBootstrap<IOpenRpcParserOptions>, IOptionsSource<IOpenRpcParserOptions> {
 
-const JSONRPC_11_PARSER_OPTIONS: IRequiredParserOptions = {
-  ...DEFAULT_PARSER_OPTIONS,
-  ...{
-    jsonRpcPropertyName: 'version',
-    jsonRpcVersion: "1.1",
-    jsonRpcIdIncluded: false,
-    jsonRpcErrorPropertyName: 'error',
-    jsonRpcErrorNameIncluded: true,
-    jsonRpcErrorSchema: undefined,
-    jsonRpcErrorDataSchema: undefined,
-  }
-};
+  private readonly _deref: Dereferencer<OpenrpcDocument>;
 
-const JSONRPC_20_PARSER_OPTIONS: IRequiredParserOptions = {
-  ...DEFAULT_PARSER_OPTIONS,
-  ...{
-    jsonRpcPropertyName: 'jsonrpc',
-    jsonRpcVersion: "2.0",
-    jsonRpcIdIncluded: false,
-    jsonRpcErrorPropertyName: 'data',
-    jsonRpcErrorNameIncluded: false,
-    jsonRpcErrorSchema: undefined,
-    jsonRpcErrorDataSchema: undefined,
+  constructor(deref: Dereferencer<OpenrpcDocument>) {
+    this._deref = deref;
   }
-};
+
+  getIncomingOptions<TTargetOptions extends ITargetOptions>(): IncomingOptions<IOpenRpcParserOptions & TTargetOptions> {
+    const doc = this._deref.getFirstRoot();
+    const customOptions = doc['x-omnigen'] as IncomingOptions<IOpenRpcParserOptions & TTargetOptions>;
+
+    // if (!customOptions.jsonRpcVersion) {
+    //
+    //   const defaultVersionOptions = JSONRPC_20_PARSER_OPTIONS;
+    //   return {...defaultVersionOptions, ...customOptions};
+    //
+    //   // customOptions.jsonRpcVersion = '1.0';
+    // }
+
+    return customOptions;
+  }
+
+  createParser(options: RealOptions<IOpenRpcParserOptions>): Parser<IOpenRpcParserOptions> {
+
+    const opt = {...options}; // Copy the options, so we do not manipulate the given object.
+    OptionsUtil.updateOptionsFromDocument(this._deref.getFirstRoot(), opt);
+
+    // // TODO: This whole part should be generalized and placed somewhere
+    // //        To make it an easy-to-understand system of where settings come from and fill in gaps
+    // if (!opt.jsonRpcVersion) {
+    //
+    //   // There is no known JSON-RPC version set.
+    //   // We will currently just fallback on "2.0" since OpenRPC does not seem to have a way of specifying spec version.
+    //   opt.jsonRpcVersion = "2.0";
+    // }
+    //
+    // let versionFallback: IJsonRpcOptions;
+    // if (opt.jsonRpcVersion.startsWith('1.0')) {
+    //   versionFallback = JSONRPC_10_PARSER_OPTIONS;
+    // } else if (opt.jsonRpcVersion.startsWith('1.1')) {
+    //   versionFallback = JSONRPC_11_PARSER_OPTIONS;
+    // } else {
+    //   versionFallback = JSONRPC_20_PARSER_OPTIONS;
+    // }
+    //
+    // var options = {
+    //   ...opt,
+    //   ...{
+    //     jsonRpcVersion: opt.jsonRpcVersion || versionFallback.jsonRpcVersion,
+    //     jsonRpcPropertyName: opt.jsonRpcPropertyName || versionFallback.jsonRpcPropertyName,
+    //     jsonRpcErrorPropertyName: opt.jsonRpcErrorPropertyName || versionFallback.jsonRpcErrorPropertyName,
+    //     jsonRpcErrorNameIncluded: opt.jsonRpcErrorNameIncluded || versionFallback.jsonRpcErrorNameIncluded,
+    //     jsonRpcErrorDataSchema: undefined,
+    //   }
+    // };
+    //
+    // // Set this as a second stage after we have assigned all the other options.
+    // options.jsonRpcErrorDataSchema = this.transformErrorDataSchemaToOmniType(
+    //   opt.jsonRpcErrorDataSchema || versionFallback.jsonRpcErrorDataSchema
+    // );
+
+    return new OpenRpcParser(this._deref, options);
+  }
+}
 
 /**
  * TODO: Remove this class, keep the global variables in the class above
  */
-class OpenRpcParserImpl {
+export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
 
   static readonly PATTERN_PLACEHOLDER = new RegExp(/^[$]{([^}]+)}$/);
   static readonly PATTERN_PLACEHOLDER_RELAXED = new RegExp(/(?:[$]{([^}]+)}$|^{{([^}]+?)}}$|^[$](.+?)$)/);
 
-  private readonly _options: IRequiredParserOptions;
+  private readonly _options: RealOptions<IOpenRpcParserOptions>;
 
   private _unknownError?: OmniOutput;
 
@@ -189,44 +213,9 @@ class OpenRpcParserImpl {
     return this._deref.getFirstRoot();
   }
 
-  constructor(dereferencer: Dereferencer<OpenrpcDocument>, options = DEFAULT_PARSER_OPTIONS) {
-    const opt = {...options}; // Copy the options, so we do not manipulate the given object.
-    OpenRpcParserImpl.updateOptionsFromDocument(dereferencer.getFirstRoot(), opt);
-
-    // TODO: This whole part should be generalized and placed somewhere
-    //        To make it an easy-to-understand system of where settings come from and fill in gaps
-    if (!opt.jsonRpcVersion) {
-
-      // There is no known JSON-RPC version set.
-      // We will currently just fallback on "2.0" since OpenRPC does not seem to have a way of specifying spec version.
-      opt.jsonRpcVersion = "2.0";
-    }
-
-    let versionFallback: IRequiredParserOptions;
-    if (opt.jsonRpcVersion.startsWith('1.0')) {
-      versionFallback = JSONRPC_10_PARSER_OPTIONS;
-    } else if (opt.jsonRpcVersion.startsWith('1.1')) {
-      versionFallback = JSONRPC_11_PARSER_OPTIONS;
-    } else {
-      versionFallback = JSONRPC_20_PARSER_OPTIONS;
-    }
-
+  constructor(dereferencer: Dereferencer<OpenrpcDocument>, options: RealOptions<IOpenRpcParserOptions>) {
     this._deref = dereferencer;
-    this._options = {
-      ...opt,
-      ...{
-        jsonRpcVersion: opt.jsonRpcVersion || versionFallback.jsonRpcVersion,
-        jsonRpcPropertyName: opt.jsonRpcPropertyName || versionFallback.jsonRpcPropertyName,
-        jsonRpcErrorPropertyName: opt.jsonRpcErrorPropertyName || versionFallback.jsonRpcErrorPropertyName,
-        jsonRpcErrorNameIncluded: opt.jsonRpcErrorNameIncluded || versionFallback.jsonRpcErrorNameIncluded,
-        jsonRpcErrorDataSchema: undefined,
-      }
-    };
-
-    // Set this as a second stage after we have assigned all the other options.
-    this._options.jsonRpcErrorDataSchema = this.transformErrorDataSchemaToOmniType(
-      opt.jsonRpcErrorDataSchema || versionFallback.jsonRpcErrorDataSchema
-    )
+    this._options = options;
   }
 
   /**
@@ -252,40 +241,7 @@ class OpenRpcParserImpl {
     return omniType;
   }
 
-  private static updateOptionsFromDocument(doc: OpenrpcDocument, opt: IParserOptions): void {
-
-    // TODO: This should be moved somewhere generic, since it should work the same in all languages.
-    const unsafeOptions = opt as unknown as Record<string, unknown>;
-    const customOptions = doc['x-omnigen'] as Record<string, unknown>;
-    if (customOptions) {
-      logger.info(`Received options ${JSON.stringify(customOptions)}`);
-      const optionsKeys = Object.keys(customOptions);
-      for (const key of optionsKeys) {
-
-        const value = customOptions[key];
-        const camelKey = camelCase(key);
-
-        if (value !== undefined) {
-          // if (!unsafeOptions.hasOwnProperty(camelKey)) {
-          //   logger.warn(`Tried to set option '${camelKey}' which does not exist`);
-          // } else {
-
-            const existingType = typeof (unsafeOptions[camelKey]);
-            const newType = typeof (value);
-
-            unsafeOptions[camelKey] = value;
-            if (existingType !== newType && existingType != 'undefined') {
-              logger.warn(`Set option '${camelKey}' to '${String(value)}' (but '${newType}' != '${existingType}'`);
-            } else {
-              logger.info(`Set option '${camelKey}' to '${String(value)}'`);
-            }
-          // }
-        }
-      }
-    }
-  }
-
-  docToGenericModel(): OmniModel {
+  parse(): OmniModelParserResult<IOpenRpcParserOptions> {
 
     const endpoints = this.doc.methods.map(it => this.toOmniEndpointFromMethod(this._deref.get(it, this._deref.getFirstRoot())));
     const contact = this.doc.info.contact ? this.toOmniContactFromContact(this.doc.info.contact) : undefined;
@@ -370,7 +326,10 @@ class OpenRpcParserImpl {
       }
     }
 
-    return model;
+    return {
+      model: model,
+      options: this._options,
+    };
   }
 
   toOmniLicenseFromLicense(license: LicenseObject): OmniLicense {
@@ -514,8 +473,8 @@ class OpenRpcParserImpl {
 
     if (typeof schema.obj == 'boolean') {
       return {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.BOOL,
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.BOOL,
       };
     }
 
@@ -611,28 +570,6 @@ class OpenRpcParserImpl {
         // TODO: This is not lossless if the primitive has comments/summary/etc
         const enumValues = schema.obj.const ? [schema.obj.const] : schema.obj.enum;
         return this.typeToGenericKnownType(name, schema.obj.type, schema.obj.format, schema.obj.description, enumValues);
-        // const schemaType = schema.obj.type;
-        // if (t.length == 1) {
-        //   // return ;
-        // } else if (t.length == 3) {
-        //   if (t[0] == OmniTypeKind.ENUM) {
-        //     return {
-        //       name: name ?? schemaType,
-        //       kind: t[0],
-        //       primitiveKind: t[1],
-        //       enumConstants: t[2],
-        //       description: schema.obj.description,
-        //     };
-        //   } else {
-        //     return {
-        //       name: name ?? schemaType,
-        //       kind: t[0],
-        //       primitiveKind: t[1],
-        //       valueConstant: t[2],
-        //       description: schema.obj.description,
-        //     };
-        //   }
-        // }
       } else {
         return undefined;
       }
@@ -1367,8 +1304,8 @@ class OpenRpcParserImpl {
       errorPropertyType.properties.push({
         name: this._options.jsonRpcErrorPropertyName,
         type: this._options.jsonRpcErrorDataSchema || {
-          valueConstant: error.data,
           kind: OmniTypeKind.UNKNOWN,
+          valueConstant: error.data,
         },
         owner: errorPropertyType,
       });
@@ -1959,8 +1896,8 @@ class OpenRpcParserImpl {
     if (typeof value == 'string') {
 
       const matcher = this._options.relaxedLookup
-        ? OpenRpcParserImpl.PATTERN_PLACEHOLDER_RELAXED
-        : OpenRpcParserImpl.PATTERN_PLACEHOLDER;
+        ? OpenRpcParser.PATTERN_PLACEHOLDER_RELAXED
+        : OpenRpcParser.PATTERN_PLACEHOLDER;
 
       const match = matcher.exec(value);
 

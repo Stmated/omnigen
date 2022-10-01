@@ -213,7 +213,13 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
       ];
     }
     this.visitGenericTypeDeclarationList = (node, visitor) => node.types.map(it => it.visit(visitor));
-    this.visitGenericTypeDeclaration = (node, visitor) => undefined;
+    this.visitGenericTypeDeclaration = (node, visitor) => {
+      return [
+        node.name.visit(visitor),
+        node.lowerBounds?.visit(visitor),
+        node.upperBounds?.visit(visitor)
+      ];
+    };
     this.visitGenericTypeUseList = (node, visitor) => node.types.map(it => it.visit(visitor));
     this.visitGenericTypeUse = (node, visitor) => undefined;
     this.visitInterfaceDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);

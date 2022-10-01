@@ -1,8 +1,15 @@
 import {OmniModel} from '@parse';
-import {ICstVisitor} from '@visit';
 import {CstRootNode} from '@cst/CstRootNode';
-import {IOptions} from '@options';
+import {IOptions, PrimitiveGenerificationChoice, RealOptions} from '@options';
 
-export interface Interpreter<TOptions extends IOptions> {
-  interpret(model: OmniModel, options: TOptions): Promise<CstRootNode>;
+export interface ITargetOptions extends IOptions {
+
+}
+
+export interface IGenericTargetOptions extends ITargetOptions {
+  onPrimitiveGenerification: PrimitiveGenerificationChoice;
+}
+
+export interface Interpreter<TOptions extends ITargetOptions> {
+  buildSyntaxTree(model: OmniModel, options: RealOptions<TOptions>): Promise<CstRootNode>;
 }

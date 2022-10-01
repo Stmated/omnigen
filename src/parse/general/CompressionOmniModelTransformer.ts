@@ -1,8 +1,9 @@
 import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {OmniModel, OmniObjectType, OmniProperty, OmniTypeKind,} from '@parse';
-import {JavaOptions} from '@java';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {LoggerFactory} from '@util';
+import {IncomingOptions, RealOptions} from '@options';
+import {ITargetOptions} from '@interpret';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -23,9 +24,9 @@ interface SubTypeInfo {
  * a (abs): [x3]
  * b (abs): [x4]
  */
-export class CompressionOmniModelTransformer implements OmniModelTransformer<JavaOptions> {
+export class CompressionOmniModelTransformer implements OmniModelTransformer<ITargetOptions> {
 
-  transformModel(model: OmniModel, options: JavaOptions): void {
+  transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
 
     const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
 

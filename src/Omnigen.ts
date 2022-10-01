@@ -1,29 +1,9 @@
-import {IParseManager, ParseInputOptions, ParserManager} from '@parse';
-import {OpenRpcParser} from '@parse/openrpc/OpenRpcParser';
-import {OmniModel} from '@parse';
-import {GenericOmniModelTransformer} from '@parse/general/GenericOmniModelTransformer';
-import {InterfaceJavaCstTransformer} from '@parse/general/InterfaceJavaCstTransformer';
-import {CompressionOmniModelTransformer} from '@parse/general/CompressionOmniModelTransformer';
 
 /**
  * Main entry class which handles the default use-case for all the conversion from scheme to output.
  */
-export class Omnigen implements IParseManager {
+export class Omnigen {
 
-  private readonly _parserManager: ParserManager;
-
-  constructor() {
-
-    this._parserManager = new ParserManager();
-    this._parserManager.register(new OpenRpcParser());
-
-    // TODO: This should not always be enabled -- should be optional, or language-dependant
-    this._parserManager.registerTransformer(new CompressionOmniModelTransformer());
-    this._parserManager.registerTransformer(new GenericOmniModelTransformer());
-    this._parserManager.registerTransformer(new InterfaceJavaCstTransformer());
-  }
-
-  parse(options: ParseInputOptions): Promise<OmniModel> {
-    return this._parserManager.parse(options);
-  }
+  // TODO: Once all functionality is in place, this is where we will refactor the main stuff to be.
+  //        Should make it as easy as possible to use, and to reuse part for custom schemes/targets
 }

@@ -4,7 +4,7 @@ import {
   Block,
   CommentList,
   JavaCstRootNode,
-  JavaOptions,
+  IJavaOptions,
   JavaUtil,
   ModifierType,
   TokenType
@@ -38,12 +38,13 @@ import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@p
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
 import {JavaCstUtils} from '@java/transform/JavaCstUtils';
+import {RealOptions} from '@options';
 
 export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
   private static readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
+  transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<IJavaOptions>): Promise<void> {
 
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
@@ -81,7 +82,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
           root.children.push(
             new Java.CompilationUnit(
-              new Java.PackageDeclaration(options.package),
+              new Java.PackageDeclaration(JavaUtil.getPackageName(type, primitiveClass.name.value, options)),
               new Java.ImportList([]),
               primitiveClass
             )
@@ -224,7 +225,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     type: OmniEnumType,
     originalType: OmniType | undefined,
     root: JavaCstRootNode,
-    options: JavaOptions
+    options: RealOptions<IJavaOptions>
   ): void {
     const body = new Java.Block();
 
@@ -285,7 +286,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     root.children.push(new Java.CompilationUnit(
-      new Java.PackageDeclaration(options.package),
+      new Java.PackageDeclaration(JavaUtil.getPackageName(type, enumDeclaration.name.value, options)),
       new Java.ImportList(
         []
       ),
@@ -295,7 +296,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
   private transformInterface(
     type: OmniInterfaceType,
-    options: JavaOptions,
+    options: RealOptions<IJavaOptions>,
     root: JavaCstRootNode,
   ): void {
 
@@ -312,7 +313,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     JavaCstUtils.addInterfaceProperties(type, declaration.body);
 
     root.children.push(new Java.CompilationUnit(
-      new Java.PackageDeclaration(options.package),
+      new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
       new Java.ImportList(
         []
       ),
@@ -327,7 +328,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     model: OmniModel,
     type: OmniObjectType | OmniCompositionType,
     originalType: OmniGenericSourceType | undefined,
-    options: JavaOptions,
+    options: RealOptions<IJavaOptions>,
     root: JavaCstRootNode,
     graph: DependencyGraph,
     genericSourceIdentifiers?: OmniGenericSourceIdentifierType[]
@@ -412,7 +413,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     root.children.push(new Java.CompilationUnit(
-      new Java.PackageDeclaration(options.package),
+      new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
       new Java.ImportList(
         []
       ),
@@ -540,7 +541,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     model: OmniModel,
     declaration: AbstractObjectDeclaration,
     comments: string[],
-    options: JavaOptions
+    options: IJavaOptions
   ): void {
 
     // The composition type is XOR, it can only be one of them.
@@ -962,7 +963,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     return knownBinary;
   }
 
-  private addOmniPropertyToBody(model: OmniModel, body: Block, property: OmniProperty, options: JavaOptions): void {
+  private addOmniPropertyToBody(model: OmniModel, body: Block, property: OmniProperty, options: IJavaOptions): void {
 
     const comments: string[] = [];
     if (property.type.kind != OmniTypeKind.OBJECT) {
@@ -1170,7 +1171,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
   }
 
-  private getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
+  private getCommentsForType(type: OmniType, model: OmniModel, options: IJavaOptions): string[] {
     const comments: string[] = [];
     if (type.description) {
       comments.push(type.description);
@@ -1234,7 +1235,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     return comments;
   }
 
-  private getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
+  private getLinkCommentsForType(type: OmniType, model: OmniModel, options: IJavaOptions): string[] {
     const comments: string[] = [];
     if (!options.includeLinksOnType) {
       return comments;
@@ -1278,7 +1279,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     return comments;
   }
 
-  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): string[] {
+  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: IJavaOptions): string[] {
     const comments: string[] = [];
     if (!options.includeLinksOnProperty) {
       return comments;
@@ -1308,13 +1309,13 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     return comments;
   }
 
-  private getLink(propertyOwner: OmniType, property: OmniProperty, options: JavaOptions): string {
+  private getLink(propertyOwner: OmniType, property: OmniProperty, options: IJavaOptions): string {
 
     const memberName = `${JavaUtil.getGetterName(property.name, property.type)}()`;
     return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
   }
 
-  private getExampleComments(example: OmniExamplePairing, options: JavaOptions): string {
+  private getExampleComments(example: OmniExamplePairing, options: IJavaOptions): string {
 
     const commentLines: string[] = [];
     commentLines.push(`<h2>Example - ${example.name}</h2>`);
@@ -1368,7 +1369,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
   private getMappingSourceTargetComment(
     mapping: OmniLinkMapping,
-    options: JavaOptions,
+    options: IJavaOptions,
     only: 'source' | 'target' | undefined = undefined
   ): string {
 
@@ -1467,13 +1468,18 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
   }
 
-  private replaceTypeWithReference(target: OmniType, primitiveType: OmniPrimitiveType, primitiveClass: Java.ClassDeclaration, options: JavaOptions): void {
+  private replaceTypeWithReference(
+    target: OmniType,
+    primitiveType: OmniPrimitiveType,
+    primitiveClass: Java.ClassDeclaration,
+    options: RealOptions<IJavaOptions>
+  ): void {
 
     // TODO: Replace this with something else? REFERENCE should be for native classes, but this is sort of not?
     target.kind = OmniTypeKind.REFERENCE;
 
     const referenceType = target as OmniReferenceType;
-
-    referenceType.fqn = `${options.package}.Primitive${pascalCase(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
+    const primitiveName = `Primitive${pascalCase(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
+    referenceType.fqn = JavaUtil.getClassNameWithPackageName(referenceType, primitiveName, options);
   }
 }

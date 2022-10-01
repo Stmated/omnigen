@@ -2,36 +2,39 @@ import * as Java from './cst/JavaCstTypes';
 import {ModifierType} from '@java/cst';
 import {camelCase, pascalCase} from 'change-case';
 import {
-  CompositionKind, OmniArrayPropertiesByPositionType,
-  OmniArrayType, OmniCompositionType,
+  CompositionKind,
+  OmniArrayPropertiesByPositionType,
+  OmniArrayType,
+  OmniCompositionType,
   OmniDictionaryType,
   OmniGenericTargetIdentifierType,
-  OmniGenericTargetType, OmniObjectType,
+  OmniGenericTargetType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
   OmniType,
-  OmniTypeKind, OmniUnknownType,
+  OmniTypeKind,
   PrimitiveNullableKind
 } from '@parse';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '@java/JavaOptions';
+import {DEFAULT_JAVA_OPTIONS, IPackageOptions, IJavaOptions, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
 import {Naming} from '@parse/Naming';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {RealOptions} from '@options';
 
 interface FqnOptions {
   type: OmniType,
   withSuffix?: boolean;
-  options?: JavaOptions;
-  relativeTo?: string | boolean;
+  options?: RealOptions<IJavaOptions>;
+  withPackage?: boolean;
   implementation?: boolean;
   boxed?: boolean;
 }
 
 export type FqnArgs = OmniType | FqnOptions;
-type TargetIdentifierTuple = {a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType};
+type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType };
 
 export class JavaUtil {
 
@@ -48,34 +51,32 @@ export class JavaUtil {
     }
   }
 
-  public static getRelativeName(type: OmniType, options: JavaOptions, relativeTo = options.package, implementation?: boolean): string {
-    return JavaUtil.getName({
-      type: type,
-      withSuffix: true,
-      options: options,
-      relativeTo: relativeTo,
-      implementation: implementation
-    });
-  }
+  public static getClassNameForImport(type: OmniType, options: RealOptions<IJavaOptions>): string | undefined {
 
-  public static getImportName(type: OmniType, options: JavaOptions): string {
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+
+      // Primitive types do not need to be imported.
+      return undefined;
+    }
+
     return JavaUtil.getName({
       type: type,
       options: options,
-      withSuffix: false
+      withSuffix: false,
+      withPackage: true
     });
   }
 
   /**
    * TODO: This should be able to return undefined OR the input type needs to be more restricted
    */
-  public static getClassName(type: OmniType, options?: JavaOptions): string {
+  public static getClassName(type: OmniType, options?: RealOptions<IJavaOptions>): string {
     return JavaUtil.getName({
       type: type,
       options: options,
       withSuffix: false,
+      withPackage: false,
       implementation: true,
-      relativeTo: false,
     })
   }
 
@@ -90,21 +91,20 @@ export class JavaUtil {
         // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
         //        Right now this is locked to this part, and difficult to change
 
-        // name: () => `${Naming.safer(originalExtension)}For${Naming.safer(subType)}`,
-
         const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});
-        const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
-        const genericTypeString = genericTypes.join(', ');
+        if (args.withSuffix == false) {
+          return rawName;
+        } else {
+          const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
+          const genericTypeString = genericTypes.join(', ');
 
-        // TODO: Fix the replacement of recursive generics -- look at JsonRpcRequest, it it pointing to the wrong type
-        return `${rawName}<${genericTypeString}>`;
+          // TODO: Fix the replacement of recursive generics -- look at JsonRpcRequest, it it pointing to the wrong type
+          return `${rawName}<${genericTypeString}>`;
+        }
       case OmniTypeKind.GENERIC_SOURCE_IDENTIFIER:
         // The local name of a generic type is always just the generic type name.
         return args.type.placeholderName;
       case OmniTypeKind.GENERIC_TARGET_IDENTIFIER:
-
-        // name: `GenericTargetFor${Naming.safer(subType)}${pascalCase(propertyName)}`,
-
         return args.type.placeholderName || args.type.sourceIdentifier.placeholderName;
       case OmniTypeKind.ARRAY:
         const arrayOf = JavaUtil.getName({...args, ...{type: args.type.of}});
@@ -136,7 +136,7 @@ export class JavaUtil {
         // The type is "No Type. Void." It is not even really an Object.
         // But we return it as an Object in case we really need to display it somewhere.
         // TODO: Should this be Void? Especially when used as a generic?
-        if (args.relativeTo) {
+        if (!args.withPackage) {
           return 'Object';
         } else {
           return 'java.lang.Object';
@@ -145,7 +145,7 @@ export class JavaUtil {
         const isBoxed = args.boxed != undefined ? args.boxed : JavaUtil.isPrimitiveBoxed(args.type);
         const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.primitiveKind, isBoxed);
         // TODO: Make a central method that handles the relative names -- especially once multi-namespaces are added
-        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
+        if (!args.withPackage) {
           return JavaUtil.cleanClassName(primitiveKindName, args.withSuffix);
         } else {
           return JavaUtil.getCleanedFullyQualifiedName(primitiveKindName, args.withSuffix);
@@ -153,14 +153,14 @@ export class JavaUtil {
       case OmniTypeKind.UNKNOWN:
         const unknownType = args.type.isAny ? UnknownType.OBJECT : args.options?.unknownType;
         const unknownName = JavaUtil.getUnknownType(unknownType);
-        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
+        if (!args.withPackage) {
           return JavaUtil.cleanClassName(unknownName, args.withSuffix);
         } else {
           return JavaUtil.getCleanedFullyQualifiedName(unknownName, args.withSuffix);
         }
       case OmniTypeKind.DICTIONARY:
         const mapClassOrInterface = args.implementation == false ? 'Map' : 'HashMap';
-        const mapClass = args.relativeTo ? mapClassOrInterface : `java.lang.${mapClassOrInterface}`;
+        const mapClass = !args.withPackage ? mapClassOrInterface : `java.lang.${mapClassOrInterface}`;
         if (args.withSuffix === false) {
           return mapClass;
         } else {
@@ -169,44 +169,79 @@ export class JavaUtil {
           return `${mapClass}<${keyString}, ${valueString}>`;
         }
       case OmniTypeKind.REFERENCE:
-        if (args.relativeTo) {
+        if (!args.withPackage) {
           return JavaUtil.cleanClassName(args.type.fqn, args.withSuffix);
+        } else {
+          return JavaUtil.getCleanedFullyQualifiedName(args.type.fqn, !!args.withSuffix);
         }
-
-        return JavaUtil.getCleanedFullyQualifiedName(args.type.fqn, !!args.withSuffix);
       case OmniTypeKind.INTERFACE:
-
         if (args.type.name) {
           const name = Naming.safe(args.type.name);
-          if (args.relativeTo == args.options?.package) {
-            return name;
-          } else {
-            return (args.options ? `${args.options.package}.${name}` : name);
-          }
+          return JavaUtil.getClassNameWithPackageName(args.type, name, args.options, args.withPackage);
         } else {
-          return `I${JavaUtil.getName({...args, ...{type: args.type.of}})}`;
+          const interfaceName = `I${JavaUtil.getName({...args, ...{type: args.type.of, relativeTo: false}})}`;
+          return JavaUtil.getClassNameWithPackageName(args.type, interfaceName, args.options, args.withPackage);
         }
       case OmniTypeKind.ENUM:
       case OmniTypeKind.OBJECT:
         // Are we sure all of these will be in the same package?
         // TODO: Use some kind of "groupName" where the group can be the package? "model", "api", "server", etc?
         const name = Naming.safe(args.type.name);
-        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
-          return name;
-        } else {
-          return (args.options ? `${args.options.package}.${name}` : name);
-        }
+        return JavaUtil.getClassNameWithPackageName(args.type, name, args.options, args.withPackage);
       case OmniTypeKind.COMPOSITION:
 
         const compositionName = JavaUtil.getCompositionClassName(args.type, args);
-        if (args.relativeTo == false || args.relativeTo == args.options?.package) {
-          return compositionName;
-        } else {
-          return (args.options ? `${args.options.package}.${compositionName}` : compositionName);
-        }
+        return JavaUtil.getClassNameWithPackageName(args.type, compositionName, args.options, args.withPackage);
       case OmniTypeKind.GENERIC_SOURCE:
         return JavaUtil.getName({...args, ...{type: args.type.of}});
     }
+  }
+
+  public static getClassNameWithPackageName(
+    type: OmniType,
+    typeName: string,
+    options?: RealOptions<IPackageOptions>,
+    withPackage?: boolean
+  ): string {
+
+    if (!withPackage) {
+      // TODO: This is weird and hard to undertand, need to make it easier to get class names based on context
+      return typeName;
+    }
+
+    const packageName = options ? JavaUtil.getPackageName(type, typeName, options) : undefined;
+    if (packageName) {
+
+      // if (relativeTo && relativeTo == packageName) {
+      //
+      //   // If the package is the same as the one it should be relative to,
+      //   // then we will return the whole fully-qualified name.
+      //   // If the name is asked for from a location that needs the whole FQN, relativeTo will be false.
+      //   return typeName;
+      // }
+
+      if (packageName && packageName.length > 0) {
+        return `${packageName}.${typeName}`;
+      }
+    }
+
+    // if (options) {
+    //
+    //   const packageName = options.packageResolver
+    //     ? options.packageResolver(type, typeName, options)
+    //     : options.package;
+    //
+    //
+    // }
+
+    return typeName;
+  }
+
+  public static getPackageName(type: OmniType, typeName: string, options: RealOptions<IPackageOptions>): string {
+
+    return options.packageResolver
+      ? options.packageResolver(type, typeName, options)
+      : options.package;
   }
 
   private static getCompositionClassName(type: OmniCompositionType, args: FqnOptions): string {
@@ -306,7 +341,7 @@ export class JavaUtil {
     }
   }
 
-  public static getPackageName(fqn: string): string {
+  public static getPackageNameFromFqn(fqn: string): string {
     const genericIdx = fqn.indexOf('<');
     if (genericIdx !== -1) {
       fqn = fqn.substring(0, genericIdx);
@@ -870,11 +905,6 @@ export class JavaUtil {
     return path;
   }
 
-  public static toGenericAllowedType(type: OmniType, wrap: boolean): OmniType {
-    // Same thing for now, might change in the future.
-    return JavaUtil.toNullableType(type, wrap);
-  }
-
   public static isGenericAllowedType(type: OmniType): boolean {
     if (type.kind == OmniTypeKind.PRIMITIVE) {
       if (type.primitiveKind == OmniPrimitiveKind.STRING) {
@@ -902,26 +932,6 @@ export class JavaUtil {
     }
 
     return false;
-  }
-
-  public static toNullableType<T extends OmniType>(type: T, wrap: boolean): T | OmniPrimitiveType {
-    // NOTE: If changed, make sure isNullable is updated
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
-      if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
-        return type;
-      }
-
-      const nullablePrimitive: OmniPrimitiveType = {
-        ...type,
-        ...{
-          nullable: (wrap ? PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE : PrimitiveNullableKind.NULLABLE)
-        }
-      };
-
-      return nullablePrimitive;
-    }
-
-    return type;
   }
 
   public static toUnboxedPrimitiveType<T extends OmniPrimitiveType>(type: T): T | OmniPrimitiveType {

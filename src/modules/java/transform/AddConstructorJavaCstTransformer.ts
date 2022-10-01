@@ -6,17 +6,17 @@ import {
   ConstructorDeclaration,
   Field,
   JavaCstRootNode,
-  JavaOptions,
+  IJavaOptions,
   JavaUtil
 } from '@java';
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
-import {Naming} from '@parse/Naming';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {RealOptions} from '@options';
 
 export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer {
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, options: JavaOptions): Promise<void> {
+  transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<IJavaOptions>): Promise<void> {
 
     const classDeclarations: Java.ClassDeclaration[] = [];
     root.visit(VisitorFactoryManager.create(this._javaVisitor, {

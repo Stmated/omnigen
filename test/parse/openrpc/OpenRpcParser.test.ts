@@ -1,13 +1,22 @@
-import {OmniTypeKind, OpenRpcParser, SchemaFile} from '@parse';
+import {OmniTypeKind, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {Naming} from '@parse/Naming';
 import {OmniModelUtil} from '@parse/OmniModelUtil';
-import {DEFAULT_JAVA_OPTIONS, JavaUtil} from '@java';
-import {TestUtils} from '../../TestUtils';
+import {JavaUtil} from '@java';
+import {JSONRPC_20_PARSER_OPTIONS} from '../../../src/parse/openrpc/JsonRpcOptions';
+import {DEFAULT_PARSER_OPTIONS} from '../../../src/parse/IParserOptions';
+import {IOpenRpcParserOptions, OpenRpcParserBootstrapFactory} from '../../../src';
+import {RealOptions} from '../../../src/options';
 
 describe('Test Generic Model Creation', () => {
-  const parser = new OpenRpcParser();
+
+  const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
+
+  // TODO: This is a bit stupid, no?
+  const options: RealOptions<IOpenRpcParserOptions> = {
+    ...DEFAULT_PARSER_OPTIONS,
+    ...JSONRPC_20_PARSER_OPTIONS
+  };
 
   test('Test basic loading', async () => {
     const dirPath = './test/examples/openrpc/';
@@ -15,14 +24,23 @@ describe('Test Generic Model Creation', () => {
     for (const file of files) {
       if (file.isFile()) {
         const filePath = path.join(dirPath, file.name);
-        const model = await parser.parse(new SchemaFile(filePath));
+        const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
+          new SchemaFile(filePath)
+        );
+        const parser = parserBootstrap.createParser(options);
+        const model = parser.parse().model;
         expect(model).toBeDefined();
       }
     }
   });
 
   test('PetStore should create expected model', async () => {
-    const model = await parser.parse(new SchemaFile('./test/examples/openrpc/petstore-expanded.json'));
+
+    const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
+      new SchemaFile('./test/examples/openrpc/petstore-expanded.json')
+    );
+    const parser = parserBootstrap.createParser(options);
+    const model = parser.parse().model;
 
     expect(model).toBeDefined();
     expect(model.name).toEqual('Petstore Expanded');
@@ -52,15 +70,6 @@ describe('Test Generic Model Creation', () => {
     const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
     expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('DeletePetByIdResponse');
     expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('ErrorUnknownError');
-  });
-
-  test('Ethereum XOrNull', async () => {
-
-    const model = await TestUtils.readExample('openrpc', 'ethereum.json', DEFAULT_JAVA_OPTIONS);
-
-    // TODO: Add expectations
-
-    expect(model).toBeDefined();
   });
 });
 

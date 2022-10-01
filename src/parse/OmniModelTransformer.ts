@@ -1,6 +1,7 @@
 import {OmniModel} from '@parse/OmniModel';
-import {IOptions} from '@options';
+import {IncomingOptions, RealOptions} from '@options';
+import {ITargetOptions} from '@interpret';
 
-export interface OmniModelTransformer<O extends IOptions> {
-  transformModel(model: OmniModel, options: O): void;
+export interface OmniModelTransformer<TOpt extends ITargetOptions> {
+  transformModel(model: OmniModel, options: RealOptions<TOpt>): void;
 }

@@ -7,8 +7,9 @@ import {ICstNode} from '@cst';
 import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
-import {JavaOptions, JavaUtil} from '@java';
+import {IJavaOptions, JavaUtil} from '@java';
 import {OmniPrimitiveKind} from '@parse';
+import {RealOptions} from '@options';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>;
 
@@ -17,11 +18,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   private readonly pattern_lineStart = new RegExp(/(?<!$)^/mg);
   private tokenPrefix = ' ';
   private tokenSuffix = ' ';
-  private readonly _options: JavaOptions;
+  private readonly _options: RealOptions<IJavaOptions>;
 
   private readonly cuCallback: CompilationUnitCallback;
 
-  constructor(options: JavaOptions, callback: CompilationUnitCallback) {
+  constructor(options: RealOptions<IJavaOptions>, callback: CompilationUnitCallback) {
     super();
     this._options = options;
     this.cuCallback = callback;
@@ -267,6 +268,8 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const fqn = JavaUtil.getName({
       type: node.type.omniType,
       withSuffix: false,
+      withPackage: true,
+      implementation: node.type.implementation,
       options: this._options
     });
 
@@ -441,7 +444,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitType: JavaRendererVisitFn<Java.Type> = (node, visitor) => {
-    return node.getLocalName() || node.getFQN(this._options);
+    if (node.getLocalName()) {
+      return node.getLocalName();
+    } else {
+      throw new Error(`Local name must have been set. Has the package name transformer not been ran?`);
+    }
   }
 
   visitModifierList: JavaRendererVisitFn<Java.ModifierList> = (node, visitor) => {

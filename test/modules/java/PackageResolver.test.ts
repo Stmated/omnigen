@@ -134,7 +134,7 @@ describe('PackageResolver', () => {
     expect(ErrorUnknownError.foundTypes).toEqual(['Integer', 'String', 'JsonNode']);
 
     const IAdditionalProperties = JavaTestUtils.getParsedContent(fileContents, 'IAdditionalProperties.java');
-    expect(IAdditionalProperties.foundImports).toEqual(['java.lang.Map']);
+    expect(IAdditionalProperties.foundImports).toEqual(['java.util.Map']);
     expect(IAdditionalProperties.foundPackage).toEqual('some.other.pkg');
     expect(IAdditionalProperties.foundTypes).toEqual(['Map', 'String', 'JsonNode']);
 
@@ -183,7 +183,7 @@ describe('PackageResolver', () => {
       "com.fasterxml.jackson.annotation.JsonAnyGetter",
       "com.fasterxml.jackson.annotation.JsonAnySetter",
       "com.fasterxml.jackson.databind.JsonNode",
-      "java.lang.Map",
+      "java.util.Map",
       "javax.annotation.Generated"
     ]);
     expect(Thing.foundPackage).toEqual('some.other.pkg');

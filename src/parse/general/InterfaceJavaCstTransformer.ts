@@ -11,7 +11,7 @@ import {
 import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniUtil} from '@parse/OmniUtil';
 import {IncomingOptions, RealOptions} from '@options';
 import {ITargetOptions} from '@interpret';
 
@@ -24,14 +24,14 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<ITarget
 
   transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
 
-    const exportableTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
+    const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
     const graph = DependencyGraphBuilder.build(exportableTypes.all, DEFAULT_GRAPH_OPTIONS);
 
     const interfaceMap = new Map<OmniType, OmniInterfaceType>();
 
     for (const type of exportableTypes.all) {
 
-      const inheritableType = OmniModelUtil.asInheritableType(type);
+      const inheritableType = OmniUtil.asInheritableType(type);
       if (!inheritableType) {
         continue;
       }
@@ -181,9 +181,9 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<ITarget
       if (root.extendedBy) {
         const found = InterfaceJavaCstTransformer.swapType(root.extendedBy, needle, replacement, maxDepth - 1);
         if (found) {
-          const inheritableReplacement = OmniModelUtil.asInheritableType(replacement);
+          const inheritableReplacement = OmniUtil.asInheritableType(replacement);
           if (!inheritableReplacement) {
-            throw new Error(`Not allowed to use '${OmniModelUtil.getTypeDescription(replacement)}' as extendable type`);
+            throw new Error(`Not allowed to use '${OmniUtil.getTypeDescription(replacement)}' as extendable type`);
           }
 
           root.extendedBy = inheritableReplacement;
@@ -197,7 +197,7 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<ITarget
         }
       }
     } else if (root.kind == OmniTypeKind.INTERFACE) {
-      const inheritableReplacement = OmniModelUtil.asInheritableType(replacement);
+      const inheritableReplacement = OmniUtil.asInheritableType(replacement);
       if (inheritableReplacement) {
         const found = InterfaceJavaCstTransformer.swapType(root.of, needle, inheritableReplacement, maxDepth - 1);
         if (found) {

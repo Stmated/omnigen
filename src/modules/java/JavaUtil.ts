@@ -21,7 +21,7 @@ import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
 import {Naming} from '@parse/Naming';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniUtil} from '@parse/OmniUtil';
 import {RealOptions} from '@options';
 
 interface FqnOptions {
@@ -51,7 +51,11 @@ export class JavaUtil {
     }
   }
 
-  public static getClassNameForImport(type: OmniType, options: RealOptions<IJavaOptions>): string | undefined {
+  public static getClassNameForImport(
+    type: OmniType,
+    options: RealOptions<IJavaOptions>,
+    implementation: boolean | undefined
+  ): string | undefined {
 
     if (type.kind == OmniTypeKind.PRIMITIVE) {
 
@@ -63,7 +67,8 @@ export class JavaUtil {
       type: type,
       options: options,
       withSuffix: false,
-      withPackage: true
+      withPackage: true,
+      implementation: implementation
     });
   }
 
@@ -160,7 +165,7 @@ export class JavaUtil {
         }
       case OmniTypeKind.DICTIONARY:
         const mapClassOrInterface = args.implementation == false ? 'Map' : 'HashMap';
-        const mapClass = !args.withPackage ? mapClassOrInterface : `java.lang.${mapClassOrInterface}`;
+        const mapClass = !args.withPackage ? mapClassOrInterface : `java.util.${mapClassOrInterface}`;
         if (args.withSuffix === false) {
           return mapClass;
         } else {
@@ -371,7 +376,7 @@ export class JavaUtil {
       case UnknownType.JSON:
         return 'com.fasterxml.jackson.databind.JsonNode';
       case UnknownType.MAP:
-        return 'java.lang.Map<String, Object>';
+        return 'java.util.Map<String, Object>';
       case UnknownType.OBJECT:
         return 'java.lang.Object';
     }
@@ -938,7 +943,7 @@ export class JavaUtil {
       return properties;
     }
 
-    OmniModelUtil.traverseTypes(type, (localType, depth) => {
+    OmniUtil.traverseTypes(type, (localType, depth) => {
 
       if (localType.kind == OmniTypeKind.OBJECT) {
         if (depth > 0) {
@@ -947,7 +952,7 @@ export class JavaUtil {
       } else if (localType.kind == OmniTypeKind.INTERFACE) {
         // The interface might be the interface of the calling type. Filter it out below.
         if (localType.of != type) {
-          properties.push(...OmniModelUtil.getPropertiesOf(localType.of));
+          properties.push(...OmniUtil.getPropertiesOf(localType.of));
         }
       } else if (localType.kind == OmniTypeKind.COMPOSITION && localType.compositionKind == CompositionKind.XOR) {
         return 'skip';

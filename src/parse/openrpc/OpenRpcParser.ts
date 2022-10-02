@@ -66,7 +66,7 @@ import {Naming} from '@parse/Naming';
 import * as path from 'path';
 import {JsonObject} from 'json-pointer';
 import {OpenApiJSONSchema7, OpenApiJSONSchema7Definition} from '@parse/openrpc/OpenApiExtendedJsonSchema';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniUtil} from '@parse/OmniUtil';
 import {
   DEFAULT_JSONRPC_OPTIONS,
   IJsonRpcOptions, JSONRPC_OPTIONS_CONVERTERS
@@ -240,7 +240,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
 
     if (schema.hasOwnProperty('kind')) {
       const omniType = schema as OmniType;
-      logger.info(`Using the given omni type '${OmniModelUtil.getTypeDescription(omniType)}'`);
+      logger.info(`Using the given omni type '${OmniUtil.getTypeDescription(omniType)}'`);
       return omniType;
     }
 
@@ -248,7 +248,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     const jsonSchema = schema as JSONSchema7;
     const derefJsonSchema = this._deref.get(jsonSchema, this.doc);
     const omniType = this.jsonSchemaToType('JsonRpcCustomErrorPayload', derefJsonSchema, undefined).type;
-    logger.info(`Using the from jsonschema converted omni type '${OmniModelUtil.getTypeDescription(omniType)}'`);
+    logger.info(`Using the from jsonschema converted omni type '${OmniUtil.getTypeDescription(omniType)}'`);
     return omniType;
   }
 
@@ -300,7 +300,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
         continue;
       }
 
-      const inheritors = OmniModelUtil.getTypesThatInheritFrom(model, postDiscriminator.type);
+      const inheritors = OmniUtil.getTypesThatInheritFrom(model, postDiscriminator.type);
       const propertyName = postDiscriminator.schema.obj.discriminator.propertyName;
 
       const subTypeHints: OmniSubTypeHint[] = [];
@@ -313,7 +313,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
               path: [propertyName],
               operator: OmniComparisonOperator.EQUALS,
               // TODO: This is VERY LIKELY INVALID! Must get the originating reference name or something!
-              value: OmniModelUtil.getVirtualTypeName(inheritor),
+              value: OmniUtil.getVirtualTypeName(inheritor),
             }
           ]
         })
@@ -713,9 +713,9 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     // This is not allowed in some languages. But it is up to the target language to decide how to handle it.
     if (extendedBy) {
 
-      const extendableType = OmniModelUtil.asInheritableType(extendedBy);
+      const extendableType = OmniUtil.asInheritableType(extendedBy);
       if (!extendableType) {
-        throw new Error(`Not allowed to use '${OmniModelUtil.getTypeDescription(extendedBy)}' as an extension type`);
+        throw new Error(`Not allowed to use '${OmniUtil.getTypeDescription(extendedBy)}' as an extension type`);
       }
 
       type.extendedBy = extendableType;
@@ -726,7 +726,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
 
   private canBeReplacedBy(type: OmniObjectType, extension: OmniType): boolean {
 
-    if (OmniModelUtil.isEmptyType(type)) {
+    if (OmniUtil.isEmptyType(type)) {
       if (extension.kind == OmniTypeKind.COMPOSITION && extension.compositionKind == CompositionKind.XOR) {
         return true;
       }
@@ -822,7 +822,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
 
         const subType = this.jsonSchemaToType(deref.hash, deref, undefined).type;
         if (subTypeHints.find(it => it.type == subType)) {
-          logger.debug(`Skipping ${discriminatorPropertyName} as ${OmniModelUtil.getTypeDescription(subType)} since it has a custom key`);
+          logger.debug(`Skipping ${discriminatorPropertyName} as ${OmniUtil.getTypeDescription(subType)} since it has a custom key`);
           continue;
         }
 
@@ -965,7 +965,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     } else {
 
       // TODO: Can we introduce generics here in some way?
-      const vsString = `${OmniModelUtil.getTypeDescription(a.type)} vs ${OmniModelUtil.getTypeDescription(b.type)}`;
+      const vsString = `${OmniUtil.getTypeDescription(a.type)} vs ${OmniUtil.getTypeDescription(b.type)}`;
       const errMessage = `No common type for merging properties ${a.name}. ${vsString}`;
       throw new Error(errMessage);
     }
@@ -1492,7 +1492,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
         (fn) => {
           // NOTE: This might not be the best way to create the property name
           // But for now it will have to do, since most type names will be a simple type.
-          const typeName = OmniModelUtil.getVirtualTypeName(owner);
+          const typeName = OmniUtil.getVirtualTypeName(owner);
           return `${Naming.safe(typeName, fn)}${pascalCase(propertyName)}`;
         }
       ),
@@ -1883,7 +1883,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
           target: targetParameter,
         });
       } else {
-        logger.warn(`Could not find property '${linkParamName}' in '${OmniModelUtil.getTypeDescription(requestResultClass)}'`);
+        logger.warn(`Could not find property '${linkParamName}' in '${OmniUtil.getTypeDescription(requestResultClass)}'`);
       }
     }
 
@@ -1932,8 +1932,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
           if (inputProperties.length > propertyPath.length) {
             propertyPath = inputProperties;
           } else {
-            const primaryName = OmniModelUtil.getTypeDescription(primaryType);
-            const secondaryName = OmniModelUtil.getTypeDescription(secondaryType);
+            const primaryName = OmniUtil.getTypeDescription(primaryType);
+            const secondaryName = OmniUtil.getTypeDescription(secondaryType);
             throw new Error(`There is no property path '${pathString}' in '${primaryName}' nor '${secondaryName}'`);
           }
         }
@@ -1979,7 +1979,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
         pointer = pointer.of;
         i--;
       } else {
-        throw new Error(`Do not know how to handle '${OmniModelUtil.getTypeDescription(type)}' in property path '${pathParts.join('.')}'`);
+        throw new Error(`Do not know how to handle '${OmniUtil.getTypeDescription(type)}' in property path '${pathParts.join('.')}'`);
       }
     }
 

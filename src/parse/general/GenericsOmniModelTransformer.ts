@@ -12,7 +12,7 @@ import {
   OmniTypeKind,
 } from '@parse';
 import {Naming} from '@parse/Naming';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniUtil} from '@parse/OmniUtil';
 import {LoggerFactory} from '@util';
 import {pascalCase} from 'change-case';
 import {IncomingOptions, PrimitiveGenerificationChoice, RealOptions} from '@options';
@@ -49,7 +49,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     // If many types have the exact same properties with the same names,
     // but the only thing differing are the types, then replace with generic source and target types.
 
-    const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
+    const allTypes = OmniUtil.getAllExportableTypes(model, model.types);
 
     // TODO: Need to sort the types so that the leaf types are done first
     //        Otherwise we will find the wrong types when doing the "find common denominator" stuff
@@ -77,7 +77,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
           //   }
           //   return propertyIdentifier;
           // }).sort();
-          const signature = `${propertyNames.join(',')},${OmniModelUtil.getTypeDescription(t.extendedBy)}`;
+          const signature = `${propertyNames.join(',')},${OmniUtil.getTypeDescription(t.extendedBy)}`;
 
           let types = signatureMap.get(signature);
           if (!types) {
@@ -249,7 +249,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
         // For some reason we could not find any target identifiers.
         // Let's remove this type from removal and keep things as they are.
-        logger.error(`Could not find any target identifiers for '${OmniModelUtil.getTypeDescription(subType)}'. This is odd.`);
+        logger.error(`Could not find any target identifiers for '${OmniUtil.getTypeDescription(subType)}'. This is odd.`);
         subTypesToRemove.push(subType);
       } else {
 
@@ -331,7 +331,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
     const wrapPrimitives = (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE);
     const targetIdentifierGenericType = targetIdentifierType
-      ? OmniModelUtil.toGenericAllowedType(targetIdentifierType, wrapPrimitives)
+      ? OmniUtil.toGenericAllowedType(targetIdentifierType, wrapPrimitives)
       : undefined;
 
     if (!targetIdentifierGenericType || targetIdentifierGenericType?.kind == OmniTypeKind.UNKNOWN) {
@@ -346,7 +346,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     if (identifier.lowerBound) {
 
       // TODO: This needs to be improved someday. It should be based on the property name, and not guessed from type.
-      const lowerName = Naming.safe(OmniModelUtil.getVirtualTypeName(identifier.lowerBound));
+      const lowerName = Naming.safe(OmniUtil.getVirtualTypeName(identifier.lowerBound));
       // Naming.safer(identifier.lowerBound, fn);
       const words = lowerName.split(/(?=[A-Z])/);
       if (words.length > 2) {
@@ -416,15 +416,15 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
       switch (options.onPrimitiveGenerification) {
         case PrimitiveGenerificationChoice.ABORT:
-          const targetName = OmniModelUtil.getTypeDescription(genericSource);
-          const ownerName = OmniModelUtil.getTypeDescription(subType);
+          const targetName = OmniUtil.getTypeDescription(genericSource);
+          const ownerName = OmniUtil.getTypeDescription(subType);
           logger.warn(
             `Aborting generification of ${targetName}', since '${ownerName}' has primitive non-null property '${propertyName}'`
           );
           return undefined;
         case PrimitiveGenerificationChoice.WRAP_OR_BOX:
         case PrimitiveGenerificationChoice.SPECIALIZE:
-          const allowedGenericTargetType = OmniModelUtil.toGenericAllowedType(
+          const allowedGenericTargetType = OmniUtil.toGenericAllowedType(
             genericTargetType,
             (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
           );
@@ -432,8 +432,8 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
           const common = JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType, false);
           if (common != genericTargetType) {
-            const from = OmniModelUtil.getTypeDescription(genericTargetType);
-            const to = OmniModelUtil.getTypeDescription(allowedGenericTargetType);
+            const from = OmniUtil.getTypeDescription(genericTargetType);
+            const to = OmniUtil.getTypeDescription(allowedGenericTargetType);
             logger.debug(`Changing generic type from ${from} (${genericTargetType.kind}) to ${to} (${allowedGenericTargetType.kind})`);
             genericTargetType = allowedGenericTargetType;
           }

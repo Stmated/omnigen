@@ -67,12 +67,9 @@ export class OptionsUtil {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const converter: IncomingConverter<unknown, unknown> = converters?.[baseKey];
+      const converter: IncomingConverter<unknown, unknown> | undefined = converters?.[baseKey];
       if (converter) {
 
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const rawValue = (incoming && baseKey in incoming) ? incoming[baseKey] : base[baseKey];
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment

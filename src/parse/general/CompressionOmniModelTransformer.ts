@@ -1,6 +1,6 @@
 import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {OmniModel, OmniObjectType, OmniProperty, OmniTypeKind,} from '@parse';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniUtil} from '@parse/OmniUtil';
 import {LoggerFactory} from '@util';
 import {IncomingOptions, RealOptions} from '@options';
 import {ITargetOptions} from '@interpret';
@@ -28,7 +28,7 @@ export class CompressionOmniModelTransformer implements OmniModelTransformer<ITa
 
   transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
 
-    const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
+    const allTypes = OmniUtil.getAllExportableTypes(model, model.types);
 
     // TODO: Need to sort the types so that the leaf types are done first
     //        Otherwise we will find the wrong types when doing the "find common denominator" stuff
@@ -48,7 +48,7 @@ export class CompressionOmniModelTransformer implements OmniModelTransformer<ITa
       // const extendedByDescription = OmniModelUtil.getTypeDescription(extendedBy);
       for (const property of type.properties) {
 
-        const signature = `${property.name}=${OmniModelUtil.getTypeDescription(property.type)}`;
+        const signature = `${property.name}=${OmniUtil.getTypeDescription(property.type)}`;
 
         let subTypeInfo = subTypeInfoMap.get(extendedBy);
         if (!subTypeInfo) {

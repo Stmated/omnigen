@@ -339,6 +339,13 @@ describe('Java Rendering', () => {
     expect(filenames).not.toContain('Pet1.java');
   });
 
+  test('Bank', async () => {
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('bank.json');
+    const filenames = [...fileContents.keys()];
+
+  });
+
   test('Test inheritance of descriptions', async () => {
 
     // TODO: Implement test case for 'openrpc', 'description-inheritance.json'

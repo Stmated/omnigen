@@ -5,6 +5,7 @@ import {BaseJavaCstTransformer} from '@java/transform';
 import {AddConstructorJavaCstTransformer} from '@java/transform/AddConstructorJavaCstTransformer';
 import {PackageImportJavaCstTransformer} from '@java/transform/PackageImportJavaCstTransformer';
 import {AdditionalPropertiesInterfaceTransformer} from '@java/transform/AdditionalPropertiesInterfaceTransformer';
+import {InnerTypeCompressionCstTransformer} from '@java/transform/InnerTypeCompressionCstTransformer';
 
 export class JavaInterpreter extends AbstractInterpreter<IJavaOptions> {
   constructor() {
@@ -12,6 +13,7 @@ export class JavaInterpreter extends AbstractInterpreter<IJavaOptions> {
     this.registerTransformer(new BaseJavaCstTransformer());
     this.registerTransformer(new AddConstructorJavaCstTransformer());
     this.registerTransformer(new AdditionalPropertiesInterfaceTransformer());
+    this.registerTransformer(new InnerTypeCompressionCstTransformer());
     this.registerTransformer(new PackageImportJavaCstTransformer());
   }
 

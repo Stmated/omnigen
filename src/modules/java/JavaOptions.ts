@@ -6,7 +6,7 @@ import {
   RealOptions,
 } from '@options';
 import {OmniType} from '@parse';
-import {IGenericTargetOptions} from '@interpret';
+import {DEFAULT_TARGET_OPTIONS, IGenericTargetOptions} from '@interpret';
 import {IncomingConverters, OptionsUtil} from '@options/OptionsUtil';
 import {PackageResolverOptionsParser} from '@options/PackageResolverOptionsParser';
 
@@ -36,6 +36,7 @@ export const DEFAULT_PACKAGE_OPTIONS: IPackageOptions = {
 
 export const DEFAULT_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
   ...DEFAULT_PACKAGE_OPTIONS,
+  ...DEFAULT_TARGET_OPTIONS,
   ...{
     immutableModels: true,
     includeAlwaysNullProperties: false,

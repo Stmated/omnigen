@@ -812,7 +812,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
         new Modifier(ModifierType.PRIVATE),
         new Modifier(ModifierType.FINAL)
       ),
-      new NewStatement(new Type(this.mapType))
+      new NewStatement(new Type(this.mapType, true))
     );
 
     const addMethod = new MethodDeclaration(

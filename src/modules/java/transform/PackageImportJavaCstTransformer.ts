@@ -34,8 +34,8 @@ export class PackageImportJavaCstTransformer extends AbstractJavaCstTransformer 
         cuInfoStack.pop();
 
         node.imports.children.sort((a, b) => {
-          const aPackage = JavaUtil.getClassNameForImport(a.type.omniType, options) || '';
-          const bPackage = JavaUtil.getClassNameForImport(b.type.omniType, options) || '';
+          const aPackage = JavaUtil.getClassNameForImport(a.type.omniType, options, a.type.implementation) || '';
+          const bPackage = JavaUtil.getClassNameForImport(b.type.omniType, options, b.type.implementation) || '';
           return aPackage.localeCompare(bPackage);
         });
       },
@@ -63,7 +63,7 @@ export class PackageImportJavaCstTransformer extends AbstractJavaCstTransformer 
 
         node.setLocalName(relativeLocalName);
 
-        const nodeImportName = JavaUtil.getClassNameForImport(node.omniType, options);
+        const nodeImportName = JavaUtil.getClassNameForImport(node.omniType, options, node.implementation);
         if (nodeImportName && nodeImportName.indexOf('.') !== -1) {
 
           const nodePackage = JavaUtil.getPackageNameFromFqn(nodeImportName);
@@ -71,7 +71,7 @@ export class PackageImportJavaCstTransformer extends AbstractJavaCstTransformer 
           if (nodePackage != cuInfo.packageName) {
             const existing = cuInfo.cu.imports.children.find(it => {
               // TODO: Cache this inside the import node? Set it in stone?
-              const otherImportName = JavaUtil.getClassNameForImport(it.type.omniType, options);
+              const otherImportName = JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
               return otherImportName == nodeImportName;
             });
 

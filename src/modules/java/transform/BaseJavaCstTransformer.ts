@@ -36,7 +36,7 @@ import {camelCase, constantCase, pascalCase} from 'change-case';
 import {Naming} from '@parse/Naming';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniUtil} from '@parse/OmniUtil';
 import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 import {RealOptions} from '@options';
 
@@ -49,7 +49,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
 
-    const exportableTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
+    const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
 
     // for (const type of exportableTypes.all) {
     //
@@ -344,7 +344,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
         // TODO: Maybe this could be removed and instead simplified elsewhere, where we compress/fix "incorrect" types?
         // In Java we cannot extend from an enum. So we will try and redirect the output.
-        if (OmniModelUtil.isEmptyType(type)) {
+        if (OmniUtil.isEmptyType(type)) {
 
           // TODO: The NAME of the resulting enum should still be the name of the current type, and not the extended class!
           this.transformEnum(model, type.extendedBy, type, root, options);
@@ -482,7 +482,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
               new Java.Identifier('name'),
-              new Java.Literal(OmniModelUtil.toLiteralValue(qualifier.value))
+              new Java.Literal(OmniUtil.toLiteralValue(qualifier.value))
             ),
             new Java.AnnotationKeyValuePair(
               new Java.Identifier('value'),

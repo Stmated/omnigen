@@ -11,7 +11,7 @@ import {
 } from '@java';
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {OmniUtil} from '@parse/OmniUtil';
 import {RealOptions} from '@options';
 
 export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer {
@@ -231,7 +231,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
             return new Java.Type(foundGenericType.type);
           } else {
             const typeName = requiredArgument.identifier.value;
-            const placeholderName = OmniModelUtil.getTypeDescription(requiredArgument.type.omniType);
+            const placeholderName = OmniUtil.getTypeDescription(requiredArgument.type.omniType);
             throw new Error(`Could not find the generic type of '${typeName}' ${placeholderName}`);
           }
         }

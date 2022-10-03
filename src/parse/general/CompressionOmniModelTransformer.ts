@@ -1,8 +1,7 @@
-import {OmniModelTransformer} from '@parse/OmniModelTransformer';
-import {OmniModel, OmniObjectType, OmniProperty, OmniTypeKind,} from '@parse';
+import {OmniModel, OmniObjectType, OmniProperty, OmniTypeKind, OmniModelTransformer} from '@parse';
 import {OmniUtil} from '@parse/OmniUtil';
 import {LoggerFactory} from '@util';
-import {IncomingOptions, RealOptions} from '@options';
+import {RealOptions} from '@options';
 import {ITargetOptions} from '@interpret';
 
 export const logger = LoggerFactory.create(__filename);

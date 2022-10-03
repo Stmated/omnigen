@@ -1,11 +1,6 @@
 import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
 import {OmniModel, OmniTypeKind} from '@parse';
 import {
-  ArgumentDeclaration,
-  ClassDeclaration,
-  ConstructorDeclaration,
-  Field,
-  JavaCstRootNode,
   IJavaOptions,
   JavaUtil
 } from '@java';
@@ -13,15 +8,22 @@ import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {OmniUtil} from '@parse/OmniUtil';
 import {RealOptions} from '@options';
+import {ExternalSyntaxTree} from '@transform';
+import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 
 export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer {
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<IJavaOptions>): Promise<void> {
+  transformCst(
+    model: OmniModel,
+    root: Java.JavaCstRootNode,
+    externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[],
+    options: RealOptions<IJavaOptions>
+  ): Promise<void> {
 
     const classDeclarations: Java.ClassDeclaration[] = [];
-    root.visit(VisitorFactoryManager.create(this._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
       visitClassDeclaration: (node, visitor) => {
-        this._javaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
+        AbstractJavaCstTransformer._javaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
         classDeclarations.push(node);
       },
       // visitGenericClassDeclaration: (node, visitor) => {
@@ -57,10 +59,10 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
   }
 
   private createConstructorDeclaration(
-    node: ClassDeclaration,
-    fields: Field[],
-    superArguments: ArgumentDeclaration[]
-  ): ConstructorDeclaration {
+    node: Java.ClassDeclaration,
+    fields: Java.Field[],
+    superArguments: Java.ArgumentDeclaration[]
+  ): Java.ConstructorDeclaration {
 
     const blockExpressions: Java.AbstractJavaNode[] = [];
 
@@ -162,7 +164,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
       // TODO: Need to test if this actually works -- currently there is no test for it
       annotations.push(
         new Java.Annotation(
-          new Java.Type({
+          new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: "com.fasterxml.jackson.annotation.JsonProperty",
           }),
@@ -188,7 +190,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
         // TODO: Add the "required" to the JsonProperty annotation above!
         annotations.push(
           new Java.Annotation(
-            new Java.Type({
+            new Java.RegularType({
               kind: OmniTypeKind.HARDCODED_REFERENCE,
               fqn: "javax.validation.constraints.NotNull",
             }),
@@ -228,7 +230,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
           });
 
           if (foundGenericType) {
-            return new Java.Type(foundGenericType.type);
+            return JavaCstUtils.createTypeNode(foundGenericType.type);
           } else {
             const typeName = requiredArgument.identifier.value;
             const placeholderName = OmniUtil.getTypeDescription(requiredArgument.type.omniType);

@@ -15,7 +15,7 @@ import {Naming} from '@parse/Naming';
 import {OmniUtil} from '@parse/OmniUtil';
 import {LoggerFactory} from '@util';
 import {pascalCase} from 'change-case';
-import {IncomingOptions, PrimitiveGenerificationChoice, RealOptions} from '@options';
+import {PrimitiveGenerificationChoice, RealOptions} from '@options';
 import {IGenericTargetOptions} from '@interpret';
 import {JavaUtil} from '@java';
 
@@ -147,7 +147,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
       // TODO: There is a possibility that the generic identifiers could clash. We should suffix with numbers then.
       const genericName = (genericEntries.length == 0) ? 'T' : `T${pascalCase(propertyName)}`;
-      const commonDenominator = JavaUtil.getCommonDenominator(...uniqueTypesOnIndex);
+      const commonDenominator = OmniUtil.getCommonDenominator(...uniqueTypesOnIndex);
       const lowerBound =  this.toGenericBoundType(commonDenominator, options);
 
       if (lowerBound) {
@@ -390,7 +390,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
       }
 
       const sameType = propertyTypes.find(it => {
-        const common = JavaUtil.getCommonDenominatorBetween(property.type, it, false);
+        const common = OmniUtil.getCommonDenominatorBetween(property.type, it, false);
 
         // If the output is the exact same as the first input, then the two types are the same.
         return common == property.type;
@@ -430,7 +430,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
           );
           allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
 
-          const common = JavaUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType, false);
+          const common = OmniUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType, false);
           if (common != genericTargetType) {
             const from = OmniUtil.getTypeDescription(genericTargetType);
             const to = OmniUtil.getTypeDescription(allowedGenericTargetType);

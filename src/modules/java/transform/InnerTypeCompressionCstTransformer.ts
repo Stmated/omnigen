@@ -1,24 +1,25 @@
 import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
 import {OmniModel, OmniType, OmniTypeKind} from '@parse';
-import {CompilationUnit, JavaCstRootNode, ModifierType} from '@java';
+import {IJavaOptions} from '@java';
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {RealOptions} from '@options';
 import {OmniUtil} from '@parse/OmniUtil';
 import {ITargetOptions} from '@interpret';
+import {ExternalSyntaxTree} from '@transform';
 
 type CompilationUnitInfo = {
   cu: Java.CompilationUnit,
 };
 
 interface TypeMapping {
-  definedIn?: CompilationUnit;
-  usedIn: Set<CompilationUnit>;
+  definedIn?: Java.CompilationUnit;
+  usedIn: Set<Java.CompilationUnit>;
 }
 
 export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransformer {
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<ITargetOptions>): Promise<void> {
+  transformCst(model: OmniModel, root: Java.JavaCstRootNode, externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[], options: RealOptions<ITargetOptions>): Promise<void> {
 
     if (!options.compressSoloReferencedTypes && !options.compressUnreferencedSubTypes) {
 
@@ -28,7 +29,7 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
 
     const typeMapping = new Map<OmniType, TypeMapping>();
     const cuInfoStack: CompilationUnitInfo[] = [];
-    root.visit(VisitorFactoryManager.create(this._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
@@ -47,12 +48,12 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
         cuInfoStack.push({
           cu: node,
         });
-        this._javaVisitor.visitCompilationUnit(node, visitor);
+        AbstractJavaCstTransformer._javaVisitor.visitCompilationUnit(node, visitor);
         cuInfoStack.pop();
 
       },
 
-      visitType: (node) => {
+      visitRegularType: (node) => {
 
         for (const usedType of OmniUtil.getResolvedVisibleTypes(node.omniType)) {
 
@@ -122,10 +123,10 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
   }
 
   private moveCompilationUnit(
-    sourceUnit: CompilationUnit | undefined,
-    targetUnit: CompilationUnit | undefined,
+    sourceUnit: Java.CompilationUnit | undefined,
+    targetUnit: Java.CompilationUnit | undefined,
     type: OmniType,
-    root: JavaCstRootNode
+    root: Java.JavaCstRootNode
   ): void {
 
     if (!sourceUnit) {
@@ -136,12 +137,12 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
       throw new Error(`Could not find the CompilationUnit target where '${OmniUtil.getTypeDescription(type)}' is defined`);
     }
 
-    if (!sourceUnit.object.modifiers.modifiers.find(it => it.type == ModifierType.STATIC)) {
+    if (!sourceUnit.object.modifiers.modifiers.find(it => it.type == Java.ModifierType.STATIC)) {
 
       // Add the static modifier if it is not already added.
       // TODO: This does not need to be done for enums?
       sourceUnit.object.modifiers.modifiers.push(
-        new Java.Modifier(ModifierType.STATIC)
+        new Java.Modifier(Java.ModifierType.STATIC)
       );
     }
 

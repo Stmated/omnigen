@@ -1,4 +1,4 @@
-import {OmniInterfaceType, OmniTypeKind} from '@parse';
+import {OmniInterfaceType, OmniType, OmniTypeKind} from '@parse';
 import {JavaUtil} from '@java';
 import * as Java from '@java/cst';
 
@@ -14,7 +14,7 @@ export class JavaCstUtils {
           new Java.AbstractMethodDeclaration(
             new Java.MethodDeclarationSignature(
               new Java.Identifier(JavaUtil.getGetterName(property.propertyName || property.name, property.type)),
-              new Java.Type(property.type, false)
+              JavaCstUtils.createTypeNode(property.type, false)
             )
           )
         );
@@ -30,7 +30,7 @@ export class JavaCstUtils {
 
     declaration.annotations.children.push(
       new Java.Annotation(
-        new Java.Type({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'javax.annotation.Generated'}),
+        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'javax.annotation.Generated'}),
         new Java.AnnotationKeyValuePairList(
           new Java.AnnotationKeyValuePair(
             new Java.Identifier('value'),
@@ -43,5 +43,28 @@ export class JavaCstUtils {
         )
       )
     );
+  }
+
+  public static createTypeNode(type: OmniType, implementation?: boolean): Java.RegularType | Java.GenericType {
+
+    if (type.kind == OmniTypeKind.DICTIONARY) {
+
+      const mapClassOrInterface = implementation == false ? 'Map' : 'HashMap';
+      const mapClass = `java.util.${mapClassOrInterface}`;
+      const mapType = new Java.RegularType({ kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
+      const keyType = JavaCstUtils.createTypeNode(type.keyType, true);
+      const valueType = JavaCstUtils.createTypeNode(type.valueType, true);
+
+      return new Java.GenericType(mapType, [keyType, valueType]);
+
+    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+
+      const baseType = new Java.RegularType(type, implementation);
+      const genericArguments = type.targetIdentifiers.map(it => JavaCstUtils.createTypeNode(it.type));
+      return new Java.GenericType(baseType, genericArguments);
+
+    } else {
+      return new Java.RegularType(type, implementation);
+    }
   }
 }

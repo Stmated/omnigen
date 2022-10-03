@@ -8,7 +8,7 @@ import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
 import {IJavaOptions, JavaUtil} from '@java';
-import {OmniPrimitiveKind} from '@parse';
+import {OmniPrimitiveKind, OmniUtil} from '@parse';
 import {RealOptions} from '@options';
 
 type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>;
@@ -148,7 +148,12 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return blockContent.replace(this.pattern_lineStart, indentation);
   }
 
-  visitCommonTypeDeclaration(visitor: IJavaCstVisitor<string>, node: Java.AbstractObjectDeclaration, typeString: string, generics?: GenericTypeDeclarationList): VisitResult<string> {
+  visitCommonTypeDeclaration(
+    visitor: IJavaCstVisitor<string>,
+    node: Java.AbstractObjectDeclaration,
+    typeString: string,
+    generics?: GenericTypeDeclarationList
+  ): VisitResult<string> {
 
     const modifiers = this.render(node.modifiers, visitor);
     const name = this.render(node.name, visitor);
@@ -266,15 +271,20 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = (node, visitor) => {
     // We always render the Fully Qualified Name here, and not the relative nor local name.
     // But we remove any generics that the import might have.
-    const fqn = JavaUtil.getName({
-      type: node.type.omniType,
-      withSuffix: false,
-      withPackage: true,
-      implementation: node.type.implementation,
-      options: this._options
-    });
+    // const fqn = JavaUtil.getName({
+    //   type: node.type.omniType,
+    //   withSuffix: false,
+    //   withPackage: true,
+    //   implementation: node.type.implementation,
+    //   options: this._options
+    // });
 
-    return `import ${fqn};`;
+    const importName = node.type.getImportName();
+    if (!importName) {
+      throw new Error(`Import name is not set for '${OmniUtil.getTypeDescription(node.type.omniType)}'`);
+    }
+
+    return `import ${importName};`;
   }
 
   visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
@@ -444,12 +454,20 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return node.children.map(it => this.render(it, visitor)).join(' ');
   }
 
-  visitType: JavaRendererVisitFn<Java.Type> = (node, visitor) => {
+  visitRegularType: JavaRendererVisitFn<Java.RegularType> = (node, visitor) => {
     if (node.getLocalName()) {
       return node.getLocalName();
     } else {
       throw new Error(`Local name must have been set. Has the package name transformer not been ran?`);
     }
+  }
+
+  visitGenericType: JavaRendererVisitFn<Java.GenericType> = (node, visitor) => {
+
+    const baseTypeString = this.render(node.baseType, visitor);
+    const genericArgumentStrings = node.genericArguments.map(it => this.render(it, visitor));
+
+    return `${baseTypeString}<${genericArgumentStrings.join(', ')}>`;
   }
 
   visitModifierList: JavaRendererVisitFn<Java.ModifierList> = (node, visitor) => {

@@ -1,14 +1,16 @@
 import {AbstractJavaCstTransformer} from './AbstractJavaCstTransformer';
 import {
+  JavaUtil,
+  IJavaOptions,
+} from '@java';
+import {
   AbstractObjectDeclaration,
   Block,
   CommentList,
   JavaCstRootNode,
-  IJavaOptions,
-  JavaUtil,
   ModifierType,
   TokenType
-} from '@java';
+} from '@java/cst';
 import {
   CompositionKind,
   OmniCompositionType,
@@ -39,12 +41,13 @@ import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {OmniUtil} from '@parse/OmniUtil';
 import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 import {RealOptions} from '@options';
+import {ExternalSyntaxTree} from '@transform';
 
 export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
   private static readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<IJavaOptions>): Promise<void> {
+  transformCst(model: OmniModel, root: JavaCstRootNode, externals: ExternalSyntaxTree<JavaCstRootNode, IJavaOptions>[], options: RealOptions<IJavaOptions>): Promise<void> {
 
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
@@ -178,7 +181,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const valueIdentifier = new Java.Identifier('value');
     const valueField = new Java.Field(
-      new Java.Type(valueType),
+      JavaCstUtils.createTypeNode(valueType),
       valueIdentifier,
       new Java.ModifierList(
         new Java.Modifier(ModifierType.PRIVATE),
@@ -187,7 +190,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       undefined,
       new Java.AnnotationList(
         new Java.Annotation(
-          new Java.Type({
+          new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
           })
@@ -196,7 +199,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     );
 
     return new Java.ClassDeclaration(
-      new Java.Type(valueType),
+      new Java.RegularType(valueType),
       new Java.Identifier(`Primitive${kindName}`),
       new Java.Block(
         valueField,
@@ -216,7 +219,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     const body = new Java.Block();
 
     const enumDeclaration = new Java.EnumDeclaration(
-      new Java.Type(type),
+      new Java.RegularType(type),
       // Naming.safer(originalType || type)
       new Java.Identifier(JavaUtil.getClassName(originalType || type, options)),
       body,
@@ -247,7 +250,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         primitiveKind: type.primitiveKind
       };
 
-      const fieldType = new Java.Type(itemType);
+      const fieldType = new Java.RegularType(itemType);
       const fieldIdentifier = new Java.Identifier('value');
       const field = new Java.Field(
         fieldType,
@@ -287,7 +290,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   ): void {
 
     const declaration = new Java.InterfaceDeclaration(
-      new Java.Type(type),
+      JavaCstUtils.createTypeNode(type),
       // TODO: This probably needs improvement, where if no interface name, then create new with "I${underlyingType}"
       // .name || OmniModelUtil.getVirtualTypeName(type.of)
       new Java.Identifier(JavaUtil.getClassName(type, options)),
@@ -355,7 +358,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     const javaClassName = JavaUtil.getClassName(originalType || type, options);
-    const javaType = new Java.Type(type);
+    const javaType = new Java.RegularType(type);
 
     let declaration: Java.ClassDeclaration | Java.GenericClassDeclaration | Java.InterfaceDeclaration;
     if (genericSourceIdentifiers) {
@@ -365,8 +368,8 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         new Java.GenericTypeDeclarationList(
           genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
             new Java.Identifier(it.placeholderName),
-            it.lowerBound ? new Java.Type(it.lowerBound) : undefined,
-            it.upperBound ? new Java.Type(it.upperBound) : undefined,
+            it.lowerBound ? JavaCstUtils.createTypeNode(it.lowerBound) : undefined,
+            it.upperBound ? JavaCstUtils.createTypeNode(it.upperBound) : undefined,
           ))
         ),
         body,
@@ -430,7 +433,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
       declaration.annotations?.children.push(
         new Java.Annotation(
-          new Java.Type({
+          new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
           }),
@@ -439,7 +442,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
               new Java.Identifier('use'),
               new Java.StaticMemberReference(
                 new Java.ClassName(
-                  new Java.Type({
+                  new Java.RegularType({
                     kind: OmniTypeKind.HARDCODED_REFERENCE,
                     fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
                   })
@@ -462,7 +465,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
         const qualifier = subTypeHint.qualifiers[0];
         subTypes.push(new Java.Annotation(
-          new Java.Type({
+          new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
           }),
@@ -473,7 +476,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
             ),
             new Java.AnnotationKeyValuePair(
               new Java.Identifier('value'),
-              new Java.ClassReference(new Java.Type(subTypeHint.type))
+              new Java.ClassReference(JavaCstUtils.createTypeNode(subTypeHint.type))
             )
           )
         ));
@@ -481,7 +484,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
       declaration.annotations?.children.push(
         new Java.Annotation(
-          new Java.Type({
+          new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
           }),
@@ -511,14 +514,14 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     if (typeExtends) {
 
       declaration.extends = new Java.ExtendsDeclaration(
-        new Java.Type(typeExtends)
+        JavaCstUtils.createTypeNode(typeExtends)
       );
     }
 
     const typeImplements = JavaDependencyGraph.getImplements(graph, type);
     if (typeImplements.length > 0) {
       declaration.implements = new Java.ImplementsDeclaration(
-        new Java.TypeList(typeImplements.map(it => new Java.Type(it)))
+        new Java.TypeList(typeImplements.map(it => JavaCstUtils.createTypeNode(it)))
       );
     }
   }
@@ -587,7 +590,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     const checkMethods: Java.MethodDeclaration[] = [];
 
     const fieldValueIdentifier = new Java.Identifier(`_value`);
-    const fieldValueType = new Java.Type({
+    const fieldValueType = new Java.RegularType({
       kind: OmniTypeKind.UNKNOWN,
       isAny: true,
     });
@@ -602,7 +605,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       new Java.AnnotationList(
         new Java.Annotation(
           // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
-          new Java.Type({
+          new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
           })
@@ -651,14 +654,14 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         declaration.body.children.push(field);
       }
 
-      const knownBinary = this.createSelfIsOneOfStaticFieldsBinary(knownEnumFields, declaration.type);
+      const knownBinary = this.createSelfIfOneOfStaticFieldsBinary(knownEnumFields, declaration.type);
       if (knownBinary) {
 
         const enumTypeName = pascalCase(Naming.safe(enumType.name));
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`is${enumTypeName}`),
-            new Java.Type({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}),
+            JavaCstUtils.createTypeNode({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}),
           ),
           new Java.Block(
             new Java.Statement(
@@ -671,7 +674,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`getAs${enumTypeName}`),
-            new Java.Type(enumType)
+            JavaCstUtils.createTypeNode(enumType)
           ),
           new Java.Block(
             new Java.Statement(
@@ -679,11 +682,11 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
                 new Java.MethodCall(
                   // NOTE: Is it really all right creating a new Java.Type here? Should we not used the *REAL* target?
                   //        Since it might be in a separate package based on specific language needs
-                  new Java.ClassName(new Java.Type(enumType)),
+                  new Java.ClassName(JavaCstUtils.createTypeNode(enumType)),
                   new Java.Identifier("valueOf"),
                   new Java.ArgumentList(
                     new Java.Cast(
-                      new Java.Type({
+                      JavaCstUtils.createTypeNode({
                         kind: OmniTypeKind.PRIMITIVE,
                         primitiveKind: enumType.primitiveKind,
                       }),
@@ -746,7 +749,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     const dictionaryIdentifier = new Java.Identifier(`_values`);
-    const fieldValuesType = new Java.Type({
+    const fieldValuesType = JavaCstUtils.createTypeNode({
       kind: OmniTypeKind.DICTIONARY,
       keyType: fieldValueType.omniType,
       valueType: declaration.type.omniType,
@@ -789,7 +792,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         new Java.AnnotationList(
           new Java.Annotation(
             // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
-            new Java.Type({
+            new Java.RegularType({
               kind: OmniTypeKind.HARDCODED_REFERENCE,
               fqn: 'com.fasterxml.jackson.annotation.JsonCreator',
             })
@@ -901,13 +904,13 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     declaration: Java.AbstractObjectDeclaration
   ): void {
 
-    const knownBinary = this.createSelfIsOneOfStaticFieldsBinary(knownValueFields, declaration.type);
+    const knownBinary = this.createSelfIfOneOfStaticFieldsBinary(knownValueFields, declaration.type);
     if (knownBinary) {
       declaration.body.children.push(
         new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier('isKnown'),
-            new Java.Type({
+            JavaCstUtils.createTypeNode({
               kind: OmniTypeKind.PRIMITIVE,
               primitiveKind: OmniPrimitiveKind.BOOL,
               nullable: PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE,
@@ -923,7 +926,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
   }
 
-  private createSelfIsOneOfStaticFieldsBinary(
+  private createSelfIfOneOfStaticFieldsBinary(
     knownValueFields: Java.Field[],
     selfType: Java.Type,
   ): Java.BinaryExpression | undefined {
@@ -1003,7 +1006,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         const methodDeclaration = new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-            this.toJavaType(property.type),
+            JavaCstUtils.createTypeNode(property.type),
           ),
           new Java.Block(
             new Java.Statement(new Java.ReturnStatement(new Java.Literal(null))),
@@ -1024,7 +1027,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const getterAnnotationList = this.getGetterAnnotations(property);
 
-    const fieldType = this.toJavaType(property.type);
+    const fieldType = JavaCstUtils.createTypeNode(property.type);
     const fieldIdentifier = new Java.Identifier(property.fieldName || camelCase(property.name), property.name);
     const getterIdentifier = property.propertyName
       ? new Java.Identifier(JavaUtil.getGetterName(property.propertyName, property.type))
@@ -1059,7 +1062,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     if (property.fieldName || property.propertyName) {
       getterAnnotations.push(
         new Java.Annotation(
-          new Java.Type({
+          new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonProperty',
           }),
@@ -1091,14 +1094,14 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     );
 
     const field = new Java.Field(
-      new Java.Type(type),
+      JavaCstUtils.createTypeNode(type),
       new Java.Identifier(`${JavaUtil.getSafeIdentifierName(property.fieldName || property.name)}`, property.name),
       fieldModifiers
     );
 
     const methodDeclarationReturnType = type.valueConstant && JavaUtil.isNullable(type)
-      ? new Java.Type(JavaUtil.toUnboxedPrimitiveType(type))
-      : new Java.Type(type);
+      ? JavaCstUtils.createTypeNode(JavaUtil.toUnboxedPrimitiveType(type))
+      : JavaCstUtils.createTypeNode(type);
 
     const methodDeclarationSignature = new Java.MethodDeclarationSignature(
       new Java.Identifier(JavaUtil.getGetterName(property.name, type), property.name),
@@ -1405,10 +1408,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     } else {
       return `Source: ${sourceLinks.join('.')}\nTarget: ${targetLinks.join('.')}`;
     }
-  }
-
-  private toJavaType(type: OmniType): Java.Type {
-    return new Java.Type(type);
   }
 
   private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {

@@ -1,4 +1,3 @@
-
 import {
   AllowedEnumTsTypes,
   CompositionKind,
@@ -56,7 +55,6 @@ import {
 } from '@open-rpc/meta-schema';
 import {JSONSchema7, JSONSchema7Definition, JSONSchema7Type} from 'json-schema';
 import {pascalCase} from 'change-case';
-import {JavaUtil} from '@java';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {Dereferenced, Dereferencer, LoggerFactory} from '@util';
@@ -74,6 +72,7 @@ import {
 import {IncomingOptions, IOptionsSource, RealOptions} from '@options';
 import {IncomingConverters, OptionsUtil} from '@options/OptionsUtil';
 import {ITargetOptions} from '@interpret';
+// import {JavaUtil} from '@java';
 
 const logger = LoggerFactory.create(__filename);
 
@@ -898,7 +897,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
         return this.jsonSchemaToType(derefArrayItem.hash || 'UnknownArrayItem', derefArrayItem, undefined);
       });
 
-      const commonDenominator = JavaUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
+      const commonDenominator = OmniUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
       const arrayByPositionType: OmniArrayTypesByPositionType = {
         // name: name ?? `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
@@ -957,7 +956,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
   }
 
   private mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniObjectType): void {
-    const common = JavaUtil.getCommonDenominatorBetween(a.type, b.type);
+    const common = OmniUtil.getCommonDenominatorBetween(a.type, b.type);
     if (common) {
       if (to.properties) {
         const idx = to.properties.indexOf(b);
@@ -1669,7 +1668,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
       });
 
       // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
-      requestParamsType.commonDenominator = JavaUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type));
+      requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type));
 
     } else {
 

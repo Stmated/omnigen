@@ -1,5 +1,11 @@
 import {
-  CompositionKind, OmniExternalModelReferenceType,
+  CompositionKind,
+  OmniArrayPropertiesByPositionType,
+  OmniArrayType,
+  OmniDictionaryType,
+  OmniExternalModelReferenceType,
+  OmniGenericTargetIdentifierType,
+  OmniGenericTargetType,
   OmniInheritableType,
   OmniModel,
   OmniPrimitiveConstantValue,
@@ -22,6 +28,8 @@ export interface TypeCollection {
   all: OmniType[];
   edge: OmniType[];
 }
+
+type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType };
 
 export type TraverseInput = OmniType | OmniType[] | undefined;
 export type TraverseCallbackResult = 'abort' | 'skip' | void;
@@ -509,8 +517,25 @@ export class OmniUtil {
         return '_any';
       }
       return "_unknown";
-    }else if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+    } else if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
       return (fn) => `${Naming.safe(OmniUtil.getVirtualTypeName(type.of), fn)}From${type.model.name}`;
+    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+      const rawName = OmniUtil.getVirtualTypeName(type);
+      const genericTypes = type.targetIdentifiers.map(it => OmniUtil.getVirtualTypeName(it));
+      const genericTypeString = genericTypes.join(', ');
+      return (fn) => `${Naming.safe(rawName, fn)}<${genericTypeString}>`;
+    } else if (type.kind == OmniTypeKind.DICTIONARY) {
+
+      // TODO: Convert this into a generic type instead! Do NOT rely on this UGLY hardcoded string method!
+      // const mapClassOrInterface = args.implementation == false ? 'Map' : 'HashMap';
+      // const mapClass = !args.withPackage ? mapClassOrInterface : `java.util.${mapClassOrInterface}`;
+      // if (args.withSuffix === false) {
+      //   return mapClass;
+      // } else {
+      const keyName = OmniUtil.getVirtualTypeName(type.keyType);
+      const valueName = OmniUtil.getVirtualTypeName(type.valueType);
+      return (fn) => `[${Naming.safe(keyName, fn)}: ${Naming.safe(valueName, fn)}]`;
+      // }
     }
 
     // TODO: All types should be able to return a "virtual" type name, which can be used for compositions or whatever!
@@ -751,6 +776,318 @@ export class OmniUtil {
       const found = OmniUtil.swapType(root.of, needle, replacement, maxDepth - 1);
       if (found) {
         root.of = found;
+      }
+    }
+
+    return undefined;
+  }
+
+  public static getCommonDenominator(...types: OmniType[]): OmniType | undefined {
+
+    let common: OmniType | undefined = types[0];
+    for (let i = 1; i < types.length; i++) {
+      common = OmniUtil.getCommonDenominatorBetween(common, types[i]);
+      if (!common) {
+        return undefined;
+      }
+    }
+
+    return common;
+  }
+
+  /**
+   * If the two types are in essence equal, 'a' is the one that is returned.
+   * This can be used to check if 'a' and 'b' are the same (by value, not necessarily reference)
+   */
+  public static getCommonDenominatorBetween(a: OmniType, b: OmniType, create?: boolean): OmniType | undefined {
+
+    if (a == b) {
+      return a;
+    }
+
+    if (a.kind == OmniTypeKind.PRIMITIVE && b.kind == OmniTypeKind.PRIMITIVE) {
+      return this.getCommonDenominatorBetweenPrimitives(a, b);
+    } else if (a.kind == OmniTypeKind.HARDCODED_REFERENCE && b.kind == OmniTypeKind.HARDCODED_REFERENCE) {
+      return a.fqn === b.fqn ? a : undefined;
+    } else if (a.kind == OmniTypeKind.ENUM && b.kind == OmniTypeKind.ENUM) {
+      // TODO: This can probably be VERY much improved -- like taking the entries that are similar between the two
+      return Naming.safe(a.name) == Naming.safe(b.name) ? a : undefined;
+    } else if (a.kind == OmniTypeKind.DICTIONARY && b.kind == OmniTypeKind.DICTIONARY) {
+      return this.getCommonDenominatorBetweenDictionaries(a, b, create);
+    } else if (a.kind == OmniTypeKind.ARRAY && b.kind == OmniTypeKind.ARRAY) {
+      return this.getCommonDenominatorBetweenArrays(a, b, create);
+    } else if (a.kind == OmniTypeKind.UNKNOWN && b.kind == OmniTypeKind.UNKNOWN) {
+      return a;
+    } else if (a.kind == OmniTypeKind.NULL && b.kind == OmniTypeKind.NULL) {
+      return a;
+    } else if (a.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION && b.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+      return this.getCommonDenominatorBetweenPropertiesByPosition(a, b, create);
+    } else if (a.kind == OmniTypeKind.OBJECT || b.kind == OmniTypeKind.OBJECT) {
+      return this.getCommonDenominatorBetweenObjectAndOther(a, b, create);
+    } else if (a.kind == OmniTypeKind.COMPOSITION) {
+      // TODO: Do something here. There might be parts of 'a' and 'b' that are similar.
+      // TODO: Should we then create a new composition type, or just return the first match?
+    } else if (a.kind == OmniTypeKind.GENERIC_TARGET) {
+      if (b.kind == OmniTypeKind.GENERIC_TARGET) {
+        return this.getCommonDenominatorBetweenGenericTargets(a, b, create);
+      }
+    }
+
+    return undefined;
+  }
+
+  private static getCommonDenominatorBetweenGenericTargets(
+    a: OmniGenericTargetType,
+    b: OmniGenericTargetType,
+    create?: boolean
+  ): OmniGenericTargetType | undefined {
+
+    if (a.source != b.source) {
+      return undefined;
+    }
+
+    // TODO: Improve! Right now we might need to move the generic target types into external types.
+    //        <T extends generated.omnigen.JsonRpcRequestParams<generated.omnigen.AccountLedgerRequestParamsData>>
+    //        <T extends generated.omnigen.JsonRpcRequestParams<generated.omnigen.AccountPayoutParamsData>>
+    //        =
+    //        <TData extends generated.omnigen.AbstractToTrustlyRequestParamsData, T extends generated.omnigen.JsonRpcRequestParams<TData>>
+    //        Then "params" should be of type T
+    //        So if they differ, we need to explode the types
+    //        Hopefully this will automatically be done recursively per level of inheritance so it's less complex to code!
+
+    const commonTargetIdentifiers: OmniGenericTargetIdentifierType[] = [];
+
+    const matching = OmniUtil.getMatchingTargetIdentifiers(a.targetIdentifiers, b.targetIdentifiers);
+    if (!matching) {
+      return undefined;
+    }
+
+    for (const match of matching) {
+
+      const commonIdentifierType = OmniUtil.getCommonDenominatorBetween(match.a.type, match.b.type, create);
+      if (!commonIdentifierType || create == false) {
+        return undefined;
+      }
+
+      commonTargetIdentifiers.push({
+        kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
+        type: commonIdentifierType,
+        sourceIdentifier: match.a.sourceIdentifier,
+      });
+    }
+
+    const commonGenericTarget: OmniGenericTargetType = {
+      ...a,
+      ...{
+        targetIdentifiers: commonTargetIdentifiers,
+      }
+    };
+
+    return commonGenericTarget;
+  }
+
+  private static getMatchingTargetIdentifiers(
+    a: OmniGenericTargetIdentifierType[],
+    b: OmniGenericTargetIdentifierType[]
+  ): Array<TargetIdentifierTuple> | undefined {
+
+    if (a.length != b.length) {
+      return undefined;
+    }
+
+    const result: Array<TargetIdentifierTuple> = [];
+    for (const aIdentifier of a) {
+      let bFound: OmniGenericTargetIdentifierType | undefined = undefined;
+      for (const bIdentifier of b) {
+        if (aIdentifier.sourceIdentifier == bIdentifier.sourceIdentifier) {
+          bFound = bIdentifier;
+        }
+      }
+
+      if (bFound) {
+        result.push({
+          a: aIdentifier,
+          b: bFound
+        });
+      } else {
+        return undefined;
+      }
+    }
+
+    return result;
+  }
+
+  private static getCommonDenominatorBetweenObjectAndOther(
+    a: OmniType,
+    b: OmniType,
+    create?: boolean
+  ): OmniType | undefined {
+    if (b.kind == OmniTypeKind.OBJECT && b.extendedBy) {
+
+      // This will recursively search downwards in B's hierarchy.
+      const common = OmniUtil.getCommonDenominatorBetween(a, b.extendedBy, create);
+      if (common) {
+        return common;
+      }
+    }
+
+    if (a.kind == OmniTypeKind.OBJECT && a.extendedBy) {
+      const common = OmniUtil.getCommonDenominatorBetween(a.extendedBy, b, create);
+      if (common) {
+        return common;
+      }
+    }
+
+    if (create == false) {
+      return undefined;
+    }
+
+    // Is there ever anything better we can do here? Like check if signatures are matching?
+    return {
+      kind: OmniTypeKind.UNKNOWN
+    };
+  }
+
+  private static getCommonDenominatorBetweenPropertiesByPosition(
+    a: OmniArrayPropertiesByPositionType,
+    b: OmniArrayPropertiesByPositionType,
+    create?: boolean
+  ): OmniArrayPropertiesByPositionType | undefined {
+
+    if (a.properties.length === b.properties.length) {
+      for (let i = 0; i < a.properties.length; i++) {
+        if (a.properties[i].name !== b.properties[i].name) {
+          return undefined;
+        }
+
+        const commonType = OmniUtil.getCommonDenominatorBetween(a.properties[i].type, b.properties[i].type, create);
+        if (!commonType) {
+          return undefined;
+        }
+      }
+
+      // TODO: Return something else here instead, which is actually the common denominators between the two
+      return a;
+    }
+
+    return undefined;
+  }
+
+  private static getCommonDenominatorBetweenArrays(
+    a: OmniArrayType,
+    b: OmniArrayType,
+    create?: boolean
+  ): OmniArrayType | undefined {
+
+    const common = OmniUtil.getCommonDenominatorBetween(a.of, b.of, create);
+    if (common == a.of) {
+      return a;
+    }
+
+    if (create == false) {
+      return undefined;
+    }
+
+    return <OmniArrayType>{
+      ...b,
+      ...a,
+      ...{
+        of: common
+      }
+    }
+  }
+
+  private static getCommonDenominatorBetweenPrimitives(
+    a: OmniPrimitiveType,
+    b: OmniPrimitiveType
+  ): OmniPrimitiveType | undefined {
+
+    // NOTE: Must nullable be equal? Or do we return the nullable type (if exists) as the common denominator?
+    if (a.nullable == b.nullable) {
+      if (a.primitiveKind == b.primitiveKind) {
+        return a;
+      }
+
+      switch (a.primitiveKind) {
+        case OmniPrimitiveKind.INTEGER:
+        case OmniPrimitiveKind.INTEGER_SMALL:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.LONG:
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.FLOAT:
+            case  OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.LONG:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.FLOAT:
+            case OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.FLOAT:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.DECIMAL:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.DOUBLE:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.NUMBER:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.INTEGER:
+            case OmniPrimitiveKind.INTEGER_SMALL:
+            case OmniPrimitiveKind.LONG:
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.FLOAT:
+            case OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.CHAR:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.STRING:
+              return b;
+          }
+          break;
+      }
+    }
+
+    return undefined;
+  }
+
+  private static getCommonDenominatorBetweenDictionaries(
+    a: OmniDictionaryType,
+    b: OmniDictionaryType,
+    create?: boolean
+  ): OmniDictionaryType | undefined {
+
+    const commonKey = OmniUtil.getCommonDenominatorBetween(a.keyType, b.keyType, create);
+    if (commonKey) {
+      const commonValue = OmniUtil.getCommonDenominatorBetween(a.valueType, b.valueType, create);
+      if (commonValue) {
+        if (commonKey == a.keyType && commonValue == a.valueType) {
+          return a;
+        }
+
+        if (create == false) {
+          return undefined;
+        }
+
+        const newDictionary: OmniDictionaryType = {
+          kind: OmniTypeKind.DICTIONARY,
+          keyType: commonKey,
+          valueType: commonValue,
+        };
+
+        return {...b, ...a, ...newDictionary};
       }
     }
 

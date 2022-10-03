@@ -11,9 +11,9 @@ import {
 } from '@parse';
 import {VisitResult} from '@visit';
 import {IJavaCstVisitor} from '@java/visit/IJavaCstVisitor';
-import {Naming} from '@parse/Naming';
 import {camelCase} from 'change-case';
 import * as Java from '@java/cst/index';
+import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 
 export enum TokenType {
   ASSIGN,
@@ -49,32 +49,33 @@ export abstract class AbstractJavaNode extends AbstractNode {
 
 }
 
-export class Type extends AbstractJavaNode {
+export class RegularType extends AbstractJavaNode {
   omniType: OmniType;
   private _localName?: string;
+  private _importName?: string;
   readonly implementation?: boolean;
 
   get array(): boolean {
     return this.omniType.kind == OmniTypeKind.ARRAY;
   }
 
-  // getFQN(options: JavaOptions, relativeTo?: string): string {
-  //   return JavaUtil.getFullyQualifiedName({
-  //     type: this.omniType,
-  //     options: options,
-  //     relativeTo: relativeTo,
-  //     implementation: this.implementation,
-  //   });
-  // }
-
   getLocalName(): string | undefined {
-    return this._localName; // ?? this.getFQN(options);
+    return this._localName;
   }
 
   setLocalName(value: string | undefined): void {
     this._localName = value;
   }
 
+  getImportName(): string | undefined {
+    return this._importName;
+  }
+
+  setImportName(value: string | undefined): void {
+    this._importName = value;
+  }
+
+  // TODO: Remove the restriction. It's not going to work. Need another way of doing it
   constructor(omniType: OmniType, implementation?: boolean) {
     super();
     this.omniType = omniType;
@@ -82,7 +83,35 @@ export class Type extends AbstractJavaNode {
   }
 
   visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
-    return visitor.visitType(this, visitor);
+    return visitor.visitRegularType(this, visitor);
+  }
+}
+
+export type Type = RegularType | GenericType;
+
+/**
+ * TODO: Remove this, and move the functionality of deciding way to render to the renderer itself?
+ *        That way RegularType and GenericType can just become Type, and skip the JavaCstUtils method
+ */
+export class GenericType extends AbstractJavaNode {
+  baseType: RegularType;
+  genericArguments: Type[];
+
+  /**
+   * A getter of kindness to make it compliant to the reglar Java.Type node.
+   */
+  get omniType(): OmniType {
+    return this.baseType.omniType;
+  }
+
+  constructor(baseType: RegularType, genericArguments: Type[]) {
+    super();
+    this.baseType = baseType;
+    this.genericArguments = genericArguments;
+  }
+
+  visit<R>(visitor: IJavaCstVisitor<R>): VisitResult<R> {
+    return visitor.visitGenericType(this, visitor);
   }
 }
 
@@ -155,10 +184,10 @@ export class AnnotationKeyValuePairList extends AbstractJavaNode {
 }
 
 export class Annotation extends AbstractJavaNode {
-  type: Type;
+  type: RegularType;
   pairs?: AnnotationKeyValuePairList;
 
-  constructor(type: Type, pairs?: AnnotationKeyValuePairList) {
+  constructor(type: RegularType, pairs?: AnnotationKeyValuePairList) {
     super();
     this.type = type;
     this.pairs = pairs;
@@ -530,11 +559,11 @@ export class VariableReference extends AbstractJavaNode {
 
 export class VariableDeclaration extends AbstractJavaNode {
   variableName: Identifier;
-  variableType?: Type;
+  variableType?: RegularType;
   initializer?: AbstractExpression;
   constant?: boolean;
 
-  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: Type, constant?: boolean) {
+  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: RegularType, constant?: boolean) {
     super();
     if (!type && !initializer) {
       throw new Error(`Either a type or an initializer must be given to the field declaration`);
@@ -590,7 +619,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
       field,
       new MethodDeclarationSignature(
         new Identifier(JavaUtil.getSetterName(field.identifier.value, field.type.omniType)),
-        new Type({
+        new RegularType({
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
         }),
@@ -689,6 +718,9 @@ export class ImplementsDeclaration extends AbstractJavaNode {
   }
 }
 
+/**
+ * TODO: Make the Type node generic, and possible to limit which OmniType is allowed: Class, Interface, Enum
+ */
 export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
   name: Identifier;
   type: Type;
@@ -806,26 +838,25 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     const valueParameterIdentifier = new Identifier('value');
 
     const additionalPropertiesField = new Field(
-      new Type(this.mapType, false),
+      JavaCstUtils.createTypeNode(this.mapType, false),
       additionalPropertiesFieldIdentifier,
       new ModifierList(
         new Modifier(ModifierType.PRIVATE),
         new Modifier(ModifierType.FINAL)
       ),
-      new NewStatement(new Type(this.mapType, true))
+      new NewStatement(JavaCstUtils.createTypeNode(this.mapType, true))
     );
 
     const addMethod = new MethodDeclaration(
       new MethodDeclarationSignature(
         new Identifier('addAdditionalProperty'),
-        new Type(<OmniPrimitiveType>{
-          name: () => '',
+        JavaCstUtils.createTypeNode(<OmniPrimitiveType>{
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID
         }),
         new ArgumentDeclarationList(
-          new ArgumentDeclaration(new Type(this.keyType), keyParameterIdentifier),
-          new ArgumentDeclaration(new Type(this.valueType), valueParameterIdentifier)
+          new ArgumentDeclaration(JavaCstUtils.createTypeNode(this.keyType), keyParameterIdentifier),
+          new ArgumentDeclaration(JavaCstUtils.createTypeNode(this.valueType), valueParameterIdentifier)
         ),
       ),
       new Block(
@@ -844,7 +875,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     addMethod.signature.annotations = new AnnotationList(
       new Annotation(
-        new Type({
+        new RegularType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
         }),
@@ -857,7 +888,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       new FieldBackedGetter(
         additionalPropertiesField,
         new AnnotationList(new Annotation(
-          new Type({
+          new RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
           }),
@@ -872,7 +903,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 }
 
 export class ClassDeclaration extends AbstractObjectDeclaration {
-  constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
+  constructor(type: RegularType, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 
@@ -897,7 +928,7 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration {
 export class GenericClassDeclaration extends ClassDeclaration {
   typeList: GenericTypeDeclarationList;
 
-  constructor(name: Identifier, type: Type, typeList: GenericTypeDeclarationList, body: Block) {
+  constructor(name: Identifier, type: RegularType, typeList: GenericTypeDeclarationList, body: Block) {
     super(type, name, body);
     this.typeList = typeList;
   }
@@ -965,7 +996,7 @@ export class GenericTypeUseList extends AbstractJavaNode {
 
 // Simplify so we don't give block, but enum entries?
 export class EnumDeclaration extends AbstractObjectDeclaration {
-  constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
+  constructor(type: RegularType, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 
@@ -1020,9 +1051,9 @@ export class IfElseStatement extends AbstractJavaNode {
 }
 
 export class ImportStatement extends AbstractJavaNode {
-  type: Type;
+  type: RegularType;
 
-  constructor(type: Type) {
+  constructor(type: RegularType) {
     super();
     this.type = type;
   }
@@ -1158,12 +1189,10 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
     this.getters = [];
     this.methods = [];
 
-    const unknownType: OmniUnknownType = {
-      kind: OmniTypeKind.UNKNOWN,
-    };
-
     const untypedField = new Field(
-      new Type(unknownType),
+      new RegularType({
+        kind: OmniTypeKind.UNKNOWN,
+      }),
       new Identifier('_raw', 'raw'),
       new ModifierList(
         new Modifier(ModifierType.PRIVATE),
@@ -1172,7 +1201,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       undefined,
       new AnnotationList(
         new Java.Annotation(
-          new Java.Type({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue'}),
+          new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue'}),
         )
       )
     );
@@ -1188,7 +1217,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       const typedFieldName = this.getFieldName(type);
 
       const typedField = new Field(
-        new Type(type),
+        JavaCstUtils.createTypeNode(type),
         new Identifier(`_${typedFieldName}`)
       );
       const typedFieldReference = new FieldReference(typedField);
@@ -1199,7 +1228,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
         const objectMapperReference = new Identifier('objectMapper');
         argumentDeclarationList.children.push(
           new ArgumentDeclaration(
-            new Type({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper"}),
+            new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper"}),
             objectMapperReference
           )
         );

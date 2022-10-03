@@ -76,11 +76,6 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
         if (numericType.children.floatingPointType) {
 
         }
-
-        // const name = ctx.numericType.map(it => it.children.integralType.image).join('.');
-        // if (!this.foundTypes.includes(name)) {
-        //   this.foundTypes.push(name);
-        // }
       }
     }
 

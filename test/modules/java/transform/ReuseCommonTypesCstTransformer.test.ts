@@ -1,9 +1,8 @@
 import {TestUtils} from '../../../TestUtils';
-import {DEFAULT_OPENRPC_OPTIONS} from '../../../../src';
+import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
 import {DEFAULT_JAVA_OPTIONS, IJavaOptions} from '@java';
 import {OmniModelMerge, OmniUtil, Naming} from '@parse';
 import {JavaTestUtils} from '../JavaTestUtils';
-
 
 describe('Reuse Common Types', () => {
 
@@ -46,9 +45,10 @@ describe('Reuse Common Types', () => {
     expect(OmniUtil.getTypeName(resultMerged.model.types[1])).toEqual('list_thingsRequestParams');
     expect(Naming.unwrapToFirstDefined(OmniUtil.getTypeName(resultMerged.model.types[2]))).toEqual('/components/schemas/Thing');
 
-    const filesCommon = (await JavaTestUtils.getFileContentsFromParseResult(resultMerged));
-    const files10 = (await JavaTestUtils.getFileContentsFromParseResult(result10));
-    const files11 = (await JavaTestUtils.getFileContentsFromParseResult(result11));
+    const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
+    const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
+    const files10 = (await JavaTestUtils.getFileContentsFromParseResult(result10, [{node: rootNodeCommon, options: resultMerged.options}]));
+    const files11 = (await JavaTestUtils.getFileContentsFromParseResult(result11, [{node: rootNodeCommon, options: resultMerged.options}]));
 
     const filesCommonNames = [...filesCommon.keys()].sort();
     const files10Names = [...files10.keys()].sort();
@@ -96,6 +96,20 @@ describe('Reuse Common Types', () => {
     expect(jsonRpcRequest11.foundImports).toEqual([
       'com.common.JsonRpcRequestParams.ListThingsRequestParams',
       'javax.annotation.Generated',
+    ]);
+
+    const ListThingsError10011 = JavaTestUtils.getParsedContent(files11, 'ListThingsError100.java');
+    expect(ListThingsError10011.foundPackage).toEqual('com.error11');
+    expect(ListThingsError10011.foundImports).toEqual([
+      'com.fasterxml.jackson.databind.JsonNode',
+      'javax.annotation.Generated',
+    ]);
+    expect(ListThingsError10011.foundTypes).toEqual([
+      'ListThingsError100.ListThingsError100Error',
+      'String',
+      'Integer',
+      'int',
+      'JsonNode'
     ]);
   });
 });

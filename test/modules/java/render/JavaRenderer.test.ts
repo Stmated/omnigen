@@ -26,7 +26,7 @@ describe('Java Rendering', () => {
       for (const fileName of fileNames) {
 
         const result = await TestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_JAVA_OPTIONS);
-        const interpretation = await new JavaInterpreter().buildSyntaxTree(result.model, result.options);
+        const interpretation = await new JavaInterpreter().buildSyntaxTree(result.model, [], result.options);
 
         let baseDir: string;
 

@@ -1,37 +1,33 @@
-import {
-  CompositionKind,
-  OmniObjectType,
-  OmniCompositionType,
-  OmniProperty,
-  OmniPropertyOwner,
-  OmniType,
-  OmniTypeKind,
-  TypeName,
-  OmniInheritableType,
-  OpenRpcParserBootstrapFactory,
-  SchemaFile,
-  IOpenRpcParserOptions, OmniModelParserResult, OPENRPC_OPTIONS_CONVERTERS
-} from '../src';
 import fs from 'fs/promises';
+import AbstractNode from '@cst/AbstractNode';
+import {VisitorFactoryManager} from '../src/visit/VisitorFactoryManager';
+import {CstRootNode} from '@cst/CstRootNode';
+import {VisitResult} from '../src/visit';
+import {OmniModelTransformer} from '@parse/OmniModelTransformer';
+import {CompressionOmniModelTransformer} from '@parse/general/CompressionOmniModelTransformer';
+import {GenericsOmniModelTransformer} from '@parse/general/GenericsOmniModelTransformer';
+import {InterfaceJavaCstTransformer} from '@parse/general/InterfaceJavaCstTransformer';
+import {OptionsUtil} from '@options';
 import {
-  MethodDeclaration,
-  CompilationUnit,
+  OmniProperty,
+  OmniModelParserResult,
+  SchemaFile,
+  CompositionKind,
+  OmniCompositionType, OmniInheritableType,OmniObjectType, OmniPropertyOwner, OmniType, OmniTypeKind,
+  TypeName
+} from '@parse';
+import {
+  IOpenRpcParserOptions,
+  JSONRPC_OPTIONS_FALLBACK,
+  OPENRPC_OPTIONS_CONVERTERS,
+  OpenRpcParserBootstrapFactory
+} from '@parse/openrpc';
+import {
   JavaVisitor,
   IJavaOptions,
   JAVA_OPTIONS_CONVERTERS
-} from '../src/modules/java';
-import AbstractNode from '../src/cst/AbstractNode';
-import {VisitorFactoryManager} from '../src/visit/VisitorFactoryManager';
-import {CstRootNode} from '../src/cst/CstRootNode';
-import {VisitResult} from '../src/visit';
-import {OmniModelTransformer} from '../src/parse/OmniModelTransformer';
-import {CompressionOmniModelTransformer} from '../src/parse/general/CompressionOmniModelTransformer';
-import {GenericsOmniModelTransformer} from '../src/parse/general/GenericsOmniModelTransformer';
-import {InterfaceJavaCstTransformer} from '../src/parse/general/InterfaceJavaCstTransformer';
-import {OptionsUtil} from '../src/options/OptionsUtil';
-import {
-  JSONRPC_OPTIONS_FALLBACK
-} from '../src/parse/openrpc/JsonRpcOptions';
+} from '@java';
+import * as Java from '@java/cst';
 
 export type KnownSchemaNames = 'openrpc';
 
@@ -137,9 +133,9 @@ export class TestUtils {
     };
   }
 
-  public static getMethod(node: AbstractNode, name: string): MethodDeclaration {
+  public static getMethod(node: AbstractNode, name: string): Java.MethodDeclaration {
 
-    const visitor = VisitorFactoryManager.create(new JavaVisitor<MethodDeclaration>(), {
+    const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.MethodDeclaration>(), {
       visitMethodDeclaration: (node, visitor) => {
         if (node.signature.identifier.value == name) {
           return node;
@@ -157,9 +153,9 @@ export class TestUtils {
     return result;
   }
 
-  public static getCompilationUnits(root: CstRootNode): CompilationUnit[] {
+  public static getCompilationUnits(root: CstRootNode): Java.CompilationUnit[] {
 
-    const array: CompilationUnit[] = [];
+    const array: Java.CompilationUnit[] = [];
     const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
       visitCompilationUnit: (node, visitor) => {
         array.push(node);
@@ -171,9 +167,9 @@ export class TestUtils {
     return array;
   }
 
-  public static getCompilationUnit(root: CstRootNode, name: string): CompilationUnit {
+  public static getCompilationUnit(root: CstRootNode, name: string): Java.CompilationUnit {
 
-    const visitor = VisitorFactoryManager.create(new JavaVisitor<CompilationUnit>(), {
+    const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.CompilationUnit>(), {
       visitCompilationUnit: (node, visitor) => {
         if (node.object.name.value == name) {
           return node;

@@ -1,13 +1,13 @@
 import {ICstVisitor, VisitFn} from '@visit';
 import * as Java from '@java/cst';
 import {ICstNode} from '@cst';
-import {AbstractJavaNode} from '@java/cst';
 
 export type JavaVisitFn<in N extends ICstNode, R> = VisitFn<N, R, IJavaCstVisitor<R>>;
 
 export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitor_java: IJavaCstVisitor<R>;
-  visitType: JavaVisitFn<Java.Type, R>;
+  visitRegularType: JavaVisitFn<Java.RegularType, R>;
+  visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;
   visitToken: JavaVisitFn<Java.JavaToken, R>;
   visitAnnotationList: JavaVisitFn<Java.AnnotationList, R>;
@@ -68,7 +68,7 @@ export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
   visitGenericTypeDeclaration:  JavaVisitFn<Java.GenericTypeDeclaration, R>;
   visitGenericTypeUse:  JavaVisitFn<Java.GenericTypeUse, R>;
   visitGenericTypeUseList:  JavaVisitFn<Java.GenericTypeUseList, R>;
-  visitArrayInitializer:  JavaVisitFn<Java.ArrayInitializer<AbstractJavaNode>, R>;
+  visitArrayInitializer:  JavaVisitFn<Java.ArrayInitializer<Java.AbstractJavaNode>, R>;
   visitStaticMemberReference: JavaVisitFn<Java.StaticMemberReference, R>;
   visitSelfReference: JavaVisitFn<Java.SelfReference, R>;
 }

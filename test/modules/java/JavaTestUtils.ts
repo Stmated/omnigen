@@ -1,15 +1,15 @@
 import * as JavaParser from 'java-parser';
-import {DEFAULT_JAVA_OPTIONS, IJavaOptions} from '@java';
+import {DEFAULT_JAVA_OPTIONS, IJavaOptions, JavaInterpreter, JavaRenderer} from '@java';
 import {KnownSchemaNames, TestUtils} from '../../TestUtils';
 import {CstRootNode} from '@cst/CstRootNode';
 import {ParsedJavaTestVisitor} from '../../ParsedJavaTestVisitor';
-import {JavaRenderer} from '@java/render/JavaRenderer';
-import {JavaInterpreter} from '@java';
+import {OmniModelParserResult} from '@parse';
 import {
   DEFAULT_OPENRPC_OPTIONS,
-  IOpenRpcParserOptions, OmniModelParserResult,
-} from '../../../src';
-import {RealOptions} from '../../../src/options';
+  IOpenRpcParserOptions,
+} from '@parse/openrpc';
+import {RealOptions} from '@options';
+import {ExternalSyntaxTree} from '@transform';
 
 export class JavaTestUtils {
 
@@ -21,13 +21,27 @@ export class JavaTestUtils {
   ): Promise<Map<string, string>> {
 
     const parseResult = await TestUtils.readExample(type, fileName, openRpcOptions, javaOptions);
-    return await this.getFileContentsFromParseResult(parseResult);
+    return await this.getFileContentsFromParseResult(parseResult, []);
   }
 
-  public static async getFileContentsFromParseResult(parseResult: OmniModelParserResult<IJavaOptions>) {
+  public static async getRootNodeFromParseResult(
+    parseResult: OmniModelParserResult<IJavaOptions>,
+    externals: ExternalSyntaxTree<CstRootNode, IJavaOptions>[] = []
+  ): Promise<CstRootNode> {
+    return await new JavaInterpreter().buildSyntaxTree(parseResult.model, externals, parseResult.options);
+  }
 
-    const interpretation = await new JavaInterpreter().buildSyntaxTree(parseResult.model, parseResult.options);
+  public static async getFileContentsFromParseResult(
+    parseResult: OmniModelParserResult<IJavaOptions>,
+    externals: ExternalSyntaxTree<CstRootNode, IJavaOptions>[] = []
+  ): Promise<Map<string, string>> {
+
+    const interpretation = await this.getRootNodeFromParseResult(parseResult, externals);
     return JavaTestUtils.getFileContents(parseResult.options, interpretation);
+  }
+
+  public static async getFileContentsFromRootNode(rootNode: CstRootNode, options: RealOptions<IJavaOptions>): Promise<Map<string, string>> {
+    return JavaTestUtils.getFileContents(options, rootNode);
   }
 
   public static getFileContents(javaOptions: RealOptions<IJavaOptions>, interpretation: CstRootNode): Map<string, string> {

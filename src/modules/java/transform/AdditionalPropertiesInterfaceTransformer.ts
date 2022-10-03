@@ -1,23 +1,29 @@
 import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
 import {OmniInterfaceType, OmniModel, OmniObjectType, OmniTypeKind} from '@parse';
-import {JavaCstRootNode, IJavaOptions, JavaUtil} from '@java';
+import {IJavaOptions, JavaUtil} from '@java';
 import * as Java from '@java/cst';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaCstUtils} from '@java/transform/JavaCstUtils';
 import {Naming} from '@parse/Naming';
 import {RealOptions} from '@options';
+import {ExternalSyntaxTree} from '@transform';
 
 export class AdditionalPropertiesInterfaceTransformer extends AbstractJavaCstTransformer {
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<IJavaOptions>): Promise<void> {
+  transformCst(
+    model: OmniModel,
+    root: Java.JavaCstRootNode,
+    externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[],
+    options: RealOptions<IJavaOptions>
+  ): Promise<void> {
 
     const createdInterface: {obj?: Java.InterfaceDeclaration} = {};
     const currentClassDeclaration: {obj?: Java.ClassDeclaration} = {};
-    root.visit(VisitorFactoryManager.create(this._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
         currentClassDeclaration.obj = node;
-        this._javaVisitor.visitClassDeclaration(node, visitor);
+        AbstractJavaCstTransformer._javaVisitor.visitClassDeclaration(node, visitor);
         currentClassDeclaration.obj = undefined;
       },
 
@@ -46,7 +52,7 @@ export class AdditionalPropertiesInterfaceTransformer extends AbstractJavaCstTra
           };
 
           createdInterface.obj = new Java.InterfaceDeclaration(
-            new Java.Type(interfaceType, false),
+            JavaCstUtils.createTypeNode(interfaceType, false),
             new Java.Identifier(Naming.safe([interfaceType.name, additionalPropertiesObjectType.name])),
             new Java.Block()
           );

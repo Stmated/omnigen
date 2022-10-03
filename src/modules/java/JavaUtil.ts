@@ -16,25 +16,33 @@ import {
   OmniTypeKind,
   PrimitiveNullableKind
 } from '@parse';
-import {DEFAULT_JAVA_OPTIONS, IJavaOptions, IPackageOptions, IPackageResolver, UnknownType} from '@java/JavaOptions';
+import {DEFAULT_JAVA_OPTIONS, IJavaOptions, IPackageResolver, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
 import {Naming} from '@parse/Naming';
 import {OmniUtil} from '@parse/OmniUtil';
 import {RealOptions} from '@options';
+import {IPackageOptions} from '@java/IPackageOptions';
+
+export interface TypeNameInfo {
+  packageName: string | undefined;
+  className: string;
+  outerTypeNames: string[];
+}
 
 interface FqnOptions {
   type: OmniType,
-  withSuffix?: boolean;
   options?: RealOptions<IJavaOptions>;
+  withSuffix?: boolean;
   withPackage?: boolean;
+  withInner?: string[];
   implementation?: boolean;
   boxed?: boolean;
+  localNames?: Map<OmniType, TypeNameInfo>;
 }
 
 export type FqnArgs = OmniType | FqnOptions;
-type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType };
 
 export class JavaUtil {
 
@@ -91,26 +99,28 @@ export class JavaUtil {
   }
 
   /**
-   * Ugly. It should not be based on if relativeTo is set or not if this should return an FQN or just Name.
-   * TODO: This should be delayed until rendering. It is up to the rendering to render a type. Should still be general.
+   * TODO: This should be delayed until rendering. It is up to the rendering to render a type.
+   *        Prime example being generics, which right now is hard-coded into strings here. Bad. Local type names are not respected.
    */
   public static getName(args: FqnOptions): string {
 
+    if (args.localNames) {
+
+      // TODO: Ugly, this code is replicated elsewhere. Should look into making it generalized/centralized
+      const localName = args.localNames.get(args.type);
+      if (localName) {
+        if (localName.outerTypeNames.length > 0) {
+          return `${localName.outerTypeNames.join('.')}.${localName.className}`;
+        } else {
+          return localName.className;
+        }
+      }
+    }
+
     switch (args.type.kind) {
       case OmniTypeKind.GENERIC_TARGET:
-        // TODO: Somehow move this into the renderer instead -- it should be easy to change *any* rendering
-        //        Right now this is locked to this part, and difficult to change
-
-        const rawName = JavaUtil.getName({...args, ...{type: args.type.source}});
-        if (args.withSuffix == false) {
-          return rawName;
-        } else {
-          const genericTypes = args.type.targetIdentifiers.map(it => JavaUtil.getName({...args, ...{type: it.type}}));
-          const genericTypeString = genericTypes.join(', ');
-
-          // TODO: Fix the replacement of recursive generics -- look at JsonRpcRequest, it it pointing to the wrong type
-          return `${rawName}<${genericTypeString}>`;
-        }
+        // NOTE: This will not include the generics, only the actual type source name.
+        return JavaUtil.getName({...args, ...{type: args.type.source}});
       case OmniTypeKind.GENERIC_SOURCE_IDENTIFIER:
         // The local name of a generic type is always just the generic type name.
         return args.type.placeholderName;
@@ -169,15 +179,7 @@ export class JavaUtil {
           return JavaUtil.getCleanedFullyQualifiedName(unknownName, args.withSuffix);
         }
       case OmniTypeKind.DICTIONARY:
-        const mapClassOrInterface = args.implementation == false ? 'Map' : 'HashMap';
-        const mapClass = !args.withPackage ? mapClassOrInterface : `java.util.${mapClassOrInterface}`;
-        if (args.withSuffix === false) {
-          return mapClass;
-        } else {
-          const keyString = JavaUtil.getName({...args, ...{type: args.type.keyType}});
-          const valueString = JavaUtil.getName({...args, ...{type: args.type.valueType}});
-          return `${mapClass}<${keyString}, ${valueString}>`;
-        }
+        throw new Error(`Not allowed to get the name of a map, instead render it using the renderer and generics`);
       case OmniTypeKind.HARDCODED_REFERENCE:
         if (!args.withPackage) {
           return JavaUtil.cleanClassName(args.type.fqn, args.withSuffix);
@@ -247,6 +249,15 @@ export class JavaUtil {
     return options.packageResolver
       ? options.packageResolver(type, typeName, options)
       : options.package;
+  }
+
+  public static buildFullyQualifiedName(packageName: string, outerTypeNames: string[], className: string): string {
+
+    if (outerTypeNames.length > 0) {
+      return `${packageName}.${outerTypeNames.join('.')}.${className}`;
+    } else {
+      return `${packageName}.${className}`;
+    }
   }
 
   private static getCompositionClassName(type: OmniCompositionType, args: FqnOptions): string {
@@ -419,19 +430,6 @@ export class JavaUtil {
     return `set${capitalized}`;
   }
 
-  public static getCommonDenominator(...types: OmniType[]): OmniType | undefined {
-
-    let common: OmniType | undefined = types[0];
-    for (let i = 1; i < types.length; i++) {
-      common = JavaUtil.getCommonDenominatorBetween(common, types[i]);
-      if (!common) {
-        return undefined;
-      }
-    }
-
-    return common;
-  }
-
   public static getMostCommonTypeInHierarchies(hierarchies: OmniType[][]): OmniType | undefined {
 
     if (hierarchies.length > 0) {
@@ -454,305 +452,6 @@ export class JavaUtil {
         if (common) {
           return common;
         }
-      }
-    }
-
-    return undefined;
-  }
-
-  /**
-   * If the two types are in essence equal, 'a' is the one that is returned.
-   * This can be used to check if 'a' and 'b' are the same (by value, not necessarily reference)
-   */
-  public static getCommonDenominatorBetween(a: OmniType, b: OmniType, create?: boolean): OmniType | undefined {
-
-    if (a == b) {
-      return a;
-    }
-
-    if (a.kind == OmniTypeKind.PRIMITIVE && b.kind == OmniTypeKind.PRIMITIVE) {
-      return this.getCommonDenominatorBetweenPrimitives(a, b);
-    } else if (a.kind == OmniTypeKind.HARDCODED_REFERENCE && b.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-      return a.fqn === b.fqn ? a : undefined;
-    } else if (a.kind == OmniTypeKind.ENUM && b.kind == OmniTypeKind.ENUM) {
-      // TODO: This can probably be VERY much improved -- like taking the entries that are similar between the two
-      return Naming.safe(a.name) == Naming.safe(b.name) ? a : undefined;
-    } else if (a.kind == OmniTypeKind.DICTIONARY && b.kind == OmniTypeKind.DICTIONARY) {
-      return this.getCommonDenominatorBetweenDictionaries(a, b, create);
-    } else if (a.kind == OmniTypeKind.ARRAY && b.kind == OmniTypeKind.ARRAY) {
-      return this.getCommonDenominatorBetweenArrays(a, b, create);
-    } else if (a.kind == OmniTypeKind.UNKNOWN && b.kind == OmniTypeKind.UNKNOWN) {
-      return a;
-    } else if (a.kind == OmniTypeKind.NULL && b.kind == OmniTypeKind.NULL) {
-      return a;
-    } else if (a.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION && b.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-      return this.getCommonDenominatorBetweenPropertiesByPosition(a, b, create);
-    } else if (a.kind == OmniTypeKind.OBJECT || b.kind == OmniTypeKind.OBJECT) {
-      return this.getCommonDenominatorBetweenObjectAndOther(a, b, create);
-    } else if (a.kind == OmniTypeKind.COMPOSITION) {
-      // TODO: Do something here. There might be parts of 'a' and 'b' that are similar.
-      // TODO: Should we then create a new composition type, or just return the first match?
-    } else if (a.kind == OmniTypeKind.GENERIC_TARGET) {
-      if (b.kind == OmniTypeKind.GENERIC_TARGET) {
-        return this.getCommonDenominatorBetweenGenericTargets(a, b, create);
-      }
-    }
-
-    return undefined;
-  }
-
-  private static getCommonDenominatorBetweenGenericTargets(
-    a: OmniGenericTargetType,
-    b: OmniGenericTargetType,
-    create?: boolean
-  ): OmniGenericTargetType | undefined {
-
-    if (a.source != b.source) {
-      return undefined;
-    }
-
-    // TODO: Improve! Right now we might need to move the generic target types into external types.
-    //        <T extends generated.omnigen.JsonRpcRequestParams<generated.omnigen.AccountLedgerRequestParamsData>>
-    //        <T extends generated.omnigen.JsonRpcRequestParams<generated.omnigen.AccountPayoutParamsData>>
-    //        =
-    //        <TData extends generated.omnigen.AbstractToTrustlyRequestParamsData, T extends generated.omnigen.JsonRpcRequestParams<TData>>
-    //        Then "params" should be of type T
-    //        So if they differ, we need to explode the types
-    //        Hopefully this will automatically be done recursively per level of inheritance so it's less complex to code!
-
-    const commonTargetIdentifiers: OmniGenericTargetIdentifierType[] = [];
-
-    const matching = JavaUtil.getMatchingTargetIdentifiers(a.targetIdentifiers, b.targetIdentifiers);
-    if (!matching) {
-      return undefined;
-    }
-
-    for (const match of matching) {
-
-      const commonIdentifierType = JavaUtil.getCommonDenominatorBetween(match.a.type, match.b.type, create);
-      if (!commonIdentifierType || create == false) {
-        return undefined;
-      }
-
-      commonTargetIdentifiers.push({
-        kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-        type: commonIdentifierType,
-        sourceIdentifier: match.a.sourceIdentifier,
-      });
-    }
-
-    const commonGenericTarget: OmniGenericTargetType = {
-      ...a,
-      ...{
-        targetIdentifiers: commonTargetIdentifiers,
-      }
-    };
-
-    return commonGenericTarget;
-  }
-
-  private static getMatchingTargetIdentifiers(
-    a: OmniGenericTargetIdentifierType[],
-    b: OmniGenericTargetIdentifierType[]
-  ): Array<TargetIdentifierTuple> | undefined {
-
-    if (a.length != b.length) {
-      return undefined;
-    }
-
-    const result: Array<TargetIdentifierTuple> = [];
-    for (const aIdentifier of a) {
-      let bFound: OmniGenericTargetIdentifierType | undefined = undefined;
-      for (const bIdentifier of b) {
-        if (aIdentifier.sourceIdentifier == bIdentifier.sourceIdentifier) {
-          bFound = bIdentifier;
-        }
-      }
-
-      if (bFound) {
-        result.push({
-          a: aIdentifier,
-          b: bFound
-        });
-      } else {
-        return undefined;
-      }
-    }
-
-    return result;
-  }
-
-  private static getCommonDenominatorBetweenObjectAndOther(
-    a: OmniType,
-    b: OmniType,
-    create?: boolean
-  ): OmniType | undefined {
-    if (b.kind == OmniTypeKind.OBJECT && b.extendedBy) {
-
-      // This will recursively search downwards in B's hierarchy.
-      const common = JavaUtil.getCommonDenominatorBetween(a, b.extendedBy, create);
-      if (common) {
-        return common;
-      }
-    }
-
-    if (a.kind == OmniTypeKind.OBJECT && a.extendedBy) {
-      const common = JavaUtil.getCommonDenominatorBetween(a.extendedBy, b, create);
-      if (common) {
-        return common;
-      }
-    }
-
-    if (create == false) {
-      return undefined;
-    }
-
-    // Is there ever anything better we can do here? Like check if signatures are matching?
-    return {
-      kind: OmniTypeKind.UNKNOWN
-    };
-  }
-
-  private static getCommonDenominatorBetweenPropertiesByPosition(
-    a: OmniArrayPropertiesByPositionType,
-    b: OmniArrayPropertiesByPositionType,
-    create?: boolean
-  ): OmniArrayPropertiesByPositionType | undefined {
-
-    if (a.properties.length === b.properties.length) {
-      for (let i = 0; i < a.properties.length; i++) {
-        if (a.properties[i].name !== b.properties[i].name) {
-          return undefined;
-        }
-
-        const commonType = JavaUtil.getCommonDenominatorBetween(a.properties[i].type, b.properties[i].type, create);
-        if (!commonType) {
-          return undefined;
-        }
-      }
-
-      // TODO: Return something else here instead, which is actually the common denominators between the two
-      return a;
-    }
-
-    return undefined;
-  }
-
-  private static getCommonDenominatorBetweenArrays(
-    a: OmniArrayType,
-    b: OmniArrayType,
-    create?: boolean
-  ): OmniArrayType | undefined {
-
-    const common = JavaUtil.getCommonDenominatorBetween(a.of, b.of, create);
-    if (common == a.of) {
-      return a;
-    }
-
-    if (create == false) {
-      return undefined;
-    }
-
-    return <OmniArrayType>{
-      ...b,
-      ...a,
-      ...{
-        of: common
-      }
-    }
-  }
-
-  private static getCommonDenominatorBetweenPrimitives(
-    a: OmniPrimitiveType,
-    b: OmniPrimitiveType
-  ): OmniPrimitiveType | undefined {
-
-    // NOTE: Must nullable be equal? Or do we return the nullable type (if exists) as the common denominator?
-    if (a.nullable == b.nullable) {
-      if (a.primitiveKind == b.primitiveKind) {
-        return a;
-      }
-
-      switch (a.primitiveKind) {
-        case OmniPrimitiveKind.INTEGER:
-        case OmniPrimitiveKind.INTEGER_SMALL:
-          switch (b.primitiveKind) {
-            case OmniPrimitiveKind.LONG:
-            case OmniPrimitiveKind.DOUBLE:
-            case OmniPrimitiveKind.FLOAT:
-            case  OmniPrimitiveKind.DECIMAL:
-              return b;
-          }
-          break;
-        case OmniPrimitiveKind.LONG:
-          switch (b.primitiveKind) {
-            case OmniPrimitiveKind.DOUBLE:
-            case OmniPrimitiveKind.FLOAT:
-            case OmniPrimitiveKind.DECIMAL:
-              return b;
-          }
-          break;
-        case OmniPrimitiveKind.FLOAT:
-          switch (b.primitiveKind) {
-            case OmniPrimitiveKind.DOUBLE:
-            case OmniPrimitiveKind.DECIMAL:
-              return b;
-          }
-          break;
-        case OmniPrimitiveKind.DECIMAL:
-          switch (b.primitiveKind) {
-            case OmniPrimitiveKind.DOUBLE:
-              return b;
-          }
-          break;
-        case OmniPrimitiveKind.NUMBER:
-          switch (b.primitiveKind) {
-            case OmniPrimitiveKind.INTEGER:
-            case OmniPrimitiveKind.INTEGER_SMALL:
-            case OmniPrimitiveKind.LONG:
-            case OmniPrimitiveKind.DOUBLE:
-            case OmniPrimitiveKind.FLOAT:
-            case OmniPrimitiveKind.DECIMAL:
-              return b;
-          }
-          break;
-        case OmniPrimitiveKind.CHAR:
-          switch (b.primitiveKind) {
-            case OmniPrimitiveKind.STRING:
-              return b;
-          }
-          break;
-      }
-    }
-
-    return undefined;
-  }
-
-  private static getCommonDenominatorBetweenDictionaries(
-    a: OmniDictionaryType,
-    b: OmniDictionaryType,
-    create?: boolean
-  ): OmniDictionaryType | undefined {
-
-    const commonKey = JavaUtil.getCommonDenominatorBetween(a.keyType, b.keyType, create);
-    if (commonKey) {
-      const commonValue = JavaUtil.getCommonDenominatorBetween(a.valueType, b.valueType, create);
-      if (commonValue) {
-        if (commonKey == a.keyType && commonValue == a.valueType) {
-          return a;
-        }
-
-        if (create == false) {
-          return undefined;
-        }
-
-        const newDictionary: OmniDictionaryType = {
-          kind: OmniTypeKind.DICTIONARY,
-          keyType: commonKey,
-          valueType: commonValue,
-        };
-
-        return {...b, ...a, ...newDictionary};
       }
     }
 

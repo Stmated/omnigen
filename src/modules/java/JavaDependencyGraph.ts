@@ -1,10 +1,11 @@
 import {CompositionKind, OmniInheritableType, OmniObjectType, OmniType, OmniTypeKind} from '@parse';
 import {DependencyGraph} from '@parse/DependencyGraphBuilder';
 import {LoggerFactory} from '@util';
-import {Naming} from '@parse/Naming';
 import {OmniUtil} from '@parse/OmniUtil';
 
 export const logger = LoggerFactory.create(__filename);
+
+export type SuperMatchesCallback = { (classType: OmniObjectType): boolean};
 
 /**
  * TODO: This class sucks -- it feels like pre-optimization, and just makes things more complex than they need to be
@@ -43,7 +44,9 @@ export class JavaDependencyGraph {
           return use;
         }
 
-        throw new Error(`Said '${OmniUtil.getTypeDescription(type)}' inherit '${OmniUtil.getTypeDescription(use)}', but does not seem Java-compatible`)
+        const inheritor = OmniUtil.getTypeDescription(type);
+        const inherited = OmniUtil.getTypeDescription(use);
+        throw new Error(`Told '${inheritor}' inherit '${inherited}', but was not found in dependency graph`);
       }
     }
 
@@ -102,26 +105,54 @@ export class JavaDependencyGraph {
   public static superMatches(
     graph: DependencyGraph,
     type: OmniObjectType,
-    callback: { (classType: OmniObjectType): boolean}
+    callback: SuperMatchesCallback
   ): boolean {
 
     let pointer: OmniInheritableType | undefined = type;
     while (pointer = JavaDependencyGraph.getExtends(graph, pointer)) {
-      // TODO: Is this even correct?
-      if (pointer.kind == OmniTypeKind.GENERIC_TARGET) {
-        if (callback(pointer.source.of)) {
-          return true;
-        }
-      } else if (pointer.kind == OmniTypeKind.COMPOSITION) {
-        // ???
-      }  else if (pointer.kind == OmniTypeKind.ENUM) {
-        // ???
-      }   else if (pointer.kind == OmniTypeKind.INTERFACE) {
-        // ???
-      } else {
-        if (callback(pointer)) {
-          return true;
-        }
+      // const unwrapped = OmniUtil.getUnwrappedType(pointer);
+      // const unwrappedInheritable = OmniUtil.asInheritableType(unwrapped);
+      // if (!unwrappedInheritable) {
+      //   throw new Error(`Something is weird with the inheritable types`);
+      // }
+
+      if (this.checkTypeAndCallback(pointer, callback)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private static checkTypeAndCallback(pointer: OmniInheritableType, callback: SuperMatchesCallback): boolean {
+
+    // TODO: Is this even correct?
+    if (pointer.kind == OmniTypeKind.GENERIC_TARGET) {
+      if (callback(pointer.source.of)) {
+        return true;
+      }
+    } else if (pointer.kind == OmniTypeKind.COMPOSITION) {
+      // ???
+    } else if (pointer.kind == OmniTypeKind.ENUM) {
+      // ???
+    } else if (pointer.kind == OmniTypeKind.INTERFACE) {
+      // ???
+    } else if (pointer.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      // NOTE: This is ugly and too hardcoded. There should exist better ways of doing it.
+      //        The culprit is that the generics for the external model reference is bad.
+      //        There needs to be a way of *knowing* what the reference contains, and getUnwrappedType to handle it.
+      const unwrapped = OmniUtil.getUnwrappedType(pointer);
+      const unwrappedInheritable = OmniUtil.asInheritableType(unwrapped);
+      if (!unwrappedInheritable) {
+        throw new Error(`Something is wrong with the external model reference. It is not inheritable`);
+      }
+
+      return JavaDependencyGraph.checkTypeAndCallback(unwrappedInheritable, callback);
+
+    } else {
+
+      if (callback(pointer)) {
+        return true;
       }
     }
 

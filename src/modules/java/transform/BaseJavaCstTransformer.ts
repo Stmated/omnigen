@@ -26,7 +26,7 @@ import {
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
-  OmniReferenceType,
+  OmniHardcodedReferenceType,
   OmniType,
   OmniTypeKind,
   PrimitiveNullableKind
@@ -50,23 +50,6 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
 
     const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
-
-    // for (const type of exportableTypes.all) {
-    //
-    //   if ('name' in type && !type.nameClassifier) {
-    //     if (type.kind == OmniTypeKind.PRIMITIVE) {
-    //
-    //       // Help with potential naming collisions.
-    //       let fqn = JavaUtil.getFullyQualifiedName(type);
-    //       const fqnLastDotIndex = fqn.lastIndexOf('.');
-    //       if (fqnLastDotIndex != -1) {
-    //         fqn = fqn.substring(fqnLastDotIndex + 1);
-    //       }
-    //
-    //       type.nameClassifier = fqn;
-    //     }
-    //   }
-    // }
 
     for (const type of exportableTypes.all) {
       if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable == PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE) {
@@ -98,14 +81,17 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
         continue;
       }
-      if (!('name' in type) || !type.name) {
+
+      // NOTE: Check if wrapped type has a name and resolve/change it too?
+      const unwrappedType = OmniUtil.getUnwrappedType(type);
+      if (!('name' in unwrappedType) || !unwrappedType.name) {
         continue;
       }
 
       // NOTE: Make sure it is in pascalCase, or just use what is given?
-      type.name = Naming.safe(type.name, (v) => typeNames.includes(v));
+      unwrappedType.name = Naming.safe(unwrappedType.name, (v) => typeNames.includes(v));
 
-      typeNames.push(type.name);
+      typeNames.push(unwrappedType.name);
     }
 
     const removedTypes: OmniType[] = [];
@@ -161,7 +147,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       } else if (type.kind == OmniTypeKind.DICTIONARY) {
 
         // This is a map. What to do here? It's a top-level type, so...?
-      } else if (type.kind == OmniTypeKind.REFERENCE) {
+      } else if (type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
 
         // This is a map in the target language, which we have zero control over.
       } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
@@ -202,7 +188,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       new Java.AnnotationList(
         new Java.Annotation(
           new Java.Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
           })
         )
@@ -433,6 +419,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       // We will with the help of external libraries note what kind of class this might be.
       // Goes against how polymorphism is supposed to work, in a way, but some webservices do it this way.
       // That way methods can receive an Abstract class, but be deserialized as the correct implementation.
+      // See: https://swagger.io/docs/specification/data-models/inheritance-and-polymorphism/
 
       // We make use the the same property for all, since it is not supported in Java to have many different ones anyway.
       const propertyName = type.subTypeHints[0].qualifiers[0].path[0];
@@ -444,7 +431,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       declaration.annotations?.children.push(
         new Java.Annotation(
           new Java.Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
           }),
           new Java.AnnotationKeyValuePairList(
@@ -453,7 +440,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
               new Java.StaticMemberReference(
                 new Java.ClassName(
                   new Java.Type({
-                    kind: OmniTypeKind.REFERENCE,
+                    kind: OmniTypeKind.HARDCODED_REFERENCE,
                     fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
                   })
                 ),
@@ -476,7 +463,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         const qualifier = subTypeHint.qualifiers[0];
         subTypes.push(new Java.Annotation(
           new Java.Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
           }),
           new Java.AnnotationKeyValuePairList(
@@ -495,7 +482,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       declaration.annotations?.children.push(
         new Java.Annotation(
           new Java.Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
           }),
           new Java.AnnotationKeyValuePairList(
@@ -616,7 +603,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         new Java.Annotation(
           // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
           new Java.Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
           })
         )
@@ -803,7 +790,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
           new Java.Annotation(
             // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
             new Java.Type({
-              kind: OmniTypeKind.REFERENCE,
+              kind: OmniTypeKind.HARDCODED_REFERENCE,
               fqn: 'com.fasterxml.jackson.annotation.JsonCreator',
             })
           )
@@ -1073,7 +1060,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       getterAnnotations.push(
         new Java.Annotation(
           new Java.Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonProperty',
           }),
           new Java.AnnotationKeyValuePairList(
@@ -1476,9 +1463,9 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   ): void {
 
     // TODO: Replace this with something else? REFERENCE should be for native classes, but this is sort of not?
-    target.kind = OmniTypeKind.REFERENCE;
+    target.kind = OmniTypeKind.HARDCODED_REFERENCE;
 
-    const referenceType = target as OmniReferenceType;
+    const referenceType = target as OmniHardcodedReferenceType;
     const primitiveName = `Primitive${pascalCase(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
     referenceType.fqn = JavaUtil.getClassNameWithPackageName(referenceType, primitiveName, options);
   }

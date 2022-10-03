@@ -845,7 +845,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     addMethod.signature.annotations = new AnnotationList(
       new Annotation(
         new Type({
-          kind: OmniTypeKind.REFERENCE,
+          kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
         }),
       )
@@ -858,7 +858,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
         additionalPropertiesField,
         new AnnotationList(new Annotation(
           new Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
           }),
         ))
@@ -1172,7 +1172,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       undefined,
       new AnnotationList(
         new Java.Annotation(
-          new Java.Type({kind: OmniTypeKind.REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue'}),
+          new Java.Type({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue'}),
         )
       )
     );
@@ -1199,7 +1199,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
         const objectMapperReference = new Identifier('objectMapper');
         argumentDeclarationList.children.push(
           new ArgumentDeclaration(
-            new Type({kind: OmniTypeKind.REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper"}),
+            new Type({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper"}),
             objectMapperReference
           )
         );

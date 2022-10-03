@@ -163,7 +163,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
       annotations.push(
         new Java.Annotation(
           new Java.Type({
-            kind: OmniTypeKind.REFERENCE,
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: "com.fasterxml.jackson.annotation.JsonProperty",
           }),
           new Java.AnnotationKeyValuePairList(
@@ -189,7 +189,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
         annotations.push(
           new Java.Annotation(
             new Java.Type({
-              kind: OmniTypeKind.REFERENCE,
+              kind: OmniTypeKind.HARDCODED_REFERENCE,
               fqn: "javax.validation.constraints.NotNull",
             }),
           )

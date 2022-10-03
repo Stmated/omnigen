@@ -16,7 +16,7 @@ import {
   OmniTypeKind,
   PrimitiveNullableKind
 } from '@parse';
-import {DEFAULT_JAVA_OPTIONS, IPackageOptions, IJavaOptions, UnknownType} from '@java/JavaOptions';
+import {DEFAULT_JAVA_OPTIONS, IJavaOptions, IPackageOptions, IPackageResolver, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {CstRootNode} from '@cst/CstRootNode';
@@ -37,6 +37,11 @@ export type FqnArgs = OmniType | FqnOptions;
 type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType };
 
 export class JavaUtil {
+
+  /**
+   * Re-usable Java Visitor, so we do not create a new one every time.
+   */
+  private static readonly _javaVisitor: JavaVisitor<void> = new JavaVisitor<void>();
 
   /**
    * TODO: Return TypeName instead?
@@ -173,7 +178,7 @@ export class JavaUtil {
           const valueString = JavaUtil.getName({...args, ...{type: args.type.valueType}});
           return `${mapClass}<${keyString}, ${valueString}>`;
         }
-      case OmniTypeKind.REFERENCE:
+      case OmniTypeKind.HARDCODED_REFERENCE:
         if (!args.withPackage) {
           return JavaUtil.cleanClassName(args.type.fqn, args.withSuffix);
         } else {
@@ -199,6 +204,19 @@ export class JavaUtil {
         return JavaUtil.getClassNameWithPackageName(args.type, compositionName, args.options, args.withPackage);
       case OmniTypeKind.GENERIC_SOURCE:
         return JavaUtil.getName({...args, ...{type: args.type.of}});
+      case OmniTypeKind.EXTERNAL_MODEL_REFERENCE: {
+
+        // This is a reference to another model.
+        // It might be possible that this model has another option that what was given to this method.
+        if (args.type.model.options) {
+
+          // TODO: This way of handling it is INCREDIBLY UGLY -- need a way to make this actually typesafe!
+          const commonOptions = args.type.model.options as RealOptions<IJavaOptions>;
+          return JavaUtil.getName({...args, ...{type: args.type.of, options: commonOptions}});
+        }
+
+        return JavaUtil.getName({...args, ...{type: args.type.of}});
+      }
     }
   }
 
@@ -445,9 +463,6 @@ export class JavaUtil {
   /**
    * If the two types are in essence equal, 'a' is the one that is returned.
    * This can be used to check if 'a' and 'b' are the same (by value, not necessarily reference)
-   *
-   * @param a
-   * @param b
    */
   public static getCommonDenominatorBetween(a: OmniType, b: OmniType, create?: boolean): OmniType | undefined {
 
@@ -457,7 +472,7 @@ export class JavaUtil {
 
     if (a.kind == OmniTypeKind.PRIMITIVE && b.kind == OmniTypeKind.PRIMITIVE) {
       return this.getCommonDenominatorBetweenPrimitives(a, b);
-    } else if (a.kind == OmniTypeKind.REFERENCE && b.kind == OmniTypeKind.REFERENCE) {
+    } else if (a.kind == OmniTypeKind.HARDCODED_REFERENCE && b.kind == OmniTypeKind.HARDCODED_REFERENCE) {
       return a.fqn === b.fqn ? a : undefined;
     } else if (a.kind == OmniTypeKind.ENUM && b.kind == OmniTypeKind.ENUM) {
       // TODO: This can probably be VERY much improved -- like taking the entries that are similar between the two
@@ -518,21 +533,6 @@ export class JavaUtil {
       if (!commonIdentifierType || create == false) {
         return undefined;
       }
-
-      // if (commonIdentifierType != match.a.type) {
-      //   // TODO: Remove this and let it be handled by the GenericOmniModelTransformer that does the type explosion?
-      //   commonTargetIdentifiers.push({
-      //     kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-      //     type: commonIdentifierType,
-      //     placeholderName: 'TData', // TODO: Figure out the name automatically based on... something
-      //     sourceIdentifier: {
-      //       // TODO: What? Is this even remotely correct?
-      //       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-      //       placeholderName: 'TDataSource',
-      //       lowerBound: commonIdentifierType,
-      //     }
-      //   });
-      // }
 
       commonTargetIdentifiers.push({
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
@@ -620,7 +620,6 @@ export class JavaUtil {
   ): OmniArrayPropertiesByPositionType | undefined {
 
     if (a.properties.length === b.properties.length) {
-      const commonTypes: OmniType[] = [];
       for (let i = 0; i < a.properties.length; i++) {
         if (a.properties[i].name !== b.properties[i].name) {
           return undefined;
@@ -630,8 +629,6 @@ export class JavaUtil {
         if (!commonType) {
           return undefined;
         }
-
-        commonTypes.push(commonType);
       }
 
       // TODO: Return something else here instead, which is actually the common denominators between the two
@@ -676,30 +673,55 @@ export class JavaUtil {
         return a;
       }
 
-      if (a.primitiveKind == OmniPrimitiveKind.INTEGER || a.primitiveKind == OmniPrimitiveKind.INTEGER_SMALL) {
-        if (b.primitiveKind == OmniPrimitiveKind.LONG || b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.FLOAT || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
-          return b;
-        }
-      } else if (a.primitiveKind == OmniPrimitiveKind.LONG) {
-        if (b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.FLOAT || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
-          return b;
-        }
-      } else if (a.primitiveKind == OmniPrimitiveKind.FLOAT) {
-        if (b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
-          return b;
-        }
-      } else if (a.primitiveKind == OmniPrimitiveKind.DECIMAL) {
-        if (b.primitiveKind == OmniPrimitiveKind.DOUBLE) {
-          return b;
-        }
-      } else if (a.primitiveKind == OmniPrimitiveKind.NUMBER) {
-        if (b.primitiveKind == OmniPrimitiveKind.INTEGER || b.primitiveKind == OmniPrimitiveKind.INTEGER_SMALL || b.primitiveKind == OmniPrimitiveKind.LONG || b.primitiveKind == OmniPrimitiveKind.DOUBLE || b.primitiveKind == OmniPrimitiveKind.FLOAT || b.primitiveKind == OmniPrimitiveKind.DECIMAL) {
-          return b;
-        }
-      } else if (a.primitiveKind == OmniPrimitiveKind.CHAR) {
-        if (b.primitiveKind == OmniPrimitiveKind.STRING) {
-          return b;
-        }
+      switch (a.primitiveKind) {
+        case OmniPrimitiveKind.INTEGER:
+        case OmniPrimitiveKind.INTEGER_SMALL:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.LONG:
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.FLOAT:
+            case  OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.LONG:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.FLOAT:
+            case OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.FLOAT:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.DECIMAL:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.DOUBLE:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.NUMBER:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.INTEGER:
+            case OmniPrimitiveKind.INTEGER_SMALL:
+            case OmniPrimitiveKind.LONG:
+            case OmniPrimitiveKind.DOUBLE:
+            case OmniPrimitiveKind.FLOAT:
+            case OmniPrimitiveKind.DECIMAL:
+              return b;
+          }
+          break;
+        case OmniPrimitiveKind.CHAR:
+          switch (b.primitiveKind) {
+            case OmniPrimitiveKind.STRING:
+              return b;
+          }
+          break;
       }
     }
 
@@ -736,11 +758,6 @@ export class JavaUtil {
 
     return undefined;
   }
-
-  /**
-   * Re-usable Java Visitor, so we do not create a new one every time.
-   */
-  private static readonly _javaVisitor: JavaVisitor<void> = new JavaVisitor<void>();
 
   public static getConstructorRequirements(
     root: CstRootNode,

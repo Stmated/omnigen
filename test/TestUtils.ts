@@ -82,6 +82,10 @@ export class TestUtils {
     const openRpcParser = openRpcParserBootstrap.createParser(openRpcRealOptions);
     const parseResult = openRpcParser.parse();
 
+    // NOTE: Would be good if this could be handled in some more central way, so it can never be missed.
+    //        But I am unsure how and where that would be.
+    parseResult.model.options = schemaIncomingOptions;
+
     const realJavaOptions = OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_CONVERTERS);
 
     for (const transformer of transformers) {

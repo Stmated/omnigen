@@ -1,4 +1,5 @@
 import {IOptions, PrimitiveGenerificationChoice} from '@options';
+import {OmniTypeKind} from '@parse';
 
 export interface ITargetOptions extends IOptions {
 
@@ -15,6 +16,12 @@ export interface ITargetOptions extends IOptions {
    * It can clutter to have each error response type be in its own compilation unit, so we can compress them.
    */
   compressUnreferencedSubTypes: boolean;
+
+  /**
+   * The kinds of types that are allowed to be compressed.
+   * An empty array means that all types are allowed.
+   */
+  compressKinds: OmniTypeKind[];
 }
 
 export interface IGenericTargetOptions extends ITargetOptions {
@@ -23,5 +30,6 @@ export interface IGenericTargetOptions extends ITargetOptions {
 
 export const DEFAULT_TARGET_OPTIONS: ITargetOptions = {
   compressSoloReferencedTypes: true,
-  compressUnreferencedSubTypes: true
+  compressUnreferencedSubTypes: true,
+  compressKinds: []
 };

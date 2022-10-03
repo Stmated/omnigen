@@ -1,7 +1,5 @@
 import {JSONSchema7Definition} from 'json-schema';
 import {IOptions, RealOptions} from '@options';
-import {IParserOptions} from '@parse/IParserOptions';
-import {ITargetOptions} from '@interpret';
 
 export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
 
@@ -17,13 +15,6 @@ export interface OmniParameter {
 export interface OmniAnnotation {
   name: string;
   parameters: OmniParameter[];
-}
-
-export interface OmniMethod {
-  name: string;
-  parameters: OmniParameter[];
-  returnType: OmniObjectType;
-  accessLevel: OmniAccessLevel;
 }
 
 export enum OmniAccessLevel {
@@ -49,6 +40,8 @@ export interface OmniProperty {
   summary?: string;
   deprecated?: boolean;
   required?: boolean;
+  readOnly?: boolean;
+  writeOnly?: boolean;
 
   accessLevel?: OmniAccessLevel;
 
@@ -62,7 +55,12 @@ export enum OmniTypeKind {
   PRIMITIVE = "PRIMITIVE",
   ENUM = "ENUM",
   OBJECT = "OBJECT",
-  REFERENCE = "REFERENCE",
+  HARDCODED_REFERENCE = "HARDCODED_REFERENCE",
+  /**
+   * The type lies in another, outside model.
+   * Most likely a model that contains types common to multiple other models.
+   */
+  EXTERNAL_MODEL_REFERENCE = "EXTERNAL_MODEL_REFERENCE",
   DICTIONARY = "DICTIONARY",
   ARRAY = "ARRAY",
   ARRAY_PROPERTIES_BY_POSITION = "ARRAY_PROPERTIES_BY_POSITION",
@@ -112,19 +110,23 @@ export type OmniInheritableType = OmniObjectType
   | OmniGenericTargetType
   | OmniCompositionType
   | OmniEnumType
-  | OmniInterfaceType;
+  | OmniInterfaceType
+  | OmniExternalModelReferenceType<OmniInheritableType> // Needs to be unwrapped/resolved every time
+  ;
 
 export type OmniType = OmniNullType
   | OmniArrayTypes
   | OmniObjectType
   | OmniUnknownType
   | OmniDictionaryType
-  | OmniReferenceType
+  | OmniHardcodedReferenceType
+  | OmniExternalModelReferenceType<OmniType>
   | OmniPrimitiveType
   | OmniCompositionType
   | OmniEnumType
   | OmniGenericType
-  | OmniInterfaceType;
+  | OmniInterfaceType
+  ;
 
 export type TypeNameFn = (value: string) => boolean;
 export type TypeNameCallback = { (hasDuplicateFn?: TypeNameFn): string | undefined };
@@ -159,8 +161,8 @@ export interface OmniBaseType<T> {
    * TODO: Delete? It is up to more exact properties in more exact types if it is readonly or not?
    *        Like Literal's "constantValue"
    */
-  readOnly?: boolean;
-  writeOnly?: boolean;
+  // readOnly?: boolean;
+  // writeOnly?: boolean;
 }
 
 export enum CompositionKind {
@@ -197,16 +199,20 @@ export interface OmniCompositionXORType extends OmniCompositionBaseType<Composit
 }
 
 type OmniDictionaryKnownKind = OmniTypeKind.DICTIONARY;
-
 export interface OmniDictionaryType extends OmniBaseType<OmniDictionaryKnownKind> {
   keyType: OmniType;
   valueType: OmniType;
 }
 
-type OmniReferenceKnownKind = OmniTypeKind.REFERENCE;
-
-export interface OmniReferenceType extends OmniBaseType<OmniReferenceKnownKind> {
+type OmniHardcodedReferenceKnownKind = OmniTypeKind.HARDCODED_REFERENCE;
+export interface OmniHardcodedReferenceType extends OmniBaseType<OmniHardcodedReferenceKnownKind> {
   fqn: string;
+}
+
+type OmniExternalModelReferenceKnownKind = OmniTypeKind.EXTERNAL_MODEL_REFERENCE;
+export interface OmniExternalModelReferenceType<TType extends OmniType> extends OmniBaseType<OmniExternalModelReferenceKnownKind> {
+  model: OmniModel;
+  of: TType;
 }
 
 type OmniArrayKnownKind = OmniTypeKind.ARRAY;
@@ -260,7 +266,6 @@ export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
   isAny?: boolean;
 }
 
-type OmniNestableType = OmniObjectType | OmniEnumType;
 type OmniObjectKnownKind = OmniTypeKind.OBJECT;
 
 export interface OmniSubTypeHint {
@@ -289,11 +294,8 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind>, IOmni
   subTypeHints?: OmniSubTypeHint[];
 
   properties: OmniProperty[];
-  requiredProperties?: OmniProperty[];
+  // requiredProperties?: OmniProperty[];
   additionalProperties?: boolean;
-
-  annotations?: OmniAnnotation[];
-  nestedTypes?: OmniNestableType[];
 }
 
 type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
@@ -517,6 +519,12 @@ export interface OmniModel {
   servers: OmniServer[];
   externalDocumentations?: OmniExternalDocumentation[];
   continuations?: OmniLink[];
+
+  /**
+   * Any options given from the schema to the model.
+   * This can be absolutely anything, and it is up to some kind of conversion to decide how they should be used.
+   */
+  options?: Record<string, unknown>;
 }
 
 export interface OmniModelParserResult<TOpt extends IOptions> {

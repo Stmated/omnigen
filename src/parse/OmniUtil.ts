@@ -1,5 +1,5 @@
 import {
-  CompositionKind,
+  CompositionKind, OmniExternalModelReferenceType,
   OmniInheritableType,
   OmniModel,
   OmniPrimitiveConstantValue,
@@ -7,6 +7,7 @@ import {
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
+  OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
   PrimitiveNullableKind,
@@ -69,7 +70,7 @@ export class OmniUtil {
   public static isAssignableTo(type: TraverseInput, needle: OmniType): boolean {
 
     const result: {value: boolean} = {value: false};
-    OmniUtil.traverseTypesInternal(type, 0, true, (localType) => {
+    OmniUtil.traverseTypesInternal(type, 0, (localType) => {
 
       if (localType.kind == OmniTypeKind.GENERIC_TARGET) {
         return 'skip';
@@ -81,36 +82,90 @@ export class OmniUtil {
       }
 
       return undefined;
-    });
+    }, undefined);
 
     return result.value;
   }
 
-  public static getUnwrappedTopType(type: OmniType): OmniType {
+  /**
+   * Resolves the type into the local visible type(s).
+   * This means the types that are externally visible for this type.
+   * For example:
+   * - If an object, then the object itself.
+   * - If an array, then the array type and item type(s).
+   * - If a generic, then the generic type itself and the generic target types.
+   *
+   * This is used to know if the type will be output into the compilation unit/source code.
+   * That way we can know if this type is hard-linked to a certain source code.
+   *
+   * NOTE: This might not be correct for all future target languages.
+   *        Might need to be looked at in the future.
+   */
+  public static getResolvedVisibleTypes(type: OmniType): OmniType[] {
 
     if (type.kind == OmniTypeKind.ARRAY) {
-      return type.of;
+      return [type, ...OmniUtil.getResolvedVisibleTypes(type.of)];
+    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+      const sourceType = OmniUtil.getResolvedVisibleTypes(type.source.of);
+      const targetTypes = type.targetIdentifiers.flatMap(it => OmniUtil.getResolvedVisibleTypes(it.type));
+      return [...sourceType, ...targetTypes];
+    }
+
+    // Should we follow external model references here?
+
+    return [type];
+  }
+
+  /**
+   * Resolves the type into its edge type, that is the innermost type that contains the functionality of the type.
+   * The returned type can be a completely other type than the given one, following interface and/or external references.
+   */
+  public static getResolvedEdgeType(type: OmniType): OmniType {
+
+    const unwrappedType = OmniUtil.getUnwrappedType(type);
+    if (unwrappedType.kind == OmniTypeKind.ARRAY) {
+      return OmniUtil.getResolvedEdgeType(unwrappedType.of);
+    }
+
+    if (unwrappedType.kind == OmniTypeKind.INTERFACE) {
+      // NOTE: Should this be included?
+      return OmniUtil.getResolvedEdgeType(unwrappedType.of);
+    }
+
+    return unwrappedType;
+  }
+
+  /**
+   * Gets the actual type of the given type, giving back the first type that is not a hollow reference to another type.
+   * The returned type might not be located in the same model as the given type.
+   */
+  public static getUnwrappedType(
+    type: OmniType
+  ): Exclude<OmniType, OmniExternalModelReferenceType<OmniType>> {
+
+    if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      return OmniUtil.getUnwrappedType(type.of);
     }
 
     return type;
   }
 
   public static traverseTypes(type: TraverseInput, callback: TraverseCallback): void {
-    OmniUtil.traverseTypesInternal(type, 0, false, callback);
+    OmniUtil.traverseTypesInternal(type, 0, undefined, callback);
   }
 
   private static traverseTypesInternal(
     type: TraverseInput,
     depth: number,
-    checkEarly: boolean,
-    callback: TraverseCallback
+    onDown?: TraverseCallback,
+    onUp?: TraverseCallback
   ): TraverseCallbackResult {
 
     if (!type) return;
 
     if (Array.isArray(type)) {
       for (const entry of type) {
-        const entryResult = OmniUtil.traverseTypesInternal(entry, depth, checkEarly, callback);
+        const entryResult = OmniUtil.traverseTypesInternal(entry, depth, onDown, onUp);
         if (entryResult == 'abort') {
           return 'abort';
         }
@@ -118,8 +173,8 @@ export class OmniUtil {
       return;
     }
 
-    if (checkEarly) {
-      switch (callback(type, depth)) {
+    if (onDown) {
+      switch (onDown(type, depth)) {
         case 'abort':
           return 'abort';
         case 'skip':
@@ -129,48 +184,47 @@ export class OmniUtil {
     }
 
     if (type.kind == OmniTypeKind.OBJECT) {
-      if (this.traverseTypesInternal(type.extendedBy, depth + 1, checkEarly, callback) == 'abort') return 'abort';
-      if (this.traverseTypesInternal(type.nestedTypes, depth + 1, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.extendedBy, depth + 1, onDown, onUp) == 'abort') return 'abort';
       for (const p of type.properties) {
-        if (this.traverseTypesInternal(p.type, depth, checkEarly, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(p.type, depth, onDown, onUp) == 'abort') return 'abort';
       }
     } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
-      if (this.traverseTypesInternal(type.types, depth, checkEarly, callback) == 'abort') return 'abort';
-      if (this.traverseTypesInternal(type.commonDenominator, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.types, depth, onDown, onUp) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.commonDenominator, depth, onDown, onUp) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
       for (const p of type.properties) {
-        if (this.traverseTypesInternal(p.type, depth, checkEarly, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(p.type, depth, onDown, onUp) == 'abort') return 'abort';
       }
-      if (this.traverseTypesInternal(type.commonDenominator, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.commonDenominator, depth, onDown, onUp) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
       if (type.compositionKind == CompositionKind.AND) {
-        if (this.traverseTypesInternal(type.andTypes, depth + 1, checkEarly, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(type.andTypes, depth + 1, onDown, onUp) == 'abort') return 'abort';
       } else if (type.compositionKind == CompositionKind.OR) {
-        if (this.traverseTypesInternal(type.orTypes, depth + 1, checkEarly, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(type.orTypes, depth + 1, onDown, onUp) == 'abort') return 'abort';
       } else if (type.compositionKind == CompositionKind.XOR) {
-        if (this.traverseTypesInternal(type.xorTypes, depth + 1, checkEarly, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(type.xorTypes, depth + 1, onDown, onUp) == 'abort') return 'abort';
       } else if (type.compositionKind == CompositionKind.NOT) {
-        if (this.traverseTypesInternal(type.notTypes, depth + 1, checkEarly, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(type.notTypes, depth + 1, onDown, onUp) == 'abort') return 'abort';
       }
     } else if (type.kind == OmniTypeKind.ARRAY) {
-      if (this.traverseTypesInternal(type.of, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.of, depth, onDown, onUp) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.DICTIONARY) {
-      if (this.traverseTypesInternal(type.keyType, depth, checkEarly, callback) == 'abort') return 'abort';
-      if (this.traverseTypesInternal(type.valueType, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.keyType, depth, onDown, onUp) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.valueType, depth, onDown, onUp) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
       // if (this.traverseTypesInternal(type.of, depth, callback) == 'abort') return 'abort';
-      if (this.traverseTypesInternal(type.sourceIdentifiers, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.sourceIdentifiers, depth, onDown, onUp) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      if (this.traverseTypesInternal(type.targetIdentifiers, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.targetIdentifiers, depth, onDown, onUp) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-      if (this.traverseTypesInternal(type.type, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.type, depth, onDown, onUp) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-      if (this.traverseTypesInternal(type.lowerBound, depth, checkEarly, callback) == 'abort') return 'abort';
-      if (this.traverseTypesInternal(type.upperBound, depth, checkEarly, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.lowerBound, depth, onDown, onUp) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.upperBound, depth, onDown, onUp) == 'abort') return 'abort';
     }
 
-    if (!checkEarly) {
-      switch (callback(type, depth)) {
+    if (onUp) {
+      switch (onUp(type, depth)) {
         case 'abort':
           return 'abort';
         case 'skip':
@@ -181,7 +235,7 @@ export class OmniUtil {
   }
 
   private static getTypesRecursively(type: TraverseInput, target: Set<OmniType>, edge: Set<OmniType>, depth: number): void {
-    OmniUtil.traverseTypesInternal(type, depth, false, (localType, depth) => {
+    OmniUtil.traverseTypesInternal(type, depth, undefined, (localType, depth) => {
       target.add(localType);
       if (depth == 0) {
         edge.add(localType);
@@ -190,6 +244,19 @@ export class OmniUtil {
   }
 
   public static asInheritableType(type: OmniType): OmniInheritableType | undefined {
+
+    if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+
+      const resolvedType = OmniUtil.getUnwrappedType(type);
+      const asInheritable = OmniUtil.asInheritableType(resolvedType);
+      if (asInheritable) {
+        // NOTE: This cast should not exist here, work needs to be done to make this all-the-way generic.
+        return type as OmniInheritableType;
+      } else {
+        return undefined;
+      }
+    }
+
     if (type.kind == OmniTypeKind.OBJECT
       || type.kind == OmniTypeKind.GENERIC_TARGET
       || type.kind == OmniTypeKind.COMPOSITION
@@ -225,7 +292,7 @@ export class OmniUtil {
     if (!type) return;
     if (Array.isArray(type)) {
       for (const entry of type) {
-        const entryResult = OmniUtil.traverseTypesInternal(entry, depth, false, callback);
+        const entryResult = OmniUtil.traverseTypesInternal(entry, depth, undefined, callback);
         if (entryResult == 'abort') {
           return 'abort';
         }
@@ -243,21 +310,21 @@ export class OmniUtil {
     }
 
     if (type.kind == OmniTypeKind.OBJECT) {
-      if (this.traverseTypesInternal(type.extendedBy, depth + 1, false, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.extendedBy, depth + 1, undefined, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
-      if (this.traverseTypesInternal(type.types, depth, false, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.types, depth, undefined, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
       for (const p of type.properties) {
-        if (this.traverseTypesInternal(p.type, depth, false, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(p.type, depth, undefined, callback) == 'abort') return 'abort';
       }
-      if (this.traverseTypesInternal(type.commonDenominator, depth, false, callback) == 'abort') return 'abort';
+      if (this.traverseTypesInternal(type.commonDenominator, depth, undefined, callback) == 'abort') return 'abort';
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
       if (type.compositionKind == CompositionKind.AND) {
-        if (this.traverseTypesInternal(type.andTypes, depth + 1, false, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(type.andTypes, depth + 1, undefined, callback) == 'abort') return 'abort';
       } else if (type.compositionKind == CompositionKind.OR) {
-        if (this.traverseTypesInternal(type.orTypes, depth + 1, false, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(type.orTypes, depth + 1, undefined, callback) == 'abort') return 'abort';
       } else if (type.compositionKind == CompositionKind.XOR) {
-        if (this.traverseTypesInternal(type.xorTypes, depth + 1, false, callback) == 'abort') return 'abort';
+        if (this.traverseTypesInternal(type.xorTypes, depth + 1, undefined, callback) == 'abort') return 'abort';
       } else if (type.compositionKind == CompositionKind.NOT) {
         // TODO: How to tell consumer that this is a NEGATION?!
         // if (this.traverseTypesInternal(type.notTypes, depth + 1, callback) == 'abort') return 'abort';
@@ -442,6 +509,8 @@ export class OmniUtil {
         return '_any';
       }
       return "_unknown";
+    }else if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      return (fn) => `${Naming.safe(OmniUtil.getVirtualTypeName(type.of), fn)}From${type.model.name}`;
     }
 
     // TODO: All types should be able to return a "virtual" type name, which can be used for compositions or whatever!
@@ -471,5 +540,220 @@ export class OmniUtil {
     }
 
     return type;
+  }
+
+  public static swapTypeForWholeModel<T extends OmniType, R extends OmniType>(
+    model: OmniModel,
+    needle: T,
+    replacement: R,
+    maxDepth = 10
+  ): void {
+
+    [...model.types].forEach((t) => {
+
+      const swapped = OmniUtil.swapType(t, needle, replacement, maxDepth);
+      if (swapped) {
+        // NOTE: Might crash when we remove from ourselves?
+        const idx = model.types.indexOf(t);
+        if (idx !== -1) {
+          model.types.splice(idx, 1, swapped);
+        }
+      }
+    });
+
+    model.endpoints.forEach(e => {
+
+      const swapped = OmniUtil.swapType(e.request.type, needle, replacement, maxDepth);
+      if (swapped) {
+        e.request.type = swapped;
+      }
+
+      e.responses.forEach(r => {
+        const swapped = OmniUtil.swapType(r.type, needle, replacement, maxDepth);
+        if (swapped) {
+          r.type = swapped;
+        }
+      });
+    });
+    (model.continuations || []).forEach(c => {
+      c.mappings.forEach(m => {
+        (m.source.propertyPath || []).forEach(p => {
+          const swappedOwner = OmniUtil.swapType(p.owner, needle, replacement, maxDepth);
+          if (swappedOwner) {
+            p.owner = swappedOwner as OmniPropertyOwner;
+          }
+          const swappedType = OmniUtil.swapType(p.type, needle, replacement, maxDepth);
+          if (swappedType) {
+            p.type = swappedType;
+          }
+        });
+        (m.target.propertyPath || []).forEach(p => {
+          const swappedOwner = OmniUtil.swapType(p.owner, needle, replacement, maxDepth);
+          if (swappedOwner) {
+            p.owner = swappedOwner as OmniPropertyOwner;
+          }
+          const swappedType = OmniUtil.swapType(p.type, needle, replacement, maxDepth);
+          if (swappedType) {
+            p.type = swappedType;
+          }
+        });
+      })
+    });
+  }
+
+  /**
+   * Iterates through a type and all its related types, and replaces all found needles with the given replacement.
+   *
+   * If a type is returned from this method, then it is up to the caller to replace the type relative to the root's owner.
+   *
+   * TODO: Implement a general way of traversing all the types, so we do not need to duplicate this functionality everywhere!
+   * TODO: This feels very inefficient right now... needs a very good revamp
+   */
+  public static swapType<T extends OmniType, R extends OmniType>(
+    root: OmniType,
+    needle: T,
+    replacement: R,
+    maxDepth = 10
+  ): R | undefined {
+
+    if (root == needle) {
+      return replacement;
+    }
+
+    if (maxDepth == 0) {
+      return undefined;
+    }
+
+    if (root.kind == OmniTypeKind.COMPOSITION) {
+
+      let types: OmniType[];
+      switch (root.compositionKind) {
+        case CompositionKind.AND:
+          types = root.andTypes;
+          break;
+        case CompositionKind.OR:
+          types = root.orTypes;
+          break;
+        case CompositionKind.XOR:
+          types = root.xorTypes;
+          break;
+        case CompositionKind.NOT:
+          types = root.notTypes;
+          break;
+      }
+
+      for (let i = 0; i < types.length; i++) {
+        const found = OmniUtil.swapType(types[i], needle, replacement, maxDepth - 1);
+        if (found) {
+          types.splice(i, 1, replacement);
+        }
+      }
+    } else if (root.kind == OmniTypeKind.OBJECT) {
+      if (root.extendedBy) {
+        const found = OmniUtil.swapType(root.extendedBy, needle, replacement, maxDepth - 1);
+        if (found) {
+          const inheritableReplacement = OmniUtil.asInheritableType(replacement);
+          if (!inheritableReplacement) {
+            throw new Error(`Not allowed to use '${OmniUtil.getTypeDescription(replacement)}' as extendable type`);
+          }
+
+          root.extendedBy = inheritableReplacement;
+        }
+      }
+
+      for (const property of root.properties) {
+        const found = OmniUtil.swapType(property.type, needle, replacement, maxDepth - 1);
+        if (found) {
+          property.type = replacement;
+        }
+      }
+    } else if (root.kind == OmniTypeKind.INTERFACE) {
+      const inheritableReplacement = OmniUtil.asInheritableType(replacement);
+      if (inheritableReplacement) {
+        const found = OmniUtil.swapType(root.of, needle, inheritableReplacement, maxDepth - 1);
+        if (found) {
+          root.of = inheritableReplacement;
+        }
+      } else {
+        throw new Error(`Cannot replace, since the interface requires a replacement that is inheritable`);
+      }
+    } else if (root.kind == OmniTypeKind.GENERIC_TARGET) {
+
+      for (let i = 0; i < root.targetIdentifiers.length; i++) {
+        const identifier = root.targetIdentifiers[i];
+        const found = OmniUtil.swapType(identifier.type, needle, replacement, maxDepth - 1);
+        if (found) {
+          identifier.type = found;
+        }
+      }
+
+      const found = OmniUtil.swapType(root.source, needle, replacement, maxDepth - 1);
+      if (found) {
+        if (found.kind == OmniTypeKind.GENERIC_SOURCE) {
+          root.source = found;
+        } else {
+          throw new Error(`Cannot replace, since it must be a generic source`);
+        }
+      }
+
+    } else if (root.kind == OmniTypeKind.GENERIC_SOURCE) {
+
+      for (let i = 0; i < root.sourceIdentifiers.length; i++) {
+        const identifier = root.sourceIdentifiers[i];
+        if (identifier.lowerBound) {
+          const found = OmniUtil.swapType(identifier.lowerBound, needle, replacement, maxDepth - 1);
+          if (found) {
+            identifier.lowerBound = found;
+          }
+        }
+        if (identifier.upperBound) {
+          const found = OmniUtil.swapType(identifier.upperBound, needle, replacement, maxDepth - 1);
+          if (found) {
+            identifier.upperBound = found;
+          }
+        }
+      }
+
+      const found = OmniUtil.swapType(root.of, needle, replacement, maxDepth - 1);
+      if (found) {
+        if (found.kind == OmniTypeKind.OBJECT) {
+          root.of = found;
+        } else {
+          throw new Error(`Cannot replace, since the replacement has to be an object`);
+        }
+      }
+    } else if (root.kind == OmniTypeKind.DICTIONARY) {
+
+      const foundKey = OmniUtil.swapType(root.keyType, needle, replacement, maxDepth - 1);
+      if (foundKey) {
+        root.keyType = foundKey;
+      }
+
+      const foundValue = OmniUtil.swapType(root.valueType, needle, replacement, maxDepth - 1);
+      if (foundValue) {
+        root.valueType = foundValue;
+      }
+    } else if (root.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
+      for (let i = 0; i < root.types.length; i++) {
+        const found = OmniUtil.swapType(root.types[i], needle, replacement, maxDepth - 1);
+        if (found) {
+          root.types.splice(i, 1, found);
+        }
+      }
+    } else if (root.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+      for (const property of root.properties) {
+        const found = OmniUtil.swapType(property.type, needle, replacement, maxDepth - 1);
+        if (found) {
+          property.type = found;
+        }
+      }
+    } else if (root.kind == OmniTypeKind.ARRAY) {
+      const found = OmniUtil.swapType(root.of, needle, replacement, maxDepth - 1);
+      if (found) {
+        root.of = found;
+      }
+    }
+
+    return undefined;
   }
 }

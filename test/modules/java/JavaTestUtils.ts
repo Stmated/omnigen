@@ -6,11 +6,10 @@ import {ParsedJavaTestVisitor} from '../../ParsedJavaTestVisitor';
 import {JavaRenderer} from '@java/render/JavaRenderer';
 import {JavaInterpreter} from '@java';
 import {
-  IOpenRpcParserOptions,
+  DEFAULT_OPENRPC_OPTIONS,
+  IOpenRpcParserOptions, OmniModelParserResult,
 } from '../../../src';
 import {RealOptions} from '../../../src/options';
-import {DEFAULT_PARSER_OPTIONS} from '../../../src/parse/IParserOptions';
-import {JSONRPC_20_PARSER_OPTIONS} from '../../../src/parse/openrpc/JsonRpcOptions';
 
 export class JavaTestUtils {
 
@@ -18,10 +17,14 @@ export class JavaTestUtils {
     fileName: string,
     type: KnownSchemaNames = 'openrpc',
     javaOptions: IJavaOptions = DEFAULT_JAVA_OPTIONS,
-    openRpcOptions: IOpenRpcParserOptions = {...DEFAULT_PARSER_OPTIONS, ...JSONRPC_20_PARSER_OPTIONS}
+    openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS
   ): Promise<Map<string, string>> {
 
     const parseResult = await TestUtils.readExample(type, fileName, openRpcOptions, javaOptions);
+    return await this.getFileContentsFromParseResult(parseResult);
+  }
+
+  public static async getFileContentsFromParseResult(parseResult: OmniModelParserResult<IJavaOptions>) {
 
     const interpretation = await new JavaInterpreter().buildSyntaxTree(parseResult.model, parseResult.options);
     return JavaTestUtils.getFileContents(parseResult.options, interpretation);

@@ -12,7 +12,7 @@ import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {OmniUtil} from '@parse/OmniUtil';
-import {IncomingOptions, RealOptions} from '@options';
+import {RealOptions} from '@options';
 import {ITargetOptions} from '@interpret';
 
 /**
@@ -69,7 +69,7 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<ITarget
 
           // We only swap the DIRECT depended types.
           // NOTE: This might be incorrect. Will notice how it feels/looks after a few examples.
-          InterfaceJavaCstTransformer.swapType(implementor, inheritableType, interfaceType, 1);
+          OmniUtil.swapType(implementor, inheritableType, interfaceType, 1);
 
           // TODO: We need to create an interface version of ALL types that inheritableType inherit from
           //        This is because an interface cannot extend a class, they can only inherit from other interfaces
@@ -135,154 +135,5 @@ export class InterfaceJavaCstTransformer implements OmniModelTransformer<ITarget
       // There is no other extension, so we just add this.
       type.extendedBy = interfaceType;
     }
-  }
-
-  /**
-   * Iterates through a type and all its related types, and replaces all found needles with the given replacement.
-   *
-   * TODO: Implement a general way of traversing all the types, so we do not need to duplicate this functionality everywhere!
-   * TODO: This feels very inefficient right now... needs a very good revamp
-   */
-  public static swapType<T extends OmniType, R extends OmniType>(root: OmniType, needle: T, replacement: R, maxDepth: number): R | undefined {
-
-    if (root == needle) {
-      return replacement;
-    }
-
-    if (maxDepth == 0) {
-      return undefined;
-    }
-
-    if (root.kind == OmniTypeKind.COMPOSITION) {
-
-      let types: OmniType[];
-      switch (root.compositionKind) {
-        case CompositionKind.AND:
-          types = root.andTypes;
-          break;
-        case CompositionKind.OR:
-          types = root.orTypes;
-          break;
-        case CompositionKind.XOR:
-          types = root.xorTypes;
-          break;
-        case CompositionKind.NOT:
-          types = root.notTypes;
-          break;
-      }
-
-      for (let i = 0; i < types.length; i++) {
-        const found = InterfaceJavaCstTransformer.swapType(types[i], needle, replacement, maxDepth - 1);
-        if (found) {
-          types.splice(i, 1, replacement);
-        }
-      }
-    } else if (root.kind == OmniTypeKind.OBJECT) {
-      if (root.extendedBy) {
-        const found = InterfaceJavaCstTransformer.swapType(root.extendedBy, needle, replacement, maxDepth - 1);
-        if (found) {
-          const inheritableReplacement = OmniUtil.asInheritableType(replacement);
-          if (!inheritableReplacement) {
-            throw new Error(`Not allowed to use '${OmniUtil.getTypeDescription(replacement)}' as extendable type`);
-          }
-
-          root.extendedBy = inheritableReplacement;
-        }
-      }
-
-      for (const property of root.properties) {
-        const found = InterfaceJavaCstTransformer.swapType(property.type, needle, replacement, maxDepth - 1);
-        if (found) {
-          property.type = replacement;
-        }
-      }
-    } else if (root.kind == OmniTypeKind.INTERFACE) {
-      const inheritableReplacement = OmniUtil.asInheritableType(replacement);
-      if (inheritableReplacement) {
-        const found = InterfaceJavaCstTransformer.swapType(root.of, needle, inheritableReplacement, maxDepth - 1);
-        if (found) {
-          root.of = inheritableReplacement;
-        }
-      } else {
-        throw new Error(`Cannot replace, since the interface requires a replacement that is inheritable`);
-      }
-    } else if (root.kind == OmniTypeKind.GENERIC_TARGET) {
-
-      for (let i = 0; i < root.targetIdentifiers.length; i++) {
-        const identifier = root.targetIdentifiers[i];
-        const found = InterfaceJavaCstTransformer.swapType(identifier.type, needle, replacement, maxDepth - 1);
-        if (found) {
-          identifier.type = found;
-        }
-      }
-
-      const found = InterfaceJavaCstTransformer.swapType(root.source, needle, replacement, maxDepth - 1);
-      if (found) {
-        if (found.kind == OmniTypeKind.GENERIC_SOURCE) {
-          root.source = found;
-        } else {
-          throw new Error(`Cannot replace, since it must be a generic source`);
-        }
-      }
-
-    } else if (root.kind == OmniTypeKind.GENERIC_SOURCE) {
-
-      for (let i = 0; i < root.sourceIdentifiers.length; i++) {
-        const identifier = root.sourceIdentifiers[i];
-        if (identifier.lowerBound) {
-          const found = InterfaceJavaCstTransformer.swapType(identifier.lowerBound, needle, replacement, maxDepth - 1);
-          if (found) {
-            identifier.lowerBound = found;
-          }
-        }
-        if (identifier.upperBound) {
-          const found = InterfaceJavaCstTransformer.swapType(identifier.upperBound, needle, replacement, maxDepth - 1);
-          if (found) {
-            identifier.upperBound = found;
-          }
-        }
-      }
-
-      const found = InterfaceJavaCstTransformer.swapType(root.of, needle, replacement, maxDepth - 1);
-      if (found) {
-        if (found.kind == OmniTypeKind.OBJECT) {
-          root.of = found;
-        } else {
-          throw new Error(`Cannot replace, since the replacement has to be an object`);
-        }
-      }
-    } else if (root.kind == OmniTypeKind.DICTIONARY) {
-
-      const foundKey = InterfaceJavaCstTransformer.swapType(root.keyType, needle, replacement, maxDepth - 1);
-      if (foundKey) {
-        root.keyType = foundKey;
-      }
-
-      const foundValue = InterfaceJavaCstTransformer.swapType(root.valueType, needle, replacement, maxDepth - 1);
-      if (foundValue) {
-        root.valueType = foundValue;
-      }
-    } else if (root.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
-      for (let i = 0; i < root.types.length; i++) {
-        const found = InterfaceJavaCstTransformer.swapType(root.types[i], needle, replacement, maxDepth - 1);
-        if (found) {
-          root.types.splice(i, 1, found);
-        }
-      }
-    } else if (root.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-      for (const property of root.properties) {
-        const found = InterfaceJavaCstTransformer.swapType(property.type, needle, replacement, maxDepth - 1);
-        if (found) {
-          property.type = found;
-        }
-      }
-    } else if (root.kind == OmniTypeKind.ARRAY) {
-      const found = InterfaceJavaCstTransformer.swapType(root.of, needle, replacement, maxDepth - 1);
-      if (found) {
-        root.of = found;
-      }
-    }
-
-    return undefined;
   }
 }

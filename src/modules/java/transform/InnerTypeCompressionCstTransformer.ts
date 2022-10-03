@@ -54,20 +54,23 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
 
       visitType: (node) => {
 
-        const usedType = OmniUtil.getUnwrappedTopType(node.omniType);
-        if (usedType.kind == OmniTypeKind.OBJECT
-          || usedType.kind == OmniTypeKind.COMPOSITION
-          || usedType.kind == OmniTypeKind.ENUM
-          || usedType.kind == OmniTypeKind.INTERFACE) {
+        for (const usedType of OmniUtil.getResolvedVisibleTypes(node.omniType)) {
 
-          const cu = cuInfoStack[cuInfoStack.length - 1];
-          const mapping = typeMapping.get(usedType);
-          if (mapping) {
-            mapping.usedIn.add(cu.cu);
-          } else {
-            typeMapping.set(usedType, {
-              usedIn: new Set([cu.cu]),
-            });
+          // We will only compress certain kind of types.
+          if (usedType.kind == OmniTypeKind.OBJECT
+            || usedType.kind == OmniTypeKind.COMPOSITION
+            || usedType.kind == OmniTypeKind.ENUM
+            || usedType.kind == OmniTypeKind.INTERFACE) {
+
+            const cu = cuInfoStack[cuInfoStack.length - 1];
+            const mapping = typeMapping.get(usedType);
+            if (mapping) {
+              mapping.usedIn.add(cu.cu);
+            } else {
+              typeMapping.set(usedType, {
+                usedIn: new Set([cu.cu]),
+              });
+            }
           }
         }
       }
@@ -79,29 +82,43 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
         continue;
       }
 
-      const targetUnit = [...usedInUnits.values()][0];
+      const usedInUnit = [...usedInUnits.values()][0];
       const type = e[0];
-      if (OmniUtil.isAssignableTo(targetUnit.object.extends?.type.omniType, type)) {
+      if (OmniUtil.isAssignableTo(usedInUnit.object.extends?.type.omniType, type)) {
 
-        if (options.compressUnreferencedSubTypes) {
+        // If the types are assignable, it means that the single use is a class extension.
+        if (options.compressUnreferencedSubTypes && this.isAllowedKind(usedInUnit, options)) {
 
           // If the only use is as an extension, then IF we compress, the source/target should be reversed.
           // If typeA is only used in typeB, and typeB is extending from typeA, then typeB should be inside typeA.
-          this.moveCompilationUnit(targetUnit, e[1].definedIn, type, root);
+          const target = e[1].definedIn;
+          this.moveCompilationUnit(usedInUnit, target, type, root);
         }
 
       } else {
 
-        if (options.compressSoloReferencedTypes) {
+        const source = e[1].definedIn;
+        if (options.compressSoloReferencedTypes && this.isAllowedKind(source, options)) {
 
           // This type is only ever used in one single unit.
           // To decrease the number of files, we can compress the types and make this an inner type.
-          this.moveCompilationUnit(e[1].definedIn, targetUnit, type, root);
+          this.moveCompilationUnit(source, usedInUnit, type, root);
         }
       }
     }
 
     return Promise.resolve(undefined);
+  }
+
+  private isAllowedKind(cu: Java.CompilationUnit | undefined, options: ITargetOptions): boolean {
+
+    if (!cu) {
+
+      // We return true here, which is wrong, but it will throw an error inside moveCompilationUnit.
+      return true;
+    }
+
+    return options.compressKinds.length == 0 || options.compressKinds.includes(cu.object.type.omniType.kind);
   }
 
   private moveCompilationUnit(

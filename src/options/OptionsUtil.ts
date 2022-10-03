@@ -1,6 +1,5 @@
 import {OpenrpcDocument} from '@open-rpc/meta-schema';
 import {camelCase} from 'change-case';
-import {logger} from '@parse';
 import {
   Booleanish,
   IncomingOptions,
@@ -9,6 +8,9 @@ import {
   OmitNever,
   RealOptions
 } from '@options/IOptions';
+import {LoggerFactory} from '@util';
+
+const logger = LoggerFactory.create(__filename);
 
 export type IncomingConverter<TInc, TReal> = (incoming: TInc) => TReal;
 

@@ -75,7 +75,7 @@ import {IncomingOptions, IOptionsSource, RealOptions} from '@options';
 import {IncomingConverters, OptionsUtil} from '@options/OptionsUtil';
 import {ITargetOptions} from '@interpret';
 
-export const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(__filename);
 
 type SchemaToTypeResult = { type: OmniType; canInline: boolean };
 
@@ -519,8 +519,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
       kind: OmniTypeKind.OBJECT,
       description: schema.obj.description,
       title: schema.obj.title,
-      readOnly: schema.obj.readOnly,
-      writeOnly: schema.obj.writeOnly,
+      // readOnly: schema.obj.readOnly,
+      // writeOnly: schema.obj.writeOnly,
       properties: [],
 
       // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
@@ -541,20 +541,24 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     }
 
     const properties: OmniProperty[] = [];
-    const requiredProperties: OmniProperty[] = [];
     if (schema.obj.properties) {
       for (const key of Object.keys(schema.obj.properties)) {
         const propertySchemaOrRef = this._deref.get(schema.obj.properties[key], schema.root);
         const omniProperty = this.toOmniPropertyFromJsonSchema7(type, key, propertySchemaOrRef);
         properties.push(omniProperty);
-        if (schema.obj.required?.indexOf(key) !== -1) {
-          requiredProperties.push(omniProperty);
+
+        if (schema.obj.readOnly != undefined) {
+          omniProperty.readOnly = schema.obj.readOnly;
+        }
+
+        if (schema.obj.writeOnly != undefined) {
+          omniProperty.writeOnly = schema.obj.writeOnly;
         }
       }
     }
 
     type.properties = properties;
-    type.requiredProperties = requiredProperties;
+    // type.requiredProperties = requiredProperties;
 
     if (schema.obj.not) {
       // ???
@@ -1113,8 +1117,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     );
 
     const resultType: OmniType = {
-      name: `${typeNamePrefix}Response`,
       kind: OmniTypeKind.OBJECT,
+      name: `${typeNamePrefix}Response`,
       additionalProperties: false,
       properties: [],
       description: method.description,
@@ -1126,8 +1130,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
       // TODO: Ability to set this is "abstract", since it should never be used directly
       const jsonRpcResponseClassName = 'JsonRpcResponse'; // TODO: Make it a setting
       this._jsonRpcResponseClass = {
-        name: jsonRpcResponseClassName,
         kind: OmniTypeKind.OBJECT,
+        name: jsonRpcResponseClassName,
         description: `Generic class to describe the JsonRpc response package`,
         additionalProperties: false,
         properties: [],
@@ -1272,8 +1276,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     if (!this._jsonRpcErrorInstanceClass) {
       const className = 'JsonRpcError'; // TODO: Make it a setting
       this._jsonRpcErrorInstanceClass = {
-        name: className,
         kind: OmniTypeKind.OBJECT,
+        name: className,
         description: `Generic class to describe the JsonRpc error inside an error response`,
         additionalProperties: false,
         properties: [],
@@ -1355,12 +1359,13 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
       name: 'error',
       type: errorPropertyType,
       owner: errorType,
+      required: true
     };
 
     errorType.properties = [
       errorProperty,
     ];
-    errorType.requiredProperties = [errorProperty];
+    // errorType.requiredProperties = [errorProperty];
 
     const qualifiers: OmniPayloadPathQualifier[] = [{
       path: ['error'],
@@ -1385,7 +1390,11 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     };
   }
 
-  private examplePairingToGenericExample(valueType: OmniType, inputProperties: OmniProperty[], example: Dereferenced<ExamplePairingObject>): OmniExamplePairing {
+  private examplePairingToGenericExample(
+    valueType: OmniType,
+    inputProperties: OmniProperty[],
+    example: Dereferenced<ExamplePairingObject>
+  ): OmniExamplePairing {
 
     const params = example.obj.params.map((paramOrRef, idx) => {
       const param = this._deref.get(paramOrRef, example.root);
@@ -1665,8 +1674,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     } else {
 
       const objectRequestParamsType: OmniObjectType = {
-        name: `${method.obj.name}RequestParams`,
         kind: OmniTypeKind.OBJECT,
+        name: `${method.obj.name}RequestParams`,
         properties: [],
         additionalProperties: false,
       };
@@ -1683,8 +1692,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
 
       if (!this._requestParamsClass) {
         this._requestParamsClass = {
-          name: 'JsonRpcRequestParams', // TODO: Make it a setting
           kind: OmniTypeKind.OBJECT,
+          name: 'JsonRpcRequestParams', // TODO: Make it a setting
           description: `Generic class to describe the JsonRpc request params`,
           additionalProperties: false,
           properties: [],
@@ -1695,9 +1704,9 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
     }
 
     const objectRequestType: OmniObjectType = {
+      kind: OmniTypeKind.OBJECT,
       name: `${method.obj.name}Request`,
       title: method.obj.name,
-      kind: OmniTypeKind.OBJECT,
       properties: [],
       additionalProperties: false,
       description: method.obj.description,
@@ -1710,8 +1719,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
 
       const className = 'JsonRpcRequest'; // TODO: Make it a setting
       this._jsonRpcRequestClass = {
-        name: className,
         kind: OmniTypeKind.OBJECT,
+        name: className,
         description: `Generic class to describe the JsonRpc request package`,
         additionalProperties: false,
         properties: [],
@@ -1733,7 +1742,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
       const requestMethodType: OmniPrimitiveType = {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
-        readOnly: true,
+        // readOnly: true,
         valueConstant: (sub) => {
           if (sub.title) {
             return sub.title;
@@ -1759,6 +1768,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions>{
         name: "method",
         type: requestMethodType,
         required: true,
+        readOnly: true,
         owner: requestType,
       });
 

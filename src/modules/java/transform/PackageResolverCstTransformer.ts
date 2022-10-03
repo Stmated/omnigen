@@ -7,12 +7,13 @@ import {RealOptions} from '@options';
 
 type CompilationUnitInfo = {cu: Java.CompilationUnit, packageName: string, addedTypeNodes: Java.Type[] };
 
-export class PackageImportJavaCstTransformer extends AbstractJavaCstTransformer {
+/**
+ * TODO: Should this be rewritten into being able to handle inner classes?
+ */
+export class PackageResolverCstTransformer extends AbstractJavaCstTransformer {
 
   transformCst(model: OmniModel, root: JavaCstRootNode, options: RealOptions<IJavaOptions>): Promise<void> {
 
-    // const usedTypeNodes: Java.Type[] = [];
-    // const usedSimpleNamesStack: string[][] = [];
     const cuInfoStack: CompilationUnitInfo[] = [];
     root.visit(VisitorFactoryManager.create(this._javaVisitor, {
 

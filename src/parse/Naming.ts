@@ -2,7 +2,7 @@ import {pascalCase} from 'change-case';
 import {TypeName, TypeNameFn, TypeNameSingle} from '@parse/OmniModel';
 import {LoggerFactory} from '@util';
 
-export const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(__filename);
 
 export class Naming {
 
@@ -17,6 +17,24 @@ export class Naming {
     }
 
     return resolvedName;
+  }
+
+  public static unwrapToFirstDefined(name: TypeName): string | undefined {
+
+    if (Array.isArray(name)) {
+      for (const choice of name) {
+        if (choice) {
+          const result = Naming.unwrapToFirstDefined(choice);
+          if (result) {
+            return result;
+          }
+        }
+      }
+
+      return undefined;
+    }
+
+    return Naming.unwrapOptional(name);
   }
 
   private static unwrapOptional(name: TypeNameSingle): string | undefined {

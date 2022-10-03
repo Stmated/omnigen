@@ -19,7 +19,12 @@ interface TypeMapping {
 
 export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransformer {
 
-  transformCst(model: OmniModel, root: Java.JavaCstRootNode, externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[], options: RealOptions<ITargetOptions>): Promise<void> {
+  transformCst(
+    model: OmniModel,
+    root: Java.JavaCstRootNode,
+    externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[],
+    options: RealOptions<ITargetOptions>
+  ): Promise<void> {
 
     if (!options.compressSoloReferencedTypes && !options.compressUnreferencedSubTypes) {
 

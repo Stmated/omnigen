@@ -12,7 +12,9 @@ describe('Reuse Common Types', () => {
       'openrpc', 'error-structure.json', DEFAULT_OPENRPC_OPTIONS, {
         ...DEFAULT_TEST_JAVA_OPTIONS,
         ...{
-          package: 'com.error10'
+          package: 'com.error10',
+          compressUnreferencedSubTypes: true,
+          compressSoloReferencedTypes: true,
         }
       }
     ));
@@ -20,7 +22,9 @@ describe('Reuse Common Types', () => {
       'openrpc', 'error-structure-1.1.json', DEFAULT_OPENRPC_OPTIONS, {
         ...DEFAULT_TEST_JAVA_OPTIONS,
         ...{
-          package: 'com.error11'
+          package: 'com.error11',
+          compressUnreferencedSubTypes: true,
+          compressSoloReferencedTypes: true,
         }
       }
     ));
@@ -28,6 +32,8 @@ describe('Reuse Common Types', () => {
     const resultMerged = OmniModelMerge.merge<IJavaOptions>([result10, result11], {
       // TODO: Add capability of figuring out package automatically, common denominator for all given options
       package: 'com.common',
+      compressUnreferencedSubTypes: true,
+      compressSoloReferencedTypes: true,
     });
 
     // The merged model should (for now, we will see later) be virtually empty of functionality.
@@ -56,7 +62,7 @@ describe('Reuse Common Types', () => {
 
     expect(filesCommonNames).toEqual([
       'JsonRpcRequestParams.java',
-      'ListThingsRequestParams.java',
+      // 'ListThingsRequestParams.java',
       'Thing.java',
     ]);
 

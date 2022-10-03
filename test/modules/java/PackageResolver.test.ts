@@ -183,6 +183,7 @@ describe('PackageResolver', () => {
       "com.fasterxml.jackson.annotation.JsonAnyGetter",
       "com.fasterxml.jackson.annotation.JsonAnySetter",
       "com.fasterxml.jackson.databind.JsonNode",
+      "java.util.HashMap",
       "java.util.Map",
       "javax.annotation.Generated"
     ]);
@@ -190,5 +191,3 @@ describe('PackageResolver', () => {
     expect(Thing.foundTypes).toEqual(['String', 'Map', 'JsonNode']);
   });
 });
-
-

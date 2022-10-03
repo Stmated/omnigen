@@ -1,5 +1,5 @@
-import {JavaTestUtils} from './JavaTestUtils';
-import {DEFAULT_JAVA_OPTIONS, IJavaOptions} from '../../../src/modules/java';
+import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from './JavaTestUtils';
+import {IJavaOptions} from '../../../src/modules/java';
 
 describe('PackageResolver', () => {
 
@@ -89,7 +89,7 @@ describe('PackageResolver', () => {
   test('FromCode', async () => {
 
     const options: IJavaOptions = {
-      ...DEFAULT_JAVA_OPTIONS,
+      ...DEFAULT_TEST_JAVA_OPTIONS,
       ...{
         packageResolver: (type, typeName, options) => {
           if (typeName.match(/.*Error.*/i)) {
@@ -134,7 +134,7 @@ describe('PackageResolver', () => {
     expect(ErrorUnknownError.foundTypes).toEqual(['Integer', 'String', 'JsonNode']);
 
     const IAdditionalProperties = JavaTestUtils.getParsedContent(fileContents, 'IAdditionalProperties.java');
-    expect(IAdditionalProperties.foundImports).toEqual(['java.util.Map']);
+    expect(IAdditionalProperties.foundImports).toEqual(['com.fasterxml.jackson.databind.JsonNode', 'java.util.Map']);
     expect(IAdditionalProperties.foundPackage).toEqual('some.other.pkg');
     expect(IAdditionalProperties.foundTypes).toEqual(['Map', 'String', 'JsonNode']);
 

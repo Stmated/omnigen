@@ -8,11 +8,17 @@ import {
   OmniTypeKind
 } from '@parse/OmniModel';
 import {OmniUtil} from '@parse/OmniUtil';
-import {IOptions, RealOptions} from '@options';
+import {RealOptions} from '@options';
+import {ITargetOptions} from '@interpret';
 
 interface CommonTypeGroupEntry {
   type: OmniType;
   model: OmniModel;
+}
+
+export enum CompressTypeLevel {
+  EXACT,
+  FUNCTIONALLY_SAME,
 }
 
 export class OmniModelMerge {
@@ -23,7 +29,7 @@ export class OmniModelMerge {
    *
    * TODO: More control, like deciding name between two identical types other than name
    */
-  public static merge<TOpt extends IOptions>(
+  public static merge<TOpt extends ITargetOptions>(
     results: OmniModelParserResult<RealOptions<TOpt>>[],
     options: Partial<RealOptions<TOpt>>,
   ): OmniModelParserResult<TOpt> {
@@ -55,7 +61,16 @@ export class OmniModelMerge {
       },
       license: results.find(it => it.model.license !== undefined)?.model.license,
       description: results.map(it => it.model.description).join(', ')
+    };
+
+    // NOTE: Is this actually the way to do this? Just merge the options and the earlier models take precedence?
+    let commonOptions: RealOptions<TOpt> = results[0].options;
+    for (let i = 1; i < results.length; i++) {
+      commonOptions = {...results[i].options, ...commonOptions};
     }
+
+    commonOptions = {...commonOptions, ...options};
+    common.options = commonOptions;
 
     const allTypes: CommonTypeGroupEntry[] = results
       .map(it => it.model)
@@ -101,7 +116,7 @@ export class OmniModelMerge {
         continue;
       }
 
-      const alike = OmniModelMerge.findAlikeTypes(allTypes[i], allTypes);
+      const alike = OmniModelMerge.findAlikeTypes(allTypes[i], allTypes, commonOptions.compressTypesLevel);
 
       if (alike.length > 0) {
         const withSelf = [...[allTypes[i], ...alike]];
@@ -163,15 +178,6 @@ export class OmniModelMerge {
       });
     }
 
-    // NOTE: Is this actually the way to do this? Just merge the options and the earlier models take precedence?
-    let commonOptions: RealOptions<TOpt> = results[0].options;
-    for (let i = 1; i < results.length; i++) {
-      commonOptions = {...results[i].options, ...commonOptions};
-    }
-
-    commonOptions = {...commonOptions, ...options};
-    common.options = commonOptions;
-
     return {
       model: common,
       options: commonOptions,
@@ -188,7 +194,7 @@ export class OmniModelMerge {
     return false;
   }
 
-  private static findAlikeTypes(type: CommonTypeGroupEntry, types: CommonTypeGroupEntry[]): CommonTypeGroupEntry[] {
+  private static findAlikeTypes(type: CommonTypeGroupEntry, types: CommonTypeGroupEntry[], level: CompressTypeLevel): CommonTypeGroupEntry[] {
 
     const alike: CommonTypeGroupEntry[] = [];
     for (const otherType of types) {
@@ -199,7 +205,7 @@ export class OmniModelMerge {
         continue;
       }
 
-      if (OmniModelMerge.isAlikeTypes(type.type, otherType.type)) {
+      if (OmniModelMerge.isAlikeTypes(type.type, otherType.type, level)) {
         alike.push(otherType);
       }
     }
@@ -207,18 +213,19 @@ export class OmniModelMerge {
     return alike;
   }
 
-  private static isAlikeTypes(a: OmniType, b: OmniType): boolean {
+  private static isAlikeTypes(a: OmniType, b: OmniType, level: CompressTypeLevel): boolean {
     if (a.kind != b.kind) {
       return false;
     }
 
-    if (a.summary != b.summary || a.description != b.description || a.title != b.title) {
-      // TODO: Should be an optional comparison
-      return false;
+    if (level == CompressTypeLevel.EXACT) {
+      if (a.summary != b.summary || a.description != b.description || a.title != b.title) {
+        return false;
+      }
     }
 
     if (a.kind == OmniTypeKind.OBJECT && b.kind == OmniTypeKind.OBJECT) {
-      return OmniModelMerge.isAlikeObjects(a, b);
+      return OmniModelMerge.isAlikeObjects(a, b, level);
     }
 
     if (a.kind == OmniTypeKind.PRIMITIVE && b.kind == OmniTypeKind.PRIMITIVE) {
@@ -228,13 +235,13 @@ export class OmniModelMerge {
     }
 
     if (a.kind == OmniTypeKind.INTERFACE && b.kind == OmniTypeKind.INTERFACE) {
-      return OmniModelMerge.isAlikeTypes(a.of, b.of);
+      return OmniModelMerge.isAlikeTypes(a.of, b.of, level);
     }
 
     return false;
   }
 
-  private static isAlikeObjects(a: OmniObjectType, b: OmniObjectType): boolean {
+  private static isAlikeObjects(a: OmniObjectType, b: OmniObjectType, level: CompressTypeLevel): boolean {
 
     if (a.properties.length != b.properties.length) {
       return false;
@@ -245,7 +252,7 @@ export class OmniModelMerge {
     }
 
     for (let i = 0; i < a.properties.length; i++) {
-      if (!OmniModelMerge.isAlikeProperties(a.properties[i], b.properties[i])) {
+      if (!OmniModelMerge.isAlikeProperties(a.properties[i], b.properties[i], level)) {
         return false;
       }
     }
@@ -255,7 +262,7 @@ export class OmniModelMerge {
         return false;
       }
 
-      if (!OmniModelMerge.isAlikeTypes(a.extendedBy, b.extendedBy)) {
+      if (!OmniModelMerge.isAlikeTypes(a.extendedBy, b.extendedBy, level)) {
         return false;
       }
     }
@@ -263,7 +270,7 @@ export class OmniModelMerge {
     return true;
   }
 
-  private static isAlikeProperties(aProp: OmniProperty, bProp: OmniProperty): boolean {
+  private static isAlikeProperties(aProp: OmniProperty, bProp: OmniProperty, level: CompressTypeLevel): boolean {
 
     if (aProp.required != bProp.required || aProp.deprecated != bProp.deprecated) {
       return false;
@@ -285,9 +292,10 @@ export class OmniModelMerge {
       return false;
     }
 
-    if (aProp.description != bProp.description) {
-      // TODO: Should be an optional comparison
-      return false;
+    if (level == CompressTypeLevel.EXACT) {
+      if (aProp.description != bProp.description) {
+        return false;
+      }
     }
 
     if (aProp.annotations?.length != bProp.annotations?.length) {
@@ -301,7 +309,7 @@ export class OmniModelMerge {
       }
     }
 
-    if (!OmniModelMerge.isAlikeTypes(aProp.type, bProp.type)) {
+    if (!OmniModelMerge.isAlikeTypes(aProp.type, bProp.type, level)) {
       return false;
     }
 

@@ -1,5 +1,5 @@
 import {IOptions, PrimitiveGenerificationChoice} from '@options';
-import {OmniTypeKind} from '@parse';
+import {CompressTypeLevel, OmniTypeKind} from '@parse';
 
 export interface ITargetOptions extends IOptions {
 
@@ -21,7 +21,9 @@ export interface ITargetOptions extends IOptions {
    * The kinds of types that are allowed to be compressed.
    * An empty array means that all types are allowed.
    */
-  compressKinds: OmniTypeKind[];
+  compressTypeKinds: OmniTypeKind[];
+
+  compressTypesLevel: CompressTypeLevel,
 }
 
 export interface IGenericTargetOptions extends ITargetOptions {
@@ -31,5 +33,6 @@ export interface IGenericTargetOptions extends ITargetOptions {
 export const DEFAULT_TARGET_OPTIONS: ITargetOptions = {
   compressSoloReferencedTypes: true,
   compressUnreferencedSubTypes: true,
-  compressKinds: []
+  compressTypeKinds: [],
+  compressTypesLevel: CompressTypeLevel.EXACT
 };

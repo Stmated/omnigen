@@ -1,14 +1,14 @@
-import {GenericOmniModelTransformer} from '@parse/general/GenericOmniModelTransformer';
 import {OmniModel, OmniPrimitiveKind, OmniTypeKind} from '@parse';
 import {TestUtils} from '../../TestUtils';
-import {DEFAULT_JAVA_OPTIONS, JavaUtil} from '@java';
-import {Naming} from '../../../src/parse/Naming';
+import {JavaUtil} from '@java';
+import {GenericsOmniModelTransformer} from '@parse/general/GenericsOmniModelTransformer';
+import {DEFAULT_TEST_JAVA_OPTIONS} from '../../modules/java/JavaTestUtils';
 
 describe('Test CompositionDependencyUtil', () => {
 
   test('ensureNothingChanges', async () => {
 
-    const transformer = new GenericOmniModelTransformer();
+    const transformer = new GenericsOmniModelTransformer();
 
     const model: OmniModel = {
       name: 'model',
@@ -22,7 +22,7 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    transformer.transformModel(model, DEFAULT_JAVA_OPTIONS);
+    transformer.transformModel(model, DEFAULT_TEST_JAVA_OPTIONS);
 
     expect(model.types).toHaveLength(1);
 
@@ -36,7 +36,7 @@ describe('Test CompositionDependencyUtil', () => {
 
   test('ensureGenericsAdded', async () => {
 
-    const transformer = new GenericOmniModelTransformer();
+    const transformer = new GenericsOmniModelTransformer();
 
     const a = TestUtils.obj('A', undefined, [
       TestUtils.prop('propA', {
@@ -72,7 +72,7 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    transformer.transformModel(model, DEFAULT_JAVA_OPTIONS);
+    transformer.transformModel(model, DEFAULT_TEST_JAVA_OPTIONS);
 
     expect(model.types).toHaveLength(3);
 

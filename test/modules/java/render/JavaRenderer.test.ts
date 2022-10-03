@@ -1,17 +1,18 @@
-import {TestUtils} from '@test';
-import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
-import {DEFAULT_JAVA_OPTIONS} from '@java';
-import {JavaRenderer} from '@java/render/JavaRenderer';
-import * as JavaParser from 'java-parser';
-import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
 import * as fs from 'fs';
 import * as path from 'path';
-import {JavaTestUtils} from '../JavaTestUtils';
-import {DEFAULT_OPENRPC_OPTIONS} from '../../../../src';
+import * as JavaParser from 'java-parser';
+import {TestUtils} from '@test';
+import {JavaInterpreter, JavaRenderer} from '@java';
+import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
+import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '../JavaTestUtils';
+import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
 
 describe('Java Rendering', () => {
 
   test('renderAll', async () => {
+
+    // TODO: Do this both with and without compressing types -- create different versions and output them in a structure!
+    // TODO: Would it be crazy or cool to take ALL the types of all the models and create one HUGE output with common types?
 
     jest.setTimeout(10_000);
     for (const schemaName of TestUtils.getKnownSchemaNames()) {
@@ -25,7 +26,7 @@ describe('Java Rendering', () => {
 
       for (const fileName of fileNames) {
 
-        const result = await TestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_JAVA_OPTIONS);
+        const result = await TestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
         const interpretation = await new JavaInterpreter().buildSyntaxTree(result.model, [], result.options);
 
         let baseDir: string;
@@ -44,7 +45,7 @@ describe('Java Rendering', () => {
           // Ignore any error here and just hope for the best
         }
 
-        const renderer = new JavaRenderer(DEFAULT_JAVA_OPTIONS, (cu) => {
+        const renderer = new JavaRenderer(DEFAULT_TEST_JAVA_OPTIONS, (cu) => {
 
           if (cu.fileName.indexOf('#') !== -1) {
             throw new Error(`# not allowed in CU '${cu.fileName}'`);

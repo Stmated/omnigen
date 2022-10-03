@@ -2,19 +2,21 @@ import {TestUtils} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
 import {
   DEFAULT_JAVA_OPTIONS,
-  JavaOptions, JavaUtil,
-  PrimitiveGenerificationChoice
+  JavaUtil,
+  IJavaOptions
 } from '@java';
 import {OmniTypeKind} from '@parse';
-import {Naming} from '@parse/Naming';
+import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
+import {RealOptions, PrimitiveGenerificationChoice} from '@options';
+import {DEFAULT_TEST_JAVA_OPTIONS} from '../JavaTestUtils';
 
 describe('Test the structuring of GenericModel into a Java CST', () => {
 
   test('ensureBasicParsingDoesNotCrash', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_JAVA_OPTIONS);
-    const interpretation = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+    const model = await TestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
+    const interpretation = await interpreter.buildSyntaxTree(model.model, [], DEFAULT_TEST_JAVA_OPTIONS);
 
     expect(interpretation).toBeDefined();
 
@@ -25,16 +27,16 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
   test('ensureGenericsAreSpecialized', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_JAVA_OPTIONS,
+    const options: RealOptions<IJavaOptions> = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
       ...{
         onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE
       }
     }
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'primitive-generics.json', options);
-    const root = await interpreter.interpret(model, options);
+    const result = await TestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
+    const root = await interpreter.buildSyntaxTree(result.model, [], options);
 
     expect(root).toBeDefined();
 
@@ -76,21 +78,21 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
     // NOTE: This is currently "REFERENCE" -- but might change later.
     //        If we introduce a new kind of type that is a reference to a custom type created in CST.
     //        This is because it is quite ugly to use "REFERENCE" in case a transformer moved the referenced object.
-    expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.REFERENCE);
+    expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.HARDCODED_REFERENCE);
   });
 
   test('ensureGenericsAreBoxed', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_JAVA_OPTIONS,
+    const options: RealOptions<IJavaOptions> = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
       ...{
         onPrimitiveGenerification: PrimitiveGenerificationChoice.WRAP_OR_BOX
       }
     }
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'primitive-generics.json', options);
-    const root = await interpreter.interpret(model, options);
+    const result = await TestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
+    const root = await interpreter.buildSyntaxTree(result.model, [], options);
 
     expect(root).toBeDefined();
 
@@ -130,16 +132,16 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
   test('ensureGenericsAreSkipped', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_JAVA_OPTIONS,
+    const options: RealOptions<IJavaOptions> = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
       ...{
         onPrimitiveGenerification: PrimitiveGenerificationChoice.ABORT
       }
     }
 
     const interpreter = new JavaInterpreter();
-    const model = await TestUtils.readExample('openrpc', 'primitive-generics.json', options);
-    const root = await interpreter.interpret(model, options);
+    const result = await TestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
+    const root = await interpreter.buildSyntaxTree(result.model, [], options);
 
     expect(root).toBeDefined();
 
@@ -175,27 +177,27 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
 
   test('Interfaces', async () => {
 
-    const model = await TestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_JAVA_OPTIONS);
+    const result = await TestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
     const interpreter = new JavaInterpreter();
-    const root = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+    const root = await interpreter.buildSyntaxTree(result.model, [], DEFAULT_TEST_JAVA_OPTIONS);
 
     expect(root).toBeDefined();
 
     expect(root.children).toHaveLength(23);
 
-    expect(model).toBeDefined();
+    expect(result).toBeDefined();
   });
 
   test('Mappings', async () => {
 
-    const model = await TestUtils.readExample('openrpc', 'mappings.json', DEFAULT_JAVA_OPTIONS);
+    const result = await TestUtils.readExample('openrpc', 'mappings.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
     const interpreter = new JavaInterpreter();
-    const root = await interpreter.interpret(model, DEFAULT_JAVA_OPTIONS);
+    const root = await interpreter.buildSyntaxTree(result.model, [], DEFAULT_TEST_JAVA_OPTIONS);
 
     expect(root).toBeDefined();
 
     expect(root.children).toHaveLength(17);
 
-    expect(model).toBeDefined();
+    expect(result).toBeDefined();
   });
 });

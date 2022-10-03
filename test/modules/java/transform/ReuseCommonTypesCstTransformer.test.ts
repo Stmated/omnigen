@@ -1,8 +1,8 @@
 import {TestUtils} from '../../../TestUtils';
 import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
-import {DEFAULT_JAVA_OPTIONS, IJavaOptions} from '@java';
+import {IJavaOptions} from '@java';
 import {OmniModelMerge, OmniUtil, Naming} from '@parse';
-import {JavaTestUtils} from '../JavaTestUtils';
+import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '../JavaTestUtils';
 
 describe('Reuse Common Types', () => {
 
@@ -10,7 +10,7 @@ describe('Reuse Common Types', () => {
 
     const result10 = (await TestUtils.readExample(
       'openrpc', 'error-structure.json', DEFAULT_OPENRPC_OPTIONS, {
-        ...DEFAULT_JAVA_OPTIONS,
+        ...DEFAULT_TEST_JAVA_OPTIONS,
         ...{
           package: 'com.error10'
         }
@@ -18,7 +18,7 @@ describe('Reuse Common Types', () => {
     ));
     const result11 = (await TestUtils.readExample(
       'openrpc', 'error-structure-1.1.json', DEFAULT_OPENRPC_OPTIONS, {
-        ...DEFAULT_JAVA_OPTIONS,
+        ...DEFAULT_TEST_JAVA_OPTIONS,
         ...{
           package: 'com.error11'
         }
@@ -56,6 +56,7 @@ describe('Reuse Common Types', () => {
 
     expect(filesCommonNames).toEqual([
       'JsonRpcRequestParams.java',
+      'ListThingsRequestParams.java',
       'Thing.java',
     ]);
 

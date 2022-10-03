@@ -119,7 +119,7 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
       return true;
     }
 
-    return options.compressKinds.length == 0 || options.compressKinds.includes(cu.object.type.omniType.kind);
+    return options.compressTypeKinds.length == 0 || options.compressTypeKinds.includes(cu.object.type.omniType.kind);
   }
 
   private moveCompilationUnit(

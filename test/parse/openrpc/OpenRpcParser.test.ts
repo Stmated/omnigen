@@ -1,12 +1,11 @@
-import {OmniTypeKind, SchemaFile} from '@parse';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {OmniModelUtil} from '@parse/OmniModelUtil';
+import {RealOptions} from '@options';
+import {JSONRPC_20_PARSER_OPTIONS} from '@parse/openrpc';
+import {DEFAULT_PARSER_OPTIONS} from '@parse/IParserOptions';
+import {OmniUtil, OmniTypeKind, SchemaFile} from '@parse';
+import {IOpenRpcParserOptions, OpenRpcParserBootstrapFactory} from '@parse/openrpc';
 import {JavaUtil} from '@java';
-import {JSONRPC_20_PARSER_OPTIONS} from '../../../src/parse/openrpc/JsonRpcOptions';
-import {DEFAULT_PARSER_OPTIONS} from '../../../src/parse/IParserOptions';
-import {IOpenRpcParserOptions, OpenRpcParserBootstrapFactory} from '../../../src';
-import {RealOptions} from '../../../src/options';
 
 describe('Test Generic Model Creation', () => {
 
@@ -67,7 +66,7 @@ describe('Test Generic Model Creation', () => {
     expect(response0properties).toHaveLength(1); // The others are in abstract supertype
     expect(response0properties[0].name).toEqual('result');
 
-    const allTypes = OmniModelUtil.getAllExportableTypes(model, model.types);
+    const allTypes = OmniUtil.getAllExportableTypes(model, model.types);
     expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('DeletePetByIdResponse');
     expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('ErrorUnknownError');
   });

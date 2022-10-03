@@ -11,12 +11,20 @@ import {
 import {RealOptions} from '@options';
 import {ExternalSyntaxTree} from '@transform';
 
+export const DEFAULT_TEST_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
+  ...DEFAULT_JAVA_OPTIONS,
+  ...{
+    compressSoloReferencedTypes: false,
+    compressUnreferencedSubTypes: false
+  }
+};
+
 export class JavaTestUtils {
 
   public static async getFileContentsFromFile(
     fileName: string,
     type: KnownSchemaNames = 'openrpc',
-    javaOptions: IJavaOptions = DEFAULT_JAVA_OPTIONS,
+    javaOptions: IJavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
     openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS
   ): Promise<Map<string, string>> {
 

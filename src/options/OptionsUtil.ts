@@ -12,7 +12,7 @@ import {LoggerFactory} from '@util';
 
 const logger = LoggerFactory.create(__filename);
 
-export type IncomingConverter<TInc, TReal> = (incoming: TInc) => TReal;
+export type IncomingConverter<TInc, TReal> = (incoming: TInc | TReal) => Promise<TReal>;
 
 export type IncomingConverters<TOpt extends IOptions> = OmitNever<{
   [Key in keyof TOpt]: TOpt[Key] extends IncomingOrRealOption<infer TInc, infer TReal>
@@ -32,7 +32,7 @@ export type Additions<TOpt extends IOptions> = {
 
 export class OptionsUtil {
 
-  public static updateOptions<
+  public static async updateOptions<
     TOpt extends IOptions,
     TInc extends IncomingOptions<TOpt>,
     TConverters extends IncomingConverters<TOpt>,
@@ -43,14 +43,14 @@ export class OptionsUtil {
     incoming: TInc | undefined,
     converters?: TConverters,
     additions?: TAdditions,
-  ): TReturn {
+  ): Promise<TReturn> {
 
     const copiedBase = {...base};
-    const alteredBase = this.getBaseWithOptionalAdditions(copiedBase, incoming, converters, additions);
+    const alteredBase = await this.getBaseWithOptionalAdditions(copiedBase, incoming, converters, additions);
     return this.replaceOptionsWithConverted(alteredBase, incoming, converters);
   }
 
-  private static replaceOptionsWithConverted<
+  private static async replaceOptionsWithConverted<
     TOpt extends IOptions,
     TInc extends IncomingOptions<TOpt>,
     TConverters extends IncomingConverters<TOpt>,
@@ -59,7 +59,7 @@ export class OptionsUtil {
     base: Required<TOpt>,
     incoming: TInc | undefined,
     converters?: TConverters
-  ): TReturn {
+  ): Promise<TReturn> {
 
     for (const baseKey in base) {
       if (!base.hasOwnProperty(baseKey)) {
@@ -73,11 +73,12 @@ export class OptionsUtil {
       if (converter) {
 
         const rawValue = (incoming && baseKey in incoming) ? incoming[baseKey] : base[baseKey];
+        const convertedPromise = converter(rawValue);
+        const convertedValue = await convertedPromise;
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        base[baseKey] = converter(rawValue);
+        base[baseKey] = convertedValue;
       } else if (incoming && baseKey in incoming) {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -90,7 +91,7 @@ export class OptionsUtil {
     return base as TReturn;
   }
 
-  private static getBaseWithOptionalAdditions<
+  private static async getBaseWithOptionalAdditions<
     TOpt extends IOptions,
     TInc extends IncomingOptions<TOpt>,
     TAdditions extends Additions<TOpt>,
@@ -100,7 +101,7 @@ export class OptionsUtil {
     incoming: TInc | undefined,
     converters?: TConverters,
     additions?: TAdditions,
-  ): TOpt {
+  ): Promise<TOpt> {
 
     // let real: TOpt = base;
     if (!additions) {
@@ -124,11 +125,11 @@ export class OptionsUtil {
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      const converter = converters?.[additionKey] as IncomingConverter<any, any> | undefined;
+      const converter = converters?.[additionKey] as IncomingConverter<unknown, any> | undefined;
       if (converter) {
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const converted = converter(value);
+        const converted = await converter(value);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const newBase = addition(converted);
 
@@ -150,14 +151,14 @@ export class OptionsUtil {
     return base;
   }
 
-  public static toBoolean(this: void, value: Booleanish | undefined): boolean {
+  public static toBoolean(this: void, value: Booleanish | undefined): Promise<boolean> {
 
     if (value == undefined) {
-      return false;
+      return Promise.resolve(false);
     }
 
     if (typeof value == 'boolean') {
-      return value;
+      return Promise.resolve(value);
     }
 
     if (typeof value == 'string' && /^-?\d+$/.test(value)) {
@@ -165,18 +166,22 @@ export class OptionsUtil {
     }
 
     if (typeof value == 'number') {
-      return value !== 0;
+      return Promise.resolve(value !== 0);
     }
 
     const lowercase = value.toLowerCase();
     if (lowercase == 'true' || lowercase == 't' || lowercase == 'yes' || lowercase == 'y') {
-      return true;
+      return Promise.resolve(true);
     } else if (lowercase == 'false' || lowercase == 'f' || lowercase == 'no' || lowercase == 'n') {
-      return false;
+      return Promise.resolve(false);
     }
 
     // Any other string will count as false.
-    return false;
+    return Promise.resolve(false);
+  }
+
+  public static toString(this: void, value: string | number): Promise<string> {
+    return Promise.resolve(String(value));
   }
 
   public static updateOptionsFromDocument<TOpt extends IOptions>(doc: OpenrpcDocument, opt: TOpt): void {

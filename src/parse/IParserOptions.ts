@@ -1,6 +1,5 @@
 import {Booleanish, IncomingOrRealOption, IOptions, RealOptions} from '@options';
 import {IncomingConverters, OptionsUtil} from '@options/OptionsUtil';
-import {IJsonRpcOptions} from '@parse/openrpc/JsonRpcOptions';
 
 export interface IParserOptions extends IOptions {
   relaxedLookup: IncomingOrRealOption<Booleanish, boolean>;

@@ -103,7 +103,7 @@ describe('PackageResolver', () => {
       }
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', 'openrpc', options);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', options);
     const fileNames = [...fileContents.keys()].sort();
     expect(fileNames).toEqual([
       'ErrorUnknown.java',

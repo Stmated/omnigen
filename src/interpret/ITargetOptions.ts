@@ -24,6 +24,8 @@ export interface ITargetOptions extends IOptions {
   compressTypeKinds: OmniTypeKind[];
 
   compressTypesLevel: CompressTypeLevel,
+
+  compressPropertiesToAncestor: boolean;
 }
 
 export interface IGenericTargetOptions extends ITargetOptions {
@@ -34,5 +36,6 @@ export const DEFAULT_TARGET_OPTIONS: ITargetOptions = {
   compressSoloReferencedTypes: true,
   compressUnreferencedSubTypes: true,
   compressTypeKinds: [],
-  compressTypesLevel: CompressTypeLevel.EXACT
+  compressTypesLevel: CompressTypeLevel.EXACT,
+  compressPropertiesToAncestor: true
 };

@@ -12,13 +12,13 @@ import {
   SuperinterfacesCtx, UnannClassTypeCtx, UnannPrimitiveTypeCtx
 } from 'java-parser';
 
-export type FoundField = {names: string[], ctx: FieldDeclarationCtx};
+// export type FoundField = {name: string, type: string};
 
 export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   readonly foundInterfaces: string[] = [];
   readonly foundMethods: string[] = [];
   readonly foundMethodArguments: any[][] = [];
-  readonly foundFields: FoundField[] = [];
+  readonly foundFields: string[] = [];
   readonly foundLiterals: any[] = [];
 
   readonly foundImports: string[] = [];
@@ -146,10 +146,7 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
       }
     }
 
-    this.foundFields.push({
-      names: identifiers,
-      ctx: ctx
-    });
+    this.foundFields.push(identifiers.join(','));
 
     return super.fieldDeclaration(ctx, param);
   }

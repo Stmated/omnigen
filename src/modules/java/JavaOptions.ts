@@ -36,7 +36,7 @@ export const DEFAULT_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
 export type IPackageResolver = (type: OmniType, typeName: string, options: IPackageOptions) => string;
 
 export const JAVA_OPTIONS_CONVERTERS: IncomingConverters<IJavaOptions> = {
-  packageResolver: (v) => new PackageResolverOptionsParser().parse(v),
+  packageResolver: (v) => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,
   includeLinksOnProperty: OptionsUtil.toBoolean,

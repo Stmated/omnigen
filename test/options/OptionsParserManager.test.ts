@@ -3,8 +3,8 @@ import {LoggerUtils} from '..';
 LoggerUtils.registerLoggerFix();
 
 import {LoggerFactory} from '@util';
-import {Booleanish, IncomingOptions, IncomingOrRealOption, IOptions} from '../../src/options';
-import {OptionsUtil} from '../../src/options/OptionsUtil';
+import {Booleanish, IncomingOptions, IncomingOrRealOption, IOptions} from '@options';
+import {OptionsUtil} from '@options';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -85,7 +85,7 @@ describe('OptionsParserManager', () => {
       b: 0, // Checks that the incoming value is used even though "false-ish"
     };
 
-    const real = OptionsUtil.updateOptions(base, inc1, {
+    const real = await OptionsUtil.updateOptions(base, inc1, {
       a: OptionsUtil.toBoolean,
       b: OptionsUtil.toBoolean,
       c: OptionsUtil.toBoolean,
@@ -108,7 +108,7 @@ describe('OptionsParserManager', () => {
       a: 'replacement',
     };
 
-    const real = OptionsUtil.updateOptions(base, inc1);
+    const real = await OptionsUtil.updateOptions(base, inc1);
 
     expect(real).toBeDefined();
     expect(real.a).toEqual('replacement');
@@ -136,9 +136,9 @@ describe('OptionsParserManager', () => {
       qwe: 2
     };
 
-    const real = OptionsUtil.updateOptions(base, {...inc1, ...inc2}, {
+    const real = await OptionsUtil.updateOptions(base, {...inc1, ...inc2}, {
       foo: OptionsUtil.toBoolean,
-      qwe: (v) => String(v)
+      qwe: OptionsUtil.toString
     }, {
       foo: value => value ? undefined : override
     });

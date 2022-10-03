@@ -28,6 +28,10 @@ import {
   JAVA_OPTIONS_CONVERTERS
 } from '@java';
 import * as Java from '@java/cst';
+import {Dereferencer} from '@util';
+import {JSONSchema7} from 'json-schema';
+import {JsonSchemaParser} from '@parse/jsonschema/JsonSchemaParser';
+import {DEFAULT_PARSER_OPTIONS} from '@parse/IParserOptions';
 
 export type KnownSchemaNames = 'openrpc';
 
@@ -68,12 +72,27 @@ export class TestUtils {
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
     const openRpcParserBootstrap = await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile);
     const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<IJavaOptions>();
-    const openRpcRealOptions = OptionsUtil.updateOptions(
+    const openRpcRealOptions = await OptionsUtil.updateOptions(
       openRpcOptions,
       schemaIncomingOptions,
       OPENRPC_OPTIONS_CONVERTERS,
       JSONRPC_OPTIONS_FALLBACK,
     );
+
+    if (!openRpcRealOptions.jsonRpcErrorDataSchema && schemaIncomingOptions?.jsonRpcErrorDataSchema) {
+
+      // TODO: How do we solve this properly? Feels ugly making exceptions for certain options like this.
+      //        Have a sort of "post converters" that can take the whole options? Need to have a look.
+      const errorSchema = schemaIncomingOptions?.jsonRpcErrorDataSchema;
+      if (!('kind' in errorSchema)) {
+
+        const dereferencer = await Dereferencer.create<JSONSchema7>('', '', errorSchema);
+        const jsonSchemaParser = new JsonSchemaParser<JSONSchema7>(dereferencer, openRpcRealOptions); // Where do we get options from?
+        const errorType = jsonSchemaParser.transformErrorDataSchemaToOmniType(dereferencer.getFirstRoot());
+
+        openRpcRealOptions.jsonRpcErrorDataSchema = errorType;
+      }
+    }
 
     const openRpcParser = openRpcParserBootstrap.createParser(openRpcRealOptions);
     const parseResult = openRpcParser.parse();
@@ -82,7 +101,7 @@ export class TestUtils {
     //        But I am unsure how and where that would be.
     parseResult.model.options = schemaIncomingOptions;
 
-    const realJavaOptions = OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_CONVERTERS);
+    const realJavaOptions = await OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_CONVERTERS);
 
     for (const transformer of transformers) {
       transformer.transformModel(parseResult.model, realJavaOptions);

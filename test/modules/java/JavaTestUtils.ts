@@ -1,8 +1,8 @@
 import * as JavaParser from 'java-parser';
 import {DEFAULT_JAVA_OPTIONS, IJavaOptions, JavaInterpreter, JavaRenderer} from '@java';
-import {KnownSchemaNames, TestUtils} from '../../TestUtils';
+import {TestUtils} from '@test';
 import {CstRootNode} from '@cst/CstRootNode';
-import {ParsedJavaTestVisitor} from '../../ParsedJavaTestVisitor';
+import {ParsedJavaTestVisitor} from '@test';
 import {OmniModelParserResult} from '@parse';
 import {
   DEFAULT_OPENRPC_OPTIONS,
@@ -23,12 +23,11 @@ export class JavaTestUtils {
 
   public static async getFileContentsFromFile(
     fileName: string,
-    type: KnownSchemaNames = 'openrpc',
     javaOptions: IJavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
     openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS
   ): Promise<Map<string, string>> {
 
-    const parseResult = await TestUtils.readExample(type, fileName, openRpcOptions, javaOptions);
+    const parseResult = await TestUtils.readExample('openrpc', fileName, openRpcOptions, javaOptions);
     return await this.getFileContentsFromParseResult(parseResult, []);
   }
 

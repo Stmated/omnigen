@@ -2,6 +2,9 @@ import {OmniType} from '@parse';
 import {JSONSchema7} from 'json-schema';
 import {Booleanish, IncomingOrRealOption, RealOptions} from '@options';
 import {Additions, IncomingConverters, OptionsUtil} from '@options/OptionsUtil';
+import {JsonSchemaParser} from '@parse/jsonschema/JsonSchemaParser';
+import {Dereferencer} from '@util/Dereferencer';
+import {DEFAULT_PARSER_OPTIONS, IParserOptions, PARSER_OPTIONS_CONVERTERS} from '@parse/IParserOptions';
 
 export type JsonRpcVersion = '1.0' | '1.1' | '2.0';
 
@@ -51,15 +54,18 @@ export const JSONRPC_20_PARSER_OPTIONS: RealOptions<IJsonRpcOptions> = {
 };
 
 export const JSONRPC_OPTIONS_CONVERTERS: IncomingConverters<IJsonRpcOptions> = {
-  jsonRpcVersion: (v) => v || '2.0',
-  jsonRpcErrorDataSchema: (v) => {
+  jsonRpcVersion: (v) => Promise.resolve(v || '2.0'),
+  jsonRpcErrorDataSchema: async (v) => {
 
-    // TODO: How do we solve this?
-    return undefined;
+    if (!v || 'kind' in v) {
+      return Promise.resolve(v);
+    }
+
+    return Promise.resolve(undefined);
   },
   jsonRpcErrorPropertyName: (v) => {
     if (v) {
-      return v;
+      return Promise.resolve(v);
     }
 
     throw new Error(`There must be a JsonRpc version override given`);

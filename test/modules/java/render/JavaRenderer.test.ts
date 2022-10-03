@@ -103,9 +103,7 @@ describe('Java Rendering', () => {
     expect(fileNames).toContain('Out_2.java');
 
     const a = JavaTestUtils.getParsedContent(fileContents, 'A.java');
-    expect(a.foundFields).toHaveLength(1);
-    expect(a.foundFields[0].names).toHaveLength(1);
-    expect(a.foundFields[0].names[0]).toEqual('foo');
+    expect(a.foundFields).toEqual(['foo']);
     expect(a.foundMethods).toHaveLength(1);
     expect(a.foundMethods[0]).toEqual('getFoo');
     expect(a.foundSuperClasses).toHaveLength(1);
@@ -126,17 +124,12 @@ describe('Java Rendering', () => {
     expect(c.foundSuperInterfaces).toContain('IC');
 
     const eitherAorB = JavaTestUtils.getParsedContent(fileContents, 'AXOrB.java');
-    expect(eitherAorB.foundFields).toHaveLength(3);
-    expect(eitherAorB.foundFields[0].names[0]).toEqual('_raw');
-    expect(eitherAorB.foundFields[1].names[0]).toEqual('_a');
-    expect(eitherAorB.foundFields[2].names[0]).toEqual('_b');
+    expect(eitherAorB.foundFields).toEqual(['_raw', '_a', '_b']);
     expect(eitherAorB.foundSuperClasses).toHaveLength(0);
     expect(eitherAorB.foundSuperInterfaces).toHaveLength(0);
 
     const out2 = JavaTestUtils.getParsedContent(fileContents, 'Out_2.java');
-    expect(out2.foundFields).toHaveLength(2);
-    expect(out2.foundFields[0].names[0]).toEqual('bar');
-    expect(out2.foundFields[1].names[0]).toEqual('xyz');
+    expect(out2.foundFields).toEqual(['bar', 'xyz']);
     expect(out2.foundSuperClasses).toHaveLength(1);
     expect(out2.foundSuperInterfaces).toHaveLength(2);
     expect(out2.foundSuperClasses[0]).toEqual('A');
@@ -176,24 +169,18 @@ describe('Java Rendering', () => {
     expect(a.foundSuperInterfaces).toHaveLength(0);
     expect(a.foundSuperClasses).toHaveLength(1);
     expect(a.foundSuperClasses[0]).toEqual('Abs');
-    expect(a.foundFields).toHaveLength(2);
-    expect(a.foundFields[0].names[0]).toEqual('a');
-    expect(a.foundFields[1].names[0]).toEqual('x');
+    expect(a.foundFields).toEqual(['a', 'x']);
 
     const b = JavaTestUtils.getParsedContent(fileContents, 'B.java');
     expect(b.foundSuperInterfaces).toHaveLength(0);
     expect(b.foundSuperClasses).toHaveLength(1);
     expect(b.foundSuperClasses[0]).toEqual('Abs');
-    expect(b.foundFields).toHaveLength(2);
-    expect(b.foundFields[0].names[0]).toEqual('b');
-    expect(b.foundFields[1].names[0]).toEqual('x');
+    expect(b.foundFields).toEqual(['b', 'x']);
 
     const abs = JavaTestUtils.getParsedContent(fileContents, 'Abs.java');
     expect(abs.foundSuperInterfaces).toHaveLength(0);
     expect(abs.foundSuperClasses).toHaveLength(0);
-    expect(abs.foundFields).toHaveLength(2);
-    expect(abs.foundFields[0].names[0]).toEqual('kind');
-    expect(abs.foundFields[1].names[0]).toEqual('common');
+    expect(abs.foundFields).toEqual(['kind', 'common']);
   });
 
   test('Enum', async () => {
@@ -212,9 +199,7 @@ describe('Java Rendering', () => {
     expect(tag.foundMethods).toHaveLength(0);
     expect(tag.foundSuperClasses).toHaveLength(0);
     expect(tag.foundSuperInterfaces).toHaveLength(0);
-    expect(tag.foundFields).toHaveLength(1);
-    expect(tag.foundFields[0].names).toHaveLength(1);
-    expect(tag.foundFields[0].names[0]).toEqual('value');
+    expect(tag.foundFields).toEqual(['value']);
     expect(tag.foundLiterals).toHaveLength(5);
     expect(tag.foundLiterals[2]).toEqual("\"TagA\"");
     expect(tag.foundLiterals[3]).toEqual("\"TagB\"");
@@ -258,9 +243,7 @@ describe('Java Rendering', () => {
     expect(thing.foundMethods[2]).toEqual('getAdditionalProperties');
     expect(thing.foundSuperInterfaces).toHaveLength(1);
     expect(thing.foundSuperInterfaces[0]).toEqual('IAdditionalProperties');
-    expect(thing.foundFields).toHaveLength(2);
-    expect(thing.foundFields[0].names[0]).toEqual('id');
-    expect(thing.foundFields[1].names[0]).toEqual('_additionalProperties');
+    expect(thing.foundFields).toEqual(['id', '_additionalProperties']);
 
     const additional = JavaTestUtils.getParsedContent(fileContents, 'IAdditionalProperties.java');
     expect(additional.foundMethods).toHaveLength(1);

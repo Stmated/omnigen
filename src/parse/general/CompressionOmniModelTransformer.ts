@@ -27,6 +27,12 @@ export class CompressionOmniModelTransformer implements OmniModelTransformer<ITa
 
   transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
 
+    if (!options.compressPropertiesToAncestor) {
+
+      // We will not move any properties to the ancestor type.
+      return;
+    }
+
     const allTypes = OmniUtil.getAllExportableTypes(model, model.types);
 
     // TODO: Need to sort the types so that the leaf types are done first

@@ -16,7 +16,7 @@ describe('Reuse Common Types', () => {
       }
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', 'openrpc', options, DEFAULT_OPENRPC_OPTIONS);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', options, DEFAULT_OPENRPC_OPTIONS);
     const fileNames = [...fileContents.keys()].sort();
 
     expect(fileNames.sort())
@@ -58,7 +58,7 @@ describe('Reuse Common Types', () => {
       }
     }
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', 'openrpc', options, DEFAULT_OPENRPC_OPTIONS);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', options, DEFAULT_OPENRPC_OPTIONS);
     const fileNames = [...fileContents.keys()].sort();
 
     expect(fileNames.sort())

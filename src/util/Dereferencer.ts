@@ -74,6 +74,9 @@ class HttpProtocolResolver implements ProtocolResolver {
   }
 }
 
+/**
+ * TODO: Try and rewrite this class so that no casts using "as" are used, instead fully generic
+ */
 export class Dereferencer<T> {
 
   private static readonly file: ProtocolResolver = {

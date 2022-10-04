@@ -1,10 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {RealOptions} from '@options';
-import {JSONRPC_20_PARSER_OPTIONS} from '@parse/openrpc';
+import {IOpenRpcParserOptions, JSONRPC_20_PARSER_OPTIONS, OpenRpcParserBootstrapFactory} from '@parse/openrpc';
 import {DEFAULT_PARSER_OPTIONS} from '@parse/IParserOptions';
-import {OmniUtil, OmniTypeKind, SchemaFile} from '@parse';
-import {IOpenRpcParserOptions, OpenRpcParserBootstrapFactory} from '@parse/openrpc';
+import {OmniTypeKind, OmniUtil, SchemaFile} from '@parse';
 import {JavaUtil} from '@java';
 
 describe('Test Generic Model Creation', () => {

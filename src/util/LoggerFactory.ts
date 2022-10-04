@@ -1,6 +1,6 @@
 import pino, {BaseLogger, LoggerOptions, DestinationStream} from 'pino';
 
-type ModifierCallback = (options: LoggerOptions | DestinationStream) => LoggerOptions | DestinationStream;
+export type ModifierCallback = (options: LoggerOptions | DestinationStream) => LoggerOptions | DestinationStream;
 
 export class LoggerFactory {
 
@@ -24,7 +24,7 @@ export class LoggerFactory {
 
     const options: LoggerOptions = {
       name: name,
-      level: 'trace'
+      level: 'trace',
     };
 
     if (LoggerFactory._pretty === undefined) {
@@ -39,15 +39,23 @@ export class LoggerFactory {
     if (LoggerFactory._pretty) {
       options.transport = {
         target: 'pino-pretty',
-          options: {
-          colorize: true
-        }
+        options: {
+          colorize: true,
+        },
       };
     }
 
     let modifiedOptions: LoggerOptions | DestinationStream = options;
     for (const modifier of LoggerFactory._modifiers) {
       modifiedOptions = modifier(modifiedOptions);
+    }
+
+    if ('pinoModifiers' in global) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const globalModifiers = (global as Record<string, unknown>)['pinoModifiers'] as ModifierCallback[];
+      for (const modifier of globalModifiers) {
+        modifiedOptions = modifier(modifiedOptions);
+      }
     }
 
     return pino(modifiedOptions);

@@ -6,10 +6,11 @@ const {compilerOptions} = require('./tsconfig');
 
 module.exports = {
   transform: {'^.+\\.ts?$': 'ts-jest'},
-  testEnvironment: 'node',
+  testEnvironment: '<rootDir>/test/jest.silent-env',
   testRegex: '/test/.*\\.(test|spec)?\\.(ts|tsx)$',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: pathsToModuleNameMapper(
       compilerOptions.paths,
-      {prefix: '<rootDir>/'}),
+      {prefix: '<rootDir>/'}
+  ),
 };

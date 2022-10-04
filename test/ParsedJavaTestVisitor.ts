@@ -1,15 +1,24 @@
 import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
-  BooleanLiteralCtx, ClassOrInterfaceTypeCtx, ExtendsInterfacesCtx,
+  BooleanLiteralCtx,
+  ClassOrInterfaceTypeCtx,
+  ExtendsInterfacesCtx,
   FieldDeclarationCtx,
-  FloatingPointLiteralCtx, FloatingPointTypeCtx, ImportDeclarationCtx,
-  IntegerLiteralCtx, IntegralTypeCtx, IToken,
+  FloatingPointLiteralCtx,
+  FloatingPointTypeCtx,
+  ImportDeclarationCtx,
+  IntegerLiteralCtx,
+  IntegralTypeCtx,
+  IToken,
   LiteralCtx,
   MethodDeclaratorCtx,
-  NormalInterfaceDeclarationCtx, PackageDeclarationCtx,
+  NormalInterfaceDeclarationCtx,
+  PackageDeclarationCtx,
   SuperclassCtx,
-  SuperinterfacesCtx, UnannClassTypeCtx, UnannPrimitiveTypeCtx
+  SuperinterfacesCtx,
+  UnannClassTypeCtx,
+  UnannPrimitiveTypeCtx
 } from 'java-parser';
 
 // export type FoundField = {name: string, type: string};

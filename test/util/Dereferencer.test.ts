@@ -1,8 +1,4 @@
-import {LoggerUtils} from '..';
-
-LoggerUtils.registerLoggerFix();
-
-import {LoggerFactory, Dereferencer} from '@util';
+import {Dereferencer, LoggerFactory} from '@util';
 import * as fs from 'fs/promises';
 import nock from 'nock';
 

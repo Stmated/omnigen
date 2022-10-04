@@ -1,10 +1,5 @@
-import {LoggerUtils} from '..';
-
-LoggerUtils.registerLoggerFix();
-
 import {LoggerFactory} from '@util';
-import {Booleanish, IncomingOptions, IncomingOrRealOption, IOptions} from '@options';
-import {OptionsUtil} from '@options';
+import {Booleanish, IncomingOptions, IncomingOrRealOption, IOptions, OptionsUtil} from '@options';
 
 export const logger = LoggerFactory.create(__filename);
 
@@ -50,7 +45,7 @@ describe('OptionsParserManager', () => {
       'something',
     ];
 
-    const converted = input.map(it => OptionsUtil.toBoolean(it));
+    const converted = await Promise.all(input.map(it => OptionsUtil.toBoolean(it)));
 
     expect(converted).toEqual([
       true,

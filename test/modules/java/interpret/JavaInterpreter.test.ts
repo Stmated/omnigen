@@ -1,14 +1,9 @@
-import {TestUtils} from '@test';
+import {TestUtils, DEFAULT_TEST_JAVA_OPTIONS} from '@test';
 import {JavaInterpreter} from '@java/interpret/JavaInterpreter';
-import {
-  DEFAULT_JAVA_OPTIONS,
-  JavaUtil,
-  IJavaOptions
-} from '@java';
+import {IJavaOptions, JavaUtil} from '@java';
 import {OmniTypeKind} from '@parse';
 import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
-import {RealOptions, PrimitiveGenerificationChoice} from '@options';
-import {DEFAULT_TEST_JAVA_OPTIONS} from '../JavaTestUtils';
+import {PrimitiveGenerificationChoice, RealOptions} from '@options';
 
 describe('Test the structuring of GenericModel into a Java CST', () => {
 

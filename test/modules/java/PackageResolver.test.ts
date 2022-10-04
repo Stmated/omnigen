@@ -1,5 +1,5 @@
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from './JavaTestUtils';
-import {IJavaOptions} from '../../../src/modules/java';
+import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@test';
+import {IJavaOptions} from '@java';
 
 describe('PackageResolver', () => {
 

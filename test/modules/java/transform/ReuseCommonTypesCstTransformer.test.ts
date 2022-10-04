@@ -1,8 +1,7 @@
-import {TestUtils} from '../../../TestUtils';
+import {TestUtils, DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@test';
 import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
 import {IJavaOptions} from '@java';
-import {OmniModelMerge, OmniUtil, Naming} from '@parse';
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '../JavaTestUtils';
+import {Naming, OmniModelMerge, OmniUtil} from '@parse';
 
 describe('Reuse Common Types', () => {
 

@@ -1,4 +1,4 @@
-import {CompositionKind, OmniPrimitiveKind, OmniTypeKind, CompositionUtil} from '@parse';
+import {CompositionKind, CompositionUtil, OmniPrimitiveKind, OmniTypeKind} from '@parse';
 import assert = require('assert');
 
 describe('Test Composition Types', () => {

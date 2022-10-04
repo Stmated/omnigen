@@ -1,8 +1,8 @@
 import {OmniModel, OmniPrimitiveKind, OmniTypeKind} from '@parse';
-import {TestUtils} from '../../TestUtils';
+import {TestUtils} from '@test';
 import {JavaUtil} from '@java';
 import {GenericsOmniModelTransformer} from '@parse/general/GenericsOmniModelTransformer';
-import {DEFAULT_TEST_JAVA_OPTIONS} from '../../modules/java/JavaTestUtils';
+import {DEFAULT_TEST_JAVA_OPTIONS} from '@test';
 
 describe('Test CompositionDependencyUtil', () => {
 

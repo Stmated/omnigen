@@ -1,22 +1,16 @@
 import * as JavaParser from 'java-parser';
 import {DEFAULT_JAVA_OPTIONS, IJavaOptions, JavaInterpreter, JavaRenderer} from '@java';
-import {TestUtils} from '@test';
+import {ParsedJavaTestVisitor, TestUtils} from '@test';
 import {CstRootNode} from '@cst/CstRootNode';
-import {ParsedJavaTestVisitor} from '@test';
 import {OmniModelParserResult} from '@parse';
-import {
-  DEFAULT_OPENRPC_OPTIONS,
-  IOpenRpcParserOptions,
-} from '@parse/openrpc';
+import {DEFAULT_OPENRPC_OPTIONS, IOpenRpcParserOptions,} from '@parse/openrpc';
 import {RealOptions} from '@options';
 import {ExternalSyntaxTree} from '@transform';
 
 export const DEFAULT_TEST_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
   ...DEFAULT_JAVA_OPTIONS,
-  ...{
-    compressSoloReferencedTypes: false,
-    compressUnreferencedSubTypes: false
-  }
+  compressSoloReferencedTypes: false,
+  compressUnreferencedSubTypes: false,
 };
 
 export class JavaTestUtils {

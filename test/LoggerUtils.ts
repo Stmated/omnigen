@@ -1,4 +1,4 @@
-import {LoggerFactory} from '../src/util/LoggerFactory';
+import {LoggerFactory} from '@util/LoggerFactory';
 import pretty from 'pino-pretty';
 
 export class LoggerUtils {

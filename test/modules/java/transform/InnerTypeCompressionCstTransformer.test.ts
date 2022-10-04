@@ -1,7 +1,7 @@
 import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
 import {IJavaOptions} from '@java';
-import {RealOptions, PrimitiveGenerificationChoice} from '@options';
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '../JavaTestUtils';
+import {PrimitiveGenerificationChoice, RealOptions} from '@options';
+import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@test';
 
 describe('Reuse Common Types', () => {
 

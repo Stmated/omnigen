@@ -1,17 +1,18 @@
 import {
-  OmniObjectType,
   OmniCompositionType,
+  OmniInheritableType,
+  OmniObjectType,
   OmniPrimitiveKind,
   OmniType,
-  OmniTypeKind, OmniInheritableType
+  OmniTypeKind
 } from '@parse';
 import {
   DEFAULT_GRAPH_OPTIONS,
   DependencyGraph,
   DependencyGraphBuilder,
   DependencyGraphOptions
-} from '../../src/parse/DependencyGraphBuilder';
-import {TestUtils} from '../TestUtils';
+} from '@parse/DependencyGraphBuilder';
+import {TestUtils} from '@test';
 
 describe('Test CompositionDependencyUtil', () => {
 

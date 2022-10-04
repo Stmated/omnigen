@@ -9,11 +9,16 @@ import {GenericsOmniModelTransformer} from '@parse/general/GenericsOmniModelTran
 import {InterfaceJavaCstTransformer} from '@parse/general/InterfaceJavaCstTransformer';
 import {OptionsUtil} from '@options';
 import {
-  OmniProperty,
-  OmniModelParserResult,
-  SchemaFile,
   CompositionKind,
-  OmniCompositionType, OmniInheritableType,OmniObjectType, OmniPropertyOwner, OmniType, OmniTypeKind,
+  OmniCompositionType,
+  OmniInheritableType,
+  OmniModelParserResult,
+  OmniObjectType,
+  OmniProperty,
+  OmniPropertyOwner,
+  OmniType,
+  OmniTypeKind,
+  SchemaFile,
   TypeName
 } from '@parse';
 import {
@@ -22,16 +27,11 @@ import {
   OPENRPC_OPTIONS_CONVERTERS,
   OpenRpcParserBootstrapFactory
 } from '@parse/openrpc';
-import {
-  JavaVisitor,
-  IJavaOptions,
-  JAVA_OPTIONS_CONVERTERS
-} from '@java';
+import {IJavaOptions, JAVA_OPTIONS_CONVERTERS, JavaVisitor} from '@java';
 import * as Java from '@java/cst';
 import {Dereferencer} from '@util';
 import {JSONSchema7} from 'json-schema';
 import {JsonSchemaParser} from '@parse/jsonschema/JsonSchemaParser';
-import {DEFAULT_PARSER_OPTIONS} from '@parse/IParserOptions';
 
 export type KnownSchemaNames = 'openrpc';
 

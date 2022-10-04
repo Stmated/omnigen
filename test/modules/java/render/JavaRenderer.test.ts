@@ -1,10 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as JavaParser from 'java-parser';
-import {TestUtils} from '@test';
 import {JavaInterpreter, JavaRenderer} from '@java';
-import {ParsedJavaTestVisitor} from '@test/ParsedJavaTestVisitor';
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '../JavaTestUtils';
+import {TestUtils, DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, ParsedJavaTestVisitor} from '@test';
 import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
 
 describe('Java Rendering', () => {

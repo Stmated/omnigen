@@ -1,29 +1,29 @@
-import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
+import {AbstractJavaAstTransformer} from '@java/transform/AbstractJavaAstTransformer';
 import {OmniInterfaceType, OmniModel, OmniObjectType, OmniTypeKind} from '@parse';
 import {IJavaOptions, JavaUtil} from '@java';
-import * as Java from '@java/cst';
+import * as Java from '@java/ast';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
-import {JavaCstUtils} from '@java/transform/JavaCstUtils';
+import {JavaAstUtils} from '@java/transform/JavaAstUtils';
 import {Naming} from '@parse/Naming';
 import {RealOptions} from '@options';
 import {ExternalSyntaxTree} from '@transform';
 
-export class AdditionalPropertiesInterfaceTransformer extends AbstractJavaCstTransformer {
+export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
-  transformCst(
+  transformAst(
     model: OmniModel,
-    root: Java.JavaCstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[],
+    root: Java.JavaAstRootNode,
+    externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
     options: RealOptions<IJavaOptions>
   ): Promise<void> {
 
     const createdInterface: {obj?: Java.InterfaceDeclaration} = {};
     const currentClassDeclaration: {obj?: Java.ClassDeclaration} = {};
-    root.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
         currentClassDeclaration.obj = node;
-        AbstractJavaCstTransformer._javaVisitor.visitClassDeclaration(node, visitor);
+        AbstractJavaAstTransformer._javaVisitor.visitClassDeclaration(node, visitor);
         currentClassDeclaration.obj = undefined;
       },
 
@@ -52,12 +52,12 @@ export class AdditionalPropertiesInterfaceTransformer extends AbstractJavaCstTra
           };
 
           createdInterface.obj = new Java.InterfaceDeclaration(
-            JavaCstUtils.createTypeNode(interfaceType, false),
+            JavaAstUtils.createTypeNode(interfaceType, false),
             new Java.Identifier(Naming.safe([interfaceType.name, additionalPropertiesObjectType.name])),
             new Java.Block()
           );
 
-          JavaCstUtils.addInterfaceProperties(interfaceType, createdInterface.obj.body);
+          JavaAstUtils.addInterfaceProperties(interfaceType, createdInterface.obj.body);
         }
 
         if (currentClassDeclaration.obj) {

@@ -1,2 +1,2 @@
 
-export * from './ICstVisitor';
+export * from './IAstVisitor';

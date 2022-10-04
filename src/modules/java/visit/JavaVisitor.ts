@@ -1,9 +1,9 @@
-import {ICstVisitor, VisitFn, VisitResult} from '@visit';
-import {IJavaCstVisitor, JavaVisitFn} from '@java/visit';
-import * as Java from '@java/cst/JavaCstTypes';
-import {CstRootNode} from '@cst/CstRootNode';
+import {IAstVisitor, VisitFn, VisitResult} from '@visit';
+import {IJavaAstVisitor, JavaVisitFn} from '@java/visit';
+import * as Java from '@java/ast/JavaAstTypes';
+import {AstRootNode} from '../../../ast/AstRootNode';
 
-export class JavaVisitor<R> implements IJavaCstVisitor<R> {
+export class JavaVisitor<R> implements IJavaAstVisitor<R> {
 
   constructor() {
 
@@ -274,8 +274,8 @@ export class JavaVisitor<R> implements IJavaCstVisitor<R> {
     this.visitSelfReference = (node, visitor) => [];
   }
 
-  visitor_java: IJavaCstVisitor<R>;
-  visitRootNode: VisitFn<CstRootNode, R, ICstVisitor<R>>;
+  visitor_java: IJavaAstVisitor<R>;
+  visitRootNode: VisitFn<AstRootNode, R, IAstVisitor<R>>;
   visitRegularType: JavaVisitFn<Java.RegularType, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;

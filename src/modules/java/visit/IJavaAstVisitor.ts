@@ -1,11 +1,11 @@
-import {ICstVisitor, VisitFn} from '@visit';
-import * as Java from '@java/cst';
-import {ICstNode} from '@cst';
+import {IAstVisitor, VisitFn} from '@visit';
+import * as Java from '@java/ast';
+import {IAstNode} from '../../../ast';
 
-export type JavaVisitFn<in N extends ICstNode, R> = VisitFn<N, R, IJavaCstVisitor<R>>;
+export type JavaVisitFn<in N extends IAstNode, R> = VisitFn<N, R, IJavaAstVisitor<R>>;
 
-export interface IJavaCstVisitor<R> extends ICstVisitor<R> {
-  visitor_java: IJavaCstVisitor<R>;
+export interface IJavaAstVisitor<R> extends IAstVisitor<R> {
+  visitor_java: IJavaAstVisitor<R>;
   visitRegularType: JavaVisitFn<Java.RegularType, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;

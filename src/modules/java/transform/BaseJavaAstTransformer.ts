@@ -1,4 +1,4 @@
-import {AbstractJavaCstTransformer} from './AbstractJavaCstTransformer';
+import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer';
 import {
   JavaUtil,
   IJavaOptions,
@@ -7,10 +7,10 @@ import {
   AbstractObjectDeclaration,
   Block,
   CommentList,
-  JavaCstRootNode,
+  JavaAstRootNode,
   ModifierType,
   TokenType
-} from '@java/cst';
+} from '@java/ast';
 import {
   CompositionKind,
   OmniCompositionType,
@@ -33,21 +33,21 @@ import {
   OmniTypeKind,
   PrimitiveNullableKind
 } from '@parse';
-import * as Java from '@java/cst';
+import * as Java from '@java/ast';
 import {camelCase, constantCase, pascalCase} from 'change-case';
 import {Naming} from '@parse/Naming';
 import {DEFAULT_GRAPH_OPTIONS, DependencyGraph, DependencyGraphBuilder} from '@parse/DependencyGraphBuilder';
 import {JavaDependencyGraph} from '@java/JavaDependencyGraph';
 import {OmniUtil} from '@parse/OmniUtil';
-import {JavaCstUtils} from '@java/transform/JavaCstUtils';
+import {JavaAstUtils} from '@java/transform/JavaAstUtils';
 import {RealOptions} from '@options';
 import {ExternalSyntaxTree} from '@transform';
 
-export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
+export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private static readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 
-  transformCst(model: OmniModel, root: JavaCstRootNode, externals: ExternalSyntaxTree<JavaCstRootNode, IJavaOptions>[], options: RealOptions<IJavaOptions>): Promise<void> {
+  transformAst(model: OmniModel, root: JavaAstRootNode, externals: ExternalSyntaxTree<JavaAstRootNode, IJavaOptions>[], options: RealOptions<IJavaOptions>): Promise<void> {
 
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
@@ -60,11 +60,11 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         // The primitive is said to not be nullable, but to still be a primitive.
         // This is not really possible in Java, so we need to wrap it inside a custom class.
         const kindName = pascalCase(JavaUtil.getPrimitiveTypeName(type));
-        let primitiveClass = BaseJavaCstTransformer._primitiveWrapperMap.get(kindName);
+        let primitiveClass = BaseJavaAstTransformer._primitiveWrapperMap.get(kindName);
         if (!primitiveClass) {
 
           primitiveClass = this.createNotNullablePrimitiveWrapper(type, kindName);
-          BaseJavaCstTransformer._primitiveWrapperMap.set(kindName, primitiveClass);
+          BaseJavaAstTransformer._primitiveWrapperMap.set(kindName, primitiveClass);
 
           root.children.push(
             new Java.CompilationUnit(
@@ -181,7 +181,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const valueIdentifier = new Java.Identifier('value');
     const valueField = new Java.Field(
-      JavaCstUtils.createTypeNode(valueType),
+      JavaAstUtils.createTypeNode(valueType),
       valueIdentifier,
       new Java.ModifierList(
         new Java.Modifier(ModifierType.PRIVATE),
@@ -213,7 +213,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     model: OmniModel,
     type: OmniEnumType,
     originalType: OmniType | undefined,
-    root: JavaCstRootNode,
+    root: JavaAstRootNode,
     options: RealOptions<IJavaOptions>
   ): void {
     const body = new Java.Block();
@@ -225,7 +225,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
       body,
     );
 
-    JavaCstUtils.addGeneratedAnnotation(enumDeclaration);
+    JavaAstUtils.addGeneratedAnnotation(enumDeclaration);
 
     const comments = this.getCommentsForType(type, model, options);
     if (comments.length > 0) {
@@ -286,20 +286,20 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
   private transformInterface(
     type: OmniInterfaceType,
     options: RealOptions<IJavaOptions>,
-    root: JavaCstRootNode,
+    root: JavaAstRootNode,
   ): void {
 
     const declaration = new Java.InterfaceDeclaration(
-      JavaCstUtils.createTypeNode(type),
+      JavaAstUtils.createTypeNode(type),
       // TODO: This probably needs improvement, where if no interface name, then create new with "I${underlyingType}"
       // .name || OmniModelUtil.getVirtualTypeName(type.of)
       new Java.Identifier(JavaUtil.getClassName(type, options)),
       new Java.Block(),
     );
 
-    JavaCstUtils.addGeneratedAnnotation(declaration);
+    JavaAstUtils.addGeneratedAnnotation(declaration);
 
-    JavaCstUtils.addInterfaceProperties(type, declaration.body);
+    JavaAstUtils.addInterfaceProperties(type, declaration.body);
 
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
@@ -318,7 +318,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     type: OmniObjectType | OmniCompositionType,
     originalType: OmniGenericSourceType | undefined,
     options: RealOptions<IJavaOptions>,
-    root: JavaCstRootNode,
+    root: JavaAstRootNode,
     graph: DependencyGraph,
     genericSourceIdentifiers?: OmniGenericSourceIdentifierType[]
   ): void {
@@ -368,8 +368,8 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         new Java.GenericTypeDeclarationList(
           genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
             new Java.Identifier(it.placeholderName),
-            it.lowerBound ? JavaCstUtils.createTypeNode(it.lowerBound) : undefined,
-            it.upperBound ? JavaCstUtils.createTypeNode(it.upperBound) : undefined,
+            it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
+            it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
           ))
         ),
         body,
@@ -383,7 +383,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     // TODO: Move into a separate transformer, and make it an option
-    JavaCstUtils.addGeneratedAnnotation(declaration);
+    JavaAstUtils.addGeneratedAnnotation(declaration);
 
     const comments = this.getCommentsForType(type, model, options);
 
@@ -476,7 +476,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
             ),
             new Java.AnnotationKeyValuePair(
               new Java.Identifier('value'),
-              new Java.ClassReference(JavaCstUtils.createTypeNode(subTypeHint.type))
+              new Java.ClassReference(JavaAstUtils.createTypeNode(subTypeHint.type))
             )
           )
         ));
@@ -514,14 +514,14 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     if (typeExtends) {
 
       declaration.extends = new Java.ExtendsDeclaration(
-        JavaCstUtils.createTypeNode(typeExtends)
+        JavaAstUtils.createTypeNode(typeExtends)
       );
     }
 
     const typeImplements = JavaDependencyGraph.getImplements(graph, type);
     if (typeImplements.length > 0) {
       declaration.implements = new Java.ImplementsDeclaration(
-        new Java.TypeList(typeImplements.map(it => JavaCstUtils.createTypeNode(it)))
+        new Java.TypeList(typeImplements.map(it => JavaAstUtils.createTypeNode(it)))
       );
     }
   }
@@ -661,7 +661,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`is${enumTypeName}`),
-            JavaCstUtils.createTypeNode({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}),
+            JavaAstUtils.createTypeNode({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}),
           ),
           new Java.Block(
             new Java.Statement(
@@ -674,7 +674,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`getAs${enumTypeName}`),
-            JavaCstUtils.createTypeNode(enumType)
+            JavaAstUtils.createTypeNode(enumType)
           ),
           new Java.Block(
             new Java.Statement(
@@ -682,11 +682,11 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
                 new Java.MethodCall(
                   // NOTE: Is it really all right creating a new Java.Type here? Should we not used the *REAL* target?
                   //        Since it might be in a separate package based on specific language needs
-                  new Java.ClassName(JavaCstUtils.createTypeNode(enumType)),
+                  new Java.ClassName(JavaAstUtils.createTypeNode(enumType)),
                   new Java.Identifier("valueOf"),
                   new Java.ArgumentList(
                     new Java.Cast(
-                      JavaCstUtils.createTypeNode({
+                      JavaAstUtils.createTypeNode({
                         kind: OmniTypeKind.PRIMITIVE,
                         primitiveKind: enumType.primitiveKind,
                       }),
@@ -749,7 +749,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     }
 
     const dictionaryIdentifier = new Java.Identifier(`_values`);
-    const fieldValuesType = JavaCstUtils.createTypeNode({
+    const fieldValuesType = JavaAstUtils.createTypeNode({
       kind: OmniTypeKind.DICTIONARY,
       keyType: fieldValueType.omniType,
       valueType: declaration.type.omniType,
@@ -910,7 +910,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier('isKnown'),
-            JavaCstUtils.createTypeNode({
+            JavaAstUtils.createTypeNode({
               kind: OmniTypeKind.PRIMITIVE,
               primitiveKind: OmniPrimitiveKind.BOOL,
               nullable: PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE,
@@ -1006,7 +1006,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
         const methodDeclaration = new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-            JavaCstUtils.createTypeNode(property.type),
+            JavaAstUtils.createTypeNode(property.type),
           ),
           new Java.Block(
             new Java.Statement(new Java.ReturnStatement(new Java.Literal(null))),
@@ -1027,7 +1027,7 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
 
     const getterAnnotationList = this.getGetterAnnotations(property);
 
-    const fieldType = JavaCstUtils.createTypeNode(property.type);
+    const fieldType = JavaAstUtils.createTypeNode(property.type);
     const fieldIdentifier = new Java.Identifier(property.fieldName || camelCase(property.name), property.name);
     const getterIdentifier = property.propertyName
       ? new Java.Identifier(JavaUtil.getGetterName(property.propertyName, property.type))
@@ -1094,14 +1094,14 @@ export class BaseJavaCstTransformer extends AbstractJavaCstTransformer {
     );
 
     const field = new Java.Field(
-      JavaCstUtils.createTypeNode(type),
+      JavaAstUtils.createTypeNode(type),
       new Java.Identifier(`${JavaUtil.getSafeIdentifierName(property.fieldName || property.name)}`, property.name),
       fieldModifiers
     );
 
     const methodDeclarationReturnType = type.valueConstant && JavaUtil.isNullable(type)
-      ? JavaCstUtils.createTypeNode(JavaUtil.toUnboxedPrimitiveType(type))
-      : JavaCstUtils.createTypeNode(type);
+      ? JavaAstUtils.createTypeNode(JavaUtil.toUnboxedPrimitiveType(type))
+      : JavaAstUtils.createTypeNode(type);
 
     const methodDeclarationSignature = new Java.MethodDeclarationSignature(
       new Java.Identifier(JavaUtil.getGetterName(property.name, type), property.name),

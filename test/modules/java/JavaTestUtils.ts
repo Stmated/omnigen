@@ -1,7 +1,7 @@
 import * as JavaParser from 'java-parser';
 import {DEFAULT_JAVA_OPTIONS, IJavaOptions, JavaInterpreter, JavaRenderer} from '@java';
 import {ParsedJavaTestVisitor, TestUtils} from '@test';
-import {CstRootNode} from '@cst/CstRootNode';
+import {AstRootNode} from '../../../src/ast/AstRootNode';
 import {OmniModelParserResult} from '@parse';
 import {DEFAULT_OPENRPC_OPTIONS, IOpenRpcParserOptions,} from '@parse/openrpc';
 import {RealOptions} from '@options';
@@ -27,25 +27,25 @@ export class JavaTestUtils {
 
   public static async getRootNodeFromParseResult(
     parseResult: OmniModelParserResult<IJavaOptions>,
-    externals: ExternalSyntaxTree<CstRootNode, IJavaOptions>[] = []
-  ): Promise<CstRootNode> {
+    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = []
+  ): Promise<AstRootNode> {
     return await new JavaInterpreter().buildSyntaxTree(parseResult.model, externals, parseResult.options);
   }
 
   public static async getFileContentsFromParseResult(
     parseResult: OmniModelParserResult<IJavaOptions>,
-    externals: ExternalSyntaxTree<CstRootNode, IJavaOptions>[] = []
+    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = []
   ): Promise<Map<string, string>> {
 
     const interpretation = await this.getRootNodeFromParseResult(parseResult, externals);
     return JavaTestUtils.getFileContents(parseResult.options, interpretation);
   }
 
-  public static async getFileContentsFromRootNode(rootNode: CstRootNode, options: RealOptions<IJavaOptions>): Promise<Map<string, string>> {
+  public static async getFileContentsFromRootNode(rootNode: AstRootNode, options: RealOptions<IJavaOptions>): Promise<Map<string, string>> {
     return JavaTestUtils.getFileContents(options, rootNode);
   }
 
-  public static getFileContents(javaOptions: RealOptions<IJavaOptions>, interpretation: CstRootNode): Map<string, string> {
+  public static getFileContents(javaOptions: RealOptions<IJavaOptions>, interpretation: AstRootNode): Map<string, string> {
     const fileContents = new Map<string, string>();
     const renderer = new JavaRenderer(javaOptions, (cu) => {
       fileContents.set(cu.fileName, cu.content);

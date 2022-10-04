@@ -1,5 +1,5 @@
-import * as Java from './cst/JavaCstTypes';
-import {ModifierType} from '@java/cst';
+import * as Java from './ast/JavaAstTypes';
+import {ModifierType} from '@java/ast';
 import {camelCase, pascalCase} from 'change-case';
 import {
   CompositionKind,
@@ -19,7 +19,7 @@ import {
 import {DEFAULT_JAVA_OPTIONS, IJavaOptions, IPackageResolver, UnknownType} from '@java/JavaOptions';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
-import {CstRootNode} from '@cst/CstRootNode';
+import {AstRootNode} from '../../ast/AstRootNode';
 import {Naming} from '@parse/Naming';
 import {OmniUtil} from '@parse/OmniUtil';
 import {RealOptions} from '@options';
@@ -459,7 +459,7 @@ export class JavaUtil {
   }
 
   public static getConstructorRequirements(
-    root: CstRootNode,
+    root: AstRootNode,
     node: Java.AbstractObjectDeclaration,
     followSupertype = false
   ): [Java.Field[], Java.ArgumentDeclaration[]] {
@@ -540,7 +540,7 @@ export class JavaUtil {
     }
   }
 
-  public static getClassDeclaration(root: CstRootNode, type: OmniType): Java.ClassDeclaration | undefined {
+  public static getClassDeclaration(root: AstRootNode, type: OmniType): Java.ClassDeclaration | undefined {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
     const holder: { ref?: Java.ClassDeclaration } = {};

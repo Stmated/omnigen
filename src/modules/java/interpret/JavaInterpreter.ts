@@ -1,24 +1,26 @@
 import {AbstractInterpreter} from '@interpret/AbstractInterpreter';
 import {IJavaOptions} from '@java';
-import {CstRootNode} from '@cst/CstRootNode';
-import {BaseJavaCstTransformer} from '@java/transform';
-import {AddConstructorJavaCstTransformer} from '@java/transform/AddConstructorJavaCstTransformer';
-import {PackageResolverCstTransformer} from '@java/transform/PackageResolverCstTransformer';
-import {AdditionalPropertiesInterfaceTransformer} from '@java/transform/AdditionalPropertiesInterfaceTransformer';
-import {InnerTypeCompressionCstTransformer} from '@java/transform/InnerTypeCompressionCstTransformer';
-import * as Java from '@java/cst';
+import {AstRootNode} from '@ast';
+import {BaseJavaAstTransformer} from '@java/transform';
+import {
+  AddConstructorJavaAstTransformer,
+  PackageResolverAstTransformer,
+  AdditionalPropertiesInterfaceAstTransformer,
+  InnerTypeCompressionAstTransformer
+} from '@java/transform';
+import * as Java from '@java/ast';
 
 export class JavaInterpreter extends AbstractInterpreter<IJavaOptions> {
   constructor() {
     super();
-    this.registerTransformer(new BaseJavaCstTransformer());
-    this.registerTransformer(new AddConstructorJavaCstTransformer());
-    this.registerTransformer(new AdditionalPropertiesInterfaceTransformer());
-    this.registerTransformer(new InnerTypeCompressionCstTransformer());
-    this.registerTransformer(new PackageResolverCstTransformer());
+    this.registerTransformer(new BaseJavaAstTransformer());
+    this.registerTransformer(new AddConstructorJavaAstTransformer());
+    this.registerTransformer(new AdditionalPropertiesInterfaceAstTransformer());
+    this.registerTransformer(new InnerTypeCompressionAstTransformer());
+    this.registerTransformer(new PackageResolverAstTransformer());
   }
 
-  newRootNode(): Promise<CstRootNode> {
-    return Promise.resolve(new Java.JavaCstRootNode());
+  newRootNode(): Promise<AstRootNode> {
+    return Promise.resolve(new Java.JavaAstRootNode());
   }
 }

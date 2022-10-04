@@ -1,17 +1,17 @@
-import * as Java from '@java/cst/JavaCstTypes';
-import {AbstractJavaNode, GenericTypeDeclarationList} from '@java/cst/JavaCstTypes';
-import {CompilationUnitRenderCallback} from '@cst/CompilationUnitRenderCallback';
-import {ICstVisitor, VisitResult} from '@visit';
+import * as Java from '@java/ast/JavaAstTypes';
+import {AbstractJavaNode, GenericTypeDeclarationList} from '@java/ast/JavaAstTypes';
+import {CompilationUnitRenderCallback} from '../../../ast/CompilationUnitRenderCallback';
+import {IAstVisitor, VisitResult} from '@visit';
 import {IRenderer} from '@render';
-import {ICstNode} from '@cst';
-import {IJavaCstVisitor, JavaVisitFn} from '@java/visit/IJavaCstVisitor';
+import {IAstNode} from '../../../ast';
+import {IJavaAstVisitor, JavaVisitFn} from '@java/visit/IJavaAstVisitor';
 import {JavaVisitor} from '@java/visit/JavaVisitor';
 import {pascalCase} from 'change-case';
 import {IJavaOptions, JavaUtil} from '@java';
 import {OmniPrimitiveKind, OmniUtil} from '@parse';
 import {RealOptions} from '@options';
 
-type JavaRendererVisitFn<N extends ICstNode> = JavaVisitFn<N, string>;
+type JavaRendererVisitFn<N extends IAstNode> = JavaVisitFn<N, string>;
 
 export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   private blockDepth = 0;
@@ -32,7 +32,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return '  '.repeat(d);
   }
 
-  public render<N extends ICstNode, V extends ICstVisitor<string>>(node: N | undefined, visitor?: V): string {
+  public render<N extends IAstNode, V extends IAstVisitor<string>>(node: N | undefined, visitor?: V): string {
     if (node === undefined) {
       return '';
     }
@@ -149,7 +149,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   }
 
   visitCommonTypeDeclaration(
-    visitor: IJavaCstVisitor<string>,
+    visitor: IJavaAstVisitor<string>,
     node: Java.AbstractObjectDeclaration,
     typeString: string,
     generics?: GenericTypeDeclarationList

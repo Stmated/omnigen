@@ -1,29 +1,29 @@
-import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
+import {AbstractJavaAstTransformer} from '@java/transform/AbstractJavaAstTransformer';
 import {OmniModel, OmniTypeKind} from '@parse';
 import {
   IJavaOptions,
   JavaUtil
 } from '@java';
-import * as Java from '@java/cst';
+import * as Java from '@java/ast';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {OmniUtil} from '@parse/OmniUtil';
 import {RealOptions} from '@options';
 import {ExternalSyntaxTree} from '@transform';
-import {JavaCstUtils} from '@java/transform/JavaCstUtils';
+import {JavaAstUtils} from '@java/transform/JavaAstUtils';
 
-export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer {
+export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
-  transformCst(
+  transformAst(
     model: OmniModel,
-    root: Java.JavaCstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[],
+    root: Java.JavaAstRootNode,
+    externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
     options: RealOptions<IJavaOptions>
   ): Promise<void> {
 
     const classDeclarations: Java.ClassDeclaration[] = [];
-    root.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
       visitClassDeclaration: (node, visitor) => {
-        AbstractJavaCstTransformer._javaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
+        AbstractJavaAstTransformer._javaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
         classDeclarations.push(node);
       },
       // visitGenericClassDeclaration: (node, visitor) => {
@@ -35,7 +35,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
     // TODO: Re-order the nodes, so that those that have no superclasses are first
     //        Or if they do, that it's in the correct order
     //  (this way we can better add constructors on subtypes, instead of working with required fields)
-    classDeclarations.sort(AddConstructorJavaCstTransformer.compareDependencyHierarchy);
+    classDeclarations.sort(AddConstructorJavaAstTransformer.compareDependencyHierarchy);
 
     // TODO: Skip the re-order and instead do it on a "need-to" basis, where we dive deeper here,
     //        and check if it has already been handled or already has constructor(s)
@@ -230,7 +230,7 @@ export class AddConstructorJavaCstTransformer extends AbstractJavaCstTransformer
           });
 
           if (foundGenericType) {
-            return JavaCstUtils.createTypeNode(foundGenericType.type);
+            return JavaAstUtils.createTypeNode(foundGenericType.type);
           } else {
             const typeName = requiredArgument.identifier.value;
             const placeholderName = OmniUtil.getTypeDescription(requiredArgument.type.omniType);

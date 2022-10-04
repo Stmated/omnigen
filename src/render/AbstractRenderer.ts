@@ -1,6 +1,6 @@
 import {IRenderer} from '@render';
-import {CstRootNode} from '@cst/CstRootNode';
+import {AstRootNode} from '../ast/AstRootNode';
 
 export abstract class AbstractRenderer implements IRenderer {
-  abstract render(node: CstRootNode): string;
+  abstract render(node: AstRootNode): string;
 }

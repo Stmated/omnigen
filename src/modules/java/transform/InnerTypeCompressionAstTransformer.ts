@@ -1,7 +1,7 @@
-import {AbstractJavaCstTransformer} from '@java/transform/AbstractJavaCstTransformer';
+import {AbstractJavaAstTransformer} from '@java/transform/AbstractJavaAstTransformer';
 import {OmniModel, OmniType, OmniTypeKind} from '@parse';
 import {IJavaOptions} from '@java';
-import * as Java from '@java/cst';
+import * as Java from '@java/ast';
 import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {RealOptions} from '@options';
 import {OmniUtil} from '@parse/OmniUtil';
@@ -17,12 +17,12 @@ interface TypeMapping {
   usedIn: Set<Java.CompilationUnit>;
 }
 
-export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransformer {
+export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
-  transformCst(
+  transformAst(
     model: OmniModel,
-    root: Java.JavaCstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[],
+    root: Java.JavaAstRootNode,
+    externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
     options: RealOptions<ITargetOptions>
   ): Promise<void> {
 
@@ -34,11 +34,11 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
 
     const typeMapping = new Map<OmniType, TypeMapping>();
     const cuInfoStack: CompilationUnitInfo[] = [];
-    root.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
-        // TODO: To get this to work, there might be a need to rewrite PackageImportJavaCstTransformer?
+        // TODO: To get this to work, there might be a need to rewrite PackageImportJavaAstTransformer?
 
         const mapping = typeMapping.get(node.object.type.omniType);
         if (mapping) {
@@ -53,7 +53,7 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
         cuInfoStack.push({
           cu: node,
         });
-        AbstractJavaCstTransformer._javaVisitor.visitCompilationUnit(node, visitor);
+        AbstractJavaAstTransformer._javaVisitor.visitCompilationUnit(node, visitor);
         cuInfoStack.pop();
 
       },
@@ -131,7 +131,7 @@ export class InnerTypeCompressionCstTransformer extends AbstractJavaCstTransform
     sourceUnit: Java.CompilationUnit | undefined,
     targetUnit: Java.CompilationUnit | undefined,
     type: OmniType,
-    root: Java.JavaCstRootNode
+    root: Java.JavaAstRootNode
   ): void {
 
     if (!sourceUnit) {

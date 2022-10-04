@@ -1,12 +1,12 @@
 import fs from 'fs/promises';
-import AbstractNode from '@cst/AbstractNode';
+import AbstractNode from '../src/ast/AbstractNode';
 import {VisitorFactoryManager} from '../src/visit/VisitorFactoryManager';
-import {CstRootNode} from '@cst/CstRootNode';
+import {AstRootNode} from '../src/ast/AstRootNode';
 import {VisitResult} from '../src/visit';
 import {OmniModelTransformer} from '@parse/OmniModelTransformer';
 import {CompressionOmniModelTransformer} from '@parse/general/CompressionOmniModelTransformer';
 import {GenericsOmniModelTransformer} from '@parse/general/GenericsOmniModelTransformer';
-import {InterfaceJavaCstTransformer} from '@parse/general/InterfaceJavaCstTransformer';
+import {InterfaceJavaModelTransformer} from '@parse/general/InterfaceJavaModelTransformer';
 import {OptionsUtil} from '@options';
 import {
   CompositionKind,
@@ -28,7 +28,7 @@ import {
   OpenRpcParserBootstrapFactory
 } from '@parse/openrpc';
 import {IJavaOptions, JAVA_OPTIONS_CONVERTERS, JavaVisitor} from '@java';
-import * as Java from '@java/cst';
+import * as Java from '@java/ast';
 import {Dereferencer} from '@util';
 import {JSONSchema7} from 'json-schema';
 import {JsonSchemaParser} from '@parse/jsonschema/JsonSchemaParser';
@@ -66,7 +66,7 @@ export class TestUtils {
     const transformers: OmniModelTransformer<IJavaOptions>[] = [
       new CompressionOmniModelTransformer(),
       new GenericsOmniModelTransformer(),
-      new InterfaceJavaCstTransformer()
+      new InterfaceJavaModelTransformer()
     ];
 
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
@@ -172,7 +172,7 @@ export class TestUtils {
     return result;
   }
 
-  public static getCompilationUnits(root: CstRootNode): Java.CompilationUnit[] {
+  public static getCompilationUnits(root: AstRootNode): Java.CompilationUnit[] {
 
     const array: Java.CompilationUnit[] = [];
     const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
@@ -186,7 +186,7 @@ export class TestUtils {
     return array;
   }
 
-  public static getCompilationUnit(root: CstRootNode, name: string): Java.CompilationUnit {
+  public static getCompilationUnit(root: AstRootNode, name: string): Java.CompilationUnit {
 
     const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.CompilationUnit>(), {
       visitCompilationUnit: (node, visitor) => {

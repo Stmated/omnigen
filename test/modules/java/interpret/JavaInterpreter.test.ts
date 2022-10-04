@@ -5,7 +5,7 @@ import {OmniTypeKind} from '@parse';
 import {DEFAULT_OPENRPC_OPTIONS} from '@parse/openrpc';
 import {PrimitiveGenerificationChoice, RealOptions} from '@options';
 
-describe('Test the structuring of GenericModel into a Java CST', () => {
+describe('Test the structuring of GenericModel into a Java AST', () => {
 
   test('ensureBasicParsingDoesNotCrash', async () => {
 
@@ -71,7 +71,7 @@ describe('Test the structuring of GenericModel into a Java CST', () => {
     expect(type.targetIdentifiers).toHaveLength(1);
 
     // NOTE: This is currently "REFERENCE" -- but might change later.
-    //        If we introduce a new kind of type that is a reference to a custom type created in CST.
+    //        If we introduce a new kind of type that is a reference to a custom type created in AST.
     //        This is because it is quite ugly to use "REFERENCE" in case a transformer moved the referenced object.
     expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.HARDCODED_REFERENCE);
   });

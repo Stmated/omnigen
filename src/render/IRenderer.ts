@@ -1,6 +1,6 @@
-import {ICstNode} from '@cst';
-import {ICstVisitor} from '@visit';
+import {IAstNode} from '../ast';
+import {IAstVisitor} from '@visit';
 
 export interface IRenderer {
-  render(node: ICstNode): string;
+  render(node: IAstNode): string;
 }

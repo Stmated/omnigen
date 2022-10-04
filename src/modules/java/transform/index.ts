@@ -1,7 +1,7 @@
 
-export * from './AbstractJavaCstTransformer';
-export * from './BaseJavaCstTransformer';
-export * from './AddConstructorJavaCstTransformer';
-export * from './AdditionalPropertiesInterfaceTransformer';
-export * from './InnerTypeCompressionCstTransformer';
-export * from './PackageResolverCstTransformer';
+export * from './AbstractJavaAstTransformer';
+export * from './BaseJavaAstTransformer';
+export * from './AddConstructorJavaAstTransformer';
+export * from './AdditionalPropertiesInterfaceAstTransformer';
+export * from './InnerTypeCompressionAstTransformer';
+export * from './PackageResolverAstTransformer';

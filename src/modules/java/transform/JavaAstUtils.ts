@@ -1,8 +1,8 @@
 import {OmniInterfaceType, OmniType, OmniTypeKind} from '@parse';
 import {JavaUtil} from '@java';
-import * as Java from '@java/cst';
+import * as Java from '@java/ast';
 
-export class JavaCstUtils {
+export class JavaAstUtils {
 
   public static addInterfaceProperties(type: OmniInterfaceType, body: Java.Block): void {
 
@@ -14,7 +14,7 @@ export class JavaCstUtils {
           new Java.AbstractMethodDeclaration(
             new Java.MethodDeclarationSignature(
               new Java.Identifier(JavaUtil.getGetterName(property.propertyName || property.name, property.type)),
-              JavaCstUtils.createTypeNode(property.type, false)
+              JavaAstUtils.createTypeNode(property.type, false)
             )
           )
         );
@@ -52,15 +52,15 @@ export class JavaCstUtils {
       const mapClassOrInterface = implementation == false ? 'Map' : 'HashMap';
       const mapClass = `java.util.${mapClassOrInterface}`;
       const mapType = new Java.RegularType({ kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
-      const keyType = JavaCstUtils.createTypeNode(type.keyType, true);
-      const valueType = JavaCstUtils.createTypeNode(type.valueType, true);
+      const keyType = JavaAstUtils.createTypeNode(type.keyType, true);
+      const valueType = JavaAstUtils.createTypeNode(type.valueType, true);
 
       return new Java.GenericType(mapType, [keyType, valueType]);
 
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
 
       const baseType = new Java.RegularType(type, implementation);
-      const genericArguments = type.targetIdentifiers.map(it => JavaCstUtils.createTypeNode(it.type));
+      const genericArguments = type.targetIdentifiers.map(it => JavaAstUtils.createTypeNode(it.type));
       return new Java.GenericType(baseType, genericArguments);
 
     } else {

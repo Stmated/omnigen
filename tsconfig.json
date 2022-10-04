@@ -14,6 +14,8 @@
       "@parse": ["src/parse"],
       "@cst/*": ["src/cst/*"],
       "@cst": ["src/cst"],
+      "@ast/*": ["src/ast/*"],
+      "@ast": ["src/ast"],
       "@interpret/*": ["src/interpret/*"],
       "@interpret": ["src/interpret"],
       "@visit/*": ["src/visit/*"],

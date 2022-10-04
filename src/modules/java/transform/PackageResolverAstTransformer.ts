@@ -3,8 +3,8 @@ import {VisitorFactoryManager} from '@visit/VisitorFactoryManager';
 import {RealOptions} from '@options';
 import {ExternalSyntaxTree} from '@transform';
 import {IJavaOptions, JavaUtil, TypeNameInfo} from '@java';
-import {AbstractJavaCstTransformer} from '@java/transform';
-import * as Java from '@java/cst';
+import {AbstractJavaAstTransformer} from '@java/transform';
+import * as Java from '@java/ast';
 
 interface CompilationUnitInfo {
   cu: Java.CompilationUnit;
@@ -17,12 +17,12 @@ interface ObjectInfo {
   object: Java.AbstractObjectDeclaration;
 }
 
-export class PackageResolverCstTransformer extends AbstractJavaCstTransformer {
+export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
-  transformCst(
+  transformAst(
     model: OmniModel,
-    root: Java.JavaCstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[],
+    root: Java.JavaAstRootNode,
+    externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
     options: RealOptions<IJavaOptions>
   ): Promise<void> {
 
@@ -31,7 +31,7 @@ export class PackageResolverCstTransformer extends AbstractJavaCstTransformer {
     const objectStack: ObjectInfo[] = [];
 
     // First we go through all the types and find their true Full-Qualified Name.
-    const all: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>[] = [...externals, {node: root, options: options}];
+    const all: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[] = [...externals, {node: root, options: options}];
     for (const external of all) {
 
       // Get and move all type infos to the global one.
@@ -43,7 +43,7 @@ export class PackageResolverCstTransformer extends AbstractJavaCstTransformer {
     }
 
     // Then we will go through the currently compiling root node and set all type nodes' local names.
-    root.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
@@ -58,7 +58,7 @@ export class PackageResolverCstTransformer extends AbstractJavaCstTransformer {
         };
 
         cuInfoStack.push(cuInfo);
-        AbstractJavaCstTransformer._javaVisitor.visitCompilationUnit(node, visitor);
+        AbstractJavaAstTransformer._javaVisitor.visitCompilationUnit(node, visitor);
         cuInfoStack.pop();
 
         // After the visitation is done, all imports should have been found
@@ -70,7 +70,7 @@ export class PackageResolverCstTransformer extends AbstractJavaCstTransformer {
       },
 
       visitObjectDeclaration: (node, visitor) => {
-        AbstractJavaCstTransformer._javaVisitor.visitObjectDeclaration(node, visitor);
+        AbstractJavaAstTransformer._javaVisitor.visitObjectDeclaration(node, visitor);
       },
 
       visitRegularType: (node) => {
@@ -194,20 +194,20 @@ export class PackageResolverCstTransformer extends AbstractJavaCstTransformer {
   }
 
   private getTypeNameInfos(
-    external: ExternalSyntaxTree<Java.JavaCstRootNode, IJavaOptions>,
+    external: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>,
     objectStack: ObjectInfo[]
   ): Map<OmniType, TypeNameInfo> {
 
     const typeNameMap = new Map<OmniType, TypeNameInfo>();
 
-    external.node.visit(VisitorFactoryManager.create(AbstractJavaCstTransformer._javaVisitor, {
+    external.node.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
 
         objectStack.push({
           object: node
         });
-        AbstractJavaCstTransformer._javaVisitor.visitObjectDeclaration(node, visitor);
+        AbstractJavaAstTransformer._javaVisitor.visitObjectDeclaration(node, visitor);
         objectStack.pop();
 
         const omniType = node.type.omniType;

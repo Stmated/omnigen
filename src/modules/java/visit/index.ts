@@ -1,3 +1,3 @@
 
-export * from './IJavaCstVisitor';
+export * from './IJavaAstVisitor';
 export * from './JavaVisitor';

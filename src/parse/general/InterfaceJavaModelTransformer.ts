@@ -20,7 +20,7 @@ import {ITargetOptions} from '@interpret';
  * One that is the original, and one that is the interface version, pointing to the original.
  * It then replaces the types where needed.
  */
-export class InterfaceJavaCstTransformer implements OmniModelTransformer<ITargetOptions> {
+export class InterfaceJavaModelTransformer implements OmniModelTransformer<ITargetOptions> {
 
   transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
 

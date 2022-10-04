@@ -1,27 +1,27 @@
 import {Interpreter, ITargetOptions} from '@interpret';
 import {OmniModel} from '@parse';
-import {CstRootNode} from '@cst/CstRootNode';
+import {AstRootNode} from '@ast/AstRootNode';
 import {ExternalSyntaxTree, ITransformer} from '@transform';
 import {RealOptions} from '@options';
 
 export abstract class AbstractInterpreter<TOpt extends ITargetOptions> implements Interpreter<TOpt> {
-  private readonly _transformers: ITransformer<CstRootNode, TOpt>[] = [];
+  private readonly _transformers: ITransformer<AstRootNode, TOpt>[] = [];
 
-  protected getTransformers(): ITransformer<CstRootNode, TOpt>[] {
+  protected getTransformers(): ITransformer<AstRootNode, TOpt>[] {
     return this._transformers;
   }
 
-  protected registerTransformer(transformer: ITransformer<CstRootNode, TOpt>): void {
+  protected registerTransformer(transformer: ITransformer<AstRootNode, TOpt>): void {
     this._transformers.push(transformer);
   }
 
-  abstract newRootNode(): Promise<CstRootNode>;
+  abstract newRootNode(): Promise<AstRootNode>;
 
   public async buildSyntaxTree(
     model: OmniModel,
-    externals: ExternalSyntaxTree<CstRootNode, TOpt>[],
+    externals: ExternalSyntaxTree<AstRootNode, TOpt>[],
     options: RealOptions<TOpt>
-  ): Promise<CstRootNode> {
+  ): Promise<AstRootNode> {
     
     const rootNode = await this.newRootNode();
 
@@ -29,7 +29,7 @@ export abstract class AbstractInterpreter<TOpt extends ITargetOptions> implement
 
       // We do the transformers in order.
       // Later we might batch them together based on "type" or "group" or whatever.
-      await transformer.transformCst(model, rootNode, externals, options);
+      await transformer.transformAst(model, rootNode, externals, options);
     }
 
     return Promise.resolve(rootNode);

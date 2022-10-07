@@ -1,0 +1,30 @@
+{
+  "name": "@omnigen/target-java",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "default": "./src/index.ts",
+    "ast": "./src/ast/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "tsc -w",
+    "lint": "TIMING=1 eslint src/**/*.ts* --fix",
+    "test": "jest --passWithNoTests"
+  },
+  "jest": {
+    "preset": "@omnigen/jest-presets/jest/node"
+  },
+  "dependencies": {
+    "@omnigen/core": "*"
+  },
+  "devDependencies": {
+    "@omnigen/jest-presets": "*",
+    "@omnigen/tsconfig": "*",
+    "typescript": "4.9.1-beta"
+  }
+}

@@ -1,8 +1,13 @@
 .idea
 .git
 .yarn
+.turbo
+.cache
 *.iml
 node_modules
+build/**
+dist/**
 dist
+.next/**
 .target_test
 *.log

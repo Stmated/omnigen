@@ -1,5 +1,7 @@
 import {AbstractJavaAstTransformer} from '../transform';
-import {OmniModel, OmniType, OmniTypeKind, ExternalSyntaxTree, VisitorFactoryManager, RealOptions, OmniUtil, ITargetOptions} from '@omnigen/core';
+import {
+  OmniModel, OmniType, OmniTypeKind, ExternalSyntaxTree, VisitorFactoryManager, RealOptions, OmniUtil, ITargetOptions
+} from '@omnigen/core';
 import {IJavaOptions} from '../options';
 import * as Java from '../ast';
 
@@ -15,9 +17,9 @@ interface TypeMapping {
 export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    model: OmniModel,
+    _model: OmniModel,
     root: Java.JavaAstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
     options: RealOptions<ITargetOptions>
   ): Promise<void> {
 

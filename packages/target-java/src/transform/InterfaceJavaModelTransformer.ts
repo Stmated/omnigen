@@ -19,7 +19,7 @@ import {JavaDependencyGraph} from '../JavaDependencyGraph';
  */
 export class InterfaceJavaModelTransformer implements OmniModelTransformer<ITargetOptions> {
 
-  transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
+  transformModel(model: OmniModel, _options: RealOptions<ITargetOptions>): void {
 
     const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
     const graph = DependencyGraphBuilder.build(exportableTypes.all, DEFAULT_GRAPH_OPTIONS);

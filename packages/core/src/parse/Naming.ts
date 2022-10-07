@@ -6,19 +6,6 @@ const logger = LoggerFactory.create(__filename);
 
 export class Naming {
 
-  /**
-   * TODO: Make this private, since it is dangerous and easier to understand with only ONE resolving entrypoint
-   */
-  public static unwrap(name: TypeNameSingle): string {
-
-    const resolvedName = Naming.unwrapOptional(name);
-    if (resolvedName == undefined) {
-      throw new Error(`Cannot unwrap a name that resolves to undefined. Use safer methods of resolving the name`);
-    }
-
-    return resolvedName;
-  }
-
   public static unwrapToFirstDefined(name: TypeName): string | undefined {
 
     if (Array.isArray(name)) {

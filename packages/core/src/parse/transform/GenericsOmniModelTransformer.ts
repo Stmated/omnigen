@@ -414,15 +414,16 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     if (!OmniUtil.isGenericAllowedType(genericTargetType)) {
 
       switch (options.onPrimitiveGenerification) {
-        case PrimitiveGenerificationChoice.ABORT:
+        case PrimitiveGenerificationChoice.ABORT: {
           const targetName = OmniUtil.getTypeDescription(genericSource);
           const ownerName = OmniUtil.getTypeDescription(subType);
           logger.warn(
             `Aborting generification of ${targetName}', since '${ownerName}' has primitive non-null property '${propertyName}'`
           );
           return undefined;
+        }
         case PrimitiveGenerificationChoice.WRAP_OR_BOX:
-        case PrimitiveGenerificationChoice.SPECIALIZE:
+        case PrimitiveGenerificationChoice.SPECIALIZE: {
           const allowedGenericTargetType = OmniUtil.toGenericAllowedType(
             genericTargetType,
             (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
@@ -437,6 +438,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
             genericTargetType = allowedGenericTargetType;
           }
           break;
+        }
       }
     }
 

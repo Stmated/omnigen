@@ -8,10 +8,10 @@ import * as Java from '../ast';
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    model: OmniModel,
+    _model: OmniModel,
     root: Java.JavaAstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<IJavaOptions>
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
+    _options: RealOptions<IJavaOptions>
   ): Promise<void> {
 
     const classDeclarations: Java.ClassDeclaration[] = [];

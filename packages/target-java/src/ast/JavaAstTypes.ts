@@ -614,7 +614,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
     super(
       field,
       new MethodDeclarationSignature(
-        new Identifier(JavaUtil.getSetterName(field.identifier.value, field.type.omniType)),
+        new Identifier(JavaUtil.getSetterName(field.identifier.value)),
         new RegularType({
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
@@ -781,27 +781,6 @@ export class ConstructorDeclaration extends AbstractJavaNode {
     return visitor.visitConstructor(this, visitor);
   }
 }
-
-// export const AdditionalPropertiesKeyType: OmniPrimitiveType = {
-//   name: 'AdditionalPropertiesKeyType',
-//   kind: OmniTypeKind.PRIMITIVE,
-//   primitiveKind: OmniPrimitiveKind.STRING
-// };
-//
-// // TODO: Should this be "Unknown" or another type that is "Any"?
-// //  Difference between rendering as JsonNode and Object in some cases.
-// export const AdditionalPropertiesValueType: OmniUnknownType = {
-//   name: 'AdditionalPropertiesValueType',
-//   kind: OmniTypeKind.UNKNOWN,
-// }
-//
-// export const AdditionalPropertiesMapType: OmniDictionaryType = {
-//   name: 'AdditionalProperties',
-//   kind: OmniTypeKind.DICTIONARY,
-//   keyType: AdditionalPropertiesKeyType,
-//   valueType: AdditionalPropertiesValueType
-// };
-
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
 

@@ -1,6 +1,7 @@
 import {AstRootNode, IAstVisitor, VisitFn, VisitResult} from '@omnigen/core';
 import {IJavaAstVisitor, JavaVisitFn} from './IJavaAstVisitor';
 import * as Java from '../ast';
+
 export class JavaVisitor<R> implements IJavaAstVisitor<R> {
 
   constructor() {
@@ -8,15 +9,15 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
     this.visitor_java = this;
 
     this.visitRootNode = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitRegularType = (node, visitor) => undefined;
+    this.visitRegularType = () => undefined;
     this.visitGenericType = (node, visitor) => {
       return [
         node.baseType.visit(visitor),
         node.genericArguments.map(it => it.visit(visitor)),
       ];
     };
-    this.visitIdentifier = (node, visitor) => undefined;
-    this.visitToken = (node, visitor) => undefined;
+    this.visitIdentifier = () => undefined;
+    this.visitToken = () => undefined;
     this.visitAnnotationList = (node, visitor) => node.children.map(it => it.visit(visitor));
 
     this.visitArgumentDeclaration = (node, visitor) => {
@@ -65,7 +66,7 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
     };
 
     this.visitCommentList = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitComment = (node, visitor) => undefined;
+    this.visitComment = () => undefined;
     this.visitFieldBackedGetter = (node, visitor) => visitor.visitMethodDeclaration(node, visitor);
     this.visitFieldBackedSetter = (node, visitor) => visitor.visitMethodDeclaration(node, visitor);
 
@@ -104,7 +105,7 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
     this.visitExtendsDeclaration = (node, visitor) => node.type.visit(visitor);
     this.visitImplementsDeclaration = (node, visitor) => node.types.visit(visitor);
     this.visitTypeList = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitLiteral = (node, visitor) => undefined;
+    this.visitLiteral = () => undefined;
 
     this.visitIfStatement = (node, visitor) => [
       node.predicate.visit(visitor),
@@ -168,12 +169,12 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
       }
     };
 
-    this.visitHardCoded = (node, visitor) => undefined;
+    this.visitHardCoded = () => undefined;
 
     this.visitBlock = (node, visitor) => node.children.map(it => it.visit(visitor));
 
-    this.visitPackage = (node, visitor) => undefined; // Edge node
-    this.visitPredicate = (node, visitor) => undefined; // Edge node
+    this.visitPackage = () => undefined; // Edge node
+    this.visitPredicate = () => undefined; // Edge node
     this.visitModifierList = (node, visitor) => node.modifiers.map(it => it.visit(visitor));
 
     this.visitFieldGetterSetter = (node, visitor) => [
@@ -224,10 +225,10 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
       ];
     };
     this.visitGenericTypeUseList = (node, visitor) => node.types.map(it => it.visit(visitor));
-    this.visitGenericTypeUse = (node, visitor) => undefined;
+    this.visitGenericTypeUse = () => undefined;
     this.visitInterfaceDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
     this.visitEnumDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
-    this.visitFieldReference = (node, visitor) => undefined;
+    this.visitFieldReference = () => undefined;
     this.visitAssignExpression = (node, visitor) => visitor.visitBinaryExpression(node, visitor);
 
     this.visitEnumItem = (node, visitor) => [
@@ -269,7 +270,7 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
       node.member.visit(visitor)
     ];
 
-    this.visitSelfReference = (node, visitor) => [];
+    this.visitSelfReference = () => [];
   }
 
   visitor_java: IJavaAstVisitor<R>;

@@ -6,23 +6,23 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "eslint --ext .ts . && tsc",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests"
   },
   "jest": {
-    "preset": "@omnigen/jest-presets/jest/node"
+    "preset": "@omnigen/config-jest"
   },
   "dependencies": {
     "pino": "8.6.0"
   },
   "devDependencies": {
-    "@omnigen/eslint-config": "*",
-    "@omnigen/tsconfig": "*",
+    "@omnigen/config-typescript": "*",
+    "@omnigen/eslint-config-custom": "*",
     "colors": "^1.4.0",
-    "eslint": "^7.32.0",
     "pino-pretty": "^9.1.0",
     "typescript": "4.9.1-beta"
   }

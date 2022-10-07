@@ -17,8 +17,7 @@ import {
   PackageDeclarationCtx,
   SuperclassCtx,
   SuperinterfacesCtx,
-  UnannClassTypeCtx,
-  UnannPrimitiveTypeCtx
+  UnannClassTypeCtx
 } from 'java-parser';
 
 export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
@@ -69,24 +68,6 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
     }
 
     return super.unannClassType(ctx, param);
-  }
-
-  unannPrimitiveType(ctx: UnannPrimitiveTypeCtx, param?: any): any {
-
-    if (ctx.numericType) {
-      for (const numericType of ctx.numericType) {
-
-        if (numericType.children.integralType) {
-
-        }
-
-        if (numericType.children.floatingPointType) {
-
-        }
-      }
-    }
-
-    return super.unannPrimitiveType(ctx, param);
   }
 
   private addTokenAsType(token: IToken[] | undefined): void {

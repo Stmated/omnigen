@@ -39,7 +39,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private static readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 
-  transformAst(model: OmniModel, root: Java.JavaAstRootNode, externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[], options: RealOptions<IJavaOptions>): Promise<void> {
+  transformAst(
+    model: OmniModel,
+    root: Java.JavaAstRootNode,
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
+    options: RealOptions<IJavaOptions>
+  ): Promise<void> {
 
     // TODO: Move most of this to another transformer later
     // TODO: Investigate the types and see which ones should be interfaces, and which ones should be classes
@@ -67,7 +72,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           );
         }
 
-        this.replaceTypeWithReference(type, type, primitiveClass, options);
+        this.replaceTypeWithReference(type, type, options);
       }
     }
 
@@ -135,7 +140,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         // This is a target, it can/should never exist outside another type/as a top-level type.
         // It will checked for when adding/rendering the extension declarations.
       } else if (type.kind == OmniTypeKind.NULL) {
-
+        // Is there anything to do here?
       } else if (type.kind == OmniTypeKind.PRIMITIVE) {
 
         // This is a primitive
@@ -522,7 +527,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     type: OmniCompositionXORType,
     model: OmniModel,
     declaration: Java.AbstractObjectDeclaration,
-    comments: string[],
+    _comments: string[], // TODO: Add the comments to whatever is created?
     options: IJavaOptions
   ): void {
 
@@ -1207,7 +1212,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
         const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
         if (example.result.type == type || parameterHasType) {
-          comments.push(this.getExampleComments(example, options));
+          comments.push(this.getExampleComments(example));
         }
       }
     }
@@ -1291,13 +1296,13 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return comments;
   }
 
-  private getLink(propertyOwner: OmniType, property: OmniProperty, options: IJavaOptions): string {
+  private getLink(propertyOwner: OmniType, property: OmniProperty): string {
 
     const memberName = `${JavaUtil.getGetterName(property.name, property.type)}()`;
     return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
   }
 
-  private getExampleComments(example: OmniExamplePairing, options: IJavaOptions): string {
+  private getExampleComments(example: OmniExamplePairing): string {
 
     const commentLines: string[] = [];
     commentLines.push(`<h2>Example - ${example.name}</h2>`);
@@ -1316,7 +1321,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       for (let i = 0; i < params.length; i++) {
 
         const param = params[i];
-        const propertyLink = this.getLink(param.property.owner, param.property, options);
+        const propertyLink = this.getLink(param.property.owner, param.property);
         commentLines.push(`  📌 ${propertyLink} (${param.name}): ${JSON.stringify(param.value)}`);
       }
     }
@@ -1362,7 +1367,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       if (mapping.source.propertyPath) {
         const sourcePath = mapping.source.propertyPath || [];
         for (let i = 0; i < sourcePath.length; i++) {
-          sourceLinks.push(this.getLink(sourcePath[i].owner, sourcePath[i], options));
+          sourceLinks.push(this.getLink(sourcePath[i].owner, sourcePath[i]));
         }
       } else if (mapping.source.constantValue) {
         sourceLinks.push(JSON.stringify(mapping.source.constantValue));
@@ -1385,7 +1390,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           if (options.immutableModels) {
             memberName = prop.name;
           } else {
-            memberName = `${JavaUtil.getSetterName(prop.name, prop.type)}(${JavaUtil.getFullyQualifiedName(prop.type)})`
+            memberName = `${JavaUtil.getSetterName(prop.name)}(${JavaUtil.getFullyQualifiedName(prop.type)})`
           }
         }
 
@@ -1447,7 +1452,6 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private replaceTypeWithReference(
     target: OmniType,
     primitiveType: OmniPrimitiveType,
-    primitiveClass: Java.ClassDeclaration,
     options: RealOptions<IJavaOptions>
   ): void {
 

@@ -2,6 +2,12 @@ import pino, {BaseLogger, LoggerOptions, DestinationStream} from 'pino';
 
 export type ModifierCallback = (options: LoggerOptions | DestinationStream) => LoggerOptions | DestinationStream;
 
+/**
+ * Creates loggers with the application's preferred format of logging.
+ * Can be extended by registering options modifier callback by setting 'global.pinoModifiers' array.
+ * Or by calling registerOptionsModifier().
+ * Both of these must be done before any logger is created.
+ */
 export class LoggerFactory {
 
   private static _pretty: boolean | undefined = undefined;
@@ -13,6 +19,13 @@ export class LoggerFactory {
     LoggerFactory._modifiers.push(modifier);
   }
 
+  /**
+   * Creates a logger with the specified name.
+   * Usually the node constant: __filename
+   *
+   * @param name A simple name, or filename. Avoid long names.
+   * @returns A new logger
+   */
   public static create(name: string): BaseLogger {
 
     if (name.startsWith(LoggerFactory._basePath)) {

@@ -411,6 +411,9 @@ export class OmniUtil {
   /**
    * Does not take into account any type that this type extends from.
    * Only checks the direct type, if it is empty and could in theory be removed.
+   *
+   * @param type The generic type to check if it counts as empty.
+   * @return true if the type counts as empty, otherwise false.
    */
   public static isEmptyType(type: OmniType): boolean {
 

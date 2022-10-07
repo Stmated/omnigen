@@ -78,11 +78,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
   /**
    * TODO: Should this be used together with the field reference above?
    */
-  visitSelfReference: JavaRendererVisitFn<Java.SelfReference> = (node, visitor) => {
+  visitSelfReference: JavaRendererVisitFn<Java.SelfReference> = () => {
     return `this`;
   }
 
-  visitVariableDeclaration: JavaRendererVisitFn<Java.VariableDeclaration> = (node, visitor) => {
+  visitVariableDeclaration: JavaRendererVisitFn<Java.VariableDeclaration> = (node) => {
 
     const constant = (node.constant) ? 'final ' : '';
     const type = node.variableType ? this.render(node.variableType) : 'var ';
@@ -96,11 +96,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return (`return ${this.render(node.expression, visitor)}`);
   }
 
-  visitToken: JavaRendererVisitFn<Java.JavaToken> = (node, visitor) => {
+  visitToken: JavaRendererVisitFn<Java.JavaToken> = (node) => {
     return (`${this.tokenPrefix}${JavaRenderer.getTokenTypeString(node.type)}${this.tokenSuffix}`);
   }
 
-  private static getTokenTypeString(type: Java.TokenType): '=' | '==' | '!=' | '<' | '>' | '<=' | '>=' | '+' | '-' | '*' | ',' | '||' | '&&' {
+  private static getTokenTypeString(type: Java.TokenType): string {
     switch (type) {
       case Java.TokenType.ASSIGN:
         return '=';
@@ -232,7 +232,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `/**\n * ${commentSections.join('\n *\n * ')}\n */`;
   }
 
-  visitComment: JavaRendererVisitFn<Java.Comment> = (node, visitor) => {
+  visitComment: JavaRendererVisitFn<Java.Comment> = (node) => {
     const lines = node.text.replace('\r', '').split('\n');
     return `${lines.join('\n * ')}`;
   }
@@ -256,7 +256,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return content;
   }
 
-  visitPackage: JavaRendererVisitFn<Java.PackageDeclaration> = (node, visitor) => {
+  visitPackage: JavaRendererVisitFn<Java.PackageDeclaration> = (node) => {
     return `package ${node.fqn};\n\n`;
   }
 
@@ -270,7 +270,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `${importStrings.join('\n')}\n\n`;
   }
 
-  visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = (node, visitor) => {
+  visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = (node) => {
     // We always render the Fully Qualified Name here, and not the relative nor local name.
     // But we remove any generics that the import might have.
     // const fqn = JavaUtil.getName({
@@ -299,7 +299,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `${key}(${value})`;
   }
 
-  visitEnumItemList: JavaRendererVisitFn<Java.EnumItemList> = (node, visitor) => {
+  visitEnumItemList: JavaRendererVisitFn<Java.EnumItemList> = (node) => {
     return `${node.children.map(it => this.render(it)).join(',\n')};\n`;
   }
 
@@ -339,7 +339,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `${this.render(node.target, visitor)}.${this.render(node.methodName, visitor)}(${this.render(node.methodArguments, visitor)})`;
   }
 
-  visitStatement: JavaRendererVisitFn<Java.Statement> = (node, visitor) => {
+  visitStatement: JavaRendererVisitFn<Java.Statement> = (node) => {
     return [
       node.child.visit(this),
       ';\n',
@@ -367,7 +367,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return (`${key}${this.render(node.value, visitor)}`);
   }
 
-  visitLiteral: JavaRendererVisitFn<Java.Literal> = (node, visitor) => {
+  visitLiteral: JavaRendererVisitFn<Java.Literal> = (node) => {
     if (typeof node.value === 'string') {
       return (`"${node.value}"`);
     } else if (typeof node.value == 'boolean') {
@@ -422,7 +422,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return `new ${this.render(node.type, visitor)}(${parameters})`;
   }
 
-  visitIdentifier: JavaRendererVisitFn<Java.Identifier> = (node, visitor) => {
+  visitIdentifier: JavaRendererVisitFn<Java.Identifier> = (node) => {
     return node.value;
   }
 
@@ -456,7 +456,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return node.children.map(it => this.render(it, visitor)).join(' ');
   }
 
-  visitRegularType: JavaRendererVisitFn<Java.RegularType> = (node, visitor) => {
+  visitRegularType: JavaRendererVisitFn<Java.RegularType> = (node) => {
     if (node.getLocalName()) {
       return node.getLocalName();
     } else {
@@ -476,7 +476,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return node.modifiers.map(it => this.render(it, visitor)).join(' ');
   }
 
-  visitModifier: JavaRendererVisitFn<Java.Modifier> = (node, visitor) => {
+  visitModifier: JavaRendererVisitFn<Java.Modifier> = (node) => {
     const modifierString = JavaRenderer.getModifierString(node.type);
     if (modifierString) {
       return modifierString;

@@ -10,9 +10,9 @@ import * as Java from '../ast';
 export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    model: OmniModel,
+    _model: OmniModel,
     root: Java.JavaAstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
     options: RealOptions<IJavaOptions>
   ): Promise<void> {
 
@@ -26,7 +26,7 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
         currentClassDeclaration.obj = undefined;
       },
 
-      visitAdditionalPropertiesDeclaration: (node, visitor) => {
+      visitAdditionalPropertiesDeclaration: (node) => {
 
         if (!createdInterface.obj) {
 

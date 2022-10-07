@@ -17,7 +17,7 @@ describe('Java Rendering', () => {
 
     for (const schemaName of OpenRpcTestUtils.getKnownSchemaNames()) {
 
-      let fileNames: string[];
+      let fileNames: string[]; //
       try {
         fileNames = await OpenRpcTestUtils.listExampleFileNames(schemaName);
       } catch (ex) {

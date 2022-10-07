@@ -1,3 +1,5 @@
+
+// NOTE: Not used! To be used later when IntelliJ supports the flat eslint configs!
 export default [
   {
     files: ["**/*.js"],
@@ -10,7 +12,8 @@ export default [
     files: ["**/*.ts"],
     rules: {
       "semi": "error",
-      "no-unused-vars": "error"
+      "no-unused-vars": "error",
+      "require-jsdoc": false
     }
   }
 ];

@@ -120,11 +120,12 @@ export class JavaUtil {
         return args.type.placeholderName;
       case OmniTypeKind.GENERIC_TARGET_IDENTIFIER:
         return args.type.placeholderName || args.type.sourceIdentifier.placeholderName;
-      case OmniTypeKind.ARRAY:
+      case OmniTypeKind.ARRAY: {
         const arrayOf = JavaUtil.getName({...args, type: args.type.of});
         return arrayOf + (args.withSuffix === false ? '' : '[]');
+      }
       case OmniTypeKind.ARRAY_TYPES_BY_POSITION:
-      case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION:
+      case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION: {
         // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
 
         // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
@@ -146,6 +147,7 @@ export class JavaUtil {
         } else {
           return `${javaType}[]`;
         }
+      }
       case OmniTypeKind.NULL:
         // The type is "No Type. Void." It is not even really an Object.
         // But we return it as an Object in case we really need to display it somewhere.
@@ -155,7 +157,7 @@ export class JavaUtil {
         } else {
           return 'java.lang.Object';
         }
-      case OmniTypeKind.PRIMITIVE:
+      case OmniTypeKind.PRIMITIVE: {
         const isBoxed = args.boxed != undefined ? args.boxed : JavaUtil.isPrimitiveBoxed(args.type);
         const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.primitiveKind, isBoxed);
         // TODO: Make a central method that handles the relative names -- especially once multi-namespaces are added
@@ -164,7 +166,8 @@ export class JavaUtil {
         } else {
           return JavaUtil.getCleanedFullyQualifiedName(primitiveKindName, args.withSuffix);
         }
-      case OmniTypeKind.UNKNOWN:
+      }
+      case OmniTypeKind.UNKNOWN: {
         const unknownType = args.type.isAny ? UnknownType.OBJECT : args.options?.unknownType;
         const unknownName = JavaUtil.getUnknownType(unknownType);
         if (!args.withPackage) {
@@ -172,6 +175,7 @@ export class JavaUtil {
         } else {
           return JavaUtil.getCleanedFullyQualifiedName(unknownName, args.withSuffix);
         }
+      }
       case OmniTypeKind.DICTIONARY:
         throw new Error(`Not allowed to get the name of a map, instead render it using the renderer and generics`);
       case OmniTypeKind.HARDCODED_REFERENCE:
@@ -189,15 +193,17 @@ export class JavaUtil {
           return JavaUtil.getClassNameWithPackageName(args.type, interfaceName, args.options, args.withPackage);
         }
       case OmniTypeKind.ENUM:
-      case OmniTypeKind.OBJECT:
+      case OmniTypeKind.OBJECT: {
         // Are we sure all of these will be in the same package?
         // TODO: Use some kind of "groupName" where the group can be the package? "model", "api", "server", etc?
         const name = Naming.safe(args.type.name);
         return JavaUtil.getClassNameWithPackageName(args.type, name, args.options, args.withPackage);
-      case OmniTypeKind.COMPOSITION:
+      }
+      case OmniTypeKind.COMPOSITION: {
 
         const compositionName = JavaUtil.getCompositionClassName(args.type, args);
         return JavaUtil.getClassNameWithPackageName(args.type, compositionName, args.options, args.withPackage);
+      }
       case OmniTypeKind.GENERIC_SOURCE:
         return JavaUtil.getName({...args, type: args.type.of});
       case OmniTypeKind.EXTERNAL_MODEL_REFERENCE: {
@@ -416,7 +422,7 @@ export class JavaUtil {
     return `get${capitalized}`;
   }
 
-  public static getSetterName(baseName: string, type: OmniType): string {
+  public static getSetterName(baseName: string): string {
     const capitalized = pascalCase(baseName);
     return `set${capitalized}`;
   }
@@ -580,12 +586,6 @@ export class JavaUtil {
     }
 
     return undefined;
-  }
-
-  public static getImplementsTypes(type: OmniType): OmniType[] {
-
-    // TODO: Implement! Should be any number of types that will be inherited from as interfaces.
-    return [];
   }
 
   public static getExtendHierarchy(type: OmniType): OmniType[] {

@@ -10,7 +10,11 @@ export type IncomingOptions<TOpt extends IOptions> = {
 };
 
 export type RealOptions<TOpt extends IOptions> = {
-  [Key in keyof TOpt]-?: TOpt[Key] extends IncomingOrRealOption<infer TInc, infer TReal> ? TReal : TOpt[Key];
+  [Key in keyof TOpt]-?: TOpt[Key] extends IncomingOrRealOption<
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    infer TInc,
+    infer TReal
+  > ? TReal : TOpt[Key];
 };
 
 export interface IOptionsSource<TOpt extends IParserOptions> {

@@ -33,7 +33,7 @@ export type SchemaToTypeResult = { type: OmniType; canInline: boolean };
 
 export type DiscriminatorAwareSchema = boolean | (JSONSchema7 & DiscriminatorAware);
 
-export interface PostDiscriminatorMapping<T> {
+export interface PostDiscriminatorMapping {
   type: OmniObjectType;
   schema: Dereferenced<DiscriminatorAwareSchema>;
 }
@@ -46,7 +46,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typeMap = new Map<string, OmniType>();
-  private readonly _postDiscriminatorMapping: PostDiscriminatorMapping<DiscriminatorAwareSchema>[] = [];
+  private readonly _postDiscriminatorMapping: PostDiscriminatorMapping[] = [];
 
   private readonly _deref: Dereferencer<TRoot>;
 
@@ -61,7 +61,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     return [...this._typeMap.values()];
   }
 
-  public getPostDiscriminatorMappings(): PostDiscriminatorMapping<DiscriminatorAwareSchema>[] {
+  public getPostDiscriminatorMappings(): PostDiscriminatorMapping[] {
     return this._postDiscriminatorMapping;
   }
 
@@ -69,8 +69,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
    * Register a custom type as if it actually existed inside the schema.
    * Can be used to make sure that the type is found when converting from an OmniModel into a syntax tree.
    *
-   * @param className
-   * @param type
+   * @param className The name of the class to register, it will be faked as having an uri in a document
+   * @param type The type that should be force-registered
    */
   public registerCustomTypeManually(className: string, type: OmniType): void {
     this._typeMap.set(`#/custom/schemes/${className}`, type);

@@ -21,6 +21,15 @@ export enum CompressTypeLevel {
   FUNCTIONALLY_SAME,
 }
 
+/**
+ * Helps with merging multiple models into one by finding types that are semantically the same.
+ * Depending on the given options, different levels of merging will be allowed.
+ * For example, it can be allowed to merge types even if:
+ * <ul>
+ *  <li>they have different comments and descriptions.</li>
+ *  <li>they have different names (currently no resolving method to choose which name is best exists)</li>
+ * </ul>
+ */
 export class OmniModelMerge {
 
   /**

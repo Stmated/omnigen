@@ -13,7 +13,7 @@ class TestEnvironment extends NodeEnvironment {
 
     /** @type {LoggerFactory.ModifierCallback} */
     const prettyModifier = (options) => {
-      return pretty({...options, sync: true, translateTime: true, singleLine: true});
+      return pretty({...options, sync: true, translateTime: true, singleLine: true, colorize: true, ignore: 'pid,hostname'});
     };
 
     // TODO: Create a modifier that caches logs until the test fails

@@ -22,7 +22,7 @@ export type OptionConverters<TOpt extends IOptions> = OmitNever<{
 }>;
 
 export type OptionAdditions<TOpt extends IOptions> = {
-  [Key in keyof TOpt]?: TOpt[Key] extends IncomingOrRealOption<infer TInc, infer TReal>
+  [Key in keyof TOpt]?: TOpt[Key] extends IncomingOrRealOption<infer _TInc, infer TReal>
     ? (value: TReal) => IncomingOptions<TOpt> | undefined
     : (value: TOpt[Key]) => IncomingOptions<TOpt> | undefined
 };
@@ -61,7 +61,7 @@ export class OptionsUtil {
   ): Promise<TReturn> {
 
     for (const baseKey in base) {
-      if (!base.hasOwnProperty(baseKey)) {
+      if (!Object.hasOwn(base, baseKey)) {
         continue;
       }
 
@@ -107,7 +107,7 @@ export class OptionsUtil {
     }
 
     for (const additionKey in additions) {
-      if (!additions.hasOwnProperty(additionKey)) {
+      if (!Object.hasOwn(additions, additionKey)) {
         continue;
       }
 

@@ -18,7 +18,7 @@ interface ObjectInfo {
 export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    model: OmniModel,
+    _model: OmniModel,
     root: Java.JavaAstRootNode,
     externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
     options: RealOptions<IJavaOptions>

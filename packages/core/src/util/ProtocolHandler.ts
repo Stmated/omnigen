@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 
 export class ProtocolHandler {
 
-  public static async get<R>(uri: string, baseUri?: string): Promise<R> {
+  public static async get<R>(uri: string, _baseUri?: string): Promise<R> {
 
     const protocolIndex = uri.indexOf(':');
     const protocol = (protocolIndex != -1)
@@ -11,12 +11,13 @@ export class ProtocolHandler {
       : 'file';
 
     switch (protocol.toLowerCase()) {
-      case 'file':
+      case 'file': {
         const protocolUri = (protocolIndex != -1)
           ? uri.substring(protocolIndex + 1)
           : uri;
 
         return ProtocolHandler.file<R>(protocolUri);
+      }
       case 'http':
       case 'https':
         return ProtocolHandler.file<R>(uri);

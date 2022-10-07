@@ -25,7 +25,7 @@ export class PackageResolverOptionsParser implements IOptionParser<IPackageResol
 
   private static parseObject(obj: object): IPackageResolver {
 
-    return (type, typeName, options) => {
+    return (_type, typeName, options) => {
 
       for (const key in obj) {
         if (key in obj) {

@@ -6,23 +6,25 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "eslint --ext .ts . && tsc",
+    "prebuild": "eslint --ext .ts .",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests"
   },
   "jest": {
-    "preset": "@omnigen/jest-presets/jest/node"
+    "preset": "@omnigen/config-jest"
   },
   "dependencies": {
     "@omnigen/core": "*",
     "@omnigen/parser-jsonschema": "*"
   },
   "devDependencies": {
-    "@omnigen/eslint-config": "*",
-    "@omnigen/jest-presets": "*",
-    "@omnigen/tsconfig": "*",
+    "@omnigen/config-jest": "*",
+    "@omnigen/config-typescript": "*",
+    "@omnigen/eslint-config-custom": "*",
     "typescript": "4.9.1-beta"
   }
 }

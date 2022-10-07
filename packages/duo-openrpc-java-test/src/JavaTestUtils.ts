@@ -67,7 +67,10 @@ export class JavaTestUtils {
     let cst: JavaParser.CstNode;
     try {
       cst = JavaParser.parse(content);
-      expect(cst).toBeDefined();
+      if (!cst) {
+        throw new Error(`The JavaParser must return something`);
+      }
+
     } catch (ex) {
       throw new Error(`Could not parse '${fileName}'': ${ex}:\n${content}`, {cause: ex instanceof Error ? ex : undefined});
     }
@@ -81,7 +84,7 @@ export class JavaTestUtils {
   public static getMethod(node: AbstractNode, name: string): Java.MethodDeclaration {
 
     const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.MethodDeclaration>(), {
-      visitMethodDeclaration: (node, visitor) => {
+      visitMethodDeclaration: (node) => {
         if (node.signature.identifier.value == name) {
           return node;
         } else {
@@ -102,7 +105,7 @@ export class JavaTestUtils {
 
     const array: Java.CompilationUnit[] = [];
     const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
-      visitCompilationUnit: (node, visitor) => {
+      visitCompilationUnit: (node) => {
         array.push(node);
       }
     });
@@ -115,7 +118,7 @@ export class JavaTestUtils {
   public static getCompilationUnit(root: AstRootNode, name: string): Java.CompilationUnit {
 
     const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.CompilationUnit>(), {
-      visitCompilationUnit: (node, visitor) => {
+      visitCompilationUnit: (node) => {
         if (node.object.name.value == name) {
           return node;
         } else {

@@ -4,7 +4,8 @@ import {
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
-  OmniUnknownType} from '@omnigen/core';
+  OmniUnknownType, LiteralValue,
+} from '@omnigen/core';
 import {camelCase} from 'change-case';
 import {JavaAstUtils} from '../transform';
 import {JavaUtil} from '../util';
@@ -25,7 +26,7 @@ export enum TokenType {
   SUBTRACT,
 
   OR,
-  AND
+  AND,
 }
 
 export class JavaToken extends AbstractToken {
@@ -129,9 +130,6 @@ export class Identifier extends AbstractJavaNode {
 export abstract class AbstractExpression extends AbstractJavaNode {
 }
 
-// Split this into different types of constant depending on the type?
-type LiteralValue = boolean | number | string | null;
-
 export class Literal extends AbstractExpression {
   value: LiteralValue;
   primitiveKind?: OmniPrimitiveKind;
@@ -225,7 +223,7 @@ export type StaticTarget = ClassName;
 
 export class StaticMemberReference extends AbstractJavaNode {
   target: StaticTarget;
-  member: AbstractExpression
+  member: AbstractExpression;
 
   constructor(target: StaticTarget, member: AbstractExpression) {
     super();
@@ -460,7 +458,14 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
   modifiers: ModifierList;
   parameters?: ArgumentDeclarationList;
 
-  constructor(identifier: Identifier, type: Type, parameters?: ArgumentDeclarationList, modifiers?: ModifierList, annotations?: AnnotationList, comments?: CommentList) {
+  constructor(
+    identifier: Identifier,
+    type: Type,
+    parameters?: ArgumentDeclarationList,
+    modifiers?: ModifierList,
+    annotations?: AnnotationList,
+    comments?: CommentList,
+  ) {
     super();
     this.modifiers = modifiers ?? new ModifierList(new Modifier(ModifierType.PUBLIC));
     this.type = type;
@@ -596,7 +601,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
         undefined,
         undefined,
         annotations,
-        comments
+        comments,
       ),
       new Block(
         new Statement(new ReturnStatement(new FieldReference(field))),
@@ -627,7 +632,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
         ),
         undefined,
         annotations,
-        comments
+        comments,
       ),
       new Block(
         new AssignExpression(
@@ -648,7 +653,13 @@ export class FieldGetterSetter extends AbstractJavaNode {
   readonly getter: FieldBackedGetter;
   readonly setter: FieldBackedSetter;
 
-  constructor(type: Type, fieldIdentifier: Identifier, getterAnnotations?: AnnotationList, comments?: CommentList, getterIdentifier?: Identifier) {
+  constructor(
+    type: Type,
+    fieldIdentifier: Identifier,
+    getterAnnotations?: AnnotationList,
+    comments?: CommentList,
+    getterIdentifier?: Identifier,
+  ) {
     super();
     this.field = new Field(type, fieldIdentifier, undefined, undefined, undefined);
     this.getter = new FieldBackedGetter(this.field, getterAnnotations, comments, getterIdentifier);
@@ -727,7 +738,7 @@ export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
   implements?: ImplementsDeclaration;
   body: Block;
 
-  constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
+  protected constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
     super();
     this.type = type;
     this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
@@ -781,6 +792,7 @@ export class ConstructorDeclaration extends AbstractJavaNode {
     return visitor.visitConstructor(this, visitor);
   }
 }
+
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
 
@@ -794,18 +806,18 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
     this.keyType = {
       kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.STRING
+      primitiveKind: OmniPrimitiveKind.STRING,
     };
 
     // TODO: Should this be "Unknown" or another type that is "Any"?
     //  Difference between rendering as JsonNode and Object in some cases.
     this.valueType = {
       kind: OmniTypeKind.UNKNOWN,
-    }
+    };
     this.mapType = {
       kind: OmniTypeKind.DICTIONARY,
       keyType: this.keyType,
-      valueType: this.valueType
+      valueType: this.valueType,
     };
 
     const additionalPropertiesFieldIdentifier = new Identifier('_additionalProperties');
@@ -817,9 +829,9 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       additionalPropertiesFieldIdentifier,
       new ModifierList(
         new Modifier(ModifierType.PRIVATE),
-        new Modifier(ModifierType.FINAL)
+        new Modifier(ModifierType.FINAL),
       ),
-      new NewStatement(JavaAstUtils.createTypeNode(this.mapType, true))
+      new NewStatement(JavaAstUtils.createTypeNode(this.mapType, true)),
     );
 
     const addMethod = new MethodDeclaration(
@@ -827,11 +839,11 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
         new Identifier('addAdditionalProperty'),
         JavaAstUtils.createTypeNode(<OmniPrimitiveType>{
           kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.VOID
+          primitiveKind: OmniPrimitiveKind.VOID,
         }),
         new ArgumentDeclarationList(
           new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.keyType), keyParameterIdentifier),
-          new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.valueType), valueParameterIdentifier)
+          new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.valueType), valueParameterIdentifier),
         ),
       ),
       new Block(
@@ -841,10 +853,10 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
             new Identifier('put'),
             new ArgumentList(
               new VariableReference(keyParameterIdentifier),
-              new VariableReference(valueParameterIdentifier)
-            )
-          )
-        )
+              new VariableReference(valueParameterIdentifier),
+            ),
+          ),
+        ),
       ),
     );
 
@@ -854,7 +866,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
         }),
-      )
+      ),
     );
 
     this.children = [
@@ -867,8 +879,8 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
           }),
-        ))
-      )
+        )),
+      ),
     ];
   }
 
@@ -1157,7 +1169,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
   getters: FieldBackedGetter[];
   methods: MethodDeclaration[];
 
-  constructor(types: OmniType[], options: IJavaOptions, commentSupplier: {(type: OmniType): Comment[]}) {
+  constructor(types: OmniType[], options: IJavaOptions, commentSupplier: { (type: OmniType): Comment[] }) {
     super();
 
     this.fields = [];
@@ -1177,11 +1189,11 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       new AnnotationList(
         new Annotation(
           new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue'}),
-        )
-      )
+        ),
+      ),
     );
     const untypedGetter = new FieldBackedGetter(
-      untypedField
+      untypedField,
     );
 
     this.fields.push(untypedField);
@@ -1193,7 +1205,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
 
       const typedField = new Field(
         JavaAstUtils.createTypeNode(type),
-        new Identifier(`_${typedFieldName}`)
+        new Identifier(`_${typedFieldName}`),
       );
       const typedFieldReference = new FieldReference(typedField);
 
@@ -1203,18 +1215,18 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
         const objectMapperReference = new Identifier('objectMapper');
         argumentDeclarationList.children.push(
           new ArgumentDeclaration(
-            new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: "com.fasterxml.jackson.ObjectMapper"}),
-            objectMapperReference
-          )
+            new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.ObjectMapper'}),
+            objectMapperReference,
+          ),
         );
         conversionExpression = new MethodCall(
           new VariableReference(objectMapperReference),
           new Identifier('convertValue'),
           new ArgumentList(
             new FieldReference(untypedField),
-            new ClassReference(typedField.type)
-          )
-        )
+            new ClassReference(typedField.type),
+          ),
+        );
       } else {
         conversionExpression = new Literal('Conversion path unknown');
       }
@@ -1231,15 +1243,15 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
             new Predicate(
               typedFieldReference,
               TokenType.NOT_EQUALS,
-              new Literal(null)
+              new Literal(null),
             ),
             new Block(
               new Statement(
                 new ReturnStatement(
-                  typedFieldReference
-                )
-              )
-            )
+                  typedFieldReference,
+                ),
+              ),
+            ),
           ),
           // If not, then try to convert the raw value into the target type and cache it.
           new Statement(
@@ -1247,11 +1259,11 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
               new BinaryExpression(
                 typedFieldReference,
                 new JavaToken(TokenType.ASSIGN),
-                conversionExpression
-              )
-            )
-          )
-        )
+                conversionExpression,
+              ),
+            ),
+          ),
+        ),
       );
       typedGetter.signature.comments = new CommentList(...commentSupplier(typedGetter.signature.type.omniType));
 
@@ -1277,7 +1289,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
     // TODO: This is most likely wrong, will give name with package and whatnot.
     const javaName = JavaUtil.getName({
       type: type,
-    })
+    });
 
     return camelCase(javaName); // camelCase(Naming.unwrap(type.name));
   }

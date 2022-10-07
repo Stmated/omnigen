@@ -1,4 +1,4 @@
-import {IOptionParser} from '@omnigen/core/src/options/IOptions';
+import {IOptionParser} from '@omnigen/core';
 import {IPackageResolver} from './IPackageResolver';
 
 export class PackageResolverOptionsParser implements IOptionParser<IPackageResolver | undefined> {
@@ -28,18 +28,20 @@ export class PackageResolverOptionsParser implements IOptionParser<IPackageResol
     return (_type, typeName, options) => {
 
       for (const key in obj) {
-        if (key in obj) {
-          const regex = key;
-          if (typeName.match(`^${regex}$`)) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const target = obj[key];
-            if (typeof target == 'string') {
-              return target;
-            } else {
-              throw new Error(`Not allowed to have non-string values as the packge name`);
-            }
+        if (!(key in obj)) {
+          continue;
+        }
+
+        const regex = key;
+        if (typeName.match(`^${regex}$`)) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          const target = obj[key];
+          if (typeof target == 'string') {
+            return target;
+          } else {
+            throw new Error(`Not allowed to have non-string values as the package name`);
           }
         }
       }
@@ -47,4 +49,5 @@ export class PackageResolverOptionsParser implements IOptionParser<IPackageResol
       return options.package;
     };
   }
+
 }

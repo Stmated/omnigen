@@ -11,3 +11,4 @@ export * from './DependencyGraphBuilder';
 export * from './IParserOptions';
 
 export * from './transform';
+export * from './LiteralValue';

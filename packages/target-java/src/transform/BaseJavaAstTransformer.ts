@@ -27,7 +27,7 @@ import {
   Naming,
   DEFAULT_GRAPH_OPTIONS,
   DependencyGraph,
-  DependencyGraphBuilder
+  DependencyGraphBuilder,
 } from '@omnigen/core';
 import * as Java from '../ast';
 import {camelCase, constantCase, pascalCase} from 'change-case';
@@ -43,7 +43,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     model: OmniModel,
     root: Java.JavaAstRootNode,
     _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<IJavaOptions>
+    options: RealOptions<IJavaOptions>,
   ): Promise<void> {
 
     // TODO: Move most of this to another transformer later
@@ -67,8 +67,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             new Java.CompilationUnit(
               new Java.PackageDeclaration(JavaUtil.getPackageName(type, primitiveClass.name.value, options)),
               new Java.ImportList([]),
-              primitiveClass
-            )
+              primitiveClass,
+            ),
           );
         }
 
@@ -89,7 +89,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       }
 
       // NOTE: Make sure it is in pascalCase, or just use what is given?
-      unwrappedType.name = Naming.safe(unwrappedType.name, (v) => typeNames.includes(v));
+      unwrappedType.name = Naming.safe(unwrappedType.name, v => typeNames.includes(v));
 
       typeNames.push(unwrappedType.name);
     }
@@ -130,7 +130,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         this.transformObject(model, type, undefined, options, root, graph);
       } else if (type.kind == OmniTypeKind.INTERFACE) {
         if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
-          throw new Error(`Do not know yet how to handle a generic interface. Fix it.`)
+          throw new Error(`Do not know yet how to handle a generic interface. Fix it.`);
         } else {
           this.transformInterface(type, options, root);
         }
@@ -182,7 +182,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       valueIdentifier,
       new Java.ModifierList(
         new Java.Modifier(Java.ModifierType.PRIVATE),
-        new Java.Modifier(Java.ModifierType.FINAL)
+        new Java.Modifier(Java.ModifierType.FINAL),
       ),
       undefined,
       new Java.AnnotationList(
@@ -190,9 +190,9 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
-          })
-        )
-      )
+          }),
+        ),
+      ),
     );
 
     return new Java.ClassDeclaration(
@@ -201,7 +201,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       new Java.Block(
         valueField,
         // Force the name to be "getValue" so that it does not become "isValue" for a primitive boolean.
-        new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue'))
+        new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue')),
       ),
     );
   }
@@ -211,7 +211,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     type: OmniEnumType,
     originalType: OmniType | undefined,
     root: Java.JavaAstRootNode,
-    options: RealOptions<IJavaOptions>
+    options: RealOptions<IJavaOptions>,
   ): void {
     const body = new Java.Block();
 
@@ -235,16 +235,16 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         new Java.EnumItemList(
           ...type.enumConstants.map(item => new Java.EnumItem(
             new Java.Identifier(constantCase(String(item))),
-            new Java.Literal(item, type.primitiveKind)
-          ))
-        )
+            new Java.Literal(item, type.primitiveKind),
+          )),
+        ),
       );
 
       // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
       //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
       const itemType: OmniPrimitiveType = {
         kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: type.primitiveKind
+        primitiveKind: type.primitiveKind,
       };
 
       const fieldType = new Java.RegularType(itemType);
@@ -252,7 +252,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       const field = new Java.Field(
         fieldType,
         fieldIdentifier,
-        undefined
+        undefined,
       );
 
       body.children.push(field);
@@ -263,20 +263,20 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           new Java.ArgumentDeclarationList(new Java.ArgumentDeclaration(fieldType, fieldIdentifier)),
           new Java.Block(
             new Java.Statement(
-              new Java.AssignExpression(new Java.FieldReference(field), new Java.VariableReference(fieldIdentifier))
-            )
+              new Java.AssignExpression(new Java.FieldReference(field), new Java.VariableReference(fieldIdentifier)),
+            ),
           ),
-          new Java.ModifierList()
-        )
+          new Java.ModifierList(),
+        ),
       );
     }
 
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(JavaUtil.getPackageName(type, enumDeclaration.name.value, options)),
       new Java.ImportList(
-        []
+        [],
       ),
-      enumDeclaration
+      enumDeclaration,
     ));
   }
 
@@ -301,15 +301,13 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
       new Java.ImportList(
-        []
+        [],
       ),
-      declaration
+      declaration,
     ));
   }
 
-  /**
-   * TODO: Merge functionality for object and composition
-   */
+  // TODO: Merge functionality for object and composition
   private transformObject(
     model: OmniModel,
     type: OmniObjectType | OmniCompositionType,
@@ -317,7 +315,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     options: RealOptions<IJavaOptions>,
     root: Java.JavaAstRootNode,
     graph: DependencyGraph,
-    genericSourceIdentifiers?: OmniGenericSourceIdentifierType[]
+    genericSourceIdentifiers?: OmniGenericSourceIdentifierType[],
   ): void {
 
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
@@ -336,7 +334,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           this.transformEnum(model, type.extendedBy, type, root, options);
           return;
         } else {
-          throw new Error("Do not know how to handle this type, since Java cannot inherit from en Enum");
+          throw new Error('Do not know how to handle this type, since Java cannot inherit from en Enum');
         }
       }
 
@@ -367,7 +365,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             new Java.Identifier(it.placeholderName),
             it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
             it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
-          ))
+          )),
         ),
         body,
       );
@@ -401,16 +399,16 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
       new Java.ImportList(
-        []
+        [],
       ),
-      declaration
+      declaration,
     ));
   }
 
   private addExtendsAndImplements(
     graph: DependencyGraph,
     type: OmniObjectType | OmniCompositionType,
-    declaration: Java.AbstractObjectDeclaration
+    declaration: Java.AbstractObjectDeclaration,
   ): void {
 
     if (type.kind == OmniTypeKind.OBJECT && type.subTypeHints) {
@@ -442,19 +440,19 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                   new Java.RegularType({
                     kind: OmniTypeKind.HARDCODED_REFERENCE,
                     fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
-                  })
+                  }),
                 ),
                 new Java.Identifier(
-                  'NAME'
-                )
-              )
+                  'NAME',
+                ),
+              ),
             ),
             new Java.AnnotationKeyValuePair(
               new Java.Identifier('property'),
-              new Java.Literal(propertyName)
+              new Java.Literal(propertyName),
             ),
-          )
-        )
+          ),
+        ),
       );
 
       const subTypes: Java.Annotation[] = [];
@@ -469,13 +467,13 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
               new Java.Identifier('name'),
-              new Java.Literal(OmniUtil.toLiteralValue(qualifier.value))
+              new Java.Literal(OmniUtil.toLiteralValue(qualifier.value)),
             ),
             new Java.AnnotationKeyValuePair(
               new Java.Identifier('value'),
-              new Java.ClassReference(JavaAstUtils.createTypeNode(subTypeHint.type))
-            )
-          )
+              new Java.ClassReference(JavaAstUtils.createTypeNode(subTypeHint.type)),
+            ),
+          ),
         ));
       }
 
@@ -489,11 +487,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             new Java.AnnotationKeyValuePair(
               undefined,
               new Java.ArrayInitializer<Java.Annotation>(
-                ...subTypes
-              )
-            )
-          )
-        )
+                ...subTypes,
+              ),
+            ),
+          ),
+        ),
       );
 
       // TODO: When is this still needed? When does the discriminators influence the inheritance hierarchy?
@@ -511,14 +509,14 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     if (typeExtends) {
 
       declaration.extends = new Java.ExtendsDeclaration(
-        JavaAstUtils.createTypeNode(typeExtends)
+        JavaAstUtils.createTypeNode(typeExtends),
       );
     }
 
     const typeImplements = JavaDependencyGraph.getImplements(graph, type);
     if (typeImplements.length > 0) {
       declaration.implements = new Java.ImplementsDeclaration(
-        new Java.TypeList(typeImplements.map(it => JavaAstUtils.createTypeNode(it)))
+        new Java.TypeList(typeImplements.map(it => JavaAstUtils.createTypeNode(it))),
       );
     }
   }
@@ -528,7 +526,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     model: OmniModel,
     declaration: Java.AbstractObjectDeclaration,
     _comments: string[], // TODO: Add the comments to whatever is created?
-    options: IJavaOptions
+    options: IJavaOptions,
   ): void {
 
     // The composition type is XOR, it can only be one of them.
@@ -562,8 +560,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         new Java.RuntimeTypeMapping(
           type.xorTypes,
           options,
-          (t) => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it))
-        )
+          t => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it)),
+        ),
       );
     }
   }
@@ -571,7 +569,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private addEnumAndPrimitivesAsObjectEnum(
     enumTypes: OmniEnumType[],
     primitiveTypes: OmniPrimitiveType[],
-    declaration: Java.AbstractObjectDeclaration
+    declaration: Java.AbstractObjectDeclaration,
   ): void {
 
     // Java does not support advanced enums. We need to handle it some other way.
@@ -596,7 +594,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       fieldValueIdentifier,
       new Java.ModifierList(
         new Java.Modifier(Java.ModifierType.PRIVATE),
-        new Java.Modifier(Java.ModifierType.FINAL)
+        new Java.Modifier(Java.ModifierType.FINAL),
       ),
       undefined,
       new Java.AnnotationList(
@@ -605,9 +603,9 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
             fqn: 'com.fasterxml.jackson.annotation.JsonValue',
-          })
-        )
-      )
+          }),
+        ),
+      ),
     );
 
     for (const enumType of enumTypes) {
@@ -642,8 +640,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             singletonFactoryMethodIdentifier,
             new Java.ArgumentList(
               // TODO: Somehow in the future reference the Enum item instead of the string value
-              new Java.Literal(enumValue, enumType.primitiveKind)
-            )
+              new Java.Literal(enumValue, enumType.primitiveKind),
+            ),
           ),
         );
 
@@ -662,16 +660,16 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           ),
           new Java.Block(
             new Java.Statement(
-              new Java.ReturnStatement(knownBinary)
-            )
-          )
+              new Java.ReturnStatement(knownBinary),
+            ),
+          ),
         ));
 
         // TODO: In the future, somehow make this cast value into Tag directly, without runtime lookup.
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`getAs${enumTypeName}`),
-            JavaAstUtils.createTypeNode(enumType)
+            JavaAstUtils.createTypeNode(enumType),
           ),
           new Java.Block(
             new Java.Statement(
@@ -680,21 +678,21 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                   // NOTE: Is it really all right creating a new Java.Type here? Should we not used the *REAL* target?
                   //        Since it might be in a separate package based on specific language needs
                   new Java.ClassName(JavaAstUtils.createTypeNode(enumType)),
-                  new Java.Identifier("valueOf"),
+                  new Java.Identifier('valueOf'),
                   new Java.ArgumentList(
                     new Java.Cast(
                       JavaAstUtils.createTypeNode({
                         kind: OmniTypeKind.PRIMITIVE,
                         primitiveKind: enumType.primitiveKind,
                       }),
-                      new Java.FieldReference(fieldValue)
-                    )
-                  )
-                )
-              )
-            )
-          )
-        ))
+                      new Java.FieldReference(fieldValue),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
       }
 
       knownValueFields.push(...knownEnumFields);
@@ -736,8 +734,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           new Java.ClassName(declaration.type),
           singletonFactoryMethodIdentifier,
           new Java.ArgumentList(
-            new Java.Literal(valueConstant, primitiveType.primitiveKind)
-          )
+            new Java.Literal(valueConstant, primitiveType.primitiveKind),
+          ),
         ),
       );
 
@@ -758,15 +756,15 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       new Java.ModifierList(
         new Java.Modifier(Java.ModifierType.PRIVATE),
         new Java.Modifier(Java.ModifierType.STATIC),
-        new Java.Modifier(Java.ModifierType.FINAL)
+        new Java.Modifier(Java.ModifierType.FINAL),
       ),
-      new Java.NewStatement(fieldValuesType)
+      new Java.NewStatement(fieldValuesType),
     );
     declaration.body.children.push(fieldValues);
 
     const fieldValuesStaticTarget = new Java.StaticMemberReference(
       new Java.ClassName(declaration.type),
-      fieldValues.identifier
+      fieldValues.identifier,
     );
 
     const singletonFactoryParamIdentifier = new Java.Identifier('value');
@@ -779,12 +777,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         new Java.ArgumentDeclarationList(
           new Java.ArgumentDeclaration(
             fieldValueType,
-            singletonFactoryParamIdentifier
-          )
+            singletonFactoryParamIdentifier,
+          ),
         ),
         new Java.ModifierList(
           new Java.Modifier(Java.ModifierType.PUBLIC),
-          new Java.Modifier(Java.ModifierType.STATIC)
+          new Java.Modifier(Java.ModifierType.STATIC),
         ),
         new Java.AnnotationList(
           new Java.Annotation(
@@ -792,9 +790,9 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             new Java.RegularType({
               kind: OmniTypeKind.HARDCODED_REFERENCE,
               fqn: 'com.fasterxml.jackson.annotation.JsonCreator',
-            })
-          )
-        )
+            }),
+          ),
+        ),
       ),
       new Java.Block(
         new Java.IfElseStatement(
@@ -805,11 +803,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                   fieldValuesStaticTarget,
                   new Java.Identifier('containsKey'),
                   new Java.ArgumentList(
-                    new Java.VariableReference(singletonFactoryParamIdentifier)
-                  )
+                    new Java.VariableReference(singletonFactoryParamIdentifier),
+                  ),
                 ),
                 new Java.JavaToken(Java.TokenType.EQUALS),
-                new Java.Literal(true)
+                new Java.Literal(true),
               ),
               new Java.Block(
                 new Java.Statement(
@@ -818,12 +816,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                       fieldValuesStaticTarget,
                       new Java.Identifier('get'),
                       new Java.ArgumentList(
-                        new Java.VariableReference(singletonFactoryParamIdentifier)
-                      )
-                    )
-                  )
-                )
-              )
+                        new Java.VariableReference(singletonFactoryParamIdentifier),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
           new Java.Block(
@@ -833,12 +831,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                 new Java.NewStatement(
                   declaration.type,
                   new Java.ArgumentList(
-                    new Java.VariableReference(singletonFactoryParamIdentifier)
-                  )
+                    new Java.VariableReference(singletonFactoryParamIdentifier),
+                  ),
                 ),
                 undefined,
-                true
-              )
+                true,
+              ),
             ),
             new Java.Statement(
               new Java.MethodCall(
@@ -846,26 +844,26 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                 new Java.Identifier('set'),
                 new Java.ArgumentList(
                   new Java.VariableReference(singletonFactoryParamIdentifier),
-                  new Java.VariableReference(createdIdentifier)
-                )
-              )
+                  new Java.VariableReference(createdIdentifier),
+                ),
+              ),
             ),
             new Java.Statement(
               new Java.ReturnStatement(
-                new Java.VariableReference(createdIdentifier)
-              )
-            )
-          )
-        )
-      )
-    )
+                new Java.VariableReference(createdIdentifier),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
 
     declaration.body.children.push(singletonFactory);
     declaration.body.children.push(fieldValue);
     declaration.body.children.push(
       new Java.FieldBackedGetter(
-        fieldValue
-      )
+        fieldValue,
+      ),
     );
 
     this.addSelfIsOfOneOfStaticFieldsMethod(knownValueFields, declaration);
@@ -885,20 +883,20 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         new Java.ArgumentDeclarationList(new Java.ArgumentDeclaration(fieldValueType, parameterIdentifier)),
         new Java.Block(
           new Java.Statement(
-            new Java.AssignExpression(new Java.FieldReference(fieldValue), new Java.VariableReference(parameterIdentifier))
-          )
+            new Java.AssignExpression(new Java.FieldReference(fieldValue), new Java.VariableReference(parameterIdentifier)),
+          ),
         ),
         // Private constructor, since all creation should go through the singleton method.
         new Java.ModifierList(
-          new Java.Modifier(Java.ModifierType.PRIVATE)
-        )
-      )
+          new Java.Modifier(Java.ModifierType.PRIVATE),
+        ),
+      ),
     );
   }
 
   private addSelfIsOfOneOfStaticFieldsMethod(
     knownValueFields: Java.Field[],
-    declaration: Java.AbstractObjectDeclaration
+    declaration: Java.AbstractObjectDeclaration,
   ): void {
 
     const knownBinary = this.createSelfIfOneOfStaticFieldsBinary(knownValueFields, declaration.type);
@@ -915,11 +913,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           ),
           new Java.Block(
             new Java.Statement(
-              new Java.ReturnStatement(knownBinary)
-            )
-          )
-        )
-      )
+              new Java.ReturnStatement(knownBinary),
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -936,8 +934,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         new Java.JavaToken(Java.TokenType.EQUALS),
         new Java.StaticMemberReference(
           new Java.ClassName(selfType),
-          knownValueFields[i].identifier
-        )
+          knownValueFields[i].identifier,
+        ),
       );
 
       if (knownBinary) {
@@ -1007,7 +1005,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           ),
           new Java.Block(
             new Java.Statement(new Java.ReturnStatement(new Java.Literal(null))),
-          )
+          ),
         );
 
         methodDeclaration.signature.comments = commentList;
@@ -1036,8 +1034,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         fieldIdentifier,
         new Java.ModifierList(
           new Java.Modifier(Java.ModifierType.PRIVATE),
-          new Java.Modifier(Java.ModifierType.FINAL)
-        )
+          new Java.Modifier(Java.ModifierType.FINAL),
+        ),
       );
       body.children.push(field);
       body.children.push(new Java.FieldBackedGetter(field, getterAnnotationList, commentList, getterIdentifier));
@@ -1047,7 +1045,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         fieldIdentifier,
         getterAnnotationList,
         commentList,
-        getterIdentifier
+        getterIdentifier,
       ));
     }
   }
@@ -1066,10 +1064,10 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
               undefined,
-              new Java.Literal(property.name)
-            )
-          )
-        )
+              new Java.Literal(property.name),
+            ),
+          ),
+        ),
       );
     }
 
@@ -1082,18 +1080,18 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     property: OmniProperty,
     type: OmniPrimitiveType,
     body: Java.Block,
-    commentList?: Java.CommentList
+    commentList?: Java.CommentList,
   ): void {
 
     const fieldModifiers = new Java.ModifierList(
       new Java.Modifier(Java.ModifierType.PRIVATE),
-      new Java.Modifier(Java.ModifierType.FINAL)
+      new Java.Modifier(Java.ModifierType.FINAL),
     );
 
     const field = new Java.Field(
       JavaAstUtils.createTypeNode(type),
       new Java.Identifier(`${JavaUtil.getSafeIdentifierName(property.fieldName || property.name)}`, property.name),
-      fieldModifiers
+      fieldModifiers,
     );
 
     const methodDeclarationReturnType = type.valueConstant && JavaUtil.isNullable(type)
@@ -1105,7 +1103,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       methodDeclarationReturnType,
       undefined,
       undefined,
-      this.getGetterAnnotations(property)
+      this.getGetterAnnotations(property),
     );
 
     if (typeof type.valueConstant == 'function') {
@@ -1115,9 +1113,9 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         methodDeclarationSignature,
         new Java.Block(
           new Java.Statement(new Java.ReturnStatement(
-            new Java.FieldReference(field)
+            new Java.FieldReference(field),
           )),
-        )
+        ),
       );
 
       methodDeclaration.signature.comments = commentList;
@@ -1133,11 +1131,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             new Java.Predicate(
               new Java.FieldReference(field),
               Java.TokenType.NOT_EQUALS,
-              new Java.Literal(null)
+              new Java.Literal(null),
             ),
             new Java.Block(
               new Java.Statement(new Java.ReturnStatement(new Java.FieldReference(field))),
-            )
+            ),
           ),
           new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.valueConstant, type.primitiveKind))),
         );
@@ -1254,11 +1252,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         if (firstMatch) {
 
           // There are links between different servers/methods
-          comments.push("<section>\n<h2>Links</h2>");
+          comments.push('<section>\n<h2>Links</h2>');
           comments.push(...continuation.mappings.map(mapping => {
             return this.getMappingSourceTargetComment(mapping, options);
           }));
-          comments.push("</section>");
+          comments.push('</section>');
         }
       }
     }
@@ -1357,7 +1355,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private getMappingSourceTargetComment(
     mapping: OmniLinkMapping,
     options: IJavaOptions,
-    only: 'source' | 'target' | undefined = undefined
+    only: 'source' | 'target' | undefined = undefined,
   ): string {
 
     const sourceLinks: string[] = [];
@@ -1390,7 +1388,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           if (options.immutableModels) {
             memberName = prop.name;
           } else {
-            memberName = `${JavaUtil.getSetterName(prop.name)}(${JavaUtil.getFullyQualifiedName(prop.type)})`
+            memberName = `${JavaUtil.getSetterName(prop.name)}(${JavaUtil.getFullyQualifiedName(prop.type)})`;
           }
         }
 
@@ -1423,7 +1421,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
               this.clearProperties(type);
               Object.assign(type, {
                 ...otherType,
-                nullable: true
+                nullable: true,
               });
               return [otherType];
             } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
@@ -1452,7 +1450,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private replaceTypeWithReference(
     target: OmniType,
     primitiveType: OmniPrimitiveType,
-    options: RealOptions<IJavaOptions>
+    options: RealOptions<IJavaOptions>,
   ): void {
 
     // TODO: Replace this with something else? REFERENCE should be for native classes, but this is sort of not?
@@ -1462,4 +1460,5 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     const primitiveName = `Primitive${pascalCase(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
     referenceType.fqn = JavaUtil.getClassNameWithPackageName(referenceType, primitiveName, options);
   }
+
 }

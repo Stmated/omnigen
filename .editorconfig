@@ -8,3 +8,19 @@ charset = utf-8
 [*.{js,ts,json,yml}]
 indent_style = space
 indent_size = 2
+ij_editorconfig_space_after_comma = true
+ij_any_space_after_colon = true
+
+[*.{js,ts}]
+ij_typescript_enforce_trailing_comma = whenmultiline
+ij_javascript_enforce_trailing_comma = whenmultiline
+ij_typescript_use_semicolon_after_statement = true
+ij_javascript_use_semicolon_after_statement = true
+
+ij_javascript_use_double_quotes = false
+ij_javascript_force_quote_style = true
+
+ij_typescript_use_double_quotes = false
+ij_typescript_force_quote_style = true
+
+trim_trailing_whitespace = true

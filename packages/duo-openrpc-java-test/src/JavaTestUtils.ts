@@ -5,14 +5,14 @@ import {
   OmniModelParserResult,
   ExternalSyntaxTree,
   VisitorFactoryManager,
-  AbstractNode
+  AbstractNode,
 } from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS, IOpenRpcParserOptions} from '@omnigen/parser-openrpc';
 import {DEFAULT_JAVA_OPTIONS, IJavaOptions, JavaInterpreter, JavaRenderer, JavaVisitor} from '@omnigen/target-java';
 import {OpenRpcTestUtils} from './OpenRpcTestUtils';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
-import * as Java from '@omnigen/target-java/src/ast';
+import {Java} from '@omnigen/target-java';
 
 export const DEFAULT_TEST_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
   ...DEFAULT_JAVA_OPTIONS,
@@ -25,7 +25,7 @@ export class JavaTestUtils {
   public static async getFileContentsFromFile(
     fileName: string,
     javaOptions: IJavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
-    openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS
+    openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
   ): Promise<Map<string, string>> {
 
     const parseResult = await OpenRpcTestUtils.readExample('openrpc', fileName, openRpcOptions, javaOptions);
@@ -34,14 +34,14 @@ export class JavaTestUtils {
 
   public static async getRootNodeFromParseResult(
     parseResult: OmniModelParserResult<IJavaOptions>,
-    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = []
+    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = [],
   ): Promise<AstRootNode> {
     return new JavaInterpreter().buildSyntaxTree(parseResult.model, externals, parseResult.options);
   }
 
   public static async getFileContentsFromParseResult(
     parseResult: OmniModelParserResult<IJavaOptions>,
-    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = []
+    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = [],
   ): Promise<Map<string, string>> {
 
     const interpretation = await this.getRootNodeFromParseResult(parseResult, externals);
@@ -54,7 +54,7 @@ export class JavaTestUtils {
 
   public static getFileContents(javaOptions: RealOptions<IJavaOptions>, interpretation: AstRootNode): Map<string, string> {
     const fileContents = new Map<string, string>();
-    const renderer = new JavaRenderer(javaOptions, (cu) => {
+    const renderer = new JavaRenderer(javaOptions, cu => {
       fileContents.set(cu.fileName, cu.content);
     });
     renderer.render(interpretation);
@@ -84,13 +84,13 @@ export class JavaTestUtils {
   public static getMethod(node: AbstractNode, name: string): Java.MethodDeclaration {
 
     const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.MethodDeclaration>(), {
-      visitMethodDeclaration: (node) => {
+      visitMethodDeclaration: node => {
         if (node.signature.identifier.value == name) {
           return node;
         } else {
           return undefined;
         }
-      }
+      },
     });
 
     const result = TestUtils.flatten(node.visit(visitor));
@@ -105,9 +105,9 @@ export class JavaTestUtils {
 
     const array: Java.CompilationUnit[] = [];
     const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
-      visitCompilationUnit: (node) => {
+      visitCompilationUnit: node => {
         array.push(node);
-      }
+      },
     });
 
     root.visit(visitor);
@@ -118,13 +118,13 @@ export class JavaTestUtils {
   public static getCompilationUnit(root: AstRootNode, name: string): Java.CompilationUnit {
 
     const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.CompilationUnit>(), {
-      visitCompilationUnit: (node) => {
+      visitCompilationUnit: node => {
         if (node.object.name.value == name) {
           return node;
         } else {
           return undefined;
         }
-      }
+      },
     });
 
     const result = TestUtils.flatten(root.visit(visitor));
@@ -134,4 +134,5 @@ export class JavaTestUtils {
 
     return result;
   }
+
 }

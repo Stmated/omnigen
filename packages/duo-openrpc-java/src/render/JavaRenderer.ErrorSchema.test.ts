@@ -5,7 +5,7 @@ describe('Error-Schema', () => {
 
   const JAVA_OPT: IJavaOptions = {
     ...DEFAULT_TEST_JAVA_OPTIONS,
-    compressPropertiesToAncestor: false
+    compressPropertiesToAncestor: false,
   };
 
   test('ErrorStructure', async () => {
@@ -15,19 +15,19 @@ describe('Error-Schema', () => {
 
     // TODO: Figure out where ObjectThing.java is coming from
     expect(filenames).toEqual([
-      "ErrorUnknown.java",
-      "ErrorUnknownError.java",
-      "JsonRpcError.java",
-      "JsonRpcErrorResponse.java",
-      "JsonRpcRequest.java",
-      "JsonRpcRequestParams.java",
-      "JsonRpcResponse.java",
-      "ListThingsError100.java",
-      "ListThingsError100Error.java",
-      "ListThingsRequest.java",
-      "ListThingsRequestParams.java",
-      "ListThingsResponse.java",
-      "Thing.java",
+      'ErrorUnknown.java',
+      'ErrorUnknownError.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcRequestParams.java',
+      'JsonRpcResponse.java',
+      'ListThingsError100.java',
+      'ListThingsError100Error.java',
+      'ListThingsRequest.java',
+      'ListThingsRequestParams.java',
+      'ListThingsResponse.java',
+      'Thing.java',
     ]);
 
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
@@ -42,7 +42,7 @@ describe('Error-Schema', () => {
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', JAVA_OPT);
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
 
-    expect(errorResponse.foundFields).toContain("version");
+    expect(errorResponse.foundFields).toContain('version');
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toHaveLength(4);
@@ -59,8 +59,8 @@ describe('Error-Schema', () => {
     expect(filenames).toContain('JsonRpcCustomErrorPayload.java');
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
-    expect(error100.foundFields).toEqual(["code", "message", "error", "name"]);
-    expect(error100.foundLiterals[7]).toEqual("\"JSONRPCError\"");
+    expect(error100.foundFields).toEqual(['code', 'message', 'error', 'name']);
+    expect(error100.foundLiterals[7]).toEqual('"JSONRPCError"');
 
     const customError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
     expect(customError.foundFields).toEqual(['signature', 'uuid', 'method', 'data', '_additionalProperties']);

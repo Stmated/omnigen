@@ -1,24 +1,25 @@
 import {
-  OmniExternalModelReferenceType,
-  OmniModel,
-  OmniModelParserResult,
-  OmniObjectType,
-  OmniProperty,
+  Naming,
+  IOmniExternalModelReferenceType,
+  IOmniModel,
+  IOmniModelParserResult,
+  IOmniObjectType,
+  IOmniProperty,
   OmniType,
   OmniTypeKind,
-  OmniUtil
+  OmniUtil,
+  TypeName,
 } from '../parse';
 import {RealOptions} from '../options';
-import {ITargetOptions} from '../interpret';
+import {CompressTypeNaming, ITargetOptions, OmniTypeNameReducer} from '../interpret';
+import {CompressTypeLevel} from './CompressTypeLevel';
+import {LoggerFactory} from '@omnigen/core-log';
 
-interface CommonTypeGroupEntry {
+const logger = LoggerFactory.create(__filename);
+
+interface ICommonTypeGroupEntry {
   type: OmniType;
-  model: OmniModel;
-}
-
-export enum CompressTypeLevel {
-  EXACT,
-  FUNCTIONALLY_SAME,
+  model: IOmniModel;
 }
 
 /**
@@ -37,11 +38,14 @@ export class OmniModelMerge {
    * The given models will also be modified so that they all point to things in the common model.
    *
    * TODO: More control, like deciding name between two identical types other than name
+   *
+   * @param results The different models that should be attempted to be merged
+   * @param options The target options, which might be a merge of the different targets', or something of its own.
    */
   public static merge<TOpt extends ITargetOptions>(
-    results: OmniModelParserResult<TOpt>[],
+    results: IOmniModelParserResult<TOpt>[],
     options: Partial<RealOptions<TOpt>>,
-  ): OmniModelParserResult<TOpt> {
+  ): IOmniModelParserResult<TOpt> {
 
     if (results.length == 0) {
       throw new Error(`Must give at least one model to merge`);
@@ -51,7 +55,7 @@ export class OmniModelMerge {
       return results[0];
     }
 
-    const common: OmniModel = {
+    const common: IOmniModel = {
       name: results.map(it => it.model.name).join(' & '),
       endpoints: [],
       types: [],
@@ -69,11 +73,11 @@ export class OmniModelMerge {
         email: [...new Set(results.map(it => it.model.contact?.email).filter(it => it !== undefined))].join(' / '),
       },
       license: results.find(it => it.model.license !== undefined)?.model.license,
-      description: results.map(it => it.model.description).join(', ')
+      description: results.map(it => it.model.description).join(', '),
     };
 
     // NOTE: Is this actually the way to do this? Just merge the options and the earlier models take precedence?
-    let commonOptions = {...results[0].options};
+    let commonOptions: RealOptions<TOpt> = {...results[0].options};
     for (let i = 1; i < results.length; i++) {
       commonOptions = {...results[i].options, ...commonOptions};
     }
@@ -81,22 +85,22 @@ export class OmniModelMerge {
     commonOptions = {...commonOptions, ...options};
     common.options = commonOptions;
 
-    const allTypes: CommonTypeGroupEntry[] = results
+    const allTypes: ICommonTypeGroupEntry[] = results
       .map(it => it.model)
       .flatMap(model => {
 
-      const modelTypes = OmniUtil.getAllExportableTypes(model).all
-        .filter(it => it.kind != OmniTypeKind.PRIMITIVE && it.kind != OmniTypeKind.NULL);
+        const modelTypes = OmniUtil.getAllExportableTypes(model).all
+          .filter(it => it.kind != OmniTypeKind.PRIMITIVE && it.kind != OmniTypeKind.NULL);
 
-      return modelTypes.map(type => {
-        return {
-          type: type,
-          model: model
-        };
+        return modelTypes.map(type => {
+          return {
+            type: type,
+            model: model,
+          };
+        });
       });
-    });
 
-    const commonTypesGroups: CommonTypeGroupEntry[][] = [];
+    const commonTypesGroups: ICommonTypeGroupEntry[][] = [];
     const flatCommonTypes = new Set<OmniType>();
 
     // We need to sort the common types so they are in order of extensions
@@ -113,7 +117,7 @@ export class OmniModelMerge {
       }
 
       return 0;
-    })
+    });
 
     for (const entry of allTypes) {
 
@@ -125,7 +129,11 @@ export class OmniModelMerge {
         continue;
       }
 
-      const alike = OmniModelMerge.findAlikeTypes(entry, allTypes, commonOptions.compressTypesLevel);
+      const alike = OmniModelMerge.findAlikeTypes(
+        entry,
+        allTypes,
+        commonOptions.compressTypesLevel,
+      );
 
       if (alike.length > 0) {
         const withSelf = [...[entry, ...alike]];
@@ -141,20 +149,31 @@ export class OmniModelMerge {
 
       const commonType = {...group[0].type}; // NOTE: Should we deep-clone this?
 
+      let commonName: TypeName | undefined = undefined;
       if ('name' in commonType) {
 
-        // TODO: The commonType should have a name that works for all entries of the group!
-        //        If they are all the same, then yay, happy days.
-        //        But if they are different, what do we do then?
-        //        Just take the first?
-        //        Use a custom resolver if possible?
-        //        Take the common prefix (and/or suffix) words of the two? (most likely...)
+        const foundCommonName = OmniModelMerge.getCommonTypeName(
+          group.map(g => OmniUtil.getTypeName(g.type)).filter(it => it != undefined),
+          commonOptions.compressTypeNaming,
+          commonOptions.compressTypeNamingReducer,
+        );
+
+        if (foundCommonName) {
+          commonName = foundCommonName;
+          commonType.name = Naming.simplify(foundCommonName);
+        } else {
+
+          const allDescriptions = group.map(g => OmniUtil.getTypeDescription(g.type)).join(', ');
+          logger.warn(`Could not find a common name between ${allDescriptions}; skipping merge`);
+          continue;
+        }
       }
 
-      const replacement: OmniExternalModelReferenceType<OmniType> = {
+      const replacement: IOmniExternalModelReferenceType<OmniType> = {
         kind: OmniTypeKind.EXTERNAL_MODEL_REFERENCE,
         model: common,
         of: commonType,
+        name: commonName,
       };
 
       // TODO: How will we know later that the type is a general one? IT NEEDS TO GO IN A SHARED/SEPARATE PACKAGE OR SOMETHING!
@@ -168,15 +187,12 @@ export class OmniModelMerge {
 
         // Replace the type in each respective model with the replacement type.
         OmniUtil.swapTypeForWholeModel(entry.model, entry.type, replacement);
-
-        // And replace the replacement type in the common model with the common type.
-        // OmniUtil.swapTypeForWholeModel(common, replacement, commonType);
       }
     }
 
     for (const type of common.types) {
 
-      OmniUtil.traverseTypes(type, (localType) => {
+      OmniUtil.traverseTypes(type, localType => {
 
         if (localType.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
 
@@ -203,9 +219,13 @@ export class OmniModelMerge {
     return false;
   }
 
-  private static findAlikeTypes(type: CommonTypeGroupEntry, types: CommonTypeGroupEntry[], level: CompressTypeLevel): CommonTypeGroupEntry[] {
+  private static findAlikeTypes(
+    type: ICommonTypeGroupEntry,
+    types: ICommonTypeGroupEntry[],
+    level: CompressTypeLevel,
+  ): ICommonTypeGroupEntry[] {
 
-    const alike: CommonTypeGroupEntry[] = [];
+    const alike: ICommonTypeGroupEntry[] = [];
     for (const otherType of types) {
 
       if (otherType.type == type.type) {
@@ -222,7 +242,11 @@ export class OmniModelMerge {
     return alike;
   }
 
-  private static isAlikeTypes(a: OmniType, b: OmniType, level: CompressTypeLevel): boolean {
+  private static isAlikeTypes(
+    a: OmniType,
+    b: OmniType,
+    level: CompressTypeLevel,
+  ): boolean {
     if (a.kind != b.kind) {
       return false;
     }
@@ -250,7 +274,11 @@ export class OmniModelMerge {
     return false;
   }
 
-  private static isAlikeObjects(a: OmniObjectType, b: OmniObjectType, level: CompressTypeLevel): boolean {
+  private static isAlikeObjects(
+    a: IOmniObjectType,
+    b: IOmniObjectType,
+    level: CompressTypeLevel,
+  ): boolean {
 
     if (a.properties.length != b.properties.length) {
       return false;
@@ -279,7 +307,132 @@ export class OmniModelMerge {
     return true;
   }
 
-  private static isAlikeProperties(aProp: OmniProperty, bProp: OmniProperty, level: CompressTypeLevel): boolean {
+  private static getCommonTypeName(
+    names: TypeName[],
+    namingEquality: CompressTypeNaming,
+    namingReducer: OmniTypeNameReducer | undefined,
+  ): TypeName | undefined {
+
+    const unwrappedNames = names.map(it => Naming.unwrapAll(it));
+
+    if (namingReducer) {
+
+      // If we have a naming reducer, we will always prefer it to any other setting.
+      // But if it does not return a resulting name, then we will try to figure one out below.
+      // TODO: Would be beneficial if we could know which packages these types were destined for, to use in the reducer
+      const reduced = namingReducer(unwrappedNames);
+      if (reduced) {
+        if (typeof reduced == 'string') {
+          return reduced;
+        } else {
+
+          // We have been told by the reducer to use another naming equality check for these names.
+          namingEquality = reduced;
+        }
+      }
+    }
+
+    // We always prefer the name that is exactly the same between the two.
+    const sameNames = unwrappedNames[0].filter(name => unwrappedNames.every(group => group.includes(name)));
+    if (sameNames.length > 0) {
+      // We return all the matched same names, for probable better fallback if there are name clashes.
+      return sameNames;
+    }
+
+    if (namingEquality == CompressTypeNaming.EXACT) {
+
+      // But if no exact one was found, and that is what we wanted, then we return undefined.
+      return undefined;
+    } else if (namingEquality == CompressTypeNaming.FIRST) {
+      for (const entry of unwrappedNames) {
+        if (entry.length > 0) {
+          return entry[0];
+        }
+      }
+
+      return undefined;
+    } else if (namingEquality == CompressTypeNaming.COMMON_PREFIX) {
+
+      // We currently only check for prefix for the FIRST name of the groups.
+      // This should maybe be improved, but I do not know how to logically know which names in which are comparable.
+      const prefix = OmniModelMerge.getCommonPrefix([...unwrappedNames.map(group => group[0])]);
+      if (prefix && prefix.length > 0) {
+        return prefix;
+      }
+
+    } else if (namingEquality == CompressTypeNaming.COMMON_SUFFIX) {
+
+      const suffix = OmniModelMerge.getCommonSuffix([...unwrappedNames.map(group => group[0])]);
+      if (suffix && suffix.length > 0) {
+        return suffix;
+      }
+    } else if (namingEquality == CompressTypeNaming.COMMON_PREFIX_AND_SUFFIX) {
+
+      const prefix = OmniModelMerge.getCommonPrefix([...unwrappedNames.map(group => group[0])]);
+      const suffix = OmniModelMerge.getCommonSuffix([...unwrappedNames.map(group => group[0])]);
+      const joined = `${prefix}${suffix}`;
+
+      if (joined && joined.length > 0) {
+        return joined;
+      }
+    } else if (namingEquality == CompressTypeNaming.JOIN) {
+      return unwrappedNames.map(it => it[0]).join('');
+    }
+
+    return undefined;
+  }
+
+  private static getCommonPrefix(names: string[]): string {
+
+    const wordsArray = names.map(name => OmniModelMerge.getWords(name));
+    for (let wordIndex = 0; wordIndex < wordsArray[0].length; wordIndex++) {
+
+      const refWord = wordsArray[0][wordIndex];
+      for (let wordsIndex = 1; wordsIndex < wordsArray.length; wordsIndex++) {
+        if (wordIndex >= wordsArray[wordsIndex].length || refWord != wordsArray[wordsIndex][wordIndex]) {
+
+          // This is as far as we could find any common prefix words.
+          return wordsArray[0].slice(0, wordIndex).join('');
+        }
+      }
+    }
+
+    return wordsArray[0].join('');
+  }
+
+  private static getCommonSuffix(_names: string[]): string {
+    // TODO: Implement!
+    return '';
+  }
+
+  private static getWords(name: string) {
+
+    const slashIndex = name.lastIndexOf('/');
+    if (slashIndex != -1) {
+
+      // If there is a slash in the name, we have some kind of schema-name.
+      // We should probably never care about those parts in the same, since it's just /components/schema or similar.
+      // TODO: Maybe create some central method to solve these issues? That can keep track on per-parser what is a good name?
+      name = name.substring(slashIndex + 1);
+    }
+
+    const words: string[] = [];
+    // SomeASTClass = [Some, AST, Class]
+    // Some2AST2Class2 = [Some2, AST2, Class2]
+    // someWithSmallLetters = [some, With, Small, Letters]
+    // /components/schemas/Thing = [Thing]
+    for (const match of name.matchAll(/\p{Lu}{2,}(?=\p{Lu}\p{Ll})|[\d\p{Lu}]+?[\p{Ll}\d]+\d*|\p{Lu}$|[\p{Ll}\d]+/gmu)) {
+      words.push(match['0']);
+    }
+
+    return words;
+  }
+
+  private static isAlikeProperties(
+    aProp: IOmniProperty,
+    bProp: IOmniProperty,
+    level: CompressTypeLevel,
+  ): boolean {
 
     if (aProp.required != bProp.required || aProp.deprecated != bProp.deprecated) {
       return false;

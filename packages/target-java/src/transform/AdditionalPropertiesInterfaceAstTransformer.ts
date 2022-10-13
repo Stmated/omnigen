@@ -1,6 +1,6 @@
 import {
-  OmniInterfaceType, OmniModel, OmniObjectType, OmniTypeKind,
-  Naming, VisitorFactoryManager, RealOptions, ExternalSyntaxTree
+  IOmniInterfaceType, IOmniModel, IOmniObjectType, OmniTypeKind,
+  Naming, VisitorFactoryManager, RealOptions, IExternalSyntaxTree,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import {IJavaOptions} from '../options';
@@ -10,41 +10,41 @@ import * as Java from '../ast';
 export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: OmniModel,
+    _model: IOmniModel,
     root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<IJavaOptions>
+    _externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
+    options: RealOptions<IJavaOptions>,
   ): Promise<void> {
 
     const createdInterface: { obj?: Java.InterfaceDeclaration } = {};
     const currentClassDeclaration: { obj?: Java.ClassDeclaration } = {};
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitClassDeclaration: (node, visitor) => {
         currentClassDeclaration.obj = node;
-        AbstractJavaAstTransformer._javaVisitor.visitClassDeclaration(node, visitor);
+        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
         currentClassDeclaration.obj = undefined;
       },
 
-      visitAdditionalPropertiesDeclaration: (node) => {
+      visitAdditionalPropertiesDeclaration: node => {
 
         if (!createdInterface.obj) {
 
           // TODO: It would be beneficial if we could add "methods" to interfaces.
           //        That way we could also add the "addAdditionalProperty" method to the interface.
-          const additionalPropertiesObjectType: OmniObjectType = {
+          const additionalPropertiesObjectType: IOmniObjectType = {
             kind: OmniTypeKind.OBJECT,
             properties: [],
-            name: 'IAdditionalProperties'
+            name: 'IAdditionalProperties',
           };
 
           additionalPropertiesObjectType.properties.push({
             type: node.mapType,
             name: 'additionalProperties',
-            owner: additionalPropertiesObjectType
+            owner: additionalPropertiesObjectType,
           });
 
-          const interfaceType: OmniInterfaceType = {
+          const interfaceType: IOmniInterfaceType = {
             kind: OmniTypeKind.INTERFACE,
             name: 'IAdditionalProperties',
             of: additionalPropertiesObjectType,
@@ -53,7 +53,7 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
           createdInterface.obj = new Java.InterfaceDeclaration(
             JavaAstUtils.createTypeNode(interfaceType, false),
             new Java.Identifier(Naming.safe([interfaceType.name, additionalPropertiesObjectType.name])),
-            new Java.Block()
+            new Java.Block(),
           );
 
           JavaAstUtils.addInterfaceProperties(interfaceType, createdInterface.obj.body);
@@ -62,27 +62,27 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
         if (currentClassDeclaration.obj) {
           if (!currentClassDeclaration.obj.implements) {
             currentClassDeclaration.obj.implements = new Java.ImplementsDeclaration(
-              new Java.TypeList([])
+              new Java.TypeList([]),
             );
           }
 
           currentClassDeclaration.obj.implements.types.children.push(
-            createdInterface.obj.type
+            createdInterface.obj.type,
           );
         }
 
         // Add the interface to the class declaration, if it does not already exist
-      }
+      },
     }));
 
     const obj = createdInterface.obj;
     if (obj) {
       root.children.push(new Java.CompilationUnit(
         new Java.PackageDeclaration(
-          JavaUtil.getPackageName(obj.type.omniType, obj.name.value, options)
+          JavaUtil.getPackageName(obj.type.omniType, obj.name.value, options),
         ),
         new Java.ImportList([]),
-        obj
+        obj,
       ));
     }
 

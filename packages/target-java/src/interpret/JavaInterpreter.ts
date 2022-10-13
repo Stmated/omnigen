@@ -5,7 +5,7 @@ import {
   AddConstructorJavaAstTransformer,
   PackageResolverAstTransformer,
   AdditionalPropertiesInterfaceAstTransformer,
-  InnerTypeCompressionAstTransformer
+  InnerTypeCompressionAstTransformer,
 } from '../transform';
 import * as Java from '../ast';
 

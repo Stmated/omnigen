@@ -1,10 +1,10 @@
-import {OmniModel, OmniObjectType, OmniProperty, OmniTypeKind, OmniModelTransformer, OmniUtil} from '../../parse';
+import {IOmniModel, IOmniObjectType, IOmniProperty, OmniTypeKind, IOmniModelTransformer, OmniUtil} from '../../parse';
 import {RealOptions} from '../../options';
 import {ITargetOptions} from '../../interpret';
 
-interface SubTypeInfo {
-  subTypes: OmniObjectType[];
-  properties: Map<string, OmniProperty[]>;
+interface ISubTypeInfo {
+  subTypes: IOmniObjectType[];
+  properties: Map<string, IOmniProperty[]>;
 }
 
 /**
@@ -19,9 +19,9 @@ interface SubTypeInfo {
  * a (abs): [x3]
  * b (abs): [x4]
  */
-export class CompressionOmniModelTransformer implements OmniModelTransformer<ITargetOptions> {
+export class CompressionOmniModelTransformer implements IOmniModelTransformer<ITargetOptions> {
 
-  transformModel(model: OmniModel, options: RealOptions<ITargetOptions>): void {
+  transformModel(model: IOmniModel, options: RealOptions<ITargetOptions>): void {
 
     if (!options.compressPropertiesToAncestor) {
 
@@ -34,7 +34,7 @@ export class CompressionOmniModelTransformer implements OmniModelTransformer<ITa
     // TODO: Need to sort the types so that the leaf types are done first
     //        Otherwise we will find the wrong types when doing the "find common denominator" stuff
 
-    const subTypeInfoMap = new Map<OmniObjectType, SubTypeInfo>();
+    const subTypeInfoMap = new Map<IOmniObjectType, ISubTypeInfo>();
     for (const type of allTypes.all) {
 
       if (type.kind != OmniTypeKind.OBJECT) {
@@ -46,7 +46,6 @@ export class CompressionOmniModelTransformer implements OmniModelTransformer<ITa
         continue;
       }
 
-      // const extendedByDescription = OmniModelUtil.getTypeDescription(extendedBy);
       for (const property of type.properties) {
 
         const signature = `${property.name}=${OmniUtil.getTypeDescription(property.type)}`;
@@ -55,7 +54,7 @@ export class CompressionOmniModelTransformer implements OmniModelTransformer<ITa
         if (!subTypeInfo) {
           subTypeInfoMap.set(extendedBy, subTypeInfo = {
             subTypes: [],
-            properties: new Map<string, OmniProperty[]>(),
+            properties: new Map<string, IOmniProperty[]>(),
           });
         }
 
@@ -89,7 +88,7 @@ export class CompressionOmniModelTransformer implements OmniModelTransformer<ITa
           // TODO: We should merge the properties together, and not just pick the first one. Comments, etc.
           parentType.properties.push({
             ...subTypesProperties[0],
-            owner: parentType
+            owner: parentType,
           });
 
           for (const subTypeProperty of subTypesProperties) {

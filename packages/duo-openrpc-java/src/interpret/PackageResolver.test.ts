@@ -92,13 +92,13 @@ describe('PackageResolver', () => {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       packageResolver: (_type, typeName) => {
         if (typeName.match(/.*Error.*/i)) {
-          return "some.base.pkg.errors";
+          return 'some.base.pkg.errors';
         }
         if (typeName.match(/JsonRpc.*/i)) {
-          return "some.base.pkg";
+          return 'some.base.pkg';
         }
-        return "some.other.pkg";
-      }
+        return 'some.other.pkg';
+      },
     };
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', options);
@@ -115,7 +115,7 @@ describe('PackageResolver', () => {
       'ListThingsRequest.java',
       'ListThingsRequestParams.java',
       'ListThingsResponse.java',
-      'Thing.java'
+      'Thing.java',
     ]);
 
     // TODO: Make one of the generic targets be in another package, and make sure the package import still works!
@@ -144,7 +144,7 @@ describe('PackageResolver', () => {
     const JsonRpcErrorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
     expect(JsonRpcErrorResponse.foundImports).toEqual(['javax.annotation.Generated']);
     expect(JsonRpcErrorResponse.foundPackage).toEqual('some.base.pkg.errors');
-    expect(JsonRpcErrorResponse.foundTypes).toEqual(['String','ErrorUnknownError']);
+    expect(JsonRpcErrorResponse.foundTypes).toEqual(['String', 'ErrorUnknownError']);
 
     const JsonRpcRequest = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcRequest.java');
     expect(JsonRpcRequest.foundImports).toEqual(['javax.annotation.Generated', 'some.other.pkg.ListThingsRequestParams']);
@@ -178,12 +178,12 @@ describe('PackageResolver', () => {
 
     const Thing = JavaTestUtils.getParsedContent(fileContents, 'Thing.java');
     expect(Thing.foundImports).toEqual([
-      "com.fasterxml.jackson.annotation.JsonAnyGetter",
-      "com.fasterxml.jackson.annotation.JsonAnySetter",
-      "com.fasterxml.jackson.databind.JsonNode",
-      "java.util.HashMap",
-      "java.util.Map",
-      "javax.annotation.Generated"
+      'com.fasterxml.jackson.annotation.JsonAnyGetter',
+      'com.fasterxml.jackson.annotation.JsonAnySetter',
+      'com.fasterxml.jackson.databind.JsonNode',
+      'java.util.HashMap',
+      'java.util.Map',
+      'javax.annotation.Generated',
     ]);
     expect(Thing.foundPackage).toEqual('some.other.pkg');
     expect(Thing.foundTypes).toEqual(['String', 'Map', 'JsonNode']);

@@ -5,6 +5,10 @@ end_of_line = lf
 insert_final_newline = true
 charset = utf-8
 
+[.turbo]
+generated_code = true
+ij_formatter_enabled = false
+
 [*.{js,ts,json,yml}]
 indent_style = space
 indent_size = 2

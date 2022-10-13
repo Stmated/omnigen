@@ -8,4 +8,4 @@ export interface IPackageOptions extends IOptions {
 export const DEFAULT_PACKAGE_OPTIONS: IPackageOptions = {
   package: 'generated.omnigen',
   packageResolver: undefined,
-}
+};

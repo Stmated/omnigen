@@ -1,9 +1,9 @@
 import fs from 'fs/promises';
 import {JSONSchema7} from 'json-schema';
 import {
-  OmniModelTransformer,
+  IOmniModelTransformer,
   Dereferencer,
-  OmniModelParserResult,
+  IOmniModelParserResult,
   SchemaFile,
   CompressionOmniModelTransformer,
   GenericsOmniModelTransformer,
@@ -12,10 +12,10 @@ import {
 import {IJavaOptions, JAVA_OPTIONS_CONVERTERS, InterfaceJavaModelTransformer} from '@omnigen/target-java';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
 import {
-   IOpenRpcParserOptions,
+  IOpenRpcParserOptions,
   JSONRPC_OPTIONS_FALLBACK,
   OPENRPC_OPTIONS_CONVERTERS,
-  OpenRpcParserBootstrapFactory
+  OpenRpcParserBootstrapFactory,
 } from '@omnigen/parser-openrpc';
 
 export type KnownSchemaNames = 'openrpc';
@@ -38,18 +38,18 @@ export class OpenRpcTestUtils {
     type: KnownSchemaNames,
     fileName: string,
     openRpcOptions: IOpenRpcParserOptions,
-    javaOptions: IJavaOptions
-  ): Promise<OmniModelParserResult<IJavaOptions>> {
+    javaOptions: IJavaOptions,
+  ): Promise<IOmniModelParserResult<IJavaOptions>> {
 
     const schemaFile = new SchemaFile(
       `../parser-${type}/examples/${fileName}`,
-      `../parser-${type}/examples/${fileName}`
+      `../parser-${type}/examples/${fileName}`,
     );
 
-    const transformers: OmniModelTransformer<IJavaOptions>[] = [
+    const transformers: IOmniModelTransformer<IJavaOptions>[] = [
       new CompressionOmniModelTransformer(),
       new GenericsOmniModelTransformer(),
-      new InterfaceJavaModelTransformer()
+      new InterfaceJavaModelTransformer(),
     ];
 
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
@@ -92,7 +92,7 @@ export class OpenRpcTestUtils {
 
     return {
       model: parseResult.model,
-      options: realJavaOptions
+      options: realJavaOptions,
     };
   }
 }

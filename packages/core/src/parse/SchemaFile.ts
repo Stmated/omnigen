@@ -3,7 +3,7 @@ import * as path from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
 
-export const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(__filename);
 
 export type SchemaFileInput = string | PathLike;
 
@@ -46,7 +46,8 @@ export class SchemaFile {
     }
 
     const str = await this.asString();
-    return this._parsedObject = JSON.parse(str) as R;
+    this._parsedObject = JSON.parse(str);
+    return this._parsedObject as R;
   }
 
   public async asString(): Promise<string> {
@@ -66,8 +67,9 @@ export class SchemaFile {
     }
 
     const path = this.getAbsolutePath() || '';
-    logger.info(`Going to read content from ${path}`);
+    logger.debug(`Going to read content from ${path}`);
     const buffer = await fs.readFile(path, {});
-    return this._readContent = buffer.toString();
+    this._readContent = buffer.toString();
+    return this._readContent;
   }
 }

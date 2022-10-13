@@ -6,7 +6,8 @@ import {
   RealOptions,
   OptionAdditions,
   OptionConverters,
-  OptionsUtil, IOptions
+  OptionsUtil,
+  IOptions,
 } from '@omnigen/core';
 
 export type JsonRpcVersion = '1.0' | '1.1' | '2.0';
@@ -30,7 +31,7 @@ export const DEFAULT_JSONRPC_OPTIONS: IJsonRpcOptions = {
 };
 
 export const JSONRPC_10_PARSER_OPTIONS: RealOptions<IJsonRpcOptions> = {
-  jsonRpcVersion: "1.0",
+  jsonRpcVersion: '1.0',
   jsonRpcIdIncluded: false,
   jsonRpcPropertyName: undefined,
   jsonRpcErrorPropertyName: 'error',
@@ -39,7 +40,7 @@ export const JSONRPC_10_PARSER_OPTIONS: RealOptions<IJsonRpcOptions> = {
 };
 
 export const JSONRPC_11_PARSER_OPTIONS: RealOptions<IJsonRpcOptions> = {
-  jsonRpcVersion: "1.1",
+  jsonRpcVersion: '1.1',
   jsonRpcIdIncluded: false,
   jsonRpcPropertyName: 'version',
   jsonRpcErrorPropertyName: 'error',
@@ -48,7 +49,7 @@ export const JSONRPC_11_PARSER_OPTIONS: RealOptions<IJsonRpcOptions> = {
 };
 
 export const JSONRPC_20_PARSER_OPTIONS: RealOptions<IJsonRpcOptions> = {
-  jsonRpcVersion: "2.0",
+  jsonRpcVersion: '2.0',
   jsonRpcIdIncluded: false,
   jsonRpcPropertyName: 'jsonrpc',
   jsonRpcErrorPropertyName: 'data',
@@ -57,8 +58,8 @@ export const JSONRPC_20_PARSER_OPTIONS: RealOptions<IJsonRpcOptions> = {
 };
 
 export const JSONRPC_OPTIONS_CONVERTERS: OptionConverters<IJsonRpcOptions> = {
-  jsonRpcVersion: (v) => Promise.resolve(v || '2.0'),
-  jsonRpcErrorDataSchema: async (v) => {
+  jsonRpcVersion: v => Promise.resolve(v || '2.0'),
+  jsonRpcErrorDataSchema: async v => {
 
     if (!v || 'kind' in v) {
       return Promise.resolve(v);
@@ -66,7 +67,7 @@ export const JSONRPC_OPTIONS_CONVERTERS: OptionConverters<IJsonRpcOptions> = {
 
     return Promise.resolve(undefined);
   },
-  jsonRpcErrorPropertyName: (v) => {
+  jsonRpcErrorPropertyName: v => {
     if (v) {
       return Promise.resolve(v);
     }
@@ -75,10 +76,10 @@ export const JSONRPC_OPTIONS_CONVERTERS: OptionConverters<IJsonRpcOptions> = {
   },
   jsonRpcErrorNameIncluded: OptionsUtil.toBoolean,
   jsonRpcIdIncluded: OptionsUtil.toBoolean,
-}
+};
 
 export const JSONRPC_OPTIONS_FALLBACK: OptionAdditions<IJsonRpcOptions> = {
-  jsonRpcVersion: (v) => {
+  jsonRpcVersion: v => {
     switch (v) {
       case '1.1':
         return JSONRPC_11_PARSER_OPTIONS;
@@ -87,5 +88,5 @@ export const JSONRPC_OPTIONS_FALLBACK: OptionAdditions<IJsonRpcOptions> = {
       default:
         return JSONRPC_20_PARSER_OPTIONS;
     }
-  }
+  },
 };

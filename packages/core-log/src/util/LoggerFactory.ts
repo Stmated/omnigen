@@ -13,10 +13,10 @@ export class LoggerFactory {
   private static _pretty: boolean | undefined = undefined;
   private static _basePath = __dirname.substring(0, __dirname.lastIndexOf('/'));
 
-  private static readonly _modifiers: ModifierCallback[] = [];
+  private static readonly _MODIFIERS: ModifierCallback[] = [];
 
   public static registerOptionsModifier(modifier: ModifierCallback): void {
-    LoggerFactory._modifiers.push(modifier);
+    LoggerFactory._MODIFIERS.push(modifier);
   }
 
   /**
@@ -42,9 +42,9 @@ export class LoggerFactory {
 
     if (LoggerFactory._pretty === undefined) {
       try {
-        require.resolve("pino-pretty");
+        require.resolve('pino-pretty');
         LoggerFactory._pretty = true;
-      } catch(e) {
+      } catch (e) {
         LoggerFactory._pretty = false;
       }
     }
@@ -59,7 +59,7 @@ export class LoggerFactory {
     }
 
     let modifiedOptions: LoggerOptions | DestinationStream = options;
-    for (const modifier of LoggerFactory._modifiers) {
+    for (const modifier of LoggerFactory._MODIFIERS) {
       modifiedOptions = modifier(modifiedOptions);
     }
 

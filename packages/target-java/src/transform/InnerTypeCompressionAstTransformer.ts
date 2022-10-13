@@ -1,15 +1,18 @@
 import {AbstractJavaAstTransformer} from '../transform';
 import {
-  OmniModel, OmniType, OmniTypeKind, ExternalSyntaxTree, VisitorFactoryManager, RealOptions, OmniUtil, ITargetOptions
+  IOmniModel, OmniType, OmniTypeKind, IExternalSyntaxTree, VisitorFactoryManager, RealOptions, OmniUtil, ITargetOptions,
 } from '@omnigen/core';
 import {IJavaOptions} from '../options';
 import * as Java from '../ast';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(__filename);
 
 type CompilationUnitInfo = {
   cu: Java.CompilationUnit,
 };
 
-interface TypeMapping {
+interface ITypeMapping {
   definedIn?: Java.CompilationUnit;
   usedIn: Set<Java.CompilationUnit>;
 }
@@ -17,10 +20,10 @@ interface TypeMapping {
 export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: OmniModel,
+    _model: IOmniModel,
     root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<ITargetOptions>
+    _externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
+    options: RealOptions<ITargetOptions>,
   ): Promise<void> {
 
     if (!options.compressSoloReferencedTypes && !options.compressUnreferencedSubTypes) {
@@ -29,9 +32,9 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       return Promise.resolve();
     }
 
-    const typeMapping = new Map<OmniType, TypeMapping>();
+    const typeMapping = new Map<OmniType, ITypeMapping>();
     const cuInfoStack: CompilationUnitInfo[] = [];
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitCompilationUnit: (node, visitor) => {
 
@@ -50,12 +53,11 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
         cuInfoStack.push({
           cu: node,
         });
-        AbstractJavaAstTransformer._javaVisitor.visitCompilationUnit(node, visitor);
+        AbstractJavaAstTransformer.JAVA_VISITOR.visitCompilationUnit(node, visitor);
         cuInfoStack.pop();
-
       },
 
-      visitRegularType: (node) => {
+      visitRegularType: node => {
 
         for (const usedType of OmniUtil.getResolvedVisibleTypes(node.omniType)) {
 
@@ -76,7 +78,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
             }
           }
         }
-      }
+      },
     }));
 
     for (const e of typeMapping.entries()) {
@@ -128,7 +130,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     sourceUnit: Java.CompilationUnit | undefined,
     targetUnit: Java.CompilationUnit | undefined,
     type: OmniType,
-    root: Java.JavaAstRootNode
+    root: Java.JavaAstRootNode,
   ): void {
 
     if (!sourceUnit) {
@@ -144,19 +146,20 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       // Add the static modifier if it is not already added.
       // TODO: This does not need to be done for enums?
       sourceUnit.object.modifiers.modifiers.push(
-        new Java.Modifier(Java.ModifierType.STATIC)
+        new Java.Modifier(Java.ModifierType.STATIC),
       );
     }
 
     targetUnit.object.body.children.push(
-      sourceUnit.object
+      sourceUnit.object,
     );
 
     const rootCuIndex = root.children.indexOf(sourceUnit);
-    if (rootCuIndex == -1) {
-      throw new Error(`The CompilationUnit for '${sourceUnit.object.name.value}' was not found in root node`);
+    if (rootCuIndex != -1) {
+      root.children.splice(rootCuIndex, 1);
+    } else {
+      // throw new Error(`The CompilationUnit for '${sourceUnit.object.name.value}' was not found in root node`);
+      logger.error(`The CompilationUnit for '${sourceUnit.object.name.value}' was not found in root node`);
     }
-
-    root.children.splice(rootCuIndex, 1);
   }
 }

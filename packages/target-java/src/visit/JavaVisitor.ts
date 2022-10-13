@@ -1,12 +1,13 @@
-import {AstRootNode, IAstVisitor, VisitFn, VisitResult} from '@omnigen/core';
-import {IJavaAstVisitor, JavaVisitFn} from './IJavaAstVisitor';
+import {AstRootNode, IAstNode, IAstVisitor, VisitFn, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
 
-export class JavaVisitor<R> implements IJavaAstVisitor<R> {
+export type JavaVisitFn<in N extends IAstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
+
+export class JavaVisitor<R> implements IAstVisitor<R> {
 
   constructor() {
 
-    this.visitor_java = this;
+    this.visitorJava = this;
 
     this.visitRootNode = (node, visitor) => node.children.map(it => it.visit(visitor));
     this.visitRegularType = () => undefined;
@@ -139,9 +140,9 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
       return [
         node.variableType?.visit(visitor),
         node.variableName.visit(visitor),
-        node.initializer?.visit(visitor)
+        node.initializer?.visit(visitor),
       ];
-    }
+    };
 
     this.visitVariableReference = (node, visitor) => node.variableName.visit(visitor);
 
@@ -150,7 +151,7 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
         return [
           node.type.visit(visitor),
           node.pairs.visit(visitor),
-        ]
+        ];
       } else {
         return node.type.visit(visitor);
       }
@@ -213,15 +214,15 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
     this.visitGenericClassDeclaration = (node, visitor) => {
       return [
         visitor.visitClassDeclaration(node, visitor),
-        visitor.visitGenericTypeDeclarationList(node.typeList, visitor)
+        visitor.visitGenericTypeDeclarationList(node.typeList, visitor),
       ];
-    }
+    };
     this.visitGenericTypeDeclarationList = (node, visitor) => node.types.map(it => it.visit(visitor));
     this.visitGenericTypeDeclaration = (node, visitor) => {
       return [
         node.name.visit(visitor),
         node.lowerBounds?.visit(visitor),
-        node.upperBounds?.visit(visitor)
+        node.upperBounds?.visit(visitor),
       ];
     };
     this.visitGenericTypeUseList = (node, visitor) => node.types.map(it => it.visit(visitor));
@@ -258,7 +259,7 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
     this.visitRuntimeTypeMapping = (node, visitor) => [
       ...node.fields.flatMap(it => it.visit(visitor)),
       ...node.getters.flatMap(it => it.visit(visitor)),
-      ...node.methods.flatMap(it => it.visit(visitor))
+      ...node.methods.flatMap(it => it.visit(visitor)),
     ];
 
     this.visitClassName = (node, visitor) => node.type.visit(visitor);
@@ -267,13 +268,13 @@ export class JavaVisitor<R> implements IJavaAstVisitor<R> {
     this.visitArrayInitializer = (node, visitor) => node.children.map(it => it.visit(visitor));
     this.visitStaticMemberReference = (node, visitor) => [
       node.target.visit(visitor),
-      node.member.visit(visitor)
+      node.member.visit(visitor),
     ];
 
     this.visitSelfReference = () => [];
   }
 
-  visitor_java: IJavaAstVisitor<R>;
+  visitorJava: JavaVisitor<R>;
   visitRootNode: VisitFn<AstRootNode, R, IAstVisitor<R>>;
   visitRegularType: JavaVisitFn<Java.RegularType, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;

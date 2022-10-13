@@ -1,25 +1,25 @@
 import {
   OmniCompositionType,
   OmniInheritableType,
-  OmniObjectType,
+  IOmniObjectType,
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
   DEFAULT_GRAPH_OPTIONS,
-  DependencyGraph,
+  IDependencyGraph,
   DependencyGraphBuilder,
-  DependencyGraphOptions
+  IDependencyGraphOptions,
 } from '../parse';
 import {TestUtils} from '@omnigen/utils-test';
 
 describe('Test CompositionDependencyUtil', () => {
 
-  const javaOptions: DependencyGraphOptions = {
+  const javaOptions: IDependencyGraphOptions = {
     ...DEFAULT_GRAPH_OPTIONS,
-    ...{}
+    ...{},
   };
 
-  function java(namedTypes: OmniType[]): DependencyGraph {
+  function java(namedTypes: OmniType[]): IDependencyGraph {
     return DependencyGraphBuilder.build(namedTypes, javaOptions);
   }
 
@@ -98,7 +98,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const result = java([
       obj('A', obj('B')),
-      obj('C', obj('D'))
+      obj('C', obj('D')),
     ]);
 
     // TODO: Should we introduce interfaces since B and D have the same contract?
@@ -144,14 +144,14 @@ describe('Test CompositionDependencyUtil', () => {
 
     const result = java([a, d, b, c]);
 
-    expect(result).toEqual<DependencyGraph>({
+    expect(result).toEqual<IDependencyGraph>({
       // abstracts: [],
       concretes: [a, d, b, c],
       interfaces: [c],
       uses: map([
         [a, [b, c]],
-        [d, [b, c]]
-      ])
+        [d, [b, c]],
+      ]),
     });
   });
 
@@ -165,14 +165,14 @@ describe('Test CompositionDependencyUtil', () => {
 
     const result = java([a, d, b, c]);
 
-    expect(result).toEqual<DependencyGraph>({
+    expect(result).toEqual<IDependencyGraph>({
       // abstracts: [c],
       concretes: [a, d, b, c],
       interfaces: [c, b],
       uses: map([
         [a, [b, c]],
-        [d, [c, b]]
-      ])
+        [d, [c, b]],
+      ]),
     });
   });
 
@@ -183,7 +183,7 @@ describe('Test CompositionDependencyUtil', () => {
     const A = obj('A');
     const B = obj('B');
     const C = obj('C');
-    const cAndInline = and(C, inline)
+    const cAndInline = and(C, inline);
     const D = obj('D', cAndInline);
     const E = obj('E', and(C, D));
     const F = obj('F', and(B, D));
@@ -192,15 +192,15 @@ describe('Test CompositionDependencyUtil', () => {
 
     // We will get the composition type in "uses" here, since the model is not simplified.
     // In a simplified model here, "inline" would be merged into D, and D only extend C.
-    expect(result).toEqual<DependencyGraph>({
+    expect(result).toEqual<IDependencyGraph>({
       // abstracts: [],
       concretes: [A, B, C, D, E, F],
       interfaces: [D],
       uses: map([
         [D, [C, inline]],
         [E, [D]],
-        [F, [B, D]]
-      ])
+        [F, [B, D]],
+      ]),
     });
   });
 
@@ -212,14 +212,14 @@ describe('Test CompositionDependencyUtil', () => {
 
     const result = java([A, B, C]);
 
-    expect(result).toEqual<DependencyGraph>({
+    expect(result).toEqual<IDependencyGraph>({
       // abstracts: [],
       concretes: [A, B, C],
       interfaces: [],
       uses: map([
         [C, [B]],
         [B, [A]],
-      ])
+      ]),
     });
   });
 });
@@ -246,7 +246,7 @@ function map(arg: MapArg): Map<OmniType, OmniType[]> {
   return map;
 }
 
-function obj(name: string, extendedBy?: OmniInheritableType): OmniObjectType {
+function obj(name: string, extendedBy?: OmniInheritableType): IOmniObjectType {
   return TestUtils.obj(name, extendedBy);
 }
 
@@ -254,8 +254,8 @@ function and(...types: OmniType[]): OmniCompositionType {
   return TestUtils.and(...types);
 }
 
-function inlineClassWithProp(name: string,) {
-  const inline: OmniObjectType = {
+function inlineClassWithProp(name: string) {
+  const inline: IOmniObjectType = {
     kind: OmniTypeKind.OBJECT,
     properties: [],
     name: `${name}Class`,
@@ -264,8 +264,8 @@ function inlineClassWithProp(name: string,) {
     {
       name: `${name}Property`,
       owner: inline,
-      type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER}
-    }
+      type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER},
+    },
   ];
   return inline;
 }

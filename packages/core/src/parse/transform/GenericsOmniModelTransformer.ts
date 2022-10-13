@@ -1,17 +1,17 @@
 import {
-  OmniModelTransformer,
-  OmniGenericSourceIdentifierType,
-  OmniGenericSourceType,
-  OmniGenericTargetIdentifierType,
-  OmniGenericTargetType,
+  IOmniModelTransformer,
+  IOmniGenericSourceIdentifierType,
+  IOmniGenericSourceType,
+  IOmniGenericTargetIdentifierType,
+  IOmniGenericTargetType,
   OmniInheritableType,
-  OmniModel,
-  OmniObjectType,
-  OmniProperty,
+  IOmniModel,
+  IOmniObjectType,
+  IOmniProperty,
   OmniType,
   OmniTypeKind,
   Naming,
-  OmniUtil
+  OmniUtil,
 } from '../../parse';
 import {LoggerFactory} from '@omnigen/core-log';
 import {pascalCase} from 'change-case';
@@ -20,18 +20,18 @@ import {IGenericTargetOptions} from '../../interpret';
 
 const logger = LoggerFactory.create(__filename);
 
-interface SignatureInfo {
+interface ISignatureInfo {
   subTypes: OmniObjectTypeWithExtension[];
-  extendedBy: OmniObjectType;
+  extendedBy: IOmniObjectType;
   propertyNames: string[];
 }
 
-interface SourceIdentifierAndPropertyName {
-  identifier: OmniGenericSourceIdentifierType;
+interface ISourceIdentifierAndPropertyName {
+  identifier: IOmniGenericSourceIdentifierType;
   propertyName: string;
 }
 
-type OmniObjectTypeWithExtension = Omit<OmniObjectType, 'extendedBy'> & Required<Pick<OmniObjectType, 'extendedBy'>>;
+type OmniObjectTypeWithExtension = Omit<IOmniObjectType, 'extendedBy'> & Required<Pick<IOmniObjectType, 'extendedBy'>>;
 
 /**
  * Takes an OmniModel, and tries to modify it to use generics where possible.
@@ -40,9 +40,9 @@ type OmniObjectTypeWithExtension = Omit<OmniObjectType, 'extendedBy'> & Required
  * TODO: Uses JavaUtil right now -- needs to be rewritten to be more generic.
  *        Abstract class and extend with a Java-variant that has implementation specifics?
  */
-export class GenericsOmniModelTransformer implements OmniModelTransformer<IGenericTargetOptions> {
+export class GenericsOmniModelTransformer implements IOmniModelTransformer<IGenericTargetOptions> {
 
-  transformModel(model: OmniModel, options: RealOptions<IGenericTargetOptions>): void {
+  transformModel(model: IOmniModel, options: RealOptions<IGenericTargetOptions>): void {
 
     // Go through all types.
     // If many types have the exact same properties with the same names,
@@ -53,7 +53,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     // TODO: Need to sort the types so that the leaf types are done first
     //        Otherwise we will find the wrong types when doing the "find common denominator" stuff
 
-    const signatureMap = new Map<string, SignatureInfo>();
+    const signatureMap = new Map<string, ISignatureInfo>();
     for (const type of allTypes.all) {
 
       if (type.kind == OmniTypeKind.OBJECT) {
@@ -83,7 +83,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
             signatureMap.set(signature, types = {
               subTypes: [],
               extendedBy: extendedBy,
-              propertyNames: propertyNames
+              propertyNames: propertyNames,
             });
           }
 
@@ -123,18 +123,18 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     }
   }
 
-  private handleSignatureInfo(info: SignatureInfo, options: IGenericTargetOptions): OmniGenericSourceType | undefined {
+  private handleSignatureInfo(info: ISignatureInfo, options: IGenericTargetOptions): IOmniGenericSourceType | undefined {
 
-    const genericEntries: SourceIdentifierAndPropertyName[] = [];
+    const genericEntries: ISourceIdentifierAndPropertyName[] = [];
 
-    const genericSource: OmniGenericSourceType = {
+    const genericSource: IOmniGenericSourceType = {
       kind: OmniTypeKind.GENERIC_SOURCE,
       of: info.extendedBy,
       sourceIdentifiers: [],
     };
 
-    const genericPropertiesToAdd: OmniProperty[] = [];
-    const propertyNameExpansions = new Map<string, OmniGenericSourceIdentifierType[]>();
+    const genericPropertiesToAdd: IOmniProperty[] = [];
+    const propertyNameExpansions = new Map<string, IOmniGenericSourceIdentifierType[]>();
     for (const propertyName of info.propertyNames) {
       const uniqueTypesOnIndex = this.getUniqueTypes(info, propertyName);
 
@@ -147,7 +147,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
       // TODO: There is a possibility that the generic identifiers could clash. We should suffix with numbers then.
       const genericName = (genericEntries.length == 0) ? 'T' : `T${pascalCase(propertyName)}`;
       const commonDenominator = OmniUtil.getCommonDenominator(...uniqueTypesOnIndex);
-      const lowerBound =  this.toGenericBoundType(commonDenominator, options);
+      const lowerBound = this.toGenericBoundType(commonDenominator, options);
 
       if (lowerBound) {
 
@@ -160,7 +160,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
       // Set the common denominator to the generic index.
       // The common denominator could be undefined, then it has no type constraints.
-      const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
+      const genericSourceIdentifier: IOmniGenericSourceIdentifierType = {
         placeholderName: genericName,
         kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
         lowerBound: lowerBound,
@@ -177,7 +177,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
       genericPropertiesToAdd.push({
         name: propertyName,
         type: genericSourceIdentifier,
-        owner: genericSource.of
+        owner: genericSource.of,
       });
     }
 
@@ -188,10 +188,10 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     }
 
     const subTypesToRemove: OmniType[] = [];
-    const extensionsToSet: { target: OmniObjectType, extension: OmniInheritableType }[] = [];
+    const extensionsToSet: { target: IOmniObjectType, extension: OmniInheritableType }[] = [];
     for (const subType of info.subTypes) {
 
-      const genericTarget: OmniGenericTargetType = {
+      const genericTarget: IOmniGenericTargetType = {
         kind: OmniTypeKind.GENERIC_TARGET,
         source: genericSource,
         targetIdentifiers: [],
@@ -214,17 +214,17 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
           genericSource,
           subType,
           propertyName,
-          options
+          options,
         );
 
         if (genericTargetType == undefined) {
           return undefined;
         }
 
-        const targetIdentifier: OmniGenericTargetIdentifierType = {
+        const targetIdentifier: IOmniGenericTargetIdentifierType = {
           kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
           type: genericTargetType,
-          sourceIdentifier: generic.identifier
+          sourceIdentifier: generic.identifier,
         };
 
         const expansions = propertyNameExpansions.get(propertyName);
@@ -256,7 +256,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
         // We replace it with a generic target to the generic source.
         extensionsToSet.push({
           target: subType,
-          extension: genericTarget
+          extension: genericTarget,
         });
       }
     }
@@ -285,9 +285,9 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
   private expandLowerBoundGenericIfPossible(
     lowerBound: OmniType,
-    genericSource: OmniGenericSourceType,
-    options: IGenericTargetOptions
-  ): OmniGenericSourceIdentifierType | undefined {
+    genericSource: IOmniGenericSourceType,
+    options: IGenericTargetOptions,
+  ): IOmniGenericSourceIdentifierType | undefined {
 
     if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
 
@@ -308,7 +308,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     const targetIdentifier = lowerBound.targetIdentifiers[0];
     const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type, options);
 
-    const sourceIdentifier: OmniGenericSourceIdentifierType = {
+    const sourceIdentifier: IOmniGenericSourceIdentifierType = {
       // TODO: The name should be automatically figure out somehow, unless specified in spec
       //        Right now the name usually becomes 'TT' and easily clashes
       placeholderName: this.getExplodedSourceIdentifierName(targetIdentifier.sourceIdentifier),
@@ -320,7 +320,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     lowerBound.targetIdentifiers[0] = {
       kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
       type: sourceIdentifier,
-      sourceIdentifier: sourceIdentifier
+      sourceIdentifier: sourceIdentifier,
     };
 
     return sourceIdentifier;
@@ -340,7 +340,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     return targetIdentifierGenericType;
   }
 
-  private getExplodedSourceIdentifierName(identifier: OmniGenericSourceIdentifierType): string {
+  private getExplodedSourceIdentifierName(identifier: IOmniGenericSourceIdentifierType): string {
 
     if (identifier.lowerBound) {
 
@@ -360,8 +360,8 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
   }
 
   private removeStaticTypePropertyFromSubType(
-    info: SignatureInfo,
-    sourceIdentifierAndPropertyNames: SourceIdentifierAndPropertyName[]
+    info: ISignatureInfo,
+    sourceIdentifierAndPropertyNames: ISourceIdentifierAndPropertyName[],
   ): void {
 
     for (const classType of info.subTypes) {
@@ -379,7 +379,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
     }
   }
 
-  private getUniqueTypes(info: SignatureInfo, propertyName: string): OmniType[] {
+  private getUniqueTypes(info: ISignatureInfo, propertyName: string): OmniType[] {
 
     const propertyTypes: OmniType[] = [];
     for (const classType of info.subTypes) {
@@ -405,10 +405,10 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
 
   private getAllowedGenericPropertyType(
     genericTargetType: OmniType,
-    genericSource: OmniGenericSourceType,
+    genericSource: IOmniGenericSourceType,
     subType: OmniObjectTypeWithExtension,
     propertyName: string,
-    options: IGenericTargetOptions
+    options: IGenericTargetOptions,
   ): OmniType | undefined {
 
     if (!OmniUtil.isGenericAllowedType(genericTargetType)) {
@@ -418,7 +418,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
           const targetName = OmniUtil.getTypeDescription(genericSource);
           const ownerName = OmniUtil.getTypeDescription(subType);
           logger.warn(
-            `Aborting generification of ${targetName}', since '${ownerName}' has primitive non-null property '${propertyName}'`
+            `Aborting generification of ${targetName}', since '${ownerName}' has primitive non-null property '${propertyName}'`,
           );
           return undefined;
         }
@@ -426,7 +426,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<IGener
         case PrimitiveGenerificationChoice.SPECIALIZE: {
           const allowedGenericTargetType = OmniUtil.toGenericAllowedType(
             genericTargetType,
-            (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
+            (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE),
           );
           allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
 

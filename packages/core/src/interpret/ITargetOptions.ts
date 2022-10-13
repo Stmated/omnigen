@@ -1,5 +1,16 @@
-import {IOptions, PrimitiveGenerificationChoice} from '../options';
+import {IncomingOrRealOption, IOptions, PrimitiveGenerificationChoice} from '../options';
 import {CompressTypeLevel, OmniTypeKind} from '../parse';
+
+export enum CompressTypeNaming {
+  EXACT,
+  FIRST,
+  JOIN,
+  COMMON_PREFIX,
+  COMMON_SUFFIX,
+  COMMON_PREFIX_AND_SUFFIX,
+}
+
+export type OmniTypeNameReducer = (groups: string[][]) => string | CompressTypeNaming | undefined;
 
 export interface ITargetOptions extends IOptions {
 
@@ -23,7 +34,14 @@ export interface ITargetOptions extends IOptions {
    */
   compressTypeKinds: OmniTypeKind[];
 
-  compressTypesLevel: CompressTypeLevel,
+  compressTypesLevel: CompressTypeLevel;
+  compressTypeNaming: CompressTypeNaming;
+  compressTypeNamingReducer: IncomingOrRealOption<undefined, OmniTypeNameReducer | undefined>;
+
+  // TODO: Introduce naming options for things like banning certain words? Like "Object" or "List" or something?
+  //        So that no weird and stupid names become chosen if we are grabbing the common prefix?
+  //        For example ALL names that exist inside java.lang or java.util should be excluded. Object, List, etc.
+  //        Maybe also add a "minimum number of common words"?
 
   compressPropertiesToAncestor: boolean;
 }
@@ -37,5 +55,7 @@ export const DEFAULT_TARGET_OPTIONS: ITargetOptions = {
   compressUnreferencedSubTypes: true,
   compressTypeKinds: [],
   compressTypesLevel: CompressTypeLevel.EXACT,
-  compressPropertiesToAncestor: true
+  compressTypeNaming: CompressTypeNaming.EXACT,
+  compressTypeNamingReducer: undefined,
+  compressPropertiesToAncestor: true,
 };

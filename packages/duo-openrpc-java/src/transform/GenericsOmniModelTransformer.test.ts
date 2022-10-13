@@ -1,6 +1,6 @@
 import {TestUtils} from '@omnigen/utils-test';
 import {JavaUtil} from '@omnigen/target-java';
-import {OmniModel, OmniPrimitiveKind, OmniTypeKind, GenericsOmniModelTransformer} from '@omnigen/core';
+import {IOmniModel, OmniPrimitiveKind, OmniTypeKind, GenericsOmniModelTransformer} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '@omnigen/duo-openrpc-java-test';
 
 describe('Test CompositionDependencyUtil', () => {
@@ -9,7 +9,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const transformer = new GenericsOmniModelTransformer();
 
-    const model: OmniModel = {
+    const model: IOmniModel = {
       name: 'model',
       schemaType: 'other',
       schemaVersion: '1.0',
@@ -17,7 +17,7 @@ describe('Test CompositionDependencyUtil', () => {
       endpoints: [],
       servers: [],
       types: [
-        TestUtils.obj('A')
+        TestUtils.obj('A'),
       ],
     };
 
@@ -40,24 +40,24 @@ describe('Test CompositionDependencyUtil', () => {
     const a = TestUtils.obj('A', undefined, [
       TestUtils.prop('propA', {
         kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER
-      })
+        primitiveKind: OmniPrimitiveKind.INTEGER,
+      }),
     ]);
 
     const aa = TestUtils.obj('aa', a, [
       TestUtils.prop('propX', {
         kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER
-      })
+        primitiveKind: OmniPrimitiveKind.INTEGER,
+      }),
     ]);
     const ab = TestUtils.obj('ab', a, [
       TestUtils.prop('propX', {
         kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.DOUBLE
-      })
+        primitiveKind: OmniPrimitiveKind.DOUBLE,
+      }),
     ]);
 
-    const model: OmniModel = {
+    const model: IOmniModel = {
       name: 'model',
       schemaType: 'other',
       schemaVersion: '1.0',
@@ -67,7 +67,7 @@ describe('Test CompositionDependencyUtil', () => {
       types: [
         a,
         aa,
-        ab
+        ab,
       ],
     };
 

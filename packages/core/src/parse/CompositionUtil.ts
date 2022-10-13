@@ -1,10 +1,10 @@
 import {
   CompositionKind,
-  OmniCompositionORType,
+  IOmniCompositionOrType,
   OmniCompositionType,
-  OmniCompositionXORType,
+  IOmniCompositionXorType,
   OmniType,
-  OmniTypeKind
+  OmniTypeKind,
 } from '../parse';
 
 export class CompositionUtil {
@@ -13,7 +13,7 @@ export class CompositionUtil {
     compositionsAnyOfOr: OmniType[] = [],
     compositionsAllOfAnd: OmniType[] = [],
     compositionsOneOfOr: OmniType[] = [],
-    compositionNot?: OmniType
+    compositionNot?: OmniType,
   ): OmniType | undefined {
 
     let composition: OmniType | undefined;
@@ -22,10 +22,10 @@ export class CompositionUtil {
       composition = compositionsAnyOfOr[0];
     } else if (compositionsAnyOfOr.length > 0) {
       const or: OmniType = (compositionsAnyOfOr.length > 1)
-        ? <OmniCompositionORType>{
+        ? <IOmniCompositionOrType>{
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.OR,
-          orTypes: compositionsAnyOfOr
+          orTypes: compositionsAnyOfOr,
         }
         : compositionsAnyOfOr[0];
 
@@ -35,7 +35,7 @@ export class CompositionUtil {
         const compositionType: OmniCompositionType = {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          andTypes: [composition, or]
+          andTypes: [composition, or],
         };
         composition = compositionType;
       }
@@ -48,7 +48,7 @@ export class CompositionUtil {
         ? <OmniCompositionType>{
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          andTypes: compositionsAllOfAnd
+          andTypes: compositionsAllOfAnd,
         }
         : compositionsAllOfAnd[0];
 
@@ -58,7 +58,7 @@ export class CompositionUtil {
         composition = {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          andTypes: [composition, and]
+          andTypes: [composition, and],
         } as OmniCompositionType;
       }
     }
@@ -67,11 +67,11 @@ export class CompositionUtil {
       composition = compositionsOneOfOr[0];
     } else if (compositionsOneOfOr.length > 1) {
       const xor: OmniType = (compositionsOneOfOr.length > 1)
-        ? <OmniCompositionXORType>{
+        ? <IOmniCompositionXorType>{
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.XOR,
 
-          xorTypes: compositionsOneOfOr
+          xorTypes: compositionsOneOfOr,
         }
         : compositionsOneOfOr[0];
 
@@ -81,7 +81,7 @@ export class CompositionUtil {
         composition = {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          andTypes: [composition, xor]
+          andTypes: [composition, xor],
         } as OmniCompositionType;
       }
     }
@@ -90,7 +90,7 @@ export class CompositionUtil {
       const not: OmniCompositionType = {
         kind: OmniTypeKind.COMPOSITION,
         compositionKind: CompositionKind.NOT,
-        notTypes: [compositionNot]
+        notTypes: [compositionNot],
       };
 
       if (!composition) {
@@ -99,7 +99,7 @@ export class CompositionUtil {
         composition = {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
-          andTypes: [composition, not]
+          andTypes: [composition, not],
         } as OmniCompositionType;
       }
     }

@@ -1,0 +1,64 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "version": "1.0.0",
+    "title": "merge-b",
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "methods": [
+    {
+      "name": "list_elements",
+      "summary": "List all elements",
+      "params": [],
+      "result": {
+        "name": "things",
+        "description": "An array of elements",
+        "schema": {
+          "$ref": "#/components/schemas/Elements"
+        }
+      },
+      "errors": [
+        {
+          "code": 100,
+          "message": "Server is busy"
+        }
+      ]
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Element": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "Elements": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Element"
+        }
+      },
+      "SomeTypeB": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

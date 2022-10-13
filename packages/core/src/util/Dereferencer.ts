@@ -13,18 +13,21 @@ export type Dereferenced<out T> = { obj: T, root: object, hash?: string, mix?: b
 
 export type UriHash = { uri: string, hash: string };
 
-interface RecordMap {
+interface IRecordMap {
   [key: string]: Record<string, never>;
 }
 
-type ReduceMap = RecordMap & { '': Array<Record<string, never>> };
+type ReduceMap = IRecordMap & {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  '': Array<Record<string, never>>
+};
 
 type UriParts = {
   protocol: string | undefined;
   path: string;
 }
 
-export interface ProtocolResolver {
+export interface IProtocolResolver {
   fetch<R>(uri: string): Promise<R>;
 
   resolveUri(baseUri: string, uri: string): string;
@@ -34,7 +37,7 @@ export interface ProtocolResolver {
   replace(parts: UriParts): UriParts;
 }
 
-class HttpProtocolResolver implements ProtocolResolver {
+class HttpProtocolResolver implements IProtocolResolver {
 
   private readonly _protocol: string;
 
@@ -79,7 +82,7 @@ class HttpProtocolResolver implements ProtocolResolver {
  */
 export class Dereferencer<T> {
 
-  private static readonly file: ProtocolResolver = {
+  private static readonly _FILE: IProtocolResolver = {
     fetch<R>(uri: string): Promise<R> {
       return ProtocolHandler.file<R>(uri);
     },
@@ -95,26 +98,26 @@ export class Dereferencer<T> {
     },
     replace(parts: UriParts): UriParts {
       return parts;
-    }
+    },
   };
 
-  private static readonly http = new HttpProtocolResolver('http');
-  private static readonly https = new HttpProtocolResolver('https');
+  private static readonly _HTTP = new HttpProtocolResolver('http');
+  private static readonly _HTTPS = new HttpProtocolResolver('https');
 
-  private static readonly PROTOCOL_RESOLVERS = new Map<string, ProtocolResolver>();
+  private static readonly _PROTOCOL_RESOLVERS = new Map<string, IProtocolResolver>();
 
   static {
-    Dereferencer.PROTOCOL_RESOLVERS.set('file', Dereferencer.file);
-    Dereferencer.PROTOCOL_RESOLVERS.set('http', Dereferencer.http);
-    Dereferencer.PROTOCOL_RESOLVERS.set('https', Dereferencer.https);
+    Dereferencer._PROTOCOL_RESOLVERS.set('file', Dereferencer._FILE);
+    Dereferencer._PROTOCOL_RESOLVERS.set('http', Dereferencer._HTTP);
+    Dereferencer._PROTOCOL_RESOLVERS.set('https', Dereferencer._HTTPS);
   }
 
   public static async create<T extends object>(baseUri: string, fileUri: string, root?: T): Promise<Dereferencer<T>> {
 
     const protocolIndex = baseUri?.indexOf(':') || -1;
     const defaultProtocolResolver = (baseUri && protocolIndex != -1)
-      ? Dereferencer.PROTOCOL_RESOLVERS.get(baseUri.substring(0, protocolIndex).toLowerCase()) || Dereferencer.file
-      : Dereferencer.file; // The default protocol handler if none is set
+      ? Dereferencer._PROTOCOL_RESOLVERS.get(baseUri.substring(0, protocolIndex).toLowerCase()) || Dereferencer._FILE
+      : Dereferencer._FILE; // The default protocol handler if none is set
 
     if (!root) {
 
@@ -139,6 +142,8 @@ export class Dereferencer<T> {
    */
   private readonly _documents = new Map<string, JsonObject | Promise<JsonObject>>();
 
+  private readonly _foundMixedRefs = new Set<string>();
+
   private constructor(root: T) {
     this._root = root;
   }
@@ -151,8 +156,8 @@ export class Dereferencer<T> {
     absoluteBaseUri: string,
     absoluteFileUri: string,
     obj: object,
-    previousResolver: ProtocolResolver,
-    callstack: string[]
+    previousResolver: IProtocolResolver,
+    callstack: string[],
   ): Promise<void> {
 
     if (callstack.length > 50) {
@@ -259,17 +264,17 @@ export class Dereferencer<T> {
 
     return {
       uri: refParts[0],
-      hash: refParts[1]
+      hash: refParts[1],
     };
   }
 
-  private getAbsoluteUri(protocolResolver: ProtocolResolver, uri: UriParts, baseUri: string): string {
+  private getAbsoluteUri(protocolResolver: IProtocolResolver, uri: UriParts, baseUri: string): string {
     return baseUri ? protocolResolver.resolveUri(baseUri, uri.path) : uri.path;
   }
 
-  private getProtocolResolver(uri: UriParts, current: ProtocolResolver): ProtocolResolver {
+  private getProtocolResolver(uri: UriParts, current: IProtocolResolver): IProtocolResolver {
     const protocolResolver = uri.protocol
-      ? Dereferencer.PROTOCOL_RESOLVERS.get(uri.protocol)
+      ? Dereferencer._PROTOCOL_RESOLVERS.get(uri.protocol)
       : current;
 
     if (!protocolResolver) {
@@ -279,7 +284,7 @@ export class Dereferencer<T> {
     return protocolResolver;
   }
 
-  private getUriParts(protocolResolver: ProtocolResolver, refUri: string): UriParts {
+  private getUriParts(protocolResolver: IProtocolResolver, refUri: string): UriParts {
 
     const protocolIndex = refUri.indexOf(':');
     return protocolResolver.replace({
@@ -336,7 +341,7 @@ export class Dereferencer<T> {
   }
 
   private static emptyTarget(val: unknown): Partial<[] | Record<string, never>> {
-    return Array.isArray(val) ? [] : {}
+    return Array.isArray(val) ? [] : {};
   }
 
   private static reduceArrayToIdMap(map: ReduceMap, obj: Record<string, never>): ReduceMap {
@@ -352,12 +357,18 @@ export class Dereferencer<T> {
     return map;
   }
 
-  private static readonly MERGE_OPTIONS: deepmerge.Options = {
+  private static readonly _MERGE_OPTIONS: deepmerge.Options = {
 
     arrayMerge: (source, target, options) => {
 
-      const namedSource: ReduceMap = source.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {'': []});
-      const namedTarget: ReduceMap = target.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {'': []});
+      const namedSource: ReduceMap = source.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        '': []
+      });
+      const namedTarget: ReduceMap = target.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        '': []
+      });
 
       const replacements: any[] = [];
       for (const key of Object.keys(namedSource)) {
@@ -388,7 +399,7 @@ export class Dereferencer<T> {
           return element;
         }
       });
-    }
+    },
   };
 
   private mix<R>(object: RefAware, resolved: Partial<R | RefAware>): [R | RefAware, boolean] {
@@ -399,13 +410,20 @@ export class Dereferencer<T> {
       return [resolved as R, false];
     }
 
-    const extraKeys = keys.filter(it => (it != '$ref'));
     const copy = {...object};
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     delete (copy as never)['$ref'];
-    logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
 
-    const merged = deepmerge.default(resolved, copy, Dereferencer.MERGE_OPTIONS);
+    // Report the ref to the key we encountered, so we can log about it after the processing is done (to lessen logs)
+    if (!this._foundMixedRefs.has(object.$ref)) {
+
+      this._foundMixedRefs.add(object.$ref);
+
+      const extraKeys = keys.filter(it => (it != '$ref'));
+      logger.warn(`Extra keys with $ref ${object.$ref} (${extraKeys.join(', ')}). This is INVALID spec. We allow and merge`);
+    }
+
+    const merged = deepmerge.default(resolved, copy, Dereferencer._MERGE_OPTIONS);
 
     return [merged, true];
   }

@@ -34,7 +34,7 @@ describe('Java Rendering', () => {
         try {
           baseDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
         } catch (ex) {
-          throw new Error(`Could not resolve path of ${fileName}`)
+          throw new Error(`Could not resolve path of ${fileName}`);
         }
 
         try {
@@ -45,7 +45,7 @@ describe('Java Rendering', () => {
           // Ignore any error here and just hope for the best
         }
 
-        const renderer = new JavaRenderer(DEFAULT_TEST_JAVA_OPTIONS, (cu) => {
+        const renderer = new JavaRenderer(DEFAULT_TEST_JAVA_OPTIONS, cu => {
 
           if (cu.fileName.indexOf('#') !== -1) {
             throw new Error(`# not allowed in CU '${cu.fileName}'`);
@@ -71,7 +71,7 @@ describe('Java Rendering', () => {
           } catch (ex) {
             throw new Error(
               `Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}`,
-              {cause: ex instanceof Error ? ex : undefined}
+              {cause: ex instanceof Error ? ex : undefined},
             );
           }
 
@@ -144,24 +144,24 @@ describe('Java Rendering', () => {
     const fileNames = [...fileContents.keys()].sort();
     // TODO: Make sure that JsonRpcRequest does not go completely bonkers with its generics
     expect(fileNames).toEqual([
-      "A.java",
-      "Abs.java",
-      "B.java",
-      "ErrorUnknown.java",
-      "ErrorUnknownError.java",
-      "GiveIn1GetOut1Request.java",
-      "GiveIn1GetOut1RequestParams.java",
-      "GiveIn1GetOut1Response.java",
-      "GiveIn2GetOut2Request.java",
-      "GiveIn2GetOut2RequestParams.java",
-      "GiveIn2GetOut2Response.java",
-      "In1.java",
-      "In2.java",
-      "JsonRpcError.java",
-      "JsonRpcErrorResponse.java",
-      "JsonRpcRequest.java",
-      "JsonRpcRequestParams.java",
-      "JsonRpcResponse.java",
+      'A.java',
+      'Abs.java',
+      'B.java',
+      'ErrorUnknown.java',
+      'ErrorUnknownError.java',
+      'GiveIn1GetOut1Request.java',
+      'GiveIn1GetOut1RequestParams.java',
+      'GiveIn1GetOut1Response.java',
+      'GiveIn2GetOut2Request.java',
+      'GiveIn2GetOut2RequestParams.java',
+      'GiveIn2GetOut2Response.java',
+      'In1.java',
+      'In2.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcRequestParams.java',
+      'JsonRpcResponse.java',
     ]);
 
     const a = JavaTestUtils.getParsedContent(fileContents, 'A.java');
@@ -200,29 +200,29 @@ describe('Java Rendering', () => {
     expect(tag.foundSuperInterfaces).toHaveLength(0);
     expect(tag.foundFields).toEqual(['value']);
     expect(tag.foundLiterals).toHaveLength(5);
-    expect(tag.foundLiterals[2]).toEqual("\"TagA\"");
-    expect(tag.foundLiterals[3]).toEqual("\"TagB\"");
-    expect(tag.foundLiterals[4]).toEqual("\"TagC\"");
+    expect(tag.foundLiterals[2]).toEqual('"TagA"');
+    expect(tag.foundLiterals[3]).toEqual('"TagB"');
+    expect(tag.foundLiterals[4]).toEqual('"TagC"');
 
     const tagOrString = JavaTestUtils.getParsedContent(fileContents, 'TagOrSpeciesOrString.java');
     expect(tagOrString.foundMethods).toHaveLength(7);
-    expect(tagOrString.foundMethods[0]).toEqual("get");
-    expect(tagOrString.foundMethods[1]).toEqual("getValue");
-    expect(tagOrString.foundMethods[2]).toEqual("isKnown");
-    expect(tagOrString.foundMethods[3]).toEqual("isTag");
-    expect(tagOrString.foundMethods[4]).toEqual("getAsTag");
-    expect(tagOrString.foundMethods[5]).toEqual("isSpecies");
-    expect(tagOrString.foundMethods[6]).toEqual("getAsSpecies");
+    expect(tagOrString.foundMethods[0]).toEqual('get');
+    expect(tagOrString.foundMethods[1]).toEqual('getValue');
+    expect(tagOrString.foundMethods[2]).toEqual('isKnown');
+    expect(tagOrString.foundMethods[3]).toEqual('isTag');
+    expect(tagOrString.foundMethods[4]).toEqual('getAsTag');
+    expect(tagOrString.foundMethods[5]).toEqual('isSpecies');
+    expect(tagOrString.foundMethods[6]).toEqual('getAsSpecies');
     expect(tagOrString.foundSuperClasses).toHaveLength(0);
     expect(tagOrString.foundSuperInterfaces).toHaveLength(0);
     expect(tagOrString.foundFields).toHaveLength(9);
     expect(tagOrString.foundLiterals).toHaveLength(10);
-    expect(tagOrString.foundLiterals[2]).toEqual("\"TagA\"");
-    expect(tagOrString.foundLiterals[3]).toEqual("\"TagB\"");
-    expect(tagOrString.foundLiterals[4]).toEqual("\"TagC\"");
-    expect(tagOrString.foundLiterals[5]).toEqual("\"SpeciesA\"");
-    expect(tagOrString.foundLiterals[6]).toEqual("\"SpeciesB\"");
-    expect(tagOrString.foundLiterals[7]).toEqual("\"foo\"");
+    expect(tagOrString.foundLiterals[2]).toEqual('"TagA"');
+    expect(tagOrString.foundLiterals[3]).toEqual('"TagB"');
+    expect(tagOrString.foundLiterals[4]).toEqual('"TagC"');
+    expect(tagOrString.foundLiterals[5]).toEqual('"SpeciesA"');
+    expect(tagOrString.foundLiterals[6]).toEqual('"SpeciesB"');
+    expect(tagOrString.foundLiterals[7]).toEqual('"foo"');
     expect(tagOrString.foundLiterals[8]).toEqual(1337);
   });
 

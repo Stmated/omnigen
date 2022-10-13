@@ -17,13 +17,12 @@ import {
   PackageDeclarationCtx,
   SuperclassCtx,
   SuperinterfacesCtx,
-  UnannClassTypeCtx
+  UnannClassTypeCtx,
 } from 'java-parser';
 
 export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   readonly foundInterfaces: string[] = [];
   readonly foundMethods: string[] = [];
-  readonly foundMethodArguments: any[][] = [];
   readonly foundFields: string[] = [];
   readonly foundLiterals: any[] = [];
 

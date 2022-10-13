@@ -1,31 +1,31 @@
 import {camelCase, pascalCase} from 'change-case';
 import {
+  AstRootNode,
   CompositionKind,
+  IOmniPrimitiveType,
+  IOmniProperty,
+  IPackageOptions,
+  Naming,
   OmniCompositionType,
   OmniPrimitiveKind,
-  OmniPrimitiveType,
-  OmniProperty,
   OmniType,
   OmniTypeKind,
-  PrimitiveNullableKind,
-  AstRootNode,
-  Naming,
   OmniUtil,
+  PrimitiveNullableKind,
   RealOptions,
-  IPackageOptions,
-  VisitorFactoryManager
+  VisitorFactoryManager,
 } from '@omnigen/core';
 import {DEFAULT_JAVA_OPTIONS, IJavaOptions, UnknownType} from '../options';
 import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
 
-export interface TypeNameInfo {
+export interface ITypeNameInfo {
   packageName: string | undefined;
   className: string;
   outerTypeNames: string[];
 }
 
-interface FqnOptions {
+interface IFqnOptions {
   type: OmniType,
   options?: RealOptions<IJavaOptions>;
   withSuffix?: boolean;
@@ -33,17 +33,21 @@ interface FqnOptions {
   withInner?: string[];
   implementation?: boolean;
   boxed?: boolean;
-  localNames?: Map<OmniType, TypeNameInfo>;
+  localNames?: Map<OmniType, ITypeNameInfo>;
 }
 
-export type FqnArgs = OmniType | FqnOptions;
+export type FqnArgs = OmniType | IFqnOptions;
 
 export class JavaUtil {
 
   /**
    * Re-usable Java Visitor, so we do not create a new one every time.
    */
-  private static readonly _javaVisitor: JavaVisitor<void> = new JavaVisitor<void>();
+  private static readonly _JAVA_VISITOR: JavaVisitor<void> = new JavaVisitor<void>();
+
+  private static readonly _PATTERN_STARTS_WITH_NUMBER = new RegExp(/^[^a-zA-Z$_]/);
+  private static readonly _PATTERN_INVALID_CHARS = new RegExp(/[^a-zA-Z0-9$_]/g);
+  private static readonly _PATTERN_WITH_PREFIX = new RegExp(/^[_$]+/g);
 
   /**
    * TODO: Return TypeName instead?
@@ -53,7 +57,7 @@ export class JavaUtil {
       return JavaUtil.getName(args);
     } else {
       return JavaUtil.getName({
-        type: args
+        type: args,
       });
     }
   }
@@ -61,7 +65,7 @@ export class JavaUtil {
   public static getClassNameForImport(
     type: OmniType,
     options: RealOptions<IJavaOptions>,
-    implementation: boolean | undefined
+    implementation: boolean | undefined,
   ): string | undefined {
 
     if (type.kind == OmniTypeKind.PRIMITIVE) {
@@ -75,12 +79,15 @@ export class JavaUtil {
       options: options,
       withSuffix: false,
       withPackage: true,
-      implementation: implementation
+      implementation: implementation,
     });
   }
 
   /**
    * TODO: This should be able to return undefined OR the input type needs to be more restricted
+   *
+   * @param type
+   * @param options
    */
   public static getClassName(type: OmniType, options?: RealOptions<IJavaOptions>): string {
     return JavaUtil.getName({
@@ -89,14 +96,16 @@ export class JavaUtil {
       withSuffix: false,
       withPackage: false,
       implementation: true,
-    })
+    });
   }
 
   /**
    * TODO: This should be delayed until rendering. It is up to the rendering to render a type.
    *        Prime example being generics, which right now is hard-coded into strings here. Bad. Local type names are not respected.
+   *
+   * @param args
    */
-  public static getName(args: FqnOptions): string {
+  public static getName(args: IFqnOptions): string {
 
     if (args.localNames) {
 
@@ -210,6 +219,13 @@ export class JavaUtil {
 
         // This is a reference to another model.
         // It might be possible that this model has another option that what was given to this method.
+        if (args.type.name) {
+
+          const name = Naming.safe(args.type.name);
+          const commonOptions = args.type.model.options as RealOptions<IJavaOptions> || args.options;
+          return JavaUtil.getClassNameWithPackageName(args.type, name, commonOptions, args.withPackage);
+        }
+
         if (args.type.model.options) {
 
           // TODO: This way of handling it is INCREDIBLY UGLY -- need a way to make this actually typesafe!
@@ -226,7 +242,7 @@ export class JavaUtil {
     type: OmniType,
     typeName: string,
     options?: RealOptions<IPackageOptions>,
-    withPackage?: boolean
+    withPackage?: boolean,
   ): string {
 
     if (!withPackage) {
@@ -260,7 +276,7 @@ export class JavaUtil {
     }
   }
 
-  private static getCompositionClassName(type: OmniCompositionType, args: FqnOptions): string {
+  private static getCompositionClassName(type: OmniCompositionType, args: IFqnOptions): string {
 
     if (type.name) {
       return Naming.safe(type.name);
@@ -293,13 +309,13 @@ export class JavaUtil {
       ...args,
       type: it,
       implementation: false,
-      boxed: true
+      boxed: true,
     })));
 
     return `${prefix}${[...uniqueNames].join(delimiter)}`;
   }
 
-  public static getPrimitiveTypeName(type: OmniPrimitiveType): string {
+  public static getPrimitiveTypeName(type: IOmniPrimitiveType): string {
 
     // The primitive nullable kind might be NOT_NULLABLE_PRIMITIVE.
     // Then in the end it will probably be a completely other type, depending on the language.
@@ -307,7 +323,7 @@ export class JavaUtil {
     return JavaUtil.getPrimitiveKindName(type.primitiveKind, JavaUtil.isPrimitiveBoxed(type));
   }
 
-  private static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
+  private static isPrimitiveBoxed(type: IOmniPrimitiveType): boolean {
     return (type.nullable !== undefined && type.nullable == PrimitiveNullableKind.NULLABLE);
   }
 
@@ -345,6 +361,7 @@ export class JavaUtil {
       if (genericIdx !== -1) {
         return fqn.substring(0, genericIdx);
       }
+
       const arrayIdx = fqn.indexOf('[');
       if (arrayIdx !== -1) {
         return fqn.substring(0, arrayIdx);
@@ -359,6 +376,7 @@ export class JavaUtil {
     if (genericIdx !== -1) {
       fqn = fqn.substring(0, genericIdx);
     }
+
     const idx = fqn.lastIndexOf('.');
     if (idx !== -1) {
       return fqn.substring(0, idx);
@@ -388,6 +406,7 @@ export class JavaUtil {
         suffix = fqn.substring(genericIdx);
         fqn = fqn.substring(0, genericIdx);
       }
+
       const idx = fqn.lastIndexOf('.');
       if (idx == -1) {
         return fqn + suffix;
@@ -410,6 +429,9 @@ export class JavaUtil {
 
   /**
    * Move to elsewhere, these should be based on the renderer and its settings?
+   *
+   * @param baseName
+   * @param type
    */
   public static getGetterName(baseName: string, type: OmniType): string {
     const capitalized = pascalCase(baseName);
@@ -458,26 +480,26 @@ export class JavaUtil {
   public static getConstructorRequirements(
     root: AstRootNode,
     node: Java.AbstractObjectDeclaration,
-    followSupertype = false
+    followSupertype = false,
   ): [Java.Field[], Java.ArgumentDeclaration[]] {
 
     const constructors: Java.ConstructorDeclaration[] = [];
     const fields: Java.Field[] = [];
     const setters: Java.FieldBackedSetter[] = [];
 
-    const fieldVisitor = VisitorFactoryManager.create(JavaUtil._javaVisitor, {
-      visitConstructor: (n) => {
+    const fieldVisitor = VisitorFactoryManager.create(JavaUtil._JAVA_VISITOR, {
+      visitConstructor: n => {
         constructors.push(n);
       },
       visitObjectDeclaration: () => {
         // Do not go into any nested objects.
       },
-      visitField: (n) => {
+      visitField: n => {
         fields.push(n);
       },
-      visitFieldBackedSetter: (n) => {
+      visitFieldBackedSetter: n => {
         setters.push(n);
-      }
+      },
     });
 
     node.body.visit(fieldVisitor);
@@ -513,12 +535,12 @@ export class JavaUtil {
       const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.omniType);
       if (extendedBy) {
 
-        const constructorVisitor = VisitorFactoryManager.create(JavaUtil._javaVisitor, {
-          visitConstructor: (node) => {
+        const constructorVisitor = VisitorFactoryManager.create(JavaUtil._JAVA_VISITOR, {
+          visitConstructor: node => {
             if (node.parameters) {
               supertypeArguments.push(...node.parameters.children);
             }
-          }
+          },
         });
 
         extendedBy.visit(constructorVisitor);
@@ -526,7 +548,7 @@ export class JavaUtil {
 
       return [
         immediateRequired,
-        supertypeArguments
+        supertypeArguments,
       ];
 
     } else {
@@ -541,13 +563,13 @@ export class JavaUtil {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
     const holder: { ref?: Java.ClassDeclaration } = {};
-    root.visit(VisitorFactoryManager.create(JavaUtil._javaVisitor, {
-      visitClassDeclaration: (node) => {
+    root.visit(VisitorFactoryManager.create(JavaUtil._JAVA_VISITOR, {
+      visitClassDeclaration: node => {
         if (node.type.omniType == type) {
           holder.ref = node;
         }
       },
-      visitGenericClassDeclaration: (node) => {
+      visitGenericClassDeclaration: node => {
         if (node.type.omniType == type) {
           holder.ref = node;
         } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -557,7 +579,7 @@ export class JavaUtil {
             holder.ref = node;
           }
         }
-      }
+      },
     }));
 
     return holder.ref;
@@ -600,7 +622,6 @@ export class JavaUtil {
   }
 
 
-
   public static isNullable(type: OmniType): boolean {
     // NOTE: If changed, make sure toNullableType is updated
     if (type.kind == OmniTypeKind.PRIMITIVE) {
@@ -612,7 +633,7 @@ export class JavaUtil {
     return false;
   }
 
-  public static toUnboxedPrimitiveType<T extends OmniPrimitiveType>(type: T): T | OmniPrimitiveType {
+  public static toUnboxedPrimitiveType<T extends IOmniPrimitiveType>(type: T): T | IOmniPrimitiveType {
     if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable == PrimitiveNullableKind.NULLABLE) {
       return {
         ...type,
@@ -623,9 +644,9 @@ export class JavaUtil {
     return type;
   }
 
-  public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
+  public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): IOmniProperty[] {
 
-    const properties: OmniProperty[] = [];
+    const properties: IOmniProperty[] = [];
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
 
       // Collecting properties from an XOR composition makes no sense, since we cannot know which needs implementing.
@@ -653,25 +674,23 @@ export class JavaUtil {
     return properties;
   }
 
-  private static readonly PATTERN_STARTS_WITH_NUMBER = new RegExp(/^[^a-zA-Z$_]/);
-  private static readonly PATTERN_INVALID_CHARS = new RegExp(/[^a-zA-Z0-9$_]/g);
-  private static readonly PATTERN_WITH_PREFIX = new RegExp(/^[_$]+/g);
-
   public static getSafeIdentifierName(name: string): string {
 
-    if (JavaUtil.PATTERN_STARTS_WITH_NUMBER.test(name)) {
+    if (JavaUtil._PATTERN_STARTS_WITH_NUMBER.test(name)) {
       name = `_${name}`;
     }
 
-    return name.replaceAll(JavaUtil.PATTERN_INVALID_CHARS, "_");
+    return name.replaceAll(JavaUtil._PATTERN_INVALID_CHARS, '_');
   }
 
   /**
    * Takes the given name and makes it safe and then makes it into a proper argument name.
+   *
+   * @param name
    */
   public static getPrettyArgumentName(name: string): string {
 
     const safeName = JavaUtil.getSafeIdentifierName(name);
-    return camelCase(safeName.replaceAll(JavaUtil.PATTERN_WITH_PREFIX, ""));
+    return camelCase(safeName.replaceAll(JavaUtil._PATTERN_WITH_PREFIX, ''));
   }
 }

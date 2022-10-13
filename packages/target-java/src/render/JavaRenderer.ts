@@ -1,14 +1,14 @@
 import {
-  CompilationUnitRenderCallback,
+  ICompilationUnitRenderCallback,
   IAstVisitor,
   VisitResult,
   OmniPrimitiveKind,
   OmniUtil,
   RealOptions,
-  IRenderer, IAstNode
+  IRenderer, IAstNode,
 } from '@omnigen/core';
 import {AbstractJavaNode, GenericTypeDeclarationList} from '../ast';
-import {JavaVisitor, IJavaAstVisitor, JavaVisitFn} from '../visit';
+import {JavaVisitor, JavaVisitFn} from '../visit';
 import {pascalCase} from 'change-case';
 import {IJavaOptions} from '../options';
 import * as Java from '../ast';
@@ -16,21 +16,21 @@ import * as Java from '../ast';
 type JavaRendererVisitFn<N extends IAstNode> = JavaVisitFn<N, string>;
 
 export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
-  private blockDepth = 0;
-  private readonly pattern_lineStart = new RegExp(/(?<!$)^/mg);
-  private tokenPrefix = ' ';
-  private tokenSuffix = ' ';
+  private _blockDepth = 0;
+  private readonly _patternLineStart = new RegExp(/(?<!$)^/mg);
+  private _tokenPrefix = ' ';
+  private _tokenSuffix = ' ';
   private readonly _options: RealOptions<IJavaOptions>;
 
-  private readonly _cuCallback: CompilationUnitRenderCallback;
+  private readonly _cuCallback: ICompilationUnitRenderCallback;
 
-  constructor(options: RealOptions<IJavaOptions>, callback: CompilationUnitRenderCallback) {
+  constructor(options: RealOptions<IJavaOptions>, callback: ICompilationUnitRenderCallback) {
     super();
     this._options = options;
     this._cuCallback = callback;
   }
 
-  private getIndentation(d: number = this.blockDepth): string {
+  private getIndentation(d: number = this._blockDepth): string {
     return '  '.repeat(d);
   }
 
@@ -73,16 +73,16 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
 
   visitFieldReference: JavaRendererVisitFn<Java.FieldReference> = (node, visitor) => {
     return (`this.${this.render(node.field.identifier, visitor)}`);
-  }
+  };
 
   /**
    * TODO: Should this be used together with the field reference above?
    */
   visitSelfReference: JavaRendererVisitFn<Java.SelfReference> = () => {
     return `this`;
-  }
+  };
 
-  visitVariableDeclaration: JavaRendererVisitFn<Java.VariableDeclaration> = (node) => {
+  visitVariableDeclaration: JavaRendererVisitFn<Java.VariableDeclaration> = node => {
 
     const constant = (node.constant) ? 'final ' : '';
     const type = node.variableType ? this.render(node.variableType) : 'var ';
@@ -90,15 +90,15 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const initializer = node.initializer ? ` = ${this.render(node.initializer)}` : '';
 
     return `${constant}${type}${name}${initializer}`;
-  }
+  };
 
   visitReturnStatement: JavaRendererVisitFn<Java.ReturnStatement> = (node, visitor) => {
     return (`return ${this.render(node.expression, visitor)}`);
-  }
+  };
 
-  visitToken: JavaRendererVisitFn<Java.JavaToken> = (node) => {
-    return (`${this.tokenPrefix}${JavaRenderer.getTokenTypeString(node.type)}${this.tokenSuffix}`);
-  }
+  visitToken: JavaRendererVisitFn<Java.JavaToken> = node => {
+    return (`${this._tokenPrefix}${JavaRenderer.getTokenTypeString(node.type)}${this._tokenSuffix}`);
+  };
 
   private static getTokenTypeString(type: Java.TokenType): string {
     switch (type) {
@@ -139,22 +139,22 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const modifiers = node.modifiers.modifiers.length > 0 ? `${this.render(node.modifiers, visitor)} ` : '';
 
     return `${annotations}${modifiers}${this.render(node.owner.name, visitor)}(${this.render(node.parameters, visitor)}) {${body}}\n\n`;
-  }
+  };
 
   visitBlock: JavaRendererVisitFn<Java.Block> = (node, visitor) => {
-    this.blockDepth++;
+    this._blockDepth++;
     const indentation = this.getIndentation(1);
     const blockContent = this.join(node.children.map(it => it.visit(visitor)));
-    this.blockDepth--;
+    this._blockDepth--;
 
-    return blockContent.replace(this.pattern_lineStart, indentation);
-  }
+    return blockContent.replace(this._patternLineStart, indentation);
+  };
 
   visitCommonTypeDeclaration(
-    visitor: IJavaAstVisitor<string>,
+    visitor: JavaVisitor<string>,
     node: Java.AbstractObjectDeclaration,
     typeString: string,
-    generics?: GenericTypeDeclarationList
+    generics?: GenericTypeDeclarationList,
   ): VisitResult<string> {
 
     const modifiers = this.render(node.modifiers, visitor);
@@ -175,20 +175,20 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
 
   visitClassDeclaration: JavaRendererVisitFn<Java.ClassDeclaration> = (node, visitor) => {
     return this.visitCommonTypeDeclaration(visitor, node, 'class');
-  }
+  };
 
   visitGenericClassDeclaration: JavaRendererVisitFn<Java.GenericClassDeclaration> = (node, visitor) => {
     const filtered = node.typeList.types.length > 0 ? node.typeList : undefined;
     return this.visitCommonTypeDeclaration(visitor, node, 'class', filtered);
-  }
+  };
 
   visitInterfaceDeclaration: JavaRendererVisitFn<Java.InterfaceDeclaration> = (node, visitor) => {
     return this.visitCommonTypeDeclaration(visitor, node, 'interface');
-  }
+  };
 
   visitEnumDeclaration: JavaRendererVisitFn<Java.EnumDeclaration> = (node, visitor) => {
     return this.visitCommonTypeDeclaration(visitor, node, 'enum');
-  }
+  };
 
   visitGenericTypeDeclaration: JavaRendererVisitFn<Java.GenericTypeDeclaration> = (node, visitor) => {
 
@@ -201,7 +201,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     }
 
     return str;
-  }
+  };
 
   visitGenericTypeDeclarationList: JavaRendererVisitFn<Java.GenericTypeDeclarationList> = (node, visitor) => {
 
@@ -212,7 +212,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     }
 
     return `<${genericTypes.join(', ')}>`;
-  }
+  };
 
   visitGenericTypeUseList: JavaRendererVisitFn<Java.GenericTypeUseList> = (node, visitor) => {
     const genericTypes = node.types.map(it => this.render(it, visitor));
@@ -221,21 +221,21 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     }
 
     return genericTypes;
-  }
+  };
 
   visitGenericTypeUse: JavaRendererVisitFn<Java.GenericTypeUse> = (node, visitor) => {
     return this.render(node.name, visitor);
-  }
+  };
 
   visitCommentList: JavaRendererVisitFn<Java.CommentList> = (node, visitor) => {
     const commentSections = node.children.map(it => this.render(it, visitor));
     return `/**\n * ${commentSections.join('\n *\n * ')}\n */`;
-  }
+  };
 
-  visitComment: JavaRendererVisitFn<Java.Comment> = (node) => {
+  visitComment: JavaRendererVisitFn<Java.Comment> = node => {
     const lines = node.text.replace('\r', '').split('\n');
     return `${lines.join('\n * ')}`;
-  }
+  };
 
   visitCompilationUnit: JavaRendererVisitFn<Java.CompilationUnit> = (node, visitor) => {
 
@@ -254,11 +254,11 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     });
 
     return content;
-  }
+  };
 
-  visitPackage: JavaRendererVisitFn<Java.PackageDeclaration> = (node) => {
+  visitPackage: JavaRendererVisitFn<Java.PackageDeclaration> = node => {
     return `package ${node.fqn};\n\n`;
-  }
+  };
 
   visitImportList: JavaRendererVisitFn<Java.ImportList> = (node, visitor) => {
 
@@ -268,9 +268,9 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     }
 
     return `${importStrings.join('\n')}\n\n`;
-  }
+  };
 
-  visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = (node) => {
+  visitImportStatement: JavaRendererVisitFn<Java.ImportStatement> = node => {
     // We always render the Fully Qualified Name here, and not the relative nor local name.
     // But we remove any generics that the import might have.
     // const fqn = JavaUtil.getName({
@@ -287,21 +287,21 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     }
 
     return `import ${importName};`;
-  }
+  };
 
   visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
     return (node.types.children.map(it => this.render(it, visitor)).join(', '));
-  }
+  };
 
   visitEnumItem: JavaRendererVisitFn<Java.EnumItem> = (node, visitor) => {
     const key = this.render(node.identifier, visitor);
     const value = this.render(node.value, visitor);
     return `${key}(${value})`;
-  }
+  };
 
-  visitEnumItemList: JavaRendererVisitFn<Java.EnumItemList> = (node) => {
+  visitEnumItemList: JavaRendererVisitFn<Java.EnumItemList> = node => {
     return `${node.children.map(it => this.render(it)).join(',\n')};\n`;
-  }
+  };
 
   visitMethodDeclaration: JavaRendererVisitFn<Java.MethodDeclaration> = (node, visitor) => {
     const signature = this.render(node.signature, visitor);
@@ -312,7 +312,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
       body,
       '}\n\n',
     ];
-  }
+  };
 
   visitMethodDeclarationSignature: JavaRendererVisitFn<Java.MethodDeclarationSignature> = (node, visitor) => {
     const comments = node.comments && node.comments.children.length > 0 ? `${this.render(node.comments, visitor)}\n` : '';
@@ -327,47 +327,47 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
       annotations,
       `${modifiers} ${type} ${name}(${parameters})`,
     ];
-  }
+  };
 
   visitAbstractMethodDeclaration: JavaRendererVisitFn<Java.AbstractMethodDeclaration> = (node, visitor) => {
 
-    const superVisitor = {...visitor, visitAbstractMethodDeclaration: this.visitor_java.visitAbstractMethodDeclaration};
+    const superVisitor = {...visitor, visitAbstractMethodDeclaration: this.visitorJava.visitAbstractMethodDeclaration};
     return `${this.render(node.signature, superVisitor)};\n`;
-  }
+  };
 
   visitMethodCall: JavaRendererVisitFn<Java.MethodCall> = (node, visitor) => {
     return `${this.render(node.target, visitor)}.${this.render(node.methodName, visitor)}(${this.render(node.methodArguments, visitor)})`;
-  }
+  };
 
-  visitStatement: JavaRendererVisitFn<Java.Statement> = (node) => {
+  visitStatement: JavaRendererVisitFn<Java.Statement> = node => {
     return [
       node.child.visit(this),
       ';\n',
     ];
-  }
+  };
 
   visitAnnotationList: JavaRendererVisitFn<Java.AnnotationList> = (node, visitor) => {
     // TODO: The "multiline" should be contextual and automatic in my opinion.
     //        There should be different methods:
     //        visitClassAnnotationList, visitFieldAnnotationList, visitMethodAnnotationList, visitArgumentAnnotationList
     return (node.children.map(it => this.render(it, visitor)).join(node.multiline ? '\n' : ' '));
-  }
+  };
 
   visitAnnotation: JavaRendererVisitFn<Java.Annotation> = (node, visitor) => {
     const pairs = node.pairs ? `(${this.render(node.pairs, visitor)})` : '';
     return (`@${this.render(node.type, visitor)}${pairs}`);
-  }
+  };
 
   visitAnnotationKeyValuePairList: JavaRendererVisitFn<Java.AnnotationKeyValuePairList> = (node, visitor) => {
     return (node.children.map(it => this.render(it, visitor)).join(', '));
-  }
+  };
 
   visitAnnotationKeyValuePair: JavaRendererVisitFn<Java.AnnotationKeyValuePair> = (node, visitor) => {
     const key = node.key ? `${this.render(node.key, visitor)} = ` : '';
     return (`${key}${this.render(node.value, visitor)}`);
-  }
+  };
 
-  visitLiteral: JavaRendererVisitFn<Java.Literal> = (node) => {
+  visitLiteral: JavaRendererVisitFn<Java.Literal> = node => {
     if (typeof node.value === 'string') {
       return (`"${node.value}"`);
     } else if (typeof node.value == 'boolean') {
@@ -390,7 +390,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
       }
       return (`${node.value}`);
     }
-  }
+  };
 
   visitFieldGetterSetter: JavaRendererVisitFn<Java.FieldGetterSetter> = (node, visitor) => {
     const content = this.join([
@@ -400,7 +400,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     ]);
 
     return `${content}\n`;
-  }
+  };
 
   visitField: JavaRendererVisitFn<Java.Field> = (node, visitor) => {
     const comments = node.comments ? `${this.render(node.comments, visitor)}\n` : '';
@@ -415,16 +415,16 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
       annotations,
       `${modifiers} ${typeName} ${identifier}${initializer};\n`,
     ];
-  }
+  };
 
   visitNewStatement: JavaRendererVisitFn<Java.NewStatement> = (node, visitor) => {
     const parameters = node.constructorArguments ? this.render(node.constructorArguments, visitor) : '';
     return `new ${this.render(node.type, visitor)}(${parameters})`;
-  }
+  };
 
-  visitIdentifier: JavaRendererVisitFn<Java.Identifier> = (node) => {
+  visitIdentifier: JavaRendererVisitFn<Java.Identifier> = node => {
     return node.value;
-  }
+  };
 
   visitArgumentDeclaration: JavaRendererVisitFn<Java.ArgumentDeclaration> = (node, visitor) => {
     // TODO: Make this simpler by allowing to "visit" between things,
@@ -434,7 +434,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const identifier = this.render(node.identifier, visitor);
 
     return `${annotations}${type} ${identifier}`;
-  }
+  };
 
   visitArgumentDeclarationList: JavaRendererVisitFn<Java.ArgumentDeclarationList> = (node, visitor) => {
 
@@ -446,23 +446,23 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     }
 
     return listString;
-  }
+  };
 
   visitArgumentList: JavaRendererVisitFn<Java.ArgumentList> = (node, visitor) => {
     return node.children.map(it => this.render(it, visitor)).join(', ');
-  }
+  };
 
   visitTypeList: JavaRendererVisitFn<Java.TypeList> = (node, visitor) => {
     return node.children.map(it => this.render(it, visitor)).join(' ');
-  }
+  };
 
-  visitRegularType: JavaRendererVisitFn<Java.RegularType> = (node) => {
+  visitRegularType: JavaRendererVisitFn<Java.RegularType> = node => {
     if (node.getLocalName()) {
       return node.getLocalName();
     } else {
       throw new Error(`Local name must have been set. Has the package name transformer not been ran?`);
     }
-  }
+  };
 
   visitGenericType: JavaRendererVisitFn<Java.GenericType> = (node, visitor) => {
 
@@ -470,29 +470,29 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const genericArgumentStrings = node.genericArguments.map(it => this.render(it, visitor));
 
     return `${baseTypeString}<${genericArgumentStrings.join(', ')}>`;
-  }
+  };
 
   visitModifierList: JavaRendererVisitFn<Java.ModifierList> = (node, visitor) => {
     return node.modifiers.map(it => this.render(it, visitor)).join(' ');
-  }
+  };
 
-  visitModifier: JavaRendererVisitFn<Java.Modifier> = (node) => {
+  visitModifier: JavaRendererVisitFn<Java.Modifier> = node => {
     const modifierString = JavaRenderer.getModifierString(node.type);
     if (modifierString) {
       return modifierString;
     }
 
     return undefined;
-  }
+  };
 
   visitSuperConstructorCall: JavaRendererVisitFn<Java.SuperConstructorCall> = (node, visitor) => {
 
     return `super(${this.render(node.parameters, visitor)})`;
-  }
+  };
 
   visitIfStatement: JavaRendererVisitFn<Java.IfStatement> = (node, visitor) => {
     return `if (${this.render(node.predicate, visitor)}) {\n${this.render(node.body)}}\n`;
-  }
+  };
 
   visitIfElseStatement: JavaRendererVisitFn<Java.IfElseStatement> = (node, visitor) => {
 
@@ -500,24 +500,24 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const el = node.elseBlock ? `else {\n${this.render(node.elseBlock)}}\n` : '';
 
     return `${ifs.join('else ')}${el}`;
-  }
+  };
 
   visitRuntimeTypeMapping: JavaRendererVisitFn<Java.RuntimeTypeMapping> = (node, visitor) => {
 
     return [
       ...node.fields.map(it => this.render(it, visitor)),
       ...node.getters.map(it => this.render(it, visitor)),
-      ...node.methods.map(it => this.render(it, visitor))
+      ...node.methods.map(it => this.render(it, visitor)),
     ];
-  }
+  };
 
   visitClassName: JavaRendererVisitFn<Java.ClassName> = (node, visitor) => {
     return `${this.render(node.type, visitor)}`;
-  }
+  };
 
   visitClassReference: JavaRendererVisitFn<Java.ClassReference> = (node, visitor) => {
     return `${this.render(node.className, visitor)}.class`;
-  }
+  };
 
   visitArrayInitializer: JavaRendererVisitFn<Java.ArrayInitializer<AbstractJavaNode>> = (node, visitor) => {
 
@@ -525,15 +525,15 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     const entries = node.children.map(it => this.render(it, visitor));
     const indentation = this.getIndentation(1);
     return `{\n${indentation}${entries.join(',\n' + indentation)}\n}`;
-  }
+  };
 
   visitStaticMemberReference: JavaRendererVisitFn<Java.StaticMemberReference> = (node, visitor) => {
     return `${this.render(node.target, visitor)}.${this.render(node.member, visitor)}`;
-  }
+  };
 
   visitCast: JavaRendererVisitFn<Java.Cast> = (node, visitor) => {
     return `((${this.render(node.toType)}) ${this.render(node.expression, visitor)})`;
-  }
+  };
 
   private escapeImplements(value: string): string {
 

@@ -2,21 +2,21 @@ import {
   CompositionKind,
   OmniCompositionType,
   OmniInheritableType,
-  OmniObjectType,
-  OmniProperty,
+  IOmniObjectType,
+  IOmniProperty,
   OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
   TypeName,
-  VisitResult
+  VisitResult,
 } from '@omnigen/core';
 
-type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<OmniProperty, 'owner'>>;
+type OmniPropertyOrphan = Omit<IOmniProperty, 'owner'> & Partial<Pick<IOmniProperty, 'owner'>>;
 
 export class TestUtils {
 
-  public static obj(name: TypeName, extendedBy?: OmniInheritableType, properties?: OmniPropertyOrphan[]): OmniObjectType {
-    const omniClass: OmniObjectType = {
+  public static obj(name: TypeName, extendedBy?: OmniInheritableType, properties?: OmniPropertyOrphan[]): IOmniObjectType {
+    const omniClass: IOmniObjectType = {
       name: name,
       kind: OmniTypeKind.OBJECT,
       extendedBy: extendedBy,
@@ -28,7 +28,7 @@ export class TestUtils {
       omniClass.properties = properties.map(it => {
         return {
           ...it,
-          owner: omniClass
+          owner: omniClass,
         };
       });
     }
@@ -44,11 +44,11 @@ export class TestUtils {
     };
   }
 
-  public static prop(name: string, type: OmniType, owner?: OmniPropertyOwner): OmniProperty | OmniPropertyOrphan {
+  public static prop(name: string, type: OmniType, owner?: OmniPropertyOwner): IOmniProperty | OmniPropertyOrphan {
     return {
       name: name,
       type: type,
-      owner: owner
+      owner: owner,
     };
   }
 

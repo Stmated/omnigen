@@ -5,14 +5,14 @@ import {
   OptionsUtil,
   PackageResolverOptionsParser,
   PrimitiveGenerificationChoice,
-  RealOptions
+  RealOptions,
 } from '@omnigen/core';
 import {IJavaOptions} from './IJavaOptions';
 
 export enum UnknownType {
   MAP,
   JSON,
-  OBJECT
+  OBJECT,
 }
 
 export const DEFAULT_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
@@ -25,10 +25,10 @@ export const DEFAULT_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
   includeLinksOnProperty: true,
   onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
   packageResolver: undefined,
-}
+};
 
 export const JAVA_OPTIONS_CONVERTERS: OptionConverters<IJavaOptions> = {
-  packageResolver: (v) => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
+  packageResolver: v => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,
   includeLinksOnProperty: OptionsUtil.toBoolean,

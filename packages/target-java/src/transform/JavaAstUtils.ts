@@ -1,10 +1,10 @@
-import {OmniInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {IOmniInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 
 export class JavaAstUtils {
 
-  public static addInterfaceProperties(type: OmniInterfaceType, body: Java.Block): void {
+  public static addInterfaceProperties(type: IOmniInterfaceType, body: Java.Block): void {
 
     if (type.of.kind == OmniTypeKind.OBJECT) {
 
@@ -14,9 +14,9 @@ export class JavaAstUtils {
           new Java.AbstractMethodDeclaration(
             new Java.MethodDeclarationSignature(
               new Java.Identifier(JavaUtil.getGetterName(property.propertyName || property.name, property.type)),
-              JavaAstUtils.createTypeNode(property.type, false)
-            )
-          )
+              JavaAstUtils.createTypeNode(property.type, false),
+            ),
+          ),
         );
       }
     }
@@ -34,14 +34,14 @@ export class JavaAstUtils {
         new Java.AnnotationKeyValuePairList(
           new Java.AnnotationKeyValuePair(
             new Java.Identifier('value'),
-            new Java.Literal('omnigen')
+            new Java.Literal('omnigen'),
           ),
           new Java.AnnotationKeyValuePair(
             new Java.Identifier('date'),
-            new Java.Literal(new Date().toISOString())
-          )
-        )
-      )
+            new Java.Literal(new Date().toISOString()),
+          ),
+        ),
+      ),
     );
   }
 
@@ -51,7 +51,7 @@ export class JavaAstUtils {
 
       const mapClassOrInterface = implementation == false ? 'Map' : 'HashMap';
       const mapClass = `java.util.${mapClassOrInterface}`;
-      const mapType = new Java.RegularType({ kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
+      const mapType = new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
       const keyType = JavaAstUtils.createTypeNode(type.keyType, true);
       const valueType = JavaAstUtils.createTypeNode(type.valueType, true);
 

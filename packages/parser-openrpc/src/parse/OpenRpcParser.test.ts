@@ -1,10 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {RealOptions} from '@omnigen/core';
-import {IOpenRpcParserOptions, JSONRPC_20_PARSER_OPTIONS, OpenRpcParserBootstrapFactory} from '../index';
 import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
 import {OmniTypeKind, OmniUtil, SchemaFile} from '@omnigen/core';
 import {JavaUtil} from '@omnigen/target-java';
+import {IOpenRpcParserOptions, OpenRpcParserBootstrapFactory} from './OpenRpcParser';
+import {JSONRPC_20_PARSER_OPTIONS} from '../options';
 
 describe('Test Generic Model Creation', () => {
 
@@ -13,7 +14,7 @@ describe('Test Generic Model Creation', () => {
   // TODO: This is a bit stupid, no?
   const options: RealOptions<IOpenRpcParserOptions> = {
     ...DEFAULT_PARSER_OPTIONS,
-    ...JSONRPC_20_PARSER_OPTIONS
+    ...JSONRPC_20_PARSER_OPTIONS,
   };
 
   test('Test basic loading', async () => {
@@ -23,10 +24,10 @@ describe('Test Generic Model Creation', () => {
       if (!file.isFile()) {
         continue;
       }
-      
+
       const filePath = path.join(dirPath, file.name);
       const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
-        new SchemaFile(filePath)
+        new SchemaFile(filePath),
       );
       const parser = parserBootstrap.createParser(options);
       const model = parser.parse().model;
@@ -37,7 +38,7 @@ describe('Test Generic Model Creation', () => {
   test('PetStore should create expected model', async () => {
 
     const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
-      new SchemaFile('../parser-openrpc/examples/petstore-expanded.json')
+      new SchemaFile('../parser-openrpc/examples/petstore-expanded.json'),
     );
     const parser = parserBootstrap.createParser(options);
     const model = parser.parse().model;
@@ -47,7 +48,7 @@ describe('Test Generic Model Creation', () => {
     expect(model.servers).toHaveLength(1);
     expect(model.endpoints).toHaveLength(4);
 
-    const endpointNames = model.endpoints.map((endpoint) => endpoint.name);
+    const endpointNames = model.endpoints.map(endpoint => endpoint.name);
     expect(endpointNames).toContain('get_pets');
     expect(endpointNames).toContain('create_pet');
     expect(endpointNames).toContain('get_pet_by_id');

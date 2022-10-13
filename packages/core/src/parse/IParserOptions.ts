@@ -4,6 +4,7 @@ export interface IParserOptions extends IOptions {
   relaxedLookup: IncomingOrRealOption<Booleanish, boolean>;
   relaxedPlaceholders: IncomingOrRealOption<Booleanish, boolean>;
   autoTypeHints: IncomingOrRealOption<Booleanish, boolean>;
+  relaxedUnknownTypes: IncomingOrRealOption<Booleanish, boolean>;
 }
 
 export const DEFAULT_PARSER_OPTIONS: RealOptions<IParserOptions> = {
@@ -11,10 +12,12 @@ export const DEFAULT_PARSER_OPTIONS: RealOptions<IParserOptions> = {
   relaxedLookup: true,
   relaxedPlaceholders: true,
   autoTypeHints: true,
-}
+  relaxedUnknownTypes: false,
+};
 
 export const PARSER_OPTIONS_CONVERTERS: OptionConverters<IParserOptions> = {
   autoTypeHints: OptionsUtil.toBoolean,
   relaxedLookup: OptionsUtil.toBoolean,
   relaxedPlaceholders: OptionsUtil.toBoolean,
-}
+  relaxedUnknownTypes: OptionsUtil.toBoolean,
+};

@@ -1,15 +1,19 @@
 import {
-  AbstractNode, AbstractToken, VisitResult, OmniDictionaryType,
+  AbstractNode,
+  AbstractToken,
+  VisitResult,
+  IOmniDictionaryType,
   OmniPrimitiveKind,
-  OmniPrimitiveType,
+  IOmniPrimitiveType,
   OmniType,
   OmniTypeKind,
-  OmniUnknownType, LiteralValue,
+  IOmniUnknownType,
+  LiteralValue,
 } from '@omnigen/core';
 import {camelCase} from 'change-case';
 import {JavaAstUtils} from '../transform';
 import {JavaUtil} from '../util';
-import {IJavaAstVisitor} from '../visit';
+import {JavaVisitor} from '../visit';
 import {IJavaOptions, UnknownType} from '../options';
 
 export enum TokenType {
@@ -37,7 +41,7 @@ export class JavaToken extends AbstractToken {
     this.type = type;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitToken(this, visitor);
   }
 }
@@ -79,7 +83,7 @@ export class RegularType extends AbstractJavaNode {
     this.implementation = implementation;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitRegularType(this, visitor);
   }
 }
@@ -107,7 +111,7 @@ export class GenericType extends AbstractJavaNode {
     this.genericArguments = genericArguments;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitGenericType(this, visitor);
   }
 }
@@ -122,7 +126,7 @@ export class Identifier extends AbstractJavaNode {
     this.original = original;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitIdentifier(this, visitor);
   }
 }
@@ -140,7 +144,7 @@ export class Literal extends AbstractExpression {
     this.primitiveKind = primitiveKind;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitLiteral(this, visitor);
   }
 }
@@ -159,7 +163,7 @@ export class AnnotationKeyValuePair extends AbstractJavaNode {
     this.value = value;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAnnotationKeyValuePair(this, visitor);
   }
 }
@@ -172,7 +176,7 @@ export class AnnotationKeyValuePairList extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAnnotationKeyValuePairList(this, visitor);
   }
 }
@@ -187,7 +191,7 @@ export class Annotation extends AbstractJavaNode {
     this.pairs = pairs;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAnnotation(this, visitor);
   }
 }
@@ -201,7 +205,7 @@ export class AnnotationList extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAnnotationList(this, visitor);
   }
 }
@@ -214,7 +218,7 @@ export class ArrayInitializer<T extends AbstractJavaNode> extends AbstractJavaNo
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitArrayInitializer(this, visitor);
   }
 }
@@ -231,7 +235,7 @@ export class StaticMemberReference extends AbstractJavaNode {
     this.member = member;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitStaticMemberReference(this, visitor);
   }
 }
@@ -248,7 +252,7 @@ export class ArgumentDeclaration extends AbstractJavaNode {
     this.annotations = annotations;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitArgumentDeclaration(this, visitor);
   }
 }
@@ -261,7 +265,7 @@ export class ArgumentDeclarationList extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitArgumentDeclarationList(this, visitor);
   }
 }
@@ -278,7 +282,7 @@ export class BinaryExpression extends AbstractJavaNode {
     this.right = right;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitBinaryExpression(this, visitor);
   }
 }
@@ -288,7 +292,7 @@ export class AssignExpression extends BinaryExpression {
     super(left, new JavaToken(TokenType.ASSIGN), right);
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAssignExpression(this, visitor);
   }
 }
@@ -301,7 +305,7 @@ export class PackageDeclaration extends AbstractJavaNode {
     this.fqn = fqn;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitPackage(this, visitor);
   }
 }
@@ -320,7 +324,7 @@ export class Predicate extends BinaryExpression {
     super(left, new JavaToken(token), right);
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitBinaryExpression(this, visitor);
   }
 }
@@ -333,7 +337,7 @@ export class ArgumentList extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitArgumentList(this, visitor);
   }
 }
@@ -346,7 +350,7 @@ export class EnumItemList extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitEnumItemList(this, visitor);
   }
 }
@@ -359,7 +363,7 @@ export class Block extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitBlock(this, visitor);
   }
 }
@@ -383,7 +387,7 @@ export class Modifier extends AbstractJavaNode {
     this.type = type;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitModifier(this, visitor);
   }
 }
@@ -396,7 +400,7 @@ export class ModifierList extends AbstractJavaNode {
     this.modifiers = modifiers;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitModifierList(this, visitor);
   }
 }
@@ -409,7 +413,7 @@ export class Comment extends AbstractJavaNode {
     this.text = text;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitComment(this, visitor);
   }
 }
@@ -422,7 +426,7 @@ export class CommentList extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitCommentList(this, visitor);
   }
 }
@@ -444,7 +448,7 @@ export class Field extends AbstractJavaNode {
     this.annotations = annotations;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitField(this, visitor);
   }
 }
@@ -475,7 +479,7 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
     this.comments = comments;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitMethodDeclarationSignature(this, visitor);
   }
 }
@@ -488,7 +492,7 @@ export class AbstractMethodDeclaration extends AbstractJavaNode {
     this.signature = signature;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAbstractMethodDeclaration(this, visitor);
   }
 }
@@ -503,7 +507,7 @@ export class MethodDeclaration extends AbstractJavaNode {
     this.body = body;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitMethodDeclaration(this, visitor);
   }
 }
@@ -516,7 +520,7 @@ export class ReturnStatement extends AbstractJavaNode {
     this.expression = expression;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitReturnStatement(this, visitor);
   }
 }
@@ -527,7 +531,7 @@ export class SelfReference extends AbstractExpression {
     super();
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitSelfReference(this, visitor);
   }
 }
@@ -540,7 +544,7 @@ export class FieldReference extends AbstractExpression {
     this.field = field;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitFieldReference(this, visitor);
   }
 }
@@ -553,7 +557,7 @@ export class VariableReference extends AbstractJavaNode {
     this.variableName = variableName;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitVariableReference(this, visitor);
   }
 }
@@ -576,7 +580,7 @@ export class VariableDeclaration extends AbstractJavaNode {
     this.constant = constant;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitVariableDeclaration(this, visitor);
   }
 }
@@ -608,7 +612,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
       ));
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitFieldBackedGetter(this, visitor);
   }
 }
@@ -643,7 +647,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
       ));
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitFieldBackedSetter(this, visitor);
   }
 }
@@ -666,7 +670,7 @@ export class FieldGetterSetter extends AbstractJavaNode {
     this.setter = new FieldBackedSetter(this.field);
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitFieldGetterSetter(this, visitor);
   }
 }
@@ -681,7 +685,7 @@ export class Cast extends AbstractJavaNode {
     this.expression = expression;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitCast(this, visitor);
   }
 }
@@ -694,7 +698,7 @@ export class TypeList extends AbstractJavaNode {
     this.children = types;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitTypeList(this, visitor);
   }
 }
@@ -707,7 +711,7 @@ export class ExtendsDeclaration extends AbstractJavaNode {
     this.type = type;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitExtendsDeclaration(this, visitor);
   }
 }
@@ -720,7 +724,7 @@ export class ImplementsDeclaration extends AbstractJavaNode {
     this.types = types;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitImplementsDeclaration(this, visitor);
   }
 }
@@ -746,7 +750,7 @@ export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
     this.body = body;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitObjectDeclaration(this, visitor);
   }
 }
@@ -763,7 +767,7 @@ export class CompilationUnit extends AbstractJavaNode {
     this.object = object;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitCompilationUnit(this, visitor);
   }
 }
@@ -788,7 +792,7 @@ export class ConstructorDeclaration extends AbstractJavaNode {
     this.body = body;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitConstructor(this, visitor);
   }
 }
@@ -796,9 +800,9 @@ export class ConstructorDeclaration extends AbstractJavaNode {
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
 
-  readonly keyType: OmniPrimitiveType;
-  readonly valueType: OmniUnknownType;
-  readonly mapType: OmniDictionaryType;
+  readonly keyType: IOmniPrimitiveType;
+  readonly valueType: IOmniUnknownType;
+  readonly mapType: IOmniDictionaryType;
 
   constructor() {
     super();
@@ -837,7 +841,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     const addMethod = new MethodDeclaration(
       new MethodDeclarationSignature(
         new Identifier('addAdditionalProperty'),
-        JavaAstUtils.createTypeNode(<OmniPrimitiveType>{
+        JavaAstUtils.createTypeNode(<IOmniPrimitiveType>{
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
         }),
@@ -884,7 +888,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     ];
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAdditionalPropertiesDeclaration(this, visitor);
   }
 }
@@ -894,7 +898,7 @@ export class ClassDeclaration extends AbstractObjectDeclaration {
     super(type, name, body, modifiers);
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitClassDeclaration(this, visitor);
   }
 }
@@ -907,7 +911,7 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration {
     super(type, name, body, modifiers);
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitInterfaceDeclaration(this, visitor);
   }
 }
@@ -920,7 +924,7 @@ export class GenericClassDeclaration extends ClassDeclaration {
     this.typeList = typeList;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitGenericClassDeclaration(this, visitor);
   }
 }
@@ -937,7 +941,7 @@ export class GenericTypeDeclaration extends AbstractNode {
     this.upperBounds = upperBounds;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitGenericTypeDeclaration(this, visitor);
   }
 }
@@ -950,7 +954,7 @@ export class GenericTypeDeclarationList extends AbstractJavaNode {
     this.types = types;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitGenericTypeDeclarationList(this, visitor);
   }
 }
@@ -963,7 +967,7 @@ export class GenericTypeUse extends AbstractNode {
     this.name = name;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitGenericTypeUse(this, visitor);
   }
 }
@@ -976,7 +980,7 @@ export class GenericTypeUseList extends AbstractJavaNode {
     this.types = types;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitGenericTypeUseList(this, visitor);
   }
 }
@@ -987,7 +991,7 @@ export class EnumDeclaration extends AbstractObjectDeclaration {
     super(type, name, body, modifiers);
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitEnumDeclaration(this, visitor);
   }
 }
@@ -1002,7 +1006,7 @@ export class EnumItem extends AbstractJavaNode {
     this.value = value;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitEnumItem(this, visitor);
   }
 }
@@ -1017,7 +1021,7 @@ export class IfStatement extends AbstractJavaNode {
     this.body = body;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitIfStatement(this, visitor);
   }
 }
@@ -1032,7 +1036,7 @@ export class IfElseStatement extends AbstractJavaNode {
     this.elseBlock = elseBlock;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitIfElseStatement(this, visitor);
   }
 }
@@ -1045,7 +1049,7 @@ export class ImportStatement extends AbstractJavaNode {
     this.type = type;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitImportStatement(this, visitor);
   }
 }
@@ -1058,7 +1062,7 @@ export class ImportList extends AbstractJavaNode {
     this.children = children;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitImportList(this, visitor);
   }
 }
@@ -1071,7 +1075,7 @@ export class Statement extends AbstractJavaNode {
     this.child = child;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitStatement(this, visitor);
   }
 }
@@ -1085,7 +1089,7 @@ export class SuperConstructorCall extends AbstractJavaNode {
     this.parameters = parameters;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitSuperConstructorCall(this, visitor);
   }
 }
@@ -1102,7 +1106,7 @@ export class MethodCall extends AbstractJavaNode {
     this.methodArguments = methodArguments;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitMethodCall(this, visitor);
   }
 }
@@ -1120,7 +1124,7 @@ export class NewStatement extends AbstractJavaNode {
     this.constructorArguments = constructorArguments;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitNewStatement(this, visitor);
   }
 }
@@ -1133,7 +1137,7 @@ export class HardCoded extends AbstractJavaNode {
     this.content = content;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitHardCoded(this, visitor);
   }
 }
@@ -1146,7 +1150,7 @@ export class ClassName extends AbstractExpression {
     this.type = type;
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitClassName(this, visitor);
   }
 }
@@ -1159,7 +1163,7 @@ export class ClassReference extends AbstractExpression {
     this.className = new ClassName(type);
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitClassReference(this, visitor);
   }
 }
@@ -1272,7 +1276,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
     }
   }
 
-  visit<R>(visitor: IJavaAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitRuntimeTypeMapping(this, visitor);
   }
 

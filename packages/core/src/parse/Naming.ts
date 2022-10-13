@@ -6,6 +6,28 @@ const logger = LoggerFactory.create(__filename);
 
 export class Naming {
 
+  public static unwrapAll(name: TypeName): string[] {
+
+    const all: string[] = [];
+    if (Array.isArray(name)) {
+      for (const choice of name) {
+        if (choice) {
+          const result = Naming.unwrapAll(choice);
+          if (result) {
+            all.push(...result);
+          }
+        }
+      }
+    } else {
+      const unwrapped = Naming.unwrapOptional(name);
+      if (unwrapped) {
+        all.push(unwrapped);
+      }
+    }
+
+    return all;
+  }
+
   public static unwrapToFirstDefined(name: TypeName): string | undefined {
 
     if (Array.isArray(name)) {
@@ -22,6 +44,15 @@ export class Naming {
     }
 
     return Naming.unwrapOptional(name);
+  }
+
+  public static simplify(name: TypeName): TypeName {
+
+    if (Array.isArray(name) && name.length == 1) {
+      return Naming.simplify(name[0]);
+    } else {
+      return name;
+    }
   }
 
   private static unwrapOptional(name: TypeNameSingle): string | undefined {
@@ -43,6 +74,9 @@ export class Naming {
    *        This MUST be fixed sometime later.
    *        Maybe make the name property a callback which can alter during the execution?
    *        (And then finalize it at the end, at the cleanup)
+   *
+   * @param name The name to safely unwrap to a string
+   * @param hasDuplicateFn The predicate callback to check for name collisions
    */
   public static safe(name: TypeName, hasDuplicateFn?: TypeNameFn): string {
 
@@ -55,7 +89,7 @@ export class Naming {
       return resolved;
     }
 
-    const firstResolvedWithoutDuplicateCheck = Naming.safeInternal(name, undefined);
+    const firstResolvedWithoutDuplicateCheck = Naming.safeInternal(name);
     if (firstResolvedWithoutDuplicateCheck) {
 
       if (hasDuplicateFn) {

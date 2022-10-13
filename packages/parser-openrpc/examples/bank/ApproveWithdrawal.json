@@ -54,7 +54,7 @@
                 "x-property-name": "OrderId"
               },
               "result": {
-                "type": "bool"
+                "type": "boolean"
               }
             }
           }

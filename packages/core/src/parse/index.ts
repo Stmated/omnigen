@@ -1,14 +1,23 @@
 
-export * from './Parser';
+// Basic types
+export * from './LiteralValue';
+export * from './CompressTypeLevel';
+
+// Basic classes
+export * from './SchemaFile';
+
+export * from './IParserOptions';
+export * from './IParser';
+
 export * from './OmniModel';
+export * from './IOmniModelParserResult';
 export * from './CompositionUtil';
 export * from './OmniModelMerge';
 export * from './OmniUtil';
 export * from './Naming';
-export * from './SchemaFile';
-export * from './OmniModelTransformer';
+export * from './IOmniModelTransformer';
 export * from './DependencyGraphBuilder';
-export * from './IParserOptions';
 
+// Other sub-directories
 export * from './transform';
-export * from './LiteralValue';
+

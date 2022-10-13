@@ -1,13 +1,13 @@
 module.exports = {
-  roots: ["<rootDir>"],
-  transform: {"^.+\\.ts$": "ts-jest",},
+  roots: ['<rootDir>'],
+  transform: {'^.+\\.ts$': 'ts-jest'},
   testEnvironment: '<rootDir>../config-jest/env/jest.silent-env.js',
-  moduleFileExtensions: ["ts", "js", "json", "node"],
+  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   modulePathIgnorePatterns: [
-    "<rootDir>/node_modules",
-    "<rootDir>/dist",
+    '<rootDir>/node_modules',
+    '<rootDir>/dist',
   ],
-  preset: "ts-jest",
+  preset: 'ts-jest',
 };
 
 // const {pathsToModuleNameMapper} = require('ts-jest');

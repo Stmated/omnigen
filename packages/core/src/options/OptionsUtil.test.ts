@@ -125,14 +125,14 @@ describe('OptionsUtil', () => {
     };
 
     const inc2: IncomingOptions<AOptions> = {
-      qwe: 2
+      qwe: 2,
     };
 
     const real = await OptionsUtil.updateOptions(base, {...inc1, ...inc2}, {
       foo: OptionsUtil.toBoolean,
-      qwe: OptionsUtil.toString
+      qwe: OptionsUtil.toString,
     }, {
-      foo: value => value ? undefined : override
+      foo: value => value ? undefined : override,
     });
 
     expect(real).toBeDefined();

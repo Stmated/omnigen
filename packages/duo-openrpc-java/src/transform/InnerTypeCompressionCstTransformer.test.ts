@@ -3,7 +3,7 @@ import {IJavaOptions} from '@omnigen/target-java';
 import {PrimitiveGenerificationChoice, RealOptions} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 
-describe('Reuse Common Types', () => {
+describe('InnerTypeCompression', () => {
 
   test('CompressNo', async () => {
 
@@ -52,7 +52,7 @@ describe('Reuse Common Types', () => {
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
-    }
+    };
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', options, DEFAULT_OPENRPC_OPTIONS);
     const fileNames = [...fileContents.keys()].sort();

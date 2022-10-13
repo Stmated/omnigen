@@ -1,23 +1,23 @@
 import {AbstractJavaAstTransformer, JavaAstUtils} from '../transform';
-import {OmniModel, OmniTypeKind, OmniUtil} from '@omnigen/core';
+import {IOmniModel, OmniTypeKind, OmniUtil} from '@omnigen/core';
 import {IJavaOptions} from '../options';
-import {RealOptions, ExternalSyntaxTree, VisitorFactoryManager} from '@omnigen/core';
+import {RealOptions, IExternalSyntaxTree, VisitorFactoryManager} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: OmniModel,
+    _model: IOmniModel,
     root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    _options: RealOptions<IJavaOptions>
+    _externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
+    _options: RealOptions<IJavaOptions>,
   ): Promise<void> {
 
     const classDeclarations: Java.ClassDeclaration[] = [];
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer._javaVisitor, {
+    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
       visitClassDeclaration: (node, visitor) => {
-        AbstractJavaAstTransformer._javaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
+        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
         classDeclarations.push(node);
       },
       // visitGenericClassDeclaration: (node, visitor) => {
@@ -55,7 +55,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   private createConstructorDeclaration(
     node: Java.ClassDeclaration,
     fields: Java.Field[],
-    superArguments: Java.ArgumentDeclaration[]
+    superArguments: Java.ArgumentDeclaration[],
   ): Java.ConstructorDeclaration {
 
     const blockExpressions: Java.AbstractJavaNode[] = [];
@@ -75,7 +75,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       const argumentDeclaration = typeArguments[i];
       blockExpressions.push(new Java.Statement(new Java.AssignExpression(
         new Java.FieldReference(constructorField),
-        new Java.VariableReference(argumentDeclaration.identifier)
+        new Java.VariableReference(argumentDeclaration.identifier),
       )));
     }
 
@@ -86,9 +86,9 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       new Java.ArgumentDeclarationList(
         // TODO: Can this be handled in a better way?
         //  To intrinsically link the argument to the field? A "FieldBackedArgumentDeclaration"? Too silly?
-        ...allArguments
+        ...allArguments,
       ),
-      new Java.Block(...blockExpressions)
+      new Java.Block(...blockExpressions),
     );
   }
 
@@ -113,7 +113,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   private addSuperConstructorCall(
     superTypeRequirements: Java.ArgumentDeclaration[],
     node: Java.ClassDeclaration,
-    blockExpressions: Java.AbstractJavaNode[]
+    blockExpressions: Java.AbstractJavaNode[],
   ): Java.ArgumentDeclaration[] {
 
     if (superTypeRequirements.length == 0) {
@@ -138,9 +138,9 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       blockExpressions.push(
         new Java.Statement(
           new Java.SuperConstructorCall(
-            new Java.ArgumentList(...superConstructorArguments)
-          )
-        )
+            new Java.ArgumentList(...superConstructorArguments),
+          ),
+        ),
       );
     }
 
@@ -160,15 +160,15 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
         new Java.Annotation(
           new Java.RegularType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: "com.fasterxml.jackson.annotation.JsonProperty",
+            fqn: 'com.fasterxml.jackson.annotation.JsonProperty',
           }),
           new Java.AnnotationKeyValuePairList(
             new Java.AnnotationKeyValuePair(
               undefined,
-              new Java.Literal(schemaIdentifier)
+              new Java.Literal(schemaIdentifier),
             ),
-          )
-        )
+          ),
+        ),
       );
     }
 
@@ -186,9 +186,9 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
           new Java.Annotation(
             new Java.RegularType({
               kind: OmniTypeKind.HARDCODED_REFERENCE,
-              fqn: "javax.validation.constraints.NotNull",
+              fqn: 'javax.validation.constraints.NotNull',
             }),
-          )
+          ),
         );
       }
     }
@@ -202,7 +202,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     return new Java.ArgumentDeclaration(
       type,
       usedIdentifier,
-      annotationList
+      annotationList,
     );
   }
 

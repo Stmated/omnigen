@@ -7,7 +7,7 @@ export class VisitorFactoryManager {
     //        But if we use this central one we can change the signature later and update everywhere.
     return {
       ...base,
-      ...also
+      ...also,
     };
   }
 }

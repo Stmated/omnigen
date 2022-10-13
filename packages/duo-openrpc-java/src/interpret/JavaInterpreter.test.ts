@@ -25,8 +25,8 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
     const options: RealOptions<IJavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
-      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE
-    }
+      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+    };
 
     const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
@@ -66,7 +66,7 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind`);
 
-    expect(JavaUtil.getClassName(type.source.of)).toEqual("JsonRpcRequestParams");
+    expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
     expect(type.targetIdentifiers).toHaveLength(1);
 
     // NOTE: This is currently "REFERENCE" -- but might change later.
@@ -79,8 +79,8 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
     const options: RealOptions<IJavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
-      onPrimitiveGenerification: PrimitiveGenerificationChoice.WRAP_OR_BOX
-    }
+      onPrimitiveGenerification: PrimitiveGenerificationChoice.WRAP_OR_BOX,
+    };
 
     const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
@@ -108,7 +108,7 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
         'JsonRpcErrorResponse',
         'JsonRpcRequest',
         'JsonRpcRequestParams',
-        'JsonRpcResponse'
+        'JsonRpcResponse',
       ]);
 
     const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
@@ -117,7 +117,7 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
     const type = giveNumberGetCharResponse.object.extends?.type.omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind`);
 
-    expect(JavaUtil.getClassName(type.source.of)).toEqual("JsonRpcRequestParams");
+    expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
     expect(type.targetIdentifiers).toHaveLength(1);
     expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.PRIMITIVE);
   });
@@ -126,8 +126,8 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
     const options: RealOptions<IJavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
-      onPrimitiveGenerification: PrimitiveGenerificationChoice.ABORT
-    }
+      onPrimitiveGenerification: PrimitiveGenerificationChoice.ABORT,
+    };
 
     const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
@@ -155,7 +155,7 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
         'JsonRpcErrorResponse',
         'JsonRpcRequest',
         'JsonRpcRequestParams',
-        'JsonRpcResponse'
+        'JsonRpcResponse',
       ]);
 
     const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');

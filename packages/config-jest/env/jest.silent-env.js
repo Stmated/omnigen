@@ -1,4 +1,4 @@
-const pretty = require("pino-pretty");
+const pretty = require('pino-pretty');
 // eslint-disable-next-line no-unused-vars -- used for jsdoc type hint
 const LoggerFactory = require('@omnigen/core-log');
 const NodeEnvironment = require('jest-environment-node').TestEnvironment;
@@ -12,7 +12,7 @@ class TestEnvironment extends NodeEnvironment {
     await super.setup();
 
     /** @type {LoggerFactory.ModifierCallback} */
-    const prettyModifier = (options) => {
+    const prettyModifier = options => {
       return pretty({...options, sync: true, translateTime: true, singleLine: true, colorize: true, ignore: 'pid,hostname'});
     };
 

@@ -2,8 +2,8 @@ import * as JavaParser from 'java-parser';
 import {
   RealOptions,
   AstRootNode,
-  OmniModelParserResult,
-  ExternalSyntaxTree,
+  IOmniModelParserResult,
+  IExternalSyntaxTree,
   VisitorFactoryManager,
   AbstractNode,
 } from '@omnigen/core';
@@ -33,15 +33,15 @@ export class JavaTestUtils {
   }
 
   public static async getRootNodeFromParseResult(
-    parseResult: OmniModelParserResult<IJavaOptions>,
-    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = [],
+    parseResult: IOmniModelParserResult<IJavaOptions>,
+    externals: IExternalSyntaxTree<AstRootNode, IJavaOptions>[] = [],
   ): Promise<AstRootNode> {
     return new JavaInterpreter().buildSyntaxTree(parseResult.model, externals, parseResult.options);
   }
 
   public static async getFileContentsFromParseResult(
-    parseResult: OmniModelParserResult<IJavaOptions>,
-    externals: ExternalSyntaxTree<AstRootNode, IJavaOptions>[] = [],
+    parseResult: IOmniModelParserResult<IJavaOptions>,
+    externals: IExternalSyntaxTree<AstRootNode, IJavaOptions>[] = [],
   ): Promise<Map<string, string>> {
 
     const interpretation = await this.getRootNodeFromParseResult(parseResult, externals);

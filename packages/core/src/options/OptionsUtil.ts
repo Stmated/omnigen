@@ -5,7 +5,7 @@ import {
   IncomingOrRealOption,
   IOptions,
   OmitNever,
-  RealOptions
+  RealOptions,
 } from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -36,7 +36,7 @@ export class OptionsUtil {
     TInc extends IncomingOptions<TOpt>,
     TConverters extends OptionConverters<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
-    TReturn extends RealOptions<TOpt>,
+    TReturn extends RealOptions<TOpt>
   >(
     base: TOpt,
     incoming: TInc | undefined,
@@ -53,11 +53,11 @@ export class OptionsUtil {
     TOpt extends IOptions,
     TInc extends IncomingOptions<TOpt>,
     TConverters extends OptionConverters<TOpt>,
-    TReturn extends RealOptions<TOpt>,
+    TReturn extends RealOptions<TOpt>
   >(
     base: Required<TOpt>,
     incoming: TInc | undefined,
-    converters?: TConverters
+    converters?: TConverters,
   ): Promise<TReturn> {
 
     for (const baseKey in base) {
@@ -94,7 +94,7 @@ export class OptionsUtil {
     TOpt extends IOptions,
     TInc extends IncomingOptions<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
-    TConverters extends OptionConverters<TOpt>,
+    TConverters extends OptionConverters<TOpt>
   >(
     base: Required<TOpt>,
     incoming: TInc | undefined,
@@ -110,13 +110,6 @@ export class OptionsUtil {
       if (!Object.hasOwn(additions, additionKey)) {
         continue;
       }
-
-      const hello = {
-        a:1,
-        b:2,
-      };
-
-      console.log(hello);
 
       const addition = additions[additionKey];
       if (!addition) {
@@ -212,7 +205,7 @@ export class OptionsUtil {
           if (existingType !== newType && existingType != 'undefined') {
             logger.warn(`Set option '${camelKey}' to '${String(value)}' (but '${newType}' != '${existingType}'`);
           } else {
-            logger.info(`Set option '${camelKey}' to '${String(value)}'`);
+            logger.debug(`Set option '${camelKey}' to '${String(value)}'`);
           }
         }
       }

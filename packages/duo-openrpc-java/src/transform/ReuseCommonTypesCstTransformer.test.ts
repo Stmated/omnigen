@@ -1,6 +1,6 @@
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {IJavaOptions} from '@omnigen/target-java';
-import {Naming, OmniModelMerge, OmniUtil} from '@omnigen/core';
+import {CompressTypeNaming, Naming, OmniModelMerge, OmniUtil} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 
 describe('Reuse Common Types', () => {
@@ -13,7 +13,7 @@ describe('Reuse Common Types', () => {
         package: 'com.error10',
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
-      }
+      },
     ));
     const result11 = (await OpenRpcTestUtils.readExample(
       'openrpc', 'error-structure-1.1.json', DEFAULT_OPENRPC_OPTIONS, {
@@ -21,7 +21,7 @@ describe('Reuse Common Types', () => {
         package: 'com.error11',
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
-      }
+      },
     ));
 
     const resultMerged = OmniModelMerge.merge<IJavaOptions>([result10, result11], {
@@ -48,8 +48,14 @@ describe('Reuse Common Types', () => {
 
     const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
-    const files10 = (await JavaTestUtils.getFileContentsFromParseResult(result10, [{node: rootNodeCommon, options: resultMerged.options}]));
-    const files11 = (await JavaTestUtils.getFileContentsFromParseResult(result11, [{node: rootNodeCommon, options: resultMerged.options}]));
+    const files10 = (await JavaTestUtils.getFileContentsFromParseResult(result10, [{
+      node: rootNodeCommon,
+      options: resultMerged.options,
+    }]));
+    const files11 = (await JavaTestUtils.getFileContentsFromParseResult(result11, [{
+      node: rootNodeCommon,
+      options: resultMerged.options,
+    }]));
 
     const filesCommonNames = [...filesCommon.keys()].sort();
     const files10Names = [...files10.keys()].sort();
@@ -62,21 +68,21 @@ describe('Reuse Common Types', () => {
     ]);
 
     expect(files10Names).toEqual([
-      "ErrorUnknown.java",
-      "JsonRpcError.java",
-      "JsonRpcErrorResponse.java",
-      "JsonRpcRequest.java",
-      "JsonRpcResponse.java",
-      "ListThingsError100.java",
+      'ErrorUnknown.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcResponse.java',
+      'ListThingsError100.java',
     ]);
 
     expect(files11Names).toEqual([
-      "ErrorUnknown.java",
-      "JsonRpcError.java",
-      "JsonRpcErrorResponse.java",
-      "JsonRpcRequest.java",
-      "JsonRpcResponse.java",
-      "ListThingsError100.java",
+      'ErrorUnknown.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcResponse.java',
+      'ListThingsError100.java',
     ]);
 
     const jsonRpcRequestParamsCommon = JavaTestUtils.getParsedContent(filesCommon, 'JsonRpcRequestParams.java');
@@ -111,7 +117,88 @@ describe('Reuse Common Types', () => {
       'String',
       'Integer',
       'int',
-      'JsonNode'
+      'JsonNode',
+    ]);
+  });
+
+  test('merge-a + merge-b', async () => {
+
+    const result10 = (await OpenRpcTestUtils.readExample(
+      'openrpc', 'merge-a.json', DEFAULT_OPENRPC_OPTIONS, {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        package: 'com.a',
+        compressUnreferencedSubTypes: true,
+        compressSoloReferencedTypes: true,
+      },
+    ));
+    const result11 = (await OpenRpcTestUtils.readExample(
+      'openrpc', 'merge-b.json', DEFAULT_OPENRPC_OPTIONS, {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        package: 'com.b',
+        compressUnreferencedSubTypes: true,
+        compressSoloReferencedTypes: true,
+      },
+    ));
+
+    const resultMerged = OmniModelMerge.merge<IJavaOptions>([result10, result11], {
+      // TODO: Add capability of figuring out package automatically, common denominator for all given options
+      package: 'com.common',
+      compressUnreferencedSubTypes: true,
+      compressSoloReferencedTypes: true,
+      compressTypeNaming: CompressTypeNaming.COMMON_PREFIX,
+    });
+
+    // The merged model should (for now, we will see later) be virtually empty of functionality.
+    // It is up to each respective model to output itself as normally, but to be aware that types are common.
+    // This can for example be done at the file writing stage, where if the other model has already written
+    // the common type to disk, then we do not need to do so again if we encounter it.
+    expect(resultMerged).toBeDefined();
+    expect(resultMerged.model.types).toHaveLength(3);
+    expect(resultMerged.model.endpoints).toHaveLength(0);
+
+    expect(OmniUtil.getTypeName(resultMerged.model.types[0])).toEqual('JsonRpcRequestParams');
+
+    // The names for this type has not been solidified/gone through the syntax tree transformers.
+    // So it is still the more schema-like names, and not the target class names.
+    expect(OmniUtil.getTypeName(resultMerged.model.types[1])).toEqual('list');
+
+    const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
+    const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
+    const files10 = (await JavaTestUtils.getFileContentsFromParseResult(result10, [{
+      node: rootNodeCommon,
+      options: resultMerged.options,
+    }]));
+    const files11 = (await JavaTestUtils.getFileContentsFromParseResult(result11, [{
+      node: rootNodeCommon,
+      options: resultMerged.options,
+    }]));
+
+    const filesCommonNames = [...filesCommon.keys()].sort();
+    const filesANames = [...files10.keys()].sort();
+    const filesBNames = [...files11.keys()].sort();
+
+    expect(filesCommonNames).toEqual([
+      'JsonRpcRequestParams.java',
+      // 'ListThingsRequestParams.java',
+      'Thing.java',
+    ]);
+
+    expect(filesANames).toEqual([
+      'ErrorUnknown.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcResponse.java',
+      'ListThingsError100.java',
+    ]);
+
+    expect(filesBNames).toEqual([
+      'ErrorUnknown.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcResponse.java',
+      'ListThingsError100.java',
     ]);
   });
 });

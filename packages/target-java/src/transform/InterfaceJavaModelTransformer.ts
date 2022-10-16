@@ -2,13 +2,13 @@ import {
   CompositionKind,
   OmniCompositionType,
   OmniInheritableType,
-  IOmniInterfaceType,
-  IOmniModel,
-  IOmniObjectType,
+  OmniInterfaceType,
+  OmniModel,
+  OmniObjectType,
   OmniType,
   OmniTypeKind,
   DEFAULT_GRAPH_OPTIONS,
-  DependencyGraphBuilder, OmniUtil, IOmniModelTransformer, ITargetOptions, RealOptions,
+  DependencyGraphBuilder, OmniUtil, OmniModelTransformer, TargetOptions, RealOptions,
 } from '@omnigen/core';
 import {JavaDependencyGraph} from '../JavaDependencyGraph';
 
@@ -17,14 +17,14 @@ import {JavaDependencyGraph} from '../JavaDependencyGraph';
  * One that is the original, and one that is the interface version, pointing to the original.
  * It then replaces the types where needed.
  */
-export class InterfaceJavaModelTransformer implements IOmniModelTransformer<ITargetOptions> {
+export class InterfaceJavaModelTransformer implements OmniModelTransformer<TargetOptions> {
 
-  transformModel(model: IOmniModel, _options: RealOptions<ITargetOptions>): void {
+  transformModel(model: OmniModel, _options: RealOptions<TargetOptions>): void {
 
     const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
     const graph = DependencyGraphBuilder.build(exportableTypes.all, DEFAULT_GRAPH_OPTIONS);
 
-    const interfaceMap = new Map<OmniType, IOmniInterfaceType>();
+    const interfaceMap = new Map<OmniType, OmniInterfaceType>();
 
     for (const type of exportableTypes.all) {
 
@@ -80,15 +80,15 @@ export class InterfaceJavaModelTransformer implements IOmniModelTransformer<ITar
 
   private getOrCreateInterfaceType(
     type: OmniInheritableType,
-    interfaceMap: Map<OmniType, IOmniInterfaceType>,
-  ): [IOmniInterfaceType, 'existed' | 'new'] {
+    interfaceMap: Map<OmniType, OmniInterfaceType>,
+  ): [OmniInterfaceType, 'existed' | 'new'] {
 
     const existing = interfaceMap.get(type);
     if (existing) {
       return [existing, 'existed'];
     }
 
-    const interfaceType: IOmniInterfaceType = {
+    const interfaceType: OmniInterfaceType = {
       kind: OmniTypeKind.INTERFACE,
       of: type,
     };
@@ -101,7 +101,7 @@ export class InterfaceJavaModelTransformer implements IOmniModelTransformer<ITar
     return [interfaceType, 'new'];
   }
 
-  private addInterfaceToOriginalType(type: IOmniObjectType | IOmniInterfaceType, interfaceType: IOmniInterfaceType): void {
+  private addInterfaceToOriginalType(type: OmniObjectType | OmniInterfaceType, interfaceType: OmniInterfaceType): void {
 
     if (type.extendedBy) {
 

@@ -1,25 +1,25 @@
 import {
   Naming,
-  IOmniExternalModelReferenceType,
-  IOmniModel,
-  IOmniModelParserResult,
-  IOmniObjectType,
-  IOmniProperty,
+  OmniExternalModelReferenceType,
+  OmniModel,
+  OmniModelParserResult,
+  OmniObjectType,
+  OmniProperty,
   OmniType,
   OmniTypeKind,
   OmniUtil,
   TypeName,
 } from '../parse';
 import {RealOptions} from '../options';
-import {CompressTypeNaming, ITargetOptions, OmniTypeNameReducer} from '../interpret';
+import {CompressTypeNaming, TargetOptions, OmniTypeNameReducer} from '../interpret';
 import {CompressTypeLevel} from './CompressTypeLevel';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(__filename);
 
-interface ICommonTypeGroupEntry {
+interface CommonTypeGroupEntry {
   type: OmniType;
-  model: IOmniModel;
+  model: OmniModel;
 }
 
 /**
@@ -42,10 +42,10 @@ export class OmniModelMerge {
    * @param results The different models that should be attempted to be merged
    * @param options The target options, which might be a merge of the different targets', or something of its own.
    */
-  public static merge<TOpt extends ITargetOptions>(
-    results: IOmniModelParserResult<TOpt>[],
+  public static merge<TOpt extends TargetOptions>(
+    results: OmniModelParserResult<TOpt>[],
     options: Partial<RealOptions<TOpt>>,
-  ): IOmniModelParserResult<TOpt> {
+  ): OmniModelParserResult<TOpt> {
 
     if (results.length == 0) {
       throw new Error(`Must give at least one model to merge`);
@@ -55,7 +55,7 @@ export class OmniModelMerge {
       return results[0];
     }
 
-    const common: IOmniModel = {
+    const common: OmniModel = {
       name: results.map(it => it.model.name).join(' & '),
       endpoints: [],
       types: [],
@@ -85,7 +85,7 @@ export class OmniModelMerge {
     commonOptions = {...commonOptions, ...options};
     common.options = commonOptions;
 
-    const allTypes: ICommonTypeGroupEntry[] = results
+    const allTypes: CommonTypeGroupEntry[] = results
       .map(it => it.model)
       .flatMap(model => {
 
@@ -100,7 +100,7 @@ export class OmniModelMerge {
         });
       });
 
-    const commonTypesGroups: ICommonTypeGroupEntry[][] = [];
+    const commonTypesGroups: CommonTypeGroupEntry[][] = [];
     const flatCommonTypes = new Set<OmniType>();
 
     // We need to sort the common types so they are in order of extensions
@@ -169,7 +169,7 @@ export class OmniModelMerge {
         }
       }
 
-      const replacement: IOmniExternalModelReferenceType<OmniType> = {
+      const replacement: OmniExternalModelReferenceType<OmniType> = {
         kind: OmniTypeKind.EXTERNAL_MODEL_REFERENCE,
         model: common,
         of: commonType,
@@ -220,12 +220,12 @@ export class OmniModelMerge {
   }
 
   private static findAlikeTypes(
-    type: ICommonTypeGroupEntry,
-    types: ICommonTypeGroupEntry[],
+    type: CommonTypeGroupEntry,
+    types: CommonTypeGroupEntry[],
     level: CompressTypeLevel,
-  ): ICommonTypeGroupEntry[] {
+  ): CommonTypeGroupEntry[] {
 
-    const alike: ICommonTypeGroupEntry[] = [];
+    const alike: CommonTypeGroupEntry[] = [];
     for (const otherType of types) {
 
       if (otherType.type == type.type) {
@@ -275,8 +275,8 @@ export class OmniModelMerge {
   }
 
   private static isAlikeObjects(
-    a: IOmniObjectType,
-    b: IOmniObjectType,
+    a: OmniObjectType,
+    b: OmniObjectType,
     level: CompressTypeLevel,
   ): boolean {
 
@@ -429,8 +429,8 @@ export class OmniModelMerge {
   }
 
   private static isAlikeProperties(
-    aProp: IOmniProperty,
-    bProp: IOmniProperty,
+    aProp: OmniProperty,
+    bProp: OmniProperty,
     level: CompressTypeLevel,
   ): boolean {
 

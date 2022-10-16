@@ -1,29 +1,29 @@
 import {
   CompositionKind,
   OmniInheritableType,
-  IOmniObjectType,
+  OmniObjectType,
   OmniType,
   OmniTypeKind,
-  IDependencyGraph,
+  DependencyGraph,
   OmniUtil,
 } from '@omnigen/core';
 
-export type SuperMatchesCallback = { (classType: IOmniObjectType): boolean };
+export type SuperMatchesCallback = { (classType: OmniObjectType): boolean };
 
 /**
  * TODO: This class sucks -- it feels like pre-optimization, and just makes things more complex than they need to be
  */
 export class JavaDependencyGraph {
 
-  public static isInterface(graph: IDependencyGraph, type: OmniType): boolean {
+  public static isInterface(graph: DependencyGraph, type: OmniType): boolean {
     return graph.interfaces.includes(type);
   }
 
-  public static isClass(graph: IDependencyGraph, type: OmniType): boolean {
+  public static isClass(graph: DependencyGraph, type: OmniType): boolean {
     return !JavaDependencyGraph.isInterface(graph, type);
   }
 
-  public static getExtends(graph: IDependencyGraph, type: OmniInheritableType): OmniInheritableType | undefined {
+  public static getExtends(graph: DependencyGraph, type: OmniInheritableType): OmniInheritableType | undefined {
 
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
       // The XOR composition class does in Java not actually extend anything.
@@ -56,7 +56,7 @@ export class JavaDependencyGraph {
     return undefined;
   }
 
-  public static getImplements(graph: IDependencyGraph, type: OmniInheritableType): OmniType[] {
+  public static getImplements(graph: DependencyGraph, type: OmniInheritableType): OmniType[] {
 
     const interfaces: OmniType[] = [];
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
@@ -81,7 +81,7 @@ export class JavaDependencyGraph {
    * Get the types that implement the given class.
    * There is a difference between implementing (interface) and extending (class)
    */
-  public static getTypesThatImplement(graph: IDependencyGraph, type: OmniInheritableType): OmniType[] {
+  public static getTypesThatImplement(graph: DependencyGraph, type: OmniInheritableType): OmniType[] {
 
     const interfaces: OmniType[] = [];
     if (JavaDependencyGraph.isInterface(graph, type)) {
@@ -103,8 +103,8 @@ export class JavaDependencyGraph {
   }
 
   public static superMatches(
-    graph: IDependencyGraph,
-    type: IOmniObjectType,
+    graph: DependencyGraph,
+    type: OmniObjectType,
     callback: SuperMatchesCallback,
   ): boolean {
 

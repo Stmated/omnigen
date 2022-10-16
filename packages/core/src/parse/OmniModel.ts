@@ -2,7 +2,7 @@ import {JSONSchema7Definition} from 'json-schema';
 
 export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
 
-export interface IOmniParameter {
+export interface OmniParameter {
   name: string;
   description?: string;
   summary?: string;
@@ -11,9 +11,9 @@ export interface IOmniParameter {
   deprecated: boolean;
 }
 
-export interface IOmniAnnotation {
+export interface OmniAnnotation {
   name: string;
-  parameters: IOmniParameter[];
+  parameters: OmniParameter[];
 }
 
 export enum OmniAccessLevel {
@@ -28,7 +28,7 @@ export enum OmniArrayImplementationType {
   SET,
 }
 
-export interface IOmniProperty {
+export interface OmniProperty {
   name: string;
   fieldName?: string;
   propertyName?: string;
@@ -44,7 +44,7 @@ export interface IOmniProperty {
 
   accessLevel?: OmniAccessLevel;
 
-  annotations?: IOmniAnnotation[];
+  annotations?: OmniAnnotation[];
 }
 
 /**
@@ -97,34 +97,34 @@ export enum OmniPrimitiveKind {
 }
 
 type OmniAlwaysNullKnownKind = OmniTypeKind.NULL;
-export type OmniNullType = IOmniBaseType<OmniAlwaysNullKnownKind>;
+export type OmniNullType = OmniBaseType<OmniAlwaysNullKnownKind>;
 
 // TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
 
-export type OmniArrayTypes = IOmniArrayType | IOmniArrayPropertiesByPositionType | IOmniArrayTypesByPositionType;
-export type OmniCompositionType = IOmniCompositionAndType | IOmniCompositionXorType | IOmniCompositionOrType | IOmniCompositionNotType;
-export type OmniGenericIdentifierType = IOmniGenericSourceIdentifierType | IOmniGenericTargetIdentifierType;
-export type OmniGenericType = OmniGenericIdentifierType | IOmniGenericSourceType | IOmniGenericTargetType;
-export type OmniInheritableType = IOmniObjectType
-  | IOmniGenericTargetType
+export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType | OmniArrayTypesByPositionType;
+export type OmniCompositionType = OmniCompositionAndType | OmniCompositionXorType | OmniCompositionOrType | OmniCompositionNotType;
+export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
+export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
+export type OmniInheritableType = OmniObjectType
+  | OmniGenericTargetType
   | OmniCompositionType
-  | IOmniEnumType
-  | IOmniInterfaceType
-  | IOmniExternalModelReferenceType<OmniInheritableType> // Needs to be unwrapped/resolved every time
+  | OmniEnumType
+  | OmniInterfaceType
+  | OmniExternalModelReferenceType<OmniInheritableType> // Needs to be unwrapped/resolved every time
   ;
 
 export type OmniType = OmniNullType
   | OmniArrayTypes
-  | IOmniObjectType
-  | IOmniUnknownType
-  | IOmniDictionaryType
-  | IOmniHardcodedReferenceType
-  | IOmniExternalModelReferenceType<OmniType>
-  | IOmniPrimitiveType
+  | OmniObjectType
+  | OmniUnknownType
+  | OmniDictionaryType
+  | OmniHardcodedReferenceType
+  | OmniExternalModelReferenceType<OmniType>
+  | OmniPrimitiveType
   | OmniCompositionType
-  | IOmniEnumType
+  | OmniEnumType
   | OmniGenericType
-  | IOmniInterfaceType
+  | OmniInterfaceType
   ;
 
 export type TypeNameFn = (value: string) => boolean;
@@ -132,7 +132,7 @@ export type TypeNameCallback = { (hasDuplicateFn?: TypeNameFn): string | undefin
 export type TypeNameSingle = string | TypeNameCallback | undefined;
 export type TypeName = TypeNameSingle | Array<TypeName>;
 
-export interface IOmniNamedType {
+export interface OmniNamedType {
 
   /**
    * The name of the type.
@@ -145,11 +145,11 @@ export interface IOmniNamedType {
   name: TypeName;
 }
 
-export interface IOmniOptionallyNamedType {
+export interface OmniOptionallyNamedType {
   name?: TypeName;
 }
 
-export interface IOmniBaseType<T> {
+export interface OmniBaseType<T> {
 
   kind: T;
   accessLevel?: OmniAccessLevel;
@@ -173,15 +173,15 @@ export enum CompositionKind {
 
 type GenericCompositionKnownKind = OmniTypeKind.COMPOSITION;
 
-export interface IOmniCompositionBaseType<T> extends IOmniBaseType<GenericCompositionKnownKind>, IOmniOptionallyNamedType {
+export interface OmniCompositionBaseType<T> extends OmniBaseType<GenericCompositionKnownKind>, OmniOptionallyNamedType {
   compositionKind: T;
 }
 
-export interface IOmniCompositionAndType extends IOmniCompositionBaseType<CompositionKind.AND> {
+export interface OmniCompositionAndType extends OmniCompositionBaseType<CompositionKind.AND> {
   andTypes: OmniType[];
 }
 
-export interface IOmniCompositionNotType extends IOmniCompositionBaseType<CompositionKind.NOT> {
+export interface OmniCompositionNotType extends OmniCompositionBaseType<CompositionKind.NOT> {
   /**
    * Only one is allowed.
    * But kept as an array to make it more similar to the other composition kinds.
@@ -189,28 +189,28 @@ export interface IOmniCompositionNotType extends IOmniCompositionBaseType<Compos
   notTypes: [OmniType];
 }
 
-export interface IOmniCompositionOrType extends IOmniCompositionBaseType<CompositionKind.OR> {
+export interface OmniCompositionOrType extends OmniCompositionBaseType<CompositionKind.OR> {
   orTypes: OmniType[];
 }
 
-export interface IOmniCompositionXorType extends IOmniCompositionBaseType<CompositionKind.XOR> {
+export interface OmniCompositionXorType extends OmniCompositionBaseType<CompositionKind.XOR> {
   xorTypes: OmniType[];
 }
 
 type OmniDictionaryKnownKind = OmniTypeKind.DICTIONARY;
-export interface IOmniDictionaryType extends IOmniBaseType<OmniDictionaryKnownKind> {
+export interface OmniDictionaryType extends OmniBaseType<OmniDictionaryKnownKind> {
   keyType: OmniType;
   valueType: OmniType;
 }
 
 type OmniHardcodedReferenceKnownKind = OmniTypeKind.HARDCODED_REFERENCE;
-export interface IOmniHardcodedReferenceType extends IOmniBaseType<OmniHardcodedReferenceKnownKind> {
+export interface OmniHardcodedReferenceType extends OmniBaseType<OmniHardcodedReferenceKnownKind> {
   fqn: string;
 }
 
 type OmniExternalModelReferenceKnownKind = OmniTypeKind.EXTERNAL_MODEL_REFERENCE;
-export interface IOmniExternalModelReferenceType<TType extends OmniType> extends IOmniBaseType<OmniExternalModelReferenceKnownKind> {
-  model: IOmniModel;
+export interface OmniExternalModelReferenceType<TType extends OmniType> extends OmniBaseType<OmniExternalModelReferenceKnownKind> {
+  model: OmniModel;
   of: TType;
   /**
    * @deprecated REMOVE! NOT NEEDED!
@@ -219,7 +219,7 @@ export interface IOmniExternalModelReferenceType<TType extends OmniType> extends
 }
 
 type OmniArrayKnownKind = OmniTypeKind.ARRAY;
-export interface IOmniArrayType extends IOmniBaseType<OmniArrayKnownKind> {
+export interface OmniArrayType extends OmniBaseType<OmniArrayKnownKind> {
   of: OmniType;
   minLength?: number;
   maxLength?: number;
@@ -229,21 +229,21 @@ export interface IOmniArrayType extends IOmniBaseType<OmniArrayKnownKind> {
 
 type OmniArrayPropertiesByPositionKnownKind = OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION;
 
-export type OmniPropertyOwner = IOmniObjectType | IOmniArrayPropertiesByPositionType;
+export type OmniPropertyOwner = OmniObjectType | OmniArrayPropertiesByPositionType;
 
 /**
  * Similar to GenericArrayType, but this solves issue of having a list of types in a static order.
  * It DOES NOT mean "any of these types" or "one of these types", it means "THESE TYPES IN THIS ORDER IN THIS ARRAY"
  */
-export interface IOmniArrayPropertiesByPositionType extends IOmniBaseType<OmniArrayPropertiesByPositionKnownKind> {
+export interface OmniArrayPropertiesByPositionType extends OmniBaseType<OmniArrayPropertiesByPositionKnownKind> {
 
-  properties: IOmniProperty[];
+  properties: OmniProperty[];
   commonDenominator?: OmniType;
   implementationType?: OmniArrayImplementationType;
 }
 
 type OmniArrayTypesByPositionKnownKind = OmniTypeKind.ARRAY_TYPES_BY_POSITION;
-export interface IOmniArrayTypesByPositionType extends IOmniBaseType<OmniArrayTypesByPositionKnownKind> {
+export interface OmniArrayTypesByPositionType extends OmniBaseType<OmniArrayTypesByPositionKnownKind> {
 
   types: OmniType[];
   commonDenominator?: OmniType;
@@ -252,7 +252,7 @@ export interface IOmniArrayTypesByPositionType extends IOmniBaseType<OmniArrayTy
 
 type OmniInterfaceTypeKnownKind = OmniTypeKind.INTERFACE;
 
-export interface IOmniInterfaceType extends IOmniBaseType<OmniInterfaceTypeKnownKind>, IOmniOptionallyNamedType {
+export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKind>, OmniOptionallyNamedType {
   of: OmniInheritableType;
 
   /**
@@ -264,20 +264,20 @@ export interface IOmniInterfaceType extends IOmniBaseType<OmniInterfaceTypeKnown
 }
 
 type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
-export interface IOmniUnknownType extends IOmniBaseType<OmniUnknownKnownKind> {
+export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
   valueConstant?: OmniPrimitiveConstantValue;
   isAny?: boolean;
 }
 
 type OmniObjectKnownKind = OmniTypeKind.OBJECT;
 
-export interface IOmniSubTypeHint {
+export interface OmniSubTypeHint {
 
   type: OmniType;
-  qualifiers: IOmniPayloadPathQualifier[];
+  qualifiers: OmniPayloadPathQualifier[];
 }
 
-export interface IOmniObjectType extends IOmniBaseType<OmniObjectKnownKind>, IOmniNamedType {
+export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind>, OmniNamedType {
 
   /**
    * This type can only be extended by "one" thing.
@@ -294,9 +294,9 @@ export interface IOmniObjectType extends IOmniBaseType<OmniObjectKnownKind>, IOm
    * If there is a runtime mapping, then we do not need to do it manually in the target language's code.
    * This is predicated on the language having some other method of doing it, though. Like Java @JsonTypeInfo and @JsonSubTypes
    */
-  subTypeHints?: IOmniSubTypeHint[];
+  subTypeHints?: OmniSubTypeHint[];
 
-  properties: IOmniProperty[];
+  properties: OmniProperty[];
   // requiredProperties?: OmniProperty[];
   additionalProperties?: boolean;
 }
@@ -316,7 +316,7 @@ export enum PrimitiveNullableKind {
   NOT_NULLABLE_PRIMITIVE,
 }
 
-export interface IOmniPrimitiveType extends IOmniBaseType<OmniPrimitiveKnownKind> {
+export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKnownKind> {
   primitiveKind: OmniPrimitiveKind;
   /**
    * Nullable means the primitive is for example not a "boolean" but a nullable "Boolean"
@@ -337,7 +337,7 @@ export type AllowedEnumTsTypes = number | string;
 export type AllowedEnumOmniPrimitiveTypes = OmniPrimitiveKind.STRING | OmniPrimitiveTypeKinds;
 
 type OmniEnumKnownKind = OmniTypeKind.ENUM;
-export interface IOmniEnumType extends IOmniBaseType<OmniEnumKnownKind>, IOmniNamedType {
+export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];
   primitiveKind: AllowedEnumOmniPrimitiveTypes;
 
@@ -353,7 +353,7 @@ export interface IOmniEnumType extends IOmniBaseType<OmniEnumKnownKind>, IOmniNa
 
 type OmniGenericSourceIdentifierKnownKind = OmniTypeKind.GENERIC_SOURCE_IDENTIFIER;
 // TODO: Should this actually be a type, and not just something simpler? Since it can ONLY exist inside a OmniGenericSourceType...
-export interface IOmniGenericSourceIdentifierType extends IOmniBaseType<OmniGenericSourceIdentifierKnownKind> {
+export interface OmniGenericSourceIdentifierType extends OmniBaseType<OmniGenericSourceIdentifierKnownKind> {
 
   placeholderName: string;
   lowerBound?: OmniType;
@@ -361,13 +361,13 @@ export interface IOmniGenericSourceIdentifierType extends IOmniBaseType<OmniGene
 }
 
 type OmniGenericTargetIdentifierKnownKind = OmniTypeKind.GENERIC_TARGET_IDENTIFIER;
-export interface IOmniGenericTargetIdentifierType extends IOmniBaseType<OmniGenericTargetIdentifierKnownKind> {
+export interface OmniGenericTargetIdentifierType extends OmniBaseType<OmniGenericTargetIdentifierKnownKind> {
 
   /**
    * If no placeholder name is set, then it has the same placeholder name as the sourceIdentifier.
    */
   placeholderName?: string;
-  sourceIdentifier: IOmniGenericSourceIdentifierType;
+  sourceIdentifier: OmniGenericSourceIdentifierType;
   type: OmniType;
 }
 
@@ -376,25 +376,25 @@ type OmniGenericSourceKnownKind = OmniTypeKind.GENERIC_SOURCE;
 /**
  * TODO: Rename this into a GenericDeclaration?
  */
-export interface IOmniGenericSourceType extends IOmniBaseType<OmniGenericSourceKnownKind> {
-  of: IOmniObjectType;
-  sourceIdentifiers: IOmniGenericSourceIdentifierType[];
+export interface OmniGenericSourceType extends OmniBaseType<OmniGenericSourceKnownKind> {
+  of: OmniObjectType;
+  sourceIdentifiers: OmniGenericSourceIdentifierType[];
 }
 
 type OmniGenericTargetKnownKind = OmniTypeKind.GENERIC_TARGET;
-export interface IOmniGenericTargetType extends IOmniBaseType<OmniGenericTargetKnownKind> {
-  source: IOmniGenericSourceType;
-  targetIdentifiers: IOmniGenericTargetIdentifierType[];
+export interface OmniGenericTargetType extends OmniBaseType<OmniGenericTargetKnownKind> {
+  source: OmniGenericSourceType;
+  targetIdentifiers: OmniGenericTargetIdentifierType[];
 }
 
-export interface IOmniInput {
+export interface OmniInput {
   description?: string;
   contentType: string;
 
   type: OmniType;
 }
 
-export interface IOmniOutput {
+export interface OmniOutput {
   name: string;
   description?: string;
   summary?: string;
@@ -403,19 +403,19 @@ export interface IOmniOutput {
   required: boolean;
   deprecated: boolean;
 
-  qualifiers?: IOmniPayloadPathQualifier[];
+  qualifiers?: OmniPayloadPathQualifier[];
 }
 
-export interface IOmniExampleParam {
+export interface OmniExampleParam {
   name: string;
-  property: IOmniProperty;
+  property: OmniProperty;
   description?: string;
   summary?: string;
   type: OmniType;
   value: unknown;
 }
 
-export interface IOmniExampleResult {
+export interface OmniExampleResult {
   name: string;
   summary?: string;
   description?: string;
@@ -423,12 +423,12 @@ export interface IOmniExampleResult {
   value: unknown;
 }
 
-export interface IOmniExamplePairing {
+export interface OmniExamplePairing {
   name: string;
   description?: string;
   summary?: string;
-  params?: IOmniExampleParam[];
-  result: IOmniExampleResult;
+  params?: OmniExampleParam[];
+  result: OmniExampleResult;
 }
 
 export enum OmniComparisonOperator {
@@ -436,30 +436,30 @@ export enum OmniComparisonOperator {
   DEFINED,
 }
 
-export interface IOmniPayloadPathQualifier {
+export interface OmniPayloadPathQualifier {
   path: string[];
   operator: OmniComparisonOperator;
   value?: unknown;
 }
 
-export interface IOmniEndpoint {
+export interface OmniEndpoint {
   name: string;
   description?: string;
   summary?: string;
   async: boolean;
   deprecated?: boolean;
   path: string;
-  externalDocumentations?: IOmniExternalDocumentation[];
-  requestQualifiers: IOmniPayloadPathQualifier[];
+  externalDocumentations?: OmniExternalDocumentation[];
+  requestQualifiers: OmniPayloadPathQualifier[];
 
-  request: IOmniInput;
-  responses: IOmniOutput[];
-  examples: IOmniExamplePairing[];
+  request: OmniInput;
+  responses: OmniOutput[];
+  examples: OmniExamplePairing[];
 
   // parameters: GenericParameter[];
 }
 
-export interface IOmniServer {
+export interface OmniServer {
   name: string;
   description?: string;
   summary?: string;
@@ -467,61 +467,61 @@ export interface IOmniServer {
   variables: Map<string, unknown>;
 }
 
-export interface IOmniExternalDocumentation {
+export interface OmniExternalDocumentation {
   url: string;
   description?: string;
 }
 
-export interface IOmniLicense {
+export interface OmniLicense {
   name: string;
   url: string;
 }
 
-export interface IOmniContact {
+export interface OmniContact {
   name?: string;
   email?: string;
   url?: string;
 }
 
-export interface IOmniLinkSourceParameter {
-  propertyPath?: IOmniProperty[];
+export interface OmniLinkSourceParameter {
+  propertyPath?: OmniProperty[];
   constantValue?: unknown;
 }
 
-export interface IOmniLinkTargetParameter {
-  propertyPath: IOmniProperty[];
+export interface OmniLinkTargetParameter {
+  propertyPath: OmniProperty[];
 }
 
-export interface IOmniLinkMapping {
-  source: IOmniLinkSourceParameter;
-  target: IOmniLinkTargetParameter;
+export interface OmniLinkMapping {
+  source: OmniLinkSourceParameter;
+  target: OmniLinkTargetParameter;
 }
 
-export interface IOmniLink {
-  sourceModel?: IOmniModel;
-  targetModel?: IOmniModel;
-  mappings: IOmniLinkMapping[];
+export interface OmniLink {
+  sourceModel?: OmniModel;
+  targetModel?: OmniModel;
+  mappings: OmniLinkMapping[];
 
   description?: string;
   summary?: string;
 
-  server?: IOmniServer;
+  server?: OmniServer;
 }
 
-export interface IOmniModel {
+export interface OmniModel {
   name: string;
   description?: string;
   version: string;
   schemaType: 'openrpc' | 'openapi' | 'other';
   schemaVersion: string;
-  contact?: IOmniContact;
-  license?: IOmniLicense;
+  contact?: OmniContact;
+  license?: OmniLicense;
   termsOfService?: string;
-  endpoints: IOmniEndpoint[];
+  endpoints: OmniEndpoint[];
   types: OmniType[];
-  servers: IOmniServer[];
-  externalDocumentations?: IOmniExternalDocumentation[];
-  continuations?: IOmniLink[];
+  servers: OmniServer[];
+  externalDocumentations?: OmniExternalDocumentation[];
+  continuations?: OmniLink[];
 
   /**
    * Any options given from the schema to the model.

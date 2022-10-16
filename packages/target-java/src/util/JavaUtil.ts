@@ -2,9 +2,9 @@ import {camelCase, pascalCase} from 'change-case';
 import {
   AstRootNode,
   CompositionKind,
-  IOmniPrimitiveType,
-  IOmniProperty,
-  IPackageOptions,
+  OmniPrimitiveType,
+  OmniProperty,
+  PackageOptions,
   Naming,
   OmniCompositionType,
   OmniPrimitiveKind,
@@ -15,28 +15,28 @@ import {
   RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, IJavaOptions, UnknownType} from '../options';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '../options';
 import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
 
-export interface ITypeNameInfo {
+export interface TypeNameInfo {
   packageName: string | undefined;
   className: string;
   outerTypeNames: string[];
 }
 
-interface IFqnOptions {
+interface FqnOptions {
   type: OmniType,
-  options?: RealOptions<IJavaOptions>;
+  options?: RealOptions<JavaOptions>;
   withSuffix?: boolean;
   withPackage?: boolean;
   withInner?: string[];
   implementation?: boolean;
   boxed?: boolean;
-  localNames?: Map<OmniType, ITypeNameInfo>;
+  localNames?: Map<OmniType, TypeNameInfo>;
 }
 
-export type FqnArgs = OmniType | IFqnOptions;
+export type FqnArgs = OmniType | FqnOptions;
 
 export class JavaUtil {
 
@@ -64,7 +64,7 @@ export class JavaUtil {
 
   public static getClassNameForImport(
     type: OmniType,
-    options: RealOptions<IJavaOptions>,
+    options: RealOptions<JavaOptions>,
     implementation: boolean | undefined,
   ): string | undefined {
 
@@ -89,7 +89,7 @@ export class JavaUtil {
    * @param type
    * @param options
    */
-  public static getClassName(type: OmniType, options?: RealOptions<IJavaOptions>): string {
+  public static getClassName(type: OmniType, options?: RealOptions<JavaOptions>): string {
     return JavaUtil.getName({
       type: type,
       options: options,
@@ -105,7 +105,7 @@ export class JavaUtil {
    *
    * @param args
    */
-  public static getName(args: IFqnOptions): string {
+  public static getName(args: FqnOptions): string {
 
     if (args.localNames) {
 
@@ -222,14 +222,14 @@ export class JavaUtil {
         if (args.type.name) {
 
           const name = Naming.safe(args.type.name);
-          const commonOptions = args.type.model.options as RealOptions<IJavaOptions> || args.options;
+          const commonOptions = args.type.model.options as RealOptions<JavaOptions> || args.options;
           return JavaUtil.getClassNameWithPackageName(args.type, name, commonOptions, args.withPackage);
         }
 
         if (args.type.model.options) {
 
           // TODO: This way of handling it is INCREDIBLY UGLY -- need a way to make this actually typesafe!
-          const commonOptions = args.type.model.options as RealOptions<IJavaOptions>;
+          const commonOptions = args.type.model.options as RealOptions<JavaOptions>;
           return JavaUtil.getName({...args, type: args.type.of, options: commonOptions});
         }
 
@@ -241,7 +241,7 @@ export class JavaUtil {
   public static getClassNameWithPackageName(
     type: OmniType,
     typeName: string,
-    options?: RealOptions<IPackageOptions>,
+    options?: RealOptions<PackageOptions>,
     withPackage?: boolean,
   ): string {
 
@@ -260,7 +260,7 @@ export class JavaUtil {
     return typeName;
   }
 
-  public static getPackageName(type: OmniType, typeName: string, options: RealOptions<IPackageOptions>): string {
+  public static getPackageName(type: OmniType, typeName: string, options: RealOptions<PackageOptions>): string {
 
     return options.packageResolver
       ? options.packageResolver(type, typeName, options)
@@ -276,7 +276,7 @@ export class JavaUtil {
     }
   }
 
-  private static getCompositionClassName(type: OmniCompositionType, args: IFqnOptions): string {
+  private static getCompositionClassName(type: OmniCompositionType, args: FqnOptions): string {
 
     if (type.name) {
       return Naming.safe(type.name);
@@ -315,7 +315,7 @@ export class JavaUtil {
     return `${prefix}${[...uniqueNames].join(delimiter)}`;
   }
 
-  public static getPrimitiveTypeName(type: IOmniPrimitiveType): string {
+  public static getPrimitiveTypeName(type: OmniPrimitiveType): string {
 
     // The primitive nullable kind might be NOT_NULLABLE_PRIMITIVE.
     // Then in the end it will probably be a completely other type, depending on the language.
@@ -323,7 +323,7 @@ export class JavaUtil {
     return JavaUtil.getPrimitiveKindName(type.primitiveKind, JavaUtil.isPrimitiveBoxed(type));
   }
 
-  private static isPrimitiveBoxed(type: IOmniPrimitiveType): boolean {
+  private static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
     return (type.nullable !== undefined && type.nullable == PrimitiveNullableKind.NULLABLE);
   }
 
@@ -633,7 +633,7 @@ export class JavaUtil {
     return false;
   }
 
-  public static toUnboxedPrimitiveType<T extends IOmniPrimitiveType>(type: T): T | IOmniPrimitiveType {
+  public static toUnboxedPrimitiveType<T extends OmniPrimitiveType>(type: T): T | OmniPrimitiveType {
     if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable == PrimitiveNullableKind.NULLABLE) {
       return {
         ...type,
@@ -644,9 +644,9 @@ export class JavaUtil {
     return type;
   }
 
-  public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): IOmniProperty[] {
+  public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
 
-    const properties: IOmniProperty[] = [];
+    const properties: OmniProperty[] = [];
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
 
       // Collecting properties from an XOR composition makes no sense, since we cannot know which needs implementing.

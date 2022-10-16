@@ -1,6 +1,6 @@
-import {IOptionParser} from './IOptions';
+import {OptionParser} from './Options';
 
-export class BooleanOptionsParser implements IOptionParser<boolean> {
+export class BooleanOptionsParser implements OptionParser<boolean> {
 
   parse(raw: unknown): boolean {
 

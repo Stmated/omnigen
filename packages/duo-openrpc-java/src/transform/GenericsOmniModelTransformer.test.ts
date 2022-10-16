@@ -1,6 +1,6 @@
 import {TestUtils} from '@omnigen/utils-test';
 import {JavaUtil} from '@omnigen/target-java';
-import {IOmniModel, OmniPrimitiveKind, OmniTypeKind, GenericsOmniModelTransformer} from '@omnigen/core';
+import {OmniModel, OmniPrimitiveKind, OmniTypeKind, GenericsOmniModelTransformer} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '@omnigen/duo-openrpc-java-test';
 
 describe('Test CompositionDependencyUtil', () => {
@@ -9,7 +9,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const transformer = new GenericsOmniModelTransformer();
 
-    const model: IOmniModel = {
+    const model: OmniModel = {
       name: 'model',
       schemaType: 'other',
       schemaVersion: '1.0',
@@ -57,7 +57,7 @@ describe('Test CompositionDependencyUtil', () => {
       }),
     ]);
 
-    const model: IOmniModel = {
+    const model: OmniModel = {
       name: 'model',
       schemaType: 'other',
       schemaVersion: '1.0',

@@ -1,3 +1,3 @@
 
-export * from './ITransformer';
+export * from './Transformer';
 export * from './AbstractAstTransformer';

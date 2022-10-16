@@ -1,4 +1,4 @@
 import {OmniType} from '../parse';
-import {IPackageOptions} from '../options';
+import {PackageOptions} from '../options';
 
-export type IPackageResolver = (type: OmniType, typeName: string, options: IPackageOptions) => string;
+export type IPackageResolver = (type: OmniType, typeName: string, options: PackageOptions) => string;

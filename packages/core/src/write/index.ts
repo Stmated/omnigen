@@ -1,3 +1,3 @@
 
 export * from './AbstractWriter';
-export * from './IWriter';
+export * from './Writer';

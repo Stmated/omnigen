@@ -1,5 +1,5 @@
 import {AbstractInterpreter, AstRootNode} from '@omnigen/core';
-import {IJavaOptions} from '../options';
+import {JavaOptions} from '../options';
 import {
   BaseJavaAstTransformer,
   AddConstructorJavaAstTransformer,
@@ -9,7 +9,7 @@ import {
 } from '../transform';
 import * as Java from '../ast';
 
-export class JavaInterpreter extends AbstractInterpreter<IJavaOptions> {
+export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
   constructor() {
     super();
     this.registerTransformer(new BaseJavaAstTransformer());

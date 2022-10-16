@@ -1,9 +1,9 @@
-import {AstRootNode, IAstNode, IAstVisitor, VisitFn, VisitResult} from '@omnigen/core';
+import {AstRootNode, AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
 
-export type JavaVisitFn<in N extends IAstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
+export type JavaVisitFn<in N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
-export class JavaVisitor<R> implements IAstVisitor<R> {
+export class JavaVisitor<R> implements AstVisitor<R> {
 
   constructor() {
 
@@ -275,7 +275,7 @@ export class JavaVisitor<R> implements IAstVisitor<R> {
   }
 
   visitorJava: JavaVisitor<R>;
-  visitRootNode: VisitFn<AstRootNode, R, IAstVisitor<R>>;
+  visitRootNode: VisitFn<AstRootNode, R, AstVisitor<R>>;
   visitRegularType: JavaVisitFn<Java.RegularType, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;

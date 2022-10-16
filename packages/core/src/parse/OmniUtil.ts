@@ -1,19 +1,19 @@
 import {
   CompositionKind,
-  IOmniArrayType,
-  IOmniDictionaryType,
-  IOmniExternalModelReferenceType,
+  OmniArrayType,
+  OmniDictionaryType,
+  OmniExternalModelReferenceType,
   Naming,
-  IOmniArrayPropertiesByPositionType,
-  IOmniGenericTargetIdentifierType,
-  IOmniGenericTargetType,
+  OmniArrayPropertiesByPositionType,
+  OmniGenericTargetIdentifierType,
+  OmniGenericTargetType,
   OmniInheritableType,
-  IOmniModel,
+  OmniModel,
   OmniPrimitiveConstantValue,
   OmniPrimitiveConstantValueOrLazySubTypeValue,
   OmniPrimitiveKind,
-  IOmniPrimitiveType,
-  IOmniProperty,
+  OmniPrimitiveType,
+  OmniProperty,
   OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
@@ -22,14 +22,14 @@ import {
 } from '../parse';
 import {LiteralValue} from './LiteralValue';
 
-export interface ITypeCollection {
+export interface TypeCollection {
 
   named: OmniType[];
   all: OmniType[];
   edge: OmniType[];
 }
 
-type TargetIdentifierTuple = { a: IOmniGenericTargetIdentifierType, b: IOmniGenericTargetIdentifierType };
+type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType };
 
 export type TraverseInput = OmniType | OmniType[] | undefined;
 export type TraverseCallbackResult = 'abort' | 'skip' | void;
@@ -37,7 +37,7 @@ export type TraverseCallback = { (type: OmniType, depth: number): TraverseCallba
 
 export class OmniUtil {
 
-  public static getAllExportableTypes(model: IOmniModel, refTypes?: OmniType[]): ITypeCollection {
+  public static getAllExportableTypes(model: OmniModel, refTypes?: OmniType[]): TypeCollection {
 
     // TODO: Should be an option to do a deep dive or a quick dive!
     const set = new Set<OmniType>();
@@ -171,7 +171,7 @@ export class OmniUtil {
    *
    * @param type
    */
-  public static getUnwrappedType(type: OmniType): Exclude<OmniType, IOmniExternalModelReferenceType<any>> {
+  public static getUnwrappedType(type: OmniType): Exclude<OmniType, OmniExternalModelReferenceType<any>> {
 
     if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
       return OmniUtil.getUnwrappedType(type.of);
@@ -303,7 +303,7 @@ export class OmniUtil {
    *
    * @param type
    */
-  public static getPropertiesOf(type: OmniType): IOmniProperty[] {
+  public static getPropertiesOf(type: OmniType): OmniProperty[] {
 
     if (type.kind == OmniTypeKind.OBJECT) {
       return type.properties;
@@ -364,9 +364,9 @@ export class OmniUtil {
     }
   }
 
-  public static getClosestProperty(type: OmniType, propertyName: string): IOmniProperty | undefined {
+  public static getClosestProperty(type: OmniType, propertyName: string): OmniProperty | undefined {
 
-    const reference: { property?: IOmniProperty } = {};
+    const reference: { property?: OmniProperty } = {};
     OmniUtil.traverseHierarchy(type, 0, localType => {
       const property = OmniUtil.getPropertiesOf(localType).find(it => it.name == propertyName);
       if (property) {
@@ -380,7 +380,7 @@ export class OmniUtil {
     return reference.property;
   }
 
-  public static getTypesThatInheritFrom(model: IOmniModel, type: OmniType): OmniType[] {
+  public static getTypesThatInheritFrom(model: OmniModel, type: OmniType): OmniType[] {
 
     const types: OmniType[] = [];
 
@@ -583,14 +583,14 @@ export class OmniUtil {
     return OmniUtil.toNullableType(type, wrap);
   }
 
-  public static toNullableType<T extends OmniType>(type: T, wrap: boolean): T | IOmniPrimitiveType {
+  public static toNullableType<T extends OmniType>(type: T, wrap: boolean): T | OmniPrimitiveType {
     // NOTE: If changed, make sure isNullable is updated
     if (type.kind == OmniTypeKind.PRIMITIVE) {
       if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
         return type;
       }
 
-      const nullablePrimitive: IOmniPrimitiveType = {
+      const nullablePrimitive: OmniPrimitiveType = {
         ...type,
         nullable: (wrap ? PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE : PrimitiveNullableKind.NULLABLE),
       };
@@ -602,7 +602,7 @@ export class OmniUtil {
   }
 
   public static swapTypeForWholeModel<T extends OmniType, R extends OmniType>(
-    model: IOmniModel,
+    model: OmniModel,
     needle: T,
     replacement: R,
     maxDepth = 10,
@@ -882,10 +882,10 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenGenericTargets(
-    a: IOmniGenericTargetType,
-    b: IOmniGenericTargetType,
+    a: OmniGenericTargetType,
+    b: OmniGenericTargetType,
     create?: boolean,
-  ): IOmniGenericTargetType | undefined {
+  ): OmniGenericTargetType | undefined {
 
     if (a.source != b.source) {
       return undefined;
@@ -900,7 +900,7 @@ export class OmniUtil {
     //        So if they differ, we need to explode the types
     //        Hopefully this will automatically be done recursively per level of inheritance so it's less complex to code!
 
-    const commonTargetIdentifiers: IOmniGenericTargetIdentifierType[] = [];
+    const commonTargetIdentifiers: OmniGenericTargetIdentifierType[] = [];
 
     const matching = OmniUtil.getMatchingTargetIdentifiers(a.targetIdentifiers, b.targetIdentifiers);
     if (!matching) {
@@ -921,7 +921,7 @@ export class OmniUtil {
       });
     }
 
-    const commonGenericTarget: IOmniGenericTargetType = {
+    const commonGenericTarget: OmniGenericTargetType = {
       ...a,
       targetIdentifiers: commonTargetIdentifiers,
     };
@@ -930,8 +930,8 @@ export class OmniUtil {
   }
 
   private static getMatchingTargetIdentifiers(
-    a: IOmniGenericTargetIdentifierType[],
-    b: IOmniGenericTargetIdentifierType[],
+    a: OmniGenericTargetIdentifierType[],
+    b: OmniGenericTargetIdentifierType[],
   ): Array<TargetIdentifierTuple> | undefined {
 
     if (a.length != b.length) {
@@ -940,7 +940,7 @@ export class OmniUtil {
 
     const result: Array<TargetIdentifierTuple> = [];
     for (const aIdentifier of a) {
-      let bFound: IOmniGenericTargetIdentifierType | undefined = undefined;
+      let bFound: OmniGenericTargetIdentifierType | undefined = undefined;
       for (const bIdentifier of b) {
         if (aIdentifier.sourceIdentifier == bIdentifier.sourceIdentifier) {
           bFound = bIdentifier;
@@ -992,10 +992,10 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenPropertiesByPosition(
-    a: IOmniArrayPropertiesByPositionType,
-    b: IOmniArrayPropertiesByPositionType,
+    a: OmniArrayPropertiesByPositionType,
+    b: OmniArrayPropertiesByPositionType,
     create?: boolean,
-  ): IOmniArrayPropertiesByPositionType | undefined {
+  ): OmniArrayPropertiesByPositionType | undefined {
 
     if (a.properties.length === b.properties.length) {
       for (let i = 0; i < a.properties.length; i++) {
@@ -1017,10 +1017,10 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenArrays(
-    a: IOmniArrayType,
-    b: IOmniArrayType,
+    a: OmniArrayType,
+    b: OmniArrayType,
     create?: boolean,
-  ): IOmniArrayType | undefined {
+  ): OmniArrayType | undefined {
 
     const common = OmniUtil.getCommonDenominatorBetween(a.of, b.of, create);
     if (common == a.of) {
@@ -1031,7 +1031,7 @@ export class OmniUtil {
       return undefined;
     }
 
-    return <IOmniArrayType>{
+    return <OmniArrayType>{
       ...b,
       ...a,
       of: common,
@@ -1039,9 +1039,9 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenPrimitives(
-    a: IOmniPrimitiveType,
-    b: IOmniPrimitiveType,
-  ): IOmniPrimitiveType | undefined {
+    a: OmniPrimitiveType,
+    b: OmniPrimitiveType,
+  ): OmniPrimitiveType | undefined {
 
     // NOTE: Must nullable be equal? Or do we return the nullable type (if exists) as the common denominator?
     if (a.nullable == b.nullable) {
@@ -1105,10 +1105,10 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenDictionaries(
-    a: IOmniDictionaryType,
-    b: IOmniDictionaryType,
+    a: OmniDictionaryType,
+    b: OmniDictionaryType,
     create?: boolean,
-  ): IOmniDictionaryType | undefined {
+  ): OmniDictionaryType | undefined {
 
     const commonKey = OmniUtil.getCommonDenominatorBetween(a.keyType, b.keyType, create);
     if (commonKey) {
@@ -1122,7 +1122,7 @@ export class OmniUtil {
           return undefined;
         }
 
-        const newDictionary: IOmniDictionaryType = {
+        const newDictionary: OmniDictionaryType = {
           kind: OmniTypeKind.DICTIONARY,
           keyType: commonKey,
           valueType: commonValue,

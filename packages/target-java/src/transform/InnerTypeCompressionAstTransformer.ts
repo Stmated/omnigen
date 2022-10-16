@@ -1,8 +1,8 @@
 import {AbstractJavaAstTransformer} from '../transform';
 import {
-  IOmniModel, OmniType, OmniTypeKind, IExternalSyntaxTree, VisitorFactoryManager, RealOptions, OmniUtil, ITargetOptions,
+  OmniModel, OmniType, OmniTypeKind, ExternalSyntaxTree, VisitorFactoryManager, RealOptions, OmniUtil, TargetOptions,
 } from '@omnigen/core';
-import {IJavaOptions} from '../options';
+import {JavaOptions} from '../options';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -12,7 +12,7 @@ type CompilationUnitInfo = {
   cu: Java.CompilationUnit,
 };
 
-interface ITypeMapping {
+interface TypeMapping {
   definedIn?: Java.CompilationUnit;
   usedIn: Set<Java.CompilationUnit>;
 }
@@ -20,10 +20,10 @@ interface ITypeMapping {
 export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: IOmniModel,
+    _model: OmniModel,
     root: Java.JavaAstRootNode,
-    _externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<ITargetOptions>,
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
+    options: RealOptions<TargetOptions>,
   ): Promise<void> {
 
     if (!options.compressSoloReferencedTypes && !options.compressUnreferencedSubTypes) {
@@ -32,7 +32,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       return Promise.resolve();
     }
 
-    const typeMapping = new Map<OmniType, ITypeMapping>();
+    const typeMapping = new Map<OmniType, TypeMapping>();
     const cuInfoStack: CompilationUnitInfo[] = [];
     root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
@@ -115,7 +115,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     return Promise.resolve(undefined);
   }
 
-  private isAllowedKind(cu: Java.CompilationUnit | undefined, options: ITargetOptions): boolean {
+  private isAllowedKind(cu: Java.CompilationUnit | undefined, options: TargetOptions): boolean {
 
     if (!cu) {
 

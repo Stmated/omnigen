@@ -1,8 +1,8 @@
 import {
   CompositionKind,
-  IOmniCompositionOrType,
+  OmniCompositionOrType,
   OmniCompositionType,
-  IOmniCompositionXorType,
+  OmniCompositionXorType,
   OmniType,
   OmniTypeKind,
 } from '../parse';
@@ -22,7 +22,7 @@ export class CompositionUtil {
       composition = compositionsAnyOfOr[0];
     } else if (compositionsAnyOfOr.length > 0) {
       const or: OmniType = (compositionsAnyOfOr.length > 1)
-        ? <IOmniCompositionOrType>{
+        ? <OmniCompositionOrType>{
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.OR,
           orTypes: compositionsAnyOfOr,
@@ -67,7 +67,7 @@ export class CompositionUtil {
       composition = compositionsOneOfOr[0];
     } else if (compositionsOneOfOr.length > 1) {
       const xor: OmniType = (compositionsOneOfOr.length > 1)
-        ? <IOmniCompositionXorType>{
+        ? <OmniCompositionXorType>{
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.XOR,
 

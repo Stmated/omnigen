@@ -1,10 +1,10 @@
-import {IOmniModel, IOmniObjectType, IOmniProperty, OmniTypeKind, IOmniModelTransformer, OmniUtil} from '../../parse';
+import {OmniModel, OmniObjectType, OmniProperty, OmniTypeKind, OmniModelTransformer, OmniUtil} from '../../parse';
 import {RealOptions} from '../../options';
-import {ITargetOptions} from '../../interpret';
+import {TargetOptions} from '../../interpret';
 
-interface ISubTypeInfo {
-  subTypes: IOmniObjectType[];
-  properties: Map<string, IOmniProperty[]>;
+interface SubTypeInfo {
+  subTypes: OmniObjectType[];
+  properties: Map<string, OmniProperty[]>;
 }
 
 /**
@@ -19,9 +19,9 @@ interface ISubTypeInfo {
  * a (abs): [x3]
  * b (abs): [x4]
  */
-export class CompressionOmniModelTransformer implements IOmniModelTransformer<ITargetOptions> {
+export class CompressionOmniModelTransformer implements OmniModelTransformer<TargetOptions> {
 
-  transformModel(model: IOmniModel, options: RealOptions<ITargetOptions>): void {
+  transformModel(model: OmniModel, options: RealOptions<TargetOptions>): void {
 
     if (!options.compressPropertiesToAncestor) {
 
@@ -34,7 +34,7 @@ export class CompressionOmniModelTransformer implements IOmniModelTransformer<IT
     // TODO: Need to sort the types so that the leaf types are done first
     //        Otherwise we will find the wrong types when doing the "find common denominator" stuff
 
-    const subTypeInfoMap = new Map<IOmniObjectType, ISubTypeInfo>();
+    const subTypeInfoMap = new Map<OmniObjectType, SubTypeInfo>();
     for (const type of allTypes.all) {
 
       if (type.kind != OmniTypeKind.OBJECT) {
@@ -54,7 +54,7 @@ export class CompressionOmniModelTransformer implements IOmniModelTransformer<IT
         if (!subTypeInfo) {
           subTypeInfoMap.set(extendedBy, subTypeInfo = {
             subTypes: [],
-            properties: new Map<string, IOmniProperty[]>(),
+            properties: new Map<string, OmniProperty[]>(),
           });
         }
 

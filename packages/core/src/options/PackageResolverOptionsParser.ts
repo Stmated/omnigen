@@ -1,7 +1,7 @@
-import {IOptionParser} from '@omnigen/core';
+import {OptionParser} from '@omnigen/core';
 import {IPackageResolver} from './IPackageResolver';
 
-export class PackageResolverOptionsParser implements IOptionParser<IPackageResolver | undefined> {
+export class PackageResolverOptionsParser implements OptionParser<IPackageResolver | undefined> {
 
   parse(raw: unknown): IPackageResolver | undefined {
 

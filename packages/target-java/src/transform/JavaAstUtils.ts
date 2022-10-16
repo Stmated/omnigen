@@ -1,10 +1,10 @@
-import {IOmniInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {OmniInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 
 export class JavaAstUtils {
 
-  public static addInterfaceProperties(type: IOmniInterfaceType, body: Java.Block): void {
+  public static addInterfaceProperties(type: OmniInterfaceType, body: Java.Block): void {
 
     if (type.of.kind == OmniTypeKind.OBJECT) {
 

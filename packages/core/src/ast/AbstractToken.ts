@@ -1,5 +1,5 @@
-import {IAstVisitor, VisitResult} from '../visit';
+import {AstVisitor, VisitResult} from '../visit';
 
 export abstract class AbstractToken {
-  abstract visit<R>(visitor: IAstVisitor<R>): VisitResult<R>;
+  abstract visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
 }

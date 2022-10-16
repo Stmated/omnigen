@@ -1,13 +1,16 @@
 import {
+  Booleanish,
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
+  GenericTargetOptions,
+  IncomingOrRealOption,
   OptionConverters,
   OptionsUtil,
+  PackageOptions,
   PackageResolverOptionsParser,
   PrimitiveGenerificationChoice,
   RealOptions,
 } from '@omnigen/core';
-import {IJavaOptions} from './IJavaOptions';
 
 export enum UnknownType {
   MAP,
@@ -15,7 +18,15 @@ export enum UnknownType {
   OBJECT,
 }
 
-export const DEFAULT_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
+export interface JavaOptions extends GenericTargetOptions, PackageOptions {
+  immutableModels: IncomingOrRealOption<Booleanish, boolean>;
+  includeAlwaysNullProperties: IncomingOrRealOption<Booleanish, boolean>;
+  unknownType: UnknownType;
+  includeLinksOnType: IncomingOrRealOption<Booleanish, boolean>;
+  includeLinksOnProperty: IncomingOrRealOption<Booleanish, boolean>;
+}
+
+export const DEFAULT_JAVA_OPTIONS: RealOptions<JavaOptions> = {
   ...DEFAULT_PACKAGE_OPTIONS,
   ...DEFAULT_TARGET_OPTIONS,
   immutableModels: true,
@@ -27,7 +38,7 @@ export const DEFAULT_JAVA_OPTIONS: RealOptions<IJavaOptions> = {
   packageResolver: undefined,
 };
 
-export const JAVA_OPTIONS_CONVERTERS: OptionConverters<IJavaOptions> = {
+export const JAVA_OPTIONS_CONVERTERS: OptionConverters<JavaOptions> = {
   packageResolver: v => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,

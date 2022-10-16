@@ -1,5 +1,5 @@
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
-import {IJavaOptions} from '@omnigen/target-java';
+import {JavaOptions} from '@omnigen/target-java';
 import {PrimitiveGenerificationChoice, RealOptions} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 
@@ -7,7 +7,7 @@ describe('InnerTypeCompression', () => {
 
   test('CompressNo', async () => {
 
-    const options: RealOptions<IJavaOptions> = {
+    const options: RealOptions<JavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
       compressSoloReferencedTypes: false,
@@ -47,7 +47,7 @@ describe('InnerTypeCompression', () => {
 
   test('CompressYes', async () => {
 
-    const options: RealOptions<IJavaOptions> = {
+    const options: RealOptions<JavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
       compressSoloReferencedTypes: true,

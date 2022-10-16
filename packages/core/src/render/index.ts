@@ -1,2 +1,2 @@
 
-export * from './IRenderer';
+export * from './Renderer';

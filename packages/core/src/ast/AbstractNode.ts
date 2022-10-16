@@ -1,6 +1,6 @@
-import {IAstVisitor, VisitResult} from '../visit';
-import {IAstNode} from './IAstNode';
+import {AstVisitor, VisitResult} from '../visit';
+import {AstNode} from './AstNode';
 
-export abstract class AbstractNode implements IAstNode {
-  abstract visit<R>(visitor: IAstVisitor<R>): VisitResult<R>;
+export abstract class AbstractNode implements AstNode {
+  abstract visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
 }

@@ -1,25 +1,25 @@
-import {IOmniModel} from '../parse';
+import {OmniModel} from '../parse';
 import {AstRootNode} from '../ast';
-import {IExternalSyntaxTree, ITransformer} from '../transform';
+import {ExternalSyntaxTree, Transformer} from '../transform';
 import {RealOptions} from '../options';
-import {ITargetOptions, IInterpreter} from '../interpret';
+import {TargetOptions, Interpreter} from '../interpret';
 
-export abstract class AbstractInterpreter<TOpt extends ITargetOptions> implements IInterpreter<TOpt> {
-  private readonly _transformers: ITransformer<AstRootNode, TOpt>[] = [];
+export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements Interpreter<TOpt> {
+  private readonly _transformers: Transformer<AstRootNode, TOpt>[] = [];
 
-  protected getTransformers(): ITransformer<AstRootNode, TOpt>[] {
+  protected getTransformers(): Transformer<AstRootNode, TOpt>[] {
     return this._transformers;
   }
 
-  protected registerTransformer(transformer: ITransformer<AstRootNode, TOpt>): void {
+  protected registerTransformer(transformer: Transformer<AstRootNode, TOpt>): void {
     this._transformers.push(transformer);
   }
 
   abstract newRootNode(): Promise<AstRootNode>;
 
   public async buildSyntaxTree(
-    model: IOmniModel,
-    externals: IExternalSyntaxTree<AstRootNode, TOpt>[],
+    model: OmniModel,
+    externals: ExternalSyntaxTree<AstRootNode, TOpt>[],
     options: RealOptions<TOpt>,
   ): Promise<AstRootNode> {
 

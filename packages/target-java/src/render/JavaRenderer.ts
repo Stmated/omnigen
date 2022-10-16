@@ -1,30 +1,30 @@
 import {
-  ICompilationUnitRenderCallback,
-  IAstVisitor,
+  CompilationUnitRenderCallback,
+  AstVisitor,
   VisitResult,
   OmniPrimitiveKind,
   OmniUtil,
   RealOptions,
-  IRenderer, IAstNode,
+  Renderer, AstNode,
 } from '@omnigen/core';
 import {AbstractJavaNode, GenericTypeDeclarationList} from '../ast';
 import {JavaVisitor, JavaVisitFn} from '../visit';
 import {pascalCase} from 'change-case';
-import {IJavaOptions} from '../options';
+import {JavaOptions} from '../options';
 import * as Java from '../ast';
 
-type JavaRendererVisitFn<N extends IAstNode> = JavaVisitFn<N, string>;
+type JavaRendererVisitFn<N extends AstNode> = JavaVisitFn<N, string>;
 
-export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
+export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   private _blockDepth = 0;
   private readonly _patternLineStart = new RegExp(/(?<!$)^/mg);
   private _tokenPrefix = ' ';
   private _tokenSuffix = ' ';
-  private readonly _options: RealOptions<IJavaOptions>;
+  private readonly _options: RealOptions<JavaOptions>;
 
-  private readonly _cuCallback: ICompilationUnitRenderCallback;
+  private readonly _cuCallback: CompilationUnitRenderCallback;
 
-  constructor(options: RealOptions<IJavaOptions>, callback: ICompilationUnitRenderCallback) {
+  constructor(options: RealOptions<JavaOptions>, callback: CompilationUnitRenderCallback) {
     super();
     this._options = options;
     this._cuCallback = callback;
@@ -34,7 +34,7 @@ export class JavaRenderer extends JavaVisitor<string> implements IRenderer {
     return '  '.repeat(d);
   }
 
-  public render<N extends IAstNode, V extends IAstVisitor<string>>(node: N | undefined, visitor?: V): string {
+  public render<N extends AstNode, V extends AstVisitor<string>>(node: N | undefined, visitor?: V): string {
     if (node === undefined) {
       return '';
     }

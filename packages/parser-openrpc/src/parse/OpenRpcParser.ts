@@ -1,46 +1,46 @@
 import {
   OmniAccessLevel,
-  IOmniArrayPropertiesByPositionType,
+  OmniArrayPropertiesByPositionType,
   OmniComparisonOperator,
-  IOmniContact,
-  IOmniEndpoint,
-  IOmniExamplePairing,
-  IOmniExampleParam,
-  IOmniExampleResult,
-  IOmniExternalDocumentation,
-  IOmniLicense,
-  IOmniLink,
-  IOmniLinkMapping,
-  IOmniLinkSourceParameter,
-  IOmniLinkTargetParameter,
-  IOmniModel,
-  IOmniModelParserResult,
-  IOmniObjectType,
-  IOmniOutput,
-  IOmniPayloadPathQualifier,
+  OmniContact,
+  OmniEndpoint,
+  OmniExamplePairing,
+  OmniExampleParam,
+  OmniExampleResult,
+  OmniExternalDocumentation,
+  OmniLicense,
+  OmniLink,
+  OmniLinkMapping,
+  OmniLinkSourceParameter,
+  OmniLinkTargetParameter,
+  OmniModel,
+  OmniModelParserResult,
+  OmniObjectType,
+  OmniOutput,
+  OmniPayloadPathQualifier,
   OmniPrimitiveKind,
-  IOmniPrimitiveType,
-  IOmniProperty,
+  OmniPrimitiveType,
+  OmniProperty,
   OmniPropertyOwner,
-  IOmniServer,
+  OmniServer,
   OmniType,
   OmniTypeKind,
-  IOmniUnknownType,
+  OmniUnknownType,
   OmniUtil,
-  IParser,
-  IParserBootstrap,
-  IParserBootstrapFactory,
+  Parser,
+  ParserBootstrap,
+  ParserBootstrapFactory,
   PrimitiveNullableKind,
   SchemaFile,
   TypeName,
   OptionConverters,
   OptionsUtil,
-  ITargetOptions,
+  TargetOptions,
   IncomingOptions,
-  IOptionsSource,
+  OptionsSource,
   RealOptions,
   DEFAULT_PARSER_OPTIONS,
-  IParserOptions,
+  ParserOptions,
   PARSER_OPTIONS_CONVERTERS,
   Dereferenced,
   Dereferencer,
@@ -69,16 +69,16 @@ import {LoggerFactory} from '@omnigen/core-log';
 import * as path from 'path';
 import {
   DEFAULT_JSONRPC_OPTIONS,
-  IJsonRpcOptions, JSONRPC_OPTIONS_CONVERTERS,
+  JsonRpcOptions, JSONRPC_OPTIONS_CONVERTERS,
 } from '../options';
 import {JsonSchemaParser, SchemaToTypeResult} from '@omnigen/parser-jsonschema';
 
 const logger = LoggerFactory.create(__filename);
 
-type OutputAndType = { output: IOmniOutput; type: OmniType };
-type TypeAndProperties = { type: OmniType; properties: IOmniProperty[] | undefined };
+type OutputAndType = { output: OmniOutput; type: OmniType };
+type TypeAndProperties = { type: OmniType; properties: OmniProperty[] | undefined };
 
-export type IOpenRpcParserOptions = IJsonRpcOptions & IParserOptions;
+export type IOpenRpcParserOptions = JsonRpcOptions & ParserOptions;
 
 export const OPENRPC_OPTIONS_CONVERTERS: OptionConverters<IOpenRpcParserOptions> = {
   ...JSONRPC_OPTIONS_CONVERTERS,
@@ -90,9 +90,9 @@ export const DEFAULT_OPENRPC_OPTIONS: IOpenRpcParserOptions = {
   ...DEFAULT_JSONRPC_OPTIONS,
 };
 
-export class OpenRpcParserBootstrapFactory implements IParserBootstrapFactory<IOpenRpcParserOptions> {
+export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<IOpenRpcParserOptions> {
 
-  async createParserBootstrap(schemaFile: SchemaFile): Promise<IParserBootstrap<IOpenRpcParserOptions>> {
+  async createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<IOpenRpcParserOptions>> {
 
     const schemaObject = await schemaFile.asObject();
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
@@ -111,7 +111,7 @@ export class OpenRpcParserBootstrapFactory implements IParserBootstrapFactory<IO
   }
 }
 
-export class OpenRpcParserBootstrap implements IParserBootstrap<IOpenRpcParserOptions>, IOptionsSource<IOpenRpcParserOptions> {
+export class OpenRpcParserBootstrap implements ParserBootstrap<IOpenRpcParserOptions>, OptionsSource<IOpenRpcParserOptions> {
 
   private readonly _deref: Dereferencer<OpenrpcDocument>;
 
@@ -119,14 +119,14 @@ export class OpenRpcParserBootstrap implements IParserBootstrap<IOpenRpcParserOp
     this._deref = deref;
   }
 
-  getIncomingOptions<TTargetOptions extends ITargetOptions>(): IncomingOptions<IOpenRpcParserOptions & TTargetOptions> | undefined {
+  getIncomingOptions<TTargetOptions extends TargetOptions>(): IncomingOptions<IOpenRpcParserOptions & TTargetOptions> | undefined {
     const doc = this._deref.getFirstRoot();
     const customOptions = doc['x-omnigen'] as IncomingOptions<IOpenRpcParserOptions & TTargetOptions>;
 
     return customOptions;
   }
 
-  createParser(options: RealOptions<IOpenRpcParserOptions>): IParser<IOpenRpcParserOptions> {
+  createParser(options: RealOptions<IOpenRpcParserOptions>): Parser<IOpenRpcParserOptions> {
 
     const opt = {...options}; // Copy the options, so we do not manipulate the given object.
     OptionsUtil.updateOptionsFromDocument(this._deref.getFirstRoot(), opt);
@@ -138,14 +138,14 @@ export class OpenRpcParserBootstrap implements IParserBootstrap<IOpenRpcParserOp
 /**
  * TODO: Remove this class, keep the global variables in the class above
  */
-export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
+export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
 
   static readonly PATTERN_PLACEHOLDER = new RegExp(/^[$]{([^}]+)}$/);
   static readonly PATTERN_PLACEHOLDER_RELAXED = new RegExp(/(?:[$]{([^}]+)}$|^{{([^}]+?)}}$|^[$](.+?)$)/);
 
   private readonly _options: RealOptions<IOpenRpcParserOptions>;
 
-  private _unknownError?: IOmniOutput;
+  private _unknownError?: OmniOutput;
 
   private readonly _preferablyUniqueErrorLogs = new Set<string>();
 
@@ -154,15 +154,15 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
   // * we are going to automatically try and create generics.
   // * some setting is set to create helper classes
   // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
-  private _jsonRpcRequestClass?: IOmniObjectType;
-  private _jsonRpcResponseClass?: IOmniObjectType;
-  private _jsonRpcErrorResponseClass?: IOmniObjectType;
-  private _jsonRpcErrorInstanceClass?: IOmniObjectType;
+  private _jsonRpcRequestClass?: OmniObjectType;
+  private _jsonRpcResponseClass?: OmniObjectType;
+  private _jsonRpcErrorResponseClass?: OmniObjectType;
+  private _jsonRpcErrorInstanceClass?: OmniObjectType;
 
   // This class should be optionally created if we are going to try and create generics.
   // It is only going to work like a marker interface, so we can know that all the classes are related.
   // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
-  private _requestParamsClass?: IOmniObjectType; // Used
+  private _requestParamsClass?: OmniObjectType; // Used
 
   private readonly _deref: Dereferencer<OpenrpcDocument>;
   private readonly _jsonSchemaParser: JsonSchemaParser<OpenrpcDocument, IOpenRpcParserOptions>;
@@ -177,7 +177,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     this._jsonSchemaParser = new JsonSchemaParser(this._deref, this._options);
   }
 
-  parse(): IOmniModelParserResult<IOpenRpcParserOptions> {
+  parse(): OmniModelParserResult<IOpenRpcParserOptions> {
 
     const endpoints = this.doc.methods.map(it => this.toOmniEndpointFromMethod(this._deref.get(it, this._deref.getFirstRoot())));
     const contact = this.doc.info.contact ? this.toOmniContactFromContact(this.doc.info.contact) : undefined;
@@ -201,7 +201,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       }
     }
 
-    const model: IOmniModel = {
+    const model: OmniModel = {
       schemaType: 'openrpc',
       schemaVersion: this.doc.openrpc,
       name: this.doc.info.title,
@@ -225,22 +225,22 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     };
   }
 
-  toOmniLicenseFromLicense(license: LicenseObject): IOmniLicense {
-    return <IOmniLicense>{
+  toOmniLicenseFromLicense(license: LicenseObject): OmniLicense {
+    return <OmniLicense>{
       name: license.name,
       url: license.url,
     };
   }
 
-  toOmniContactFromContact(contact: ContactObject): IOmniContact {
-    return <IOmniContact>{
+  toOmniContactFromContact(contact: ContactObject): OmniContact {
+    return <OmniContact>{
       name: contact.name,
       url: contact.url,
       email: contact.email,
     };
   }
 
-  toOmniEndpointFromMethod(method: Dereferenced<MethodObject>): IOmniEndpoint {
+  toOmniEndpointFromMethod(method: Dereferenced<MethodObject>): OmniEndpoint {
 
     const typeAndProperties = this.toTypeAndPropertiesFromMethod(method);
 
@@ -249,7 +249,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       this._deref.get(method.obj.result, method.root),
     );
 
-    const responses: IOmniOutput[] = [];
+    const responses: OmniOutput[] = [];
 
     // One regular response
     responses.push(resultResponse.output);
@@ -416,7 +416,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     resultType.extendedBy = this._jsonRpcResponseClass;
 
     return {
-      output: <IOmniOutput>{
+      output: <OmniOutput>{
         name: contentDescriptor.obj.name,
         description: contentDescriptor.obj.description,
         summary: contentDescriptor.obj.summary,
@@ -435,7 +435,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     };
   }
 
-  private errorToGenericOutput(parentName: string, error: Dereferenced<ErrorObject>): IOmniOutput {
+  private errorToGenericOutput(parentName: string, error: Dereferenced<ErrorObject>): OmniOutput {
 
     const isUnknownCode = (error.obj.code === -1234567890);
     if (isUnknownCode && this._unknownError) {
@@ -454,12 +454,12 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     }
   }
 
-  private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): IOmniOutput {
+  private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): OmniOutput {
     const typeName = isUnknownCode
       ? `ErrorUnknown`
       : `${parentName}Error${error.code}`;
 
-    const errorPropertyType: IOmniObjectType = {
+    const errorPropertyType: OmniObjectType = {
       name: `${typeName}Error`,
       kind: OmniTypeKind.OBJECT,
       additionalProperties: false,
@@ -582,7 +582,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       });
     }
 
-    const errorType: IOmniObjectType = {
+    const errorType: OmniObjectType = {
       name: typeName,
       accessLevel: OmniAccessLevel.PUBLIC,
       kind: OmniTypeKind.OBJECT,
@@ -591,7 +591,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       properties: [],
     };
 
-    const errorProperty: IOmniProperty = {
+    const errorProperty: OmniProperty = {
       name: 'error',
       type: errorPropertyType,
       owner: errorType,
@@ -603,7 +603,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     ];
     // errorType.requiredProperties = [errorProperty];
 
-    const qualifiers: IOmniPayloadPathQualifier[] = [{
+    const qualifiers: OmniPayloadPathQualifier[] = [{
       path: ['error'],
       operator: OmniComparisonOperator.DEFINED,
     }];
@@ -628,16 +628,16 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
 
   private examplePairingToGenericExample(
     valueType: OmniType,
-    inputProperties: IOmniProperty[],
+    inputProperties: OmniProperty[],
     example: Dereferenced<ExamplePairingObject>,
-  ): IOmniExamplePairing {
+  ): OmniExamplePairing {
 
     const params = example.obj.params.map((paramOrRef, idx) => {
       const param = this._deref.get(paramOrRef, example.root);
       return this.exampleParamToGenericExampleParam(inputProperties, param, idx);
     });
 
-    return <IOmniExamplePairing>{
+    return <OmniExamplePairing>{
       name: example.obj.name,
       description: example.obj.description,
       summary: example.obj['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
@@ -647,10 +647,10 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
   }
 
   private exampleParamToGenericExampleParam(
-    inputProperties: IOmniProperty[],
+    inputProperties: OmniProperty[],
     param: Dereferenced<ExampleObject>,
     paramIndex: number
-  ): IOmniExampleParam {
+  ): OmniExampleParam {
 
     // If the name of the example param is the same as the property name, it will match here.
     let property = inputProperties.find(it => it.name == param.obj.name);
@@ -665,7 +665,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     if (property) {
       valueType = property.type;
     } else {
-      valueType = <IOmniUnknownType>{kind: OmniTypeKind.UNKNOWN};
+      valueType = <OmniUnknownType>{kind: OmniTypeKind.UNKNOWN};
     }
 
     return {
@@ -678,7 +678,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     };
   }
 
-  private toOmniExampleResultFromExampleObject(valueType: OmniType, example: Dereferenced<ExampleObject>): IOmniExampleResult {
+  private toOmniExampleResultFromExampleObject(valueType: OmniType, example: Dereferenced<ExampleObject>): OmniExampleResult {
 
     if (example.obj['externalValue']) {
       // This is part of the specification, but not part of the OpenRPC interface.
@@ -693,15 +693,15 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     };
   }
 
-  toOmniExternalDocumentationFromExternalDocumentationObject(documentation: ExternalDocumentationObject): IOmniExternalDocumentation {
-    return <IOmniExternalDocumentation>{
+  toOmniExternalDocumentationFromExternalDocumentationObject(documentation: ExternalDocumentationObject): OmniExternalDocumentation {
+    return <OmniExternalDocumentation>{
       url: documentation.url,
       description: documentation.description,
     };
   }
 
-  toOmniServerFromServerObject(server: ServerObject): IOmniServer {
-    return <IOmniServer>{
+  toOmniServerFromServerObject(server: ServerObject): OmniServer {
+    return <OmniServer>{
       name: server.name,
       description: server.description,
       summary: server.summary,
@@ -710,7 +710,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     };
   }
 
-  private toOmniPropertyFromContentDescriptor(owner: OmniPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): IOmniProperty {
+  private toOmniPropertyFromContentDescriptor(owner: OmniPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): OmniProperty {
 
     const propertyType = this.toOmniTypeFromContentDescriptor(descriptor);
 
@@ -728,7 +728,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
   private toTypeAndPropertiesFromMethod(method: Dereferenced<MethodObject>): TypeAndProperties {
 
     // TODO: This should be able to be a String OR Number -- need to make this more generic
-    const requestIdType: IOmniPrimitiveType = {
+    const requestIdType: OmniPrimitiveType = {
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING,
       nullable: PrimitiveNullableKind.NOT_NULLABLE,
@@ -737,7 +737,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     let requestParamsType: OmniPropertyOwner;
     if (method.obj.paramStructure == 'by-position') {
       // The params is an array values, and not a map nor properties.
-      requestParamsType = <IOmniArrayPropertiesByPositionType>{
+      requestParamsType = <OmniArrayPropertiesByPositionType>{
         // name: `${method.obj.name}RequestParams`,
         kind: OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION,
       };
@@ -751,7 +751,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
 
     } else {
 
-      const objectRequestParamsType: IOmniObjectType = {
+      const objectRequestParamsType: OmniObjectType = {
         kind: OmniTypeKind.OBJECT,
         name: `${method.obj.name}RequestParams`,
         properties: [],
@@ -781,7 +781,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       requestParamsType.extendedBy = this._requestParamsClass;
     }
 
-    const objectRequestType: IOmniObjectType = {
+    const objectRequestType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
       name: `${method.obj.name}Request`,
       title: method.obj.name,
@@ -806,7 +806,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcRequestClass);
 
       const hasConstantVersion = (this._options.jsonRpcVersion || '').length > 0;
-      const requestJsonRpcType: IOmniPrimitiveType = {
+      const requestJsonRpcType: OmniPrimitiveType = {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
         valueConstant: hasConstantVersion ? this._options.jsonRpcVersion : undefined,
@@ -817,7 +817,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       //        Maybe this can be done automatically through GenericOmniModelTransformer?
       //        Or can we do this in some other way? Maybe have valueConstant be string OR callback
       //        Then if callback, it takes the method object, and is put inside the constructor without a given parameter?
-      const requestMethodType: IOmniPrimitiveType = {
+      const requestMethodType: OmniPrimitiveType = {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
         // readOnly: true,
@@ -876,9 +876,9 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     };
   }
 
-  private toOmniLinkFromDocMethods(endpoint: IOmniEndpoint, endpoints: IOmniEndpoint[]): IOmniLink[] {
+  private toOmniLinkFromDocMethods(endpoint: OmniEndpoint, endpoints: OmniEndpoint[]): OmniLink[] {
 
-    const continuations: IOmniLink[] = [];
+    const continuations: OmniLink[] = [];
     for (const methodOrRef of this.doc.methods) {
 
       // TODO: This is probably wrong! The reference can exist in another file; in the file that contains the endpoint
@@ -902,7 +902,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     return continuations;
   }
 
-  private getTargetEndpoint(name: string, endpoints: IOmniEndpoint[]): IOmniEndpoint {
+  private getTargetEndpoint(name: string, endpoints: OmniEndpoint[]): OmniEndpoint {
     let targetEndpoint = endpoints.find(it => it.name == name);
     if (!targetEndpoint) {
       const options = endpoints.map(it => it.name);
@@ -935,28 +935,28 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     return targetEndpoint;
   }
 
-  private toOmniLinkFromLinkObject(sourceEndpoint: IOmniEndpoint, endpoints: IOmniEndpoint[], link: LinkObject, refName?: string): IOmniLink {
+  private toOmniLinkFromLinkObject(sourceEndpoint: OmniEndpoint, endpoints: OmniEndpoint[], link: LinkObject, refName?: string): OmniLink {
 
     const targetEndpoint = this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
     const paramNames: string[] = Object.keys(link.params as object);
 
     // The request type is always a class type, since it is created as such by us.
-    const requestClass = targetEndpoint.request.type as IOmniObjectType;
+    const requestClass = targetEndpoint.request.type as OmniObjectType;
     const requestParamsParameter = requestClass.properties?.find(it => it.name == 'params');
     if (!requestParamsParameter) {
       throw new Error(`The target request type must be Class and have a 'params' property`);
     }
 
-    const requestResultClass = requestParamsParameter.type as IOmniObjectType;
+    const requestResultClass = requestParamsParameter.type as OmniObjectType;
 
-    const mappings: IOmniLinkMapping[] = [];
+    const mappings: OmniLinkMapping[] = [];
     for (const linkParamName of paramNames) {
 
       const requestResultParamParameter = requestResultClass.properties?.find(prop => prop.name == linkParamName);
 
       if (requestResultParamParameter) {
 
-        const sourceParameter: IOmniLinkSourceParameter = this.toOmniLinkSourceParameterFromLinkObject(
+        const sourceParameter: OmniLinkSourceParameter = this.toOmniLinkSourceParameterFromLinkObject(
           // The first response is the Result, not Error or otherwise.
           sourceEndpoint.responses[0].type,
           sourceEndpoint.request.type,
@@ -964,7 +964,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
           linkParamName,
         );
 
-        const targetParameter: IOmniLinkTargetParameter = {
+        const targetParameter: OmniLinkTargetParameter = {
           propertyPath: [
             requestParamsParameter,
             requestResultParamParameter,
@@ -980,7 +980,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
       }
     }
 
-    return <IOmniLink>{
+    return <OmniLink>{
       name: link.name || refName,
       mappings: mappings,
       description: link.description,
@@ -993,7 +993,7 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
     secondaryType: OmniType,
     link: LinkObject,
     linkParamName: string,
-  ): IOmniLinkSourceParameter {
+  ): OmniLinkSourceParameter {
 
     const params = link.params as Record<string, unknown>;
     const value = params[linkParamName];
@@ -1049,8 +1049,8 @@ export class OpenRpcParser implements IParser<IOpenRpcParserOptions> {
    * @param type
    * @param pathParts
    */
-  private getPropertyPath(type: OmniType, pathParts: string[]): IOmniProperty[] {
-    const propertyPath: IOmniProperty[] = [];
+  private getPropertyPath(type: OmniType, pathParts: string[]): OmniProperty[] {
+    const propertyPath: OmniProperty[] = [];
     let pointer = type;
     for (let i = 0; i < pathParts.length; i++) {
       if (pointer.kind == OmniTypeKind.OBJECT) {

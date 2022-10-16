@@ -1,18 +1,18 @@
-import {Booleanish, IncomingOptions, IncomingOrRealOption, IOptions, OptionsUtil} from '../options';
+import {Booleanish, IncomingOptions, IncomingOrRealOption, Options, OptionsUtil} from '../options';
 
-interface AOptions extends IOptions {
+interface AOptions extends Options {
   foo: IncomingOrRealOption<Booleanish, boolean>;
   bar: string;
   qwe: IncomingOrRealOption<string | number, string>;
 }
 
-interface BoolOptions extends IOptions {
+interface BoolOptions extends Options {
   a: IncomingOrRealOption<string, boolean>;
   b: IncomingOrRealOption<number, boolean>;
   c: IncomingOrRealOption<boolean, boolean>;
 }
 
-interface NoDynamicOptions extends IOptions {
+interface NoDynamicOptions extends Options {
   a: string;
   b: number;
   c: boolean;

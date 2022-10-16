@@ -1,17 +1,17 @@
 import {AbstractJavaAstTransformer, JavaAstUtils} from '../transform';
-import {IOmniModel, OmniTypeKind, OmniUtil} from '@omnigen/core';
-import {IJavaOptions} from '../options';
-import {RealOptions, IExternalSyntaxTree, VisitorFactoryManager} from '@omnigen/core';
+import {OmniModel, OmniTypeKind, OmniUtil} from '@omnigen/core';
+import {JavaOptions} from '../options';
+import {RealOptions, ExternalSyntaxTree, VisitorFactoryManager} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: IOmniModel,
+    _model: OmniModel,
     root: Java.JavaAstRootNode,
-    _externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    _options: RealOptions<IJavaOptions>,
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
+    _options: RealOptions<JavaOptions>,
   ): Promise<void> {
 
     const classDeclarations: Java.ClassDeclaration[] = [];

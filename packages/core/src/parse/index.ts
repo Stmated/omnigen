@@ -6,16 +6,16 @@ export * from './CompressTypeLevel';
 // Basic classes
 export * from './SchemaFile';
 
-export * from './IParserOptions';
-export * from './IParser';
+export * from './ParserOptions';
+export * from './Parser';
 
 export * from './OmniModel';
-export * from './IOmniModelParserResult';
+export * from './OmniModelParserResult';
 export * from './CompositionUtil';
 export * from './OmniModelMerge';
 export * from './OmniUtil';
 export * from './Naming';
-export * from './IOmniModelTransformer';
+export * from './OmniModelTransformer';
 export * from './DependencyGraphBuilder';
 
 // Other sub-directories

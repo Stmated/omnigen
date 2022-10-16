@@ -1,32 +1,32 @@
 import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer';
-import {IJavaOptions} from '../options';
+import {JavaOptions} from '../options';
 import {
   CompositionKind,
   OmniCompositionType,
-  IOmniCompositionXorType,
-  IOmniEnumType,
-  IOmniExamplePairing,
-  IOmniGenericSourceIdentifierType,
-  IOmniGenericSourceType,
-  IOmniInterfaceType,
-  IOmniLinkMapping,
-  IOmniModel,
-  IOmniObjectType,
-  IOmniOutput,
+  OmniCompositionXorType,
+  OmniEnumType,
+  OmniExamplePairing,
+  OmniGenericSourceIdentifierType,
+  OmniGenericSourceType,
+  OmniInterfaceType,
+  OmniLinkMapping,
+  OmniModel,
+  OmniObjectType,
+  OmniOutput,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
-  IOmniPrimitiveType,
-  IOmniProperty,
-  IOmniHardcodedReferenceType,
+  OmniPrimitiveType,
+  OmniProperty,
+  OmniHardcodedReferenceType,
   OmniType,
   OmniTypeKind,
   PrimitiveNullableKind,
   RealOptions,
-  IExternalSyntaxTree,
+  ExternalSyntaxTree,
   OmniUtil,
   Naming,
   DEFAULT_GRAPH_OPTIONS,
-  IDependencyGraph,
+  DependencyGraph,
   DependencyGraphBuilder,
 } from '@omnigen/core';
 import * as Java from '../ast';
@@ -40,10 +40,10 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private static readonly _PRIMITIVE_WRAPPER_MAP = new Map<string, Java.ClassDeclaration>();
 
   transformAst(
-    model: IOmniModel,
+    model: OmniModel,
     root: Java.JavaAstRootNode,
-    _externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<IJavaOptions>,
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
+    options: RealOptions<JavaOptions>,
   ): Promise<void> {
 
     // TODO: Move most of this to another transformer later
@@ -173,9 +173,9 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return Promise.resolve();
   }
 
-  private createNotNullablePrimitiveWrapper(type: IOmniPrimitiveType, kindName: string): Java.ClassDeclaration {
+  private createNotNullablePrimitiveWrapper(type: OmniPrimitiveType, kindName: string): Java.ClassDeclaration {
 
-    const valueType: IOmniPrimitiveType = {
+    const valueType: OmniPrimitiveType = {
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: type.primitiveKind,
     };
@@ -211,11 +211,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private transformEnum(
-    model: IOmniModel,
-    type: IOmniEnumType,
+    model: OmniModel,
+    type: OmniEnumType,
     originalType: OmniType | undefined,
     root: Java.JavaAstRootNode,
-    options: RealOptions<IJavaOptions>,
+    options: RealOptions<JavaOptions>,
   ): void {
     const body = new Java.Block();
 
@@ -246,7 +246,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
       // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
       //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
-      const itemType: IOmniPrimitiveType = {
+      const itemType: OmniPrimitiveType = {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: type.primitiveKind,
       };
@@ -285,8 +285,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private transformInterface(
-    type: IOmniInterfaceType,
-    options: RealOptions<IJavaOptions>,
+    type: OmniInterfaceType,
+    options: RealOptions<JavaOptions>,
     root: Java.JavaAstRootNode,
   ): void {
 
@@ -313,13 +313,13 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   // TODO: Merge functionality for object and composition
   private transformObject(
-    model: IOmniModel,
-    type: IOmniObjectType | OmniCompositionType,
-    originalType: IOmniGenericSourceType | undefined,
-    options: RealOptions<IJavaOptions>,
+    model: OmniModel,
+    type: OmniObjectType | OmniCompositionType,
+    originalType: OmniGenericSourceType | undefined,
+    options: RealOptions<JavaOptions>,
     root: Java.JavaAstRootNode,
-    graph: IDependencyGraph,
-    genericSourceIdentifiers?: IOmniGenericSourceIdentifierType[],
+    graph: DependencyGraph,
+    genericSourceIdentifiers?: OmniGenericSourceIdentifierType[],
   ): void {
 
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
@@ -410,8 +410,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private addExtendsAndImplements(
-    graph: IDependencyGraph,
-    type: IOmniObjectType | OmniCompositionType,
+    graph: DependencyGraph,
+    type: OmniObjectType | OmniCompositionType,
     declaration: Java.AbstractObjectDeclaration,
   ): void {
 
@@ -517,11 +517,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private addXOrMappingToBody(
-    type: IOmniCompositionXorType,
-    model: IOmniModel,
+    type: OmniCompositionXorType,
+    model: OmniModel,
     declaration: Java.AbstractObjectDeclaration,
     _comments: string[], // TODO: Add the comments to whatever is created?
-    options: IJavaOptions,
+    options: JavaOptions,
   ): void {
 
     // The composition type is XOR, it can only be one of them.
@@ -532,8 +532,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     // 3. Trial and error by saving content as a string, and then trying different options (in a sorted order of hopeful exclusivity)
 
     // TODO: If it is a composition of multiple ENUM, then we need to simplify and merge them
-    const enumTypes: IOmniEnumType[] = [];
-    const primitiveTypes: IOmniPrimitiveType[] = [];
+    const enumTypes: OmniEnumType[] = [];
+    const primitiveTypes: OmniPrimitiveType[] = [];
     let otherTypeCount = 0;
     for (const xor of type.xorTypes) {
       if (xor.kind == OmniTypeKind.ENUM) {
@@ -562,8 +562,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private addEnumAndPrimitivesAsObjectEnum(
-    enumTypes: IOmniEnumType[],
-    primitiveTypes: IOmniPrimitiveType[],
+    enumTypes: OmniEnumType[],
+    primitiveTypes: OmniPrimitiveType[],
     declaration: Java.AbstractObjectDeclaration,
   ): void {
 
@@ -943,7 +943,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return knownBinary;
   }
 
-  private addOmniPropertyToBody(model: IOmniModel, body: Java.Block, property: IOmniProperty, options: IJavaOptions): void {
+  private addOmniPropertyToBody(model: OmniModel, body: Java.Block, property: OmniProperty, options: JavaOptions): void {
 
     const comments: string[] = [];
     if (property.type.kind != OmniTypeKind.OBJECT) {
@@ -1045,7 +1045,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     }
   }
 
-  private getGetterAnnotations(property: IOmniProperty): Java.AnnotationList | undefined {
+  private getGetterAnnotations(property: OmniProperty): Java.AnnotationList | undefined {
 
     // TODO: Move this to another transformer which checks for differences between field name and original name.
     const getterAnnotations: Java.Annotation[] = [];
@@ -1072,8 +1072,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private addPrimitivePropertyAsField(
-    property: IOmniProperty,
-    type: IOmniPrimitiveType,
+    property: OmniProperty,
+    type: OmniPrimitiveType,
     body: Java.Block,
     commentList?: Java.CommentList,
   ): void {
@@ -1151,7 +1151,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     }
   }
 
-  private getCommentsForType(type: OmniType, model: IOmniModel, options: IJavaOptions): string[] {
+  private getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
     const comments: string[] = [];
     if (type.description) {
       comments.push(type.description);
@@ -1160,7 +1160,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       comments.push(type.summary);
     }
 
-    const handledResponse: IOmniOutput[] = [];
+    const handledResponse: OmniOutput[] = [];
     for (const endpoint of model.endpoints) {
 
       // TODO: Redo so they are only linked by "@see" and stuff?
@@ -1215,7 +1215,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return comments;
   }
 
-  private getLinkCommentsForType(type: OmniType, model: IOmniModel, options: IJavaOptions): string[] {
+  private getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
     const comments: string[] = [];
     if (!options.includeLinksOnType) {
       return comments;
@@ -1259,7 +1259,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return comments;
   }
 
-  private getLinkCommentsForProperty(property: IOmniProperty, model: IOmniModel, options: IJavaOptions): string[] {
+  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): string[] {
     const comments: string[] = [];
     if (!options.includeLinksOnProperty) {
       return comments;
@@ -1289,13 +1289,13 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return comments;
   }
 
-  private getLink(propertyOwner: OmniType, property: IOmniProperty): string {
+  private getLink(propertyOwner: OmniType, property: OmniProperty): string {
 
     const memberName = `${JavaUtil.getGetterName(property.name, property.type)}()`;
     return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
   }
 
-  private getExampleComments(example: IOmniExamplePairing): string {
+  private getExampleComments(example: OmniExamplePairing): string {
 
     const commentLines: string[] = [];
     commentLines.push(`<h2>Example - ${example.name}</h2>`);
@@ -1348,8 +1348,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private getMappingSourceTargetComment(
-    mapping: IOmniLinkMapping,
-    options: IJavaOptions,
+    mapping: OmniLinkMapping,
+    options: JavaOptions,
     only: 'source' | 'target' | undefined = undefined,
   ): string {
 
@@ -1444,14 +1444,14 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private replaceTypeWithReference(
     target: OmniType,
-    primitiveType: IOmniPrimitiveType,
-    options: RealOptions<IJavaOptions>,
+    primitiveType: OmniPrimitiveType,
+    options: RealOptions<JavaOptions>,
   ): void {
 
     // TODO: Replace this with something else? REFERENCE should be for native classes, but this is sort of not?
     target.kind = OmniTypeKind.HARDCODED_REFERENCE;
 
-    const referenceType = target as IOmniHardcodedReferenceType;
+    const referenceType = target as OmniHardcodedReferenceType;
     const primitiveName = `Primitive${pascalCase(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
     referenceType.fqn = JavaUtil.getClassNameWithPackageName(referenceType, primitiveName, options);
   }

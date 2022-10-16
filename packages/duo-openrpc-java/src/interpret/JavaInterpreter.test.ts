@@ -1,7 +1,7 @@
 // import {TestUtils} from '@omnigen/target-java';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {JavaInterpreter} from '@omnigen/target-java';
-import {IJavaOptions, JavaUtil} from '@omnigen/target-java';
+import {JavaOptions, JavaUtil} from '@omnigen/target-java';
 import {OmniTypeKind} from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {PrimitiveGenerificationChoice, RealOptions} from '@omnigen/core';
@@ -23,7 +23,7 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
   test('ensureGenericsAreSpecialized', async () => {
 
-    const options: RealOptions<IJavaOptions> = {
+    const options: RealOptions<JavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
     };
@@ -77,7 +77,7 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
   test('ensureGenericsAreBoxed', async () => {
 
-    const options: RealOptions<IJavaOptions> = {
+    const options: RealOptions<JavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.WRAP_OR_BOX,
     };
@@ -124,7 +124,7 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
   test('ensureGenericsAreSkipped', async () => {
 
-    const options: RealOptions<IJavaOptions> = {
+    const options: RealOptions<JavaOptions> = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.ABORT,
     };

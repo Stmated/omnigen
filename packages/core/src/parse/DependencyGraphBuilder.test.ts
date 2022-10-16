@@ -1,25 +1,25 @@
 import {
   OmniCompositionType,
   OmniInheritableType,
-  IOmniObjectType,
+  OmniObjectType,
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
   DEFAULT_GRAPH_OPTIONS,
-  IDependencyGraph,
+  DependencyGraph,
   DependencyGraphBuilder,
-  IDependencyGraphOptions,
+  DependencyGraphOptions,
 } from '../parse';
 import {TestUtils} from '@omnigen/utils-test';
 
 describe('Test CompositionDependencyUtil', () => {
 
-  const javaOptions: IDependencyGraphOptions = {
+  const javaOptions: DependencyGraphOptions = {
     ...DEFAULT_GRAPH_OPTIONS,
     ...{},
   };
 
-  function java(namedTypes: OmniType[]): IDependencyGraph {
+  function java(namedTypes: OmniType[]): DependencyGraph {
     return DependencyGraphBuilder.build(namedTypes, javaOptions);
   }
 
@@ -144,7 +144,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const result = java([a, d, b, c]);
 
-    expect(result).toEqual<IDependencyGraph>({
+    expect(result).toEqual<DependencyGraph>({
       // abstracts: [],
       concretes: [a, d, b, c],
       interfaces: [c],
@@ -165,7 +165,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const result = java([a, d, b, c]);
 
-    expect(result).toEqual<IDependencyGraph>({
+    expect(result).toEqual<DependencyGraph>({
       // abstracts: [c],
       concretes: [a, d, b, c],
       interfaces: [c, b],
@@ -192,7 +192,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     // We will get the composition type in "uses" here, since the model is not simplified.
     // In a simplified model here, "inline" would be merged into D, and D only extend C.
-    expect(result).toEqual<IDependencyGraph>({
+    expect(result).toEqual<DependencyGraph>({
       // abstracts: [],
       concretes: [A, B, C, D, E, F],
       interfaces: [D],
@@ -212,7 +212,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const result = java([A, B, C]);
 
-    expect(result).toEqual<IDependencyGraph>({
+    expect(result).toEqual<DependencyGraph>({
       // abstracts: [],
       concretes: [A, B, C],
       interfaces: [],
@@ -246,7 +246,7 @@ function map(arg: MapArg): Map<OmniType, OmniType[]> {
   return map;
 }
 
-function obj(name: string, extendedBy?: OmniInheritableType): IOmniObjectType {
+function obj(name: string, extendedBy?: OmniInheritableType): OmniObjectType {
   return TestUtils.obj(name, extendedBy);
 }
 
@@ -255,7 +255,7 @@ function and(...types: OmniType[]): OmniCompositionType {
 }
 
 function inlineClassWithProp(name: string) {
-  const inline: IOmniObjectType = {
+  const inline: OmniObjectType = {
     kind: OmniTypeKind.OBJECT,
     properties: [],
     name: `${name}Class`,

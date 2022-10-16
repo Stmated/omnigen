@@ -1,4 +1,4 @@
 
-export * from './IAstVisitor';
-export * from './IVisitorFactory';
+export * from './AstVisitor';
+export * from './VisitorFactory';
 export * from './VisitorFactoryManager';

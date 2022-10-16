@@ -1,9 +1,9 @@
-import {IJavaOptions} from '@omnigen/target-java';
+import {JavaOptions} from '@omnigen/target-java';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 
 describe('Error-Schema', () => {
 
-  const JAVA_OPT: IJavaOptions = {
+  const JAVA_OPT: JavaOptions = {
     ...DEFAULT_TEST_JAVA_OPTIONS,
     compressPropertiesToAncestor: false,
   };

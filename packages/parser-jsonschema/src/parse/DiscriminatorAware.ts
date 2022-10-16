@@ -1,11 +1,11 @@
 
 export type DiscriminatorMapping = Record<string, string>;
 
-export interface IDiscriminator {
+export interface Discriminator {
   propertyName: string;
   mapping?: DiscriminatorMapping;
 }
 
-export interface IDiscriminatorAware {
-  discriminator: IDiscriminator;
+export interface DiscriminatorAware {
+  discriminator: Discriminator;
 }

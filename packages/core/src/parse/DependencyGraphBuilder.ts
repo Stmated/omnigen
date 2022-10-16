@@ -17,9 +17,9 @@ export class DependencyGraphBuilder {
    * @param namedTypes The types that are named. All other types are inline/anonymous
    * @param options The graph options based on the target language
    */
-  public static build(namedTypes: OmniType[], options = DEFAULT_GRAPH_OPTIONS): IDependencyGraph {
+  public static build(namedTypes: OmniType[], options = DEFAULT_GRAPH_OPTIONS): DependencyGraph {
 
-    const graph: IDependencyGraph = {
+    const graph: DependencyGraph = {
       uses: new Map<OmniType, OmniType[]>(),
       // abstracts: [], // TODO: Always empty for now. Need to implement later
       concretes: [],
@@ -92,7 +92,7 @@ export class DependencyGraphBuilder {
     return graph;
   }
 
-  private static getCommonAncestors(graph: IDependencyGraph, a: OmniType, b: OmniType): OmniType[] {
+  private static getCommonAncestors(graph: DependencyGraph, a: OmniType, b: OmniType): OmniType[] {
 
     const aAncestors = DependencyGraphBuilder.getAncestors(graph, a);
     const bAncestors = DependencyGraphBuilder.getAncestors(graph, b);
@@ -104,7 +104,7 @@ export class DependencyGraphBuilder {
     return a.filter(value => b.includes(value));
   }
 
-  private static getAncestors(graph: IDependencyGraph, type: OmniType): OmniType[] {
+  private static getAncestors(graph: DependencyGraph, type: OmniType): OmniType[] {
 
     const ancestors = graph.uses.get(type);
     if (ancestors) {
@@ -114,7 +114,7 @@ export class DependencyGraphBuilder {
     }
   }
 
-  private static addUseToGraph(graph: IDependencyGraph, usedBy: OmniType, uses: OmniType): void {
+  private static addUseToGraph(graph: DependencyGraph, usedBy: OmniType, uses: OmniType): void {
     if (!graph.uses.get(usedBy)) {
       graph.uses.set(usedBy, []);
     }
@@ -142,15 +142,15 @@ export class DependencyGraphBuilder {
   }
 }
 
-export interface IDependencyGraphOptions {
+export interface DependencyGraphOptions {
   multipleInheritance: boolean;
 }
 
-export const DEFAULT_GRAPH_OPTIONS: IDependencyGraphOptions = {
+export const DEFAULT_GRAPH_OPTIONS: DependencyGraphOptions = {
   multipleInheritance: false,
 };
 
-export interface IDependencyGraph {
+export interface DependencyGraph {
 
   uses: Map<OmniType, OmniType[]>;
   concretes: OmniType[];

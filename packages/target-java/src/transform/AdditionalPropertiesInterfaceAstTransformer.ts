@@ -1,19 +1,19 @@
 import {
-  IOmniInterfaceType, IOmniModel, IOmniObjectType, OmniTypeKind,
-  Naming, VisitorFactoryManager, RealOptions, IExternalSyntaxTree,
+  OmniInterfaceType, OmniModel, OmniObjectType, OmniTypeKind,
+  Naming, VisitorFactoryManager, RealOptions, ExternalSyntaxTree,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
-import {IJavaOptions} from '../options';
+import {JavaOptions} from '../options';
 import {JavaAstUtils, AbstractJavaAstTransformer} from '../transform';
 import * as Java from '../ast';
 
 export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: IOmniModel,
+    _model: OmniModel,
     root: Java.JavaAstRootNode,
-    _externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<IJavaOptions>,
+    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
+    options: RealOptions<JavaOptions>,
   ): Promise<void> {
 
     const createdInterface: { obj?: Java.InterfaceDeclaration } = {};
@@ -32,7 +32,7 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
 
           // TODO: It would be beneficial if we could add "methods" to interfaces.
           //        That way we could also add the "addAdditionalProperty" method to the interface.
-          const additionalPropertiesObjectType: IOmniObjectType = {
+          const additionalPropertiesObjectType: OmniObjectType = {
             kind: OmniTypeKind.OBJECT,
             properties: [],
             name: 'IAdditionalProperties',
@@ -44,7 +44,7 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
             owner: additionalPropertiesObjectType,
           });
 
-          const interfaceType: IOmniInterfaceType = {
+          const interfaceType: OmniInterfaceType = {
             kind: OmniTypeKind.INTERFACE,
             name: 'IAdditionalProperties',
             of: additionalPropertiesObjectType,

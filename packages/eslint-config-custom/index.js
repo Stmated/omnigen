@@ -23,8 +23,11 @@ module.exports = {
             'selector': 'interface',
             'leadingUnderscore': 'forbid',
             'trailingUnderscore': 'forbid',
-            'prefix': ['I'],
             'format': ['PascalCase'],
+            'custom': {
+              'regex': '^I[A-Z]',
+              'match': false,
+            },
           },
           {
             'selector': 'typeLike',

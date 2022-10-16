@@ -13,11 +13,11 @@ export type Dereferenced<out T> = { obj: T, root: object, hash?: string, mix?: b
 
 export type UriHash = { uri: string, hash: string };
 
-interface IRecordMap {
+interface RecordMap {
   [key: string]: Record<string, never>;
 }
 
-type ReduceMap = IRecordMap & {
+type ReduceMap = RecordMap & {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   '': Array<Record<string, never>>
 };
@@ -27,7 +27,7 @@ type UriParts = {
   path: string;
 }
 
-export interface IProtocolResolver {
+export interface ProtocolResolver {
   fetch<R>(uri: string): Promise<R>;
 
   resolveUri(baseUri: string, uri: string): string;
@@ -37,7 +37,7 @@ export interface IProtocolResolver {
   replace(parts: UriParts): UriParts;
 }
 
-class HttpProtocolResolver implements IProtocolResolver {
+class HttpProtocolResolver implements ProtocolResolver {
 
   private readonly _protocol: string;
 
@@ -82,7 +82,7 @@ class HttpProtocolResolver implements IProtocolResolver {
  */
 export class Dereferencer<T> {
 
-  private static readonly _FILE: IProtocolResolver = {
+  private static readonly _FILE: ProtocolResolver = {
     fetch<R>(uri: string): Promise<R> {
       return ProtocolHandler.file<R>(uri);
     },
@@ -104,7 +104,7 @@ export class Dereferencer<T> {
   private static readonly _HTTP = new HttpProtocolResolver('http');
   private static readonly _HTTPS = new HttpProtocolResolver('https');
 
-  private static readonly _PROTOCOL_RESOLVERS = new Map<string, IProtocolResolver>();
+  private static readonly _PROTOCOL_RESOLVERS = new Map<string, ProtocolResolver>();
 
   static {
     Dereferencer._PROTOCOL_RESOLVERS.set('file', Dereferencer._FILE);
@@ -156,7 +156,7 @@ export class Dereferencer<T> {
     absoluteBaseUri: string,
     absoluteFileUri: string,
     obj: object,
-    previousResolver: IProtocolResolver,
+    previousResolver: ProtocolResolver,
     callstack: string[],
   ): Promise<void> {
 
@@ -268,11 +268,11 @@ export class Dereferencer<T> {
     };
   }
 
-  private getAbsoluteUri(protocolResolver: IProtocolResolver, uri: UriParts, baseUri: string): string {
+  private getAbsoluteUri(protocolResolver: ProtocolResolver, uri: UriParts, baseUri: string): string {
     return baseUri ? protocolResolver.resolveUri(baseUri, uri.path) : uri.path;
   }
 
-  private getProtocolResolver(uri: UriParts, current: IProtocolResolver): IProtocolResolver {
+  private getProtocolResolver(uri: UriParts, current: ProtocolResolver): ProtocolResolver {
     const protocolResolver = uri.protocol
       ? Dereferencer._PROTOCOL_RESOLVERS.get(uri.protocol)
       : current;
@@ -284,7 +284,7 @@ export class Dereferencer<T> {
     return protocolResolver;
   }
 
-  private getUriParts(protocolResolver: IProtocolResolver, refUri: string): UriParts {
+  private getUriParts(protocolResolver: ProtocolResolver, refUri: string): UriParts {
 
     const protocolIndex = refUri.indexOf(':');
     return protocolResolver.replace({

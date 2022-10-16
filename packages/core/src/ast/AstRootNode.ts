@@ -1,10 +1,10 @@
 import {AbstractNode} from '../ast';
-import {IAstVisitor, VisitResult} from '../visit';
+import {AstVisitor, VisitResult} from '../visit';
 
 export class AstRootNode extends AbstractNode {
   children: AbstractNode[] = [];
 
-  visit<R>(visitor: IAstVisitor<R>): VisitResult<R> {
+  visit<R>(visitor: AstVisitor<R>): VisitResult<R> {
     return visitor.visitRootNode(this, visitor);
   }
 }

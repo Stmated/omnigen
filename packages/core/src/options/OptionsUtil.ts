@@ -3,7 +3,7 @@ import {
   Booleanish,
   IncomingOptions,
   IncomingOrRealOption,
-  IOptions,
+  Options,
   OmitNever,
   RealOptions,
 } from '../options';
@@ -13,7 +13,7 @@ const logger = LoggerFactory.create(__filename);
 
 export type IncomingConverter<TInc, TReal> = (incoming: TInc | TReal) => Promise<TReal>;
 
-export type OptionConverters<TOpt extends IOptions> = OmitNever<{
+export type OptionConverters<TOpt extends Options> = OmitNever<{
   [Key in keyof TOpt]: TOpt[Key] extends IncomingOrRealOption<infer TInc, infer TReal>
     ? TOpt[Key] extends TReal
       ? never
@@ -21,7 +21,7 @@ export type OptionConverters<TOpt extends IOptions> = OmitNever<{
     : never
 }>;
 
-export type OptionAdditions<TOpt extends IOptions> = {
+export type OptionAdditions<TOpt extends Options> = {
   [Key in keyof TOpt]?: TOpt[Key] extends IncomingOrRealOption<infer _TInc, infer TReal>
     ? (value: TReal) => IncomingOptions<TOpt> | undefined
     : (value: TOpt[Key]) => IncomingOptions<TOpt> | undefined
@@ -32,7 +32,7 @@ export type OptionAdditions<TOpt extends IOptions> = {
 export class OptionsUtil {
 
   public static async updateOptions<
-    TOpt extends IOptions,
+    TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TConverters extends OptionConverters<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
@@ -50,7 +50,7 @@ export class OptionsUtil {
   }
 
   private static async replaceOptionsWithConverted<
-    TOpt extends IOptions,
+    TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TConverters extends OptionConverters<TOpt>,
     TReturn extends RealOptions<TOpt>
@@ -91,7 +91,7 @@ export class OptionsUtil {
   }
 
   private static async getBaseWithOptionalAdditions<
-    TOpt extends IOptions,
+    TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
     TConverters extends OptionConverters<TOpt>
@@ -182,7 +182,7 @@ export class OptionsUtil {
     return Promise.resolve(String(value));
   }
 
-  public static updateOptionsFromDocument<TOpt extends IOptions>(doc: Record<string, Record<string, unknown>>, opt: TOpt): void {
+  public static updateOptionsFromDocument<TOpt extends Options>(doc: Record<string, Record<string, unknown>>, opt: TOpt): void {
 
     // TODO: This should be moved somewhere generic, since it should work the same in all languages.
     // TODO: Also need to incorporate the options parsers into this somehow

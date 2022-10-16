@@ -1,19 +1,19 @@
-import {IExternalSyntaxTree, ITransformer} from '../transform';
+import {ExternalSyntaxTree, Transformer} from '../transform';
 import {AstRootNode} from '../ast';
-import {IOmniModel} from '../parse';
+import {OmniModel} from '../parse';
 import {RealOptions} from '../options';
-import {ITargetOptions} from '../interpret';
+import {TargetOptions} from '../interpret';
 
-export abstract class AbstractAstTransformer<TRoot extends AstRootNode, TOpt extends ITargetOptions>
-implements ITransformer<TRoot, TOpt> {
+export abstract class AbstractAstTransformer<TRoot extends AstRootNode, TOpt extends TargetOptions>
+implements Transformer<TRoot, TOpt> {
 
   /**
    * TODO: Remove "options" and instead use "options" given from model. Or think of some other way of doing it
    */
   abstract transformAst(
-    model: IOmniModel,
+    model: OmniModel,
     root: TRoot,
-    externals: IExternalSyntaxTree<TRoot, TOpt>[],
+    externals: ExternalSyntaxTree<TRoot, TOpt>[],
     options: RealOptions<TOpt>
   ): Promise<void>;
 }

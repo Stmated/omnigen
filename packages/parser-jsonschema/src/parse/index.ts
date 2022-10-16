@@ -1,3 +1,3 @@
 
-export * from './IDiscriminatorAware';
+export * from './DiscriminatorAware';
 export * from './JsonSchemaParser';

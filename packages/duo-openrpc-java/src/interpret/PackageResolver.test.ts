@@ -1,5 +1,5 @@
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {IJavaOptions} from '@omnigen/target-java';
+import {JavaOptions} from '@omnigen/target-java';
 
 describe('PackageResolver', () => {
 
@@ -88,7 +88,7 @@ describe('PackageResolver', () => {
 
   test('FromCode', async () => {
 
-    const options: IJavaOptions = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       packageResolver: (_type, typeName) => {
         if (typeName.match(/.*Error.*/i)) {

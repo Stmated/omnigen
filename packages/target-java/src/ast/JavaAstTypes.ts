@@ -2,19 +2,19 @@ import {
   AbstractNode,
   AbstractToken,
   VisitResult,
-  IOmniDictionaryType,
+  OmniDictionaryType,
   OmniPrimitiveKind,
-  IOmniPrimitiveType,
+  OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
-  IOmniUnknownType,
+  OmniUnknownType,
   LiteralValue,
 } from '@omnigen/core';
 import {camelCase} from 'change-case';
 import {JavaAstUtils} from '../transform';
 import {JavaUtil} from '../util';
 import {JavaVisitor} from '../visit';
-import {IJavaOptions, UnknownType} from '../options';
+import {JavaOptions, UnknownType} from '../options';
 
 export enum TokenType {
   ASSIGN,
@@ -800,9 +800,9 @@ export class ConstructorDeclaration extends AbstractJavaNode {
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
 
-  readonly keyType: IOmniPrimitiveType;
-  readonly valueType: IOmniUnknownType;
-  readonly mapType: IOmniDictionaryType;
+  readonly keyType: OmniPrimitiveType;
+  readonly valueType: OmniUnknownType;
+  readonly mapType: OmniDictionaryType;
 
   constructor() {
     super();
@@ -841,7 +841,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     const addMethod = new MethodDeclaration(
       new MethodDeclarationSignature(
         new Identifier('addAdditionalProperty'),
-        JavaAstUtils.createTypeNode(<IOmniPrimitiveType>{
+        JavaAstUtils.createTypeNode(<OmniPrimitiveType>{
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
         }),
@@ -1173,7 +1173,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
   getters: FieldBackedGetter[];
   methods: MethodDeclaration[];
 
-  constructor(types: OmniType[], options: IJavaOptions, commentSupplier: { (type: OmniType): Comment[] }) {
+  constructor(types: OmniType[], options: JavaOptions, commentSupplier: { (type: OmniType): Comment[] }) {
     super();
 
     this.fields = [];

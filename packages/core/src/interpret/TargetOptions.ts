@@ -1,4 +1,4 @@
-import {IncomingOrRealOption, IOptions, PrimitiveGenerificationChoice} from '../options';
+import {IncomingOrRealOption, Options, PrimitiveGenerificationChoice} from '../options';
 import {CompressTypeLevel, OmniTypeKind} from '../parse';
 
 export enum CompressTypeNaming {
@@ -12,7 +12,7 @@ export enum CompressTypeNaming {
 
 export type OmniTypeNameReducer = (groups: string[][]) => string | CompressTypeNaming | undefined;
 
-export interface ITargetOptions extends IOptions {
+export interface TargetOptions extends Options {
 
   /**
    * Means to compress types by making them an inner type, if it is only ever used by one other type.
@@ -46,11 +46,11 @@ export interface ITargetOptions extends IOptions {
   compressPropertiesToAncestor: boolean;
 }
 
-export interface IGenericTargetOptions extends ITargetOptions {
+export interface GenericTargetOptions extends TargetOptions {
   onPrimitiveGenerification: PrimitiveGenerificationChoice;
 }
 
-export const DEFAULT_TARGET_OPTIONS: ITargetOptions = {
+export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
   compressSoloReferencedTypes: true,
   compressUnreferencedSubTypes: true,
   compressTypeKinds: [],

@@ -6,35 +6,35 @@ import {
   JSONSchema7Items,
   Naming,
   OmniArrayTypes,
-  IOmniArrayTypesByPositionType,
+  OmniArrayTypesByPositionType,
   OmniComparisonOperator,
-  IOmniModel,
-  IOmniObjectType,
+  OmniModel,
+  OmniObjectType,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
-  IOmniProperty,
+  OmniProperty,
   OmniPropertyOwner,
-  IOmniSubTypeHint,
+  OmniSubTypeHint,
   OmniType,
   OmniTypeKind,
   OmniUtil,
   TypeName,
-  Dereferenced, Dereferencer, RealOptions, IParserOptions,
+  Dereferenced, Dereferencer, RealOptions, ParserOptions,
 } from '@omnigen/core';
 import {pascalCase} from 'change-case';
 import {JSONSchema} from '@open-rpc/meta-schema';
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
-import {IDiscriminatorAware} from './IDiscriminatorAware';
+import {DiscriminatorAware} from './DiscriminatorAware';
 
 const logger = LoggerFactory.create(__filename);
 
 export type SchemaToTypeResult = { type: OmniType; canInline: boolean };
 
-export type DiscriminatorAwareSchema = boolean | (JSONSchema7 & IDiscriminatorAware);
+export type DiscriminatorAwareSchema = boolean | (JSONSchema7 & DiscriminatorAware);
 
-export interface IPostDiscriminatorMapping {
-  type: IOmniObjectType;
+export interface PostDiscriminatorMapping {
+  type: OmniObjectType;
   schema: Dereferenced<DiscriminatorAwareSchema>;
 }
 
@@ -42,11 +42,11 @@ export interface IPostDiscriminatorMapping {
  * TODO: This class needs some refactoring after being split out from OpenRpcParser
  *        It should be easy to use the JsonSchemaParser from other parsers; right now quite clumsy and locked to OpenRpc.
  */
-export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOptions> {
+export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptions> {
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typeMap = new Map<string, OmniType>();
-  private readonly _postDiscriminatorMapping: IPostDiscriminatorMapping[] = [];
+  private readonly _postDiscriminatorMapping: PostDiscriminatorMapping[] = [];
 
   private readonly _deref: Dereferencer<TRoot>;
 
@@ -61,7 +61,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     return [...this._typeMap.values()];
   }
 
-  public getPostDiscriminatorMappings(): IPostDiscriminatorMapping[] {
+  public getPostDiscriminatorMappings(): PostDiscriminatorMapping[] {
     return this._postDiscriminatorMapping;
   }
 
@@ -165,7 +165,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
       },
     ];
 
-    const type: IOmniObjectType = {
+    const type: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
       name: names,
       description: schema.obj.description,
@@ -189,7 +189,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
       this._typeMap.set(actualRef, type);
     }
 
-    const properties: IOmniProperty[] = [];
+    const properties: OmniProperty[] = [];
     if (schema.obj.properties) {
       for (const key of Object.keys(schema.obj.properties)) {
         const propertyValue = schema.obj.properties[key];
@@ -247,7 +247,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     owner: OmniPropertyOwner,
     propertyName: string,
     schemaOrRef: Dereferenced<JSONSchema7Definition>,
-  ): IOmniProperty {
+  ): OmniProperty {
 
     // The type name will be replaced if the schema is a $ref to another type.
     const schema = this.unwrapJsonSchema(schemaOrRef);
@@ -324,7 +324,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     return names;
   }
 
-  private canBeReplacedBy(type: IOmniObjectType, extension: OmniType): boolean {
+  private canBeReplacedBy(type: OmniObjectType, extension: OmniType): boolean {
 
     if (OmniUtil.isEmptyType(type)) {
       if (extension.kind == OmniTypeKind.COMPOSITION && extension.compositionKind == CompositionKind.XOR) {
@@ -335,7 +335,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     return false;
   }
 
-  private mergeTwoPropertiesAndAddToClassType(a: IOmniProperty, b: IOmniProperty, to: IOmniObjectType): void {
+  private mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniObjectType): void {
     const common = OmniUtil.getCommonDenominatorBetween(a.type, b.type);
     if (common) {
       if (to.properties) {
@@ -354,7 +354,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     }
   }
 
-  private addPropertyToClassType(property: IOmniProperty, toType: IOmniObjectType, as?: OmniType): void {
+  private addPropertyToClassType(property: OmniProperty, toType: OmniObjectType, as?: OmniType): void {
 
     if (!toType.properties) {
       toType.properties = [];
@@ -537,7 +537,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
 
   public extendOrEnhanceClassType(
     schema: Dereferenced<JSONSchema7Definition>,
-    type: IOmniObjectType,
+    type: OmniObjectType,
     name: TypeName,
   ): OmniType {
 
@@ -602,7 +602,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
       compositionsNot = (this.jsonSchemaToType(name, {obj: schema.obj.not, root: schema.root}, undefined)).type;
     }
 
-    let subTypeHints: IOmniSubTypeHint[] | undefined = undefined;
+    let subTypeHints: OmniSubTypeHint[] | undefined = undefined;
     const discriminatorAware = this.getDiscriminatorAware(schema);
     if (discriminatorAware) {
 
@@ -671,7 +671,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
 
   private getDiscriminatorAware(
     schema: Dereferenced<JSONSchema7Definition | DiscriminatorAwareSchema>,
-  ): Dereferenced<JSONSchema7 & IDiscriminatorAware> | undefined {
+  ): Dereferenced<JSONSchema7 & DiscriminatorAware> | undefined {
 
     if (typeof schema.obj == 'boolean') {
       return undefined;
@@ -689,9 +689,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     return undefined;
   }
 
-  private getSubTypeHints(schema: Dereferenced<DiscriminatorAwareSchema>, type: IOmniObjectType): IOmniSubTypeHint[] | undefined {
+  private getSubTypeHints(schema: Dereferenced<DiscriminatorAwareSchema>, type: OmniObjectType): OmniSubTypeHint[] | undefined {
 
-    const subTypeHints: IOmniSubTypeHint[] = [];
+    const subTypeHints: OmniSubTypeHint[] = [];
 
     if (typeof schema.obj == 'boolean') {
       return undefined;
@@ -830,7 +830,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
 
       const commonDenominator = OmniUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
 
-      const arrayByPositionType: IOmniArrayTypesByPositionType = {
+      const arrayByPositionType: OmniArrayTypesByPositionType = {
         // name: name ?? `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
         kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
@@ -900,7 +900,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
     return omniType;
   }
 
-  public executePostCleanup(model: IOmniModel): void {
+  public executePostCleanup(model: OmniModel): void {
 
     // Let's do the discriminator mapping which could not be done earlier in the process.
     // If we got here, then the type does not have any other mappings specified.
@@ -913,7 +913,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends IParserOpti
       const inheritors = OmniUtil.getTypesThatInheritFrom(model, postDiscriminator.type);
       const propertyName = postDiscriminator.schema.obj.discriminator.propertyName;
 
-      const subTypeHints: IOmniSubTypeHint[] = [];
+      const subTypeHints: OmniSubTypeHint[] = [];
       for (const inheritor of inheritors) {
 
         subTypeHints.push({

@@ -1,16 +1,16 @@
-import {IOmniModel, RealOptions, AbstractAstTransformer, IExternalSyntaxTree} from '@omnigen/core';
-import {IJavaOptions} from '../options';
+import {OmniModel, RealOptions, AbstractAstTransformer, ExternalSyntaxTree} from '@omnigen/core';
+import {JavaOptions} from '../options';
 import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
 
-export abstract class AbstractJavaAstTransformer implements AbstractAstTransformer<Java.JavaAstRootNode, IJavaOptions> {
+export abstract class AbstractJavaAstTransformer implements AbstractAstTransformer<Java.JavaAstRootNode, JavaOptions> {
 
   protected static readonly JAVA_VISITOR: JavaVisitor<void> = new JavaVisitor<void>();
 
   abstract transformAst(
-    model: IOmniModel,
+    model: OmniModel,
     root: Java.JavaAstRootNode,
-    externals: IExternalSyntaxTree<Java.JavaAstRootNode, IJavaOptions>[],
-    options: RealOptions<IJavaOptions>
+    externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
+    options: RealOptions<JavaOptions>
   ): Promise<void>;
 }

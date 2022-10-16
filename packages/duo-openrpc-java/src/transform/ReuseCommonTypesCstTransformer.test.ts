@@ -1,5 +1,5 @@
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
-import {IJavaOptions} from '@omnigen/target-java';
+import {JavaOptions} from '@omnigen/target-java';
 import {CompressTypeNaming, Naming, OmniModelMerge, OmniUtil} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 
@@ -24,7 +24,7 @@ describe('Reuse Common Types', () => {
       },
     ));
 
-    const resultMerged = OmniModelMerge.merge<IJavaOptions>([result10, result11], {
+    const resultMerged = OmniModelMerge.merge<JavaOptions>([result10, result11], {
       // TODO: Add capability of figuring out package automatically, common denominator for all given options
       package: 'com.common',
       compressUnreferencedSubTypes: true,
@@ -140,7 +140,7 @@ describe('Reuse Common Types', () => {
       },
     ));
 
-    const resultMerged = OmniModelMerge.merge<IJavaOptions>([result10, result11], {
+    const resultMerged = OmniModelMerge.merge<JavaOptions>([result10, result11], {
       // TODO: Add capability of figuring out package automatically, common denominator for all given options
       package: 'com.common',
       compressUnreferencedSubTypes: true,

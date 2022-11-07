@@ -1,15 +1,19 @@
-import {OmniInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {OmniPotentialInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 
 export class JavaAstUtils {
 
-  public static addInterfaceProperties(type: OmniInterfaceType, body: Java.Block): void {
+  public static addInterfaceProperties(type: OmniPotentialInterfaceType, body: Java.Block): void {
 
-    if (type.of.kind == OmniTypeKind.OBJECT) {
+    const interfaceLikeTarget = (type.kind == OmniTypeKind.INTERFACE)
+      ? type.of
+      : type;
+
+    if ('properties' in interfaceLikeTarget) {
 
       // Transform the object, but add no fields and only add the abstract method declaration (signature only)
-      for (const property of type.of.properties) {
+      for (const property of interfaceLikeTarget.properties) {
         body.children.push(
           new Java.AbstractMethodDeclaration(
             new Java.MethodDeclarationSignature(

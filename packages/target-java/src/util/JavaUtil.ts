@@ -1,16 +1,21 @@
-import {camelCase, pascalCase} from 'change-case';
 import {
   AstRootNode,
+  Case,
   CompositionKind,
-  OmniPrimitiveType,
-  OmniProperty,
-  PackageOptions,
   Naming,
   OmniCompositionType,
+  OmniModel,
+  OmniObjectType,
+  OmniPotentialInterfaceType,
   OmniPrimitiveKind,
+  OmniPrimitiveType,
+  OmniProperty,
+  OmniSubtypeCapableType,
+  OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   OmniUtil,
+  PackageOptions,
   PrimitiveNullableKind,
   RealOptions,
   VisitorFactoryManager,
@@ -18,6 +23,22 @@ import {
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '../options';
 import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(__filename);
+
+export type SuperTypePredicate = { (classType: JavaSuperTypeCapableType): boolean };
+
+export type JavaPotentialClassType = OmniObjectType;
+
+type JavaSubXOR = OmniCompositionType<JavaSubTypeCapableType | OmniPrimitiveType, CompositionKind.XOR>;
+
+// NOTE: This might not be the best way to look at things. Is an XOR Composition really a subtype?
+export type JavaSubTypeCapableType = OmniSubtypeCapableType | JavaSubXOR;
+
+// FIX: IT MUST ONLY BE POSSIBLE TO HAVE COMPOSITION KIND XOR!
+
+export type JavaSuperTypeCapableType = Exclude<OmniSuperTypeCapableType, OmniCompositionType<OmniSuperTypeCapableType, CompositionKind>> | OmniCompositionType<JavaSuperTypeCapableType, CompositionKind>;
 
 export interface TypeNameInfo {
   packageName: string | undefined;
@@ -27,13 +48,13 @@ export interface TypeNameInfo {
 
 interface FqnOptions {
   type: OmniType,
-  options?: RealOptions<JavaOptions>;
-  withSuffix?: boolean;
-  withPackage?: boolean;
-  withInner?: string[];
-  implementation?: boolean;
-  boxed?: boolean;
-  localNames?: Map<OmniType, TypeNameInfo>;
+  options?: RealOptions<JavaOptions> | undefined;
+  withSuffix?: boolean | undefined;
+  withPackage?: boolean | undefined;
+  withInner?: string[] | undefined;
+  implementation?: boolean | undefined;
+  boxed?: boolean | undefined;
+  localNames?: Map<OmniType, TypeNameInfo> | undefined;
 }
 
 export type FqnArgs = OmniType | FqnOptions;
@@ -195,7 +216,7 @@ export class JavaUtil {
         }
       case OmniTypeKind.INTERFACE:
         if (args.type.name) {
-          const name = Naming.safe(args.type.name);
+          const name = Naming.unwrap(args.type.name);
           return JavaUtil.getClassNameWithPackageName(args.type, name, args.options, args.withPackage);
         } else {
           const interfaceName = `I${JavaUtil.getName({...args, type: args.type.of, withPackage: false})}`;
@@ -205,11 +226,12 @@ export class JavaUtil {
       case OmniTypeKind.OBJECT: {
         // Are we sure all of these will be in the same package?
         // TODO: Use some kind of "groupName" where the group can be the package? "model", "api", "server", etc?
-        const name = Naming.safe(args.type.name);
+        const name = Naming.unwrap(args.type.name);
         return JavaUtil.getClassNameWithPackageName(args.type, name, args.options, args.withPackage);
       }
       case OmniTypeKind.COMPOSITION: {
 
+        // TODO: This is bad. The name should be set as a TypeName and evaluated once needed.
         const compositionName = JavaUtil.getCompositionClassName(args.type, args);
         return JavaUtil.getClassNameWithPackageName(args.type, compositionName, args.options, args.withPackage);
       }
@@ -221,7 +243,7 @@ export class JavaUtil {
         // It might be possible that this model has another option that what was given to this method.
         if (args.type.name) {
 
-          const name = Naming.safe(args.type.name);
+          const name = Naming.unwrap(args.type.name);
           const commonOptions = args.type.model.options as RealOptions<JavaOptions> || args.options;
           return JavaUtil.getClassNameWithPackageName(args.type, name, commonOptions, args.withPackage);
         }
@@ -276,10 +298,10 @@ export class JavaUtil {
     }
   }
 
-  private static getCompositionClassName(type: OmniCompositionType, args: FqnOptions): string {
+  private static getCompositionClassName<T extends OmniType>(type: OmniCompositionType<T, CompositionKind>, args: FqnOptions): string {
 
     if (type.name) {
-      return Naming.safe(type.name);
+      return Naming.unwrap(type.name);
     }
 
     let compositionTypes: OmniType[];
@@ -287,19 +309,19 @@ export class JavaUtil {
     let delimiter: string;
     switch (type.compositionKind) {
       case CompositionKind.AND:
-        compositionTypes = type.andTypes;
+        compositionTypes = type.types;
         delimiter = 'And';
         break;
       case CompositionKind.OR:
-        compositionTypes = type.orTypes;
+        compositionTypes = type.types;
         delimiter = 'Or';
         break;
       case CompositionKind.XOR:
-        compositionTypes = type.xorTypes;
+        compositionTypes = type.types;
         delimiter = 'XOr';
         break;
       case CompositionKind.NOT:
-        compositionTypes = type.notTypes;
+        compositionTypes = type.types;
         prefix = 'Not';
         delimiter = '';
         break;
@@ -428,13 +450,10 @@ export class JavaUtil {
   }
 
   /**
-   * Move to elsewhere, these should be based on the renderer and its settings?
-   *
-   * @param baseName
-   * @param type
+   * TODO: Move to elsewhere, these should be based on the renderer and its settings?
    */
   public static getGetterName(baseName: string, type: OmniType): string {
-    const capitalized = pascalCase(baseName);
+    const capitalized = Case.pascal(baseName);
     if (type.kind != OmniTypeKind.ARRAY) {
       if (type.kind == OmniTypeKind.PRIMITIVE && type.primitiveKind == OmniPrimitiveKind.BOOL && !type.nullable) {
         return `is${capitalized}`;
@@ -445,32 +464,33 @@ export class JavaUtil {
   }
 
   public static getSetterName(baseName: string): string {
-    const capitalized = pascalCase(baseName);
+    const capitalized = Case.pascal(baseName);
     return `set${capitalized}`;
   }
 
   public static getMostCommonTypeInHierarchies(hierarchies: OmniType[][]): OmniType | undefined {
 
-    if (hierarchies.length > 0) {
+    if (hierarchies.length == 0) {
+      return undefined;
+    }
 
-      const firstHierarchy = hierarchies[0];
-      for (let typeIndex = firstHierarchy.length - 1; typeIndex >= 0; typeIndex--) {
+    const firstHierarchy = hierarchies[0];
+    for (let typeIndex = firstHierarchy.length - 1; typeIndex >= 0; typeIndex--) {
 
-        let common: OmniType | undefined = firstHierarchy[typeIndex];
-        for (let n = 1; n < hierarchies.length; n++) {
+      let common: OmniType | undefined = firstHierarchy[typeIndex];
+      for (let n = 1; n < hierarchies.length; n++) {
 
-          const indexOfInOtherHierarchy = hierarchies[n].indexOf(common);
-          if (indexOfInOtherHierarchy == -1) {
+        const indexOfInOtherHierarchy = hierarchies[n].indexOf(common);
+        if (indexOfInOtherHierarchy == -1) {
 
-            // Could not find this type in the other's hierarchy. Need to search deeper.
-            common = undefined;
-            break;
-          }
+          // Could not find this type in the other's hierarchy. Need to search deeper.
+          common = undefined;
+          break;
         }
+      }
 
-        if (common) {
-          return common;
-        }
+      if (common) {
+        return common;
       }
     }
 
@@ -585,43 +605,6 @@ export class JavaUtil {
     return holder.ref;
   }
 
-  public static getExtendType(type: OmniType): OmniType | undefined {
-
-    // TODO: Implement! Should have *one* if possible, the best common denominator between most types.
-    if (type.kind == OmniTypeKind.OBJECT) {
-
-      if (type.extendedBy) {
-
-        // TODO: This is probably VERY wrong at the moment. Need to figure out which SINGLE type in probable composition to extend from
-        if (type.extendedBy.kind == OmniTypeKind.OBJECT) {
-          return type.extendedBy;
-        } else if (type.extendedBy.kind == OmniTypeKind.COMPOSITION) {
-
-          // TODO: Need to figure out which one it is we should actually *extend* from. It can only be one.
-        }
-
-        return type.extendedBy;
-      }
-
-      // TODO: How do we actually handle this in Java? Check other existing generator libraries for ideas
-      //        Maybe there exists a dedicated library for analyzing JSONSchema -> Java conversions?
-    }
-
-    return undefined;
-  }
-
-  public static getExtendHierarchy(type: OmniType): OmniType[] {
-
-    const path: OmniType[] = [];
-    let pointer: OmniType | undefined = type;
-    while (pointer = JavaUtil.getExtendType(pointer)) {
-      path.push(pointer);
-    }
-
-    return path;
-  }
-
-
   public static isNullable(type: OmniType): boolean {
     // NOTE: If changed, make sure toNullableType is updated
     if (type.kind == OmniTypeKind.PRIMITIVE) {
@@ -653,19 +636,21 @@ export class JavaUtil {
       return properties;
     }
 
-    OmniUtil.traverseTypes(type, (localType, depth) => {
+    OmniUtil.visitTypesDepthFirst(type, ctx => {
 
-      if (localType.kind == OmniTypeKind.OBJECT) {
-        if (depth > 0) {
-          return 'skip';
+      if (ctx.type.kind == OmniTypeKind.OBJECT) {
+        if (ctx.depth > 0) {
+          ctx.skip = true;
+          return;
         }
-      } else if (localType.kind == OmniTypeKind.INTERFACE) {
+      } else if (ctx.type.kind == OmniTypeKind.INTERFACE) {
         // The interface might be the interface of the calling type. Filter it out below.
-        if (localType.of != type) {
-          properties.push(...OmniUtil.getPropertiesOf(localType.of));
+        if (ctx.type.of != type) {
+          properties.push(...OmniUtil.getPropertiesOf(ctx.type.of));
         }
-      } else if (localType.kind == OmniTypeKind.COMPOSITION && localType.compositionKind == CompositionKind.XOR) {
-        return 'skip';
+      } else if (ctx.type.kind == OmniTypeKind.COMPOSITION && ctx.type.compositionKind == CompositionKind.XOR) {
+        ctx.skip = true;
+        return;
       }
 
       return undefined;
@@ -691,6 +676,470 @@ export class JavaUtil {
   public static getPrettyArgumentName(name: string): string {
 
     const safeName = JavaUtil.getSafeIdentifierName(name);
-    return camelCase(safeName.replaceAll(JavaUtil._PATTERN_WITH_PREFIX, ''));
+    return Case.camel(safeName.replaceAll(JavaUtil._PATTERN_WITH_PREFIX, ''));
+  }
+
+
+  // TODO: MOVE ALL THE METHODS BELOW INTO A GENERAL CLASS THAT TAKES THE LANGUAGE FEATURES AS AN ARGUMENT
+  //        BECAUSE IT SHOULD BE LIKELY THAT THE CODE IS VERY SIMILAR TO ALL DIFFERENT LANGUAGES!
+
+
+  /**
+   * Check if any of the supertypes of 'type' matches the predicate callback.
+   *
+   * @param model The current OmniModel
+   * @param type The type to begin searching in
+   * @param predicate Predicate which returns true if the object type matches, otherwise false.
+   */
+  public static superMatches(
+    model: OmniModel,
+    type: JavaSubTypeCapableType | undefined,
+    predicate: SuperTypePredicate,
+  ): boolean {
+
+    const superType = JavaUtil.getSuperClassOfSubType(model, type);
+    if (superType) {
+      if (predicate(superType)) {
+        return true;
+      }
+
+      const asSubType = JavaUtil.asSubType(superType);
+      if (asSubType) {
+
+        // The supertype is also a subtype which we can keep searching upwards in
+        return JavaUtil.superMatches(model, asSubType, predicate);
+      }
+    }
+
+    return false;
+  }
+
+  public static asSubType(type: OmniType): JavaSubTypeCapableType | undefined {
+
+    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
+
+      // NOTE: This conversion is not necessarily true, the generics need to be improved to be trusted
+      const isSubTypes = type.types.map(it => it.kind == OmniTypeKind.PRIMITIVE || !!JavaUtil.asSubType(it));
+      if (isSubTypes.includes(false)) {
+
+        // This might seem confusing, when you call "asSuperType" on a composition but get back undefined.
+        // This method is supposed to be safe to call with anything though, but we log this occasion.
+        logger.debug(`There is a non-subtype type inside composition ${OmniUtil.describe(type)}`);
+        return undefined;
+      }
+
+      return type as JavaSubXOR;
+    }
+
+    return OmniUtil.asSubType(type);
+  }
+
+  public static asSuperType(type: OmniType | undefined): JavaSuperTypeCapableType | undefined {
+
+    if (!type) {
+      return undefined;
+    }
+
+    if (type.kind == OmniTypeKind.COMPOSITION) {
+
+      const anyNotSuper = type.types.find(it => JavaUtil.asSuperType(it) === undefined);
+      if (anyNotSuper) {
+        throw new Error(`There was a non-supertype inside the composition ${OmniUtil.describe(type)}`);
+      }
+
+      return type as JavaSuperTypeCapableType;
+    }
+
+    // NOTE: Would be good to get rid of this cast? Why is it not recognized?
+    const omniSuperType = OmniUtil.asSuperType(type);
+    if (omniSuperType) {
+      if (omniSuperType.kind == OmniTypeKind.COMPOSITION) {
+        if (omniSuperType.compositionKind == CompositionKind.XOR) {
+          return omniSuperType;
+        }
+
+        return undefined;
+      }
+    }
+
+    return omniSuperType;
+  }
+
+  public static getSubTypes(model: OmniModel, superType: OmniSuperTypeCapableType): [OmniSubtypeCapableType, number][] {
+
+    const result: [OmniSubtypeCapableType, number][] = [];
+    const superTypes = OmniUtil.getFlattenedSuperTypes(superType);
+
+    OmniUtil.visitTypesDepthFirst(model, ctx => {
+
+      if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
+        return 'skip';
+      }
+
+      if (ctx.type.kind == OmniTypeKind.OBJECT || ctx.type.kind == OmniTypeKind.INTERFACE || ctx.type.kind == OmniTypeKind.ENUM) {
+
+        const index = superTypes.indexOf(ctx.type);
+        if (index != -1) {
+          result.push([ctx.type, index]);
+        } else {
+          // Do anything here?
+        }
+
+      } else {
+
+        // Skip any type that is not a subtype capable type.
+        return 'skip';
+      }
+
+      return undefined;
+    });
+
+    return result;
+  }
+
+  public static getFlattenedSuperTypes(type: JavaSuperTypeCapableType): JavaSuperTypeCapableType[] {
+
+    if (type.kind == OmniTypeKind.COMPOSITION) {
+
+      const superTypes: JavaSuperTypeCapableType[] = [];
+      for (const t of type.types) {
+        const asSuperType = JavaUtil.asSuperType(t);
+        if (asSuperType) {
+          superTypes.push(...JavaUtil.getFlattenedSuperTypes(asSuperType));
+        }
+      }
+
+      return superTypes;
+
+      // if (type.compositionKind == CompositionKind.XOR) {
+      //
+      // } else {
+      //
+      //   // Are there other composition kinds that can be allowed as a list of 'extends' and 'implements'?
+      //   return [];
+      // }
+
+    } else {
+      return [type];
+    }
+  }
+
+  /**
+   * See {@link JavaUtil#getSuperInterfacesOfSubType} for information about definition of objects and interfaces.
+   */
+  public static getSuperClassOfSubType(_model: OmniModel, subType: JavaSubTypeCapableType | undefined): JavaSuperTypeCapableType | undefined {
+
+    subType = OmniUtil.getUnwrappedType(subType);
+    if (!subType || subType.kind == OmniTypeKind.COMPOSITION) {
+
+      // The XOR composition class in Java does not actually extend anything.
+      // Instead it solves things by becoming a manual mapping class with different getters.
+      return undefined;
+    }
+
+    if (!subType.extendedBy) {
+      return undefined;
+    }
+
+    const unwrapped = OmniUtil.getUnwrappedType(subType.extendedBy);
+
+    if (unwrapped.kind == OmniTypeKind.COMPOSITION && unwrapped.compositionKind == CompositionKind.AND) {
+      const flattened = JavaUtil.getFlattenedSuperTypes(unwrapped);
+      if (flattened.length > 0) {
+        const possibleObject = OmniUtil.getUnwrappedType(flattened[0]);
+        if (possibleObject) {
+          return possibleObject;
+        }
+      }
+    }
+
+    // This is a single type, and if it's an object, then it's something we inherit from.
+    return JavaUtil.asSuperType(unwrapped);
+  }
+
+  /**
+   * On the Omni side of things we have two types: Object & Interface.
+   *
+   * Interface is when the source schema has specified the type as being an interface and not an implementation.
+   *
+   * Object is when the source schema has specified the shape of an object.
+   *
+   * But depending on the target language, that Object might be handled/rendered as an interface.
+   * This is most apparent when dealing with JSONSchema to Java (or any language with single-inheritance).
+   *
+   * The schema might say "This object extends types A, B, C" but the language only allows inheriting from "A".
+   * It then needs to handle B and C as interfaces and then try to live up to that contract on the subtype of A.
+   */
+  public static getSuperInterfacesOfSubType(_model: OmniModel, subType: JavaSubTypeCapableType): OmniPotentialInterfaceType[] {
+
+    const interfaces: OmniPotentialInterfaceType[] = [];
+    if (subType.kind == OmniTypeKind.COMPOSITION && subType.compositionKind == CompositionKind.XOR) {
+      // The XOR composition class does in Java not actually implement anything.
+      // Instead it solves things by becoming a manual mapping class with different getters.
+      return interfaces;
+    }
+
+    // First we can find the specifically stated interfaces. This is not a very used concept.
+    if (subType.kind == OmniTypeKind.OBJECT || subType.kind == OmniTypeKind.INTERFACE) {
+      if (subType.extendedBy) {
+        const flattened = OmniUtil.getFlattenedSuperTypes(subType.extendedBy);
+        for (let i = 0; i < flattened.length; i++) {
+
+          const superType = flattened[i];
+          if (superType.kind == OmniTypeKind.INTERFACE) {
+            interfaces.push(superType);
+          } else if (superType.kind == OmniTypeKind.OBJECT && i > 0) {
+
+            // If the supertype is an object, but it's not the first supertype, then it is an interface in Java.
+            // It is up to transformers to order the supertypes in the best order for what should be class/interface.
+            interfaces.push(superType);
+          }
+        }
+      }
+    }
+
+    return interfaces;
+  }
+
+  // private static checkTypeAndCallback(pointer: JavaSuperTypeCapableType, callback: ObjectTypePredicate): boolean {
+  //
+  //   // TODO: Is this even correct?
+  //   if (pointer.kind == OmniTypeKind.GENERIC_TARGET) {
+  //     // TODO: Should allow more types than just object here, the generic can be pointing to something else.
+  //     if (pointer.source.of.kind == OmniTypeKind.OBJECT && callback(pointer.source.of)) {
+  //       return true;
+  //     }
+  //   } else if (pointer.kind == OmniTypeKind.COMPOSITION) {
+  //     // ???
+  //   } else if (pointer.kind == OmniTypeKind.ENUM) {
+  //     // ???
+  //   } else if (pointer.kind == OmniTypeKind.INTERFACE) {
+  //     // ???
+  //   } else if (pointer.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+  //     const unwrapped = OmniUtil.getUnwrappedType(pointer);
+  //     if (!unwrapped) {
+  //       throw new Error(`Something is wrong with the external model reference. It is not inheritable`);
+  //     }
+  //
+  //     return JavaUtil.checkTypeAndCallback(unwrapped, callback);
+  //
+  //   } else {
+  //
+  //     if (callback(pointer)) {
+  //       return true;
+  //     }
+  //   }
+  //
+  //   return false;
+  // }
+
+  /**
+   * TypeGuard version of an otherwise expected 'isInterface' method.
+   * Returns undefined if it does not have the potential of being an interface, otherwise the type casted.
+   */
+  public static getAsInterface(model: OmniModel, type: OmniType): OmniPotentialInterfaceType | undefined {
+
+    const unwrapped = OmniUtil.getUnwrappedType(type);
+    if (unwrapped.kind == OmniTypeKind.INTERFACE) {
+      return unwrapped;
+    }
+
+    if (unwrapped.kind != OmniTypeKind.OBJECT) {
+      return undefined;
+    }
+
+    // Now we need to figure out if this type is ever used as an interface in another type.
+
+    const subTypeOfOurType = OmniUtil.visitTypesDepthFirst(model, ctx => {
+      if ('extendedBy' in ctx.type && ctx.type.extendedBy) {
+
+        const flattened = OmniUtil.getFlattenedSuperTypes(ctx.type.extendedBy);
+        const usedAtIndex = flattened.indexOf(unwrapped);
+        if (usedAtIndex > 0) {
+          return ctx.type;
+        }
+      }
+
+      return;
+    });
+
+    if (subTypeOfOurType) {
+
+      const typeName = OmniUtil.describe(unwrapped);
+      const subType = OmniUtil.describe(subTypeOfOurType);
+      logger.debug(`Given type ${typeName} is used as interface in type ${subType}`);
+      return unwrapped;
+    }
+
+    return undefined;
+  }
+
+  public static getAsClass(model: OmniModel, type: OmniType): JavaPotentialClassType | undefined {
+
+    const unwrapped = OmniUtil.getUnwrappedType(type);
+    if (unwrapped.kind != OmniTypeKind.OBJECT) { // && unwrapped.kind != OmniTypeKind.COMPOSITION) {
+
+      return undefined;
+    }
+
+    if (model.types.includes(type)) {
+
+      // The type is an external type and should always be output like a class (but might also become an interface).
+      return unwrapped;
+    }
+
+    // This is a type that we need to investigate if it is ever used as a class somewhere else.
+    // We do this by checking if any type uses 'type' as a first extension.
+    return OmniUtil.visitTypesDepthFirst(model, ctx => {
+
+      const uw = OmniUtil.getUnwrappedType(ctx.type);
+      if (uw.kind == OmniTypeKind.ENUM || uw.kind == OmniTypeKind.INTERFACE) {
+        return;
+      }
+
+      if ('extendedBy' in uw && uw.extendedBy) {
+        if (uw.extendedBy == unwrapped) {
+          return unwrapped;
+        }
+
+        if (uw.extendedBy.kind == OmniTypeKind.COMPOSITION && uw.extendedBy.compositionKind == CompositionKind.AND) {
+          if (uw.extendedBy.types.length > 0) {
+            if (uw.extendedBy.types[0] == unwrapped) {
+              return unwrapped;
+            }
+          }
+        }
+      }
+
+      return;
+    });
+  }
+
+  public static getInterfaces(model: OmniModel): OmniPotentialInterfaceType[] {
+
+    const interfaces: OmniPotentialInterfaceType[] = [];
+
+    OmniUtil.visitTypesDepthFirst(model, ctx => {
+      const asInterface = JavaUtil.getAsInterface(model, ctx.type);
+      if (asInterface && !interfaces.includes(asInterface)) {
+        interfaces.push(asInterface);
+
+        // TODO: THIS IS WRONG! MOVE THIS INTO "getAsInterface"! It must be *central* to how it is decided!
+
+        // If this is an interface, then we also need to add *all* supertypes as interfaces.
+        // This is because an interface cannot inherit from a class, so all needs to be interfaces.
+        for (const superClass of JavaUtil.getSuperClassHierarchy(model, asInterface)) {
+
+          // getAsInterface is costly. So do a quicker check here.
+          // The check might desync from the definition of an interface in getAsInterface, so keep heed here.
+          if (superClass.kind == OmniTypeKind.OBJECT || superClass.kind == OmniTypeKind.INTERFACE) {
+            if (!interfaces.includes(superClass)) {
+              interfaces.push(superClass);
+            }
+          }
+        }
+      }
+    });
+
+    return interfaces;
+  }
+
+  public static getClasses(model: OmniModel): JavaPotentialClassType[] {
+
+    const checked: OmniType[] = [];
+    const classes: JavaPotentialClassType[] = [];
+
+    OmniUtil.visitTypesDepthFirst(model, ctx => {
+      if (checked.includes(ctx.type)) {
+        return;
+      }
+      checked.push(ctx.type);
+
+      const asClass = JavaUtil.getAsClass(model, ctx.type);
+      if (asClass && !classes.includes(asClass)) {
+        classes.push(asClass);
+      }
+    });
+
+    return classes;
+  }
+
+  public static getConcreteClasses(model: OmniModel): JavaPotentialClassType[] {
+
+    // TODO: It should be an option or not whether concrete vs abstract classes should exist, or all just be classes.
+    const edgeTypes = OmniUtil.getAllExportableTypes(model).edge;
+
+    const concreteClasses: JavaPotentialClassType[] = [];
+    for (const edgeType of edgeTypes) {
+      const asClass = JavaUtil.getAsClass(model, edgeType);
+      if (asClass) {
+        concreteClasses.push(asClass);
+      }
+    }
+
+    return concreteClasses;
+  }
+
+  public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubtypeCapableType, OmniSuperTypeCapableType[]> {
+    return OmniUtil.getSubTypeToSuperTypesMap(model);
+  }
+
+  public static getSuperTypeToSubTypesMap(model: OmniModel): Map<OmniSuperTypeCapableType, OmniSubtypeCapableType[]> {
+    return OmniUtil.getSuperTypeToSubTypesMap(model);
+  }
+
+  /**
+   * Get the types that implement the given class.
+   * There is a difference between implementing (interface) and extending (class)
+   */
+  public static getSubTypesOfInterface(model: OmniModel, interfaceType: OmniPotentialInterfaceType): OmniSubtypeCapableType[] {
+
+    const subTypesOfInterface: OmniSubtypeCapableType[] = [];
+
+    const superTypeToSubTypeMap = JavaUtil.getSuperTypeToSubTypesMap(model);
+    const subTypes = superTypeToSubTypeMap.get(interfaceType);
+    if (subTypes) {
+      for (const subType of subTypes) {
+        if (!subTypesOfInterface.includes(subType)) {
+          subTypesOfInterface.push(subType);
+        }
+      }
+    }
+
+    return subTypesOfInterface;
+  }
+
+  public static getCommonSuperClasses(model: OmniModel, a: JavaSubTypeCapableType, b: JavaSubTypeCapableType): OmniType[] {
+
+    const aAncestors = JavaUtil.getSuperClassHierarchy(model, a);
+    const bAncestors = JavaUtil.getSuperClassHierarchy(model, b);
+
+    return this.getCommon(aAncestors, bAncestors);
+  }
+
+  public static getSuperClassHierarchy(model: OmniModel, type: JavaSubTypeCapableType | undefined): OmniSuperTypeCapableType[] {
+
+    const path: OmniSuperTypeCapableType[] = [];
+    if (!type) {
+      return path;
+    }
+
+    let pointer: JavaSubTypeCapableType | undefined = type;
+    while (pointer) {
+
+      const superClass = JavaUtil.getSuperClassOfSubType(model, pointer);
+      if (superClass) {
+        path.push(superClass);
+        pointer = JavaUtil.asSubType(superClass);
+      } else {
+        break;
+      }
+    }
+
+    return path;
+  }
+
+  private static getCommon<T>(a: T[], b: T[]): T[] {
+    return a.filter(value => b.includes(value));
   }
 }

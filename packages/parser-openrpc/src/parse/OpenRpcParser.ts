@@ -33,7 +33,7 @@ import {
   PrimitiveNullableKind,
   SchemaFile,
   TypeName,
-  OptionConverters,
+  OptionResolver,
   OptionsUtil,
   TargetOptions,
   IncomingOptions,
@@ -43,7 +43,7 @@ import {
   ParserOptions,
   PARSER_OPTIONS_CONVERTERS,
   Dereferenced,
-  Dereferencer,
+  Dereferencer, Case,
 } from '@omnigen/core';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
@@ -62,7 +62,6 @@ import {
   ServerObject,
 } from '@open-rpc/meta-schema';
 import {JSONSchema7} from 'json-schema';
-import {pascalCase} from 'change-case';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -80,7 +79,7 @@ type TypeAndProperties = { type: OmniType; properties: OmniProperty[] | undefine
 
 export type IOpenRpcParserOptions = JsonRpcOptions & ParserOptions;
 
-export const OPENRPC_OPTIONS_CONVERTERS: OptionConverters<IOpenRpcParserOptions> = {
+export const OPENRPC_OPTIONS_CONVERTERS: OptionResolver<IOpenRpcParserOptions> = {
   ...JSONRPC_OPTIONS_CONVERTERS,
   ...PARSER_OPTIONS_CONVERTERS,
 };
@@ -266,7 +265,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
 
     const errorOutputs = errorsOrReferences.map(it => {
       const deref = this._deref.get(it, method.root);
-      return this.errorToGenericOutput(pascalCase(method.obj.name), deref);
+      return this.errorToGenericOutput(Case.pascal(method.obj.name), deref);
     });
 
     responses.push(...errorOutputs);
@@ -299,7 +298,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
         },
       ],
       responses: responses,
-      deprecated: method.obj.deprecated,
+      deprecated: method.obj.deprecated || false,
       examples: examples,
       externalDocumentations: method.obj.externalDocs
         ? [this.toOmniExternalDocumentationFromExternalDocumentationObject(method.obj.externalDocs)]
@@ -334,7 +333,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
     }
     if (contentDescriptor.obj && contentDescriptor.obj.description && contentDescriptor.obj.description.length < 20) {
       // Very ugly, but it's something?
-      names.push(pascalCase(contentDescriptor.obj.description));
+      names.push(Case.pascal(contentDescriptor.obj.description));
     }
     names.push(...this._jsonSchemaParser.getFallbackNamesOfJsonSchemaType(schema));
 
@@ -343,7 +342,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
 
   private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: Dereferenced<ContentDescriptorObject>): OutputAndType {
 
-    const typeNamePrefix = pascalCase(method.name);
+    const typeNamePrefix = Case.pascal(method.name);
 
     // TODO: Should this always be unique, or should we ever use a common inherited method type?
     // TODO: Reuse the code from contentDescriptorToGenericProperty -- so they are ALWAYS THE SAME
@@ -416,12 +415,12 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
     resultType.extendedBy = this._jsonRpcResponseClass;
 
     return {
-      output: <OmniOutput>{
+      output: {
         name: contentDescriptor.obj.name,
         description: contentDescriptor.obj.description,
         summary: contentDescriptor.obj.summary,
         deprecated: contentDescriptor.obj.deprecated || false,
-        required: contentDescriptor.obj.required,
+        required: contentDescriptor.obj.required || false,
         type: resultType,
         contentType: 'application/json',
         qualifiers: [
@@ -460,20 +459,22 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
       : `${parentName}Error${error.code}`;
 
     const errorPropertyType: OmniObjectType = {
-      name: `${typeName}Error`,
       kind: OmniTypeKind.OBJECT,
+      name: `${typeName}Error`,
       additionalProperties: false,
       properties: [],
+      debug: `Created by ${this.doc.info.title}`,
     };
 
     if (!this._jsonRpcErrorResponseClass) {
-      const className = 'JsonRpcErrorResponse'; // TODO: Make it a setting
+      const className = 'JsonRpcErrorResponse';
       this._jsonRpcErrorResponseClass = {
         kind: OmniTypeKind.OBJECT,
         name: className,
         description: `Generic class to describe the JsonRpc error response package`,
         additionalProperties: false,
         properties: [],
+        debug: `Created by ${this.doc.info.title}`,
       };
       this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcErrorResponseClass);
 
@@ -517,6 +518,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
         description: `Generic class to describe the JsonRpc error inside an error response`,
         additionalProperties: false,
         properties: [],
+        debug: `Created by ${this.doc.info.title}`,
       };
       this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcErrorInstanceClass);
 
@@ -583,12 +585,13 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
     }
 
     const errorType: OmniObjectType = {
+      kind: OmniTypeKind.OBJECT,
       name: typeName,
       accessLevel: OmniAccessLevel.PUBLIC,
-      kind: OmniTypeKind.OBJECT,
       extendedBy: this._jsonRpcErrorResponseClass,
       additionalProperties: false,
       properties: [],
+      debug: `Created by ${this.doc.info.title}`,
     };
 
     const errorProperty: OmniProperty = {
@@ -601,7 +604,6 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
     errorType.properties = [
       errorProperty,
     ];
-    // errorType.requiredProperties = [errorProperty];
 
     const qualifiers: OmniPayloadPathQualifier[] = [{
       path: ['error'],
@@ -746,8 +748,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
         return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._deref.get(it, method.root));
       });
 
-      // TODO: DO NOT USE ANY JAVA-SPECIFIC METHODS HERE! MOVE THEM SOMEPLACE ELSE IF GENERIC ENOUGH!
-      requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type));
+      requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type))?.type;
 
     } else {
 
@@ -809,9 +810,12 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
       const requestJsonRpcType: OmniPrimitiveType = {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
-        valueConstant: hasConstantVersion ? this._options.jsonRpcVersion : undefined,
         nullable: PrimitiveNullableKind.NOT_NULLABLE,
       };
+
+      if (hasConstantVersion) {
+        requestJsonRpcType.valueConstant = this._options.jsonRpcVersion;
+      }
 
       // TODO: This should be moved to the abstract parent class somehow, then sent down through constructor
       //        Maybe this can be done automatically through GenericOmniModelTransformer?
@@ -911,8 +915,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
       // TODO: Try converting both into PascalCase and compare
       // TODO: Need to mark as "incorrect" somehow, so the documentation can know the Spec is invalid!
       if (this._options.relaxedLookup) {
-        const pascalName = pascalCase(name);
-        targetEndpoint = endpoints.find(it => pascalCase(it.name) == pascalName);
+        const pascalName = Case.pascal(name);
+        targetEndpoint = endpoints.find(it => Case.pascal(it.name) == pascalName);
         if (targetEndpoint) {
           logger.warn(`There is no target endpoint called '${choice || 'N/A'}', WILL ASSUME INVALID CASE '${targetEndpoint.name}'!`);
         }
@@ -976,7 +980,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
           target: targetParameter,
         });
       } else {
-        logger.warn(`Could not find property '${linkParamName}' in '${OmniUtil.getTypeDescription(requestResultClass)}'`);
+        logger.warn(`Could not find property '${linkParamName}' in '${OmniUtil.describe(requestResultClass)}'`);
       }
     }
 
@@ -1025,8 +1029,8 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
           if (inputProperties.length > propertyPath.length) {
             propertyPath = inputProperties;
           } else {
-            const primaryName = OmniUtil.getTypeDescription(primaryType);
-            const secondaryName = OmniUtil.getTypeDescription(secondaryType);
+            const primaryName = OmniUtil.describe(primaryType);
+            const secondaryName = OmniUtil.describe(secondaryType);
             throw new Error(`There is no property path '${pathString}' in '${primaryName}' nor '${secondaryName}'`);
           }
         }
@@ -1043,12 +1047,6 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
     };
   }
 
-  /**
-   * TODO: Move somewhere more generic
-   *
-   * @param type
-   * @param pathParts
-   */
   private getPropertyPath(type: OmniType, pathParts: string[]): OmniProperty[] {
     const propertyPath: OmniProperty[] = [];
     let pointer = type;
@@ -1075,7 +1073,7 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
         pointer = pointer.of;
         i--;
       } else {
-        throw new Error(`Do not know how to handle '${OmniUtil.getTypeDescription(type)}' in property path '${pathParts.join('.')}'`);
+        throw new Error(`Do not know how to handle '${OmniUtil.describe(type)}' in property path '${pathParts.join('.')}'`);
       }
     }
 

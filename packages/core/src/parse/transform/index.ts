@@ -1,3 +1,4 @@
 
-export * from './CompressionOmniModelTransformer';
+export * from './SimplifyInheritanceOmniModelTransformer';
+export * from './ElevateCommonPropertiesOmniModelTransformer';
 export * from './GenericsOmniModelTransformer';

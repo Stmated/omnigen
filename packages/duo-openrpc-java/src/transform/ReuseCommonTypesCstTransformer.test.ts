@@ -1,6 +1,6 @@
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {JavaOptions} from '@omnigen/target-java';
-import {CompressTypeNaming, Naming, OmniModelMerge, OmniUtil} from '@omnigen/core';
+import {CompressTypeNaming, Naming, OmniModelMerge, OmniObjectType, OmniTypeKind, OmniUtil} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 
 describe('Reuse Common Types', () => {
@@ -39,12 +39,19 @@ describe('Reuse Common Types', () => {
     expect(resultMerged.model.types).toHaveLength(3);
     expect(resultMerged.model.endpoints).toHaveLength(0);
 
+    resultMerged.model.types.sort((a, b) => OmniUtil.describe(a).localeCompare(OmniUtil.describe(b)));
     expect(OmniUtil.getTypeName(resultMerged.model.types[0])).toEqual('JsonRpcRequestParams');
 
     // The names for this type has not been solidified/gone through the syntax tree transformers.
     // So it is still the more schema-like names, and not the target class names.
     expect(OmniUtil.getTypeName(resultMerged.model.types[1])).toEqual('list_thingsRequestParams');
-    expect(Naming.unwrapToFirstDefined(OmniUtil.getTypeName(resultMerged.model.types[2]))).toEqual('/components/schemas/Thing');
+
+    const typeName = OmniUtil.getTypeName(resultMerged.model.types[2]);
+    if (!typeName) {
+      throw new Error(`Type name was expected to be defined`);
+    }
+
+    expect(Naming.unwrap(typeName)).toEqual('/components/schemas/Thing');
 
     const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
@@ -148,19 +155,13 @@ describe('Reuse Common Types', () => {
       compressTypeNaming: CompressTypeNaming.COMMON_PREFIX,
     });
 
-    // The merged model should (for now, we will see later) be virtually empty of functionality.
-    // It is up to each respective model to output itself as normally, but to be aware that types are common.
-    // This can for example be done at the file writing stage, where if the other model has already written
-    // the common type to disk, then we do not need to do so again if we encounter it.
     expect(resultMerged).toBeDefined();
-    expect(resultMerged.model.types).toHaveLength(3);
+    expect(resultMerged.model.types).toHaveLength(1);
     expect(resultMerged.model.endpoints).toHaveLength(0);
 
-    expect(OmniUtil.getTypeName(resultMerged.model.types[0])).toEqual('JsonRpcRequestParams');
+    resultMerged.model.types.sort((a, b) => OmniUtil.describe(a).localeCompare(OmniUtil.describe(b)));
 
-    // The names for this type has not been solidified/gone through the syntax tree transformers.
-    // So it is still the more schema-like names, and not the target class names.
-    expect(OmniUtil.getTypeName(resultMerged.model.types[1])).toEqual('list');
+    expect(OmniUtil.getTypeName(resultMerged.model.types[0])).toEqual('JsonRpcRequestParams');
 
     const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
@@ -179,8 +180,6 @@ describe('Reuse Common Types', () => {
 
     expect(filesCommonNames).toEqual([
       'JsonRpcRequestParams.java',
-      // 'ListThingsRequestParams.java',
-      'Thing.java',
     ]);
 
     expect(filesANames).toEqual([
@@ -190,15 +189,209 @@ describe('Reuse Common Types', () => {
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
       'ListThingsError100.java',
+      'ListThingsRequestParams.java',
+      'SomeTypeA.java',
+      'Thing.java',
     ]);
 
     expect(filesBNames).toEqual([
+      'Element.java',
       'ErrorUnknown.java',
       'JsonRpcError.java',
       'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
-      'ListThingsError100.java',
+      'ListElementsError100.java',
+      'ListElementsRequestParams.java',
+      'SomeTypeB.java',
     ]);
   });
+
+  test('merge-a-multi-endpoints', async () => {
+
+    const result10 = (await OpenRpcTestUtils.readExample(
+      'openrpc', 'merge-a-multi-endpoints.json', DEFAULT_OPENRPC_OPTIONS, {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        package: 'com.a',
+        compressUnreferencedSubTypes: true,
+        compressSoloReferencedTypes: true,
+      },
+    ));
+
+    const fileMap = await JavaTestUtils.getFileContentsFromParseResult(result10);
+    const filesNames = [...fileMap.keys()].sort();
+
+    expect(filesNames).toEqual([
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcRequestParams.java',
+      'JsonRpcResponse.java',
+      'ListThingsRequest.java',
+      'ListThingsResponse.java',
+      'SaveThingRequest.java',
+      'SaveThingResponse.java',
+      'SomeTypeA.java',
+      'Thing.java',
+    ]);
+
+    const jsonRpcRequest = JavaTestUtils.getParsedContent(fileMap, 'JsonRpcRequest.java');
+    const jsonRpcRequestParams = JavaTestUtils.getParsedContent(fileMap, 'JsonRpcRequestParams.java');
+    const listThingsRequest = JavaTestUtils.getParsedContent(fileMap, 'ListThingsRequest.java');
+    const listThingsResponse = JavaTestUtils.getParsedContent(fileMap, 'ListThingsResponse.java');
+    const saveThingRequest = JavaTestUtils.getParsedContent(fileMap, 'SaveThingRequest.java');
+    const saveThingResponse = JavaTestUtils.getParsedContent(fileMap, 'SaveThingResponse.java');
+
+    expect(jsonRpcRequest.foundFields).toEqual(['jsonrpc', 'method', 'params']);
+    expect(jsonRpcRequest.foundMethods).toEqual(['getJsonrpc', 'getMethod', 'getParams']);
+    expect(jsonRpcRequest.foundTypes).toEqual(['JsonRpcRequestParams', 'String', 'T']);
+    expect(jsonRpcRequest.foundSuperClasses).toEqual([]);
+    expect(jsonRpcRequest.foundSuperInterfaces).toEqual([]);
+
+    expect(jsonRpcRequestParams.foundFields).toEqual([]);
+    expect(jsonRpcRequestParams.foundMethods).toEqual([]);
+    expect(jsonRpcRequestParams.foundTypes).toEqual([]);
+    expect(jsonRpcRequestParams.foundSuperClasses).toEqual([]);
+    expect(jsonRpcRequestParams.foundSuperInterfaces).toEqual([]);
+
+    expect(listThingsRequest.foundFields).toEqual([]);
+    expect(listThingsRequest.foundMethods).toEqual([]);
+    expect(listThingsRequest.foundTypes).toEqual(['ListThingsRequest.ListThingsRequestParams', 'String']);
+    expect(listThingsRequest.foundSuperClasses).toEqual(['JsonRpcRequest', 'JsonRpcRequestParams']);
+    expect(listThingsRequest.foundSuperInterfaces).toEqual([]);
+
+    expect(listThingsResponse.foundFields).toEqual(['result']);
+    expect(listThingsResponse.foundMethods).toEqual(['getResult']);
+    expect(listThingsResponse.foundTypes).toEqual(['Thing', 'String']);
+    expect(listThingsResponse.foundSuperClasses).toEqual(['JsonRpcResponse']);
+    expect(listThingsResponse.foundSuperInterfaces).toEqual([]);
+
+    expect(saveThingRequest.foundFields).toEqual(['thing']);
+    expect(saveThingRequest.foundMethods).toEqual(['getThing']);
+    expect(saveThingRequest.foundTypes).toEqual(['SaveThingRequest.SaveThingRequestParams', 'String', 'Thing']);
+    expect(saveThingRequest.foundSuperClasses).toEqual(['JsonRpcRequest', 'JsonRpcRequestParams']);
+    expect(saveThingRequest.foundSuperInterfaces).toEqual([]);
+
+    expect(saveThingResponse.foundFields).toEqual(['result']);
+    expect(saveThingResponse.foundMethods).toEqual(['getResult']);
+    expect(saveThingResponse.foundTypes).toEqual(['long', 'String']);
+    expect(saveThingResponse.foundSuperClasses).toEqual(['JsonRpcResponse']);
+    expect(saveThingResponse.foundSuperInterfaces).toEqual([]);
+  });
+
+  test('w/ + w/o elevation = same endpoint response', async () => {
+
+    const withoutElevate = (await OpenRpcTestUtils.readExample(
+      'openrpc', 'merge-a-multi-endpoints.json', DEFAULT_OPENRPC_OPTIONS, {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        package: 'com.a',
+        compressUnreferencedSubTypes: true,
+        compressSoloReferencedTypes: true,
+        elevateProperties: false,
+      },
+    ));
+
+    const withElevate = (await OpenRpcTestUtils.readExample(
+      'openrpc', 'merge-a-multi-endpoints.json', DEFAULT_OPENRPC_OPTIONS, {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        package: 'com.a',
+        compressUnreferencedSubTypes: true,
+        compressSoloReferencedTypes: true,
+        elevateProperties: true,
+      },
+    ));
+
+    // Check that the elevation did no funky business with moving in incorrect stuffs.
+    const notElevated0 = withoutElevate.model.endpoints[0].responses[0].type as OmniObjectType;
+    expect(notElevated0.kind).toEqual(OmniTypeKind.OBJECT);
+    expect(notElevated0.properties).toHaveLength(1);
+    expect(notElevated0.properties[0].name).toEqual('result');
+    expect(notElevated0.properties[0].type.kind).toEqual(OmniTypeKind.ARRAY);
+
+    const elevated0 = withElevate.model.endpoints[0].responses[0].type as OmniObjectType;
+    expect(elevated0.kind).toEqual(OmniTypeKind.OBJECT);
+    expect(elevated0.properties).toHaveLength(1);
+    expect(elevated0.properties[0].name).toEqual('result');
+    expect(elevated0.properties[0].type.kind).toEqual(OmniTypeKind.ARRAY);
+  });
+
+  test('merge-a-multi-endpoints + merge-b-multi-endpoints', async () => {
+
+    const resultA = (await OpenRpcTestUtils.readExample(
+      'openrpc', 'merge-a-multi-endpoints.json', DEFAULT_OPENRPC_OPTIONS, {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        package: 'com.a',
+        compressUnreferencedSubTypes: true,
+        compressSoloReferencedTypes: true,
+      },
+    ));
+    const resultB = (await OpenRpcTestUtils.readExample(
+      'openrpc', 'merge-b-multi-endpoints.json', DEFAULT_OPENRPC_OPTIONS, {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        package: 'com.b',
+        compressUnreferencedSubTypes: true,
+        compressSoloReferencedTypes: true,
+      },
+    ));
+
+    const resultMerged = OmniModelMerge.merge<JavaOptions>([resultA, resultB], {
+      // TODO: Add capability of figuring out package automatically, common denominator for all given options
+      package: 'com.common',
+      compressUnreferencedSubTypes: true,
+      compressSoloReferencedTypes: true,
+      compressTypeNaming: CompressTypeNaming.COMMON_PREFIX,
+    });
+
+    const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
+    const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
+    const filesA = (await JavaTestUtils.getFileContentsFromParseResult(resultA, [{
+      node: rootNodeCommon,
+      options: resultMerged.options,
+    }]));
+    const filesB = (await JavaTestUtils.getFileContentsFromParseResult(resultB, [{
+      node: rootNodeCommon,
+      options: resultMerged.options,
+    }]));
+
+    const filesCommonNames = [...filesCommon.keys()].sort();
+    const filesANames = [...filesA.keys()].sort();
+    const filesBNames = [...filesB.keys()].sort();
+
+    expect(filesCommonNames).toEqual([
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequestParams.java',
+      'JsonRpcResponse.java',
+    ]);
+
+    expect(filesANames).toEqual([
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcResponse.java',
+      'ListThingsRequest.java',
+      'ListThingsResponse.java',
+      'SaveThingRequest.java',
+      'SaveThingResponse.java',
+      'SomeTypeA.java',
+      'Thing.java',
+    ]);
+
+    expect(filesBNames).toEqual([
+      'Element.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcResponse.java',
+      'ListElementsRequest.java',
+      'ListElementsResponse.java',
+      'SaveElementRequest.java',
+      'SaveElementResponse.java',
+      'SomeTypeB.java',
+    ]);
+  });
+
+  // Create another merger test where a merge-a-multiple and merge-b-multiple have MULTIPLE endpoints
+  // So that each will create a generic JsonRpcRequest<T> and JsonRpcRequestParams<T>
+  // Then we have to make sure that these generic ones are moved to the common model and re-used by the others!
 });

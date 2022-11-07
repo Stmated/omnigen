@@ -5,18 +5,20 @@ import {
   Dereferencer,
   OmniModelParserResult,
   SchemaFile,
-  CompressionOmniModelTransformer,
+  ElevateCommonPropertiesOmniModelTransformer,
   GenericsOmniModelTransformer,
-  OptionsUtil,
+  OptionsUtil, SimplifyInheritanceOmniModelTransformer,
 } from '@omnigen/core';
 import {JavaOptions, JAVA_OPTIONS_CONVERTERS, InterfaceJavaModelTransformer} from '@omnigen/target-java';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
 import {
+  DEFAULT_OPENRPC_OPTIONS,
   IOpenRpcParserOptions,
   JSONRPC_OPTIONS_FALLBACK,
   OPENRPC_OPTIONS_CONVERTERS,
   OpenRpcParserBootstrapFactory,
 } from '@omnigen/parser-openrpc';
+import {DEFAULT_TEST_JAVA_OPTIONS} from './JavaTestUtils';
 
 export type KnownSchemaNames = 'openrpc';
 
@@ -37,8 +39,8 @@ export class OpenRpcTestUtils {
   static async readExample(
     type: KnownSchemaNames,
     fileName: string,
-    openRpcOptions: IOpenRpcParserOptions,
-    javaOptions: JavaOptions,
+    openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
+    javaOptions: JavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
   ): Promise<OmniModelParserResult<JavaOptions>> {
 
     const schemaFile = new SchemaFile(
@@ -47,7 +49,8 @@ export class OpenRpcTestUtils {
     );
 
     const transformers: OmniModelTransformer<JavaOptions>[] = [
-      new CompressionOmniModelTransformer(),
+      new SimplifyInheritanceOmniModelTransformer(),
+      new ElevateCommonPropertiesOmniModelTransformer(),
       new GenericsOmniModelTransformer(),
       new InterfaceJavaModelTransformer(),
     ];
@@ -82,7 +85,9 @@ export class OpenRpcTestUtils {
 
     // NOTE: Would be good if this could be handled in some more central way, so it can never be missed.
     //        But I am unsure how and where that would be.
-    parseResult.model.options = schemaIncomingOptions;
+    if (schemaIncomingOptions) {
+      parseResult.model.options = schemaIncomingOptions;
+    }
 
     const realJavaOptions = await OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_CONVERTERS);
 

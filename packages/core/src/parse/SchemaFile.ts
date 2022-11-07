@@ -13,9 +13,9 @@ export type SchemaFileInput = string | PathLike;
  */
 export class SchemaFile {
   private readonly _input: SchemaFileInput;
-  private readonly _fileName?: string;
-  private _parsedObject?: unknown;
-  private _readContent?: string;
+  private readonly _fileName?: string | undefined;
+  private _parsedObject?: unknown | undefined;
+  private _readContent?: string | undefined;
 
   constructor(input: SchemaFileInput, fileName?: string) {
     this._input = input;

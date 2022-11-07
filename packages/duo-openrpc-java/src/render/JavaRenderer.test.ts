@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as JavaParser from 'java-parser';
-import {JavaInterpreter, JavaRenderer} from '@omnigen/target-java';
+import {JavaInterpreter, JavaOptions, JavaRenderer} from '@omnigen/target-java';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
@@ -17,7 +17,7 @@ describe('Java Rendering', () => {
 
     for (const schemaName of OpenRpcTestUtils.getKnownSchemaNames()) {
 
-      let fileNames: string[]; //
+      let fileNames: string[];
       try {
         fileNames = await OpenRpcTestUtils.listExampleFileNames(schemaName);
       } catch (ex) {
@@ -90,16 +90,37 @@ describe('Java Rendering', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json');
 
-    const fileNames = [...fileContents.keys()];
-    expect(fileNames).toContain('A.java');
-    expect(fileNames).toContain('Abs.java');
-    expect(fileNames).toContain('AXOrB.java'); // TODO: Bad naming, it looks weird. Fix?
-    expect(fileNames).toContain('B.java');
-    expect(fileNames).toContain('C.java');
-    expect(fileNames).not.toContain('IA.java');
-    expect(fileNames).toContain('IB.java');
-    expect(fileNames).toContain('IC.java');
-    expect(fileNames).toContain('Out_2.java');
+    const fileNames = [...fileContents.keys()].sort();
+    expect(fileNames).toEqual([
+      'A.java',
+      'AXOrB.java',
+      'Abs.java',
+      'B.java',
+      'C.java',
+      'ErrorUnknown.java',
+      'ErrorUnknownError.java',
+      'GiveInGetOut2Request.java',
+      'GiveInGetOut2RequestParams.java',
+      'GiveInGetOut2Response.java',
+      'GiveInGetOutRequest.java',
+      'GiveInGetOutRequestParams.java',
+      'GiveInGetOutResponse.java',
+      'IB.java',
+      'IC.java',
+      'In.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcRequestParams.java',
+      'JsonRpcResponse.java',
+      'Out.java',
+      'Out_2.java',
+    ]);
+
+    // TO FIX:
+    // * Interfaces are not rendered (missing IB, IC)
+    // * 'In' does not have any connection to AXOrB
+    //    * Change so properties in "in" are moved to copies of A and B, and "in" become the runtime mapping type
 
     const a = JavaTestUtils.getParsedContent(fileContents, 'A.java');
     expect(a.foundFields).toEqual(['foo']);
@@ -139,7 +160,12 @@ describe('Java Rendering', () => {
   test('Type compressions', async () => {
 
     // Check that the property 'common' from A and B are moved into Abs.
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('compressable-types.json');
+    const optionsWithoutGenerics: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      generifyTypes: false,
+    };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('compressable-types.json', optionsWithoutGenerics);
 
     const fileNames = [...fileContents.keys()].sort();
     // TODO: Make sure that JsonRpcRequest does not go completely bonkers with its generics
@@ -260,5 +286,45 @@ describe('Java Rendering', () => {
     expect(filenames).toContain('Pet.java');
     expect(filenames).toContain('DeletePetByIdResponse.java');
     expect(filenames).not.toContain('Pet1.java');
+  });
+
+  test('primitive-generics-specialize', async () => {
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('primitive-generics.json');
+    const filenames = [...fileContents.keys()].sort();
+
+    expect(filenames).toEqual([
+      'ErrorUnknown.java',
+      'ErrorUnknownError.java',
+      'GiveIntGetDoubleRequest.java',
+      'GiveIntGetDoubleRequestParams.java',
+      'GiveIntGetDoubleResponse.java',
+      'GiveNumberGetCharRequest.java',
+      'GiveNumberGetCharRequestParams.java',
+      'GiveNumberGetCharResponse.java',
+      'GiveStringGetStringRequest.java',
+      'GiveStringGetStringRequestParams.java',
+      'GiveStringGetStringResponse.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcRequestParams.java',
+      'JsonRpcResponse.java',
+      'PrimitiveChar.java',
+      'PrimitiveDouble.java',
+      'PrimitiveInt.java',
+    ]);
+
+    const primitiveChar = JavaTestUtils.getParsedContent(fileContents, 'PrimitiveChar.java');
+    const primitiveDouble = JavaTestUtils.getParsedContent(fileContents, 'PrimitiveDouble.java');
+    const primitiveInt = JavaTestUtils.getParsedContent(fileContents, 'PrimitiveInt.java');
+
+    expect(primitiveChar.foundFields).toEqual(['value']);
+    expect(primitiveDouble.foundFields).toEqual(['value']);
+    expect(primitiveInt.foundFields).toEqual(['value']);
+
+    expect(primitiveChar.foundMethods).toEqual(['getValue']);
+    expect(primitiveDouble.foundMethods).toEqual(['getValue']);
+    expect(primitiveInt.foundMethods).toEqual(['getValue']);
   });
 });

@@ -5,7 +5,7 @@ import {
   OmniModelParserResult,
   ExternalSyntaxTree,
   VisitorFactoryManager,
-  AbstractNode,
+  AbstractStNode,
 } from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS, IOpenRpcParserOptions} from '@omnigen/parser-openrpc';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, JavaInterpreter, JavaRenderer, JavaVisitor} from '@omnigen/target-java';
@@ -81,7 +81,7 @@ export class JavaTestUtils {
     return visitor;
   }
 
-  public static getMethod(node: AbstractNode, name: string): Java.MethodDeclaration {
+  public static getMethod(node: AbstractStNode, name: string): Java.MethodDeclaration {
 
     const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.MethodDeclaration>(), {
       visitMethodDeclaration: node => {

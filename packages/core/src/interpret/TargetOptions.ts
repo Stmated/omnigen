@@ -1,5 +1,6 @@
-import {IncomingOrRealOption, Options, PrimitiveGenerificationChoice} from '../options';
+import {Option, Options, PrimitiveGenerificationChoice} from '../options';
 import {CompressTypeLevel, OmniTypeKind} from '../parse';
+import {EqualityLevel} from '../parse/EqualityLevel';
 
 export enum CompressTypeNaming {
   EXACT,
@@ -36,17 +37,22 @@ export interface TargetOptions extends Options {
 
   compressTypesLevel: CompressTypeLevel;
   compressTypeNaming: CompressTypeNaming;
-  compressTypeNamingReducer: IncomingOrRealOption<undefined, OmniTypeNameReducer | undefined>;
+  compressTypeNamingReducer: Option<undefined, OmniTypeNameReducer | undefined>;
 
   // TODO: Introduce naming options for things like banning certain words? Like "Object" or "List" or something?
   //        So that no weird and stupid names become chosen if we are grabbing the common prefix?
   //        For example ALL names that exist inside java.lang or java.util should be excluded. Object, List, etc.
   //        Maybe also add a "minimum number of common words"?
 
-  compressPropertiesToAncestor: boolean;
+  elevateProperties: boolean;
+  elevatePropertiesMoreEqualThan: EqualityLevel;
+  elevatePropertiesWithTypesMoreEqualThan: EqualityLevel;
+
+  simplifyTypeHierarchy: boolean;
 }
 
 export interface GenericTargetOptions extends TargetOptions {
+  generifyTypes: boolean;
   onPrimitiveGenerification: PrimitiveGenerificationChoice;
 }
 
@@ -57,5 +63,8 @@ export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
   compressTypesLevel: CompressTypeLevel.EXACT,
   compressTypeNaming: CompressTypeNaming.EXACT,
   compressTypeNamingReducer: undefined,
-  compressPropertiesToAncestor: true,
+  elevateProperties: true,
+  elevatePropertiesMoreEqualThan: EqualityLevel.FUNCTION_MIN,
+  elevatePropertiesWithTypesMoreEqualThan: EqualityLevel.FUNCTION_MIN,
+  simplifyTypeHierarchy: true,
 };

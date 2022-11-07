@@ -27,6 +27,7 @@
     "@omnigen/config-jest": "*",
     "@omnigen/config-typescript": "*",
     "@omnigen/eslint-config-custom": "*",
-    "typescript": "4.9.1-beta"
+    "java-parser": "^2.0.2",
+    "typescript": "4.9.2-rc"
   }
 }

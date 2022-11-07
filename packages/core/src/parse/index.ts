@@ -16,7 +16,6 @@ export * from './OmniModelMerge';
 export * from './OmniUtil';
 export * from './Naming';
 export * from './OmniModelTransformer';
-export * from './DependencyGraphBuilder';
 
 // Other sub-directories
 export * from './transform';

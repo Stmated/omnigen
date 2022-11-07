@@ -5,7 +5,7 @@ describe('Error-Schema', () => {
 
   const JAVA_OPT: JavaOptions = {
     ...DEFAULT_TEST_JAVA_OPTIONS,
-    compressPropertiesToAncestor: false,
+    elevateProperties: false,
   };
 
   test('ErrorStructure', async () => {

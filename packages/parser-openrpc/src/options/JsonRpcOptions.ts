@@ -2,10 +2,10 @@ import {JSONSchema7} from 'json-schema';
 import {
   OmniType,
   Booleanish,
-  IncomingOrRealOption,
+  Option,
   RealOptions,
   OptionAdditions,
-  OptionConverters,
+  OptionResolver,
   OptionsUtil,
   Options,
 } from '@omnigen/core';
@@ -14,11 +14,11 @@ export type JsonRpcVersion = '1.0' | '1.1' | '2.0';
 
 export interface JsonRpcOptions extends Options {
   jsonRpcPropertyName: string | undefined;
-  jsonRpcVersion: IncomingOrRealOption<JsonRpcVersion | undefined, JsonRpcVersion>;
-  jsonRpcIdIncluded: IncomingOrRealOption<Booleanish | undefined, boolean>;
-  jsonRpcErrorPropertyName: IncomingOrRealOption<string | undefined, string>;
-  jsonRpcErrorNameIncluded: IncomingOrRealOption<Booleanish | undefined, boolean>;
-  jsonRpcErrorDataSchema: IncomingOrRealOption<JSONSchema7 | undefined, OmniType | undefined>;
+  jsonRpcVersion: Option<JsonRpcVersion | undefined, JsonRpcVersion>;
+  jsonRpcIdIncluded: Option<Booleanish | undefined, boolean>;
+  jsonRpcErrorPropertyName: Option<string | undefined, string>;
+  jsonRpcErrorNameIncluded: Option<Booleanish | undefined, boolean>;
+  jsonRpcErrorDataSchema: Option<JSONSchema7 | undefined, OmniType | undefined>;
 }
 
 export const DEFAULT_JSONRPC_OPTIONS: JsonRpcOptions = {
@@ -57,7 +57,7 @@ export const JSONRPC_20_PARSER_OPTIONS: RealOptions<JsonRpcOptions> = {
   jsonRpcErrorDataSchema: undefined,
 };
 
-export const JSONRPC_OPTIONS_CONVERTERS: OptionConverters<JsonRpcOptions> = {
+export const JSONRPC_OPTIONS_CONVERTERS: OptionResolver<JsonRpcOptions> = {
   jsonRpcVersion: v => Promise.resolve(v || '2.0'),
   jsonRpcErrorDataSchema: async v => {
 

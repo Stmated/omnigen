@@ -25,6 +25,6 @@
     "@omnigen/config-jest": "*",
     "@omnigen/config-typescript": "*",
     "@omnigen/eslint-config-custom": "*",
-    "typescript": "4.9.1-beta"
+    "typescript": "4.9.2-rc"
   }
 }

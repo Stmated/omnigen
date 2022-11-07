@@ -1,6 +1,6 @@
 import {TestUtils} from '@omnigen/utils-test';
 import {JavaUtil} from '@omnigen/target-java';
-import {OmniModel, OmniPrimitiveKind, OmniTypeKind, GenericsOmniModelTransformer} from '@omnigen/core';
+import {OmniModel, OmniPrimitiveKind, OmniTypeKind, GenericsOmniModelTransformer, OmniUtil} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '@omnigen/duo-openrpc-java-test';
 
 describe('Test CompositionDependencyUtil', () => {
@@ -75,9 +75,11 @@ describe('Test CompositionDependencyUtil', () => {
 
     expect(model.types).toHaveLength(3);
 
-    if (model.types[0].kind != OmniTypeKind.GENERIC_SOURCE) throw new Error(`Should be a generic source`);
-    if (model.types[1].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
-    if (model.types[2].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
+    if (model.types[0].kind != OmniTypeKind.GENERIC_SOURCE) {
+      throw new Error(`Should be generic source not ${OmniUtil.describe(model.types[0])}`);
+    }
+    if (model.types[1].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object not ${OmniUtil.describe(model.types[1])}`);
+    if (model.types[2].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object not ${OmniUtil.describe(model.types[2])}`);
 
     expect(JavaUtil.getClassName(model.types[0])).toEqual('A');
     expect(JavaUtil.getClassName(model.types[0].of)).toEqual('A');

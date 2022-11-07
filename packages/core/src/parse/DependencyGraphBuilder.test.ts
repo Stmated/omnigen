@@ -1,137 +1,179 @@
 import {
+  CompositionKind,
   OmniCompositionType,
-  OmniInheritableType,
+  OmniEndpoint,
+  OmniModel,
   OmniObjectType,
   OmniPrimitiveKind,
+  OmniSuperTypeCapableType,
   OmniType,
-  OmniTypeKind,
-  DEFAULT_GRAPH_OPTIONS,
-  DependencyGraph,
-  DependencyGraphBuilder,
-  DependencyGraphOptions,
+  OmniTypeKind, OmniUtil,
 } from '../parse';
-import {TestUtils} from '@omnigen/utils-test';
+import {MapArg, TestUtils} from '@omnigen/utils-test';
+
+// TODO: Check if this test can be ran! Because it should not be able to! Since we do not depend on target-java!
+import {JavaUtil} from '@omnigen/target-java';
+import {SimplifyInheritanceOmniModelTransformer} from './transform/SimplifyInheritanceOmniModelTransformer';
+import {DEFAULT_TARGET_OPTIONS} from '../interpret';
 
 describe('Test CompositionDependencyUtil', () => {
 
-  const javaOptions: DependencyGraphOptions = {
-    ...DEFAULT_GRAPH_OPTIONS,
-    ...{},
-  };
+  // const javaOptions: DependencyGraphOptions = {
+  //   ...DEFAULT_GRAPH_OPTIONS,
+  //   ...{},
+  // };
 
-  function java(namedTypes: OmniType[]): DependencyGraph {
-    return DependencyGraphBuilder.build(namedTypes, javaOptions);
+  function createModel(namedTypes: OmniType[]): OmniModel {
+
+    // Let's create some fake endpoints, to make the types "edge" types that are used outwardly.
+    const endpoints: OmniEndpoint[] = namedTypes
+      ? namedTypes.map((t, idx) => {
+        return {
+          name: `Endpoint${idx}`,
+          async: false,
+          path: '/',
+          requestQualifiers: [],
+          examples: [],
+          request: {
+            type: {
+              kind: OmniTypeKind.PRIMITIVE,
+              primitiveKind: OmniPrimitiveKind.STRING,
+            },
+            contentType: 'application/json',
+          },
+          responses: [{
+            type: t,
+            required: true,
+            contentType: 'application/json',
+            name: `Response${idx}`,
+            deprecated: false,
+          }],
+        };
+      })
+      : [];
+
+    return {
+      name: 'Test Model for Dependency Tests',
+      types: namedTypes,
+      endpoints: endpoints,
+      version: '1.0',
+      schemaType: 'other',
+      servers: [],
+      schemaVersion: '1.0',
+    };
   }
 
   test('Empty', async () => {
-    const result = java([]);
+    const model = createModel([]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(0);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(0);
     // expect(result.abstracts).toHaveLength(0);
-    expect(getUsedBy(result.uses).size).toEqual(0);
-    expect(result.uses.size).toEqual(0);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
   test('One Primitive', async () => {
-    const result = java([{
+    const model = createModel([{
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.NUMBER,
     }]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(0);
-    // expect(result.abstracts).toHaveLength(0);
-    expect(getUsedBy(result.uses).size).toEqual(0);
-    expect(result.uses.size).toEqual(0);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(0);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
   test('One Class', async () => {
-    const result = java([obj('A')]);
+    const model = createModel([obj('A')]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(1);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(1);
     // expect(result.abstracts).toHaveLength(0);
-    expect(getUsedBy(result.uses).size).toEqual(0);
-    expect(result.uses.size).toEqual(0);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
   test('Two Classes', async () => {
-    const result = java([obj('A'), obj('B')]);
+    const model = createModel([obj('A'), obj('B')]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(2);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(0);
-    expect(getUsedBy(result.uses).size).toEqual(0);
-    expect(result.uses.size).toEqual(0);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
   test('A extends B, B', async () => {
     const b = obj('B');
-    const result = java([obj('A', b), b]);
+    const model = createModel([obj('A', b), b]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(2);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(0);
-    expect(getUsedBy(result.uses).size).toEqual(1);
-    expect(result.uses.size).toEqual(1);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
   });
 
   test('A extends B', async () => {
 
-    const result = java([obj('A', obj('B'))]);
+    const model = createModel([obj('A', obj('B'))]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(1);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(2);
+    expect(JavaUtil.getConcreteClasses(model)).toHaveLength(1);
     // expect(result.abstracts).toHaveLength(1);
-    expect(getUsedBy(result.uses).size).toEqual(1);
-    expect(result.uses.size).toEqual(1);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
   });
 
   test('A extends B, C extends D', async () => {
 
-    const result = java([
+    const model = createModel([
       obj('A', obj('B')),
       obj('C', obj('D')),
     ]);
 
     // TODO: Should we introduce interfaces since B and D have the same contract?
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(2);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(4);
+    expect(JavaUtil.getConcreteClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(2);
-    expect(getUsedBy(result.uses).size).toEqual(2);
-    expect(result.uses.size).toEqual(2);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(2);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
   test('A extends B, C extends B', async () => {
     const b = obj('B');
-    const result = java([obj('C', b), obj('C', b)]);
+    const model = createModel([obj('C', b), obj('C', b)]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(2);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(3);
+    expect(JavaUtil.getConcreteClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(1);
-    expect(getUsedBy(result.uses).size).toEqual(1);
-    expect(result.uses.size).toEqual(2);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
   test('A extends B, C extends B, B', async () => {
     const b = obj('B');
-    const result = java([obj('A', b), obj('C', b), b]);
+    const model = createModel([obj('A', b), obj('C', b), b]);
 
-    expect(result).toBeDefined();
-    expect(result.interfaces).toHaveLength(0);
-    expect(result.concretes).toHaveLength(3);
+    expect(model).toBeDefined();
+    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(JavaUtil.getClasses(model)).toHaveLength(3);
     // expect(result.abstracts).toHaveLength(0);
-    expect(getUsedBy(result.uses).size).toEqual(1);
-    expect(result.uses.size).toEqual(2);
+    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
   test('A extends B & C, D extends B & C, B', async () => {
@@ -142,17 +184,15 @@ describe('Test CompositionDependencyUtil', () => {
     const a = obj('A', bc1);
     const d = obj('D', bc2);
 
-    const result = java([a, d, b, c]);
+    const model = createModel([a, d, b, c]);
 
-    expect(result).toEqual<DependencyGraph>({
-      // abstracts: [],
-      concretes: [a, d, b, c],
-      interfaces: [c],
-      uses: map([
-        [a, [b, c]],
-        [d, [b, c]],
-      ]),
-    });
+    assertTypes(JavaUtil.getInterfaces(model), [c]);
+    assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
+    assertTypes(JavaUtil.getConcreteClasses(model), [a, d, b, c]);
+    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+      [a, [b, c]],
+      [d, [b, c]],
+    ]));
   });
 
   test('A extends B & C, D extends C & B, B', async () => {
@@ -163,95 +203,159 @@ describe('Test CompositionDependencyUtil', () => {
     const a = obj('A', bc);
     const d = obj('D', cb);
 
-    const result = java([a, d, b, c]);
+    const model = createModel([a, d, b, c]);
 
-    expect(result).toEqual<DependencyGraph>({
-      // abstracts: [c],
-      concretes: [a, d, b, c],
-      interfaces: [c, b],
-      uses: map([
-        [a, [b, c]],
-        [d, [c, b]],
-      ]),
-    });
+    // B is found before C, because A -> B (and B used as interface for D -> C & B)
+    // This would change if the search was done breadth-first vs depth-first.
+    assertTypes(JavaUtil.getInterfaces(model), [b, c]);
+    assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
+    assertTypes(JavaUtil.getConcreteClasses(model), [a, d, b, c]);
+    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+      [a, [b, c]],
+      [d, [c, b]],
+    ]));
   });
 
-  test('ABCDEF', async () => {
+  test('ABCDEF w/o simplification', async () => {
 
-    const inline = inlineClassWithProp('DInline');
+    const dInline = inlineClassWithProp('DInline');
 
     const A = obj('A');
     const B = obj('B');
     const C = obj('C');
-    const cAndInline = and(C, inline);
+    const cAndInline = and(C, dInline);
     const D = obj('D', cAndInline);
     const E = obj('E', and(C, D));
     const F = obj('F', and(B, D));
 
-    const result = java([A, B, C, D, E, F]);
+    const model = createModel([A, B, C, D, E, F]);
 
-    // We will get the composition type in "uses" here, since the model is not simplified.
-    // In a simplified model here, "inline" would be merged into D, and D only extend C.
-    expect(result).toEqual<DependencyGraph>({
-      // abstracts: [],
-      concretes: [A, B, C, D, E, F],
-      interfaces: [D],
-      uses: map([
-        [D, [C, inline]],
-        [E, [D]],
-        [F, [B, D]],
-      ]),
-    });
+    // This would change if the search was done breadth-first vs depth-first.
+    assertTypes(JavaUtil.getInterfaces(model), [D, C, dInline]);
+    assertTypes(JavaUtil.getClasses(model), [A, B, C, D, E, F]);
+    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+      [D, [C, dInline]],
+      [E, [C, D]],
+      [F, [B, D]],
+    ]));
   });
 
-  test('Ancestry simplification', async () => {
+  test('ABCDEF w/ simplification', async () => {
+
+    const dInline = inlineClassWithProp('DInline');
+
+    const A = obj('A');
+    const B = obj('B');
+    const C = obj('C');
+    const cAndInline = and(C, dInline);
+    const D = obj('D', cAndInline);
+    const E = obj('E', and(C, D));
+    const F = obj('F', and(B, D));
+
+    const model = createModel([A, B, C, D, E, F]);
+
+    new SimplifyInheritanceOmniModelTransformer().transformModel(model, {
+      ...DEFAULT_TARGET_OPTIONS,
+      simplifyTypeHierarchy: true,
+    });
+
+    // This would change if the search was done breadth-first vs depth-first.
+    assertTypes(JavaUtil.getInterfaces(model), [D, C, dInline]);
+    assertTypes(JavaUtil.getClasses(model), [A, B, C, D, E, F]);
+    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+      [D, [C, dInline]],
+      [E, [D]],
+      [F, [B, D]],
+    ]));
+  });
+
+  // TODO: A test case where we expect 'dInline' to not an interface, and inline it because it is single use non-edge type?
+
+  test('Ancestry w/o simplification', async () => {
 
     const A = obj('A');
     const B = obj('B', A);
     const C = obj('C', and(A, B));
 
-    const result = java([A, B, C]);
+    const model = createModel([A, C]);
 
-    expect(result).toEqual<DependencyGraph>({
-      // abstracts: [],
-      concretes: [A, B, C],
-      interfaces: [],
-      uses: map([
-        [C, [B]],
-        [B, [A]],
-      ]),
+    // Since we do not simplify the model, we will think that B needs to be an interface..
+    // And A is also an interface, since if B is an interface and uses A, then A also needs to have an interface.
+    assertTypes(JavaUtil.getInterfaces(model), [B, A]);
+
+    // And since B is never actually used other than supertype #2 for C, it will only be an interface and not a class.
+    // TODO: Maybe this is wrong? B should also be available as a class? Make it an option "javaAddSuperfluousClass?"
+    assertTypes(JavaUtil.getClasses(model), [A, C]);
+    assertTypes(JavaUtil.getConcreteClasses(model), [A, C]);
+    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+      [C, [A, B]],
+      [B, [A]],
+    ]));
+  });
+
+  test('Ancestry w/ simplification', async () => {
+
+    const A = obj('A');
+    const B = obj('B', A);
+    const C = obj('C', and(A, B));
+
+    const model = createModel([A, B, C]);
+
+    new SimplifyInheritanceOmniModelTransformer().transformModel(model, {
+      ...DEFAULT_TARGET_OPTIONS,
+      simplifyTypeHierarchy: true,
     });
+
+    expect(JavaUtil.getInterfaces(model)).toEqual([]);
+    expect(JavaUtil.getClasses(model)).toEqual([A, B, C]);
+    expect(JavaUtil.getConcreteClasses(model)).toEqual([A, B, C]);
+    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+      [C, [B]],
+      [B, [A]],
+    ]));
   });
 });
 
-type MapArg = Array<[OmniType, Array<OmniType>]>;
-
-function getUsedBy(original: Map<OmniType, OmniType[]>): Map<OmniType, OmniType[]> {
-  const map = new Map<OmniType, OmniType[]>();
-  for (const e of original.entries()) {
-    for (const key of e[1]) {
-      map.set(key, (map.get(key) || []).concat(e[0]));
-    }
-  }
-
-  return map;
+function map<T>(arg: MapArg<T>): Map<T, T[]> {
+  return TestUtils.map(arg);
 }
 
-function map(arg: MapArg): Map<OmniType, OmniType[]> {
-  const map = new Map<OmniType, OmniType[]>();
-  for (const array of arg) {
-    map.set(array[0], array[1]);
-  }
-
-  return map;
-}
-
-function obj(name: string, extendedBy?: OmniInheritableType): OmniObjectType {
+function obj(name: string, extendedBy?: OmniSuperTypeCapableType): OmniObjectType {
   return TestUtils.obj(name, extendedBy);
 }
 
-function and(...types: OmniType[]): OmniCompositionType {
+function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.AND> {
   return TestUtils.and(...types);
+}
+
+function assertTypes<T extends OmniType>(expected: T[], given: T[]) {
+
+  const expectedDescriptions = expected.map(it => OmniUtil.describe(it)).join(', ');
+  const givenDescriptions = given.map(it => OmniUtil.describe(it)).join(', ');
+
+  expect(expectedDescriptions).toEqual(givenDescriptions);
+}
+
+function assertMap<T extends OmniType>(expected: Map<T, T[]>, given: Map<T, T[]>) {
+
+  for (const e of expected.entries()) {
+    const givenValues = given.get(e[0]);
+    if (!givenValues) {
+      fail(`Expected key '${OmniUtil.describe(e[0])}' but not in given`);
+    }
+
+    const keyDescription = OmniUtil.describe(e[0]);
+    const expectedDescriptions = e[1].map(it => OmniUtil.describe(it)).join(', ');
+    const givenDescriptions = givenValues.map(it => OmniUtil.describe(it)).join(', ');
+
+    expect(`${keyDescription}: ${expectedDescriptions}`).toEqual(`${keyDescription}: ${givenDescriptions}`);
+  }
+
+  for (const e of given.entries()) {
+    if (!expected.has(e[0])) {
+      fail(`Given unexpected '${OmniUtil.describe(e[0])}`);
+    }
+  }
 }
 
 function inlineClassWithProp(name: string) {

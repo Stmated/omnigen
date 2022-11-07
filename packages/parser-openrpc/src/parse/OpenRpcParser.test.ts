@@ -55,10 +55,11 @@ describe('Test Generic Model Creation', () => {
     expect(endpointNames).toContain('delete_pet_by_id');
     expect(endpointNames).not.toContain('made_up');
 
-    expect(model.endpoints[0].name).toEqual('get_pets');
-    expect(model.endpoints[0].responses).toHaveLength(2); // 1 result, 1 error
-    expect(model.endpoints[0].responses[0].name).toEqual('pet'); // Or should it be something else?
-    expect(JavaUtil.getClassName(model.endpoints[0].responses[0].type)).toEqual('GetPetsResponse'); // Should this be 'pet' since is name of `result`?
+    const e = model.endpoints[0];
+    expect(e.name).toEqual('get_pets');
+    expect(e.responses).toHaveLength(2); // 1 result, 1 error
+    expect(e.responses[0].name).toEqual('pet'); // Or should it be something else?
+    expect(JavaUtil.getClassName(e.responses[0].type)).toEqual('GetPetsResponse'); // Should be 'pet'?
 
     const response0 = model.endpoints[0].responses[0];
     expect(response0.type.kind).toEqual(OmniTypeKind.OBJECT);

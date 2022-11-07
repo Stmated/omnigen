@@ -1,24 +1,47 @@
-// import {TestUtils} from '@omnigen/target-java';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {JavaInterpreter} from '@omnigen/target-java';
 import {JavaOptions, JavaUtil} from '@omnigen/target-java';
-import {OmniTypeKind} from '@omnigen/core';
+import {OmniTypeKind, OmniUtil} from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {PrimitiveGenerificationChoice, RealOptions} from '@omnigen/core';
 
-describe('Test the structuring of GenericModel into a Java AST', () => {
+describe('JavaInterpreter', () => {
 
   test('ensureBasicParsingDoesNotCrash', async () => {
 
     const interpreter = new JavaInterpreter();
-    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
-    const interpretation = await interpreter.buildSyntaxTree(model.model, [], DEFAULT_TEST_JAVA_OPTIONS);
+    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json');
+    const interpretation = await interpreter.buildSyntaxTree(model.model, [], model.options);
 
     expect(interpretation).toBeDefined();
 
-    expect(interpretation.children).toHaveLength(22);
+    const compilationUnits = JavaTestUtils.getCompilationUnits(interpretation);
+    const classNames = compilationUnits.map(cu => cu.object.name.value).sort();
 
-    // TODO: We should assert stuff here :)
+    expect(classNames).toEqual([
+      'CreatePetRequest',
+      'CreatePetRequestParams',
+      'CreatePetResponse',
+      'DeletePetByIdRequest',
+      'DeletePetByIdRequestParams',
+      'DeletePetByIdResponse',
+      'DeletePetByIdResponsePayload',
+      'ErrorUnknown',
+      'ErrorUnknownError',
+      'GetPetByIdRequest',
+      'GetPetByIdRequestParams',
+      'GetPetByIdResponse',
+      'GetPetsRequest',
+      'GetPetsRequestParams',
+      'GetPetsResponse',
+      'JsonRpcError',
+      'JsonRpcErrorResponse',
+      'JsonRpcRequest',
+      'JsonRpcRequestParams',
+      'JsonRpcResponse',
+      'NewPet',
+      'Pet',
+    ]);
   });
 
   test('ensureGenericsAreSpecialized', async () => {
@@ -30,14 +53,14 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
     const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], options);
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
     expect(root).toBeDefined();
 
     const compilationUnits = JavaTestUtils.getCompilationUnits(root);
-    const fileNames = compilationUnits.map(it => it.object.name.value);
+    const fileNames = compilationUnits.map(it => it.object.name.value).sort();
 
-    expect(fileNames.sort())
+    expect(fileNames)
       .toEqual([
         'ErrorUnknown',
         'ErrorUnknownError',
@@ -60,10 +83,10 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
         'PrimitiveInt',
       ]);
 
-    const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
-    expect(giveNumberGetCharResponse.object.extends).toBeDefined();
+    const givIntGetDoubleRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
+    expect(givIntGetDoubleRequestParams.object.extends).toBeDefined();
 
-    const type = giveNumberGetCharResponse.object.extends?.type.omniType;
+    const type = givIntGetDoubleRequestParams.object.extends?.type.omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind`);
 
     expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
@@ -84,14 +107,14 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
     const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], options);
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
     expect(root).toBeDefined();
 
     const compilationUnits = JavaTestUtils.getCompilationUnits(root);
-    const fileNames = compilationUnits.map(it => it.object.name.value);
+    const fileNames = compilationUnits.map(it => it.object.name.value).sort();
 
-    expect(fileNames.sort())
+    expect(fileNames)
       .toEqual([
         'ErrorUnknown',
         'ErrorUnknownError',
@@ -111,15 +134,17 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
         'JsonRpcResponse',
       ]);
 
-    const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
-    expect(giveNumberGetCharResponse.object.extends).toBeDefined();
+    const giveIntGetDoubleRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
+    expect(giveIntGetDoubleRequestParams.object.extends).toBeDefined();
 
-    const type = giveNumberGetCharResponse.object.extends?.type.omniType;
-    if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind`);
+    const type = giveIntGetDoubleRequestParams.object.extends?.type.omniType;
+    if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind: ${OmniUtil.describe(type)}`);
 
     expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
     expect(type.targetIdentifiers).toHaveLength(1);
     expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.PRIMITIVE);
+
+    // TODO: Check that JsonRpcRequest has the correct generics!!!!!
   });
 
   test('ensureGenericsAreSkipped', async () => {
@@ -131,14 +156,14 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
     const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], options);
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
     expect(root).toBeDefined();
 
     const compilationUnits = JavaTestUtils.getCompilationUnits(root);
-    const fileNames = compilationUnits.map(it => it.object.name.value);
+    const classNames = compilationUnits.map(it => it.object.name.value).sort();
 
-    expect(fileNames.sort())
+    expect(classNames)
       .toEqual([
         'ErrorUnknown',
         'ErrorUnknownError',
@@ -160,16 +185,14 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
     const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
     expect(giveNumberGetCharResponse.object.extends).toBeDefined();
-
-    const type = giveNumberGetCharResponse.object.extends?.type.omniType;
-    expect(type?.kind).toEqual(OmniTypeKind.OBJECT);
+    expect(giveNumberGetCharResponse.object.extends?.type.omniType?.kind).toEqual(OmniTypeKind.OBJECT);
   });
 
   test('Interfaces', async () => {
 
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'multiple-inheritance.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
+    const result = await OpenRpcTestUtils.readExample('openrpc', 'multiple-inheritance.json');
     const interpreter = new JavaInterpreter();
-    const root = await interpreter.buildSyntaxTree(result.model, [], DEFAULT_TEST_JAVA_OPTIONS);
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
     expect(root).toBeDefined();
 
@@ -180,9 +203,9 @@ describe('Test the structuring of GenericModel into a Java AST', () => {
 
   test('Mappings', async () => {
 
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'mappings.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
+    const result = await OpenRpcTestUtils.readExample('openrpc', 'mappings.json');
     const interpreter = new JavaInterpreter();
-    const root = await interpreter.buildSyntaxTree(result.model, [], DEFAULT_TEST_JAVA_OPTIONS);
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
     expect(root).toBeDefined();
 

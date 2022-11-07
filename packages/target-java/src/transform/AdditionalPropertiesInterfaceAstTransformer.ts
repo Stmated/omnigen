@@ -17,7 +17,7 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
   ): Promise<void> {
 
     const createdInterface: { obj?: Java.InterfaceDeclaration } = {};
-    const currentClassDeclaration: { obj?: Java.ClassDeclaration } = {};
+    const currentClassDeclaration: { obj?: Java.ClassDeclaration | undefined } = {};
     root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitClassDeclaration: (node, visitor) => {
@@ -52,7 +52,7 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
 
           createdInterface.obj = new Java.InterfaceDeclaration(
             JavaAstUtils.createTypeNode(interfaceType, false),
-            new Java.Identifier(Naming.safe([interfaceType.name, additionalPropertiesObjectType.name])),
+            new Java.Identifier(Naming.unwrap(interfaceType.name ?? additionalPropertiesObjectType.name)),
             new Java.Block(),
           );
 

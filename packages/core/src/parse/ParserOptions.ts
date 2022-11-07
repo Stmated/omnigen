@@ -1,23 +1,23 @@
-import {Booleanish, IncomingOrRealOption, RealOptions, OptionConverters, OptionsUtil, Options} from '../options';
+import {Booleanish, Option, RealOptions, OptionResolver, Options} from '../options';
+import {OptionsResolvers} from '../options/OptionsResolvers';
 
 export interface ParserOptions extends Options {
-  relaxedLookup: IncomingOrRealOption<Booleanish, boolean>;
-  relaxedPlaceholders: IncomingOrRealOption<Booleanish, boolean>;
-  autoTypeHints: IncomingOrRealOption<Booleanish, boolean>;
-  relaxedUnknownTypes: IncomingOrRealOption<Booleanish, boolean>;
+  relaxedLookup: Option<Booleanish, boolean>;
+  relaxedPlaceholders: Option<Booleanish, boolean>;
+  autoTypeHints: Option<Booleanish, boolean>;
+  relaxedUnknownTypes: Option<Booleanish, boolean>;
 }
 
 export const DEFAULT_PARSER_OPTIONS: RealOptions<ParserOptions> = {
-  // TODO: This should be 'false', but we keep it as this for the sake of easy testing.
   relaxedLookup: true,
   relaxedPlaceholders: true,
   autoTypeHints: true,
   relaxedUnknownTypes: false,
 };
 
-export const PARSER_OPTIONS_CONVERTERS: OptionConverters<ParserOptions> = {
-  autoTypeHints: OptionsUtil.toBoolean,
-  relaxedLookup: OptionsUtil.toBoolean,
-  relaxedPlaceholders: OptionsUtil.toBoolean,
-  relaxedUnknownTypes: OptionsUtil.toBoolean,
+export const PARSER_OPTIONS_CONVERTERS: OptionResolver<ParserOptions> = {
+  autoTypeHints: OptionsResolvers.toBoolean,
+  relaxedLookup: OptionsResolvers.toBoolean,
+  relaxedPlaceholders: OptionsResolvers.toBoolean,
+  relaxedUnknownTypes: OptionsResolvers.toBoolean,
 };

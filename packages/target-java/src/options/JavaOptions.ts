@@ -3,8 +3,8 @@ import {
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
   GenericTargetOptions,
-  IncomingOrRealOption,
-  OptionConverters,
+  Option,
+  OptionResolver,
   OptionsUtil,
   PackageOptions,
   PackageResolverOptionsParser,
@@ -19,11 +19,13 @@ export enum UnknownType {
 }
 
 export interface JavaOptions extends GenericTargetOptions, PackageOptions {
-  immutableModels: IncomingOrRealOption<Booleanish, boolean>;
-  includeAlwaysNullProperties: IncomingOrRealOption<Booleanish, boolean>;
+  immutableModels: Option<Booleanish, boolean>;
+  includeAlwaysNullProperties: Option<Booleanish, boolean>;
   unknownType: UnknownType;
-  includeLinksOnType: IncomingOrRealOption<Booleanish, boolean>;
-  includeLinksOnProperty: IncomingOrRealOption<Booleanish, boolean>;
+  includeLinksOnType: Option<Booleanish, boolean>;
+  includeLinksOnProperty: Option<Booleanish, boolean>;
+  interfaceNamePrefix: string,
+  interfaceNameSuffix: string,
 }
 
 export const DEFAULT_JAVA_OPTIONS: RealOptions<JavaOptions> = {
@@ -34,11 +36,14 @@ export const DEFAULT_JAVA_OPTIONS: RealOptions<JavaOptions> = {
   unknownType: UnknownType.JSON,
   includeLinksOnType: false,
   includeLinksOnProperty: true,
+  generifyTypes: true,
   onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
   packageResolver: undefined,
+  interfaceNamePrefix: 'I',
+  interfaceNameSuffix: '',
 };
 
-export const JAVA_OPTIONS_CONVERTERS: OptionConverters<JavaOptions> = {
+export const JAVA_OPTIONS_CONVERTERS: OptionResolver<JavaOptions> = {
   packageResolver: v => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,

@@ -19,9 +19,8 @@ import {
   OmniTypeKind,
   OmniUtil,
   TypeName,
-  Dereferenced, Dereferencer, RealOptions, ParserOptions,
+  Dereferenced, Dereferencer, RealOptions, ParserOptions, Case,
 } from '@omnigen/core';
-import {pascalCase} from 'change-case';
 import {JSONSchema} from '@open-rpc/meta-schema';
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -147,23 +146,21 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     const schemaObj = schema.obj;
-    const names: TypeName = [
-      name,
-      fn => {
-        if (schemaObj.title) {
-          return `${pascalCase(schemaObj.title)}${Naming.safe(name, fn)}`;
-        } else {
-          return undefined;
-        }
-      },
-      fn => {
-        if (schemaObj.type) {
-          return `${pascalCase(String(schemaObj.type))}${Naming.safe(name, fn)}`;
-        } else {
-          return undefined;
-        }
-      },
-    ];
+    const names: TypeName = [name];
+
+    if (schemaObj.title) {
+      names.push({
+        prefix: Case.pascal(String(schemaObj.title)),
+        name: name,
+      });
+    }
+
+    if (schemaObj.type) {
+      names.push({
+        prefix: Case.pascal(String(schemaObj.type)),
+        name: name,
+      });
+    }
 
     const type: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
@@ -256,11 +253,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       this.getPreferredName(
         schema,
         schemaOrRef,
-        fn => {
-          // NOTE: This might not be the best way to create the property name
-          // But for now it will have to do, since most type names will be a simple type.
-          const typeName = OmniUtil.getVirtualTypeName(owner);
-          return `${Naming.safe(typeName, fn)}${pascalCase(propertyName)}`;
+        // NOTE: This might not be the best way to create the property name
+        // But for now it will have to do, since most type names will be a simple type.
+        {
+          prefix: OmniUtil.getVirtualTypeName(owner),
+          name: Case.pascal(propertyName),
         },
       ),
       schema,
@@ -300,10 +297,10 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const names: TypeName[] = [];
     if (schema.obj.type) {
       if (Array.isArray(schema.obj.type)) {
-        names.push(pascalCase(schema.obj.type.join('_')));
+        names.push(Case.pascal(schema.obj.type.join('_')));
       } else {
         if (schema.obj.type) {
-          names.push(pascalCase(schema.obj.type));
+          names.push(Case.pascal(schema.obj.type));
         }
       }
     }
@@ -336,7 +333,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   }
 
   private mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniObjectType): void {
-    const common = OmniUtil.getCommonDenominatorBetween(a.type, b.type);
+    const common = OmniUtil.getCommonDenominatorBetween(a.type, b.type)?.type;
     if (common) {
       if (to.properties) {
         const idx = to.properties.indexOf(b);
@@ -348,7 +345,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     } else {
 
       // TODO: Can we introduce generics here in some way?
-      const vsString = `${OmniUtil.getTypeDescription(a.type)} vs ${OmniUtil.getTypeDescription(b.type)}`;
+      const vsString = `${OmniUtil.describe(a.type)} vs ${OmniUtil.describe(b.type)}`;
       const errMessage = `No common type for merging properties ${a.name}. ${vsString}`;
       throw new Error(errMessage);
     }
@@ -501,7 +498,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       return {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: primitiveType,
-        valueConstant: undefined,
         description: description,
       };
     }
@@ -652,15 +648,17 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       return newType;
     }
 
-    type.subTypeHints = subTypeHints;
+    if (subTypeHints && subTypeHints.length > 0) {
+      type.subTypeHints = subTypeHints;
+    }
 
     // NOTE: "extendedBy" could be an ENUM, while "type" is an Object.
     // This is not allowed in some languages. But it is up to the target language to decide how to handle it.
     if (extendedBy) {
 
-      const extendableType = OmniUtil.asInheritableType(extendedBy);
+      const extendableType = OmniUtil.asSuperType(extendedBy);
       if (!extendableType) {
-        throw new Error(`Not allowed to use '${OmniUtil.getTypeDescription(extendedBy)}' as an extension type`);
+        throw new Error(`Not allowed to use '${OmniUtil.describe(extendedBy)}' as an extension type`);
       }
 
       type.extendedBy = extendableType;
@@ -756,7 +754,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
         const subType = this.jsonSchemaToType(deref.hash, deref, undefined).type;
         if (subTypeHints.find(it => it.type == subType)) {
-          logger.debug(`Skipping ${discriminatorPropertyName} as ${OmniUtil.getTypeDescription(subType)} since it has a custom key`);
+          logger.debug(`Skipping ${discriminatorPropertyName} as ${OmniUtil.describe(subType)} since it has a custom key`);
           continue;
         }
 
@@ -815,7 +813,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       };
 
     } else if (typeof items == 'boolean') {
-      throw new Error(`Do not know how to handle a boolean items '${name ? Naming.safe(name) : ''}'`);
+      throw new Error(`Do not know how to handle a boolean items '${name ? Naming.unwrap(name) : ''}'`);
     } else if (Array.isArray(items)) {
 
       // TODO: We should be introducing interfaces that describe the common denominators between the different items?
@@ -828,10 +826,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         return this.jsonSchemaToType(derefArrayItem.hash || 'UnknownArrayItem', derefArrayItem, undefined);
       });
 
-      const commonDenominator = OmniUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type));
+      const commonDenominator = OmniUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type))?.type;
 
       const arrayByPositionType: OmniArrayTypesByPositionType = {
-        // name: name ?? `ArrayOf${staticArrayTypes.map(it => Naming.safer(it.type)).join('And')}`,
         kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
         types: staticArrayTypes.map(it => it.type),
         description: schema.obj.description,
@@ -846,9 +843,12 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       const itemsSchema = this.unwrapJsonSchema({obj: items, root: schema.root});
       let itemTypeName: TypeName;
       if (itemsSchema.obj.title) {
-        itemTypeName = pascalCase(itemsSchema.obj.title);
+        itemTypeName = Case.pascal(itemsSchema.obj.title);
       } else {
-        itemTypeName = fn => `${name ? Naming.safe(name, fn) : ''}Item`;
+        itemTypeName = {
+          name: name ?? '',
+          suffix: 'Item',
+        };
       }
 
       const itemType = this.jsonSchemaToType(itemTypeName, itemsSchema, undefined);
@@ -896,7 +896,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const jsonSchema = schema as JSONSchema7;
     const derefJsonSchema = this._deref.get(jsonSchema, this._deref.getFirstRoot());
     const omniType = this.jsonSchemaToType('JsonRpcCustomErrorPayload', derefJsonSchema, undefined).type;
-    logger.debug(`Using the from jsonschema converted omni type '${OmniUtil.getTypeDescription(omniType)}'`);
+    logger.debug(`Using the from jsonschema converted omni type '${OmniUtil.describe(omniType)}'`);
     return omniType;
   }
 

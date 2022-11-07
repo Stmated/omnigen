@@ -27,6 +27,6 @@
     "@omnigen/eslint-config-custom": "*",
     "@omnigen/utils-test": "*",
     "@omnigen/utils-test-target-java": "*",
-    "typescript": "4.9.1-beta"
+    "typescript": "4.9.2-rc"
   }
 }

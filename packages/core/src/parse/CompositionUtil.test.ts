@@ -35,7 +35,7 @@ describe('Test Composition Types', () => {
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
-      andTypes: [
+      types: [
         {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
         {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
       ],
@@ -51,7 +51,7 @@ describe('Test Composition Types', () => {
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
-      andTypes: [
+      types: [
         {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
         {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
       ],
@@ -70,9 +70,10 @@ describe('Test Composition Types', () => {
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
-      andTypes: [
+      types: [
         {
-          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.OR, orTypes: [
+          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.OR,
+          types: [
             {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
             {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
           ],
@@ -95,10 +96,11 @@ describe('Test Composition Types', () => {
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
-      andTypes: [
+      types: [
         {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
         {
-          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.XOR, xorTypes: [
+          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.XOR,
+          types: [
             {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
             {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
           ],
@@ -121,12 +123,14 @@ describe('Test Composition Types', () => {
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
-      andTypes: [
+      types: [
         {
-          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.AND, andTypes: [
+          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.AND,
+          types: [
             {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
             {
-              kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.XOR, xorTypes: [
+              kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.XOR,
+              types: [
                 {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
                 {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
               ],
@@ -134,7 +138,8 @@ describe('Test Composition Types', () => {
           ],
         },
         {
-          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.NOT, notTypes: [
+          kind: OmniTypeKind.COMPOSITION, compositionKind: CompositionKind.NOT,
+          types: [
             {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.FLOAT},
           ],
         },

@@ -1,10 +1,18 @@
 import {AbstractJavaAstTransformer} from '../transform';
 import {
-  OmniModel, OmniType, OmniTypeKind, ExternalSyntaxTree, VisitorFactoryManager, RealOptions, OmniUtil, TargetOptions,
+  ExternalSyntaxTree,
+  OmniModel,
+  OmniType,
+  OmniTypeKind,
+  OmniUtil,
+  RealOptions,
+  TargetOptions,
+  VisitorFactoryManager,
 } from '@omnigen/core';
 import {JavaOptions} from '../options';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
+import {JavaUtil} from '../util';
 
 const logger = LoggerFactory.create(__filename);
 
@@ -20,9 +28,9 @@ interface TypeMapping {
 export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: OmniModel,
+    model: OmniModel,
     root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
+    externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
     options: RealOptions<TargetOptions>,
   ): Promise<void> {
 
@@ -33,16 +41,78 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     }
 
     const typeMapping = new Map<OmniType, TypeMapping>();
+    this.gatherTypeMappings(typeMapping, root);
+
+    const typeMappingExternals = new Map<OmniType, TypeMapping>();
+    for (const external of externals) {
+
+      // We still gather the mappings for all externals as well.
+      // It will be useful for error messages and exclusions of some compressions.
+      // Like... we should never move types from specific models INTO the common types. That is just weird.
+      this.gatherTypeMappings(typeMappingExternals, external.node);
+    }
+
+    for (const [type, typeMappings] of typeMapping.entries()) {
+
+      const usedInUnits = typeMappings.usedIn;
+      if (!usedInUnits || usedInUnits.size != 1) {
+        continue;
+      }
+
+      const usedInUnit = [...usedInUnits.values()][0];
+      const definedUsedInSuperType = JavaUtil.superMatches(
+        model, JavaUtil.asSubType(usedInUnit.object.type.omniType),
+        superType => (superType == type),
+      );
+
+      if (definedUsedInSuperType) {
+
+        // If the types are assignable, it means that the single use is a class extension.
+        if (options.compressUnreferencedSubTypes && this.isAllowedKind(usedInUnit, options)) {
+
+          // If the only use is as an extension, then IF we compress, the source/target should be reversed.
+          // If typeA is only used in typeB, and typeB is extending from typeA, then typeB should be inside typeA.
+          const definedIn = typeMappings.definedIn;
+          if (!definedIn && typeMappingExternals.has(type)) {
+            // If we could not find the target, but it is available in the external mappings,
+            // then we know that the other type is inside another model. We do not want to compress into them.
+            logger.debug(`Skipping compression of type '${OmniUtil.describe(type)}' inside external model`);
+          } else {
+            // this.moveCompilationUnit(usedInUnit, definedIn, type, root);
+          }
+        }
+
+      } else {
+
+        if (options.compressSoloReferencedTypes && this.isAllowedKind(typeMappings.definedIn, options)) {
+
+          // This type is only ever used in one single unit.
+          // To decrease the number of files, we can compress the types and make this an inner type.
+          this.moveCompilationUnit(typeMappings.definedIn, usedInUnit, type, root);
+        }
+      }
+    }
+
+    return Promise.resolve(undefined);
+  }
+
+  private gatherTypeMappings(
+    typeMapping: Map<OmniType, TypeMapping>,
+    root: Java.JavaAstRootNode,
+  ) {
+
     const cuInfoStack: CompilationUnitInfo[] = [];
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    const visitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitCompilationUnit: (node, visitor) => {
 
-        // TODO: To get this to work, there might be a need to rewrite PackageImportJavaAstTransformer?
-
         const mapping = typeMapping.get(node.object.type.omniType);
         if (mapping) {
-          mapping.usedIn.add(node);
+          if (mapping.definedIn) {
+            mapping.usedIn.add(node);
+          } else {
+            mapping.definedIn = node;
+          }
         } else {
           typeMapping.set(node.object.type.omniType, {
             usedIn: new Set(),
@@ -59,7 +129,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
       visitRegularType: node => {
 
-        for (const usedType of OmniUtil.getResolvedVisibleTypes(node.omniType)) {
+        for (const usedType of InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(node.omniType)) {
 
           // We will only compress certain kind of types.
           if (usedType.kind == OmniTypeKind.OBJECT
@@ -79,40 +149,43 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
           }
         }
       },
-    }));
+    });
 
-    for (const e of typeMapping.entries()) {
-      const usedInUnits = e[1].usedIn;
-      if (usedInUnits.size != 1) {
-        continue;
-      }
+    root.visit(visitor);
+  }
 
-      const usedInUnit = [...usedInUnits.values()][0];
-      const type = e[0];
-      if (OmniUtil.isAssignableTo(usedInUnit.object.extends?.type.omniType, type)) {
+  /**
+   * Resolves the type into the local visible type(s).
+   * This means the types that are externally visible for this type.
+   * For example:
+   * - If an object, then the object itself.
+   * - If an array, then the array type and item type(s).
+   * - If a generic, then the generic type itself and the generic target types.
+   *
+   * This is used to know if the type will be output into the compilation unit/source code.
+   * That way we can know if this type is hard-linked to a certain source code.
+   *
+   * NOTE: This might not be correct for all future target languages.
+   *        Might need to be looked at in the future.
+   *
+   * @param type
+   */
+  public static getResolvedVisibleTypes(type: OmniType): OmniType[] {
 
-        // If the types are assignable, it means that the single use is a class extension.
-        if (options.compressUnreferencedSubTypes && this.isAllowedKind(usedInUnit, options)) {
-
-          // If the only use is as an extension, then IF we compress, the source/target should be reversed.
-          // If typeA is only used in typeB, and typeB is extending from typeA, then typeB should be inside typeA.
-          const target = e[1].definedIn;
-          this.moveCompilationUnit(usedInUnit, target, type, root);
-        }
-
-      } else {
-
-        const source = e[1].definedIn;
-        if (options.compressSoloReferencedTypes && this.isAllowedKind(source, options)) {
-
-          // This type is only ever used in one single unit.
-          // To decrease the number of files, we can compress the types and make this an inner type.
-          this.moveCompilationUnit(source, usedInUnit, type, root);
-        }
-      }
+    if (type.kind == OmniTypeKind.ARRAY) {
+      return [type, ...InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.of)];
+    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+      const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.source.of);
+      const targetTypes = type.targetIdentifiers.flatMap(it => InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(it.type));
+      return [...sourceType, ...targetTypes];
+    } else if (type.kind == OmniTypeKind.INTERFACE) {
+      const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.of);
+      return [type, ...sourceType];
     }
 
-    return Promise.resolve(undefined);
+    // Should we follow external model references here?
+
+    return [type];
   }
 
   private isAllowedKind(cu: Java.CompilationUnit | undefined, options: TargetOptions): boolean {
@@ -134,11 +207,11 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
   ): void {
 
     if (!sourceUnit) {
-      throw new Error(`Could not find the CompilationUnit source where '${OmniUtil.getTypeDescription(type)}' is defined`);
+      throw new Error(`Could not find the CompilationUnit source where '${OmniUtil.describe(type)}' is defined`);
     }
 
     if (!targetUnit) {
-      throw new Error(`Could not find the CompilationUnit target where '${OmniUtil.getTypeDescription(type)}' is defined`);
+      throw new Error(`Could not find the CompilationUnit target where '${OmniUtil.describe(type)}' is defined`);
     }
 
     if (!sourceUnit.object.modifiers.modifiers.find(it => it.type == Java.ModifierType.STATIC)) {

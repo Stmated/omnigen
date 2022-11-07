@@ -9,7 +9,7 @@ const logger = LoggerFactory.create(__filename);
 
 export type RefAware = { $ref: string };
 
-export type Dereferenced<out T> = { obj: T, root: object, hash?: string, mix?: boolean; };
+export type Dereferenced<out T> = { obj: T, root: object, hash?: string | undefined, mix?: boolean | undefined; };
 
 export type UriHash = { uri: string, hash: string };
 

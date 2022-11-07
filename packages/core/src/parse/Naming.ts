@@ -1,49 +1,169 @@
-import {pascalCase} from 'change-case';
-import {TypeName, TypeNameFn, TypeNameSingle} from '../parse';
+import {TypeName} from '../parse';
 import {LoggerFactory} from '@omnigen/core-log';
+import crypto from 'crypto';
+import {Case} from '../util';
 
 const logger = LoggerFactory.create(__filename);
 
+export type NamePair<T> = { owner: T, name: TypeName };
+export type ResolvedNamePair<T> = { owner: T, name: string };
+
+export type NameCallback = {(name: string, parts?: string[], preservePunctuation?: boolean): string | undefined | void};
+
+const DEF_UNWRAP_CALLBACK: NameCallback = (name, parts, keepPunctuation) => {
+  if (keepPunctuation) {
+    if (parts && parts.length > 0) {
+      return `${parts.join('')}${name}`;
+    } else {
+      return name;
+    }
+  } else {
+    if (parts && parts.length > 0) {
+      return `${parts.map(it => Naming.prefixedPascalCase(it)).join('')}${Naming.prefixedPascalCase(name)}`;
+    } else {
+      return Naming.prefixedPascalCase(name);
+    }
+  }
+};
+
 export class Naming {
 
-  public static unwrapAll(name: TypeName): string[] {
+  public static unwrap(name: TypeName, callback?: NameCallback): string;
+  public static unwrap<T>(pairs: NamePair<T>[], callback?: NameCallback): ResolvedNamePair<T>[];
+  public static unwrap(name: undefined): undefined;
+  public static unwrap<T>(
+    input: TypeName | NamePair<T>[] | undefined,
+    callback: NameCallback = DEF_UNWRAP_CALLBACK,
+  ): string | ResolvedNamePair<T>[] | undefined {
 
-    const all: string[] = [];
-    if (Array.isArray(name)) {
-      for (const choice of name) {
-        if (choice) {
-          const result = Naming.unwrapAll(choice);
-          if (result) {
-            all.push(...result);
-          }
-        }
-      }
-    } else {
-      const unwrapped = Naming.unwrapOptional(name);
-      if (unwrapped) {
-        all.push(unwrapped);
-      }
-    }
+    if (input == undefined) {
+      return input;
+    } else if (typeof input == 'string') {
 
-    return all;
-  }
+      // The type name contains a slash, which means it is probably a ref name.
+      const nameParts = input.split('/');
+      if (nameParts.length > 1) {
 
-  public static unwrapToFirstDefined(name: TypeName): string | undefined {
-
-    if (Array.isArray(name)) {
-      for (const choice of name) {
-        if (choice) {
-          const result = Naming.unwrapToFirstDefined(choice);
+        const lastNamePart = nameParts[nameParts.length - 1];
+        for (let i = nameParts.length - 1; i >= 0; i--) {
+          const namePartsSlice = (i == nameParts.length - 1) ? [] : nameParts.slice(i, -1).reverse();
+          const result = callback(lastNamePart, namePartsSlice);
           if (result) {
             return result;
           }
         }
+
+        return undefined;
+
+      } else {
+        return callback(input) || undefined;
+      }
+    } else if (Array.isArray(input)) {
+
+      if (input.length > 0) {
+        if (typeof input[0] == 'object' && 'owner' in input[0]) {
+          return this.unwrapPairs(input as NamePair<T>[], callback);
+        } else {
+          return this.unwrapArray(input, callback);
+        }
       }
 
       return undefined;
+    } else if (typeof input == 'object') {
+      return Naming.unwrap(input.name, (name, parts) => {
+        return Naming.unwrap(input.prefix || '', (prefix, _prefixParts) => {
+          return Naming.unwrap(input.suffix || '', (suffix, _suffixParts) => {
+
+            // NOTE: Do we ever need to care about the prefix and suffix parts?
+            const modifiedName = `${prefix}${name}${suffix}`;
+            return callback(modifiedName, parts);
+          });
+        });
+      });
     }
 
-    return Naming.unwrapOptional(name);
+    return undefined;
+  }
+
+  private static unwrapArray(input: Array<TypeName>, callback: NameCallback) {
+
+    for (const entry of input) {
+      const result = Naming.unwrap(entry, (name, parts) => {
+        return callback(name, parts);
+      });
+
+      if (result) {
+        return result;
+      }
+    }
+
+    return undefined;
+  }
+
+  private static unwrapPairs<T>(pairs: NamePair<T>[], callback: NameCallback): ResolvedNamePair<T>[] {
+
+    // This is a pair. We should resolve the actual name and replace it with a resolved pair.
+    const result: ResolvedNamePair<T>[] = [];
+
+    const encountered: string[] = [];
+    for (const pair of pairs) {
+
+      const pairNames: string[] = [];
+      let foundName = Naming.unwrap(pair.name, (name, parts) => {
+
+        // TODO: This is ugly and bad and wrong. Should be able to avoid all this string manipulation
+        //        Is this even correct? Should we not call the callback first?
+        const resolvedName = callback(name, parts);
+        if (!resolvedName) {
+          return undefined;
+        }
+
+        pairNames.push(resolvedName);
+        if (encountered.includes(resolvedName)) {
+
+          // This name has already been found before.
+          // Need to keep looking for an available, alternative name.
+          return undefined;
+        } else {
+          encountered.push(resolvedName);
+        }
+
+        return resolvedName;
+      });
+
+      if (!foundName) {
+
+        // We could not find any available name.
+        // So what we will do is try again, but with an index appended at the end.
+        for (let i = 1; i <= 5 && !foundName; i++) {
+          for (const pairName of pairNames) {
+            const indexedName = `${pairName}_${i}`;
+            const acceptedIndexedName = callback(indexedName, undefined, true);
+            if (acceptedIndexedName) {
+              if (!encountered.includes(acceptedIndexedName)) {
+                foundName = acceptedIndexedName;
+                encountered.push(acceptedIndexedName);
+                break;
+              } else {
+                // NOTE: Is it even needed at all to add the names to the list here?
+                encountered.push(acceptedIndexedName);
+              }
+            }
+          }
+        }
+      }
+
+      if (!foundName) {
+
+        // We could *still* not find a suitable name. So we will need to give a random one.
+        const firstName = pairNames.length > 0 ? pairNames[0] : '';
+        foundName = `${firstName}_${crypto.randomBytes(20).toString('hex')}`;
+      }
+
+      result.push({owner: pair.owner, name: foundName});
+    }
+
+    return result;
   }
 
   public static simplify(name: TypeName): TypeName {
@@ -55,108 +175,12 @@ export class Naming {
     }
   }
 
-  private static unwrapOptional(name: TypeNameSingle): string | undefined {
-    if (name == undefined) {
-      return name;
-    }
-
-    if (typeof name == 'string') {
-      return name;
-    }
-
-    return name();
-  }
-
-  /**
-   * TODO: This needs to not be called everywhere. We need to synchronize the names better.
-   *        Right now there are situations where a type can be called different things in different places
-   *        This is because the final name is not set until at cleanup.
-   *        This MUST be fixed sometime later.
-   *        Maybe make the name property a callback which can alter during the execution?
-   *        (And then finalize it at the end, at the cleanup)
-   *
-   * @param name The name to safely unwrap to a string
-   * @param hasDuplicateFn The predicate callback to check for name collisions
-   */
-  public static safe(name: TypeName, hasDuplicateFn?: TypeNameFn): string {
-
-    if (name == undefined) {
-      throw new Error(`Not allowed to give an undefined name`);
-    }
-
-    const resolved = Naming.safeInternal(name, hasDuplicateFn);
-    if (resolved) {
-      return resolved;
-    }
-
-    const firstResolvedWithoutDuplicateCheck = Naming.safeInternal(name);
-    if (firstResolvedWithoutDuplicateCheck) {
-
-      if (hasDuplicateFn) {
-
-        // If we have come this far, then we will have to attempt to add a numbered suffix.
-        // We should *really* try to avoid this by some other naming.
-        for (let i = 1; i < 50; i++) {
-          const safeSuffixedName = `${firstResolvedWithoutDuplicateCheck}${i}`;
-          if (!hasDuplicateFn(safeSuffixedName)) {
-            logger.warn(`Created fallback naming '${safeSuffixedName}', this should be avoided`);
-            return safeSuffixedName;
-          }
-        }
-      } else {
-
-        // TODO: Do something here? Create a random number or set of character and append to the name?
-      }
-    }
-
-    throw new Error(`Could not build a safe unique name for '${firstResolvedWithoutDuplicateCheck || ''}'`);
-  }
-
-  private static safeInternal(name: TypeName, hasDuplicateFn?: TypeNameFn): string | undefined {
-
-    if (Array.isArray(name)) {
-      for (const entry of name) {
-        const resolved = Naming.safeInternal(entry, hasDuplicateFn);
-        if (resolved) {
-          return resolved;
-        }
-      }
-    } else {
-
-      // TODO: Should this be removed and instead up to the caller to have a longer list of potential names?
-      //       Feels like that is the better choice; gives more freedom to where we should use the slash (/) fallback.
-      let safeName = '';
-      const resolvedName = Naming.unwrapOptional(name);
-      if (resolvedName) {
-        if (resolvedName.indexOf('/') !== -1) {
-          // The type name contains a slash, which means it is probably a ref name.
-          const nameParts = resolvedName.split('/');
-          for (let i = nameParts.length - 1; i >= 0; i--) {
-            safeName = (Naming.prefixedPascalCase(nameParts[i]) + safeName);
-
-            if (!hasDuplicateFn || !hasDuplicateFn(safeName)) {
-              return safeName;
-            }
-          }
-        } else {
-          safeName = Naming.prefixedPascalCase(resolvedName);
-        }
-      }
-
-      if (!hasDuplicateFn || (safeName.length > 0 && !hasDuplicateFn(safeName))) {
-        return safeName;
-      }
-    }
-
-    return undefined;
-  }
-
-  private static prefixedPascalCase(name: string): string {
+  public static prefixedPascalCase(name: string): string {
 
     if (name.startsWith('_')) {
-      return `_${pascalCase(name)}`;
+      return `_${Case.pascalKeepUpperCase(name)}`;
     } else {
-      return pascalCase(name);
+      return Case.pascalKeepUpperCase(name);
     }
   }
 }

@@ -1,28 +1,28 @@
-import {camelCase} from 'change-case';
-import {
-  Booleanish,
-  IncomingOptions,
-  IncomingOrRealOption,
-  Options,
-  OmitNever,
-  RealOptions,
-} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
+import {Option} from './Option';
+import {Options} from './Options';
+import {Booleanish} from './Booleanish';
+import {IncomingOptions} from './IncomingOptions';
+import {RealOptions} from './RealOptions';
+import {Case} from '../util';
+import {OptionsResolvers} from './OptionsResolvers';
 
 const logger = LoggerFactory.create(__filename);
 
-export type IncomingConverter<TInc, TReal> = (incoming: TInc | TReal) => Promise<TReal>;
+export type IncomingResolver<TInc, TReal> = (incoming: TInc | TReal) => Promise<TReal>;
 
-export type OptionConverters<TOpt extends Options> = OmitNever<{
-  [Key in keyof TOpt]: TOpt[Key] extends IncomingOrRealOption<infer TInc, infer TReal>
+type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
+
+export type OptionResolver<TOpt extends Options> = OmitNever<{
+  [Key in keyof TOpt]: TOpt[Key] extends Option<infer TInc, infer TReal>
     ? TOpt[Key] extends TReal
       ? never
-      : IncomingConverter<TInc, TReal>
+      : IncomingResolver<TInc, TReal>
     : never
 }>;
 
 export type OptionAdditions<TOpt extends Options> = {
-  [Key in keyof TOpt]?: TOpt[Key] extends IncomingOrRealOption<infer _TInc, infer TReal>
+  [Key in keyof TOpt]?: TOpt[Key] extends Option<infer _TInc, infer TReal>
     ? (value: TReal) => IncomingOptions<TOpt> | undefined
     : (value: TOpt[Key]) => IncomingOptions<TOpt> | undefined
 };
@@ -34,30 +34,30 @@ export class OptionsUtil {
   public static async updateOptions<
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
-    TConverters extends OptionConverters<TOpt>,
+    TResolver extends OptionResolver<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
     TReturn extends RealOptions<TOpt>
   >(
     base: TOpt,
     incoming: TInc | undefined,
-    converters?: TConverters,
+    resolvers?: TResolver,
     additions?: TAdditions,
   ): Promise<TReturn> {
 
     const copiedBase = {...base};
-    const alteredBase = await this.getBaseWithOptionalAdditions(copiedBase, incoming, converters, additions);
-    return this.replaceOptionsWithConverted(alteredBase, incoming, converters);
+    const alteredBase = await this.getBaseWithOptionalAdditions(copiedBase, incoming, resolvers, additions);
+    return this.replaceOptionsWithConverted(alteredBase, incoming, resolvers);
   }
 
   private static async replaceOptionsWithConverted<
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
-    TConverters extends OptionConverters<TOpt>,
+    TResolver extends OptionResolver<TOpt>,
     TReturn extends RealOptions<TOpt>
   >(
     base: Required<TOpt>,
     incoming: TInc | undefined,
-    converters?: TConverters,
+    resolvers?: TResolver,
   ): Promise<TReturn> {
 
     for (const baseKey in base) {
@@ -68,7 +68,7 @@ export class OptionsUtil {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const converter: IncomingConverter<unknown, unknown> | undefined = converters?.[baseKey];
+      const converter: IncomingResolver<unknown, unknown> | undefined = resolvers?.[baseKey];
       if (converter) {
 
         const rawValue = (incoming && baseKey in incoming) ? incoming[baseKey] : base[baseKey];
@@ -94,11 +94,11 @@ export class OptionsUtil {
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
-    TConverters extends OptionConverters<TOpt>
+    TResolver extends OptionResolver<TOpt>
   >(
     base: Required<TOpt>,
     incoming: TInc | undefined,
-    converters?: TConverters,
+    resolvers?: TResolver,
     additions?: TAdditions,
   ): Promise<TOpt> {
 
@@ -123,7 +123,7 @@ export class OptionsUtil {
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      const converter = converters?.[additionKey] as IncomingConverter<unknown, any> | undefined;
+      const converter = resolvers?.[additionKey] as IncomingResolver<unknown, any> | undefined;
       if (converter) {
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -150,36 +150,11 @@ export class OptionsUtil {
   }
 
   public static toBoolean(this: void, value: Booleanish | undefined): Promise<boolean> {
-
-    if (value == undefined) {
-      return Promise.resolve(false);
-    }
-
-    if (typeof value == 'boolean') {
-      return Promise.resolve(value);
-    }
-
-    if (typeof value == 'string' && /^-?\d+$/.test(value)) {
-      value = parseFloat(value);
-    }
-
-    if (typeof value == 'number') {
-      return Promise.resolve(value !== 0);
-    }
-
-    const lowercase = value.toLowerCase();
-    if (lowercase == 'true' || lowercase == 't' || lowercase == 'yes' || lowercase == 'y') {
-      return Promise.resolve(true);
-    } else if (lowercase == 'false' || lowercase == 'f' || lowercase == 'no' || lowercase == 'n') {
-      return Promise.resolve(false);
-    }
-
-    // Any other string will count as false.
-    return Promise.resolve(false);
+    return OptionsResolvers.toBoolean(value);
   }
 
   public static toString(this: void, value: string | number): Promise<string> {
-    return Promise.resolve(String(value));
+    return OptionsResolvers.toString(value);
   }
 
   public static updateOptionsFromDocument<TOpt extends Options>(doc: Record<string, Record<string, unknown>>, opt: TOpt): void {
@@ -194,7 +169,7 @@ export class OptionsUtil {
       for (const key of optionsKeys) {
 
         const value = customOptions[key];
-        const camelKey = camelCase(key);
+        const camelKey = Case.camel(key);
 
         if (value !== undefined) {
 

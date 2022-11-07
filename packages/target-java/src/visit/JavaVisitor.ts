@@ -1,7 +1,7 @@
-import {AstRootNode, AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/core';
+import {AstRootNode, AstVisitor, VisitFn, VisitResult, AbstractStNode} from '@omnigen/core';
 import * as Java from '../ast';
 
-export type JavaVisitFn<in N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
+export type JavaVisitFn<in N extends AbstractStNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
 export class JavaVisitor<R> implements AstVisitor<R> {
 

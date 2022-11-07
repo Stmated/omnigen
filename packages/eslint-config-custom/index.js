@@ -39,7 +39,15 @@ module.exports = {
             'selector': 'typeParameter',
             'leadingUnderscore': 'forbid',
             'trailingUnderscore': 'forbid',
-            'prefix': ['T', 'R', 'N', 'V'],
+            // T = Type
+            // R = Return
+            // N = Node
+            // V = Value / Visitor
+            // C = Concrete Syntax Tree Node
+            // P = Parent
+            // I = Input
+            // K = Key
+            'prefix': ['T', 'R', 'N', 'V', 'C', 'P', 'I', 'K'],
             'format': ['PascalCase'],
           },
           {
@@ -54,6 +62,17 @@ module.exports = {
             'trailingUnderscore': 'forbid',
             'modifiers': ['exported', 'const'],
             'format': ['UPPER_CASE'],
+          },
+          {
+            'selector': 'variable',
+            'leadingUnderscore': 'forbid',
+            'trailingUnderscore': 'forbid',
+            'modifiers': ['global', 'const'],
+            'format': ['UPPER_CASE'],
+            'filter': {
+              'regex': 'logger',
+              'match': false,
+            },
           },
           {
             'selector': 'property',
@@ -95,6 +114,7 @@ module.exports = {
             'format': ['camelCase'],
           },
         ],
+        'no-dupe-class-members': 0,
       },
     },
     {
@@ -128,7 +148,7 @@ module.exports = {
   rules: {
     // Disable default no-unused-vars, and use typescript validation
     'no-unused-vars': 0,
-    '@typescript-eslint/no-unused-vars': [2,
+    '@typescript-eslint/no-unused-vars': [1,
       {'args': 'all', 'varsIgnorePattern': '^_', 'argsIgnorePattern': '^_'}],
     'require-jsdoc': 0,
     'valid-jsdoc': 0,

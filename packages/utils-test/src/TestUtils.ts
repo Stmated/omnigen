@@ -1,7 +1,7 @@
 import {
   CompositionKind,
   OmniCompositionType,
-  OmniInheritableType,
+  OmniSuperTypeCapableType,
   OmniObjectType,
   OmniProperty,
   OmniPropertyOwner,
@@ -13,9 +13,11 @@ import {
 
 type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<OmniProperty, 'owner'>>;
 
+export type MapArg<T> = Array<[T, Array<T>]>;
+
 export class TestUtils {
 
-  public static obj(name: TypeName, extendedBy?: OmniInheritableType, properties?: OmniPropertyOrphan[]): OmniObjectType {
+  public static obj(name: TypeName, extendedBy?: OmniSuperTypeCapableType, properties?: OmniPropertyOrphan[]): OmniObjectType {
     const omniClass: OmniObjectType = {
       name: name,
       kind: OmniTypeKind.OBJECT,
@@ -36,20 +38,27 @@ export class TestUtils {
     return omniClass;
   }
 
-  public static and(...types: OmniType[]): OmniCompositionType {
+  public static and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.AND> {
     return {
       kind: OmniTypeKind.COMPOSITION,
       compositionKind: CompositionKind.AND,
-      andTypes: types,
+      types: types,
     };
   }
 
   public static prop(name: string, type: OmniType, owner?: OmniPropertyOwner): OmniProperty | OmniPropertyOrphan {
-    return {
-      name: name,
-      type: type,
-      owner: owner,
-    };
+    if (owner) {
+      return {
+        name: name,
+        type: type,
+        owner: owner,
+      };
+    } else {
+      return {
+        name: name,
+        type: type,
+      };
+    }
   }
 
   public static flatten<T>(result: VisitResult<T>): T | undefined {
@@ -72,5 +81,14 @@ export class TestUtils {
     }
 
     return result;
+  }
+
+  public static map<T>(arg: MapArg<T>): Map<T, T[]> {
+    const map = new Map<T, T[]>();
+    for (const array of arg) {
+      map.set(array[0], array[1]);
+    }
+
+    return map;
   }
 }

@@ -1,5 +1,5 @@
 import {
-  AbstractNode,
+  AbstractStNode,
   AbstractToken,
   VisitResult,
   OmniDictionaryType,
@@ -8,9 +8,8 @@ import {
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
-  LiteralValue,
+  LiteralValue, StNodeWithChildren, Case,
 } from '@omnigen/core';
-import {camelCase} from 'change-case';
 import {JavaAstUtils} from '../transform';
 import {JavaUtil} from '../util';
 import {JavaVisitor} from '../visit';
@@ -46,15 +45,15 @@ export class JavaToken extends AbstractToken {
   }
 }
 
-export abstract class AbstractJavaNode extends AbstractNode {
+export abstract class AbstractJavaNode extends AbstractStNode {
 
 }
 
 export class RegularType extends AbstractJavaNode {
   omniType: OmniType;
-  private _localName?: string;
-  private _importName?: string;
-  readonly implementation?: boolean;
+  private _localName?: string | undefined;
+  private _importName?: string | undefined;
+  readonly implementation?: boolean | undefined;
 
   get array(): boolean {
     return this.omniType.kind == OmniTypeKind.ARRAY;
@@ -118,7 +117,7 @@ export class GenericType extends AbstractJavaNode {
 
 export class Identifier extends AbstractJavaNode {
   value: string;
-  original?: string;
+  original?: string | undefined;
 
   constructor(name: string, original?: string) {
     super();
@@ -136,7 +135,7 @@ export abstract class AbstractExpression extends AbstractJavaNode {
 
 export class Literal extends AbstractExpression {
   value: LiteralValue;
-  primitiveKind?: OmniPrimitiveKind;
+  primitiveKind?: OmniPrimitiveKind | undefined;
 
   constructor(value: LiteralValue, primitiveKind?: OmniPrimitiveKind) {
     super();
@@ -168,7 +167,7 @@ export class AnnotationKeyValuePair extends AbstractJavaNode {
   }
 }
 
-export class AnnotationKeyValuePairList extends AbstractJavaNode {
+export class AnnotationKeyValuePairList extends AbstractJavaNode implements StNodeWithChildren<AnnotationKeyValuePair> {
   children: AnnotationKeyValuePair[];
 
   constructor(...children: AnnotationKeyValuePair[]) {
@@ -183,7 +182,7 @@ export class AnnotationKeyValuePairList extends AbstractJavaNode {
 
 export class Annotation extends AbstractJavaNode {
   type: RegularType;
-  pairs?: AnnotationKeyValuePairList;
+  pairs?: AnnotationKeyValuePairList | undefined;
 
   constructor(type: RegularType, pairs?: AnnotationKeyValuePairList) {
     super();
@@ -196,7 +195,7 @@ export class Annotation extends AbstractJavaNode {
   }
 }
 
-export class AnnotationList extends AbstractJavaNode {
+export class AnnotationList extends AbstractJavaNode implements StNodeWithChildren<Annotation> {
   children: Annotation[];
   multiline = true;
 
@@ -210,7 +209,7 @@ export class AnnotationList extends AbstractJavaNode {
   }
 }
 
-export class ArrayInitializer<T extends AbstractJavaNode> extends AbstractJavaNode {
+export class ArrayInitializer<T extends AbstractJavaNode> extends AbstractJavaNode implements StNodeWithChildren<T> {
   children: T[];
 
   constructor(...children: T[]) {
@@ -243,7 +242,7 @@ export class StaticMemberReference extends AbstractJavaNode {
 export class ArgumentDeclaration extends AbstractJavaNode {
   type: Type;
   identifier: Identifier;
-  annotations?: AnnotationList;
+  annotations?: AnnotationList | undefined;
 
   constructor(type: Type, identifier: Identifier, annotations?: AnnotationList) {
     super();
@@ -257,7 +256,7 @@ export class ArgumentDeclaration extends AbstractJavaNode {
   }
 }
 
-export class ArgumentDeclarationList extends AbstractJavaNode {
+export class ArgumentDeclarationList extends AbstractJavaNode implements StNodeWithChildren<ArgumentDeclaration> {
   children: ArgumentDeclaration[];
 
   constructor(...children: ArgumentDeclaration[]) {
@@ -329,7 +328,7 @@ export class Predicate extends BinaryExpression {
   }
 }
 
-export class ArgumentList extends AbstractJavaNode {
+export class ArgumentList extends AbstractJavaNode implements StNodeWithChildren<AbstractExpression> {
   children: AbstractExpression[];
 
   constructor(...children: AbstractExpression[]) {
@@ -342,7 +341,7 @@ export class ArgumentList extends AbstractJavaNode {
   }
 }
 
-export class EnumItemList extends AbstractJavaNode {
+export class EnumItemList extends AbstractJavaNode implements StNodeWithChildren<EnumItem> {
   children: EnumItem[];
 
   constructor(...children: EnumItem[]) {
@@ -355,7 +354,7 @@ export class EnumItemList extends AbstractJavaNode {
   }
 }
 
-export class Block extends AbstractJavaNode {
+export class Block extends AbstractJavaNode implements StNodeWithChildren<AbstractJavaNode> {
   children: AbstractJavaNode[];
 
   constructor(...children: AbstractJavaNode[]) {
@@ -418,7 +417,7 @@ export class Comment extends AbstractJavaNode {
   }
 }
 
-export class CommentList extends AbstractJavaNode {
+export class CommentList extends AbstractJavaNode implements StNodeWithChildren<Comment> {
   children: Comment[];
 
   constructor(...children: Comment[]) {
@@ -434,10 +433,10 @@ export class CommentList extends AbstractJavaNode {
 export class Field extends AbstractJavaNode {
   identifier: Identifier;
   type: Type;
-  initializer?: AbstractExpression;
-  comments?: CommentList;
+  initializer?: AbstractExpression | undefined;
+  comments?: CommentList | undefined;
   modifiers: ModifierList;
-  annotations?: AnnotationList;
+  annotations?: AnnotationList | undefined;
 
   constructor(type: Type, name: Identifier, modifiers?: ModifierList, initializer?: AbstractExpression, annotations?: AnnotationList) {
     super();
@@ -457,10 +456,10 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
 
   identifier: Identifier;
   type: Type;
-  comments?: CommentList;
-  annotations?: AnnotationList;
+  comments?: CommentList | undefined;
+  annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
-  parameters?: ArgumentDeclarationList;
+  parameters?: ArgumentDeclarationList | undefined;
 
   constructor(
     identifier: Identifier,
@@ -499,7 +498,7 @@ export class AbstractMethodDeclaration extends AbstractJavaNode {
 
 export class MethodDeclaration extends AbstractJavaNode {
   signature: MethodDeclarationSignature;
-  body?: Block;
+  body?: Block | undefined;
 
   constructor(signature: MethodDeclarationSignature, body?: Block) {
     super();
@@ -564,9 +563,9 @@ export class VariableReference extends AbstractJavaNode {
 
 export class VariableDeclaration extends AbstractJavaNode {
   variableName: Identifier;
-  variableType?: RegularType;
-  initializer?: AbstractExpression;
-  constant?: boolean;
+  variableType?: RegularType | undefined;
+  initializer?: AbstractExpression | undefined;
+  constant?: boolean | undefined;
 
   constructor(variableName: Identifier, initializer?: AbstractExpression, type?: RegularType, constant?: boolean) {
     super();
@@ -690,7 +689,7 @@ export class Cast extends AbstractJavaNode {
   }
 }
 
-export class TypeList extends AbstractJavaNode {
+export class TypeList extends AbstractJavaNode implements StNodeWithChildren<Type> {
   children: Type[];
 
   constructor(types: Type[]) {
@@ -778,10 +777,10 @@ export class ConstructorDeclaration extends AbstractJavaNode {
 
   owner: ConstructorOwnerDeclaration;
   modifiers: ModifierList;
-  parameters?: ArgumentDeclarationList;
-  annotations?: AnnotationList;
-  comments?: CommentList;
-  body?: Block;
+  parameters?: ArgumentDeclarationList | undefined;
+  annotations?: AnnotationList | undefined;
+  comments?: CommentList | undefined;
+  body?: Block | undefined;
 
 
   constructor(owner: ConstructorOwnerDeclaration, parameters?: ArgumentDeclarationList, body?: Block, modifiers?: ModifierList) {
@@ -929,12 +928,12 @@ export class GenericClassDeclaration extends ClassDeclaration {
   }
 }
 
-export class GenericTypeDeclaration extends AbstractNode {
+export class GenericTypeDeclaration extends AbstractStNode {
   name: Identifier;
-  lowerBounds?: AbstractNode;
-  upperBounds?: AbstractNode;
+  lowerBounds?: AbstractStNode | undefined;
+  upperBounds?: AbstractStNode | undefined;
 
-  constructor(name: Identifier, lowerBounds?: AbstractNode, upperBounds?: AbstractNode) {
+  constructor(name: Identifier, lowerBounds?: AbstractStNode, upperBounds?: AbstractStNode) {
     super();
     this.name = name;
     this.lowerBounds = lowerBounds;
@@ -959,7 +958,7 @@ export class GenericTypeDeclarationList extends AbstractJavaNode {
   }
 }
 
-export class GenericTypeUse extends AbstractNode {
+export class GenericTypeUse extends AbstractStNode {
   name: Identifier;
 
   constructor(name: Identifier) {
@@ -1028,7 +1027,7 @@ export class IfStatement extends AbstractJavaNode {
 
 export class IfElseStatement extends AbstractJavaNode {
   ifStatements: IfStatement[];
-  elseBlock?: Block;
+  elseBlock?: Block | undefined;
 
   constructor(ifStatements: IfStatement[], elseBlock?: Block) {
     super();
@@ -1054,7 +1053,7 @@ export class ImportStatement extends AbstractJavaNode {
   }
 }
 
-export class ImportList extends AbstractJavaNode {
+export class ImportList extends AbstractJavaNode implements StNodeWithChildren<ImportStatement> {
   children: ImportStatement[];
 
   constructor(children: ImportStatement[]) {
@@ -1116,7 +1115,7 @@ export class MethodCall extends AbstractJavaNode {
  */
 export class NewStatement extends AbstractJavaNode {
   type: Type;
-  constructorArguments?: ArgumentList;
+  constructorArguments?: ArgumentList | undefined;
 
   constructor(type: Type, constructorArguments?: ArgumentList) {
     super();
@@ -1295,6 +1294,6 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       type: type,
     });
 
-    return camelCase(javaName); // camelCase(Naming.unwrap(type.name));
+    return Case.camel(javaName);
   }
 }

@@ -5,15 +5,15 @@ import {
   OmniPrimitiveKind,
   OmniUtil,
   RealOptions,
-  Renderer, AstNode,
+  Renderer,
+  AbstractStNode, Case,
 } from '@omnigen/core';
 import {AbstractJavaNode, GenericTypeDeclarationList} from '../ast';
 import {JavaVisitor, JavaVisitFn} from '../visit';
-import {pascalCase} from 'change-case';
 import {JavaOptions} from '../options';
 import * as Java from '../ast';
 
-type JavaRendererVisitFn<N extends AstNode> = JavaVisitFn<N, string>;
+type JavaRendererVisitFn<N extends AbstractStNode> = JavaVisitFn<N, string>;
 
 export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   private _blockDepth = 0;
@@ -34,7 +34,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     return '  '.repeat(d);
   }
 
-  public render<N extends AstNode, V extends AstVisitor<string>>(node: N | undefined, visitor?: V): string {
+  public render<N extends AbstractStNode, V extends AstVisitor<string>>(node: N | undefined, visitor?: V): string {
     if (node === undefined) {
       return '';
     }
@@ -283,7 +283,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
 
     const importName = node.type.getImportName();
     if (!importName) {
-      throw new Error(`Import name is not set for '${OmniUtil.getTypeDescription(node.type.omniType)}'`);
+      throw new Error(`Import name is not set for '${OmniUtil.describe(node.type.omniType)}'`);
     }
 
     return `import ${importName};`;
@@ -540,6 +540,6 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     // This will most likely result in *INCORRECT* Java Code, since it will refer to other type that intended.
     // But for now this is better than simply crashing.
     // TODO: But THIS MUST BE REMOVED later when the inheritance system is fully functional. Then it *should* crash on parse error.
-    return pascalCase(value.replaceAll(/[^\w0-9]/g, '_'));
+    return Case.pascal(value.replaceAll(/[^\w0-9]/g, '_'));
   }
 }

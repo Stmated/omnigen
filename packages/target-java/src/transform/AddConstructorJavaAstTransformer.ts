@@ -8,7 +8,7 @@ import * as Java from '../ast';
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(
-    _model: OmniModel,
+    model: OmniModel,
     root: Java.JavaAstRootNode,
     _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
     _options: RealOptions<JavaOptions>,
@@ -29,7 +29,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     // TODO: Re-order the nodes, so that those that have no superclasses are first
     //        Or if they do, that it's in the correct order
     //  (this way we can better add constructors on subtypes, instead of working with required fields)
-    classDeclarations.sort(AddConstructorJavaAstTransformer.compareDependencyHierarchy);
+    classDeclarations.sort((a, b) => AddConstructorJavaAstTransformer.compareSuperClassHierarchy(model, a, b));
 
     // TODO: Skip the re-order and instead do it on a "need-to" basis, where we dive deeper here,
     //        and check if it has already been handled or already has constructor(s)
@@ -92,7 +92,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     );
   }
 
-  private static compareDependencyHierarchy(this: void, a: Java.ClassDeclaration, b: Java.ClassDeclaration): number {
+  private static compareSuperClassHierarchy(model: OmniModel, a: Java.ClassDeclaration, b: Java.ClassDeclaration): number {
 
     if (a.extends && !b.extends) {
       return 1;
@@ -101,8 +101,8 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     } else if (a.extends && b.extends) {
 
       // TODO: This is probably wrong? We should build an actual tree, and sort based on it?
-      const aHierarchy = JavaUtil.getExtendHierarchy(a.type.omniType);
-      const bHierarchy = JavaUtil.getExtendHierarchy(a.type.omniType);
+      const aHierarchy = JavaUtil.getSuperClassHierarchy(model, JavaUtil.asSubType(a.type.omniType));
+      const bHierarchy = JavaUtil.getSuperClassHierarchy(model, JavaUtil.asSubType(a.type.omniType));
       return aHierarchy.length - bHierarchy.length;
     }
 
@@ -227,7 +227,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
             return JavaAstUtils.createTypeNode(foundGenericType.type);
           } else {
             const typeName = requiredArgument.identifier.value;
-            const placeholderName = OmniUtil.getTypeDescription(requiredArgument.type.omniType);
+            const placeholderName = OmniUtil.describe(requiredArgument.type.omniType);
             throw new Error(`Could not find the generic type of '${typeName}' ${placeholderName}`);
           }
         }

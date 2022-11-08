@@ -1,6 +1,6 @@
 /**
  * Taken from https://github.com/sindresorhus/camelcase
- * and https://www.npmjs.com/package/pascalcase
+ * and https://github.com/jonschlinkert/pascalcase
  * But updated to typescript and made it easier to use the preserveConsecutiveUppercase option.
  */
 import * as ChangeCase from 'change-case';
@@ -9,7 +9,7 @@ const UPPERCASE = /[\p{Lu}]/u;
 const LOWERCASE = /[\p{Ll}]/u;
 const LEADING_CAPITAL = /^[\p{Lu}](?![\p{Lu}])/gu;
 const IDENTIFIER = /([\p{Alpha}\p{N}_]|$)/u;
-const SEPARATORS = /[_.\- ]+/;
+const SEPARATORS = /[_.\-/[\]()\s#+*$~`]+/;
 
 const LEADING_SEPARATORS = new RegExp('^' + SEPARATORS.source);
 const SEPARATORS_AND_IDENTIFIER = new RegExp(SEPARATORS.source + IDENTIFIER.source, 'gu');
@@ -31,12 +31,12 @@ export interface PascalCaseOptions extends CamelCaseOptions {
 
 export class Case {
 
-  public static camel(value: string): string {
-    return CamelCase.camelCase(value);
+  public static camel(value: string, options?: Partial<CamelCaseOptions>): string {
+    return CamelCase.camelCase(value, options);
   }
 
-  public static pascal(value: string): string {
-    return PascalCase.pascalCase(value);
+  public static pascal(value: string, option?: Partial<PascalCaseOptions>): string {
+    return PascalCase.pascalCase(value, option);
   }
 
   public static pascalKeepUpperCase(value: string): string {
@@ -111,7 +111,8 @@ class CamelCase {
     SEPARATORS_AND_IDENTIFIER.lastIndex = 0;
     NUMBERS_AND_IDENTIFIER.lastIndex = 0;
 
-    return input.replace(SEPARATORS_AND_IDENTIFIER, (_, identifier) => toUpperCase(identifier))
+    return input
+      .replace(SEPARATORS_AND_IDENTIFIER, (_, identifier) => toUpperCase(identifier))
       .replace(NUMBERS_AND_IDENTIFIER, m => toUpperCase(m));
   };
 

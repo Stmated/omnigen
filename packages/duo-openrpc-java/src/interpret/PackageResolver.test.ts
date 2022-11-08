@@ -3,9 +3,14 @@ import {JavaOptions} from '@omnigen/target-java';
 
 describe('PackageResolver', () => {
 
+  const JAVA_OPTIONS: JavaOptions = {
+    ...DEFAULT_TEST_JAVA_OPTIONS,
+    generifyTypes: false,
+  };
+
   test('FromSchema', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json', JAVA_OPTIONS);
     const fileNames = [...fileContents.keys()].sort();
     expect(fileNames).toEqual([
       'A.java',
@@ -89,7 +94,7 @@ describe('PackageResolver', () => {
   test('FromCode', async () => {
 
     const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
+      ...JAVA_OPTIONS,
       packageResolver: (_type, typeName) => {
         if (typeName.match(/.*Error.*/i)) {
           return 'some.base.pkg.errors';

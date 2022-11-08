@@ -3,7 +3,7 @@ import {JavaOptions} from '@omnigen/target-java';
 import {CompressTypeNaming, Naming, OmniModelMerge, OmniObjectType, OmniTypeKind, OmniUtil} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 
-describe('Reuse Common Types', () => {
+describe('OmniModelMerge-it', () => {
 
   test('error-structure-1.0+1.1', async () => {
 
@@ -13,6 +13,7 @@ describe('Reuse Common Types', () => {
         package: 'com.error10',
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
+        generifyTypes: false,
       },
     ));
     const result11 = (await OpenRpcTestUtils.readExample(
@@ -21,6 +22,7 @@ describe('Reuse Common Types', () => {
         package: 'com.error11',
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
+        generifyTypes: false,
       },
     ));
 
@@ -29,6 +31,7 @@ describe('Reuse Common Types', () => {
       package: 'com.common',
       compressUnreferencedSubTypes: true,
       compressSoloReferencedTypes: true,
+      generifyTypes: false,
     });
 
     // The merged model should (for now, we will see later) be virtually empty of functionality.
@@ -51,7 +54,7 @@ describe('Reuse Common Types', () => {
       throw new Error(`Type name was expected to be defined`);
     }
 
-    expect(Naming.unwrap(typeName)).toEqual('/components/schemas/Thing');
+    expect(Naming.unwrap(typeName)).toEqual('Thing');
 
     const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
@@ -70,27 +73,23 @@ describe('Reuse Common Types', () => {
 
     expect(filesCommonNames).toEqual([
       'JsonRpcRequestParams.java',
-      // 'ListThingsRequestParams.java',
+      'ListThingsRequestParams.java',
       'Thing.java',
     ]);
 
-    expect(files10Names).toEqual([
+    const expectedUniqueFileNames = [
       'ErrorUnknown.java',
       'JsonRpcError.java',
       'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
       'ListThingsError100.java',
-    ]);
+      'ListThingsRequest.java',
+      'ListThingsResponse.java',
+    ];
 
-    expect(files11Names).toEqual([
-      'ErrorUnknown.java',
-      'JsonRpcError.java',
-      'JsonRpcErrorResponse.java',
-      'JsonRpcRequest.java',
-      'JsonRpcResponse.java',
-      'ListThingsError100.java',
-    ]);
+    expect(files10Names).toEqual(expectedUniqueFileNames);
+    expect(files11Names).toEqual(expectedUniqueFileNames);
 
     const jsonRpcRequestParamsCommon = JavaTestUtils.getParsedContent(filesCommon, 'JsonRpcRequestParams.java');
     expect(jsonRpcRequestParamsCommon.foundPackage).toEqual('com.common');
@@ -102,14 +101,14 @@ describe('Reuse Common Types', () => {
     const jsonRpcRequest10 = JavaTestUtils.getParsedContent(files10, 'JsonRpcRequest.java');
     expect(jsonRpcRequest10.foundPackage).toEqual('com.error10');
     expect(jsonRpcRequest10.foundImports).toEqual([
-      'com.common.JsonRpcRequestParams.ListThingsRequestParams',
+      'com.common.ListThingsRequestParams',
       'javax.annotation.Generated',
     ]);
 
     const jsonRpcRequest11 = JavaTestUtils.getParsedContent(files11, 'JsonRpcRequest.java');
     expect(jsonRpcRequest11.foundPackage).toEqual('com.error11');
     expect(jsonRpcRequest11.foundImports).toEqual([
-      'com.common.JsonRpcRequestParams.ListThingsRequestParams',
+      'com.common.ListThingsRequestParams',
       'javax.annotation.Generated',
     ]);
 
@@ -123,7 +122,6 @@ describe('Reuse Common Types', () => {
       'ListThingsError100.ListThingsError100Error',
       'String',
       'Integer',
-      'int',
       'JsonNode',
     ]);
   });
@@ -155,13 +153,7 @@ describe('Reuse Common Types', () => {
       compressTypeNaming: CompressTypeNaming.COMMON_PREFIX,
     });
 
-    expect(resultMerged).toBeDefined();
-    expect(resultMerged.model.types).toHaveLength(1);
-    expect(resultMerged.model.endpoints).toHaveLength(0);
-
     resultMerged.model.types.sort((a, b) => OmniUtil.describe(a).localeCompare(OmniUtil.describe(b)));
-
-    expect(OmniUtil.getTypeName(resultMerged.model.types[0])).toEqual('JsonRpcRequestParams');
 
     const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
@@ -179,17 +171,21 @@ describe('Reuse Common Types', () => {
     const filesBNames = [...files11.keys()].sort();
 
     expect(filesCommonNames).toEqual([
+      'ErrorUnknownError.java',
+      'JsonRpcError.java',
       'JsonRpcRequestParams.java',
     ]);
 
     expect(filesANames).toEqual([
       'ErrorUnknown.java',
-      'JsonRpcError.java',
       'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
       'ListThingsError100.java',
+      'ListThingsError100Error.java',
+      'ListThingsRequest.java',
       'ListThingsRequestParams.java',
+      'ListThingsResponse.java',
       'SomeTypeA.java',
       'Thing.java',
     ]);
@@ -197,12 +193,14 @@ describe('Reuse Common Types', () => {
     expect(filesBNames).toEqual([
       'Element.java',
       'ErrorUnknown.java',
-      'JsonRpcError.java',
       'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
       'ListElementsError100.java',
+      'ListElementsError100Error.java',
+      'ListElementsRequest.java',
       'ListElementsRequestParams.java',
+      'ListElementsResponse.java',
       'SomeTypeB.java',
     ]);
   });
@@ -215,6 +213,7 @@ describe('Reuse Common Types', () => {
         package: 'com.a',
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
+        generifyTypes: false,
       },
     ));
 
@@ -222,6 +221,8 @@ describe('Reuse Common Types', () => {
     const filesNames = [...fileMap.keys()].sort();
 
     expect(filesNames).toEqual([
+      'ErrorUnknown.java',
+      'ErrorUnknownError.java',
       'JsonRpcError.java',
       'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
@@ -242,9 +243,9 @@ describe('Reuse Common Types', () => {
     const saveThingRequest = JavaTestUtils.getParsedContent(fileMap, 'SaveThingRequest.java');
     const saveThingResponse = JavaTestUtils.getParsedContent(fileMap, 'SaveThingResponse.java');
 
-    expect(jsonRpcRequest.foundFields).toEqual(['jsonrpc', 'method', 'params']);
-    expect(jsonRpcRequest.foundMethods).toEqual(['getJsonrpc', 'getMethod', 'getParams']);
-    expect(jsonRpcRequest.foundTypes).toEqual(['JsonRpcRequestParams', 'String', 'T']);
+    expect(jsonRpcRequest.foundFields).toEqual(['jsonrpc', 'method']);
+    expect(jsonRpcRequest.foundMethods).toEqual(['getJsonrpc', 'getMethod']);
+    expect(jsonRpcRequest.foundTypes).toEqual(['String']);
     expect(jsonRpcRequest.foundSuperClasses).toEqual([]);
     expect(jsonRpcRequest.foundSuperInterfaces).toEqual([]);
 
@@ -254,8 +255,8 @@ describe('Reuse Common Types', () => {
     expect(jsonRpcRequestParams.foundSuperClasses).toEqual([]);
     expect(jsonRpcRequestParams.foundSuperInterfaces).toEqual([]);
 
-    expect(listThingsRequest.foundFields).toEqual([]);
-    expect(listThingsRequest.foundMethods).toEqual([]);
+    expect(listThingsRequest.foundFields).toEqual(['params']);
+    expect(listThingsRequest.foundMethods).toEqual(['getParams']);
     expect(listThingsRequest.foundTypes).toEqual(['ListThingsRequest.ListThingsRequestParams', 'String']);
     expect(listThingsRequest.foundSuperClasses).toEqual(['JsonRpcRequest', 'JsonRpcRequestParams']);
     expect(listThingsRequest.foundSuperInterfaces).toEqual([]);
@@ -266,8 +267,8 @@ describe('Reuse Common Types', () => {
     expect(listThingsResponse.foundSuperClasses).toEqual(['JsonRpcResponse']);
     expect(listThingsResponse.foundSuperInterfaces).toEqual([]);
 
-    expect(saveThingRequest.foundFields).toEqual(['thing']);
-    expect(saveThingRequest.foundMethods).toEqual(['getThing']);
+    expect(saveThingRequest.foundFields).toEqual(['params', 'thing']);
+    expect(saveThingRequest.foundMethods).toEqual(['getParams', 'getThing']);
     expect(saveThingRequest.foundTypes).toEqual(['SaveThingRequest.SaveThingRequestParams', 'String', 'Thing']);
     expect(saveThingRequest.foundSuperClasses).toEqual(['JsonRpcRequest', 'JsonRpcRequestParams']);
     expect(saveThingRequest.foundSuperInterfaces).toEqual([]);
@@ -288,6 +289,7 @@ describe('Reuse Common Types', () => {
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
         elevateProperties: false,
+        generifyTypes: false,
       },
     ));
 
@@ -298,6 +300,7 @@ describe('Reuse Common Types', () => {
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
         elevateProperties: true,
+        generifyTypes: false,
       },
     ));
 
@@ -323,6 +326,7 @@ describe('Reuse Common Types', () => {
         package: 'com.a',
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
+        generifyTypes: false,
       },
     ));
     const resultB = (await OpenRpcTestUtils.readExample(
@@ -331,6 +335,7 @@ describe('Reuse Common Types', () => {
         package: 'com.b',
         compressUnreferencedSubTypes: true,
         compressSoloReferencedTypes: true,
+        generifyTypes: false,
       },
     ));
 
@@ -340,6 +345,7 @@ describe('Reuse Common Types', () => {
       compressUnreferencedSubTypes: true,
       compressSoloReferencedTypes: true,
       compressTypeNaming: CompressTypeNaming.COMMON_PREFIX,
+      generifyTypes: false,
     });
 
     const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
@@ -358,17 +364,16 @@ describe('Reuse Common Types', () => {
     const filesBNames = [...filesB.keys()].sort();
 
     expect(filesCommonNames).toEqual([
+      'ErrorUnknown.java',
+      'ErrorUnknownError.java',
       'JsonRpcError.java',
       'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
       'JsonRpcRequestParams.java',
       'JsonRpcResponse.java',
     ]);
 
     expect(filesANames).toEqual([
-      'JsonRpcError.java',
-      'JsonRpcErrorResponse.java',
-      'JsonRpcRequest.java',
-      'JsonRpcResponse.java',
       'ListThingsRequest.java',
       'ListThingsResponse.java',
       'SaveThingRequest.java',
@@ -379,10 +384,6 @@ describe('Reuse Common Types', () => {
 
     expect(filesBNames).toEqual([
       'Element.java',
-      'JsonRpcError.java',
-      'JsonRpcErrorResponse.java',
-      'JsonRpcRequest.java',
-      'JsonRpcResponse.java',
       'ListElementsRequest.java',
       'ListElementsResponse.java',
       'SaveElementRequest.java',

@@ -114,7 +114,7 @@ describe('Java Rendering', () => {
       'JsonRpcRequestParams.java',
       'JsonRpcResponse.java',
       'Out.java',
-      'Out_2.java',
+      'Out2.java',
     ]);
 
     // TO FIX:
@@ -148,7 +148,7 @@ describe('Java Rendering', () => {
     expect(eitherAorB.foundSuperClasses).toHaveLength(0);
     expect(eitherAorB.foundSuperInterfaces).toHaveLength(0);
 
-    const out2 = JavaTestUtils.getParsedContent(fileContents, 'Out_2.java');
+    const out2 = JavaTestUtils.getParsedContent(fileContents, 'Out2.java');
     expect(out2.foundFields).toEqual(['bar', 'xyz']);
     expect(out2.foundSuperClasses).toHaveLength(1);
     expect(out2.foundSuperInterfaces).toHaveLength(2);

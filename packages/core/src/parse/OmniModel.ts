@@ -236,10 +236,7 @@ type OmniExternalModelReferenceKnownKind = OmniTypeKind.EXTERNAL_MODEL_REFERENCE
 export interface OmniExternalModelReferenceType<TType extends OmniType> extends OmniBaseType<OmniExternalModelReferenceKnownKind> {
   model: OmniModel;
   of: TType;
-  /**
-   * @deprecated REMOVE! NOT NEEDED!
-   */
-  name: TypeName | undefined;
+  name: TypeName;
 }
 
 type OmniArrayKnownKind = OmniTypeKind.ARRAY;

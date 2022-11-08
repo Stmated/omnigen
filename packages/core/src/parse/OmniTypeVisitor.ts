@@ -1,9 +1,13 @@
-import {OmniModel, OmniType, OmniTypeKind} from './OmniModel';
-import {TypeOwner} from './OmniUtil';
+import {OmniModel, OmniNullType, OmniType, OmniTypeKind} from './OmniModel';
+import {OmniUtil, TypeOwner} from './OmniUtil';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(__filename);
 
 export interface DFSTraverseContext {
   type: OmniType;
   parent: TypeOwner<OmniType> | undefined;
+  replacement?: OmniType | undefined;
   depth: number;
   skip: boolean;
   visited: OmniType[];
@@ -27,6 +31,8 @@ export interface BFSTraverseCallback<R> {
 }
 
 export class OmniTypeVisitor {
+
+  private static readonly _NULL_TYPE: OmniNullType = {kind: OmniTypeKind.NULL};
 
   public visitTypesBreadthFirst<R>(
     input: TypeOwner<OmniType> | undefined,
@@ -172,42 +178,8 @@ export class OmniTypeVisitor {
       }
     }
 
-    // If we have an "onUp" then we will now traverse the BFS in reverse order, from bottom up.
-    // while (up.length > 0) {
-    //
-    //   const dequeued = up.pop();
-    //   if (!dequeued) {
-    //     continue;
-    //   }
-    //
-    //   dequeued.skip = false;
-    //   if (onUp) {
-    //     const result = onUp(dequeued);
-    //     if (result !== undefined) {
-    //       return result;
-    //     }
-    //
-    //     if (dequeued.skip) {
-    //       this.eatSiblings(up, dequeued, it => it.pop());
-    //     }
-    //   }
-    // }
-
     return undefined;
   }
-
-  // private eatSiblings(queue: BFSTraverseContext[], dequeued: BFSTraverseContext, onSkip: {(q: BFSTraverseContext[]): void}) {
-  //
-  //   while (queue.length > 0) {
-  //     const peeked = queue[0];
-  //     if (peeked.typeDepth != dequeued.typeDepth || peeked.owner != dequeued.owner) {
-  //       break;
-  //     }
-  //
-  //     // This is a sibling, so remove it.
-  //     onSkip(queue);
-  //   }
-  // }
 
   public visitTypesDepthFirst<R>(
     input: TypeOwner<OmniType> | undefined,
@@ -220,7 +192,7 @@ export class OmniTypeVisitor {
     }
 
     const ctx: DFSTraverseContext = {
-      type: {kind: OmniTypeKind.NULL},
+      type: OmniTypeVisitor._NULL_TYPE,
       parent: undefined,
       depth: 0,
       skip: false,
@@ -322,17 +294,42 @@ export class OmniTypeVisitor {
     ctx.visited.push(input);
 
     if (onDown) {
-      const downCtx = {...ctx, type: input};
-      const result = onDown(downCtx);
-      if (result !== undefined) return result;
+      ctx.type = input;
+      const result = onDown(ctx);
 
-      if (downCtx.skip) {
-        downCtx.skip = false;
+      if (ctx.replacement) {
+
+        // We have been told to replace the input with this other type.
+        // The caller probably modified the type tree somehow.
+        if (ctx.parent) {
+          OmniUtil.swapType(ctx.parent, ctx.type, ctx.replacement, 1);
+        } else {
+          const from = OmniUtil.describe(ctx.type);
+          const to = OmniUtil.describe(ctx.replacement);
+          logger.warn(`Could not swap '${from}' with ${to}' since no parent was known`);
+        }
+
+        // And we will instead keep searching downwards along the replacement.
+        input = ctx.replacement;
+        ctx.replacement = undefined;
+
+        // return undefined;
+        // ctx.replacement = undefined;
+      }
+
+      if (result !== undefined) return result;
+      // if (ctx.replacement) {
+      //   return undefined;
+      // }
+
+      if (ctx.skip) {
+        ctx.skip = false;
         return undefined;
       }
     }
 
     // Replace the context with a new one, which is one level deeper.
+    // NOTE: We could improve memory use by implementing an object pool.
     ctx = {...ctx, parent: input, depth: ctx.depth + 1};
 
     switch (input.kind) {

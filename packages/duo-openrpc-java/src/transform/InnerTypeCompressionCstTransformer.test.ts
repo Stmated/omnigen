@@ -117,4 +117,66 @@ describe('InnerTypeCompression', () => {
     expect(inClass.foundSuperInterfaces).toEqual([]);
     expect(inClass.foundFields).toEqual(['inType']); // NOTE: Check that @JsonProperty() gets added?
   });
+
+  test('CompressYes-error-structure', async () => {
+
+    const options: RealOptions<JavaOptions> = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: true,
+      generifyTypes: false,
+      elevateProperties: false,
+    };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', options, DEFAULT_OPENRPC_OPTIONS);
+    const fileNames = [...fileContents.keys()].sort();
+
+    // NOTE: This *could* be more aggressive, but it starts to become confusing merging some of them.
+    //        Could be a future option to, for example, put ListThingsRequest inside JsonRpcRequest (which it inherits from).
+    expect(fileNames)
+      .toEqual([
+        'ErrorUnknown.java',
+        'JsonRpcError.java',
+        'JsonRpcErrorResponse.java',
+        'JsonRpcRequest.java',
+        'JsonRpcRequestParams.java',
+        'JsonRpcResponse.java',
+        'ListThingsError100.java',
+        'ListThingsRequest.java',
+        'ListThingsResponse.java',
+      ]);
+  });
+
+  test('CompressYes-error-structure w/ generics', async () => {
+
+    const options: RealOptions<JavaOptions> = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: true,
+      generifyTypes: true,
+      elevateProperties: false,
+    };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', options, DEFAULT_OPENRPC_OPTIONS);
+    const fileNames = [...fileContents.keys()].sort();
+
+    expect(fileNames)
+      .toEqual([
+        'ErrorUnknown.java',
+        'JsonRpcError.java',
+        'JsonRpcErrorResponse.java',
+        'JsonRpcRequest.java',
+        'JsonRpcRequestParams.java',
+        'JsonRpcResponse.java',
+        'ListThingsError100.java',
+        // ListThingsError100Error gets its own file if using generics, since used in both:
+        // * ListThingsError100
+        // * JsonRpcErrorResponse (as lower-bound generic identifier target)
+        'ListThingsError100Error.java',
+        'ListThingsRequest.java',
+        'ListThingsResponse.java',
+      ]);
+  });
 });

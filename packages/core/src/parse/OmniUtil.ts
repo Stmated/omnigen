@@ -526,9 +526,9 @@ export class OmniUtil {
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
       return OmniUtil.getTypeName(type.of);
     } else if (type.kind == OmniTypeKind.INTERFACE) {
-      return OmniUtil.getTypeName(type.of);
+      return type.name || OmniUtil.getTypeName(type.of);
     } else if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      return OmniUtil.getTypeName(type.of);
+      return type.name || OmniUtil.getTypeName(type.of);
     }
 
     return undefined;

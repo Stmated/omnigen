@@ -1,4 +1,12 @@
-import {OmniModel, OmniModelParserResult, OmniType, OmniTypeKind, OmniUtil, TypeOwner} from '../parse';
+import {
+  OmniExternalModelReferenceType,
+  OmniModel,
+  OmniModelParserResult,
+  OmniType,
+  OmniTypeKind,
+  OmniUtil,
+  TypeOwner,
+} from '../parse';
 import {Options, RealOptions} from '../options';
 import {TargetOptions} from '../interpret';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -206,14 +214,45 @@ export class OmniModelMerge {
     common.options = commonOptions;
 
     // TODO:
-    // * First go through all and find all that are similar
-    // * Then go through each separate model from BOTTOMS UP, and replace in order from the bottom
-    // * If an object has a SUPERTYPE -- then that SUPERTYPE MUST BE IN THE LIST OF GENERAL/MOVED OBJECTS
-    //    - This way we can quickly and easily know if a type for that model can be moved!
-    // * Is it possible to do this "lazily"? Checking if two types are the same.
-    //    - If we can, then we can maybe skip checking the supertypes every time for equality?
-    //    - Or is it "mathematically" proven that if they match ON THEIR OWN and the BOTTOMS UP comparison works,
-    //      that is it not needed at all anyway? That if they match from bottoms up anyway, they MUST match all the way?
+    // * Get common types
+    // * Swap all types, in correct order (which is what is given)
+
+    const replacements = OmniModelMerge.getReplacements(...results.map(it => it.model));
+    const skippedKinds = [OmniTypeKind.UNKNOWN, OmniTypeKind.NULL, OmniTypeKind.PRIMITIVE, OmniTypeKind.ARRAY];
+    const usefulReplacements = replacements.filter(it => !skippedKinds.includes(it.from.kind));
+
+    for (const replacement of usefulReplacements) {
+
+      if (!common.types.includes(replacement.to)) {
+
+        // Add the type to our common model.
+        common.types.push(replacement.to);
+      }
+
+      // Create the wrapper to tell that the type is in another model.
+      const toExternal: OmniExternalModelReferenceType<OmniType> = {
+        kind: OmniTypeKind.EXTERNAL_MODEL_REFERENCE,
+        model: common,
+        of: replacement.to,
+        name: {
+          name: OmniUtil.getTypeName(replacement.to) || OmniUtil.getVirtualTypeName(replacement.to),
+        },
+      };
+
+      OmniUtil.swapType(replacement.root, replacement.from, toExternal);
+    }
+
+    OmniUtil.visitTypesDepthFirst(common, ctx => {
+
+      if (ctx.type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+
+        // If the common model has an external model reference, then we should resolve it to the true type.
+        // This removes some chance of recursive models, and simplifies the model.
+        ctx.replacement = ctx.type.of;
+      }
+    });
+
+    // Then resolve any external references that are in the common model with the actual type.
 
 
     // const allTypes: CommonTypeGroupEntry[] = results

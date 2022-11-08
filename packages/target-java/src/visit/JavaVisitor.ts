@@ -176,7 +176,7 @@ export class JavaVisitor<R> implements AstVisitor<R> {
 
     this.visitPackage = () => undefined; // Edge node
     this.visitPredicate = () => undefined; // Edge node
-    this.visitModifierList = (node, visitor) => node.modifiers.map(it => it.visit(visitor));
+    this.visitModifierList = (node, visitor) => node.children.map(it => it.visit(visitor));
 
     this.visitFieldGetterSetter = (node, visitor) => [
       node.field.visit(visitor),

@@ -214,11 +214,11 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       throw new Error(`Could not find the CompilationUnit target where '${OmniUtil.describe(type)}' is defined`);
     }
 
-    if (!sourceUnit.object.modifiers.modifiers.find(it => it.type == Java.ModifierType.STATIC)) {
+    if (!sourceUnit.object.modifiers.children.find(it => it.type == Java.ModifierType.STATIC)) {
 
       // Add the static modifier if it is not already added.
       // TODO: This does not need to be done for enums?
-      sourceUnit.object.modifiers.modifiers.push(
+      sourceUnit.object.modifiers.children.push(
         new Java.Modifier(Java.ModifierType.STATIC),
       );
     }

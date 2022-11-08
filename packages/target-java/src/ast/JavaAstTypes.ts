@@ -8,7 +8,7 @@ import {
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
-  LiteralValue, StNodeWithChildren, Case,
+  LiteralValue, StNodeWithChildren, Case, OmniProperty,
 } from '@omnigen/core';
 import {JavaAstUtils} from '../transform';
 import {JavaUtil} from '../util';
@@ -391,12 +391,11 @@ export class Modifier extends AbstractJavaNode {
   }
 }
 
-export class ModifierList extends AbstractJavaNode {
-  modifiers: Modifier[];
-
+export class ModifierList extends AbstractJavaNode implements StNodeWithChildren<Modifier> {
+  children: Modifier[];
   constructor(...modifiers: Modifier[]) {
     super();
-    this.modifiers = modifiers;
+    this.children = modifiers;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -437,6 +436,7 @@ export class Field extends AbstractJavaNode {
   comments?: CommentList | undefined;
   modifiers: ModifierList;
   annotations?: AnnotationList | undefined;
+  property?: OmniProperty;
 
   constructor(type: Type, name: Identifier, modifiers?: ModifierList, initializer?: AbstractExpression, annotations?: AnnotationList) {
     super();
@@ -638,10 +638,11 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
         comments,
       ),
       new Block(
-        new AssignExpression(
-          new FieldReference(field),
-          // TODO: Change, so that "value" is not hard-coded! Or is "identifier" enough?
-          new VariableReference(new Identifier('value')),
+        new Statement(
+          new AssignExpression(
+            new FieldReference(field),
+            new VariableReference(field.identifier),
+          ),
         ),
       ));
   }
@@ -827,6 +828,14 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     const keyParameterIdentifier = new Identifier('key');
     const valueParameterIdentifier = new Identifier('value');
 
+    // NOTE: This should NEVER be on a field. But it should be moved by later transformers!
+    const fieldAnnotations = new AnnotationList(new Annotation(
+      new RegularType({
+        kind: OmniTypeKind.HARDCODED_REFERENCE,
+        fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
+      }),
+    ));
+
     const additionalPropertiesField = new Field(
       JavaAstUtils.createTypeNode(this.mapType, false),
       additionalPropertiesFieldIdentifier,
@@ -835,6 +844,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
         new Modifier(ModifierType.FINAL),
       ),
       new NewStatement(JavaAstUtils.createTypeNode(this.mapType, true)),
+      fieldAnnotations,
     );
 
     const addMethod = new MethodDeclaration(
@@ -875,15 +885,6 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     this.children = [
       additionalPropertiesField,
       addMethod,
-      new FieldBackedGetter(
-        additionalPropertiesField,
-        new AnnotationList(new Annotation(
-          new RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
-          }),
-        )),
-      ),
     ];
   }
 

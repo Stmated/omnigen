@@ -145,6 +145,7 @@ describe('Java Rendering', () => {
 
     const eitherAorB = JavaTestUtils.getParsedContent(fileContents, 'AXOrB.java');
     expect(eitherAorB.foundFields).toEqual(['_raw', '_a', '_b']);
+    expect(eitherAorB.foundMethods).toEqual(['getRaw', 'getA', 'getB']);
     expect(eitherAorB.foundSuperClasses).toHaveLength(0);
     expect(eitherAorB.foundSuperInterfaces).toHaveLength(0);
 
@@ -231,14 +232,16 @@ describe('Java Rendering', () => {
     expect(tag.foundLiterals[4]).toEqual('"TagC"');
 
     const tagOrString = JavaTestUtils.getParsedContent(fileContents, 'TagOrSpeciesOrString.java');
-    expect(tagOrString.foundMethods).toHaveLength(7);
-    expect(tagOrString.foundMethods[0]).toEqual('get');
-    expect(tagOrString.foundMethods[1]).toEqual('getValue');
-    expect(tagOrString.foundMethods[2]).toEqual('isKnown');
-    expect(tagOrString.foundMethods[3]).toEqual('isTag');
-    expect(tagOrString.foundMethods[4]).toEqual('getAsTag');
-    expect(tagOrString.foundMethods[5]).toEqual('isSpecies');
-    expect(tagOrString.foundMethods[6]).toEqual('getAsSpecies');
+    expect(tagOrString.foundMethods).toEqual([
+      'get',
+      'getValue',
+      'isKnown',
+      'isTag',
+      'getAsTag',
+      'isSpecies',
+      'getAsSpecies',
+    ]);
+
     expect(tagOrString.foundSuperClasses).toHaveLength(0);
     expect(tagOrString.foundSuperInterfaces).toHaveLength(0);
     expect(tagOrString.foundFields).toHaveLength(9);
@@ -262,10 +265,12 @@ describe('Java Rendering', () => {
     expect(filenames).toContain('IAdditionalProperties.java');
 
     const thing = JavaTestUtils.getParsedContent(fileContents, 'Thing.java');
-    expect(thing.foundMethods).toHaveLength(3);
-    expect(thing.foundMethods[0]).toEqual('getId');
-    expect(thing.foundMethods[1]).toEqual('addAdditionalProperty');
-    expect(thing.foundMethods[2]).toEqual('getAdditionalProperties');
+    expect(thing.foundMethods).toEqual([
+      'addAdditionalProperty',
+      'getId',
+      'getAdditionalProperties',
+    ]);
+
     expect(thing.foundSuperInterfaces).toHaveLength(1);
     expect(thing.foundSuperInterfaces[0]).toEqual('IAdditionalProperties');
     expect(thing.foundFields).toEqual(['id', '_additionalProperties']);

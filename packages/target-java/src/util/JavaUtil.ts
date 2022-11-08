@@ -532,7 +532,7 @@ export class JavaUtil {
     }
 
     const fieldsWithSetters = setters.map(setter => setter.field);
-    const fieldsWithFinal = fields.filter(field => field.modifiers.modifiers.some(m => m.type == Java.ModifierType.FINAL));
+    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type == Java.ModifierType.FINAL));
     const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
     const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer == undefined);
 

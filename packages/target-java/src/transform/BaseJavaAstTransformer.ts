@@ -198,7 +198,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
     JavaAstUtils.addGeneratedAnnotation(enumDeclaration);
 
-    const comments = this.getCommentsForType(type, model, options);
+    const comments = BaseJavaAstTransformer.getCommentsForType(type, model, options);
     if (comments.length > 0) {
       enumDeclaration.comments = new Java.CommentList(...comments.map(it => new Java.Comment(it)));
     }
@@ -297,31 +297,15 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     const body = new Java.Block();
 
     if (type.kind == OmniTypeKind.OBJECT) {
-
       if (type.extendedBy && type.extendedBy.kind == OmniTypeKind.ENUM) {
-
         // TODO: Maybe this could be removed and instead simplified elsewhere, where we compress/fix "incorrect" types?
         // In Java we cannot extend from an enum. So we will try and redirect the output.
         if (OmniUtil.isEmptyType(type)) {
-
           // TODO: The NAME of the resulting enum should still be the name of the current type, and not the extended class!
           this.transformEnum(model, type.extendedBy, type, root, options);
           return;
         } else {
           throw new Error('Do not know how to handle this type, since Java cannot inherit from en Enum');
-        }
-      }
-
-      for (const property of type.properties) {
-        this.addOmniPropertyToBody(model, body, property, options);
-      }
-
-      if (type.additionalProperties) {
-
-        if (!JavaUtil.superMatches(model, type, parent => parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true)) {
-
-          // No parent implements additional properties, so we should.
-          body.children.push(new Java.AdditionalPropertiesDeclaration());
         }
       }
     }
@@ -354,17 +338,13 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     // TODO: Move into a separate transformer, and make it an option
     JavaAstUtils.addGeneratedAnnotation(declaration);
 
-    const comments = this.getCommentsForType(type, model, options);
+    const comments = BaseJavaAstTransformer.getCommentsForType(type, model, options);
 
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
       this.addXOrMappingToBody(model, type, declaration, comments, options);
     }
 
     this.addExtendsAndImplements(model, type, declaration);
-
-    for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
-      this.addOmniPropertyToBody(model, body, property, options);
-    }
 
     if (comments.length > 0) {
       declaration.comments = new Java.CommentList(...comments.map(it => new Java.Comment(it)));
@@ -527,7 +507,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         new Java.RuntimeTypeMapping(
           type.types,
           options,
-          t => this.getCommentsForType(t, model, options).map(it => new Java.Comment(it)),
+          t => BaseJavaAstTransformer.getCommentsForType(t, model, options).map(it => new Java.Comment(it)),
         ),
       );
     }
@@ -915,215 +895,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return knownBinary;
   }
 
-  private addOmniPropertyToBody(model: OmniModel, body: Java.Block, property: OmniProperty, options: JavaOptions): void {
-
-    const comments: string[] = [];
-    if (property.type.kind != OmniTypeKind.OBJECT) {
-
-      // If the type is not an object, then we will never create a class just for its sake.
-      // So we should propagate all the examples and all other data we can find about it, to the property's comments.
-      comments.push(...this.getCommentsForType(property.type, model, options));
-
-      if (property.type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-
-        const staticArrayStrings = property.type.properties.map((prop, idx) => {
-          const typeName = JavaUtil.getFullyQualifiedName(prop.type);
-          const parameterName = prop.name;
-          const description = prop.description || prop.type.description;
-          return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
-        });
-
-        comments.push(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`);
-      }
-    }
-
-    if (property.description && !comments.includes(property.description)) {
-
-      // Sometimes a description can be set both to the property itself and its type.
-      comments.push(property.description);
-    }
-
-    if (property.summary && !comments.includes(property.summary)) {
-      comments.push(property.summary);
-    }
-
-    if (property.deprecated) {
-      comments.push('@deprecated');
-    }
-
-    if (property.required) {
-      // TODO: Remove this, it should be apparent by the type of the property, no?
-      comments.push('Required');
-    }
-
-    comments.push(...this.getLinkCommentsForProperty(property, model, options));
-
-    const commentList = (comments.length > 0) ? new Java.CommentList(...comments.map(it => new Java.Comment(it))) : undefined;
-
-    if (property.type.kind == OmniTypeKind.NULL) {
-
-      if (options.includeAlwaysNullProperties) {
-
-        // We're told to include it, even though it always returns null.
-        const methodDeclaration = new Java.MethodDeclaration(
-          new Java.MethodDeclarationSignature(
-            new Java.Identifier(JavaUtil.getGetterName(property.name, property.type), property.name),
-            JavaAstUtils.createTypeNode(property.type),
-          ),
-          new Java.Block(
-            new Java.Statement(new Java.ReturnStatement(new Java.Literal(null))),
-          ),
-        );
-
-        methodDeclaration.signature.comments = commentList;
-        body.children.push(methodDeclaration);
-      }
-
-      return;
-    }
-
-    if (property.type.kind == OmniTypeKind.PRIMITIVE && property.type.valueConstant) {
-      this.addPrimitivePropertyAsField(property, property.type, body, commentList);
-      return;
-    }
-
-    const getterAnnotationList = this.getGetterAnnotations(property);
-
-    const fieldType = JavaAstUtils.createTypeNode(property.type);
-    const fieldIdentifier = new Java.Identifier(property.fieldName || Case.camel(property.name), property.name);
-    const getterIdentifier = property.propertyName
-      ? new Java.Identifier(JavaUtil.getGetterName(property.propertyName, property.type))
-      : undefined;
-
-    if (options.immutableModels) {
-      const field = new Java.Field(
-        fieldType,
-        fieldIdentifier,
-        new Java.ModifierList(
-          new Java.Modifier(Java.ModifierType.PRIVATE),
-          new Java.Modifier(Java.ModifierType.FINAL),
-        ),
-      );
-      body.children.push(field);
-      body.children.push(new Java.FieldBackedGetter(field, getterAnnotationList, commentList, getterIdentifier));
-    } else {
-      body.children.push(new Java.FieldGetterSetter(
-        fieldType,
-        fieldIdentifier,
-        getterAnnotationList,
-        commentList,
-        getterIdentifier,
-      ));
-    }
-  }
-
-  private getGetterAnnotations(property: OmniProperty): Java.AnnotationList | undefined {
-
-    // TODO: Move this to another transformer which checks for differences between field name and original name.
-    const getterAnnotations: Java.Annotation[] = [];
-    if (property.fieldName || property.propertyName) {
-      getterAnnotations.push(
-        new Java.Annotation(
-          new Java.RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonProperty',
-          }),
-          new Java.AnnotationKeyValuePairList(
-            new Java.AnnotationKeyValuePair(
-              undefined,
-              new Java.Literal(property.name),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return (getterAnnotations.length > 0)
-      ? new Java.AnnotationList(...getterAnnotations)
-      : undefined;
-  }
-
-  private addPrimitivePropertyAsField(
-    property: OmniProperty,
-    type: OmniPrimitiveType,
-    body: Java.Block,
-    commentList?: Java.CommentList,
-  ): void {
-
-    const fieldModifiers = new Java.ModifierList(
-      new Java.Modifier(Java.ModifierType.PRIVATE),
-      new Java.Modifier(Java.ModifierType.FINAL),
-    );
-
-    const field = new Java.Field(
-      JavaAstUtils.createTypeNode(type),
-      new Java.Identifier(`${JavaUtil.getSafeIdentifierName(property.fieldName || property.name)}`, property.name),
-      fieldModifiers,
-    );
-
-    const methodDeclarationReturnType = type.valueConstant && JavaUtil.isNullable(type)
-      ? JavaAstUtils.createTypeNode(JavaUtil.toUnboxedPrimitiveType(type))
-      : JavaAstUtils.createTypeNode(type);
-
-    const methodDeclarationSignature = new Java.MethodDeclarationSignature(
-      new Java.Identifier(JavaUtil.getGetterName(property.name, type), property.name),
-      methodDeclarationReturnType,
-      undefined,
-      undefined,
-      this.getGetterAnnotations(property),
-    );
-
-    if (typeof type.valueConstant == 'function') {
-
-      // This constant is dynamic based on the type that the property is owned by.
-      const methodDeclaration = new Java.MethodDeclaration(
-        methodDeclarationSignature,
-        new Java.Block(
-          new Java.Statement(new Java.ReturnStatement(
-            new Java.FieldReference(field),
-          )),
-        ),
-      );
-
-      methodDeclaration.signature.comments = commentList;
-      body.children.push(field);
-      body.children.push(methodDeclaration);
-
-    } else {
-
-      let methodBlock: Java.Block;
-      if (type.valueConstant && type.valueConstantOptional !== false) {
-        methodBlock = new Java.Block(
-          new Java.IfStatement(
-            new Java.Predicate(
-              new Java.FieldReference(field),
-              Java.TokenType.NOT_EQUALS,
-              new Java.Literal(null),
-            ),
-            new Java.Block(
-              new Java.Statement(new Java.ReturnStatement(new Java.FieldReference(field))),
-            ),
-          ),
-          new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.valueConstant, type.primitiveKind))),
-        );
-      } else {
-        methodBlock = new Java.Block(
-          new Java.Statement(new Java.ReturnStatement(new Java.FieldReference(field))),
-        );
-      }
-
-      const methodDeclaration = new Java.MethodDeclaration(
-        methodDeclarationSignature,
-        methodBlock,
-      );
-
-      methodDeclaration.signature.comments = commentList;
-      body.children.push(field);
-      body.children.push(methodDeclaration);
-    }
-  }
-
-  private getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
+  public static getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
     const comments: string[] = [];
     if (type.description) {
       comments.push(type.description);
@@ -1177,17 +949,17 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
         const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
         if (example.result.type == type || parameterHasType) {
-          comments.push(this.getExampleComments(example));
+          comments.push(BaseJavaAstTransformer.getExampleComments(example));
         }
       }
     }
 
-    comments.push(...this.getLinkCommentsForType(type, model, options));
+    comments.push(...BaseJavaAstTransformer.getLinkCommentsForType(type, model, options));
 
     return comments;
   }
 
-  private getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
+  public static getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
     const comments: string[] = [];
     if (!options.includeLinksOnType) {
       return comments;
@@ -1221,7 +993,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           // There are links between different servers/methods
           comments.push('<section>\n<h2>Links</h2>');
           comments.push(...continuation.mappings.map(mapping => {
-            return this.getMappingSourceTargetComment(mapping, options);
+            return BaseJavaAstTransformer.getMappingSourceTargetComment(mapping, options);
           }));
           comments.push('</section>');
         }
@@ -1231,43 +1003,13 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return comments;
   }
 
-  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): string[] {
-    const comments: string[] = [];
-    if (!options.includeLinksOnProperty) {
-      return comments;
-    }
-
-    const linkComments: string[] = [];
-    for (const continuation of (model.continuations || [])) {
-      for (const mapping of continuation.mappings) {
-        if (mapping.source.propertyPath?.length) {
-          if (mapping.source.propertyPath[mapping.source.propertyPath.length - 1] == property) {
-            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'target'));
-          }
-        }
-
-        if (mapping.target.propertyPath.length) {
-          if (mapping.target.propertyPath[mapping.target.propertyPath.length - 1] == property) {
-            linkComments.push(this.getMappingSourceTargetComment(mapping, options, 'source'));
-          }
-        }
-      }
-    }
-
-    if (linkComments.length > 0) {
-      comments.push(linkComments.join('\n'));
-    }
-
-    return comments;
-  }
-
-  private getLink(propertyOwner: OmniType, property: OmniProperty): string {
+  public static getLink(propertyOwner: OmniType, property: OmniProperty): string {
 
     const memberName = `${JavaUtil.getGetterName(property.name, property.type)}()`;
     return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
   }
 
-  private getExampleComments(example: OmniExamplePairing): string {
+  public static getExampleComments(example: OmniExamplePairing): string {
 
     const commentLines: string[] = [];
     commentLines.push(`<h2>Example - ${example.name}</h2>`);
@@ -1286,7 +1028,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       for (let i = 0; i < params.length; i++) {
 
         const param = params[i];
-        const propertyLink = this.getLink(param.property.owner, param.property);
+        const propertyLink = BaseJavaAstTransformer.getLink(param.property.owner, param.property);
         commentLines.push(`  📌 ${propertyLink} (${param.name}): ${JSON.stringify(param.value)}`);
       }
     }
@@ -1319,7 +1061,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return commentLines.join('\n  ');
   }
 
-  private getMappingSourceTargetComment(
+  public static getMappingSourceTargetComment(
     mapping: OmniLinkMapping,
     options: JavaOptions,
     only: 'source' | 'target' | undefined = undefined,
@@ -1332,7 +1074,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       if (mapping.source.propertyPath) {
         const sourcePath = mapping.source.propertyPath || [];
         for (let i = 0; i < sourcePath.length; i++) {
-          sourceLinks.push(this.getLink(sourcePath[i].owner, sourcePath[i]));
+          sourceLinks.push(BaseJavaAstTransformer.getLink(sourcePath[i].owner, sourcePath[i]));
         }
       } else if (mapping.source.constantValue) {
         sourceLinks.push(JSON.stringify(mapping.source.constantValue));

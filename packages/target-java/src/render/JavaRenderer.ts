@@ -136,7 +136,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   visitConstructor: JavaRendererVisitFn<Java.ConstructorDeclaration> = (node, visitor) => {
     const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
     const body = node.body ? `\n${this.render(node.body, visitor)}` : '';
-    const modifiers = node.modifiers.modifiers.length > 0 ? `${this.render(node.modifiers, visitor)} ` : '';
+    const modifiers = node.modifiers.children.length > 0 ? `${this.render(node.modifiers, visitor)} ` : '';
 
     return `${annotations}${modifiers}${this.render(node.owner.name, visitor)}(${this.render(node.parameters, visitor)}) {${body}}\n\n`;
   };
@@ -473,7 +473,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitModifierList: JavaRendererVisitFn<Java.ModifierList> = (node, visitor) => {
-    return node.modifiers.map(it => this.render(it, visitor)).join(' ');
+    return node.children.map(it => this.render(it, visitor)).join(' ');
   };
 
   visitModifier: JavaRendererVisitFn<Java.Modifier> = node => {

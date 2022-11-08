@@ -9,8 +9,9 @@ describe('JavaInterpreter', () => {
 
   test('ensureBasicParsingDoesNotCrash', async () => {
 
-    const interpreter = new JavaInterpreter();
-    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json');
+    const options = DEFAULT_TEST_JAVA_OPTIONS;
+    const interpreter = new JavaInterpreter(options);
+    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_OPENRPC_OPTIONS, options);
     const interpretation = await interpreter.buildSyntaxTree(model.model, [], model.options);
 
     expect(interpretation).toBeDefined();
@@ -51,7 +52,7 @@ describe('JavaInterpreter', () => {
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
     };
 
-    const interpreter = new JavaInterpreter();
+    const interpreter = new JavaInterpreter(options);
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
     const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
@@ -105,7 +106,7 @@ describe('JavaInterpreter', () => {
       onPrimitiveGenerification: PrimitiveGenerificationChoice.WRAP_OR_BOX,
     };
 
-    const interpreter = new JavaInterpreter();
+    const interpreter = new JavaInterpreter(options);
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
     const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
@@ -154,7 +155,7 @@ describe('JavaInterpreter', () => {
       onPrimitiveGenerification: PrimitiveGenerificationChoice.ABORT,
     };
 
-    const interpreter = new JavaInterpreter();
+    const interpreter = new JavaInterpreter(options);
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
     const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
@@ -191,7 +192,7 @@ describe('JavaInterpreter', () => {
   test('Interfaces', async () => {
 
     const result = await OpenRpcTestUtils.readExample('openrpc', 'multiple-inheritance.json');
-    const interpreter = new JavaInterpreter();
+    const interpreter = new JavaInterpreter(result.options);
     const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
     expect(root).toBeDefined();
@@ -204,7 +205,7 @@ describe('JavaInterpreter', () => {
   test('Mappings', async () => {
 
     const result = await OpenRpcTestUtils.readExample('openrpc', 'mappings.json');
-    const interpreter = new JavaInterpreter();
+    const interpreter = new JavaInterpreter(result.options);
     const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
 
     expect(root).toBeDefined();

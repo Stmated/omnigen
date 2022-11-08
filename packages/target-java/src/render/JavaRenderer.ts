@@ -405,15 +405,19 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   visitField: JavaRendererVisitFn<Java.Field> = (node, visitor) => {
     const comments = node.comments ? `${this.render(node.comments, visitor)}\n` : '';
     const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
-    const modifiers = this.render(node.modifiers, visitor);
+    let modifiers = this.render(node.modifiers, visitor);
     const typeName = this.render(node.type, visitor);
     const initializer = node.initializer ? ` = ${this.render(node.initializer, visitor)}` : '';
     const identifier = this.render(node.identifier, visitor);
 
+    if (modifiers.length > 0) {
+      modifiers += ' ';
+    }
+
     return [
       comments,
       annotations,
-      `${modifiers} ${typeName} ${identifier}${initializer};\n`,
+      `${modifiers}${typeName} ${identifier}${initializer};\n`,
     ];
   };
 

@@ -1,7 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstUtils} from '../transform';
-import {OmniModel, OmniTypeKind, OmniUtil} from '@omnigen/core';
-import {JavaOptions} from '../options';
-import {RealOptions, ExternalSyntaxTree, VisitorFactoryManager} from '@omnigen/core';
+import {ExternalSyntaxTree, OmniModel, OmniTypeKind, OmniUtil, RealOptions, VisitorFactoryManager} from '@omnigen/core';
+import {FieldAccessorMode, JavaOptions} from '../options';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 
@@ -14,16 +13,18 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     _options: RealOptions<JavaOptions>,
   ): Promise<void> {
 
+    if (_options.fieldAccessorMode == FieldAccessorMode.LOMBOK) {
+
+      // If the fields are managed by lombok, then we add no constructor.
+      return Promise.resolve();
+    }
+
     const classDeclarations: Java.ClassDeclaration[] = [];
     root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
       visitClassDeclaration: (node, visitor) => {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
         classDeclarations.push(node);
       },
-      // visitGenericClassDeclaration: (node, visitor) => {
-      //   this._javaVisitor.visitGenericClassDeclaration(node, visitor); // Continue, so we look in nested classes.
-      //   classDeclarations.push(node);
-      // },
     }));
 
     // TODO: Re-order the nodes, so that those that have no superclasses are first

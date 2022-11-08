@@ -18,6 +18,12 @@ export enum UnknownType {
   OBJECT,
 }
 
+export enum FieldAccessorMode {
+  NONE,
+  POJO,
+  LOMBOK,
+}
+
 export interface JavaOptions extends GenericTargetOptions, PackageOptions {
   immutableModels: Option<Booleanish, boolean>;
   includeAlwaysNullProperties: Option<Booleanish, boolean>;
@@ -26,6 +32,7 @@ export interface JavaOptions extends GenericTargetOptions, PackageOptions {
   includeLinksOnProperty: Option<Booleanish, boolean>;
   interfaceNamePrefix: string,
   interfaceNameSuffix: string,
+  fieldAccessorMode: FieldAccessorMode;
 }
 
 export const DEFAULT_JAVA_OPTIONS: RealOptions<JavaOptions> = {
@@ -41,6 +48,7 @@ export const DEFAULT_JAVA_OPTIONS: RealOptions<JavaOptions> = {
   packageResolver: undefined,
   interfaceNamePrefix: 'I',
   interfaceNameSuffix: '',
+  fieldAccessorMode: FieldAccessorMode.POJO,
 };
 
 export const JAVA_OPTIONS_CONVERTERS: OptionResolver<JavaOptions> = {

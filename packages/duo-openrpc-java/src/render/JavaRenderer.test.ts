@@ -26,8 +26,9 @@ describe('Java Rendering', () => {
 
       for (const fileName of fileNames) {
 
-        const result = await OpenRpcTestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
-        const interpretation = await new JavaInterpreter().buildSyntaxTree(result.model, [], result.options);
+        const javaOptions = DEFAULT_TEST_JAVA_OPTIONS;
+        const result = await OpenRpcTestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, javaOptions);
+        const interpretation = await new JavaInterpreter(result.options).buildSyntaxTree(result.model, [], result.options);
 
         let baseDir: string;
 

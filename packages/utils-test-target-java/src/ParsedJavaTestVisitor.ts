@@ -1,4 +1,5 @@
 import {
+  AnnotationCtx,
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BooleanLiteralCtx,
@@ -25,6 +26,7 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   readonly foundMethods: string[] = [];
   readonly foundFields: string[] = [];
   readonly foundLiterals: any[] = [];
+  readonly foundAnnotations: string[] = [];
 
   readonly foundImports: string[] = [];
   readonly foundTypes: string[] = [];
@@ -76,6 +78,15 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
         this.foundTypes.push(name);
       }
     }
+  }
+
+  annotation(ctx: AnnotationCtx, param?: any): any {
+
+    this.foundAnnotations.push(
+      ctx.typeName.map(it => it.children.Identifier.map(id => id.image).join('')).join(''),
+    );
+
+    return super.annotation(ctx, param);
   }
 
   integralType(ctx: IntegralTypeCtx, param?: any): any {

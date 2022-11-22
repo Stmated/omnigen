@@ -5,9 +5,9 @@ import {
   OmniModelTransformer, OmniType,
   OmniTypeKind,
   OmniUtil, TypeOwner,
-} from '../../parse';
-import {RealOptions} from '../../options';
-import {TargetOptions} from '../../interpret';
+} from '../../parse/index.js';
+import {RealOptions} from '../../options/index.js';
+import {TargetOptions} from '../../interpret/index.js';
 
 /**
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.

@@ -1,2 +1,2 @@
 
-export * from './JavaInterpreter';
+export * from './JavaInterpreter.js';

@@ -1,7 +1,7 @@
 import {OmniModel, RealOptions, AbstractAstTransformer, ExternalSyntaxTree} from '@omnigen/core';
-import {JavaOptions} from '../options';
-import {JavaVisitor} from '../visit';
-import * as Java from '../ast';
+import {JavaOptions} from '../options/index.js';
+import {JavaVisitor} from '../visit/index.js';
+import * as Java from '../ast/index.js';
 
 export abstract class AbstractJavaAstTransformer implements AbstractAstTransformer<Java.JavaAstRootNode, JavaOptions> {
 

@@ -8,13 +8,13 @@ import {
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind, OmniUtil,
-} from '../parse';
+} from '../parse/index.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 
 // TODO: Check if this test can be ran! Because it should not be able to! Since we do not depend on target-java!
 import {JavaUtil} from '@omnigen/target-java';
-import {SimplifyInheritanceOmniModelTransformer} from './transform/SimplifyInheritanceOmniModelTransformer';
-import {DEFAULT_TARGET_OPTIONS} from '../interpret';
+import {SimplifyInheritanceOmniModelTransformer} from './transform/index.js';
+import {DEFAULT_TARGET_OPTIONS} from '../interpret/index.js';
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -23,7 +23,7 @@ describe('Test CompositionDependencyUtil', () => {
   //   ...{},
   // };
 
-  function createModel(namedTypes: OmniType[]): OmniModel {
+  const createModel = (namedTypes: OmniType[]): OmniModel => {
 
     // Let's create some fake endpoints, to make the types "edge" types that are used outwardly.
     const endpoints: OmniEndpoint[] = namedTypes
@@ -61,7 +61,7 @@ describe('Test CompositionDependencyUtil', () => {
       servers: [],
       schemaVersion: '1.0',
     };
-  }
+  };
 
   test('Empty', async () => {
     const model = createModel([]);
@@ -358,7 +358,7 @@ function assertMap<T extends OmniType>(expected: Map<T, T[]>, given: Map<T, T[]>
   }
 }
 
-function inlineClassWithProp(name: string) {
+const inlineClassWithProp = (name: string): OmniObjectType => {
   const inline: OmniObjectType = {
     kind: OmniTypeKind.OBJECT,
     properties: [],

@@ -1,8 +1,8 @@
-import {AbstractJavaAstTransformer, JavaAstUtils} from '../transform';
+import {AbstractJavaAstTransformer, JavaAstUtils} from '../transform/index.js';
 import {ExternalSyntaxTree, OmniModel, OmniTypeKind, OmniUtil, RealOptions, VisitorFactoryManager} from '@omnigen/core';
-import {FieldAccessorMode, JavaOptions} from '../options';
-import {JavaUtil} from '../util';
-import * as Java from '../ast';
+import {FieldAccessorMode, JavaOptions} from '../options/index.js';
+import {JavaUtil} from '../util/index.js';
+import * as Java from '../ast/index.js';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 

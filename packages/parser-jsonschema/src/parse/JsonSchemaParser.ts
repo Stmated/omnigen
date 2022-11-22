@@ -24,9 +24,9 @@ import {
 import {JSONSchema} from '@open-rpc/meta-schema';
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
-import {DiscriminatorAware} from './DiscriminatorAware';
+import {DiscriminatorAware} from './DiscriminatorAware.js';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export type SchemaToTypeResult = { type: OmniType; canInline: boolean };
 

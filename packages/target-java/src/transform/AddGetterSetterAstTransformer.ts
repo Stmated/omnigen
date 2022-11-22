@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer';
+import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
 import {
   AbortVisitingWithResult, AbstractStNode,
   ExternalSyntaxTree,
@@ -7,10 +7,10 @@ import {
   VisitorFactoryManager,
   VisitResultFlattener,
 } from '@omnigen/core';
-import * as Java from '../ast';
-import {AnnotationList, CommentList, JavaAstRootNode, ModifierType} from '../ast';
-import {JavaOptions} from '../options';
-import {JavaUtil} from '../util';
+import * as Java from '../ast/index.js';
+import {AnnotationList, CommentList, JavaAstRootNode, ModifierType} from '../ast/index.js';
+import {JavaOptions} from '../options/index.js';
+import {JavaUtil} from '../util/index.js';
 
 export class AddGetterSetterAstTransformer extends AbstractJavaAstTransformer {
   transformAst(

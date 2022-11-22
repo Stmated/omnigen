@@ -1,7 +1,7 @@
-import {OmniProperty, OmniPropertyOrphan, OmniPropertyOwner, OmniType, OmniTypeKind} from './OmniModel';
-import {PropertiesInformation} from './PropertiesInformation';
-import {OmniUtil} from './OmniUtil';
-import {EqualityLevel, PropertyEquality} from './EqualityLevel';
+import {OmniProperty, OmniPropertyOrphan, OmniPropertyOwner, OmniType, OmniTypeKind} from './OmniModel.js';
+import {PropertiesInformation} from './PropertiesInformation.js';
+import {OmniUtil} from './OmniUtil.js';
+import {EqualityLevel, PropertyEquality} from './EqualityLevel.js';
 
 export class PropertyUtil {
 

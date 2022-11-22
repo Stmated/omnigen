@@ -1,4 +1,4 @@
 
-export * from './Interpreter';
-export * from './AbstractInterpreter';
-export * from './TargetOptions';
+export * from './Interpreter.js';
+export * from './AbstractInterpreter.js';
+export * from './TargetOptions.js';

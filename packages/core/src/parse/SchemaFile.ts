@@ -3,7 +3,7 @@ import * as path from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export type SchemaFileInput = string | PathLike;
 

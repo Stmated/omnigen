@@ -1,4 +1,4 @@
-import {OptionParser} from './OptionParser';
+import {OptionParser} from './OptionParser.js';
 
 export class BooleanOptionsParser implements OptionParser<boolean> {
 

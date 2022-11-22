@@ -1,5 +1,5 @@
-import {OmniType} from './OmniModel';
-import {EqualityLevel} from './EqualityLevel';
+import {OmniType} from './OmniModel.js';
+import {EqualityLevel} from './EqualityLevel.js';
 
 export interface CommonDenominatorType<T extends OmniType> {
 

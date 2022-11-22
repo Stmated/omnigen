@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-argument */
 import pointer, {JsonObject} from 'json-pointer';
-import {ProtocolHandler} from './ProtocolHandler';
+import {ProtocolHandler} from './ProtocolHandler.js';
 import * as deepmerge from 'deepmerge';
 import * as path from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export type RefAware = { $ref: string };
 

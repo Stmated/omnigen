@@ -1,7 +1,7 @@
-import {OmniModel} from '../parse';
-import {AstRootNode} from '../ast';
-import {TargetOptions} from '../interpret';
-import {RealOptions} from '../options';
+import {OmniModel} from '../parse/index.js';
+import {AstRootNode} from '../ast/index.js';
+import {TargetOptions} from '../interpret/index.js';
+import {RealOptions} from '../options/index.js';
 
 export interface ExternalSyntaxTree<TRoot extends AstRootNode, TOpt extends TargetOptions> {
   node: TRoot;

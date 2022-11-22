@@ -28,3 +28,7 @@ ij_typescript_use_double_quotes = false
 ij_typescript_force_quote_style = true
 
 trim_trailing_whitespace = true
+
+[*.{java,kt,kts}]
+indent_style = space
+indent_size = 2

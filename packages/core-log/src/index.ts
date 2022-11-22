@@ -1,2 +1,2 @@
 
-export * from './util';
+export * from './util/index.js';

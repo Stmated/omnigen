@@ -1,6 +1,6 @@
-import {OmniObjectType, OmniPrimitiveKind, OmniProperty, OmniPropertyOwner, OmniTypeKind} from './OmniModel';
-import {PropertyUtil} from './PropertyUtil';
-import {EqualityLevel} from './EqualityLevel';
+import {OmniObjectType, OmniPrimitiveKind, OmniProperty, OmniPropertyOwner, OmniTypeKind} from './OmniModel.js';
+import {PropertyUtil} from './PropertyUtil.js';
+import {EqualityLevel} from './EqualityLevel.js';
 
 describe('Test PropertyUtil', () => {
 

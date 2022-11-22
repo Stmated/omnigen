@@ -1,3 +1,3 @@
 
-export * from './Transformer';
-export * from './AbstractAstTransformer';
+export * from './Transformer.js';
+export * from './AbstractAstTransformer.js';

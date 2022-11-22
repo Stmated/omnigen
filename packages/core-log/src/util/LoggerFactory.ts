@@ -11,7 +11,7 @@ export type ModifierCallback = (options: LoggerOptions | DestinationStream) => L
 export class LoggerFactory {
 
   private static _pretty: boolean | undefined = undefined;
-  private static _basePath = __dirname.substring(0, __dirname.lastIndexOf('/'));
+  // private static _basePath = __dirname.substring(0, __dirname.lastIndexOf('/'));
 
   private static readonly _MODIFIERS: ModifierCallback[] = [];
 
@@ -21,18 +21,21 @@ export class LoggerFactory {
 
   /**
    * Creates a logger with the specified name.
-   * Usually the node constant: __filename
+   * Usually the node constant: import.meta.url
    *
    * @param name A simple name, or filename. Avoid long names.
    * @returns A new logger
    */
   public static create(name: string): BaseLogger {
 
-    if (name.startsWith(LoggerFactory._basePath)) {
-      name = name.substring(LoggerFactory._basePath.length);
-      while (name.startsWith('/')) {
-        name = name.substring(1);
-      }
+    const startIndex = name.lastIndexOf('/');
+    if (startIndex != -1) {
+      name = name.substring(startIndex + 1);
+    }
+
+    const endIndex = name.lastIndexOf('.');
+    if (endIndex != -1) {
+      name = name.substring(0, endIndex);
     }
 
     const options: LoggerOptions = {
@@ -71,6 +74,6 @@ export class LoggerFactory {
       }
     }
 
-    return pino(modifiedOptions);
+    return pino.pino(modifiedOptions);
   }
 }

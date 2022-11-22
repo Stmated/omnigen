@@ -1,20 +1,20 @@
 import {AbstractInterpreter, AstRootNode} from '@omnigen/core';
-import {FieldAccessorMode, JavaOptions} from '../options';
+import {FieldAccessorMode, JavaOptions} from '../options/index.js';
 import {
   AddConstructorJavaAstTransformer,
   AdditionalPropertiesInterfaceAstTransformer,
   BaseJavaAstTransformer,
   InnerTypeCompressionAstTransformer,
   PackageResolverAstTransformer,
-} from '../transform';
-import * as Java from '../ast';
-import {AddFieldsAstTransformer} from '../transform/AddFieldsAstTransformer';
-import {AddGetterSetterAstTransformer} from '../transform/AddGetterSetterAstTransformer';
-import {AddLombokAstTransformer} from '../transform/AddLombokAstTransformer';
+} from '../transform/index.js';
+import * as Java from '../ast/index.js';
+import {AddFieldsAstTransformer} from '../transform/AddFieldsAstTransformer.js';
+import {AddGetterSetterAstTransformer} from '../transform/AddGetterSetterAstTransformer.js';
+import {AddLombokAstTransformer} from '../transform/AddLombokAstTransformer.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {PropertyNameDiscrepancyAstTransformer} from '../transform/PropertyNameDiscrepancyAstTransformer';
+import {PropertyNameDiscrepancyAstTransformer} from '../transform/PropertyNameDiscrepancyAstTransformer.js';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
   constructor(options: JavaOptions) {

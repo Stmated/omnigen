@@ -1,1 +1,2 @@
-export * from './OpenRpcParser';
+
+export * from './OpenRpcParser.js';

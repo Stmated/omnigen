@@ -1,4 +1,4 @@
-import {CompositionKind, CompositionUtil, OmniPrimitiveKind, OmniType, OmniTypeKind} from '../parse';
+import {CompositionKind, CompositionUtil, OmniPrimitiveKind, OmniType, OmniTypeKind} from '../parse/index.js';
 
 describe('Test Composition Types', () => {
 

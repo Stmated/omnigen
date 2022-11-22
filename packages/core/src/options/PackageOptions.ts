@@ -1,4 +1,4 @@
-import {Option, Options, IPackageResolver} from '../options';
+import {Option, Options, IPackageResolver} from '../options/index.js';
 
 export interface PackageOptions extends Options {
   package: string;

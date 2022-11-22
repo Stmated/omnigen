@@ -8,7 +8,7 @@
     "test": "turbo run test",
     "test:watch": "turbo run test:watch",
     "lint": "turbo run lint",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --parallel",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "workspaces": [

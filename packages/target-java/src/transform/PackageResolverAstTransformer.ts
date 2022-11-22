@@ -1,8 +1,8 @@
 import {OmniModel, OmniType, OmniTypeKind, RealOptions, ExternalSyntaxTree, VisitorFactoryManager} from '@omnigen/core';
-import {JavaUtil, TypeNameInfo} from '../util';
-import {JavaOptions} from '../options';
-import {AbstractJavaAstTransformer} from '../transform';
-import * as Java from '../ast';
+import {JavaUtil, TypeNameInfo} from '../util/index.js';
+import {JavaOptions} from '../options/index.js';
+import {AbstractJavaAstTransformer} from '../transform/index.js';
+import * as Java from '../ast/index.js';
 
 interface CompilationUnitInfo {
   cu: Java.CompilationUnit;

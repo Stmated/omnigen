@@ -10,10 +10,10 @@ import {
   OmniUnknownType,
   LiteralValue, StNodeWithChildren, Case, OmniProperty,
 } from '@omnigen/core';
-import {JavaAstUtils} from '../transform';
-import {JavaUtil} from '../util';
-import {JavaVisitor} from '../visit';
-import {JavaOptions, UnknownType} from '../options';
+import {JavaAstUtils} from '../transform/index.js';
+import {JavaUtil} from '../util/index.js';
+import {JavaVisitor} from '../visit/index.js';
+import {JavaOptions, UnknownType} from '../options/index.js';
 
 export enum TokenType {
   ASSIGN,

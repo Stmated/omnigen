@@ -1,6 +1,6 @@
-import {Option, Options, PrimitiveGenerificationChoice} from '../options';
-import {CompressTypeLevel, OmniTypeKind} from '../parse';
-import {EqualityLevel} from '../parse/EqualityLevel';
+import {Option, Options, PrimitiveGenerificationChoice} from '../options/index.js';
+import {CompressTypeLevel, OmniTypeKind} from '../parse/index.js';
+import {EqualityLevel} from '../parse/EqualityLevel.js';
 
 export enum CompressTypeNaming {
   EXACT,

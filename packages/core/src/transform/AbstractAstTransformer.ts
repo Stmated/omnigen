@@ -1,8 +1,8 @@
-import {ExternalSyntaxTree, Transformer} from '../transform';
-import {AstRootNode} from '../ast';
-import {OmniModel} from '../parse';
-import {RealOptions} from '../options';
-import {TargetOptions} from '../interpret';
+import {ExternalSyntaxTree, Transformer} from '../transform/index.js';
+import {AstRootNode} from '../ast/index.js';
+import {OmniModel} from '../parse/index.js';
+import {RealOptions} from '../options/index.js';
+import {TargetOptions} from '../interpret/index.js';
 
 export abstract class AbstractAstTransformer<TRoot extends AstRootNode, TOpt extends TargetOptions>
 implements Transformer<TRoot, TOpt> {

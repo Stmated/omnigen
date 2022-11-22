@@ -8,10 +8,10 @@ import {
   Renderer,
   AbstractStNode, Case,
 } from '@omnigen/core';
-import {AbstractJavaNode, GenericTypeDeclarationList} from '../ast';
-import {JavaVisitor, JavaVisitFn} from '../visit';
-import {JavaOptions} from '../options';
-import * as Java from '../ast';
+import {AbstractJavaNode, GenericTypeDeclarationList} from '../ast/index.js';
+import {JavaVisitor, JavaVisitFn} from '../visit/index.js';
+import {JavaOptions} from '../options/index.js';
+import * as Java from '../ast/index.js';
 
 type JavaRendererVisitFn<N extends AbstractStNode> = JavaVisitFn<N, string>;
 

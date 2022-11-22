@@ -1,3 +1,3 @@
 
-export * from './AbstractWriter';
-export * from './Writer';
+export * from './AbstractWriter.js';
+export * from './Writer.js';

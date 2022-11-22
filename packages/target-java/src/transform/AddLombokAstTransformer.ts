@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer';
+import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
 import {
   ExternalSyntaxTree,
   OmniModel,
@@ -8,9 +8,9 @@ import {
   RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import * as Java from '../ast';
-import {AnnotationList, JavaAstRootNode, ModifierType} from '../ast';
-import {JavaOptions} from '../options';
+import * as Java from '../ast/index.js';
+import {AnnotationList, JavaAstRootNode, ModifierType} from '../ast/index.js';
+import {JavaOptions} from '../options/index.js';
 
 export interface StackInfo {
   cu: Java.CompilationUnit;

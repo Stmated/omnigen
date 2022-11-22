@@ -1,4 +1,6 @@
 import {JSONSchema7Definition} from 'json-schema';
+// @ts-ignore
+import {TypeName} from './TypeName.js';
 
 export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
 
@@ -162,15 +164,6 @@ export type SmartUnwrappedType<T> =
     : T extends OmniExternalModelReferenceType<infer R>
       ? Exclude<R, OmniExternalModelReferenceType<any>>
       : T;
-
-export interface TypeNameModifier {
-  name: TypeName;
-  prefix?: TypeName;
-  suffix?: TypeName;
-  namespaceSuffix?: string;
-}
-
-export type TypeName = string | TypeNameModifier | Array<TypeName>;
 
 export interface OmniNamedType {
 

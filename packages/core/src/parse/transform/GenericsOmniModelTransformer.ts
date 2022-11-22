@@ -6,22 +6,20 @@ import {
   OmniGenericTargetType,
   OmniModel,
   OmniModelTransformer,
-  OmniPrimitiveKind,
-  OmniPrimitiveType,
   OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
   OmniUtil,
-} from '../../parse';
+} from '../../parse/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {PrimitiveGenerificationChoice, RealOptions} from '../../options';
-import {GenericTargetOptions} from '../../interpret';
-import {PropertyUtil} from '../PropertyUtil';
-import {EqualityLevel} from '../EqualityLevel';
-import {Case, Sorters} from '../../util';
-import {PropertyInformation} from '../PropertiesInformation';
+import {PrimitiveGenerificationChoice, RealOptions} from '../../options/index.js';
+import {GenericTargetOptions} from '../../interpret/index.js';
+import {PropertyUtil} from '../PropertyUtil.js';
+import {EqualityLevel} from '../EqualityLevel.js';
+import {Case, Sorters} from '../../util/index.js';
+import {PropertyInformation} from '../PropertiesInformation.js';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Takes an OmniModel, and tries to modify it to use generics where possible.

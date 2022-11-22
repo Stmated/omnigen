@@ -1,5 +1,5 @@
-import {AbstractStNode} from '../ast';
-import {AstVisitor, VisitResult} from '../visit';
+import {AbstractStNode} from '../ast/index.js';
+import {AstVisitor, VisitResult} from '../visit/index.js';
 
 export class AstRootNode extends AbstractStNode {
   children: AbstractStNode[] = [];

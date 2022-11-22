@@ -1,2 +1,2 @@
 
-export * from './OpenApiExtendedJsonSchema';
+export * from './OpenApiExtendedJsonSchema.js';

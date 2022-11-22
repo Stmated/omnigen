@@ -1,9 +1,9 @@
-import {Dereferencer} from '../util';
+import {Dereferencer} from '../util/index.js';
 import * as fs from 'fs/promises';
 import nock from 'nock';
 import {LoggerFactory} from '@omnigen/core-log';
 
-export const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 describe('Test ObjectRefTraverser', () => {
 

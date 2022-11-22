@@ -1,8 +1,8 @@
-import {Options} from './Options';
-import {Option} from './Option';
+import {Options} from './Options.js';
+import {Option} from './Option.js';
 
 export type RealOptions<TOpt extends Options> = {
-  [Key in keyof TOpt]: TOpt[Key] extends Option<infer _TInc, infer TReal>
-    ? TReal
-    : TOpt[Key];
+  [Key in keyof TOpt]-?: TOpt[Key] extends Option<infer TInc, infer TReal>
+      ? TReal
+      : TOpt[Key];
 };

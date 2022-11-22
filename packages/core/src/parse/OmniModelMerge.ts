@@ -6,14 +6,11 @@ import {
   OmniTypeKind,
   OmniUtil,
   TypeOwner,
-} from '../parse';
-import {Options, RealOptions} from '../options';
-import {TargetOptions} from '../interpret';
-import {LoggerFactory} from '@omnigen/core-log';
-import {BFSTraverseContext} from './OmniTypeVisitor';
-import {HashUtil} from './HashUtil';
-
-const logger = LoggerFactory.create(__filename);
+} from '../parse/index.js';
+import {Options, RealOptions} from '../options/index.js';
+import {TargetOptions} from '../interpret/index.js';
+import {BFSTraverseContext} from './OmniTypeVisitor.js';
+import {HashUtil} from './HashUtil.js';
 
 export interface Replacement<T extends TypeOwner<OmniType>> {
   root: T;

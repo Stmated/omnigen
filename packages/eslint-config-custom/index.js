@@ -47,7 +47,7 @@ module.exports = {
             // P = Parent
             // I = Input
             // K = Key
-            'prefix': ['T', 'R', 'N', 'V', 'C', 'P', 'I', 'K'],
+            // 'prefix': ['T', 'R', 'N', 'V', 'C', 'P', 'I', 'K', 'U', 'Y', 'G'],
             'format': ['PascalCase'],
           },
           {
@@ -118,7 +118,7 @@ module.exports = {
       },
     },
     {
-      files: ['**/*.ts', '**/*.js'],
+      files: ['**/*', '**/*.js'],
       rules: {
         '@typescript-eslint/comma-dangle': ['warn', {
           'arrays': 'always-multiline',
@@ -133,7 +133,7 @@ module.exports = {
       },
     },
     {
-      files: ['**/test/**/*', '**/*.test.ts'],
+      files: ['**/test/**/*', '**/*.test.*'],
       env: {
         jest: true,
       },
@@ -148,6 +148,7 @@ module.exports = {
   rules: {
     // Disable default no-unused-vars, and use typescript validation
     'no-unused-vars': 0,
+    '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/no-unused-vars': [1,
       {'args': 'all', 'varsIgnorePattern': '^_', 'argsIgnorePattern': '^_'}],
     'require-jsdoc': 0,

@@ -1,6 +1,6 @@
 import {OmniPotentialInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
-import {JavaUtil} from '../util';
-import * as Java from '../ast';
+import {JavaUtil} from '../util/index.js';
+import * as Java from '../ast/index.js';
 
 export class JavaAstUtils {
 

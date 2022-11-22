@@ -3,6 +3,8 @@
 .yarn
 .turbo
 .cache
+.local-pack
+.npm.work
 *.iml
 node_modules
 build/**
@@ -11,3 +13,4 @@ dist
 .next/**
 .target_test
 *.log
+target

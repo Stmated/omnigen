@@ -1,2 +1,2 @@
 
-export * from './JavaRenderer';
+export * from './JavaRenderer.js';

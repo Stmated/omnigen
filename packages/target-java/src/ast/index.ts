@@ -1,3 +1,3 @@
 
-export * from './JavaAstTypes';
-export * from './JavaAstRootNode';
+export * from './JavaAstTypes.js';
+export * from './JavaAstRootNode.js';

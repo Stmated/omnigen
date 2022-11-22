@@ -1,5 +1,5 @@
-import {AbortVisitingWithResult, AstVisitor, VisitResult} from './AstVisitor';
-import {AbstractStNode} from '../ast';
+import {AbortVisitingWithResult, AstVisitor, VisitResult} from './AstVisitor.js';
+import {AbstractStNode} from '../ast/index.js';
 
 export class VisitResultFlattener {
 

@@ -9,7 +9,7 @@ export default [
     },
   },
   {
-    files: ['**/*.ts'],
+    files: ['**/*'],
     rules: {
       'semi': 'error',
       'no-unused-vars': 'error',

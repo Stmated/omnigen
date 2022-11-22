@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer';
+import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
 import {
   Case,
   ExternalSyntaxTree,
@@ -8,12 +8,12 @@ import {
   RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import {JavaAstRootNode} from '../ast';
-import {JavaOptions} from '../options';
-import {JavaUtil} from '../util';
-import * as Java from '../ast';
-import {JavaAstUtils} from './JavaAstUtils';
-import {BaseJavaAstTransformer} from './BaseJavaAstTransformer';
+import {JavaAstRootNode} from '../ast/index.js';
+import {JavaOptions} from '../options/index.js';
+import {JavaUtil} from '../util/index.js';
+import * as Java from '../ast/index.js';
+import {JavaAstUtils} from './JavaAstUtils.js';
+import {BaseJavaAstTransformer} from './BaseJavaAstTransformer.js';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
   transformAst(

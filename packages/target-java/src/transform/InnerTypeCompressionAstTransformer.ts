@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from '../transform';
+import {AbstractJavaAstTransformer} from '../transform/index.js';
 import {
   ExternalSyntaxTree,
   OmniModel,
@@ -9,12 +9,12 @@ import {
   TargetOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import {JavaOptions} from '../options';
-import * as Java from '../ast';
+import {JavaOptions} from '../options/index.js';
+import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaUtil} from '../util';
+import {JavaUtil} from '../util/index.js';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 type CompilationUnitInfo = {
   cu: Java.CompilationUnit,

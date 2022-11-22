@@ -1,7 +1,4 @@
-import {LoggerFactory} from '@omnigen/core-log';
-import {Case} from './Case';
-
-export const logger = LoggerFactory.create(__filename);
+import {Case} from './Case.js';
 
 describe('Case', () => {
 

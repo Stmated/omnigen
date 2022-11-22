@@ -12,7 +12,7 @@ import {
   RealOptions,
   TargetOptions,
 } from '@omnigen/core';
-import {JavaUtil} from '../util';
+import {JavaUtil} from '../util/index.js';
 
 /**
  * Checks for object types that are used as interfaces, and splits the type into two types.

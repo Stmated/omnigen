@@ -4,15 +4,15 @@ import {RealOptions} from '@omnigen/core';
 import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
 import {OmniTypeKind, OmniUtil, SchemaFile} from '@omnigen/core';
 import {JavaUtil} from '@omnigen/target-java';
-import {IOpenRpcParserOptions, OpenRpcParserBootstrapFactory} from './OpenRpcParser';
-import {JSONRPC_20_PARSER_OPTIONS} from '../options';
+import {OpenRpcParserOptions, OpenRpcParserBootstrapFactory} from './OpenRpcParser.js';
+import {JSONRPC_20_PARSER_OPTIONS} from '../options/index.js';
 
 describe('Test Generic Model Creation', () => {
 
   const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
 
   // TODO: This is a bit stupid, no?
-  const options: RealOptions<IOpenRpcParserOptions> = {
+  const options: RealOptions<OpenRpcParserOptions> = {
     ...DEFAULT_PARSER_OPTIONS,
     ...JSONRPC_20_PARSER_OPTIONS,
   };

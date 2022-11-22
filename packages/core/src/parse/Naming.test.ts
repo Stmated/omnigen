@@ -1,4 +1,4 @@
-import {Naming} from './Naming';
+import {Naming} from './Naming.js';
 
 const obj1 = {};
 const obj2 = {};

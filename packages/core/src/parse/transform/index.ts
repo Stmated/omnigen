@@ -1,4 +1,4 @@
 
-export * from './SimplifyInheritanceOmniModelTransformer';
-export * from './ElevateCommonPropertiesOmniModelTransformer';
-export * from './GenericsOmniModelTransformer';
+export * from './SimplifyInheritanceOmniModelTransformer.js';
+export * from './ElevateCommonPropertiesOmniModelTransformer.js';
+export * from './GenericsOmniModelTransformer.js';

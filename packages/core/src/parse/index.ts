@@ -1,22 +1,24 @@
 
 // Basic types
-export * from './LiteralValue';
-export * from './CompressTypeLevel';
+export * from './LiteralValue.js';
+export * from './CompressTypeLevel.js';
 
 // Basic classes
-export * from './SchemaFile';
+export * from './SchemaFile.js';
 
-export * from './ParserOptions';
-export * from './Parser';
+export * from './ParserOptions.js';
+export * from './Parser.js';
 
-export * from './OmniModel';
-export * from './OmniModelParserResult';
-export * from './CompositionUtil';
-export * from './OmniModelMerge';
-export * from './OmniUtil';
-export * from './Naming';
-export * from './OmniModelTransformer';
+export * from './OmniModel.js';
+export * from './OmniModelParserResult.js';
+export * from './CompositionUtil.js';
+export * from './OmniModelMerge.js';
+export * from './OmniUtil.js';
+export * from './Naming.js';
+export * from './OmniModelTransformer.js';
 
 // Other sub-directories
-export * from './transform';
+export * from './transform/index.js';
+export * from './TypeName.js';
+export * from './TypeNameModifier.js';
 

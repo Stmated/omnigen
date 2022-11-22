@@ -3,15 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "eslint --ext .ts . && tsc",
-    "prebuild": "eslint --ext .ts .",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
-    "test": "jest --passWithNoTests",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest | pino-pretty -c -S -t --sync false",
     "test:watch": "jest --watch --passWithNoTests"
   },
   "jest": {
@@ -25,6 +24,6 @@
     "@omnigen/config-jest": "*",
     "@omnigen/config-typescript": "*",
     "@omnigen/eslint-config-custom": "*",
-    "typescript": "4.9.2-rc"
+    "typescript": "^4.9.3"
   }
 }

@@ -9,16 +9,16 @@ import {
   GenericsOmniModelTransformer,
   OptionsUtil, SimplifyInheritanceOmniModelTransformer,
 } from '@omnigen/core';
-import {JavaOptions, JAVA_OPTIONS_CONVERTERS, InterfaceJavaModelTransformer} from '@omnigen/target-java';
+import {JavaOptions, JAVA_OPTIONS_RESOLVER, InterfaceJavaModelTransformer} from '@omnigen/target-java';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
 import {
   DEFAULT_OPENRPC_OPTIONS,
-  IOpenRpcParserOptions,
+  OpenRpcParserOptions,
   JSONRPC_OPTIONS_FALLBACK,
-  OPENRPC_OPTIONS_CONVERTERS,
-  OpenRpcParserBootstrapFactory,
+  OPENRPC_OPTIONS_RESOLVERS,
+  OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_FALLBACK,
 } from '@omnigen/parser-openrpc';
-import {DEFAULT_TEST_JAVA_OPTIONS} from './JavaTestUtils';
+import {DEFAULT_TEST_JAVA_OPTIONS} from './JavaTestUtils.js';
 
 export type KnownSchemaNames = 'openrpc';
 
@@ -39,7 +39,7 @@ export class OpenRpcTestUtils {
   static async readExample(
     type: KnownSchemaNames,
     fileName: string,
-    openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
+    openRpcOptions: OpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
     javaOptions: JavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
   ): Promise<OmniModelParserResult<JavaOptions>> {
 
@@ -61,8 +61,8 @@ export class OpenRpcTestUtils {
     const openRpcRealOptions = await OptionsUtil.updateOptions(
       openRpcOptions,
       schemaIncomingOptions,
-      OPENRPC_OPTIONS_CONVERTERS,
-      JSONRPC_OPTIONS_FALLBACK,
+      OPENRPC_OPTIONS_RESOLVERS,
+      OPENRPC_OPTIONS_FALLBACK,
     );
 
     if (!openRpcRealOptions.jsonRpcErrorDataSchema && schemaIncomingOptions?.jsonRpcErrorDataSchema) {
@@ -73,7 +73,7 @@ export class OpenRpcTestUtils {
       if (!('kind' in errorSchema)) {
 
         const dereferencer = await Dereferencer.create<JSONSchema7>('', '', errorSchema);
-        const jsonSchemaParser = new JsonSchemaParser<JSONSchema7, IOpenRpcParserOptions>(dereferencer, openRpcRealOptions);
+        const jsonSchemaParser = new JsonSchemaParser<JSONSchema7, OpenRpcParserOptions>(dereferencer, openRpcRealOptions);
         const errorType = jsonSchemaParser.transformErrorDataSchemaToOmniType(dereferencer.getFirstRoot());
 
         openRpcRealOptions.jsonRpcErrorDataSchema = errorType;
@@ -89,7 +89,7 @@ export class OpenRpcTestUtils {
       parseResult.model.options = schemaIncomingOptions;
     }
 
-    const realJavaOptions = await OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_CONVERTERS);
+    const realJavaOptions = await OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_RESOLVER);
 
     for (const transformer of transformers) {
       transformer.transformModel(parseResult.model, realJavaOptions);

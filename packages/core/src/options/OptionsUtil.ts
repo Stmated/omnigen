@@ -1,19 +1,19 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {Option} from './Option';
-import {Options} from './Options';
-import {Booleanish} from './Booleanish';
-import {IncomingOptions} from './IncomingOptions';
-import {RealOptions} from './RealOptions';
-import {Case} from '../util';
-import {OptionsResolvers} from './OptionsResolvers';
+import {Option} from './Option.js';
+import {Options} from './Options.js';
+import {Booleanish} from './Booleanish.js';
+import {IncomingOptions} from './IncomingOptions.js';
+import {RealOptions} from './RealOptions.js';
+import {Case} from '../util/index.js';
+import {OptionsResolvers} from './OptionsResolvers.js';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export type IncomingResolver<TInc, TReal> = (incoming: TInc | TReal) => Promise<TReal>;
 
 type OmitNever<T> = { [K in keyof T as T[K] extends never ? never : K]: T[K] };
 
-export type OptionResolver<TOpt extends Options> = OmitNever<{
+export type OptionResolvers<TOpt extends Options> = OmitNever<{
   [Key in keyof TOpt]: TOpt[Key] extends Option<infer TInc, infer TReal>
     ? TOpt[Key] extends TReal
       ? never
@@ -22,19 +22,23 @@ export type OptionResolver<TOpt extends Options> = OmitNever<{
 }>;
 
 export type OptionAdditions<TOpt extends Options> = {
-  [Key in keyof TOpt]?: TOpt[Key] extends Option<infer _TInc, infer TReal>
-    ? (value: TReal) => IncomingOptions<TOpt> | undefined
-    : (value: TOpt[Key]) => IncomingOptions<TOpt> | undefined
+  [Key in keyof TOpt]?: TOpt[Key] extends Option<infer TInc, infer TReal>
+    ? (value: TInc) => Partial<RealOptions<TOpt>> | undefined
+    : (value: TOpt[Key]) => Partial<RealOptions<TOpt>> | undefined
 };
 
-// TODO: THERE MUST BE SOME WAY TO GET RID OF ALL THE GENERIC HACKS!!! IT SHOULD BE LOGICALLY SOLVABLE!
+export type SimplifiedInputOptions<T> = T extends RealOptions<infer TRealOpt>
+  ? TRealOpt
+  : T extends IncomingOptions<infer TIncomingOpt>
+    ? TIncomingOpt
+    : T;
 
 export class OptionsUtil {
 
   public static async updateOptions<
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
-    TResolver extends OptionResolver<TOpt>,
+    TResolver extends OptionResolvers<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
     TReturn extends RealOptions<TOpt>
   >(
@@ -52,7 +56,7 @@ export class OptionsUtil {
   private static async replaceOptionsWithConverted<
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
-    TResolver extends OptionResolver<TOpt>,
+    TResolver extends OptionResolvers<TOpt>,
     TReturn extends RealOptions<TOpt>
   >(
     base: Required<TOpt>,
@@ -94,7 +98,7 @@ export class OptionsUtil {
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
-    TResolver extends OptionResolver<TOpt>
+    TResolver extends OptionResolvers<TOpt>
   >(
     base: Required<TOpt>,
     incoming: TInc | undefined,

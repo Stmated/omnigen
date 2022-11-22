@@ -1,4 +1,4 @@
-import {Booleanish} from './Booleanish';
+import {Booleanish} from './Booleanish.js';
 
 export class OptionsResolvers {
 
@@ -33,5 +33,18 @@ export class OptionsResolvers {
 
   public static toString(this: void, value: string | number): Promise<string> {
     return Promise.resolve(String(value));
+  }
+
+  public static toRegExp(this: void, value: string | RegExp | undefined): Promise<RegExp | undefined> {
+
+    if (!value) {
+      return Promise.resolve(undefined);
+    }
+
+    if (value instanceof RegExp) {
+      return Promise.resolve(value);
+    }
+
+    return Promise.resolve(new RegExp(value));
   }
 }

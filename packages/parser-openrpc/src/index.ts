@@ -1,4 +1,4 @@
 
-export * from './options';
-export * from './model';
-export * from './parse';
+export * from './options/index.js';
+export * from './model/index.js';
+export * from './parse/index.js';

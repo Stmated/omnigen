@@ -1,4 +1,4 @@
-import {AstRootNode, AbstractStNode} from '../ast';
+import {AstRootNode, AbstractStNode} from '../ast/index.js';
 
 export type VisitResult<R> = void | R | Array<R> | Array<VisitResult<R>>;
 

@@ -1,4 +1,4 @@
-import {OmniType} from './OmniModel';
+import {OmniType} from './OmniModel.js';
 
 /**
  * Enum explaining the equality level of a comparison.

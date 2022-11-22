@@ -1,5 +1,6 @@
 import {OptionParser} from '@omnigen/core';
-import {IPackageResolver} from './IPackageResolver';
+// @ts-ignore
+import {IPackageResolver} from './IPackageResolver.js';
 
 export class PackageResolverOptionsParser implements OptionParser<IPackageResolver | undefined> {
 

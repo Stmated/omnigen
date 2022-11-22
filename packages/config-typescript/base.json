@@ -2,9 +2,9 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "base",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "Node",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "lib": ["es2022", "es2022.error"],
     "composite": false,

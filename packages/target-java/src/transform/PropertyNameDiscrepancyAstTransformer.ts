@@ -1,13 +1,13 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer';
+import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
 import {
   ExternalSyntaxTree,
   OmniModel, OmniTypeKind,
   RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import * as Java from '../ast';
-import {AnnotationList, JavaAstRootNode} from '../ast';
-import {JavaOptions} from '../options';
+import * as Java from '../ast/index.js';
+import {AnnotationList, JavaAstRootNode} from '../ast/index.js';
+import {JavaOptions} from '../options/index.js';
 
 export class PropertyNameDiscrepancyAstTransformer extends AbstractJavaAstTransformer {
 

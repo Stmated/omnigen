@@ -1,8 +1,8 @@
-import {OmniModel} from '../parse';
-import {AstRootNode} from '../ast';
-import {ExternalSyntaxTree, Transformer} from '../transform';
-import {RealOptions} from '../options';
-import {TargetOptions, Interpreter} from '../interpret';
+import {OmniModel} from '../parse/index.js';
+import {AstRootNode} from '../ast/index.js';
+import {ExternalSyntaxTree, Transformer} from '../transform/index.js';
+import {RealOptions} from '../options/index.js';
+import {TargetOptions, Interpreter} from '../interpret/index.js';
 
 export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements Interpreter<TOpt> {
   private readonly _transformers: Transformer<AstRootNode, TOpt>[] = [];

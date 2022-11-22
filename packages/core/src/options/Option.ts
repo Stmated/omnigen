@@ -1,1 +1,2 @@
-export type Option<TIncoming, TReal> = TIncoming | TReal;
+
+export type Option<TIncoming, TReal> = Exclude<TIncoming, TReal> | TReal;

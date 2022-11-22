@@ -1,9 +1,8 @@
-import {TypeName} from '../parse';
-import {LoggerFactory} from '@omnigen/core-log';
 import crypto from 'crypto';
-import {Case} from '../util';
-
-const logger = LoggerFactory.create(__filename);
+// @ts-ignore
+import {TypeName} from '../parse/TypeName.js';
+// @ts-ignore
+import {Case} from '../util/Case.js';
 
 export type NamePair<T> = { owner: T, name: TypeName };
 export type ResolvedNamePair<T> = { owner: T, name: string };

@@ -25,15 +25,15 @@ import {
   PrimitiveNullableKind,
   SmartUnwrappedType,
   TypeName,
-} from '../parse';
-import {LiteralValue} from './LiteralValue';
+} from '../parse/index.js';
+import {LiteralValue} from './LiteralValue.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {BFSTraverseCallback, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
-import {CommonDenominatorType} from './CommonDenominatorType';
-import {EqualityLevel} from './EqualityLevel';
-import {PropertyUtil} from './PropertyUtil';
+import {BFSTraverseCallback, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.js';
+import {CommonDenominatorType} from './CommonDenominatorType.js';
+import {EqualityLevel} from './EqualityLevel.js';
+import {PropertyUtil} from './PropertyUtil.js';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export interface TypeCollection {
 

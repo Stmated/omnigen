@@ -1,28 +1,30 @@
+
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
+  preset: 'ts-jest/presets/default-esm',
   roots: ['<rootDir>'],
-  transform: {'^.+\\.ts$': 'ts-jest'},
-  testEnvironment: '<rootDir>../config-jest/env/jest.silent-env.js',
+  transform: {
+    // '^.+\\.tsx?$': [
+    //   'ts-jest',
+    //   {
+    //     useESM: true,
+    //   },
+    // ],
+    // '^.+\\.tsx?$': 'esbuild-jest',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    '^.+\\.(t|j)sx?$': '@swc/jest',
+  },
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  extensionsToTreatAsEsm: ['.ts'],
+  // injectGlobals: true,
+  // testEnvironment: '<rootDir>../config-jest/env/jest.silent-env.js',
+  testEnvironment: 'node',
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   modulePathIgnorePatterns: [
     '<rootDir>/node_modules',
+    '<rootDir>/lib',
     '<rootDir>/dist',
   ],
-  preset: 'ts-jest',
 };
-
-// const {pathsToModuleNameMapper} = require('ts-jest');
-//
-// // In the following statement, replace `./tsconfig` with the path to your `tsconfig` file
-// // which contains the path mapping (ie the `compilerOptions.paths` option):
-// const {compilerOptions} = require('./tsconfig');
-//
-// module.exports = {
-//   transform: {'^.+\\.ts?$': 'ts-jest'},
-//   testEnvironment: '<rootDir>/jest.silent-env',
-//   testRegex: '/test/.*\\.(test|spec)?\\.(ts|tsx)$',
-//   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-//   moduleNameMapper: pathsToModuleNameMapper(
-//     compilerOptions.paths,
-//     {prefix: '<rootDir>/'}
-//   ),
-// };

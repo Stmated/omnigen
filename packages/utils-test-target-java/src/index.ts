@@ -1,2 +1,2 @@
 
-export * from './ParsedJavaTestVisitor';
+export * from './ParsedJavaTestVisitor.js';

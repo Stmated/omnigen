@@ -5,10 +5,10 @@ import {
   OmniPropertyOrphan,
   OmniSuperTypeCapableType, OmniType,
   OmniTypeKind,
-} from './OmniModel';
-import {OmniModelMerge, Replacement} from './OmniModelMerge';
-import {PropertyUtil} from './PropertyUtil';
-import {OmniUtil} from './OmniUtil';
+} from './OmniModel.js';
+import {OmniModelMerge, Replacement} from './OmniModelMerge.js';
+import {PropertyUtil} from './PropertyUtil.js';
+import {OmniUtil} from './OmniUtil.js';
 
 test('Not Similar', async () => {
 

@@ -1,5 +1,5 @@
 
-export * from './AbstractStNode';
-export * from './AbstractToken';
-export * from './AstRootNode';
-export * from './CompilationUnitRenderCallback';
+export * from './AbstractStNode.js';
+export * from './AbstractToken.js';
+export * from './AstRootNode.js';
+export * from './CompilationUnitRenderCallback.js';

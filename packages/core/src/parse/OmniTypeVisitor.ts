@@ -1,8 +1,8 @@
-import {OmniModel, OmniNullType, OmniType, OmniTypeKind} from './OmniModel';
-import {OmniUtil, TypeOwner} from './OmniUtil';
+import {OmniModel, OmniNullType, OmniType, OmniTypeKind} from './OmniModel.js';
+import {OmniUtil, TypeOwner} from './OmniUtil.js';
 import {LoggerFactory} from '@omnigen/core-log';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export interface DFSTraverseContext {
   type: OmniType;

@@ -1,9 +1,9 @@
 
-export * from './AbstractJavaAstTransformer';
-export * from './BaseJavaAstTransformer';
-export * from './AddConstructorJavaAstTransformer';
-export * from './AdditionalPropertiesInterfaceAstTransformer';
-export * from './InnerTypeCompressionAstTransformer';
-export * from './PackageResolverAstTransformer';
-export * from './JavaAstUtils';
-export * from './InterfaceJavaModelTransformer';
+export * from './AbstractJavaAstTransformer.js';
+export * from './BaseJavaAstTransformer.js';
+export * from './AddConstructorJavaAstTransformer.js';
+export * from './AdditionalPropertiesInterfaceAstTransformer.js';
+export * from './InnerTypeCompressionAstTransformer.js';
+export * from './PackageResolverAstTransformer.js';
+export * from './JavaAstUtils.js';
+export * from './InterfaceJavaModelTransformer.js';

@@ -7,9 +7,9 @@ import {
   VisitorFactoryManager,
   AbstractStNode,
 } from '@omnigen/core';
-import {DEFAULT_OPENRPC_OPTIONS, IOpenRpcParserOptions} from '@omnigen/parser-openrpc';
+import {DEFAULT_OPENRPC_OPTIONS, OpenRpcParserOptions} from '@omnigen/parser-openrpc';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, JavaInterpreter, JavaRenderer, JavaVisitor} from '@omnigen/target-java';
-import {OpenRpcTestUtils} from './OpenRpcTestUtils';
+import {OpenRpcTestUtils} from './OpenRpcTestUtils.js';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
 import {Java} from '@omnigen/target-java';
@@ -25,7 +25,7 @@ export class JavaTestUtils {
   public static async getFileContentsFromFile(
     fileName: string,
     javaOptions: JavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
-    openRpcOptions: IOpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
+    openRpcOptions: OpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
   ): Promise<Map<string, string>> {
 
     const parseResult = await OpenRpcTestUtils.readExample('openrpc', fileName, openRpcOptions, javaOptions);

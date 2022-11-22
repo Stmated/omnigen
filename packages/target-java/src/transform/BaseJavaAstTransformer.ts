@@ -1,5 +1,5 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer';
-import {JavaOptions} from '../options';
+import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
+import {JavaOptions} from '../options/index.js';
 import {
   Case,
   CompositionKind,
@@ -27,10 +27,10 @@ import {
   PrimitiveNullableKind,
   RealOptions,
 } from '@omnigen/core';
-import * as Java from '../ast';
-import {AbstractObjectDeclaration} from '../ast';
-import {JavaSubTypeCapableType, JavaUtil} from '../util';
-import {JavaAstUtils} from '../transform';
+import * as Java from '../ast/index.js';
+import {AbstractObjectDeclaration} from '../ast/index.js';
+import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
+import {JavaAstUtils} from '../transform/index.js';
 
 export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 

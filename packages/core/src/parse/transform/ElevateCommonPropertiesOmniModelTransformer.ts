@@ -1,9 +1,9 @@
-import {OmniModel, OmniModelTransformer, OmniUtil} from '../../parse';
-import {RealOptions} from '../../options';
-import {TargetOptions} from '../../interpret';
-import {Sorters} from '../../util';
-import {PropertyUtil} from '../PropertyUtil';
-import {EqualityLevel} from '../EqualityLevel';
+import {OmniModel, OmniModelTransformer, OmniUtil} from '../../parse/index.js';
+import {RealOptions} from '../../options/index.js';
+import {TargetOptions} from '../../interpret/index.js';
+import {Sorters} from '../../util/index.js';
+import {PropertyUtil} from '../PropertyUtil.js';
+import {EqualityLevel} from '../EqualityLevel.js';
 
 /**
  * Takes an OmniModel, and tries to compress types as much as possible.

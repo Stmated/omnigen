@@ -1,5 +1,5 @@
 
-export * from './AstVisitor';
-export * from './VisitorFactory';
-export * from './VisitorFactoryManager';
-export * from './VisitResultFlattener';
+export * from './AstVisitor.js';
+export * from './VisitorFactory.js';
+export * from './VisitorFactoryManager.js';
+export * from './VisitResultFlattener.js';

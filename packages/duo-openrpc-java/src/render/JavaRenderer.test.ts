@@ -5,6 +5,7 @@ import {JavaInterpreter, JavaOptions, JavaRenderer} from '@omnigen/target-java';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
+import {jest} from '@jest/globals';
 
 describe('Java Rendering', () => {
 

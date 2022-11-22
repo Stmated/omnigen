@@ -1,3 +1,3 @@
 
-export * from './JavaTestUtils';
-export * from './OpenRpcTestUtils';
+export * from './JavaTestUtils.js';
+export * from './OpenRpcTestUtils.js';

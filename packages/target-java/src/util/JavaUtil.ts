@@ -20,12 +20,12 @@ import {
   RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '../options';
-import {JavaVisitor} from '../visit';
-import * as Java from '../ast';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '../options/index.js';
+import {JavaVisitor} from '../visit/index.js';
+import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 export type SuperTypePredicate = { (classType: JavaSuperTypeCapableType): boolean };
 

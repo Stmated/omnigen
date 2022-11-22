@@ -1,5 +1,11 @@
-import {Booleanish, Option, RealOptions, OptionResolver, Options} from '../options';
-import {OptionsResolvers} from '../options/OptionsResolvers';
+import {
+  Booleanish,
+  Option,
+  RealOptions,
+  OptionResolvers,
+  Options,
+} from '../options/index.js';
+import {OptionsResolvers} from '../options/OptionsResolvers.js';
 
 export interface ParserOptions extends Options {
   relaxedLookup: Option<Booleanish, boolean>;
@@ -15,7 +21,7 @@ export const DEFAULT_PARSER_OPTIONS: RealOptions<ParserOptions> = {
   relaxedUnknownTypes: false,
 };
 
-export const PARSER_OPTIONS_CONVERTERS: OptionResolver<ParserOptions> = {
+export const PARSER_OPTIONS_RESOLVERS: OptionResolvers<ParserOptions> = {
   autoTypeHints: OptionsResolvers.toBoolean,
   relaxedLookup: OptionsResolvers.toBoolean,
   relaxedPlaceholders: OptionsResolvers.toBoolean,

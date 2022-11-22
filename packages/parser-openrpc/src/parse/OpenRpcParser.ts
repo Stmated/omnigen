@@ -33,7 +33,7 @@ import {
   PrimitiveNullableKind,
   SchemaFile,
   TypeName,
-  OptionResolver,
+  OptionResolvers,
   OptionsUtil,
   TargetOptions,
   IncomingOptions,
@@ -41,9 +41,9 @@ import {
   RealOptions,
   DEFAULT_PARSER_OPTIONS,
   ParserOptions,
-  PARSER_OPTIONS_CONVERTERS,
+  PARSER_OPTIONS_RESOLVERS,
   Dereferenced,
-  Dereferencer, Case,
+  Dereferencer, Case, OptionAdditions,
 } from '@omnigen/core';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
@@ -68,30 +68,56 @@ import {LoggerFactory} from '@omnigen/core-log';
 import * as path from 'path';
 import {
   DEFAULT_JSONRPC_OPTIONS,
-  JsonRpcOptions, JSONRPC_OPTIONS_CONVERTERS,
-} from '../options';
+  JsonRpcParserOptions,
+  JSONRPC_OPTIONS_RESOLVERS,
+  JSONRPC_OPTIONS_FALLBACK,
+} from '../options/index.js';
 import {JsonSchemaParser, SchemaToTypeResult} from '@omnigen/parser-jsonschema';
 
-const logger = LoggerFactory.create(__filename);
+const logger = LoggerFactory.create(import.meta.url);
 
 type OutputAndType = { output: OmniOutput; type: OmniType };
 type TypeAndProperties = { type: OmniType; properties: OmniProperty[] | undefined };
 
-export type IOpenRpcParserOptions = JsonRpcOptions & ParserOptions;
+export type OpenRpcParserOptions = JsonRpcParserOptions & ParserOptions;
 
-export const OPENRPC_OPTIONS_CONVERTERS: OptionResolver<IOpenRpcParserOptions> = {
-  ...JSONRPC_OPTIONS_CONVERTERS,
-  ...PARSER_OPTIONS_CONVERTERS,
+export const OPENRPC_OPTIONS_RESOLVERS: OptionResolvers<OpenRpcParserOptions> = {
+  ...JSONRPC_OPTIONS_RESOLVERS,
+  ...PARSER_OPTIONS_RESOLVERS,
 };
 
-export const DEFAULT_OPENRPC_OPTIONS: IOpenRpcParserOptions = {
+export const DEFAULT_OPENRPC_OPTIONS: OpenRpcParserOptions = {
   ...DEFAULT_PARSER_OPTIONS,
   ...DEFAULT_JSONRPC_OPTIONS,
 };
 
-export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<IOpenRpcParserOptions> {
+export const OPENRPC_OPTIONS_FALLBACK: OptionAdditions<OpenRpcParserOptions> = {
+  jsonRpcVersion: value => {
+    if (JSONRPC_OPTIONS_FALLBACK.jsonRpcVersion) {
 
-  async createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<IOpenRpcParserOptions>> {
+      const jsonRpcFallback = JSONRPC_OPTIONS_FALLBACK.jsonRpcVersion(value);
+      if (!jsonRpcFallback) {
+        throw new Error(`There must be a JsonRpc options fallback registered`);
+      }
+
+      const realOpenRpcOptions: OpenRpcParserOptions = {
+        ...DEFAULT_OPENRPC_OPTIONS,
+        ...DEFAULT_PARSER_OPTIONS,
+        ...jsonRpcFallback,
+      };
+
+      // Not necessarily true, since we do not know what properties the JSONRpc fallback will give.
+      // But we will simply have to trust that it is so... or many things will break.
+      return realOpenRpcOptions as RealOptions<OpenRpcParserOptions>;
+    } else {
+      throw new Error(`There must be a JsonRpc options fallback registered`);
+    }
+  },
+};
+
+export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<OpenRpcParserOptions> {
+
+  async createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<OpenRpcParserOptions>> {
 
     const schemaObject = await schemaFile.asObject();
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
@@ -110,7 +136,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<IOp
   }
 }
 
-export class OpenRpcParserBootstrap implements ParserBootstrap<IOpenRpcParserOptions>, OptionsSource<IOpenRpcParserOptions> {
+export class OpenRpcParserBootstrap implements ParserBootstrap<OpenRpcParserOptions>, OptionsSource<OpenRpcParserOptions> {
 
   private readonly _deref: Dereferencer<OpenrpcDocument>;
 
@@ -118,14 +144,14 @@ export class OpenRpcParserBootstrap implements ParserBootstrap<IOpenRpcParserOpt
     this._deref = deref;
   }
 
-  getIncomingOptions<TTargetOptions extends TargetOptions>(): IncomingOptions<IOpenRpcParserOptions & TTargetOptions> | undefined {
+  getIncomingOptions<TTargetOptions extends TargetOptions>(): IncomingOptions<OpenRpcParserOptions & TTargetOptions> | undefined {
     const doc = this._deref.getFirstRoot();
-    const customOptions = doc['x-omnigen'] as IncomingOptions<IOpenRpcParserOptions & TTargetOptions>;
+    const customOptions = doc['x-omnigen'] as IncomingOptions<OpenRpcParserOptions & TTargetOptions>;
 
     return customOptions;
   }
 
-  createParser(options: RealOptions<IOpenRpcParserOptions>): Parser<IOpenRpcParserOptions> {
+  createParser(options: RealOptions<OpenRpcParserOptions>): Parser<OpenRpcParserOptions> {
 
     const opt = {...options}; // Copy the options, so we do not manipulate the given object.
     OptionsUtil.updateOptionsFromDocument(this._deref.getFirstRoot(), opt);
@@ -137,12 +163,12 @@ export class OpenRpcParserBootstrap implements ParserBootstrap<IOpenRpcParserOpt
 /**
  * TODO: Remove this class, keep the global variables in the class above
  */
-export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
+export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
 
   static readonly PATTERN_PLACEHOLDER = new RegExp(/^[$]{([^}]+)}$/);
   static readonly PATTERN_PLACEHOLDER_RELAXED = new RegExp(/(?:[$]{([^}]+)}$|^{{([^}]+?)}}$|^[$](.+?)$)/);
 
-  private readonly _options: RealOptions<IOpenRpcParserOptions>;
+  private readonly _options: RealOptions<OpenRpcParserOptions>;
 
   private _unknownError?: OmniOutput;
 
@@ -164,19 +190,19 @@ export class OpenRpcParser implements Parser<IOpenRpcParserOptions> {
   private _requestParamsClass?: OmniObjectType; // Used
 
   private readonly _deref: Dereferencer<OpenrpcDocument>;
-  private readonly _jsonSchemaParser: JsonSchemaParser<OpenrpcDocument, IOpenRpcParserOptions>;
+  private readonly _jsonSchemaParser: JsonSchemaParser<OpenrpcDocument, OpenRpcParserOptions>;
 
   private get doc(): OpenrpcDocument {
     return this._deref.getFirstRoot();
   }
 
-  constructor(dereferencer: Dereferencer<OpenrpcDocument>, options: RealOptions<IOpenRpcParserOptions>) {
+  constructor(dereferencer: Dereferencer<OpenrpcDocument>, options: RealOptions<OpenRpcParserOptions>) {
     this._deref = dereferencer;
     this._options = options;
     this._jsonSchemaParser = new JsonSchemaParser(this._deref, this._options);
   }
 
-  parse(): OmniModelParserResult<IOpenRpcParserOptions> {
+  parse(): OmniModelParserResult<OpenRpcParserOptions> {
 
     const endpoints = this.doc.methods.map(it => this.toOmniEndpointFromMethod(this._deref.get(it, this._deref.getFirstRoot())));
     const contact = this.doc.info.contact ? this.toOmniContactFromContact(this.doc.info.contact) : undefined;

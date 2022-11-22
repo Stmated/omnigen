@@ -27,7 +27,7 @@ export class ProtocolHandler {
   }
 
   public static http<R>(uri: string): Promise<R> {
-    return fetch(uri, {method: 'GET', compress: false})
+    return fetch.default(uri, {method: 'GET', compress: false})
       .then(response => {
         return response.json()
           .then(obj => {

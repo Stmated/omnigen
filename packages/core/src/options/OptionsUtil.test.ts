@@ -1,4 +1,4 @@
-import {Booleanish, IncomingOptions, Option, Options, OptionsUtil} from '../options';
+import {Booleanish, IncomingOptions, Option, Options, OptionsUtil, RealOptions} from '../options/index.js';
 
 interface AOptions extends Options {
   foo: Option<Booleanish, boolean>;
@@ -17,6 +17,30 @@ interface NoDynamicOptions extends Options {
   b: number;
   c: boolean;
 }
+
+interface OverlappingOptions extends Options {
+  a: Option<string | undefined, string>;
+  b: Option<string | undefined, string | null>;
+  c: string;
+}
+
+// const a: OverlappingOptions = {
+//   a: undefined,
+//   b: null,
+//   c: '',
+// };
+//
+// const b: IncomingOptions<OverlappingOptions> = {
+//   a: undefined,
+//   b: undefined,
+//   c: '',
+// };
+//
+// const c: RealOptions<OverlappingOptions> = {
+//   a: undefined,
+//   b: 'qwe',
+//   c: '',
+// };
 
 test('Booleanish', async () => {
 
@@ -114,7 +138,7 @@ test('Additions', async () => {
     qwe: 'qwe',
   };
 
-  const override: IncomingOptions<AOptions> = {
+  const override: Partial<RealOptions<AOptions>> = {
     bar: 'barrrr',
   };
 

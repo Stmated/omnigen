@@ -1,5 +1,5 @@
-import {OmniModelParserResult, ParserOptions, SchemaFile} from '../parse';
-import {OptionsSource, RealOptions} from '../options';
+import {OmniModelParserResult, ParserOptions, SchemaFile} from '../parse/index.js';
+import {OptionsSource, RealOptions} from '../options/index.js';
 
 export interface ParserBootstrapFactory<TOpt extends ParserOptions> {
   createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<TOpt>>;

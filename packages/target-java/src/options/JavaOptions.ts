@@ -4,12 +4,11 @@ import {
   DEFAULT_TARGET_OPTIONS,
   GenericTargetOptions,
   Option,
-  OptionResolver,
+  OptionResolvers,
   OptionsUtil,
   PackageOptions,
   PackageResolverOptionsParser,
   PrimitiveGenerificationChoice,
-  RealOptions,
 } from '@omnigen/core';
 
 export enum UnknownType {
@@ -35,7 +34,7 @@ export interface JavaOptions extends GenericTargetOptions, PackageOptions {
   fieldAccessorMode: FieldAccessorMode;
 }
 
-export const DEFAULT_JAVA_OPTIONS: RealOptions<JavaOptions> = {
+export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
   ...DEFAULT_PACKAGE_OPTIONS,
   ...DEFAULT_TARGET_OPTIONS,
   immutableModels: true,
@@ -51,7 +50,7 @@ export const DEFAULT_JAVA_OPTIONS: RealOptions<JavaOptions> = {
   fieldAccessorMode: FieldAccessorMode.POJO,
 };
 
-export const JAVA_OPTIONS_CONVERTERS: OptionResolver<JavaOptions> = {
+export const JAVA_OPTIONS_RESOLVER: OptionResolvers<JavaOptions> = {
   packageResolver: v => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,

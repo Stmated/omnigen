@@ -1,5 +1,5 @@
-import {OmniModel, OmniType} from '../parse/OmniModel';
-import {OmniUtil} from '../parse/OmniUtil';
+import {OmniModel, OmniType} from '../parse/OmniModel.js';
+import {OmniUtil} from '../parse/OmniUtil.js';
 
 export class Sorters {
 

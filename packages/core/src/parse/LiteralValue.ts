@@ -1,1 +1,3 @@
-export type LiteralValue = boolean | number | string | null;
+import {OmniPrimitiveConstantValue} from './OmniModel.js';
+
+export type LiteralValue = OmniPrimitiveConstantValue | null;

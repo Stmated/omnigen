@@ -7,7 +7,7 @@ describe('InnerTypeCompression', () => {
 
   test('CompressNo', async () => {
 
-    const options: RealOptions<JavaOptions> = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
       compressSoloReferencedTypes: false,
@@ -56,7 +56,7 @@ describe('InnerTypeCompression', () => {
 
   test('CompressYes', async () => {
 
-    const options: RealOptions<JavaOptions> = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
       compressSoloReferencedTypes: true,
@@ -120,7 +120,7 @@ describe('InnerTypeCompression', () => {
 
   test('CompressYes-error-structure', async () => {
 
-    const options: RealOptions<JavaOptions> = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
       compressSoloReferencedTypes: true,
@@ -150,7 +150,7 @@ describe('InnerTypeCompression', () => {
 
   test('CompressYes-error-structure w/ generics', async () => {
 
-    const options: RealOptions<JavaOptions> = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
       compressSoloReferencedTypes: true,

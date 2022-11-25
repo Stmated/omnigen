@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "vite build & tsc -d --declarationDir dist/ --emitDeclarationOnly",
-    "generate": "ts-node src/index.ts --pretty $@ | pino-pretty -c -S -t --sync false",
+    "generate": "ts-node src/index.ts --pretty $@",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w"
   },
@@ -24,9 +24,7 @@
     "@omnigen/config-typescript": "*",
     "@omnigen/eslint-config-custom": "*",
     "@types/node": "^16.18.3",
-    "local-package-publisher": "^1.0.4",
     "ts-node": "^10.9.1",
-    "typescript": "^4.9.3",
-    "vite": "^3.2.3"
+    "typescript": "^4.9.3"
   }
 }

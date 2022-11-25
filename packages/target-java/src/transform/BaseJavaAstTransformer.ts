@@ -17,20 +17,23 @@ import {
   OmniOptionallyNamedType,
   OmniOutput,
   OmniPotentialInterfaceType,
-  OmniPrimitiveConstantValue,
+  OmniPrimitiveBoxMode,
   OmniPrimitiveKind,
+  OmniPrimitiveNonNullableType,
   OmniPrimitiveType,
   OmniProperty,
   OmniType,
   OmniTypeKind,
   OmniUtil,
-  PrimitiveNullableKind,
   RealOptions,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
 import {AbstractObjectDeclaration} from '../ast/index.js';
 import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
-import {JavaAstUtils} from '../transform/index.js';
+import {JavaAstUtils} from './JavaAstUtils.js';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
@@ -48,7 +51,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
 
     for (const type of exportableTypes.all) {
-      if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable == PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE) {
+
+      if (type.kind == OmniTypeKind.PRIMITIVE && type.boxMode == OmniPrimitiveBoxMode.WRAP) {
 
         // The primitive is said to not be nullable, but to still be a primitive.
         // This is not really possible in Java, so we need to wrap it inside a custom class.
@@ -146,9 +150,15 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private createNotNullablePrimitiveWrapper(type: OmniPrimitiveType, kindName: string): Java.ClassDeclaration {
 
-    const valueType: OmniPrimitiveType = {
+    const valuePrimitiveKind = type.primitiveKind;
+    if (valuePrimitiveKind == OmniPrimitiveKind.VOID || valuePrimitiveKind == OmniPrimitiveKind.NULL) {
+      throw new Error(`Cannot create a non-nullable primitive of type void`);
+    }
+
+    const valueType: OmniPrimitiveNonNullableType = {
       kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: type.primitiveKind,
+      primitiveKind: valuePrimitiveKind,
+      nullable: false,
     };
 
     const valueIdentifier = new Java.Identifier('value');
@@ -171,12 +181,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     );
 
     return new Java.ClassDeclaration(
-      new Java.RegularType(valueType),
+      new Java.RegularType(type),
       new Java.Identifier(`Primitive${kindName}`),
       new Java.Block(
         valueField,
         // Force the name to be "getValue" so that it does not become "isValue" for a primitive boolean.
-        new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue')),
+        // new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue')),
       ),
     );
   }
@@ -199,8 +209,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     JavaAstUtils.addGeneratedAnnotation(enumDeclaration);
 
     const comments = BaseJavaAstTransformer.getCommentsForType(type, model, options);
-    if (comments.length > 0) {
-      enumDeclaration.comments = new Java.CommentList(...comments.map(it => new Java.Comment(it)));
+    if (comments) {
+      enumDeclaration.comments = new Java.CommentBlock(comments);
     }
 
     if (type.enumConstants) {
@@ -346,8 +356,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
     this.addExtendsAndImplements(model, type, declaration);
 
-    if (comments.length > 0) {
-      declaration.comments = new Java.CommentList(...comments.map(it => new Java.Comment(it)));
+    if (comments) {
+      declaration.comments = new Java.CommentBlock(comments);
     }
 
     root.children.push(new Java.CompilationUnit(
@@ -472,7 +482,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     model: OmniModel,
     type: OmniCompositionType<JavaSubTypeCapableType | OmniPrimitiveType, CompositionKind>,
     declaration: AbstractObjectDeclaration,
-    _comments: string[], // TODO: Add the comments to whatever is created?
+    _comments: Java.FreeTextType | undefined, // TODO: Add the comments to whatever is created?
     options: JavaOptions,
   ): void {
 
@@ -507,7 +517,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         new Java.RuntimeTypeMapping(
           type.types,
           options,
-          t => BaseJavaAstTransformer.getCommentsForType(t, model, options).map(it => new Java.Comment(it)),
+          t => BaseJavaAstTransformer.getCommentsForType(t, model, options),
         ),
       );
     }
@@ -647,7 +657,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
     for (const primitiveType of primitiveTypes) {
 
-      if (!primitiveType.valueConstant) {
+      if (!primitiveType.value) {
 
         // We have no idea what the value is supposed to contain.
         // So there is not really much we can do here. It will be up to the user to check the "isKnown()" method.
@@ -656,12 +666,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
       // This primitive type has a value constant, so we can treat it as a known value, like an ENUM.
       let fieldIdentifier: Java.Identifier;
-      let valueConstant: OmniPrimitiveConstantValue;
-      if (typeof primitiveType.valueConstant == 'function') {
-        valueConstant = primitiveType.valueConstant(primitiveType); // TODO: Check if this is correct
-      } else {
-        valueConstant = primitiveType.valueConstant;
-      }
+      const valueConstant = primitiveType.value;
+      // if (typeof primitiveType.value == 'function') {
+      //   valueConstant = primitiveType.value(primitiveType); // TODO: Check if this is correct
+      // } else {
+      //   valueConstant = primitiveType.value;
+      // }
 
       if (typeof valueConstant == 'string') {
         fieldIdentifier = new Java.Identifier(JavaUtil.getSafeIdentifierName(Case.constant(valueConstant)));
@@ -813,7 +823,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       ),
     );
 
-    this.addSelfIsOfOneOfStaticFieldsMethod(knownValueFields, declaration);
+    this.addSelfIfOfOneOfStaticFieldsMethod(knownValueFields, declaration);
 
     // Add any check methods that we have created.
     declaration.body.children.push(...checkMethods);
@@ -841,7 +851,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     );
   }
 
-  private addSelfIsOfOneOfStaticFieldsMethod(
+  private addSelfIfOfOneOfStaticFieldsMethod(
     knownValueFields: Java.Field[],
     declaration: Java.AbstractObjectDeclaration,
   ): void {
@@ -854,8 +864,8 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             new Java.Identifier('isKnown'),
             JavaAstUtils.createTypeNode({
               kind: OmniTypeKind.PRIMITIVE,
+              nullable: false,
               primitiveKind: OmniPrimitiveKind.BOOL,
-              nullable: PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE,
             }),
           ),
           new Java.Block(
@@ -895,15 +905,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return knownBinary;
   }
 
-  public static getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
-    const comments: string[] = [];
-    if (type.description) {
-      comments.push(type.description);
-    }
-    if (type.summary) {
-      comments.push(type.summary);
-    }
+  public static getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.FreeTextType | undefined {
 
+    const comments: Java.FreeTextType[] = [];
+
+    let exampleIndex = 0;
     const handledResponse: OmniOutput[] = [];
     for (const endpoint of model.endpoints) {
 
@@ -914,10 +920,10 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         for (const property of endpoint.request.type.properties) {
           if (property.type == type) {
             if (property.description) {
-              comments.push(property.description);
+              comments.push(new Java.FreeTextParagraph(new Java.FreeText(property.description)));
             }
             if (property.summary) {
-              comments.push(property.summary);
+              comments.push(new Java.FreeTextParagraph(new Java.FreeText(property.summary)));
             }
           }
         }
@@ -930,37 +936,59 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         if (response.type == type && !handledResponse.includes(response)) {
           handledResponse.push(response);
 
-          if (response.description || response.summary) {
-            comments.push(`<section>\n<h2>${response.name}</h2>`);
+          if (response.description) {
+            comments.push(new Java.FreeTextParagraph(['As response: ', response.description]));
+          }
 
+          if (response.summary) {
             if (response.description) {
-              comments.push(response.description);
+              comments.push(new Java.FreeTextParagraph(['<small>', response.summary, '</small>']));
+            } else {
+              comments.push(new Java.FreeTextParagraph(['As response: ', response.summary]));
             }
-            if (response.summary) {
-              comments.push(response.summary);
-            }
-
-            comments.push(`</section>`);
           }
         }
       }
 
       for (const example of endpoint.examples) {
-
         const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
         if (example.result.type == type || parameterHasType) {
-          comments.push(BaseJavaAstTransformer.getExampleComments(example));
+
+          exampleIndex++;
+          comments.push(BaseJavaAstTransformer.getExampleComments(example, exampleIndex));
         }
       }
     }
 
     comments.push(...BaseJavaAstTransformer.getLinkCommentsForType(type, model, options));
 
+    const hasExtraComments = (comments.length > 0);
+    if (type.description) {
+      if (hasExtraComments) {
+        comments.splice(0, 0, new Java.FreeTextLine(type.description));
+      } else {
+        comments.push(type.description);
+      }
+    }
+    if (type.summary) {
+      if (hasExtraComments) {
+        comments.splice(0, 0, new Java.FreeTextLine(type.summary));
+      } else {
+        comments.push(type.summary);
+      }
+    }
+
+    if (comments.length == 0) {
+      return undefined;
+    }
+
     return comments;
   }
 
-  public static getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): string[] {
-    const comments: string[] = [];
+  public static getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.FreeTextType[] {
+
+    const comments: Java.FreeTextType[] = [];
+
     if (!options.includeLinksOnType) {
       return comments;
     }
@@ -991,11 +1019,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         if (firstMatch) {
 
           // There are links between different servers/methods
-          comments.push('<section>\n<h2>Links</h2>');
-          comments.push(...continuation.mappings.map(mapping => {
-            return BaseJavaAstTransformer.getMappingSourceTargetComment(mapping, options);
-          }));
-          comments.push('</section>');
+          comments.push(new Java.FreeTextSection(
+            2, 'Links',
+            continuation.mappings.map(mapping => {
+              return BaseJavaAstTransformer.getMappingSourceTargetComment(mapping, options);
+            }),
+          ));
         }
       }
     }
@@ -1003,45 +1032,67 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return comments;
   }
 
-  public static getLink(propertyOwner: OmniType, property: OmniProperty): string {
+  public static getLink(propertyOwner: OmniType, property: OmniProperty): Java.FreeTextPropertyLink {
 
-    const memberName = `${JavaUtil.getGetterName(property.name, property.type)}()`;
-    return `{@link ${JavaUtil.getFullyQualifiedName(propertyOwner)}#${memberName}}`;
+    return new Java.FreeTextPropertyLink(
+      new Java.RegularType(propertyOwner, false),
+      property,
+    );
   }
 
-  public static getExampleComments(example: OmniExamplePairing): string {
+  public static getExampleComments(example: OmniExamplePairing, index: number): Java.FreeTextType {
 
-    const commentLines: string[] = [];
-    commentLines.push(`<h2>Example - ${example.name}</h2>`);
+    const commentLines: Java.FreeTextType[] = [];
 
-    if (example.description) {
-      commentLines.push(example.description);
-    }
-    if (example.summary) {
-      commentLines.push(example.summary);
-    }
+    // if (example.description) {
+    //   commentLines.push(new Java.FreeTextParagraph(example.description));
+    // }
+    // if (example.summary) {
+    //   commentLines.push(new Java.FreeTextParagraph(example.summary));
+    // }
 
     const params = (example.params || []);
     if (params.length > 0) {
-      commentLines.push(`<h3>➡ Request</h3>`);
 
-      for (let i = 0; i < params.length; i++) {
+      const lines: Java.FreeTextLine[] = [];
+      for (const param of params) {
 
-        const param = params[i];
-        const propertyLink = BaseJavaAstTransformer.getLink(param.property.owner, param.property);
-        commentLines.push(`  📌 ${propertyLink} (${param.name}): ${JSON.stringify(param.value)}`);
+        lines.push(new Java.FreeTextLine([
+          `<dt>`,
+          BaseJavaAstTransformer.getLink(param.property.owner, param.property),
+          `</dt>`,
+        ]));
+
+        lines.push(new Java.FreeTextLine([
+          `<dd>`,
+          new Java.FreeText(`${JSON.stringify(param.value)}`),
+          `</dd>`,
+        ]));
+      }
+
+      if (lines.length > 0) {
+        commentLines.push(new Java.FreeTextParagraph([
+          new Java.FreeTextLine(['<strong>', `📥 Request`, '</strong>']),
+          [
+            new Java.FreeTextLine('<dl>'),
+            new Java.FreeTextIndent(lines),
+            new Java.FreeTextLine('</dl>'),
+          ],
+        ]));
       }
     }
 
     if (example.result.description || example.result.summary || example.result.value) {
 
-      commentLines.push(`<h3>↩ Response - ${example.result.name}</h3>`);
+      const lines: Java.FreeTextLine[] = [];
 
-      if (example.result.description) {
-        commentLines.push(`  💡 ${example.result.description}`);
-      }
-      if (example.result.summary) {
-        commentLines.push(`  💡 ${example.result.summary}`);
+      // if (example.result.description) {
+      //   lines.push(new Java.FreeTextLine(new Java.FreeText(`💡 ${example.result.description}`)));
+      // }
+      if (example.result.summary && example.result.description) {
+
+        // Only show summary if no description (since it will be shown as the title)
+        lines.push(new Java.FreeTextLine(new Java.FreeText(`💡 ${example.result.summary}`)));
       }
 
       // WRONG CLASS!
@@ -1054,21 +1105,44 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           prettyValue = JSON.stringify(example.result.value, null, 2);
         }
 
-        commentLines.push(`  ⬅ returns <pre>{@code ${prettyValue}}</pre>`);
+        lines.push(new Java.FreeTextLine(`<pre>{@code ${prettyValue}}</pre>`));
+      }
+
+      if (lines.length > 0) {
+        // commentLines.push(new Java.FreeTextSection(3, `📤 Response - ${example.result.name}`, lines));
+        const displayName = example.result.description || example.result.summary || example.result.name;
+        commentLines.push(new Java.FreeTextLine(new Java.FreeTextParagraph([
+          new Java.FreeTextLine(['<strong>', `📤 Response`, '</strong>', ` - ${displayName}`]),
+          ...lines,
+        ])));
+        // commentLines.push(lines));
       }
     }
 
-    return commentLines.join('\n  ');
+    return [
+      new Java.FreeTextLine('<hr />'),
+      // new Java.FreeTextHeader(2, `Example #${index + 1}`),
+      new Java.FreeTextLine([
+        '<strong>',
+        `Example #${index}`,
+        '</strong>',
+        ` - ${example.description || example.name}`,
+        (example.summary ? ` - ${example.summary}` : ''),
+      ]),
+      new Java.FreeTextIndent(
+        commentLines,
+      ),
+    ];
   }
 
   public static getMappingSourceTargetComment(
     mapping: OmniLinkMapping,
     options: JavaOptions,
     only: 'source' | 'target' | undefined = undefined,
-  ): string {
+  ): Java.FreeTextType {
 
-    const sourceLinks: string[] = [];
-    const targetLinks: string[] = [];
+    const sourceLinks: Java.FreeTextType[] = [];
+    const targetLinks: Java.FreeTextType[] = [];
 
     if (!only || only == 'source') {
       if (mapping.source.propertyPath) {
@@ -1121,9 +1195,9 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     if (type.kind == OmniTypeKind.COMPOSITION) {
       if (type.compositionKind == CompositionKind.XOR) {
         if (type.types.length == 2) {
-          const nullType = type.types.find(it => it.kind == OmniTypeKind.NULL);
+          const nullType = type.types.find(it => it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL);
           if (nullType) {
-            const otherType = type.types.find(it => it.kind != OmniTypeKind.NULL);
+            const otherType = type.types.find(it => !(it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL));
             if (otherType && otherType.kind == OmniTypeKind.PRIMITIVE) {
 
               // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
@@ -1169,5 +1243,4 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     const primitiveName = `Primitive${Case.pascal(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
     referenceType.fqn = JavaUtil.getClassNameWithPackageName(referenceType, primitiveName, options);
   }
-
 }

@@ -1,4 +1,4 @@
-import {OmniModel, OmniNullType, OmniType, OmniTypeKind} from './OmniModel.js';
+import {OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from './OmniModel.js';
 import {OmniUtil, TypeOwner} from './OmniUtil.js';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -32,7 +32,11 @@ export interface BFSTraverseCallback<R> {
 
 export class OmniTypeVisitor {
 
-  private static readonly _NULL_TYPE: OmniNullType = {kind: OmniTypeKind.NULL};
+  private static readonly _NULL_TYPE: OmniPrimitiveType = {
+    kind: OmniTypeKind.PRIMITIVE,
+    primitiveKind: OmniPrimitiveKind.NULL,
+    nullable: true
+  };
 
   public visitTypesBreadthFirst<R>(
     input: TypeOwner<OmniType> | undefined,
@@ -163,7 +167,6 @@ export class OmniTypeVisitor {
           q.push({...dq, owner: type, parent: type, type: type.of, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
           break;
         case OmniTypeKind.PRIMITIVE:
-        case OmniTypeKind.NULL:
         case OmniTypeKind.UNKNOWN:
         case OmniTypeKind.ENUM:
         case OmniTypeKind.HARDCODED_REFERENCE:
@@ -398,7 +401,6 @@ export class OmniTypeVisitor {
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.PRIMITIVE:
-      case OmniTypeKind.NULL:
       case OmniTypeKind.UNKNOWN:
       case OmniTypeKind.ENUM:
       case OmniTypeKind.HARDCODED_REFERENCE:

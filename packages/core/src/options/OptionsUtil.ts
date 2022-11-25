@@ -5,7 +5,7 @@ import {Booleanish} from './Booleanish.js';
 import {IncomingOptions} from './IncomingOptions.js';
 import {RealOptions} from './RealOptions.js';
 import {Case} from '../util/index.js';
-import {OptionsResolvers} from './OptionsResolvers.js';
+import {StandardOptionResolvers} from './StandardOptionResolvers.js';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -26,12 +26,6 @@ export type OptionAdditions<TOpt extends Options> = {
     ? (value: TInc) => Partial<RealOptions<TOpt>> | undefined
     : (value: TOpt[Key]) => Partial<RealOptions<TOpt>> | undefined
 };
-
-export type SimplifiedInputOptions<T> = T extends RealOptions<infer TRealOpt>
-  ? TRealOpt
-  : T extends IncomingOptions<infer TIncomingOpt>
-    ? TIncomingOpt
-    : T;
 
 export class OptionsUtil {
 
@@ -154,11 +148,11 @@ export class OptionsUtil {
   }
 
   public static toBoolean(this: void, value: Booleanish | undefined): Promise<boolean> {
-    return OptionsResolvers.toBoolean(value);
+    return StandardOptionResolvers.toBoolean(value);
   }
 
   public static toString(this: void, value: string | number): Promise<string> {
-    return OptionsResolvers.toString(value);
+    return StandardOptionResolvers.toString(value);
   }
 
   public static updateOptionsFromDocument<TOpt extends Options>(doc: Record<string, Record<string, unknown>>, opt: TOpt): void {

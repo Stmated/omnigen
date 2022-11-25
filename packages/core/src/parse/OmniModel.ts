@@ -49,8 +49,17 @@ export interface OmniProperty {
   description?: string | undefined;
   summary?: string | undefined;
   deprecated?: boolean;
+  /**
+   * TODO: Move this into the type? A validation hint?
+   */
   required?: boolean;
+  /**
+   * TODO: Move this into the type? A validation hint?
+   */
   readOnly?: boolean;
+  /**
+   * TODO: Move this into the type? A validation hint?
+   */
   writeOnly?: boolean;
 
   accessLevel?: OmniAccessLevel;
@@ -88,11 +97,6 @@ export enum OmniTypeKind {
    * It is a way of saying "it is an object, but it can be anything"
    */
   UNKNOWN = 'UNKNOWN',
-
-  /**
-   * TODO: Should this be a primitive?
-   */
-  NULL = 'NULL',
 }
 
 export enum OmniPrimitiveKind {
@@ -107,10 +111,8 @@ export enum OmniPrimitiveKind {
   CHAR = 'CHAR',
   BOOL = 'BOOL',
   VOID = 'VOID',
+  NULL = 'NULL',
 }
-
-type OmniAlwaysNullKnownKind = OmniTypeKind.NULL;
-export type OmniNullType = OmniBaseType<OmniAlwaysNullKnownKind>;
 
 // TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
 
@@ -144,7 +146,7 @@ export type OmniSuperGenericTypeCapableType = OmniObjectType
   | OmniExternalModelReferenceType<OmniSuperGenericTypeCapableType> // Needs to be unwrapped/resolved every time
   ;
 
-export type OmniType = OmniNullType
+export type OmniType =
   | OmniArrayTypes
   | OmniObjectType
   | OmniUnknownType
@@ -204,12 +206,6 @@ export interface OmniCompositionType<T extends OmniType, K extends CompositionKi
   compositionKind: K;
   types: T[];
 }
-
-// type OmniCompositionType<T extends OmniType> = GenericOmniCompositionType<T, >;
-
-// export interface OmniCompositionType<T extends OmniType> extends GenericOmniCompositionType<T, CompositionKind.AND | CompositionKind.OR | CompositionKind.XOR | CompositionKind.NOT> {
-//
-// }
 
 type OmniDictionaryKnownKind = OmniTypeKind.DICTIONARY;
 
@@ -282,7 +278,7 @@ export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKi
 type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
 
 export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
-  valueConstant?: OmniPrimitiveConstantValue | undefined;
+  valueDefault?: OmniPrimitiveConstantValue | null;
   isAny?: boolean;
 }
 
@@ -320,45 +316,80 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind>, OmniN
 type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
 export type OmniPrimitiveConstantValue = string | boolean | number
 
-/**
- * This means that it is either directly a constant value,
- * or it is a lazy value that should be produced as late as possible in the code generation.
- */
-export type OmniPrimitiveConstantValueOrLazySubTypeValue =
-  OmniPrimitiveConstantValue
-  | { (subtype: OmniType): OmniPrimitiveConstantValue };
+// export enum PrimitiveNullableKind {
+//   NOT_NULLABLE,
+//   NOT_NULLABLE_PRIMITIVE,
+//   NULLABLE,
+// }
 
-export enum PrimitiveNullableKind {
-  NOT_NULLABLE,
-  NULLABLE,
-  NOT_NULLABLE_PRIMITIVE,
-}
-
-export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKnownKind> {
-  primitiveKind: OmniPrimitiveKind;
+export enum OmniPrimitiveValueMode {
   /**
-   * Nullable means the primitive is for example not a "boolean" but a nullable "Boolean"
+   * This means the value is the default value of the type unless anything else has/can be set.
    */
-  nullable?: PrimitiveNullableKind;
-  valueConstant?: OmniPrimitiveConstantValueOrLazySubTypeValue | undefined;
-  valueConstantOptional?: boolean | undefined;
+  DEFAULT = 'DEFAULT',
+  /**
+   * This means that the value is the ONLY value that is allowed for the type.
+   * It is not really the type, it is the value itself.
+   */
+  LITERAL = 'LITERAL',
 }
 
-export type OmniPrimitiveTypeKinds = OmniPrimitiveKind.INTEGER
+export enum OmniPrimitiveBoxMode {
+  /**
+   * Box means for example 'int' -> 'Integer'
+   */
+  BOX = 'BOX',
+  /**
+   * Wrap means for example 'int' -> 'PrimitiveInt'.
+   *
+   * A custom-generated class to hold a forced non-null primitive int, but usable as a generic.
+   */
+  WRAP = 'WRAP',
+}
+
+export interface OmniPrimitiveBaseType extends OmniBaseType<OmniPrimitiveKnownKind> {
+
+  /**
+   * Undefined = OmniPrimitiveValueMode.DEFAULT
+   */
+  valueMode?: OmniPrimitiveValueMode;
+}
+
+/**
+ * Nullable means the primitive is for example not a "boolean" but a nullable "Boolean"
+ */
+export interface OmniPrimitiveNullableType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveKind;
+  nullable: true;
+  boxMode?: OmniPrimitiveBoxMode;
+  value?: OmniPrimitiveConstantValue | null;
+}
+
+export type OmniPrimitiveNonNullableKind = Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
+
+export interface OmniPrimitiveNonNullableType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveNonNullableKind;
+  nullable?: false,
+  boxMode?: OmniPrimitiveBoxMode.WRAP;
+  value?: OmniPrimitiveConstantValue;
+}
+
+export type OmniPrimitiveType = OmniPrimitiveNullableType | OmniPrimitiveNonNullableType
+
+export type AllowedEnumTsTypes = number | string;
+export type OmniAllowedEnumPrimitiveKinds = OmniPrimitiveKind.STRING
+  | OmniPrimitiveKind.INTEGER
   | OmniPrimitiveKind.INTEGER_SMALL
   | OmniPrimitiveKind.DOUBLE
   | OmniPrimitiveKind.FLOAT
   | OmniPrimitiveKind.DECIMAL
   | OmniPrimitiveKind.NUMBER;
 
-export type AllowedEnumTsTypes = number | string;
-export type AllowedEnumOmniPrimitiveTypes = OmniPrimitiveKind.STRING | OmniPrimitiveTypeKinds;
-
 type OmniEnumKnownKind = OmniTypeKind.ENUM;
 
 export interface OmniEnumType extends OmniBaseType<OmniEnumKnownKind>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];
-  primitiveKind: AllowedEnumOmniPrimitiveTypes;
+  primitiveKind: OmniAllowedEnumPrimitiveKinds;
 
   /**
    * If this is true, then the enum actually also need to support any other value outside of the constants.

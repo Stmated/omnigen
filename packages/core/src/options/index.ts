@@ -11,4 +11,4 @@ export * from './RealOptions.js';
 export * from './OptionsSource.js';
 export * from './PrimitiveGenerificationChoice.js';
 export * from './OptionsUtil.js';
-export * from './OptionsResolvers.js';
+export * from './StandardOptionResolvers.js';

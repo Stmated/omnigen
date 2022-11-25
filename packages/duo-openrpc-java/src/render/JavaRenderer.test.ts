@@ -27,8 +27,7 @@ describe('Java Rendering', () => {
 
       for (const fileName of fileNames) {
 
-        const javaOptions = DEFAULT_TEST_JAVA_OPTIONS;
-        const result = await OpenRpcTestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, javaOptions);
+        const result = await OpenRpcTestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
         const interpretation = await new JavaInterpreter(result.options).buildSyntaxTree(result.model, [], result.options);
 
         let baseDir: string;
@@ -47,7 +46,7 @@ describe('Java Rendering', () => {
           // Ignore any error here and just hope for the best
         }
 
-        const renderer = new JavaRenderer(DEFAULT_TEST_JAVA_OPTIONS, cu => {
+        const renderer = new JavaRenderer(result.options, cu => {
 
           if (cu.fileName.indexOf('#') !== -1) {
             throw new Error(`# not allowed in CU '${cu.fileName}'`);

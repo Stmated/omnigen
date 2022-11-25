@@ -66,8 +66,12 @@ export class JavaVisitor<R> implements AstVisitor<R> {
       return results;
     };
 
-    this.visitCommentList = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitComment = () => undefined;
+    this.visitCommentBlock = (node, visitor) => {
+      return this.visitFreeTextRecursively(node.text, visitor, () => undefined as R);
+    };
+    this.visitComment = (node, visitor) => {
+      return this.visitFreeTextRecursively(node.text, visitor, () => undefined as R);
+    };
     this.visitFieldBackedGetter = (node, visitor) => visitor.visitMethodDeclaration(node, visitor);
     this.visitFieldBackedSetter = (node, visitor) => visitor.visitMethodDeclaration(node, visitor);
 
@@ -271,7 +275,47 @@ export class JavaVisitor<R> implements AstVisitor<R> {
       node.member.visit(visitor),
     ];
 
-    this.visitSelfReference = () => [];
+    this.visitFreeText = (node, visitor) => {
+      return [];
+      // return this.visitFreeTextRecursively(node, visitor, () => undefined as R);
+    };
+    this.visitFreeTextParagraph = (node, visitor) => {
+      return this.visitFreeTextRecursively(node.child, visitor, () => undefined as R);
+    };
+    this.visitFreeTextLine = (node, visitor) => {
+      return this.visitFreeTextRecursively(node.child, visitor, () => undefined as R);
+    };
+    this.visitFreeTextIndent = (node, visitor) => {
+      return this.visitFreeTextRecursively(node.child, visitor, () => undefined as R);
+    };
+    this.visitFreeTextHeader = (node, visitor) => {
+      return this.visitFreeTextRecursively(node.child, visitor, () => undefined as R);
+    };
+    this.visitFreeTextTypeLink = (node, visitor) => node.type.visit(visitor);
+    this.visitFreeTextMethodLink = (node, visitor) => [
+      node.type.visit(visitor),
+      node.method.visit(visitor),
+    ];
+    this.visitFreeTextSection = (node, visitor) => [
+      node.header.visit(visitor),
+      this.visitFreeTextRecursively(node.content, visitor, () => undefined as R),
+    ];
+    this.visitFreeTextPropertyLink = (node, visitor) => node.type.visit(visitor);
+
+    this.visitSelfReference = () => undefined;
+  }
+
+  protected visitFreeTextRecursively(freeText: Java.FreeTextType, visitor: JavaVisitor<R>, translator: (v: string) => R): VisitResult<R> {
+
+    if (typeof freeText == 'string') {
+      return translator(freeText);
+    } else {
+      if (Array.isArray(freeText)) {
+        return freeText.map(it => this.visitFreeTextRecursively(it, visitor, translator));
+      } else {
+        return freeText.visit(visitor); // this.visitFreeTextRecursively(freeText, visitor, translator);
+      }
+    }
   }
 
   visitorJava: JavaVisitor<R>;
@@ -286,8 +330,18 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitBinaryExpression: JavaVisitFn<Java.BinaryExpression, R>;
   visitModifier: JavaVisitFn<Java.Modifier, R>;
   visitField: JavaVisitFn<Java.Field, R>;
-  visitCommentList: JavaVisitFn<Java.CommentList, R>;
+  visitCommentBlock: JavaVisitFn<Java.CommentBlock, R>;
   visitComment: JavaVisitFn<Java.Comment, R>;
+  visitFreeText: JavaVisitFn<Java.FreeText, R>;
+  visitFreeTextParagraph: JavaVisitFn<Java.FreeTextParagraph, R>;
+  visitFreeTextSection: JavaVisitFn<Java.FreeTextSection, R>;
+  visitFreeTextLine: JavaVisitFn<Java.FreeTextLine, R>;
+  visitFreeTextIndent: JavaVisitFn<Java.FreeTextIndent, R>;
+  visitFreeTextHeader: JavaVisitFn<Java.FreeTextHeader, R>;
+  visitFreeTextTypeLink: JavaVisitFn<Java.FreeTextTypeLink, R>;
+  visitFreeTextMethodLink: JavaVisitFn<Java.FreeTextMethodLink, R>;
+  visitFreeTextPropertyLink: JavaVisitFn<Java.FreeTextPropertyLink, R>;
+  // visitFreeTextList: JavaVisitFn<Java.FreeTextList, R>;
   visitFieldBackedGetter: JavaVisitFn<Java.FieldBackedGetter, R>;
   visitFieldBackedSetter: JavaVisitFn<Java.FieldBackedSetter, R>;
   visitMethodDeclaration: JavaVisitFn<Java.MethodDeclaration, R>;

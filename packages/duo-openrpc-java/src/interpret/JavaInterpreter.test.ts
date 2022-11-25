@@ -3,7 +3,7 @@ import {JavaInterpreter} from '@omnigen/target-java';
 import {JavaOptions, JavaUtil} from '@omnigen/target-java';
 import {OmniTypeKind, OmniUtil} from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
-import {PrimitiveGenerificationChoice, RealOptions} from '@omnigen/core';
+import {PrimitiveGenerificationChoice} from '@omnigen/core';
 
 describe('JavaInterpreter', () => {
 
@@ -47,7 +47,7 @@ describe('JavaInterpreter', () => {
 
   test('ensureGenericsAreSpecialized', async () => {
 
-    const options: RealOptions<JavaOptions> = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
     };
@@ -101,7 +101,7 @@ describe('JavaInterpreter', () => {
 
   test('ensureGenericsAreBoxed', async () => {
 
-    const options: RealOptions<JavaOptions> = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.WRAP_OR_BOX,
     };
@@ -150,7 +150,7 @@ describe('JavaInterpreter', () => {
 
   test('ensureGenericsAreSkipped', async () => {
 
-    const options: RealOptions<JavaOptions> = {
+    const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
       onPrimitiveGenerification: PrimitiveGenerificationChoice.ABORT,
     };

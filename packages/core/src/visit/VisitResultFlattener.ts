@@ -50,4 +50,23 @@ export class VisitResultFlattener {
       throw e;
     }
   }
+
+  public static visitWithSingularResult<T>(
+    visitor: AstVisitor<T>,
+    node: AbstractStNode,
+    fallback: T,
+    reducer: (a: T, b: T) => T = (a, b) => a || b,
+  ): T {
+
+    const result = VisitResultFlattener.visitWithResult(visitor, node);
+    if (result == undefined) {
+      return fallback;
+    }
+
+    if (Array.isArray(result)) {
+      return result.reduce(reducer);
+    } else {
+      return result;
+    }
+  }
 }

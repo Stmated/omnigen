@@ -6,6 +6,7 @@ import {
   OmniGenericTargetType,
   OmniModel,
   OmniModelTransformer,
+  OmniPrimitiveBoxMode,
   OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
@@ -296,7 +297,9 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<Generi
         case PrimitiveGenerificationChoice.SPECIALIZE: {
           const allowedGenericTargetType = OmniUtil.toGenericAllowedType(
             genericTargetType,
-            (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE),
+            (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
+              ? OmniPrimitiveBoxMode.WRAP
+              : OmniPrimitiveBoxMode.BOX,
           );
           allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
 
@@ -304,7 +307,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<Generi
           if (common != genericTargetType) {
             const from = OmniUtil.describe(genericTargetType);
             const to = OmniUtil.describe(allowedGenericTargetType);
-            logger.debug(`Changing generic type from ${from} (${genericTargetType.kind}) to ${to} (${allowedGenericTargetType.kind})`);
+            logger.debug(`Changing generic type from ${from} to ${to}`);
             genericTargetType = allowedGenericTargetType;
           }
           break;

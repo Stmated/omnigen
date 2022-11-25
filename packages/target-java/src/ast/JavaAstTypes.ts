@@ -393,6 +393,7 @@ export class Modifier extends AbstractJavaNode {
 
 export class ModifierList extends AbstractJavaNode implements StNodeWithChildren<Modifier> {
   children: Modifier[];
+
   constructor(...modifiers: Modifier[]) {
     super();
     this.children = modifiers;
@@ -403,10 +404,174 @@ export class ModifierList extends AbstractJavaNode implements StNodeWithChildren
   }
 }
 
-export class Comment extends AbstractJavaNode {
-  text: string;
+export abstract class AbstractFreeText extends AbstractJavaNode {
+
+}
+
+export class FreeText extends AbstractFreeText {
+  readonly text: string;
 
   constructor(text: string) {
+    super();
+    this.text = text;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeText(this, visitor);
+  }
+}
+
+export class FreeTextLine extends AbstractFreeText {
+  readonly child: FreeTextType;
+
+  constructor(text: FreeTextType | string) {
+    super();
+    if (typeof text == 'string') {
+      this.child = new FreeText(text);
+    } else {
+      this.child = text;
+    }
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextLine(this, visitor);
+  }
+}
+
+export class FreeTextIndent extends AbstractFreeText {
+  readonly child: FreeTextType;
+
+  constructor(text: FreeTextType) {
+    super();
+    this.child = text;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextIndent(this, visitor);
+  }
+}
+
+export class FreeTextParagraph extends AbstractFreeText {
+  readonly child: FreeTextType;
+
+  constructor(text: FreeTextType | string) {
+    super();
+    if (typeof text == 'string') {
+      this.child = new FreeText(text);
+    } else {
+      this.child = text;
+    }
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextParagraph(this, visitor);
+  }
+}
+
+export class FreeTextHeader extends AbstractFreeText {
+  readonly level: number;
+  readonly child: FreeTextType;
+
+  constructor(level: number, text: FreeTextType) {
+    super();
+    this.level = level;
+    this.child = text;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextHeader(this, visitor);
+  }
+}
+
+export class FreeTextSection extends AbstractFreeText {
+  readonly header: FreeTextHeader;
+  readonly content: FreeTextType;
+
+  constructor(level: number, header: string, content: FreeTextType) {
+    super();
+    this.header = new FreeTextHeader(level, new FreeText(header));
+    this.content = content;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextSection(this, visitor);
+  }
+}
+
+export class FreeTextTypeLink extends AbstractFreeText {
+  readonly type: Type;
+
+  constructor(type: Type) {
+    super();
+    this.type = type;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextTypeLink(this, visitor);
+  }
+}
+
+export class FreeTextMethodLink extends AbstractFreeText {
+  readonly type: Type;
+  readonly method: MethodDeclarationSignature;
+
+  constructor(type: Type, method: MethodDeclarationSignature) {
+    super();
+    this.type = type;
+    this.method = method;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextMethodLink(this, visitor);
+  }
+}
+
+export class FreeTextPropertyLink extends AbstractFreeText {
+  readonly type: Type;
+  readonly property: OmniProperty;
+
+  constructor(type: Type, property: OmniProperty) {
+    super();
+    this.type = type;
+    this.property = property;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextPropertyLink(this, visitor);
+  }
+}
+
+// export class FreeTextList extends AbstractFreeText {
+//   readonly children: FreeTextType[];
+//
+//   constructor(...children: FreeTextType[]) {
+//     super();
+//     this.children = children;
+//   }
+//
+//   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+//     return visitor.visitFreeTextList(this, visitor);
+//   }
+// }
+
+export type FreeTextType =
+  | string
+  | FreeText
+  | FreeTextParagraph
+  | FreeTextLine
+  | FreeTextIndent
+  | FreeTextHeader
+  | FreeTextSection
+  // | FreeTextList
+  | FreeTextPropertyLink
+  | FreeTextMethodLink
+  | FreeTextTypeLink
+  | FreeTextType[];
+
+export class Comment extends AbstractJavaNode {
+  text: FreeTextType;
+
+  constructor(text: FreeTextType) {
     super();
     this.text = text;
   }
@@ -416,16 +581,16 @@ export class Comment extends AbstractJavaNode {
   }
 }
 
-export class CommentList extends AbstractJavaNode implements StNodeWithChildren<Comment> {
-  children: Comment[];
+export class CommentBlock extends AbstractJavaNode {
+  text: FreeTextType;
 
-  constructor(...children: Comment[]) {
+  constructor(text: FreeTextType) {
     super();
-    this.children = children;
+    this.text = text;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitCommentList(this, visitor);
+    return visitor.visitCommentBlock(this, visitor);
   }
 }
 
@@ -433,7 +598,7 @@ export class Field extends AbstractJavaNode {
   identifier: Identifier;
   type: Type;
   initializer?: AbstractExpression | undefined;
-  comments?: CommentList | undefined;
+  comments?: CommentBlock | undefined;
   modifiers: ModifierList;
   annotations?: AnnotationList | undefined;
   property?: OmniProperty;
@@ -456,7 +621,7 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
 
   identifier: Identifier;
   type: Type;
-  comments?: CommentList | undefined;
+  comments?: CommentBlock | undefined;
   annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
   parameters?: ArgumentDeclarationList | undefined;
@@ -467,7 +632,7 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
     parameters?: ArgumentDeclarationList,
     modifiers?: ModifierList,
     annotations?: AnnotationList,
-    comments?: CommentList,
+    comments?: CommentBlock,
   ) {
     super();
     this.modifiers = modifiers ?? new ModifierList(new Modifier(ModifierType.PUBLIC));
@@ -595,7 +760,7 @@ export abstract class AbstractFieldBackedMethodDeclaration extends MethodDeclara
 
 export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 
-  constructor(field: Field, annotations?: AnnotationList, comments?: CommentList, getterName?: Identifier) {
+  constructor(field: Field, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
     super(
       field,
       new MethodDeclarationSignature(
@@ -618,7 +783,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 
 export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
 
-  constructor(field: Field, annotations?: AnnotationList, comments?: CommentList) {
+  constructor(field: Field, annotations?: AnnotationList, comments?: CommentBlock) {
     super(
       field,
       new MethodDeclarationSignature(
@@ -626,6 +791,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
         new RegularType({
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
+          nullable: true,
         }),
         new ArgumentDeclarationList(
           new ArgumentDeclaration(
@@ -661,7 +827,7 @@ export class FieldGetterSetter extends AbstractJavaNode {
     type: Type,
     fieldIdentifier: Identifier,
     getterAnnotations?: AnnotationList,
-    comments?: CommentList,
+    comments?: CommentBlock,
     getterIdentifier?: Identifier,
   ) {
     super();
@@ -735,7 +901,7 @@ export class ImplementsDeclaration extends AbstractJavaNode {
 export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
   name: Identifier;
   type: Type;
-  comments?: CommentList;
+  comments?: CommentBlock;
   annotations?: AnnotationList;
   modifiers: ModifierList;
   extends?: ExtendsDeclaration;
@@ -780,7 +946,7 @@ export class ConstructorDeclaration extends AbstractJavaNode {
   modifiers: ModifierList;
   parameters?: ArgumentDeclarationList | undefined;
   annotations?: AnnotationList | undefined;
-  comments?: CommentList | undefined;
+  comments?: CommentBlock | undefined;
   body?: Block | undefined;
 
 
@@ -1173,7 +1339,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
   getters: FieldBackedGetter[];
   methods: MethodDeclaration[];
 
-  constructor(types: OmniType[], options: JavaOptions, commentSupplier: { (type: OmniType): Comment[] }) {
+  constructor(types: OmniType[], options: JavaOptions, commentSupplier: { (type: OmniType): FreeTextType | undefined }) {
     super();
 
     this.fields = [];
@@ -1269,7 +1435,9 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
           ),
         ),
       );
-      typedGetter.signature.comments = new CommentList(...commentSupplier(typedGetter.signature.type.omniType));
+
+      const comment = commentSupplier(typedGetter.signature.type.omniType);
+      typedGetter.signature.comments = (comment) ? new CommentBlock(comment) : undefined;
 
       this.fields.push(typedField);
       this.methods.push(typedGetter);

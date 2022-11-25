@@ -1,8 +1,11 @@
-import {OmniModel, OmniType, OmniTypeKind, RealOptions, ExternalSyntaxTree, VisitorFactoryManager} from '@omnigen/core';
+import {ExternalSyntaxTree, OmniModel, OmniType, OmniTypeKind, RealOptions, VisitorFactoryManager} from '@omnigen/core';
 import {JavaUtil, TypeNameInfo} from '../util/index.js';
 import {JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer} from '../transform/index.js';
 import * as Java from '../ast/index.js';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 interface CompilationUnitInfo {
   cu: Java.CompilationUnit;
@@ -33,7 +36,8 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     for (const external of all) {
 
       // Get and move all type infos to the global one.
-      this.getTypeNameInfos(external, objectStack).forEach((v, k) => typeNameMap.set(k, v));
+      this.getTypeNameInfos(external, objectStack)
+        .forEach((v, k) => typeNameMap.set(k, v));
     }
 
     if (objectStack.length > 0 || cuInfoStack.length > 0) {
@@ -118,6 +122,10 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     });
     const nodeImportName = JavaUtil.getClassNameForImport(node.omniType, options, node.implementation);
 
+    // if (node.omniType.kind == OmniTypeKind.PRIMITIVE && !node.omniType.nullable) {
+    //   logger.info(`${relativeLocalName}: ${nodeImportName}`);
+    // }
+
     node.setLocalName(relativeLocalName);
 
     if (nodeImportName && nodeImportName.indexOf('.') !== -1) {
@@ -159,7 +167,6 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       );
 
       const existing = cuInfo.cu.imports.children.find(it => {
-        // TODO: Cache this inside the import node? Set it in stone?
         const otherImportName = JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
         return otherImportName == nodeImportName;
       });

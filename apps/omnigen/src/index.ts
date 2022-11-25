@@ -3,6 +3,8 @@ import {OmnigenOptions} from './OmnigenOptions.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as url from 'node:url';
 import {IncomingOptions} from '@omnigen/core';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -20,12 +22,10 @@ logger.info(process.argv);
  */
 export default async function run(opt: IncomingOptions<OmnigenOptions>) {
 
-  const options = opt;
-
   const omnigen = new Omnigen();
-  await omnigen.generate(options);
+  await omnigen.generateAndWriteToFile(opt, opt);
 
-  console.log('Done');
+  logger.info('Exiting Run');
 }
 
 let isMain = false; // require.main === module
@@ -44,17 +44,42 @@ if (isMain) {
     process.exit();
   }
 
+  let directory: string | undefined = undefined;
   let optionsString = process.argv[process.argv.length - 1] || '{ }';
   if (optionsString.match(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)) {
+    logger.info(`Reading configuration from given base64 '${optionsString}`);
     const buff = Buffer.from(optionsString, 'base64');
     optionsString = buff.toString('ascii');
+  } else if (optionsString.startsWith('/') || optionsString.startsWith('.') || optionsString.startsWith('~')) {
+    const absolutePath = path.resolve(optionsString);
+    logger.info(`Reading configuration from file '${absolutePath}`);
+    optionsString = fs.readFileSync(absolutePath, {encoding: 'utf8'}).toString();
+    directory = path.dirname(absolutePath);
+    // TODO: If outputBaseDir / schemaDirBase not set, then set it to the directory that contains this file
+  } else {
+    logger.info(`Using configuration as it was given`);
   }
 
-  logger.info('Parsing: ' + optionsString);
-  // const givenArgOptions = options || '{}';
-  run(JSON.parse(optionsString) as OmnigenOptions)
+  logger.info(`Parsing: ${optionsString}`);
+  const options = JSON.parse(optionsString) as OmnigenOptions;
+
+  // This should move into using the options utils -- like being able to send "fallbacks" to the main entrypoint
+  if (!options.schemaDirBase) {
+    logger.info(`Setting schemaDirBase to '${directory}`);
+    options.schemaDirBase = directory;
+  }
+
+  if (!options.outputDirBase) {
+    logger.info(`Setting outputDirBase to '${directory}`);
+    options.outputDirBase = directory;
+  }
+
+  run(options)
     .then(() => {
       logger.info(`Done`);
+    })
+    .catch(ex => {
+      logger.error(ex, `Could not finish: ${ex}`);
     });
 } else {
   logger.info(`Start generating by calling the default exported function with your options`);

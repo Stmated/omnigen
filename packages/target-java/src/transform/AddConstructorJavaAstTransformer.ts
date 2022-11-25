@@ -1,8 +1,19 @@
 import {AbstractJavaAstTransformer, JavaAstUtils} from '../transform/index.js';
-import {ExternalSyntaxTree, OmniModel, OmniTypeKind, OmniUtil, RealOptions, VisitorFactoryManager} from '@omnigen/core';
+import {
+  AbortVisitingWithResult,
+  ExternalSyntaxTree, LiteralValue,
+  OmniModel,
+  OmniPrimitiveValueMode,
+  OmniTypeKind,
+  OmniUtil,
+  RealOptions,
+  VisitorFactoryManager,
+  VisitResultFlattener,
+} from '@omnigen/core';
 import {FieldAccessorMode, JavaOptions} from '../options/index.js';
 import {JavaUtil} from '../util/index.js';
 import * as Java from '../ast/index.js';
+import {TokenType} from '../ast/index.js';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
@@ -35,18 +46,47 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     // TODO: Skip the re-order and instead do it on a "need-to" basis, where we dive deeper here,
     //        and check if it has already been handled or already has constructor(s)
 
-    for (const node of classDeclarations) {
+    for (const classDeclaration of classDeclarations) {
 
-      const superTypeRequirements = JavaUtil.getConstructorRequirements(root, node, true);
+      const superTypeRequirements = JavaUtil.getConstructorRequirements(root, classDeclaration, true);
 
       if (superTypeRequirements[0].length > 0 || superTypeRequirements[1].length > 0) {
 
         const finalFields = superTypeRequirements[0];
         const superArgumentDeclarations = superTypeRequirements[1];
 
-        const constructorDeclaration = this.createConstructorDeclaration(node, finalFields, superArgumentDeclarations);
+        const visitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_BOOLEAN_VISITOR, {
+          visitAnnotation: node => {
+            if (node.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
+              if (node.type.omniType.fqn.indexOf('JsonValue') >= 0) {
+                throw new AbortVisitingWithResult(true);
+              }
+            }
+          },
+        });
 
-        node.body.children.push(constructorDeclaration);
+        const hasJsonValue = VisitResultFlattener.visitWithSingularResult(visitor, classDeclaration.body, false);
+
+        const constructorDeclaration = this.createConstructorDeclaration(classDeclaration, finalFields, superArgumentDeclarations);
+
+        if (hasJsonValue) {
+          if (!constructorDeclaration.annotations) {
+            constructorDeclaration.annotations = new Java.AnnotationList(...[]);
+          }
+
+          if (!constructorDeclaration.parameters || constructorDeclaration.parameters.children.length <= 1) {
+            constructorDeclaration.annotations.children.push(
+              new Java.Annotation(
+                new Java.RegularType({
+                  kind: OmniTypeKind.HARDCODED_REFERENCE,
+                  fqn: 'com.fasterxml.jackson.annotation.JsonCreator',
+                }),
+              ),
+            );
+          }
+        }
+
+        classDeclaration.body.children.push(constructorDeclaration);
       }
     }
 
@@ -64,20 +104,22 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     const ourArguments = this.addSuperConstructorCall(superArguments, node, blockExpressions);
 
     const typeArguments = fields.map(it => {
-      let required = false;
-      if (it.type.omniType.kind == OmniTypeKind.PRIMITIVE) {
-        required = (it.type.omniType.valueConstantOptional == false);
-      }
-      return this.createArgumentDeclaration(it.type, it.identifier, required);
+      return this.createArgumentDeclaration(it.type, it.identifier);
     });
 
     for (let i = 0; i < fields.length; i++) {
       const constructorField = fields[i];
       const argumentDeclaration = typeArguments[i];
-      blockExpressions.push(new Java.Statement(new Java.AssignExpression(
-        new Java.FieldReference(constructorField),
-        new Java.VariableReference(argumentDeclaration.identifier),
-      )));
+
+      const defaultValue = JavaUtil.getSpecifiedDefaultValue(constructorField.type.omniType);
+      if (defaultValue !== undefined) {
+        blockExpressions.push(this.createAssignmentWithFallback(argumentDeclaration, constructorField, defaultValue));
+      } else {
+        blockExpressions.push(new Java.Statement(new Java.AssignExpression(
+          new Java.FieldReference(constructorField),
+          new Java.VariableReference(argumentDeclaration.identifier),
+        )));
+      }
     }
 
     const allArguments = ourArguments.concat(typeArguments);
@@ -90,6 +132,35 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
         ...allArguments,
       ),
       new Java.Block(...blockExpressions),
+    );
+  }
+
+  private createAssignmentWithFallback(
+    argumentDeclaration: Java.ArgumentDeclaration,
+    targetField: Java.Field,
+    defaultValue: LiteralValue,
+  ): Java.IfElseStatement {
+
+    return new Java.IfElseStatement(
+      [
+        new Java.IfStatement(
+          new Java.Predicate(
+            new Java.VariableReference(argumentDeclaration.identifier),
+            TokenType.NOT_EQUALS,
+            new Java.Literal(null),
+          ),
+          new Java.Block(new Java.Statement(new Java.AssignExpression(
+            new Java.FieldReference(targetField),
+            new Java.VariableReference(argumentDeclaration.identifier),
+          ))),
+        ),
+      ],
+      new Java.Block(
+        new Java.Statement(new Java.AssignExpression(
+          new Java.FieldReference(targetField),
+          new Java.Literal(defaultValue),
+        )),
+      ),
     );
   }
 
@@ -124,15 +195,9 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     const requiredSuperArguments: Java.ArgumentDeclaration[] = [];
     const superConstructorArguments: Java.AbstractExpression[] = [];
     for (const requiredArgument of superTypeRequirements) {
-      const omniType = requiredArgument.type.omniType;
-      if (omniType.kind == OmniTypeKind.PRIMITIVE && typeof omniType.valueConstant == 'function') {
-        const requiredConstant = omniType.valueConstant(node.type.omniType);
-        superConstructorArguments.push(new Java.Literal(requiredConstant));
-      } else {
-        superConstructorArguments.push(new Java.VariableReference(requiredArgument.identifier));
-        const actualType = this.getResolvedGenericArgumentType(requiredArgument, node);
-        requiredSuperArguments.push(this.createArgumentDeclaration(actualType, requiredArgument.identifier, false));
-      }
+      superConstructorArguments.push(new Java.VariableReference(requiredArgument.identifier));
+      const actualType = this.getResolvedGenericArgumentType(requiredArgument, node);
+      requiredSuperArguments.push(this.createArgumentDeclaration(actualType, requiredArgument.identifier));
     }
 
     if (superConstructorArguments.length > 0) {
@@ -149,14 +214,13 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   }
 
 
-  private createArgumentDeclaration(type: Java.Type, identifier: Java.Identifier, required: boolean): Java.ArgumentDeclaration {
+  private createArgumentDeclaration(type: Java.Type, identifier: Java.Identifier): Java.ArgumentDeclaration {
 
     const annotations: Java.Annotation[] = [];
     const schemaIdentifier = identifier.original || identifier.value;
     const safeName = JavaUtil.getPrettyArgumentName(schemaIdentifier);
     if (schemaIdentifier != safeName || (identifier.original && identifier.original != safeName)) {
 
-      // TODO: Need to test if this actually works -- currently there is no test for it
       annotations.push(
         new Java.Annotation(
           new Java.RegularType({
@@ -176,22 +240,6 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     let usedIdentifier = identifier;
     if (identifier.value != safeName) {
       usedIdentifier = new Java.Identifier(safeName, schemaIdentifier);
-    }
-
-    if (required) {
-
-      if (JavaUtil.isNullable(type.omniType)) {
-
-        // TODO: Add the "required" to the JsonProperty annotation above!
-        annotations.push(
-          new Java.Annotation(
-            new Java.RegularType({
-              kind: OmniTypeKind.HARDCODED_REFERENCE,
-              fqn: 'javax.validation.constraints.NotNull',
-            }),
-          ),
-        );
-      }
     }
 
     let annotationList: Java.AnnotationList | undefined = undefined;

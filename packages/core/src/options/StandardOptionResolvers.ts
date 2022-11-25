@@ -1,6 +1,6 @@
 import {Booleanish} from './Booleanish.js';
 
-export class OptionsResolvers {
+export class StandardOptionResolvers {
 
   public static toBoolean(this: void, value: Booleanish | undefined): Promise<boolean> {
 

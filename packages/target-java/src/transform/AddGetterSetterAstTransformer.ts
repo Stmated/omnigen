@@ -1,14 +1,17 @@
 import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
 import {
-  AbortVisitingWithResult, AbstractStNode,
+  AbortVisitingWithResult,
+  AbstractStNode,
   ExternalSyntaxTree,
   OmniModel,
+  OmniPrimitiveValueMode,
+  OmniTypeKind,
   RealOptions,
   VisitorFactoryManager,
   VisitResultFlattener,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {AnnotationList, CommentList, JavaAstRootNode, ModifierType} from '../ast/index.js';
+import {AnnotationList, CommentBlock, Identifier, JavaAstRootNode, ModifierType} from '../ast/index.js';
 import {JavaOptions} from '../options/index.js';
 import {JavaUtil} from '../util/index.js';
 
@@ -51,25 +54,43 @@ export class AddGetterSetterAstTransformer extends AbstractJavaAstTransformer {
         const body = latestCompilationUnit.cu.object.body;
 
         // Move comments from field over to the getter.
-        const commentList: CommentList | undefined = (node.comments)
-          ? new CommentList(...(node.comments.children || []))
-          : undefined;
+        const commentList: CommentBlock | undefined = node.comments;
         node.comments = undefined;
 
         // Move annotations from field over to the getter.
         // TODO: This should be an option, to move or not.
-        const getterAnnotationList: AnnotationList | undefined = (node.annotations)
+        const annotationList: AnnotationList | undefined = (node.annotations)
           ? new AnnotationList(...(node.annotations.children || []))
           : undefined;
         node.annotations = undefined;
 
+        const type = node.type.omniType;
+
         const getterIdentifier = node.property?.propertyName
-          ? new Java.Identifier(JavaUtil.getGetterName(node.property?.propertyName, node.type.omniType))
+          ? new Java.Identifier(JavaUtil.getGetterName(node.property?.propertyName, type))
           : undefined;
 
-        body.children.push(new Java.FieldBackedGetter(node, getterAnnotationList, commentList, getterIdentifier));
-        if (!node.modifiers.children.find(it => it.type == ModifierType.FINAL)) {
-          body.children.push(new Java.FieldBackedSetter(node, undefined, undefined));
+        if (type.kind == OmniTypeKind.PRIMITIVE && type.valueMode == OmniPrimitiveValueMode.LITERAL) {
+
+          const literalMethod = new Java.MethodDeclaration(
+            new Java.MethodDeclarationSignature(
+              getterIdentifier ?? new Identifier(JavaUtil.getGetterName(node.identifier.value, type)),
+              new Java.RegularType(type), undefined, undefined, annotationList, commentList,
+            ),
+            new Java.Block(
+              new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.value ?? null))),
+            ),
+          );
+
+          const fieldIndex = body.children.indexOf(node);
+          body.children.splice(fieldIndex, 1, literalMethod);
+
+        } else {
+
+          body.children.push(new Java.FieldBackedGetter(node, annotationList, commentList, getterIdentifier));
+          if (!node.modifiers.children.find(it => it.type == ModifierType.FINAL)) {
+            body.children.push(new Java.FieldBackedSetter(node, undefined, undefined));
+          }
         }
       },
     }));
@@ -89,7 +110,7 @@ export class AddGetterSetterAstTransformer extends AbstractJavaAstTransformer {
 
       visitMethodDeclarationSignature: node => {
         const methodName = node.identifier.value;
-        if (/get[A-Z]*/ug.test(methodName)) {
+        if ((!node.parameters || node.parameters.children.length == 0) && /(?:get|is)[A-Z]*/ug.test(methodName)) {
           throw new AbortVisitingWithResult(methodName);
         }
       },

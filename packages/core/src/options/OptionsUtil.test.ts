@@ -18,30 +18,6 @@ interface NoDynamicOptions extends Options {
   c: boolean;
 }
 
-interface OverlappingOptions extends Options {
-  a: Option<string | undefined, string>;
-  b: Option<string | undefined, string | null>;
-  c: string;
-}
-
-// const a: OverlappingOptions = {
-//   a: undefined,
-//   b: null,
-//   c: '',
-// };
-//
-// const b: IncomingOptions<OverlappingOptions> = {
-//   a: undefined,
-//   b: undefined,
-//   c: '',
-// };
-//
-// const c: RealOptions<OverlappingOptions> = {
-//   a: undefined,
-//   b: 'qwe',
-//   c: '',
-// };
-
 test('Booleanish', async () => {
 
   const input: Booleanish[] = [

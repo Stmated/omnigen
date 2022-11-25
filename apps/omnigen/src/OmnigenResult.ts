@@ -1,5 +1,6 @@
+import {RenderedCompilationUnit} from '@omnigen/core';
 
 export interface OmnigenResult {
 
-  files: Map<string, string>;
+  renders: RenderedCompilationUnit[];
 }

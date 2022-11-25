@@ -12,9 +12,10 @@ import {
   OmniModel,
   OmniObjectType,
   OmniOutput,
+  OmniPrimitiveBoxMode,
   OmniPrimitiveConstantValue,
-  OmniPrimitiveConstantValueOrLazySubTypeValue,
   OmniPrimitiveKind,
+  OmniPrimitiveNullableType,
   OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
@@ -22,7 +23,6 @@ import {
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
-  PrimitiveNullableKind,
   SmartUnwrappedType,
   TypeName,
 } from '../parse/index.js';
@@ -109,13 +109,23 @@ export class OmniUtil {
         return true;
       }
 
-      switch (type.nullable) {
-        case PrimitiveNullableKind.NULLABLE:
-        case PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE:
-          return true;
-        default:
-          return false;
+      if (type.boxMode) {
+        return true;
       }
+
+      if (type.nullable) {
+        return true;
+      }
+
+      return false;
+
+      // switch (type.nullable) {
+      //   case PrimitiveNullableKind.NULLABLE:
+      //   case PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE:
+      //     return true;
+      //   default:
+      //     return false;
+      // }
     }
 
     return true;
@@ -426,45 +436,56 @@ export class OmniUtil {
     return false;
   }
 
+  public static isNull(type: OmniType): boolean {
+
+    if (type.kind != OmniTypeKind.PRIMITIVE) {
+      return false;
+    }
+
+    return type.primitiveKind == OmniPrimitiveKind.NULL;
+  }
+
   /**
    * Returns a general name for the primitive.
    * Does not translate into the actual target language's primitive type.
    * Is used for generating property names or used in general logging.
    *
    * @param kind
-   * @param nullable
+   * @param boxed
    */
-  public static getPrimitiveKindName(kind: OmniPrimitiveKind, nullable: boolean): string {
+  public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean): string {
 
     switch (kind) {
       case OmniPrimitiveKind.BOOL:
-        return nullable ? 'Boolean' : 'bool';
+        return boxed ? 'Boolean' : 'bool';
       case OmniPrimitiveKind.VOID:
         return 'void';
       case OmniPrimitiveKind.CHAR:
-        return nullable ? 'Character' : 'char';
+        return boxed ? 'Character' : 'char';
       case OmniPrimitiveKind.STRING:
-        return nullable ? 'String' : 'string';
+        return boxed ? 'String' : 'string';
       case OmniPrimitiveKind.FLOAT:
-        return nullable ? 'Float' : 'float';
+        return boxed ? 'Float' : 'float';
       case OmniPrimitiveKind.INTEGER:
-        return nullable ? 'Integer' : 'int';
+        return boxed ? 'Integer' : 'int';
       case OmniPrimitiveKind.INTEGER_SMALL:
-        return nullable ? 'Short' : 'short';
+        return boxed ? 'Short' : 'short';
       case OmniPrimitiveKind.LONG:
-        return nullable ? 'Long' : 'long';
+        return boxed ? 'Long' : 'long';
       case OmniPrimitiveKind.DECIMAL:
-        return nullable ? 'Decimal' : 'decimal';
+        return boxed ? 'Decimal' : 'decimal';
       case OmniPrimitiveKind.DOUBLE:
-        return nullable ? 'Double' : 'double';
+        return boxed ? 'Double' : 'double';
       case OmniPrimitiveKind.NUMBER:
-        return nullable ? 'Number' : 'number';
+        return boxed ? 'Number' : 'number';
+      case OmniPrimitiveKind.NULL:
+        return 'null';
     }
   }
 
-  public static isNullable(nullableKind: PrimitiveNullableKind | undefined): boolean {
-    return (nullableKind == PrimitiveNullableKind.NULLABLE);
-  }
+  // public static isNullable(primitive: OmniPrimitiveType | undefined): boolean {
+  //   return !!primitive?.nullable; //   primitive?.boxed == PrimitiveNullableKind.NULLABLE);
+  // }
 
   /**
    * Gives the name of the type, or a description which describes the type.
@@ -480,16 +501,33 @@ export class OmniUtil {
 
     const baseName = Naming.unwrap(OmniUtil.getVirtualTypeName(type));
     if (type.kind == OmniTypeKind.PRIMITIVE) {
-      if (type.valueConstant) {
-        const resolved = OmniUtil.resolvePrimitiveConstantValue(type.valueConstant, type);
-        const resolvedString = OmniUtil.primitiveConstantValueToString(resolved);
+      if (type.value) {
+        const resolvedString = OmniUtil.primitiveConstantValueToString(type.value);
         return `[${baseName}=${resolvedString}]`;
+      } else if (type.nullable) {
+        return `${baseName} [${type.kind} - nullable - ${OmniUtil.getBoxModeString(type.boxMode)}]`;
+      } else if (!type.nullable) {
+        return `${baseName} [${type.kind} - non-nullable - ${OmniUtil.getBoxModeString(type.boxMode)}]`;
       }
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
       return `${baseName}<${type.sourceIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
     }
 
     return `${baseName} [${type.kind}]`;
+  }
+
+  private static getBoxModeString(boxMode: OmniPrimitiveBoxMode | undefined): string {
+
+    if (!boxMode) {
+      return 'no-box';
+    }
+
+    switch (boxMode) {
+      case OmniPrimitiveBoxMode.BOX:
+        return 'box';
+      case OmniPrimitiveBoxMode.WRAP:
+        return 'wrap';
+    }
   }
 
   public static primitiveConstantValueToString(value: OmniPrimitiveConstantValue): string {
@@ -500,17 +538,17 @@ export class OmniUtil {
     }
   }
 
-  public static resolvePrimitiveConstantValue(
-    value: OmniPrimitiveConstantValueOrLazySubTypeValue,
-    subType: OmniType,
-  ): OmniPrimitiveConstantValue {
-
-    if (typeof value == 'function') {
-      return value(subType); // TODO: Check if this is correct
-    } else {
-      return value;
-    }
-  }
+  // public static resolvePrimitiveConstantValue(
+  //   value: OmniPrimitiveConstantValueOrLazySubTypeValue,
+  //   subType: OmniType,
+  // ): OmniPrimitiveConstantValue {
+  //
+  //   if (typeof value == 'function') {
+  //     return value(subType); // TODO: Check if this is correct
+  //   } else {
+  //     return value;
+  //   }
+  // }
 
   /**
    * Gets the name of the type, or returns 'undefined' if the type is not named.
@@ -545,11 +583,12 @@ export class OmniUtil {
         name: OmniUtil.getVirtualTypeName(type.of),
       };
     } else if (type.kind == OmniTypeKind.PRIMITIVE) {
-      const nullable = OmniUtil.isNullable(type.nullable);
-      return OmniUtil.getPrimitiveKindName(type.primitiveKind, nullable);
+      // If the primitive is wrapped, we will get the wrong name, but that's not very important
+      const primitiveName = OmniUtil.getPrimitiveKindName(type.primitiveKind, type.boxMode != undefined);
+      return (type.boxMode == OmniPrimitiveBoxMode.WRAP) ? `Primitive${primitiveName}` : primitiveName;
     } else if (type.kind == OmniTypeKind.UNKNOWN) {
-      if (type.valueConstant != undefined) {
-        return OmniUtil.primitiveConstantValueToString(type.valueConstant);
+      if (type.valueDefault != undefined) {
+        return OmniUtil.primitiveConstantValueToString(type.valueDefault);
       }
       if (type.isAny) {
         return '_any';
@@ -588,21 +627,38 @@ export class OmniUtil {
     return `[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`;
   }
 
-  public static toGenericAllowedType(type: OmniType, wrap: boolean): OmniType {
+  public static toGenericAllowedType(type: OmniType, boxMode: OmniPrimitiveBoxMode): OmniType {
     // Same thing for now, might change in the future.
-    return OmniUtil.toNullableType(type, wrap);
+    return OmniUtil.toReferenceType(type, boxMode);
   }
 
-  public static toNullableType<T extends OmniType>(type: T, wrap: boolean): T | OmniPrimitiveType {
+  public static toReferenceType<T extends OmniType>(type: T, boxMode: OmniPrimitiveBoxMode): T | OmniPrimitiveType {
     // NOTE: If changed, make sure isNullable is updated
     if (type.kind == OmniTypeKind.PRIMITIVE) {
-      if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
+
+      if (type.primitiveKind == OmniPrimitiveKind.STRING) {
         return type;
       }
 
-      const nullablePrimitive: OmniPrimitiveType = {
+      if (type.nullable) {
+        return type;
+      }
+
+      if (type.nullable == false && boxMode == OmniPrimitiveBoxMode.WRAP) {
+
+        const nullablePrimitive: OmniPrimitiveType = {
+          ...type,
+          nullable: false,
+          boxMode: boxMode,
+        };
+
+        return nullablePrimitive;
+      }
+
+      const nullablePrimitive: OmniPrimitiveNullableType = {
         ...type,
-        nullable: (wrap ? PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE : PrimitiveNullableKind.NULLABLE),
+        nullable: true,
+        boxMode: boxMode,
       };
 
       return nullablePrimitive;
@@ -913,8 +969,6 @@ export class OmniUtil {
     } else if (a.kind == OmniTypeKind.ARRAY && b.kind == OmniTypeKind.ARRAY) {
       return this.getCommonDenominatorBetweenArrays(a, b, create);
     } else if (a.kind == OmniTypeKind.UNKNOWN && b.kind == OmniTypeKind.UNKNOWN) {
-      return {type: a, level: EqualityLevel.CLONE_MIN};
-    } else if (a.kind == OmniTypeKind.NULL && b.kind == OmniTypeKind.NULL) {
       return {type: a, level: EqualityLevel.CLONE_MIN};
     } else if (a.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION && b.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
       return this.getCommonDenominatorBetweenPropertiesByPosition(a, b, create);

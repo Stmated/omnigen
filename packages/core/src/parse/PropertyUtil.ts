@@ -157,6 +157,17 @@ export class PropertyUtil {
       commonType = {type: {kind: OmniTypeKind.UNKNOWN}, level: EqualityLevel.NOT_EQUAL_MIN};
     }
 
+    if (a.type.kind == OmniTypeKind.PRIMITIVE && b.type.kind == OmniTypeKind.PRIMITIVE) {
+
+      if (a.type.value != b.type.value || a.type.valueMode != b.type.valueMode) {
+        return {
+          propertyEquality: EqualityLevel.SEMANTICS_MIN,
+          typeEquality: commonType.level,
+          type: commonType.type,
+        };
+      }
+    }
+
     if (a.required != b.required) {
       return {
         propertyEquality: EqualityLevel.ISOMORPHIC_MIN,

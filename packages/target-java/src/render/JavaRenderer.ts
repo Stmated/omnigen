@@ -8,7 +8,7 @@ import {
   Renderer,
   AbstractStNode, Case,
 } from '@omnigen/core';
-import {AbstractJavaNode, GenericTypeDeclarationList} from '../ast/index.js';
+import {AbstractJavaNode, Comment, GenericTypeDeclarationList} from '../ast/index.js';
 import {JavaVisitor, JavaVisitFn} from '../visit/index.js';
 import {JavaOptions} from '../options/index.js';
 import * as Java from '../ast/index.js';
@@ -144,10 +144,10 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   visitBlock: JavaRendererVisitFn<Java.Block> = (node, visitor) => {
     this._blockDepth++;
     const indentation = this.getIndentation(1);
-    const blockContent = this.join(node.children.map(it => it.visit(visitor)));
+    const blockContent = this.join(node.children.map(it => it.visit(visitor))).trim();
     this._blockDepth--;
 
-    return blockContent.replace(this._patternLineStart, indentation);
+    return blockContent.replace(this._patternLineStart, indentation) + '\n';
   };
 
   visitCommonTypeDeclaration(
@@ -227,14 +227,24 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     return this.render(node.name, visitor);
   };
 
-  visitCommentList: JavaRendererVisitFn<Java.CommentList> = (node, visitor) => {
-    const commentSections = node.children.map(it => this.render(it, visitor));
-    return `/**\n * ${commentSections.join('\n *\n * ')}\n */`;
+  visitCommentBlock: JavaRendererVisitFn<Java.CommentBlock> = (node, visitor) => {
+
+    const text = this.join(this.visitFreeTextRecursively(node.text, visitor, it => it))
+      .trim()
+      .replaceAll('\r', '')
+      .replaceAll('\n', '\n * ');
+
+    return `/**\n * ${text}\n */`;
   };
 
-  visitComment: JavaRendererVisitFn<Java.Comment> = node => {
-    const lines = node.text.replace('\r', '').split('\n');
-    return `${lines.join('\n * ')}`;
+  visitComment: JavaRendererVisitFn<Java.Comment> = (node, visitor) => {
+
+    const textString = this.join(this.visitFreeTextRecursively(node.text, visitor, it => it));
+
+    return textString
+      .replaceAll('\r', '')
+      .replaceAll('\n', '\n// ')
+      .trim();
   };
 
   visitCompilationUnit: JavaRendererVisitFn<Java.CompilationUnit> = (node, visitor) => {
@@ -251,6 +261,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
       name: node.object.name.value,
       fileName: `${node.object.name.value}.java`,
       directories: node.packageDeclaration.fqn.split('.'),
+      node: node,
     });
 
     return content;
@@ -315,7 +326,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitMethodDeclarationSignature: JavaRendererVisitFn<Java.MethodDeclarationSignature> = (node, visitor) => {
-    const comments = node.comments && node.comments.children.length > 0 ? `${this.render(node.comments, visitor)}\n` : '';
+    const comments = node.comments ? `${this.render(node.comments, visitor)}\n` : '';
     const annotations = node.annotations ? `${this.render(node.annotations, visitor)}\n` : '';
     const modifiers = this.render(node.modifiers, visitor);
     const type = this.render(node.type, visitor);
@@ -501,9 +512,9 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   visitIfElseStatement: JavaRendererVisitFn<Java.IfElseStatement> = (node, visitor) => {
 
     const ifs = node.ifStatements.map(it => this.render(it, visitor));
-    const el = node.elseBlock ? `else {\n${this.render(node.elseBlock)}}\n` : '';
+    const el = node.elseBlock ? ` else {\n${this.render(node.elseBlock)}}\n` : '';
 
-    return `${ifs.join('else ')}${el}`;
+    return `${ifs.join('else ').trim()}${el}`;
   };
 
   visitRuntimeTypeMapping: JavaRendererVisitFn<Java.RuntimeTypeMapping> = (node, visitor) => {
@@ -539,11 +550,55 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     return `((${this.render(node.toType)}) ${this.render(node.expression, visitor)})`;
   };
 
-  private escapeImplements(value: string): string {
+  visitFreeText: JavaRendererVisitFn<Java.FreeText> = (node, visitor) => {
+    return node.text;
+  };
 
-    // This will most likely result in *INCORRECT* Java Code, since it will refer to other type that intended.
-    // But for now this is better than simply crashing.
-    // TODO: But THIS MUST BE REMOVED later when the inheritance system is fully functional. Then it *should* crash on parse error.
-    return Case.pascal(value.replaceAll(/[^\w0-9]/g, '_'));
-  }
+  visitFreeTextHeader: JavaRendererVisitFn<Java.FreeTextHeader> = (node, visitor) => {
+    return `<h${node.level}>${this.join(this.visitFreeTextRecursively(node.child, visitor, it => it))}</h${node.level}>\n`;
+  };
+
+  visitFreeTextParagraph: JavaRendererVisitFn<Java.FreeTextParagraph> = (node, visitor) => {
+    return `<p>${this.join(this.visitFreeTextRecursively(node.child, visitor, it => it))}</p>\n`;
+  };
+
+  visitFreeTextSection: JavaRendererVisitFn<Java.FreeTextSection> = (node, visitor) => {
+
+    const indentation = this.getIndentation(1);
+    const header = this.render(node.header, visitor);
+    const content = this.join(this.visitFreeTextRecursively(node.content, visitor, it => it));
+    const blockContent = `${header}${content.trim()}`;
+
+    const indentedBlock = blockContent.replace(this._patternLineStart, indentation);
+
+    return `<section>\n${indentedBlock}\n</section>\n`;
+  };
+
+  visitFreeTextLine: JavaRendererVisitFn<Java.FreeTextLine> = (node, visitor) => {
+    return `${this.join(this.visitFreeTextRecursively(node.child, visitor, it => it))}\n`;
+  };
+
+  visitFreeTextIndent: JavaRendererVisitFn<Java.FreeTextLine> = (node, visitor) => {
+
+    const indentation = this.getIndentation(1);
+    const blockContent = this.join(this.visitFreeTextRecursively(node.child, visitor, it => it));
+
+    return blockContent.replace(this._patternLineStart, indentation);
+  };
+
+  visitFreeTextTypeLink: JavaRendererVisitFn<Java.FreeTextTypeLink> = (node, visitor) => {
+    // TODO: Do we not need a way to say here that "we want the type without the generics"?
+    //  Or do we need to specify on creation?
+    return `{@link ${this.render(node.type, visitor)}}`;
+  };
+
+  visitFreeTextMethodLink: JavaRendererVisitFn<Java.FreeTextMethodLink> = (node, visitor) => {
+    return `{@link ${this.render(node.type, visitor)}#${this.render(node.method.identifier, visitor)}}`;
+  };
+
+  visitFreeTextPropertyLink: JavaRendererVisitFn<Java.FreeTextPropertyLink> = (node, visitor) => {
+
+    const targetName = node.property.fieldName || node.property.propertyName || node.property.name;
+    return `{@link ${this.render(node.type, visitor)}#${targetName}}`;
+  };
 }

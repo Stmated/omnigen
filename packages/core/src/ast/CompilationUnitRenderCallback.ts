@@ -1,10 +1,4 @@
-
-export interface RenderedCompilationUnit {
-  name: string;
-  fileName: string;
-  content: string;
-  directories: string[];
-}
+import {RenderedCompilationUnit} from './RenderedCompilationUnit.js';
 
 export interface CompilationUnitRenderCallback {
   (rcu: RenderedCompilationUnit): void

@@ -14,7 +14,7 @@ import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
 import {Java} from '@omnigen/target-java';
 
-export const DEFAULT_TEST_JAVA_OPTIONS: RealOptions<JavaOptions> = {
+export const DEFAULT_TEST_JAVA_OPTIONS: JavaOptions = {
   ...DEFAULT_JAVA_OPTIONS,
   compressSoloReferencedTypes: false,
   compressUnreferencedSubTypes: false,

@@ -1,13 +1,13 @@
 import fs from 'fs/promises';
-import {DEFAULT_RUN_OPTIONS, OmnigenOptions, RunOptions} from './OmnigenOptions.js';
+import {DEFAULT_FILE_WRITE_OPTIONS, DEFAULT_RUN_OPTIONS, FileWriteOptions, OmnigenOptions} from './OmnigenOptions.js';
 import {OmnigenResult} from './OmnigenResult.js';
 import {
   Dereferencer,
-  ElevateCommonPropertiesOmniModelTransformer, GenericsOmniModelTransformer, IncomingOptions,
+  ElevateCommonPropertiesOmniModelTransformer, FileWriter, GenericsOmniModelTransformer, IncomingOptions,
   OmniModelTransformer,
-  OptionsResolvers, OptionsUtil, RealOptions,
+  StandardOptionResolvers, OptionsUtil, RenderedCompilationUnit,
   SchemaFile,
-  SimplifyInheritanceOmniModelTransformer,
+  SimplifyInheritanceOmniModelTransformer, Writer,
 } from '@omnigen/core';
 import {
   DEFAULT_JAVA_OPTIONS,
@@ -23,11 +23,62 @@ import {
 } from '@omnigen/parser-openrpc';
 import {JSONSchema7} from 'json-schema';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
+import {LoggerFactory} from '@omnigen/core-log';
+import {PathLike} from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Main entry class which handles the default use-case for all the conversion from schema to output.
  */
 export class Omnigen {
+
+  public async generateAndWriteToFile(
+    incomingOptions: IncomingOptions<OmnigenOptions>,
+    incomingFileWriteOptions: IncomingOptions<FileWriteOptions>,
+  ): Promise<void> {
+
+    const fileWriteOptions = await OptionsUtil.updateOptions(
+      DEFAULT_FILE_WRITE_OPTIONS,
+      incomingFileWriteOptions,
+      {
+        outputDirBase: v => {
+          if (!v) {
+            return Promise.reject(new Error(`You must specify a base dir`));
+          }
+          return Promise.resolve(this.relativeToAbsolute(v));
+        },
+      });
+
+    if (typeof fileWriteOptions.outputDirBase !== 'string') {
+      throw new Error(`The output dir must be a string and not a FileLike type`);
+    }
+
+    const fileWriter = new FileWriter(fileWriteOptions.outputDirBase);
+
+    return this.generate(incomingOptions)
+      .then(result => {
+
+        const results: OmnigenResult[] = [];
+        if (!Array.isArray(result)) {
+          results.push(result);
+        } else {
+          results.push(...result);
+        }
+
+        const promises = results.map(result => result.renders.flatMap(rcu => fileWriter.write(rcu)));
+
+        return Promise.all(promises)
+          .then(() => {
+
+            // TODO: After all files are written, we should optionally introduce some kind of lock file
+            //        Then we can know if files have been modified, or which to delete before generating new ones
+            return;
+          });
+      });
+  }
 
   public async generate(incomingOptions: IncomingOptions<OmnigenOptions>): Promise<OmnigenResult | OmnigenResult[]> {
 
@@ -39,20 +90,23 @@ export class Omnigen {
           if (!v) {
             return Promise.reject(new Error(`You must specify a base dir`));
           }
-          return Promise.resolve(v);
+          return Promise.resolve(this.relativeToAbsolute(v));
         },
-        schemaPatternExclude: v => OptionsResolvers.toRegExp(v),
-        schemaPatternInclude: v => OptionsResolvers.toRegExp(v),
-        schemaDirRecursive: v => OptionsResolvers.toBoolean(v),
+        schemaPatternExclude: v => StandardOptionResolvers.toRegExp(v),
+        schemaPatternInclude: v => StandardOptionResolvers.toRegExp(v),
+        schemaDirRecursive: v => StandardOptionResolvers.toBoolean(v),
       });
 
-    const dirPath = runOptions.schemaDirBase;
-    const excludePattern = await OptionsResolvers.toRegExp(runOptions.schemaPatternExclude);
-    const includePattern = await OptionsResolvers.toRegExp(runOptions.schemaPatternInclude);
-    const fileNames = await this.getFileNames(dirPath, excludePattern, includePattern);
+    logger.info(`Schema base dir: ${runOptions.schemaDirBase}`);
+
+    const excludePattern = await StandardOptionResolvers.toRegExp(runOptions.schemaPatternExclude);
+    const includePattern = await StandardOptionResolvers.toRegExp(runOptions.schemaPatternInclude);
+    const fileNames = await this.getFileNames(runOptions.schemaDirBase, excludePattern, includePattern);
 
     const promises: Promise<OmnigenResult>[] = [];
     for (const fileName of fileNames) {
+
+      logger.info(`Found file ${fileName}`);
 
       const schemaFile = new SchemaFile(fileName, fileName);
       promises.push(this.generateFromSchemaFile(schemaFile, incomingOptions, incomingOptions));
@@ -82,6 +136,21 @@ export class Omnigen {
           throw error;
         }
       });
+  }
+
+  private relativeToAbsolute(relative: PathLike): PathLike {
+
+    if (typeof relative == 'string') {
+
+      const homeDirectory = os.homedir();
+      const homeResolved = homeDirectory ? relative.replace(/^~(?=$|\/|\\)/, homeDirectory) : relative;
+
+      logger.info(`HomeResolved: ${homeResolved}`);
+
+      return path.resolve(homeResolved);
+    } else {
+      return relative;
+    }
   }
 
   private async generateFromSchemaFile(
@@ -149,42 +218,54 @@ export class Omnigen {
     const interpreter = new JavaInterpreter(realJavaOptions);
     const syntaxTree = await interpreter.buildSyntaxTree(parseResult.model, [], realJavaOptions);
 
-    const fileContents = new Map<string, string>();
+    const renders: RenderedCompilationUnit[] = [];
     const renderer = new JavaRenderer(realJavaOptions, cu => {
-      fileContents.set(cu.fileName, cu.content);
+      renders.push(cu);
     });
     renderer.render(syntaxTree);
 
     // For now just log it!
-    console.log(JSON.stringify(fileContents));
+    // console.log(util.inspect(renders));
 
     return {
-      files: fileContents,
+      renders: renders,
     };
   }
 
   private async getFileNames(
-    dirPath: string,
+    dirPath: PathLike,
     excludePattern: RegExp | undefined,
     includePattern: RegExp | undefined,
   ): Promise<string[]> {
 
+    try {
+      await fs.access(dirPath);
+    } catch (ex) {
+
+      logger.warn(`Could not access directory ${dirPath}`);
+      return [];
+    }
+
     return fs.readdir(dirPath, {withFileTypes: true})
-      .then(async paths => {
+      .then(async children => {
 
         const files: string[] = [];
-        for (const path of paths) {
-          if (path.isFile()) {
+        for (const child of children) {
+          if (child.isFile()) {
 
-            if (excludePattern && excludePattern.test(path.name)) {
+            if (excludePattern && excludePattern.test(child.name)) {
               continue;
             }
 
-            if (!includePattern || includePattern.test(path.name)) {
-              files.push(path.name);
+            if (!includePattern || includePattern.test(child.name)) {
+              if (typeof dirPath == 'string') {
+                files.push(path.resolve(dirPath, child.name));
+              } else {
+                files.push(child.name);
+              }
             }
           } else {
-            files.push(...await this.getFileNames(path.name, excludePattern, includePattern));
+            files.push(...await this.getFileNames(child.name, excludePattern, includePattern));
           }
         }
 

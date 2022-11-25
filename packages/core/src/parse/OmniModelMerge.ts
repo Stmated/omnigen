@@ -215,7 +215,7 @@ export class OmniModelMerge {
     // * Swap all types, in correct order (which is what is given)
 
     const replacements = OmniModelMerge.getReplacements(...results.map(it => it.model));
-    const skippedKinds = [OmniTypeKind.UNKNOWN, OmniTypeKind.NULL, OmniTypeKind.PRIMITIVE, OmniTypeKind.ARRAY];
+    const skippedKinds = [OmniTypeKind.UNKNOWN, OmniTypeKind.PRIMITIVE, OmniTypeKind.ARRAY];
     const usefulReplacements = replacements.filter(it => !skippedKinds.includes(it.from.kind));
 
     for (const replacement of usefulReplacements) {

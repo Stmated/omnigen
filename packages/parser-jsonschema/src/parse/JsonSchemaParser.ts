@@ -1,8 +1,11 @@
 import {JSONSchema7, JSONSchema7Definition, JSONSchema7Type} from 'json-schema';
 import {
   AllowedEnumTsTypes,
+  Case,
   CompositionKind,
   CompositionUtil,
+  Dereferenced,
+  Dereferencer,
   JSONSchema7Items,
   Naming,
   OmniArrayTypes,
@@ -11,15 +14,17 @@ import {
   OmniModel,
   OmniObjectType,
   OmniPrimitiveConstantValue,
-  OmniPrimitiveKind,
+  OmniPrimitiveKind, OmniPrimitiveNonNullableKind,
+  OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
   OmniSubTypeHint,
   OmniType,
   OmniTypeKind,
   OmniUtil,
+  ParserOptions,
+  RealOptions,
   TypeName,
-  Dereferenced, Dereferencer, RealOptions, ParserOptions, Case,
 } from '@omnigen/core';
 import {JSONSchema} from '@open-rpc/meta-schema';
 import {JsonObject} from 'json-pointer';
@@ -410,13 +415,15 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const lcType = schemaType.toLowerCase();
     if (lcType == 'null') {
       return {
-        kind: OmniTypeKind.NULL,
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.NULL,
+        nullable: true,
         description: description,
       };
     }
 
     const lcFormat = format?.toLowerCase() ?? '';
-    let primitiveType: OmniPrimitiveKind;
+    let primitiveType: OmniPrimitiveNonNullableKind;
     switch (lcType) {
       case 'number':
         switch (lcFormat) {
@@ -466,12 +473,18 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       if (enumValues.length == 1) {
 
         // En ENUM with just one value is the same as a regular constant
-        return {
+        const primitive: OmniPrimitiveType = {
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: primitiveType,
-          valueConstant: this.getLiteralValueOfSchema(enumValues[0]),
           description: description,
         };
+
+        const valueDefault = this.getLiteralValueOfSchema(enumValues[0]);
+        if (valueDefault != undefined) {
+          primitive.value = valueDefault;
+        }
+
+        return primitive;
       }
 
       let allowedValues: AllowedEnumTsTypes[];
@@ -503,7 +516,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
   }
 
-  private getLiteralValueOfSchema(schema: JSONSchema7Type): OmniPrimitiveConstantValue | undefined {
+  private getLiteralValueOfSchema(schema: JSONSchema7Type): OmniPrimitiveConstantValue | null | undefined {
 
     if (typeof schema == 'string') {
       return schema;
@@ -518,7 +531,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return undefined;
   }
 
-  private getIntegerPrimitiveFromFormat(format: string, fallback: OmniPrimitiveKind.INTEGER | OmniPrimitiveKind.NUMBER): OmniPrimitiveKind {
+  private getIntegerPrimitiveFromFormat(format: string, fallback: OmniPrimitiveKind.INTEGER | OmniPrimitiveKind.NUMBER): OmniPrimitiveNonNullableKind {
     switch (format) {
       case 'integer':
       case 'int':

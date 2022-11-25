@@ -472,10 +472,11 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitRegularType: JavaRendererVisitFn<Java.RegularType> = node => {
-    if (node.getLocalName()) {
-      return node.getLocalName();
+    const localName = node.getLocalName();
+    if (localName) {
+      return localName;
     } else {
-      throw new Error(`Local name must have been set. Has the package name transformer not been ran?`);
+      throw new Error(`Local name must be set. Package name transformer not ran for ${OmniUtil.describe(node.omniType)}`);
     }
   };
 

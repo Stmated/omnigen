@@ -13,7 +13,7 @@ import {
   OmniUtil,
 } from '../../parse/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {PrimitiveGenerificationChoice, RealOptions} from '../../options/index.js';
+import {RealOptions} from '../../options/index.js';
 import {GenericTargetOptions} from '../../interpret/index.js';
 import {PropertyUtil} from '../PropertyUtil.js';
 import {EqualityLevel} from '../EqualityLevel.js';
@@ -26,7 +26,7 @@ const logger = LoggerFactory.create(import.meta.url);
  * Takes an OmniModel, and tries to modify it to use generics where possible.
  * This will remove the need for a lot of extra types, and make code more readable.
  */
-export class GenericsOmniModelTransformer implements OmniModelTransformer<GenericTargetOptions> {
+export class GenericsModelTransformer implements OmniModelTransformer<GenericTargetOptions> {
 
   transformModel(model: OmniModel, options: RealOptions<GenericTargetOptions>): void {
 
@@ -214,7 +214,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<Generi
   private expandLowerBoundGenericIfPossible(
     lowerBound: OmniType,
     genericSource: OmniGenericSourceType,
-    options: GenericTargetOptions,
+    options: RealOptions<GenericTargetOptions>,
   ): OmniGenericSourceIdentifierType | undefined {
 
     if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
@@ -252,7 +252,7 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<Generi
     return sourceIdentifier;
   }
 
-  private toGenericBoundType(targetIdentifierType: OmniType | undefined, options: GenericTargetOptions): OmniType | undefined {
+  private toGenericBoundType(targetIdentifierType: OmniType | undefined, options: RealOptions<GenericTargetOptions>): OmniType | undefined {
 
     const targetIdentifierGenericType = targetIdentifierType
       ? this.getAllowedGenericPropertyType(targetIdentifierType, options)
@@ -284,24 +284,20 @@ export class GenericsOmniModelTransformer implements OmniModelTransformer<Generi
 
   private getAllowedGenericPropertyType(
     genericTargetType: OmniType,
-    options: GenericTargetOptions,
+    options: RealOptions<GenericTargetOptions>,
   ): OmniType | undefined {
 
     if (!OmniUtil.isGenericAllowedType(genericTargetType)) {
 
-      switch (options.onPrimitiveGenerification) {
-        case PrimitiveGenerificationChoice.ABORT: {
-          return undefined;
-        }
-        case PrimitiveGenerificationChoice.WRAP_OR_BOX:
-        case PrimitiveGenerificationChoice.SPECIALIZE: {
-          const allowedGenericTargetType = OmniUtil.toGenericAllowedType(
-            genericTargetType,
-            (options.onPrimitiveGenerification == PrimitiveGenerificationChoice.SPECIALIZE)
-              ? OmniPrimitiveBoxMode.WRAP
-              : OmniPrimitiveBoxMode.BOX,
-          );
-          allowedGenericTargetType.description = `Not allowed to be null`; // TODO: Internationalize
+      if (!options.generificationBoxAllowed) {
+        return undefined;
+      }
+
+      switch (options.generificationBoxMode) {
+        case OmniPrimitiveBoxMode.BOX:
+        case OmniPrimitiveBoxMode.WRAP: {
+
+          const allowedGenericTargetType = OmniUtil.toGenericAllowedType(genericTargetType, options.generificationBoxMode);
 
           const common = OmniUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType, false)?.type;
           if (common != genericTargetType) {

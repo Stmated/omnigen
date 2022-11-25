@@ -13,7 +13,7 @@ import {MapArg, TestUtils} from '@omnigen/utils-test';
 
 // TODO: Check if this test can be ran! Because it should not be able to! Since we do not depend on target-java!
 import {JavaUtil} from '@omnigen/target-java';
-import {SimplifyInheritanceOmniModelTransformer} from './transform/index.js';
+import {SimplifyInheritanceModelTransformer} from './transform/index.js';
 import {DEFAULT_TARGET_OPTIONS} from '../interpret/index.js';
 
 describe('Test CompositionDependencyUtil', () => {
@@ -254,7 +254,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C, D, E, F]);
 
-    new SimplifyInheritanceOmniModelTransformer().transformModel(model, {
+    new SimplifyInheritanceModelTransformer().transformModel(model, {
       ...DEFAULT_TARGET_OPTIONS,
       simplifyTypeHierarchy: true,
     });
@@ -301,7 +301,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C]);
 
-    new SimplifyInheritanceOmniModelTransformer().transformModel(model, {
+    new SimplifyInheritanceModelTransformer().transformModel(model, {
       ...DEFAULT_TARGET_OPTIONS,
       simplifyTypeHierarchy: true,
     });

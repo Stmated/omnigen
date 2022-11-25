@@ -1,13 +1,20 @@
 import {TestUtils} from '@omnigen/utils-test';
-import {JavaUtil} from '@omnigen/target-java';
-import {OmniModel, OmniPrimitiveKind, OmniTypeKind, GenericsOmniModelTransformer, OmniUtil} from '@omnigen/core';
+import {JAVA_OPTIONS_RESOLVER, JavaUtil} from '@omnigen/target-java';
+import {
+  OmniModel,
+  OmniPrimitiveKind,
+  OmniTypeKind,
+  GenericsModelTransformer,
+  OmniUtil,
+  OptionsUtil,
+} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '@omnigen/duo-openrpc-java-test';
 
 describe('Test CompositionDependencyUtil', () => {
 
   test('ensureNothingChanges', async () => {
 
-    const transformer = new GenericsOmniModelTransformer();
+    const transformer = new GenericsModelTransformer();
 
     const model: OmniModel = {
       name: 'model',
@@ -21,7 +28,13 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    transformer.transformModel(model, DEFAULT_TEST_JAVA_OPTIONS);
+    const realJavaOptions = await OptionsUtil.updateOptions(
+      DEFAULT_TEST_JAVA_OPTIONS,
+      undefined,
+      JAVA_OPTIONS_RESOLVER,
+    );
+
+    transformer.transformModel(model, realJavaOptions);
 
     expect(model.types).toHaveLength(1);
 
@@ -35,7 +48,7 @@ describe('Test CompositionDependencyUtil', () => {
 
   test('ensureGenericsAdded', async () => {
 
-    const transformer = new GenericsOmniModelTransformer();
+    const transformer = new GenericsModelTransformer();
 
     const a = TestUtils.obj('A', undefined, [
       TestUtils.prop('propA', {
@@ -71,7 +84,13 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    transformer.transformModel(model, DEFAULT_TEST_JAVA_OPTIONS);
+    const realJavaOptions = await OptionsUtil.updateOptions(
+      DEFAULT_TEST_JAVA_OPTIONS,
+      undefined,
+      JAVA_OPTIONS_RESOLVER,
+    );
+
+    transformer.transformModel(model, realJavaOptions);
 
     expect(model.types).toHaveLength(3);
 

@@ -105,11 +105,13 @@ export class OmniUtil {
 
   public static isGenericAllowedType(type: OmniType): boolean {
     if (type.kind == OmniTypeKind.PRIMITIVE) {
+
+      // TODO: This is specific to some languages, and should not be inside OmniUtil
       if (type.primitiveKind == OmniPrimitiveKind.STRING) {
         return true;
       }
 
-      if (type.boxMode) {
+      if (type.boxMode !== undefined) {
         return true;
       }
 
@@ -118,55 +120,9 @@ export class OmniUtil {
       }
 
       return false;
-
-      // switch (type.nullable) {
-      //   case PrimitiveNullableKind.NULLABLE:
-      //   case PrimitiveNullableKind.NOT_NULLABLE_PRIMITIVE:
-      //     return true;
-      //   default:
-      //     return false;
-      // }
     }
 
     return true;
-  }
-
-  public static isAssignableTo(type: OmniType | undefined, needle: OmniType): boolean {
-
-    return OmniUtil.visitTypesDepthFirst(type, ctx => {
-
-      if (ctx.type.kind == OmniTypeKind.GENERIC_TARGET) {
-        ctx.skip = true;
-        return;
-      }
-
-      if (ctx.type == needle) {
-        return true;
-      }
-
-      return;
-    }) || false;
-  }
-
-  /**
-   * Resolves the type into its edge type, that is the innermost type that contains the functionality of the type.
-   * The returned type can be a completely other type than the given one, following interface and/or external references.
-   *
-   * @param type what to resolve
-   */
-  public static getResolvedEdgeType(type: OmniType): OmniType {
-
-    const unwrappedType = OmniUtil.getUnwrappedType(type);
-    if (unwrappedType.kind == OmniTypeKind.ARRAY) {
-      return OmniUtil.getResolvedEdgeType(unwrappedType.of);
-    }
-
-    if (unwrappedType.kind == OmniTypeKind.INTERFACE) {
-      // NOTE: Should this be included?
-      return OmniUtil.getResolvedEdgeType(unwrappedType.of);
-    }
-
-    return unwrappedType;
   }
 
   /**
@@ -519,7 +475,7 @@ export class OmniUtil {
   private static getBoxModeString(boxMode: OmniPrimitiveBoxMode | undefined): string {
 
     if (!boxMode) {
-      return 'no-box';
+      return '?';
     }
 
     switch (boxMode) {
@@ -537,18 +493,6 @@ export class OmniUtil {
       return String(value);
     }
   }
-
-  // public static resolvePrimitiveConstantValue(
-  //   value: OmniPrimitiveConstantValueOrLazySubTypeValue,
-  //   subType: OmniType,
-  // ): OmniPrimitiveConstantValue {
-  //
-  //   if (typeof value == 'function') {
-  //     return value(subType); // TODO: Check if this is correct
-  //   } else {
-  //     return value;
-  //   }
-  // }
 
   /**
    * Gets the name of the type, or returns 'undefined' if the type is not named.
@@ -636,7 +580,9 @@ export class OmniUtil {
     // NOTE: If changed, make sure isNullable is updated
     if (type.kind == OmniTypeKind.PRIMITIVE) {
 
-      if (type.primitiveKind == OmniPrimitiveKind.STRING) {
+      if (type.primitiveKind == OmniPrimitiveKind.STRING
+        || type.primitiveKind == OmniPrimitiveKind.NULL
+        || type.primitiveKind == OmniPrimitiveKind.VOID) {
         return type;
       }
 

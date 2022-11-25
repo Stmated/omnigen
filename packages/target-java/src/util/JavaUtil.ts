@@ -1,16 +1,15 @@
 import {
   AstRootNode,
   Case,
-  CompositionKind, LiteralValue,
+  CompositionKind,
+  LiteralValue,
   Naming,
   OmniCompositionType,
   OmniModel,
   OmniObjectType,
   OmniPotentialInterfaceType,
-  OmniPrimitiveBoxMode, OmniPrimitiveConstantValue,
+  OmniPrimitiveBoxMode,
   OmniPrimitiveKind,
-  OmniPrimitiveNonNullableType,
-  OmniPrimitiveNullableType,
   OmniPrimitiveType,
   OmniPrimitiveValueMode,
   OmniProperty,
@@ -184,19 +183,6 @@ export class JavaUtil {
         }
       }
       case OmniTypeKind.PRIMITIVE: {
-
-        // if (args.type.primitiveKind == OmniPrimitiveKind.NULL) {
-        //
-        //   // The type is "No Type. Void." It is not even really an Object.
-        //   // But we return it as an Object in case we really need to display it somewhere.
-        //   // TODO: Should this be Void? Especially when used as a generic?
-        //   if (!args.withPackage) {
-        //     return 'Object';
-        //   } else {
-        //     return 'java.lang.Object';
-        //   }
-        // }
-
         const isBoxed = args.boxed != undefined ? args.boxed : JavaUtil.isPrimitiveBoxed(args.type);
         const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.primitiveKind, isBoxed);
         // TODO: Make a central method that handles the relative names -- especially once multi-namespaces are added
@@ -355,11 +341,12 @@ export class JavaUtil {
   }
 
   private static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
-    if (type.nullable) {
-      return type.boxMode == OmniPrimitiveBoxMode.BOX; // (type.nullable !== undefined && type.nullable == PrimitiveNullableKind.NULLABLE);
+
+    if (type.primitiveKind == OmniPrimitiveKind.NULL) {
+      return true;
     }
 
-    return false;
+    return type.boxMode == OmniPrimitiveBoxMode.BOX;
   }
 
   public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean): string {
@@ -386,7 +373,7 @@ export class JavaUtil {
       case OmniPrimitiveKind.NUMBER:
         return boxed ? 'java.lang.Double' : 'double';
       case OmniPrimitiveKind.NULL:
-        return 'null';
+        return boxed ? 'java.lang.Object' : 'object';
     }
   }
 
@@ -620,16 +607,16 @@ export class JavaUtil {
     return holder.ref;
   }
 
-  public static isNullable(type: OmniType): boolean {
-    // NOTE: If changed, make sure toReferenceType is updated
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
-      if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
-        return true;
-      }
-    }
-
-    return false;
-  }
+  // public static isNullable(type: OmniType): boolean {
+  //   // NOTE: If changed, make sure toReferenceType is updated
+  //   if (type.kind == OmniTypeKind.PRIMITIVE) {
+  //     if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
+  //       return true;
+  //     }
+  //   }
+  //
+  //   return false;
+  // }
 
   public static getSpecifiedDefaultValue(type: OmniType): LiteralValue | undefined {
     if (type.kind == OmniTypeKind.PRIMITIVE && type.valueMode == OmniPrimitiveValueMode.DEFAULT) {
@@ -639,39 +626,39 @@ export class JavaUtil {
     }
   }
 
-  public static toUnboxedPrimitiveType<T extends OmniPrimitiveType>(type: T): T | OmniPrimitiveType {
-    if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable) {
-
-      const nullable: OmniPrimitiveNullableType = {...type};
-      delete nullable.boxMode;
-
-      const prunedNullable: Omit<OmniPrimitiveNullableType, 'boxMode'> = nullable;
-
-      const primitiveKind = prunedNullable.primitiveKind;
-      const primitiveValue = prunedNullable.value;
-      const primitiveBox = type.boxMode;
-      if (primitiveKind == OmniPrimitiveKind.NULL || primitiveKind == OmniPrimitiveKind.VOID || primitiveValue == null) {
-
-        // Cannot unbox NULL or VOID, and cannot unbox other primitives if the value is NULL.
-        return prunedNullable;
-      }
-
-      const nonNullable: OmniPrimitiveNonNullableType = {
-        ...prunedNullable,
-        primitiveKind: primitiveKind,
-        value: primitiveValue,
-        nullable: false,
-      };
-
-      if (primitiveBox == OmniPrimitiveBoxMode.WRAP) {
-        nonNullable.boxMode = primitiveBox;
-      }
-
-      return nonNullable;
-    }
-
-    return type;
-  }
+  // public static toUnboxedPrimitiveType<T extends OmniPrimitiveType>(type: T): T | OmniPrimitiveType {
+  //   if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable) {
+  //
+  //     const nullable: OmniPrimitiveNullableType = {...type};
+  //     delete nullable.boxMode;
+  //
+  //     const prunedNullable: Omit<OmniPrimitiveNullableType, 'boxMode'> = nullable;
+  //
+  //     const primitiveKind = prunedNullable.primitiveKind;
+  //     const primitiveValue = prunedNullable.value;
+  //     const primitiveBox = type.boxMode;
+  //     if (primitiveKind == OmniPrimitiveKind.NULL || primitiveKind == OmniPrimitiveKind.VOID || primitiveValue == null) {
+  //
+  //       // Cannot unbox NULL or VOID, and cannot unbox other primitives if the value is NULL.
+  //       return prunedNullable;
+  //     }
+  //
+  //     const nonNullable: OmniPrimitiveNonNullableType = {
+  //       ...prunedNullable,
+  //       primitiveKind: primitiveKind,
+  //       value: primitiveValue,
+  //       nullable: false,
+  //     };
+  //
+  //     if (primitiveBox == OmniPrimitiveBoxMode.WRAP) {
+  //       nonNullable.boxMode = primitiveBox;
+  //     }
+  //
+  //     return nonNullable;
+  //   }
+  //
+  //   return type;
+  // }
 
   public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
 

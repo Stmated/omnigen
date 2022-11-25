@@ -1,4 +1,12 @@
-import {ExternalSyntaxTree, OmniModel, OmniType, OmniTypeKind, RealOptions, VisitorFactoryManager} from '@omnigen/core';
+import {
+  ExternalSyntaxTree,
+  OmniModel,
+  OmniType,
+  OmniTypeKind,
+  OmniUtil,
+  RealOptions,
+  VisitorFactoryManager,
+} from '@omnigen/core';
 import {JavaUtil, TypeNameInfo} from '../util/index.js';
 import {JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
@@ -84,10 +92,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
           throw new Error(`There should be at least one level of compilation units before encountering a type`);
         }
 
-        const typeNameInfo = node.omniType.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE
-          ? typeNameMap.get(node.omniType.of)
-          : typeNameMap.get(node.omniType);
-
+        const typeNameInfo = typeNameMap.get(OmniUtil.getUnwrappedType(node.omniType));
         if (typeNameInfo) {
           this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, args.options);
         } else {
@@ -116,10 +121,6 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       localNames: typeNameMap,
     });
     const nodeImportName = JavaUtil.getClassNameForImport(node.omniType, options, node.implementation);
-
-    // if (node.omniType.kind == OmniTypeKind.PRIMITIVE && !node.omniType.nullable) {
-    //   logger.info(`${relativeLocalName}: ${nodeImportName}`);
-    // }
 
     node.setLocalName(relativeLocalName);
 

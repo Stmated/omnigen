@@ -13,7 +13,7 @@ import {TargetOptions} from '../../interpret/index.js';
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.
  * It does this by seeing if types have common ancestors and skipping the superfluously stated ones.
  */
-export class SimplifyInheritanceOmniModelTransformer implements OmniModelTransformer<TargetOptions> {
+export class SimplifyInheritanceModelTransformer implements OmniModelTransformer<TargetOptions> {
 
   transformModel(model: OmniModel, options: RealOptions<TargetOptions>): void {
 
@@ -25,7 +25,7 @@ export class SimplifyInheritanceOmniModelTransformer implements OmniModelTransfo
 
     OmniUtil.visitTypesDepthFirst(model, ctx => {
       if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
-        SimplifyInheritanceOmniModelTransformer.simplifyComposition(model, ctx.type, ctx.parent);
+        SimplifyInheritanceModelTransformer.simplifyComposition(model, ctx.type, ctx.parent);
       }
     });
   }

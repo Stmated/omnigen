@@ -23,6 +23,7 @@ import {
   OmniObjectType,
   OmniOutput,
   OmniPayloadPathQualifier,
+  OmniPrimitiveBoxMode,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniPrimitiveValueMode,
@@ -465,7 +466,9 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
     };
 
     if (!this._jsonRpcErrorResponseClass) {
+
       const className = 'JsonRpcErrorResponse';
+
       this._jsonRpcErrorResponseClass = {
         kind: OmniTypeKind.OBJECT,
         name: className,
@@ -474,43 +477,12 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         properties: [],
         debug: `Created by ${this.doc.info.title}`,
       };
+
       this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcErrorResponseClass);
-
-      this._jsonRpcErrorResponseClass.properties = [];
-      if (this._options.jsonRpcPropertyName) {
-        this._jsonRpcErrorResponseClass.properties.push({
-          name: this._options.jsonRpcPropertyName,
-          type: {
-            kind: OmniTypeKind.PRIMITIVE,
-            primitiveKind: OmniPrimitiveKind.STRING,
-          },
-          owner: this._jsonRpcErrorResponseClass,
-        });
-      }
-
-      this._jsonRpcErrorResponseClass.properties.push({
-        name: 'result',
-        type: {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.NULL,
-          nullable: true,
-        },
-        owner: this._jsonRpcErrorResponseClass,
-      });
-
-      if (this._options.jsonRpcIdIncluded) {
-        this._jsonRpcErrorResponseClass.properties.push({
-          name: 'id',
-          type: {
-            kind: OmniTypeKind.PRIMITIVE,
-            primitiveKind: OmniPrimitiveKind.STRING,
-          },
-          owner: this._jsonRpcErrorResponseClass,
-        });
-      }
     }
 
     if (!this._jsonRpcErrorInstanceClass) {
+
       const className = 'JsonRpcError'; // TODO: Make it a setting
       this._jsonRpcErrorInstanceClass = {
         kind: OmniTypeKind.OBJECT,
@@ -520,25 +492,28 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         properties: [],
         debug: `Created by ${this.doc.info.title}`,
       };
-      this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcErrorInstanceClass);
 
-      // TODO: Add any properties here? Or rely on the generic and property compressor transformers?
+      this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcErrorInstanceClass);
     }
 
     errorPropertyType.extendedBy = this._jsonRpcErrorInstanceClass;
 
-    const codeType: OmniPrimitiveType = {
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.INTEGER,
-      // value: isUnknownCode ? -1 : error.code,
-      nullable: isUnknownCode,
-      // valueMode: isUnknownCode ? OmniPrimitiveValueMode.DEFAULT : OmniPrimitiveValueMode.LITERAL,
-      // nullable: PrimitiveNullableKind.NULLABLE,
-    };
-
-    if (!isUnknownCode) {
-      codeType.value = error.code;
-      codeType.valueMode = OmniPrimitiveValueMode.LITERAL;
+    let codeType: OmniPrimitiveType;
+    if (isUnknownCode) {
+      codeType = {
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.INTEGER,
+        nullable: true,
+        boxMode: OmniPrimitiveBoxMode.BOX,
+      };
+    } else {
+      codeType = {
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.INTEGER,
+        nullable: false,
+        value: error.code,
+        valueMode: OmniPrimitiveValueMode.LITERAL,
+      };
     }
 
     errorPropertyType.properties = [
@@ -601,6 +576,8 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
       debug: `Created by ${this.doc.info.title}`,
     };
 
+    OpenRpcParser.addJsonRpcErrorProperties(errorType, this._options);
+
     const errorProperty: OmniProperty = {
       name: 'error',
       type: errorPropertyType,
@@ -633,6 +610,44 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
       contentType: 'application/json',
       qualifiers: qualifiers,
     };
+  }
+
+  private static addJsonRpcErrorProperties(
+    target: OmniObjectType,
+    options: RealOptions<OpenRpcParserOptions>,
+  ): void {
+
+    if (options.jsonRpcPropertyName) {
+      target.properties.push({
+        name: options.jsonRpcPropertyName,
+        type: {
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
+        },
+        owner: target,
+      });
+    }
+
+    target.properties.push({
+      name: 'result',
+      type: {
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.NULL,
+        nullable: true,
+      },
+      owner: target,
+    });
+
+    if (options.jsonRpcIdIncluded) {
+      target.properties.push({
+        name: 'id',
+        type: {
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
+        },
+        owner: target,
+      });
+    }
   }
 
   private examplePairingToGenericExample(
@@ -850,6 +865,7 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
         nullable: true,
+        boxMode: OmniPrimitiveBoxMode.BOX,
       };
 
       if (hasConstantVersion) {
@@ -875,11 +891,21 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
 
     if (options.jsonRpcIdIncluded) {
 
-      const requestIdType: OmniPrimitiveType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.STRING,
-        nullable: !options.trustedClients, // PrimitiveNullableKind.NOT_NULLABLE,
-      };
+      let requestIdType: OmniPrimitiveType;
+      if (options.trustedClients) {
+        requestIdType = {
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
+          nullable: false,
+        };
+      } else {
+        requestIdType = {
+          kind: OmniTypeKind.PRIMITIVE,
+          primitiveKind: OmniPrimitiveKind.STRING,
+          nullable: true,
+          boxMode: OmniPrimitiveBoxMode.BOX,
+        };
+      }
 
       targetObject.properties.push({
         name: 'id',

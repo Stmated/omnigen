@@ -1,6 +1,6 @@
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {JavaOptions} from '@omnigen/target-java';
-import {PrimitiveGenerificationChoice, RealOptions} from '@omnigen/core';
+import {OmniPrimitiveBoxMode} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 
 describe('InnerTypeCompression', () => {
@@ -9,7 +9,7 @@ describe('InnerTypeCompression', () => {
 
     const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
-      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
       compressSoloReferencedTypes: false,
       compressUnreferencedSubTypes: false,
       generifyTypes: false,
@@ -58,7 +58,7 @@ describe('InnerTypeCompression', () => {
 
     const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
-      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
       generifyTypes: false,
@@ -122,7 +122,7 @@ describe('InnerTypeCompression', () => {
 
     const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
-      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
       generifyTypes: false,
@@ -152,7 +152,7 @@ describe('InnerTypeCompression', () => {
 
     const options: JavaOptions = {
       ...DEFAULT_TEST_JAVA_OPTIONS,
-      onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
       generifyTypes: true,

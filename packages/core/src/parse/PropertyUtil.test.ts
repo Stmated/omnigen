@@ -1,4 +1,11 @@
-import {OmniObjectType, OmniPrimitiveKind, OmniProperty, OmniPropertyOwner, OmniTypeKind} from './OmniModel.js';
+import {
+  OmniObjectType,
+  OmniPrimitiveKind,
+  OmniPrimitiveNonNullableKind,
+  OmniProperty,
+  OmniPropertyOwner,
+  OmniTypeKind,
+} from './OmniModel.js';
 import {PropertyUtil} from './PropertyUtil.js';
 import {EqualityLevel} from './EqualityLevel.js';
 
@@ -54,7 +61,7 @@ describe('Test PropertyUtil', () => {
   });
 });
 
-function addPrim(owner: OmniPropertyOwner, name: string, primitiveKind: OmniPrimitiveKind, description?: string): OmniProperty {
+function addPrim(owner: OmniPropertyOwner, name: string, primitiveKind: OmniPrimitiveNonNullableKind, description?: string): OmniProperty {
 
   return PropertyUtil.addProperty(owner, {
     type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: primitiveKind},

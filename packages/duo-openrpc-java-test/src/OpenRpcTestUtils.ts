@@ -5,9 +5,9 @@ import {
   Dereferencer,
   OmniModelParserResult,
   SchemaFile,
-  ElevateCommonPropertiesOmniModelTransformer,
-  GenericsOmniModelTransformer,
-  OptionsUtil, SimplifyInheritanceOmniModelTransformer,
+  ElevateCommonPropertiesModelTransformer,
+  GenericsModelTransformer,
+  OptionsUtil, SimplifyInheritanceModelTransformer,
 } from '@omnigen/core';
 import {JavaOptions, JAVA_OPTIONS_RESOLVER, InterfaceJavaModelTransformer} from '@omnigen/target-java';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
@@ -49,9 +49,9 @@ export class OpenRpcTestUtils {
     );
 
     const transformers: OmniModelTransformer<JavaOptions>[] = [
-      new SimplifyInheritanceOmniModelTransformer(),
-      new ElevateCommonPropertiesOmniModelTransformer(),
-      new GenericsOmniModelTransformer(),
+      new SimplifyInheritanceModelTransformer(),
+      new ElevateCommonPropertiesModelTransformer(),
+      new GenericsModelTransformer(),
       new InterfaceJavaModelTransformer(),
     ];
 

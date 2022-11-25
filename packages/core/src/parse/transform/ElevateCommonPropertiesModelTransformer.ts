@@ -9,18 +9,19 @@ import {EqualityLevel} from '../EqualityLevel.js';
  * Takes an OmniModel, and tries to compress types as much as possible.
  * Might make the types not compatible to the contract exactly, but payloads should be the same.
  *
- * <pre>{@code abs: [x1]
+ * <pre>
+ * abs: [x1]
  * a (abs): [x2, x3]
  * b (abs): [x2, x4]
- * }</pre>
- * Equals:
- * <pre>{@code
+ * </pre>
+ * Equals (with x2 moved to abstract parent):
+ * <pre>
  * abs: [x1, x2]
  * a (abs): [x3]
  * b (abs): [x4]
- * }</pre>
+ * </pre>
  */
-export class ElevateCommonPropertiesOmniModelTransformer implements OmniModelTransformer<TargetOptions> {
+export class ElevateCommonPropertiesModelTransformer implements OmniModelTransformer<TargetOptions> {
 
   transformModel(model: OmniModel, options: RealOptions<TargetOptions>): void {
 

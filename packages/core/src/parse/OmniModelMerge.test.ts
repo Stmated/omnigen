@@ -1,6 +1,8 @@
 import {
   OmniObjectType,
-  OmniPrimitiveKind,
+  OmniPrimitiveKind, OmniPrimitiveNonNullableKind,
+  OmniPrimitiveNonNullableType,
+  OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOrphan,
   OmniSuperTypeCapableType, OmniType,
@@ -167,9 +169,13 @@ function createObject(name: string, extendedBy?: OmniSuperTypeCapableType, ...pr
   return type;
 }
 
-function createPrimitive(name: string, primitiveKind = OmniPrimitiveKind.DOUBLE): Omit<OmniProperty, 'owner'> {
+function createPrimitive(name: string, primitiveKind: OmniPrimitiveNonNullableKind = OmniPrimitiveKind.DOUBLE): Omit<OmniProperty, 'owner'> {
+
   return {
-    type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: primitiveKind},
+    type: {
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: primitiveKind,
+    },
     name: name,
   };
 }

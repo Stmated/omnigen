@@ -3,11 +3,11 @@ import {DEFAULT_FILE_WRITE_OPTIONS, DEFAULT_RUN_OPTIONS, FileWriteOptions, Omnig
 import {OmnigenResult} from './OmnigenResult.js';
 import {
   Dereferencer,
-  ElevateCommonPropertiesOmniModelTransformer, FileWriter, GenericsOmniModelTransformer, IncomingOptions,
+  ElevateCommonPropertiesModelTransformer, FileWriter, GenericsModelTransformer, IncomingOptions,
   OmniModelTransformer,
   StandardOptionResolvers, OptionsUtil, RenderedCompilationUnit,
   SchemaFile,
-  SimplifyInheritanceOmniModelTransformer, Writer,
+  SimplifyInheritanceModelTransformer, Writer,
 } from '@omnigen/core';
 import {
   DEFAULT_JAVA_OPTIONS,
@@ -160,9 +160,9 @@ export class Omnigen {
   ): Promise<OmnigenResult> {
 
     const transformers: OmniModelTransformer<JavaOptions>[] = [
-      new SimplifyInheritanceOmniModelTransformer(),
-      new ElevateCommonPropertiesOmniModelTransformer(),
-      new GenericsOmniModelTransformer(),
+      new SimplifyInheritanceModelTransformer(),
+      new ElevateCommonPropertiesModelTransformer(),
+      new GenericsModelTransformer(),
 
       // TODO: Java specific! Needs to be loaded in optionally!
       new InterfaceJavaModelTransformer(),

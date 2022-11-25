@@ -1,12 +1,12 @@
 import {FieldAccessorMode, JavaOptions} from '@omnigen/target-java';
-import {PrimitiveGenerificationChoice} from '@omnigen/core';
+import {OmniPrimitiveBoxMode} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 
 test('lombok', async () => {
 
   const options: JavaOptions = {
     ...DEFAULT_TEST_JAVA_OPTIONS,
-    onPrimitiveGenerification: PrimitiveGenerificationChoice.SPECIALIZE,
+    generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
     compressSoloReferencedTypes: false,
     compressUnreferencedSubTypes: false,
     generifyTypes: false,

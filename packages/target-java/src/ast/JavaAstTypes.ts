@@ -1339,7 +1339,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
   getters: FieldBackedGetter[];
   methods: MethodDeclaration[];
 
-  constructor(types: OmniType[], options: JavaOptions, commentSupplier: { (type: OmniType): FreeTextType | undefined }) {
+  constructor(types: OmniType[], options: JavaOptions) {
     super();
 
     this.fields = [];
@@ -1435,9 +1435,6 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
           ),
         ),
       );
-
-      const comment = commentSupplier(typedGetter.signature.type.omniType);
-      typedGetter.signature.comments = (comment) ? new CommentBlock(comment) : undefined;
 
       this.fields.push(typedField);
       this.methods.push(typedGetter);

@@ -13,9 +13,11 @@ import {
   OmniComparisonOperator,
   OmniModel,
   OmniObjectType,
+  OmniPrimitiveBoxMode,
   OmniPrimitiveConstantValue,
-  OmniPrimitiveKind, OmniPrimitiveNonNullableKind,
-  OmniPrimitiveType,
+  OmniPrimitiveKind,
+  OmniPrimitiveNonNullableKind,
+  OmniPrimitiveNonNullableType,
   OmniProperty,
   OmniPropertyOwner,
   OmniSubTypeHint,
@@ -236,7 +238,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
         // TODO: This is not lossless if the primitive has comments/summary/etc
         const enumValues = schema.obj.const ? [schema.obj.const] : schema.obj.enum;
-        return this.typeToGenericKnownType(name, schema.obj.type, schema.obj.format, schema.obj.description, enumValues);
+        return this.typeToKnownType(name, schema.obj.type, schema.obj.format, schema.obj.description, enumValues);
       } else {
         return undefined;
       }
@@ -403,7 +405,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
   }
 
-  private typeToGenericKnownType(
+  private typeToKnownType(
     name: TypeName,
     schemaType: string,
     format?: string,
@@ -418,6 +420,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.NULL,
         nullable: true,
+        value: null,
         description: description,
       };
     }
@@ -473,11 +476,17 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       if (enumValues.length == 1) {
 
         // En ENUM with just one value is the same as a regular constant
-        const primitive: OmniPrimitiveType = {
+        const primitive: OmniPrimitiveNonNullableType = {
           kind: OmniTypeKind.PRIMITIVE,
+          // boxMode: this._options.preferredBoxMode,
           primitiveKind: primitiveType,
+          nullable: false,
+          // NOTE: This is probably incorrect, since if boxing not allowed for generics, we should fail
+          boxMode: this._options.preferredWrapMode ? OmniPrimitiveBoxMode.WRAP : OmniPrimitiveBoxMode.BOX,
           description: description,
         };
+
+        // primitive.boxMode = this._options.preferredBoxMode;
 
         const valueDefault = this.getLiteralValueOfSchema(enumValues[0]);
         if (valueDefault != undefined) {
@@ -531,7 +540,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return undefined;
   }
 
-  private getIntegerPrimitiveFromFormat(format: string, fallback: OmniPrimitiveKind.INTEGER | OmniPrimitiveKind.NUMBER): OmniPrimitiveNonNullableKind {
+  private getIntegerPrimitiveFromFormat(
+    format: string,
+    fallback: OmniPrimitiveKind.INTEGER | OmniPrimitiveKind.NUMBER
+  ): OmniPrimitiveNonNullableKind {
+
     switch (format) {
       case 'integer':
       case 'int':

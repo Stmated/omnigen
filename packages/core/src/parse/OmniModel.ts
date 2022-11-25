@@ -349,32 +349,75 @@ export enum OmniPrimitiveBoxMode {
 
 export interface OmniPrimitiveBaseType extends OmniBaseType<OmniPrimitiveKnownKind> {
 
+  primitiveKind: OmniPrimitiveKind;
+  nullable?: boolean;
+  boxMode?: OmniPrimitiveBoxMode | undefined;
+  value?: OmniPrimitiveConstantValue | null | undefined;
   /**
    * Undefined = OmniPrimitiveValueMode.DEFAULT
    */
   valueMode?: OmniPrimitiveValueMode;
 }
 
-/**
- * Nullable means the primitive is for example not a "boolean" but a nullable "Boolean"
- */
+export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveKind.NULL;
+  nullable?: true;
+  boxMode?: undefined; // OmniPrimitiveBoxMode.BOX;
+  value?: null;
+  valueMode?: OmniPrimitiveValueMode.LITERAL;
+}
+
+export interface OmniPrimitiveVoidType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveKind.VOID;
+  nullable?: true;
+  boxMode?: undefined; // OmniPrimitiveBoxMode.BOX;
+  value?: undefined;
+  valueMode?: OmniPrimitiveValueMode.LITERAL;
+}
+
 export interface OmniPrimitiveNullableType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveKind;
+  primitiveKind: Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
   nullable: true;
-  boxMode?: OmniPrimitiveBoxMode;
+  boxMode: OmniPrimitiveBoxMode;
   value?: OmniPrimitiveConstantValue | null;
+  valueMode?: OmniPrimitiveValueMode;
 }
 
 export type OmniPrimitiveNonNullableKind = Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
 
-export interface OmniPrimitiveNonNullableType extends OmniPrimitiveBaseType {
+export interface OmniPrimitiveNonNullableBoxedType extends OmniPrimitiveBaseType {
   primitiveKind: OmniPrimitiveNonNullableKind;
-  nullable?: false,
-  boxMode?: OmniPrimitiveBoxMode.WRAP;
+  nullable: false,
+  boxMode: OmniPrimitiveBoxMode.BOX;
   value?: OmniPrimitiveConstantValue;
+  valueMode?: OmniPrimitiveValueMode;
 }
 
-export type OmniPrimitiveType = OmniPrimitiveNullableType | OmniPrimitiveNonNullableType
+export interface OmniPrimitiveNonNullableWrappedType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveNonNullableKind;
+  nullable: false,
+  boxMode: OmniPrimitiveBoxMode.WRAP;
+  value?: OmniPrimitiveConstantValue;
+  valueMode?: OmniPrimitiveValueMode;
+}
+
+export interface OmniPrimitiveNonNullableSimpleType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveNonNullableKind;
+  nullable?: false,
+  boxMode?: undefined;
+  value?: OmniPrimitiveConstantValue;
+  valueMode?: OmniPrimitiveValueMode;
+}
+
+export type OmniPrimitiveNonNullableType = OmniPrimitiveNonNullableWrappedType
+  | OmniPrimitiveNonNullableBoxedType
+  | OmniPrimitiveNonNullableSimpleType;
+
+export type OmniPrimitiveType =
+  OmniPrimitiveVoidType
+  | OmniPrimitiveNullType
+  | OmniPrimitiveNullableType
+  | OmniPrimitiveNonNullableType;
 
 export type AllowedEnumTsTypes = number | string;
 export type OmniAllowedEnumPrimitiveKinds = OmniPrimitiveKind.STRING

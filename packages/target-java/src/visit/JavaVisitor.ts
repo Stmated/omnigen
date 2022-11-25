@@ -313,7 +313,7 @@ export class JavaVisitor<R> implements AstVisitor<R> {
       if (Array.isArray(freeText)) {
         return freeText.map(it => this.visitFreeTextRecursively(it, visitor, translator));
       } else {
-        return freeText.visit(visitor); // this.visitFreeTextRecursively(freeText, visitor, translator);
+        return freeText.visit(visitor);
       }
     }
   }

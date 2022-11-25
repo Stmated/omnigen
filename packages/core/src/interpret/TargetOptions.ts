@@ -1,5 +1,5 @@
-import {Option, Options, PrimitiveGenerificationChoice} from '../options/index.js';
-import {CompressTypeLevel, OmniTypeKind} from '../parse/index.js';
+import {Booleanish, Option, OptionResolvers, Options, StandardOptionResolvers} from '../options/index.js';
+import {CompressTypeLevel, DEFAULT_PARSER_OPTIONS, OmniPrimitiveBoxMode, OmniTypeKind} from '../parse/index.js';
 import {EqualityLevel} from '../parse/EqualityLevel.js';
 
 export enum CompressTypeNaming {
@@ -64,8 +64,9 @@ export interface TargetOptions extends Options {
 }
 
 export interface GenericTargetOptions extends TargetOptions {
-  generifyTypes: boolean;
-  onPrimitiveGenerification: PrimitiveGenerificationChoice;
+  generifyTypes: Option<Booleanish, boolean>;
+  generificationBoxAllowed: Option<Booleanish, boolean>;
+  generificationBoxMode: OmniPrimitiveBoxMode;
 }
 
 export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
@@ -79,4 +80,16 @@ export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
   elevatePropertiesMoreEqualThan: EqualityLevel.FUNCTION_MIN,
   elevatePropertiesWithTypesMoreEqualThan: EqualityLevel.FUNCTION_MIN,
   simplifyTypeHierarchy: true,
+};
+
+export const DEFAULT_GENERIC_TARGET_OPTIONS: GenericTargetOptions = {
+  ...DEFAULT_TARGET_OPTIONS,
+  generifyTypes: true,
+  generificationBoxAllowed: true,
+  generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
+};
+
+export const GENERIC_TARGET_OPTIONS_RESOLVER: OptionResolvers<GenericTargetOptions> = {
+  generificationBoxAllowed: StandardOptionResolvers.toBoolean,
+  generifyTypes: StandardOptionResolvers.toBoolean,
 };

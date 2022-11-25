@@ -6,14 +6,14 @@ import {
   BaseJavaAstTransformer,
   InnerTypeCompressionAstTransformer,
   PackageResolverAstTransformer,
+  AddJakartaValidationAstTransformer,
+  PropertyNameDiscrepancyAstTransformer,
+  AddFieldsAstTransformer,
+  AddGetterSetterAstTransformer,
+  AddLombokAstTransformer, AddCommentsAstTransformer,
 } from '../transform/index.js';
 import * as Java from '../ast/index.js';
-import {AddFieldsAstTransformer} from '../transform/AddFieldsAstTransformer.js';
-import {AddGetterSetterAstTransformer} from '../transform/AddGetterSetterAstTransformer.js';
-import {AddLombokAstTransformer} from '../transform/AddLombokAstTransformer.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {PropertyNameDiscrepancyAstTransformer} from '../transform/PropertyNameDiscrepancyAstTransformer.js';
-import {AddJakartaValidationAstTransformer} from '../transform/AddJakartaValidationAstTransformer.js';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -38,6 +38,7 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
     }
     this.registerTransformer(new AddConstructorJavaAstTransformer());
     this.registerTransformer(new AdditionalPropertiesInterfaceAstTransformer());
+    this.registerTransformer(new AddCommentsAstTransformer());
     this.registerTransformer(new AddJakartaValidationAstTransformer());
     this.registerTransformer(new AddGeneratedAnnotationAstTransformer());
     this.registerTransformer(new InnerTypeCompressionAstTransformer());

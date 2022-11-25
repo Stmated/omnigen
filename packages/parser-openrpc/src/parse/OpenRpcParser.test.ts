@@ -1,18 +1,17 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {RealOptions} from '@omnigen/core';
-import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
+import {DEFAULT_PARSER_OPTIONS, OptionsUtil} from '@omnigen/core';
 import {OmniTypeKind, OmniUtil, SchemaFile} from '@omnigen/core';
 import {JavaUtil} from '@omnigen/target-java';
-import {OpenRpcParserOptions, OpenRpcParserBootstrapFactory} from './OpenRpcParser.js';
-import {JSONRPC_20_PARSER_OPTIONS} from '../options/index.js';
+import {OpenRpcParserOptions, OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_RESOLVERS} from './OpenRpcParser.js';
+import {JSONRPC_20_PARSER_OPTIONS, JSONRPC_OPTIONS_RESOLVERS} from '../options/index.js';
 
 describe('Test Generic Model Creation', () => {
 
   const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
 
   // TODO: This is a bit stupid, no?
-  const options: RealOptions<OpenRpcParserOptions> = {
+  const options: OpenRpcParserOptions = {
     ...DEFAULT_PARSER_OPTIONS,
     ...JSONRPC_20_PARSER_OPTIONS,
   };
@@ -29,7 +28,8 @@ describe('Test Generic Model Creation', () => {
       const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
         new SchemaFile(filePath),
       );
-      const parser = parserBootstrap.createParser(options);
+      const realOptions = await OptionsUtil.updateOptions(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
+      const parser = parserBootstrap.createParser(realOptions);
       const model = parser.parse().model;
       expect(model).toBeDefined();
     }
@@ -40,7 +40,9 @@ describe('Test Generic Model Creation', () => {
     const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
       new SchemaFile('../parser-openrpc/examples/petstore-expanded.json'),
     );
-    const parser = parserBootstrap.createParser(options);
+
+    const realOptions = await OptionsUtil.updateOptions(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
+    const parser = parserBootstrap.createParser(realOptions);
     const model = parser.parse().model;
 
     expect(model).toBeDefined();

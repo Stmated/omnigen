@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
   ExternalSyntaxTree,
   OmniModel, OmniTypeKind,
@@ -11,16 +11,11 @@ import {JavaOptions} from '../options/index.js';
 
 export class PropertyNameDiscrepancyAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(
-    _model: OmniModel,
-    root: JavaAstRootNode,
-    _externals: ExternalSyntaxTree<JavaAstRootNode, JavaOptions>[],
-    _options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
     // TODO: Add @JsonProperty to the constructor parameters?
 
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitMethodDeclaration: () => {},
       visitExtendsDeclaration: () => {},

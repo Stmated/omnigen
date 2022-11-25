@@ -26,29 +26,6 @@ export class JavaAstUtils {
     }
   }
 
-  public static addGeneratedAnnotation(declaration: Java.AbstractObjectDeclaration): void {
-
-    if (!declaration.annotations) {
-      declaration.annotations = new Java.AnnotationList(...[]);
-    }
-
-    declaration.annotations.children.push(
-      new Java.Annotation(
-        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'javax.annotation.Generated'}),
-        new Java.AnnotationKeyValuePairList(
-          new Java.AnnotationKeyValuePair(
-            new Java.Identifier('value'),
-            new Java.Literal('omnigen'),
-          ),
-          new Java.AnnotationKeyValuePair(
-            new Java.Identifier('date'),
-            new Java.Literal(new Date().toISOString()),
-          ),
-        ),
-      ),
-    );
-  }
-
   public static createTypeNode(type: OmniType, implementation?: boolean): Java.RegularType | Java.GenericType {
 
     if (type.kind == OmniTypeKind.DICTIONARY) {

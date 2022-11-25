@@ -1,7 +1,7 @@
 import {AbstractInterpreter, AstRootNode} from '@omnigen/core';
 import {FieldAccessorMode, JavaOptions} from '../options/index.js';
 import {
-  AddConstructorJavaAstTransformer,
+  AddConstructorJavaAstTransformer, AddGeneratedAnnotationAstTransformer,
   AdditionalPropertiesInterfaceAstTransformer,
   BaseJavaAstTransformer,
   InnerTypeCompressionAstTransformer,
@@ -39,6 +39,7 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
     this.registerTransformer(new AddConstructorJavaAstTransformer());
     this.registerTransformer(new AdditionalPropertiesInterfaceAstTransformer());
     this.registerTransformer(new AddJakartaValidationAstTransformer());
+    this.registerTransformer(new AddGeneratedAnnotationAstTransformer());
     this.registerTransformer(new InnerTypeCompressionAstTransformer());
     this.registerTransformer(new PackageResolverAstTransformer());
   }

@@ -163,6 +163,8 @@ export class Omnigen {
       new SimplifyInheritanceOmniModelTransformer(),
       new ElevateCommonPropertiesOmniModelTransformer(),
       new GenericsOmniModelTransformer(),
+
+      // TODO: Java specific! Needs to be loaded in optionally!
       new InterfaceJavaModelTransformer(),
     ];
 

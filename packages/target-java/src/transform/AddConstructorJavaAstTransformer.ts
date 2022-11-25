@@ -1,9 +1,8 @@
-import {AbstractJavaAstTransformer, JavaAstUtils} from '../transform/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform/index.js';
 import {
   AbortVisitingWithResult,
   ExternalSyntaxTree, LiteralValue,
   OmniModel,
-  OmniPrimitiveValueMode,
   OmniTypeKind,
   OmniUtil,
   RealOptions,
@@ -17,21 +16,16 @@ import {TokenType} from '../ast/index.js';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(
-    model: OmniModel,
-    root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
-    _options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
-    if (_options.fieldAccessorMode == FieldAccessorMode.LOMBOK) {
+    if (args.options.fieldAccessorMode == FieldAccessorMode.LOMBOK) {
 
       // If the fields are managed by lombok, then we add no constructor.
       return Promise.resolve();
     }
 
     const classDeclarations: Java.ClassDeclaration[] = [];
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
       visitClassDeclaration: (node, visitor) => {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
         classDeclarations.push(node);
@@ -41,14 +35,14 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     // TODO: Re-order the nodes, so that those that have no superclasses are first
     //        Or if they do, that it's in the correct order
     //  (this way we can better add constructors on subtypes, instead of working with required fields)
-    classDeclarations.sort((a, b) => AddConstructorJavaAstTransformer.compareSuperClassHierarchy(model, a, b));
+    classDeclarations.sort((a, b) => AddConstructorJavaAstTransformer.compareSuperClassHierarchy(args.model, a, b));
 
     // TODO: Skip the re-order and instead do it on a "need-to" basis, where we dive deeper here,
     //        and check if it has already been handled or already has constructor(s)
 
     for (const classDeclaration of classDeclarations) {
 
-      const superTypeRequirements = JavaUtil.getConstructorRequirements(root, classDeclaration, true);
+      const superTypeRequirements = JavaUtil.getConstructorRequirements(args.root, classDeclaration, true);
 
       if (superTypeRequirements[0].length > 0 || superTypeRequirements[1].length > 0) {
 

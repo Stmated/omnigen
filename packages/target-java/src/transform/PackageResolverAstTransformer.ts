@@ -1,7 +1,7 @@
 import {ExternalSyntaxTree, OmniModel, OmniType, OmniTypeKind, RealOptions, VisitorFactoryManager} from '@omnigen/core';
 import {JavaUtil, TypeNameInfo} from '../util/index.js';
 import {JavaOptions} from '../options/index.js';
-import {AbstractJavaAstTransformer} from '../transform/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -20,19 +20,14 @@ interface ObjectInfo {
 
 export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(
-    _model: OmniModel,
-    root: Java.JavaAstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
-    options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
     const typeNameMap = new Map<OmniType, TypeNameInfo>();
     const cuInfoStack: CompilationUnitInfo[] = [];
     const objectStack: ObjectInfo[] = [];
 
     // First we go through all the types and find their true Full-Qualified Name.
-    const all: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[] = [...externals, {node: root, options: options}];
+    const all: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[] = [...args.externals, {node: args.root, options: args.options}];
     for (const external of all) {
 
       // Get and move all type infos to the global one.
@@ -45,12 +40,12 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     }
 
     // Then we will go through the currently compiling root node and set all type nodes' local names.
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitCompilationUnit: (node, visitor) => {
 
-        const cuClassName = JavaUtil.getClassName(node.object.type.omniType, options);
-        const cuPackage = JavaUtil.getPackageName(node.object.type.omniType, cuClassName, options);
+        const cuClassName = JavaUtil.getClassName(node.object.type.omniType, args.options);
+        const cuPackage = JavaUtil.getPackageName(node.object.type.omniType, cuClassName, args.options);
 
         const cuInfo: CompilationUnitInfo = {
           cu: node,
@@ -94,9 +89,9 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
           : typeNameMap.get(node.omniType);
 
         if (typeNameInfo) {
-          this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, options);
+          this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, args.options);
         } else {
-          this.setLocalNameAndImportForUnknownTypeName(node, cuInfo, typeNameMap, options);
+          this.setLocalNameAndImportForUnknownTypeName(node, cuInfo, typeNameMap, args.options);
         }
 
         cuInfo.addedTypeNodes.push(node);

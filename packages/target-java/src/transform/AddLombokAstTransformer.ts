@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
   ExternalSyntaxTree,
   OmniModel,
@@ -25,15 +25,10 @@ export interface StackInfo {
  * This will be improved as we move along, and right now it is enough to work for 80% of cases, in an ugly way.
  */
 export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
-  transformAst(
-    _model: OmniModel,
-    root: JavaAstRootNode,
-    _externals: ExternalSyntaxTree<JavaAstRootNode, JavaOptions>[],
-    _options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
     const cuStack: StackInfo[] = [];
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitCompilationUnit: (node, visitor) => {
 

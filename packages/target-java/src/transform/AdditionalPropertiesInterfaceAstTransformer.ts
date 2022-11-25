@@ -4,21 +4,16 @@ import {
 } from '@omnigen/core';
 import {JavaUtil} from '../util/index.js';
 import {JavaOptions} from '../options/index.js';
-import {JavaAstUtils, AbstractJavaAstTransformer} from '../transform/index.js';
+import {JavaAstUtils, AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 
 export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(
-    _model: OmniModel,
-    root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
-    options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
     const createdInterface: { obj?: Java.InterfaceDeclaration } = {};
     const currentClassDeclaration: { obj?: Java.ClassDeclaration | undefined } = {};
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitClassDeclaration: (node, visitor) => {
         currentClassDeclaration.obj = node;
@@ -77,9 +72,9 @@ export class AdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAst
 
     const obj = createdInterface.obj;
     if (obj) {
-      root.children.push(new Java.CompilationUnit(
+      args.root.children.push(new Java.CompilationUnit(
         new Java.PackageDeclaration(
-          JavaUtil.getPackageName(obj.type.omniType, obj.name.value, options),
+          JavaUtil.getPackageName(obj.type.omniType, obj.name.value, args.options),
         ),
         new Java.ImportList([]),
         obj,

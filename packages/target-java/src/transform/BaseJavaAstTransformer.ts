@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {JavaOptions} from '../options/index.js';
 import {
   Case,
@@ -39,16 +39,11 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
 
-  transformAst(
-    model: OmniModel,
-    root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
-    options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
     // TODO: Need to figure out where the wrong JsonRpcErrorResponse comes from. Something is missed in the replacement!
 
-    const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
+    const exportableTypes = OmniUtil.getAllExportableTypes(args.model, args.model.types);
 
     for (const type of exportableTypes.all) {
 
@@ -63,16 +58,16 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           primitiveClass = this.createNotNullablePrimitiveWrapper(type, kindName);
           this._primitiveWrapperMap.set(kindName, primitiveClass);
 
-          root.children.push(
+          args.root.children.push(
             new Java.CompilationUnit(
-              new Java.PackageDeclaration(JavaUtil.getPackageName(type, primitiveClass.name.value, options)),
+              new Java.PackageDeclaration(JavaUtil.getPackageName(type, primitiveClass.name.value, args.options)),
               new Java.ImportList([]),
               primitiveClass,
             ),
           );
         }
 
-        this.replaceTypeWithReference(type, type, options);
+        this.replaceTypeWithReference(type, type, args.options);
       }
     }
 
@@ -115,7 +110,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         // What do we do here?
 
       } else if (type.kind == OmniTypeKind.ENUM) {
-        this.transformEnum(model, type, undefined, root, options);
+        this.transformEnum(args.model, type, undefined, args.root, args.options);
       } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
         // A composition type is likely just like any other object.
@@ -128,20 +123,20 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
           // That is because multiple inheritance does not exist, so it needs to be done manually.
           const subType = JavaUtil.asSubType(type);
           if (subType) {
-            this.transformSubType(model, subType, undefined, options, root);
+            this.transformSubType(args.model, subType, undefined, args.options, args.root);
           }
         }
 
       } else if (type.kind == OmniTypeKind.OBJECT) {
-        this.transformSubType(model, type, undefined, options, root);
+        this.transformSubType(args.model, type, undefined, args.options, args.root);
       } else if (type.kind == OmniTypeKind.INTERFACE) {
         if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
           throw new Error(`Do not know yet how to handle a generic interface. Fix it.`);
         } else {
-          this.transformInterface(type, options, root);
+          this.transformInterface(type, args.options, args.root);
         }
       } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-        this.transformSubType(model, type.of, type, options, root, type.sourceIdentifiers);
+        this.transformSubType(args.model, type.of, type, args.options, args.root, type.sourceIdentifiers);
       }
     }
 
@@ -205,8 +200,6 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       new Java.Identifier(JavaUtil.getClassName(originalType || type, options)),
       body,
     );
-
-    JavaAstUtils.addGeneratedAnnotation(enumDeclaration);
 
     const comments = BaseJavaAstTransformer.getCommentsForType(type, model, options);
     if (comments) {
@@ -278,7 +271,6 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       new Java.Block(),
     );
 
-    JavaAstUtils.addGeneratedAnnotation(declaration);
     JavaAstUtils.addInterfaceProperties(type, declaration.body);
 
     root.children.push(new Java.CompilationUnit(
@@ -344,9 +336,6 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         body,
       );
     }
-
-    // TODO: Move into a separate transformer, and make it an option
-    JavaAstUtils.addGeneratedAnnotation(declaration);
 
     const comments = BaseJavaAstTransformer.getCommentsForType(type, model, options);
 

@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
   AbortVisitingWithResult,
   AbstractStNode,
@@ -16,15 +16,10 @@ import {JavaOptions} from '../options/index.js';
 import {JavaUtil} from '../util/index.js';
 
 export class AddGetterSetterAstTransformer extends AbstractJavaAstTransformer {
-  transformAst(
-    _model: OmniModel,
-    root: JavaAstRootNode,
-    _externals: ExternalSyntaxTree<JavaAstRootNode, JavaOptions>[],
-    _options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
     const latestCompilationUnit: { cu: Java.CompilationUnit | undefined } = {cu: undefined};
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitCompilationUnit: (node, visitor) => {
 

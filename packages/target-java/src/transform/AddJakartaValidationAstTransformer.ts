@@ -6,19 +6,14 @@ import {
   VisitorFactoryManager,
 } from '@omnigen/core';
 import {JavaOptions} from '../options/index.js';
-import {AbstractJavaAstTransformer} from '../transform/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 
 export class AddJakartaValidationAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(
-    _model: OmniModel,
-    root: Java.JavaAstRootNode,
-    _externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
-    options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitClassDeclaration: (node, visitor) => {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);

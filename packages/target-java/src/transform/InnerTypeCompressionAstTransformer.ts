@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer} from '../transform/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import {
   ExternalSyntaxTree,
   OmniModel,
@@ -27,24 +27,19 @@ interface TypeMapping {
 
 export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(
-    model: OmniModel,
-    root: Java.JavaAstRootNode,
-    externals: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[],
-    options: RealOptions<TargetOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
-    if (!options.compressSoloReferencedTypes && !options.compressUnreferencedSubTypes) {
+    if (!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes) {
 
       // The option for compressing types is disabled.
       return Promise.resolve();
     }
 
     const typeMapping = new Map<OmniType, TypeMapping>();
-    this.gatherTypeMappings(typeMapping, root);
+    this.gatherTypeMappings(typeMapping, args.root);
 
     const typeMappingExternals = new Map<OmniType, TypeMapping>();
-    for (const external of externals) {
+    for (const external of args.externals) {
 
       // We still gather the mappings for all externals as well.
       // It will be useful for error messages and exclusions of some compressions.
@@ -61,14 +56,14 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
       const usedInUnit = [...usedInUnits.values()][0];
       const definedUsedInSuperType = JavaUtil.superMatches(
-        model, JavaUtil.asSubType(usedInUnit.object.type.omniType),
+        args.model, JavaUtil.asSubType(usedInUnit.object.type.omniType),
         superType => (superType == type),
       );
 
       if (definedUsedInSuperType) {
 
         // If the types are assignable, it means that the single use is a class extension.
-        if (options.compressUnreferencedSubTypes && this.isAllowedKind(usedInUnit, options)) {
+        if (args.options.compressUnreferencedSubTypes && this.isAllowedKind(usedInUnit, args.options)) {
 
           // If the only use is as an extension, then IF we compress, the source/target should be reversed.
           // If typeA is only used in typeB, and typeB is extending from typeA, then typeB should be inside typeA.
@@ -84,11 +79,11 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
       } else {
 
-        if (options.compressSoloReferencedTypes && this.isAllowedKind(typeMappings.definedIn, options)) {
+        if (args.options.compressSoloReferencedTypes && this.isAllowedKind(typeMappings.definedIn, args.options)) {
 
           // This type is only ever used in one single unit.
           // To decrease the number of files, we can compress the types and make this an inner type.
-          this.moveCompilationUnit(typeMappings.definedIn, usedInUnit, type, root);
+          this.moveCompilationUnit(typeMappings.definedIn, usedInUnit, type, args.root);
         }
       }
     }

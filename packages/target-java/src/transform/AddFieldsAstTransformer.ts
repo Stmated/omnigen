@@ -1,5 +1,6 @@
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
+  AstTransformerArguments,
   Case,
   ExternalSyntaxTree,
   OmniModel,
@@ -19,14 +20,9 @@ import {JavaAstUtils} from './JavaAstUtils.js';
 import {BaseJavaAstTransformer} from './BaseJavaAstTransformer.js';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
-  transformAst(
-    model: OmniModel,
-    root: JavaAstRootNode,
-    _externals: ExternalSyntaxTree<JavaAstRootNode, JavaOptions>[],
-    options: RealOptions<JavaOptions>,
-  ): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
-    root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitClassDeclaration: node => {
 
@@ -39,12 +35,12 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
         if (type.kind == OmniTypeKind.OBJECT) {
 
           for (const property of type.properties) {
-            this.addOmniPropertyToBody(model, body, property, options);
+            this.addOmniPropertyToBody(args.model, body, property, args.options);
           }
 
           if (type.additionalProperties) {
 
-            if (!JavaUtil.superMatches(model, type, parent => parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true)) {
+            if (!JavaUtil.superMatches(args.model, type, parent => parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true)) {
 
               // No parent implements additional properties, so we should.
               body.children.push(new Java.AdditionalPropertiesDeclaration());
@@ -53,7 +49,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
         }
 
         for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
-          this.addOmniPropertyToBody(model, body, property, options);
+          this.addOmniPropertyToBody(args.model, body, property, args.options);
         }
       },
     }));

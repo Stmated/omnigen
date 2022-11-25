@@ -12,7 +12,7 @@ import {
   RealOptions,
   TargetOptions,
 } from '@omnigen/core';
-import {JavaUtil} from '../util/index.js';
+import {JavaUtil} from '../../util/index.js';
 
 /**
  * Checks for object types that are used as interfaces, and splits the type into two types.
@@ -24,16 +24,6 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer<Targe
   transformModel(model: OmniModel, _options: RealOptions<TargetOptions>): void {
 
     const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
-
-    // if (!subTypesAsInterfaces.has(type)) {
-    //   const asInterface = JavaUtil.getAsInterface(model, type);
-    //   if (asInterface) {
-    //     const declaration = this.transformInterface(asInterface, options, root, options.interfaceNamePrefix, options.interfaceNameSuffix);
-    //     subTypesAsInterfaces.set(asInterface, declaration);
-    //   }
-    // } else {
-    //
-    // }
 
     const interfaceMap = new Map<OmniType, OmniInterfaceType>();
 
@@ -56,24 +46,8 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer<Targe
           continue;
         }
 
-        // if (superType.kind == OmniTypeKind.COMPOSITION) {
-        //   // If it is a composition, then add it as an "AND" if it not there
-        // } else if (superType.kind == OmniTypeKind.OBJECT) {
-        //
-        //   // If it is an an object, change it into a composite and add it as an AND
-        // } else if (superType.kind == OmniTypeKind.GENERIC_TARGET) {
-        //
-        //   // ???
-        // }
-
         // Now let's replace all the types that inherit from this object with the new interface type.
         for (const implementor of subTypesThatImplementUs) {
-
-          // if (implementor.kind == OmniTypeKind.COMPOSITION && implementor.compositionKind == CompositionKind.XOR) {
-          //   // Do NOT replace the implementation type with the interface type.
-          //   // This will make the payloads not deserializable by the manual deserialization.
-          //   continue;
-          // }
 
           // We only swap the DIRECT depended types.
           // NOTE: This might be incorrect. Will notice how it feels/looks after a few examples.

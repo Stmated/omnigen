@@ -229,7 +229,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
 
   visitCommentBlock: JavaRendererVisitFn<Java.CommentBlock> = (node, visitor) => {
 
-    const text = this.join(this.visitFreeTextRecursively(node.text, visitor, it => it))
+    const text = this.join(this.visitFreeTextGlobal(node.text, visitor, it => it))
       .trim()
       .replaceAll('\r', '')
       .replaceAll('\n', '\n * ');
@@ -239,7 +239,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
 
   visitComment: JavaRendererVisitFn<Java.Comment> = (node, visitor) => {
 
-    const textString = this.join(this.visitFreeTextRecursively(node.text, visitor, it => it));
+    const textString = this.join(this.visitFreeTextGlobal(node.text, visitor, it => it));
 
     return textString
       .replaceAll('\r', '')
@@ -556,18 +556,18 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitFreeTextHeader: JavaRendererVisitFn<Java.FreeTextHeader> = (node, visitor) => {
-    return `<h${node.level}>${this.join(this.visitFreeTextRecursively(node.child, visitor, it => it))}</h${node.level}>\n`;
+    return `<h${node.level}>${this.join(this.visitFreeTextGlobal(node.child, visitor, it => it))}</h${node.level}>\n`;
   };
 
   visitFreeTextParagraph: JavaRendererVisitFn<Java.FreeTextParagraph> = (node, visitor) => {
-    return `<p>${this.join(this.visitFreeTextRecursively(node.child, visitor, it => it))}</p>\n`;
+    return `<p>${this.join(this.visitFreeTextGlobal(node.child, visitor, it => it))}</p>\n`;
   };
 
   visitFreeTextSection: JavaRendererVisitFn<Java.FreeTextSection> = (node, visitor) => {
 
     const indentation = this.getIndentation(1);
     const header = this.render(node.header, visitor);
-    const content = this.join(this.visitFreeTextRecursively(node.content, visitor, it => it));
+    const content = this.join(this.visitFreeTextGlobal(node.content, visitor, it => it));
     const blockContent = `${header}${content.trim()}`;
 
     const indentedBlock = blockContent.replace(this._patternLineStart, indentation);
@@ -576,13 +576,13 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitFreeTextLine: JavaRendererVisitFn<Java.FreeTextLine> = (node, visitor) => {
-    return `${this.join(this.visitFreeTextRecursively(node.child, visitor, it => it))}\n`;
+    return `${this.join(this.visitFreeTextGlobal(node.child, visitor, it => it))}\n`;
   };
 
   visitFreeTextIndent: JavaRendererVisitFn<Java.FreeTextLine> = (node, visitor) => {
 
     const indentation = this.getIndentation(1);
-    const blockContent = this.join(this.visitFreeTextRecursively(node.child, visitor, it => it));
+    const blockContent = this.join(this.visitFreeTextGlobal(node.child, visitor, it => it));
 
     return blockContent.replace(this._patternLineStart, indentation);
   };

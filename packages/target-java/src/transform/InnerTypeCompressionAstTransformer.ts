@@ -1,29 +1,16 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import {
-  ExternalSyntaxTree,
-  OmniModel,
   OmniType,
   OmniTypeKind,
   OmniUtil,
-  RealOptions,
   TargetOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import {JavaOptions} from '../options/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaUtil} from '../util/index.js';
 
 const logger = LoggerFactory.create(import.meta.url);
-
-type CompilationUnitInfo = {
-  cu: Java.CompilationUnit,
-};
-
-interface TypeMapping {
-  definedIn?: Java.CompilationUnit;
-  usedIn: Set<Java.CompilationUnit>;
-}
 
 export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
@@ -32,58 +19,73 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     if (!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes) {
 
       // The option for compressing types is disabled.
+      logger.info(`Not compressing any types`);
       return Promise.resolve();
     }
 
-    const typeMapping = new Map<OmniType, TypeMapping>();
-    this.gatherTypeMappings(typeMapping, args.root);
+    const cuUsedInTypes = new Map<Java.CompilationUnit, OmniType[]>();
+    const typeToCu = new Map<OmniType, Java.CompilationUnit>();
+    this.gatherTypeMappings(cuUsedInTypes, typeToCu, args.root);
 
-    const typeMappingExternals = new Map<OmniType, TypeMapping>();
-    for (const external of args.externals) {
+    // const externalCuToTypes = new Map<Java.CompilationUnit, OmniType[]>();
+    // for (const external of args.externals) {
+    //
+    //   // We still gather the mappings for all externals as well.
+    //   // It will be useful for error messages and exclusions of some compressions.
+    //   // Like... we should never move types from specific models INTO the common types. That is just weird.
+    //   this.gatherTypeMappings(externalCuToTypes, external.node);
+    // }
 
-      // We still gather the mappings for all externals as well.
-      // It will be useful for error messages and exclusions of some compressions.
-      // Like... we should never move types from specific models INTO the common types. That is just weird.
-      this.gatherTypeMappings(typeMappingExternals, external.node);
-    }
+    const typeUsedInCus = this.flipMultiMap(cuUsedInTypes);
+    // const externalTypeToCUs = this.flipMultiMap(externalCuToTypes);
+    logger.info(typeUsedInCus);
 
-    for (const [type, typeMappings] of typeMapping.entries()) {
+    for (const [type, units] of typeUsedInCus.entries()) {
 
-      const usedInUnits = typeMappings.usedIn;
-      if (!usedInUnits || usedInUnits.size != 1) {
+      // const usedInUnits = typeMappings.usedIn;
+
+      logger.info(`${OmniUtil.describe(type)} used in ${units.map(it => OmniUtil.describe(it.object.type.omniType))}`);
+
+      // or two? Since it contains itself?
+      if (units.length != 1) {
         continue;
       }
 
-      const usedInUnit = [...usedInUnits.values()][0];
+      // const usedInUnit = [...usedInUnits.values()][0];
       const definedUsedInSuperType = JavaUtil.superMatches(
-        args.model, JavaUtil.asSubType(usedInUnit.object.type.omniType),
+        args.model, JavaUtil.asSubType(type),
         superType => (superType == type),
       );
 
       if (definedUsedInSuperType) {
 
         // If the types are assignable, it means that the single use is a class extension.
-        if (args.options.compressUnreferencedSubTypes && this.isAllowedKind(usedInUnit, args.options)) {
+        if (args.options.compressUnreferencedSubTypes && this.isAllowedKind(type, args.options)) {
 
           // If the only use is as an extension, then IF we compress, the source/target should be reversed.
           // If typeA is only used in typeB, and typeB is extending from typeA, then typeB should be inside typeA.
-          const definedIn = typeMappings.definedIn;
-          if (!definedIn && typeMappingExternals.has(type)) {
-            // If we could not find the target, but it is available in the external mappings,
-            // then we know that the other type is inside another model. We do not want to compress into them.
-            logger.debug(`Skipping compression of type '${OmniUtil.describe(type)}' inside external model`);
-          } else {
+
+          // const definedIn = typeToCu.get(type);
+          // if (!definedIn && externalTypeToCUs.has(type)) {
+          //   // If we could not find the target, but it is available in the external mappings,
+          //   // then we know that the other type is inside another model. We do not want to compress into them.
+          //   logger.debug(`Skipping compression of type '${OmniUtil.describe(type)}' inside external model`);
+          // } else {
             // this.moveCompilationUnit(usedInUnit, definedIn, type, root);
-          }
+          logger.info(`Could compress ${type} into ${OmniUtil.describe(type)}`);
+          // }
         }
 
       } else {
 
-        if (args.options.compressSoloReferencedTypes && this.isAllowedKind(typeMappings.definedIn, args.options)) {
+        if (args.options.compressSoloReferencedTypes && this.isAllowedKind(type, args.options)) {
 
           // This type is only ever used in one single unit.
           // To decrease the number of files, we can compress the types and make this an inner type.
-          this.moveCompilationUnit(typeMappings.definedIn, usedInUnit, type, args.root);
+          const definedIn = typeToCu.get(type);
+          const singleUseIn = units[0];
+
+          this.moveCompilationUnit(definedIn, singleUseIn, type, args.root);
         }
       }
     }
@@ -91,36 +93,51 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     return Promise.resolve(undefined);
   }
 
+  private flipMultiMap<A, B>(original: Map<A, B[]>): Map<B, A[]> {
+
+    const flipped = new Map<B, A[]>();
+    for (const [originalKey, originalValues] of original.entries()) {
+      for (const entry of originalValues) {
+        let flippedValues = flipped.get(entry);
+        if (!flippedValues) {
+          flippedValues = [];
+          flipped.set(entry, flippedValues);
+        }
+
+        flippedValues.push(originalKey);
+      }
+    }
+
+    return flipped;
+  }
+
   private gatherTypeMappings(
-    typeMapping: Map<OmniType, TypeMapping>,
+    typeMapping: Map<Java.CompilationUnit, OmniType[]>,
+    typeToCu: Map<OmniType, Java.CompilationUnit>,
     root: Java.JavaAstRootNode,
   ) {
 
-    const cuInfoStack: CompilationUnitInfo[] = [];
+    const cuInfoStack: Java.CompilationUnit[] = [];
     const visitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitCompilationUnit: (node, visitor) => {
 
-        const mapping = typeMapping.get(node.object.type.omniType);
-        if (mapping) {
-          if (mapping.definedIn) {
-            mapping.usedIn.add(node);
-          } else {
-            mapping.definedIn = node;
-          }
-        } else {
-          typeMapping.set(node.object.type.omniType, {
-            usedIn: new Set(),
-            definedIn: node,
-          });
+        const mapping = typeMapping.get(node);
+        if (!mapping) {
+          typeMapping.set(node, []);
         }
 
-        cuInfoStack.push({
-          cu: node,
-        });
+        typeToCu.set(node.object.type.omniType, node);
+
+        cuInfoStack.push(node);
         AbstractJavaAstTransformer.JAVA_VISITOR.visitCompilationUnit(node, visitor);
         cuInfoStack.pop();
       },
+
+      visitFreeTextLine: () => {},
+      visitFreeTextTypeLink: () => {},
+      visitFreeTextMethodLink: () => {},
+      visitFreeTextPropertyLink: () => {},
 
       visitRegularType: node => {
 
@@ -133,13 +150,15 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
             || usedType.kind == OmniTypeKind.INTERFACE) {
 
             const cu = cuInfoStack[cuInfoStack.length - 1];
-            const mapping = typeMapping.get(usedType);
-            if (mapping) {
-              mapping.usedIn.add(cu.cu);
-            } else {
-              typeMapping.set(usedType, {
-                usedIn: new Set([cu.cu]),
-              });
+            if (usedType != cu.object.type.omniType) {
+              const mapping = typeMapping.get(cu);
+              if (mapping) {
+                if (!mapping.includes(usedType)) {
+                  mapping.push(usedType);
+                }
+              } else {
+                typeMapping.set(cu, [usedType]);
+              }
             }
           }
         }
@@ -183,15 +202,15 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     return [type];
   }
 
-  private isAllowedKind(cu: Java.CompilationUnit | undefined, options: TargetOptions): boolean {
+  private isAllowedKind(type: OmniType | undefined, options: TargetOptions): boolean {
 
-    if (!cu) {
+    if (!type) {
 
       // We return true here, which is wrong, but it will throw an error inside moveCompilationUnit.
       return true;
     }
 
-    return options.compressTypeKinds.length == 0 || options.compressTypeKinds.includes(cu.object.type.omniType.kind);
+    return options.compressTypeKinds.length == 0 || options.compressTypeKinds.includes(type.kind);
   }
 
   private moveCompilationUnit(

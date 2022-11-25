@@ -15,7 +15,7 @@ import {
   OmniPotentialInterfaceType,
   OmniPrimitiveBoxMode,
   OmniPrimitiveKind,
-  OmniPrimitiveNonNullableBoxedType,
+  OmniPrimitiveNonNullableBoxedType, OmniPrimitiveNonNullableSimpleType,
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
@@ -145,11 +145,10 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       throw new Error(`Cannot create a non-nullable primitive of type void`);
     }
 
-    const valueType: OmniPrimitiveNonNullableBoxedType = {
+    const valueType: OmniPrimitiveNonNullableSimpleType = {
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: valuePrimitiveKind,
       nullable: false,
-      boxMode: OmniPrimitiveBoxMode.BOX,
     };
 
     const valueIdentifier = new Java.Identifier('value');

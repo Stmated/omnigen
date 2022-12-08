@@ -15,7 +15,10 @@ export * from './CompositionUtil.js';
 export * from './OmniModelMerge.js';
 export * from './OmniUtil.js';
 export * from './Naming.js';
-export * from './OmniModelTransformer.js';
+
+export * from './ModelTransformOptions.js';
+
+export * from './PropertyUtil.js';
 
 // Other sub-directories
 export * from './transform/index.js';

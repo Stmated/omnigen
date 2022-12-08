@@ -1,13 +1,8 @@
 import {
-  ExternalSyntaxTree,
-  OmniModel,
   OmniUtil,
-  RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import {JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
-import * as Java from '../ast/index.js';
 
 export class AddJakartaValidationAstTransformer extends AbstractJavaAstTransformer {
 

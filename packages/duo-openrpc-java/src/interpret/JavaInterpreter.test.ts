@@ -1,9 +1,7 @@
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {JavaInterpreter} from '@omnigen/target-java';
-import {JavaOptions, JavaUtil} from '@omnigen/target-java';
-import {OmniTypeKind, OmniUtil} from '@omnigen/core';
+import {JAVA_FEATURES, JavaInterpreter, JavaOptions, JavaUtil} from '@omnigen/target-java';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions, OmniTypeKind, OmniUtil} from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
-import {OmniPrimitiveBoxMode} from '@omnigen/core';
 
 describe('JavaInterpreter', () => {
 
@@ -11,8 +9,13 @@ describe('JavaInterpreter', () => {
 
     const options = DEFAULT_TEST_JAVA_OPTIONS;
     const interpreter = new JavaInterpreter(options);
-    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json', DEFAULT_OPENRPC_OPTIONS, options);
-    const interpretation = await interpreter.buildSyntaxTree(model.model, [], model.options);
+    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      options,
+    );
+
+    const interpretation = await interpreter.buildSyntaxTree(model.model, [], model.options, JAVA_FEATURES);
 
     expect(interpretation).toBeDefined();
 
@@ -47,14 +50,23 @@ describe('JavaInterpreter', () => {
 
   test('ensureGenericsAreSpecialized', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
+    const transformerOptions: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      generificationBoxAllowed: false,
+      generificationWrapAllowed: true,
     };
 
-    const interpreter = new JavaInterpreter(options);
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+    };
+
+    const interpreter = new JavaInterpreter(targetOptions);
+    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformerOptions,
+      targetOptions,
+    );
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
 
     expect(root).toBeDefined();
 
@@ -79,9 +91,9 @@ describe('JavaInterpreter', () => {
         'JsonRpcRequest',
         'JsonRpcRequestParams',
         'JsonRpcResponse',
-        'PrimitiveChar',
-        'PrimitiveDouble',
-        'PrimitiveInt',
+        'WrappedCharacter',
+        'WrappedDouble',
+        'WrappedInteger',
       ]);
 
     const givIntGetDoubleRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
@@ -92,23 +104,29 @@ describe('JavaInterpreter', () => {
 
     expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
     expect(type.targetIdentifiers).toHaveLength(1);
-
-    // NOTE: This is currently "REFERENCE" -- but might change later.
-    //        If we introduce a new kind of type that is a reference to a custom type created in AST.
-    //        This is because it is quite ugly to use "REFERENCE" in case a transformer moved the referenced object.
-    expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.HARDCODED_REFERENCE);
+    expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.WRAPPED);
   });
 
   test('ensureGenericsAreBoxed', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-      generificationBoxMode: OmniPrimitiveBoxMode.BOX,
+    const transformerOptions: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      generificationBoxAllowed: true,
+      generificationWrapAllowed: false,
     };
 
-    const interpreter = new JavaInterpreter(options);
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+    };
+
+    const interpreter = new JavaInterpreter(targetOptions);
+    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformerOptions,
+      targetOptions,
+    );
+
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
 
     expect(root).toBeDefined();
 
@@ -136,7 +154,12 @@ describe('JavaInterpreter', () => {
       ]);
 
     const giveIntGetDoubleRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
+    const giveNumberGetCharacterRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveNumberGetCharRequestParams');
+    const giveStringGetStringRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveStringGetStringRequestParams');
+
     expect(giveIntGetDoubleRequestParams.object.extends).toBeDefined();
+    expect(giveNumberGetCharacterRequestParams.object.extends).toBeDefined();
+    expect(giveStringGetStringRequestParams.object.extends).toBeDefined();
 
     const type = giveIntGetDoubleRequestParams.object.extends?.type.omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind: ${OmniUtil.describe(type)}`);
@@ -150,14 +173,24 @@ describe('JavaInterpreter', () => {
 
   test('ensureGenericsAreSkipped', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
+    const transformerOptions: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
       generificationBoxAllowed: false,
+      generificationWrapAllowed: false,
     };
 
-    const interpreter = new JavaInterpreter(options);
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', DEFAULT_OPENRPC_OPTIONS, options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+    };
+
+    const interpreter = new JavaInterpreter(targetOptions);
+    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformerOptions,
+      targetOptions,
+    );
+
+    const root = await interpreter.buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
 
     expect(root).toBeDefined();
 
@@ -187,31 +220,5 @@ describe('JavaInterpreter', () => {
     const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
     expect(giveNumberGetCharResponse.object.extends).toBeDefined();
     expect(giveNumberGetCharResponse.object.extends?.type.omniType?.kind).toEqual(OmniTypeKind.OBJECT);
-  });
-
-  test('Interfaces', async () => {
-
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'multiple-inheritance.json');
-    const interpreter = new JavaInterpreter(result.options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
-
-    expect(root).toBeDefined();
-
-    expect(root.children).toHaveLength(23);
-
-    expect(result).toBeDefined();
-  });
-
-  test('Mappings', async () => {
-
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'mappings.json');
-    const interpreter = new JavaInterpreter(result.options);
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options);
-
-    expect(root).toBeDefined();
-
-    expect(root.children).toHaveLength(17);
-
-    expect(result).toBeDefined();
   });
 });

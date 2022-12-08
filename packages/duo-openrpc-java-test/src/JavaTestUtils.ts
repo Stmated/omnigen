@@ -5,10 +5,17 @@ import {
   OmniModelParserResult,
   ExternalSyntaxTree,
   VisitorFactoryManager,
-  AbstractStNode,
+  AbstractStNode, ModelTransformOptions, DEFAULT_MODEL_TRANSFORM_OPTIONS,
 } from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS, OpenRpcParserOptions} from '@omnigen/parser-openrpc';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions, JavaInterpreter, JavaRenderer, JavaVisitor} from '@omnigen/target-java';
+import {
+  DEFAULT_JAVA_OPTIONS,
+  JavaOptions,
+  JavaInterpreter,
+  JavaRenderer,
+  JavaVisitor,
+  JAVA_FEATURES,
+} from '@omnigen/target-java';
 import {OpenRpcTestUtils} from './OpenRpcTestUtils.js';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
@@ -24,11 +31,12 @@ export class JavaTestUtils {
 
   public static async getFileContentsFromFile(
     fileName: string,
-    javaOptions: JavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
     openRpcOptions: OpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
+    transformOptions: ModelTransformOptions = DEFAULT_MODEL_TRANSFORM_OPTIONS,
+    javaOptions: JavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
   ): Promise<Map<string, string>> {
 
-    const parseResult = await OpenRpcTestUtils.readExample('openrpc', fileName, openRpcOptions, javaOptions);
+    const parseResult = await OpenRpcTestUtils.readExample('openrpc', fileName, openRpcOptions, transformOptions, javaOptions);
     return this.getFileContentsFromParseResult(parseResult, []);
   }
 
@@ -36,7 +44,7 @@ export class JavaTestUtils {
     parseResult: OmniModelParserResult<JavaOptions>,
     externals: ExternalSyntaxTree<AstRootNode, JavaOptions>[] = [],
   ): Promise<AstRootNode> {
-    return new JavaInterpreter(parseResult.options).buildSyntaxTree(parseResult.model, externals, parseResult.options);
+    return new JavaInterpreter(parseResult.options).buildSyntaxTree(parseResult.model, externals, parseResult.options, JAVA_FEATURES);
   }
 
   public static async getFileContentsFromParseResult(

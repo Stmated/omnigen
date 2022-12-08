@@ -2,9 +2,10 @@ import {Omnigen} from './Omnigen.js';
 import {OmnigenOptions} from './OmnigenOptions.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as url from 'node:url';
-import {IncomingOptions} from '@omnigen/core';
+import {IncomingOptions, ParserOptions, TargetOptions} from '@omnigen/core';
 import * as fs from 'fs';
 import * as path from 'path';
+import {ImplementationOptions} from '@omnigen/target-impl-java-http';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -20,7 +21,7 @@ logger.info(process.argv);
  *
  * @param opt The incoming options
  */
-export default async function run(opt: IncomingOptions<OmnigenOptions>) {
+export default async function run(opt: IncomingOptions<OmnigenOptions<ParserOptions, TargetOptions, ImplementationOptions>>) {
 
   const omnigen = new Omnigen();
   await omnigen.generateAndWriteToFile(opt, opt);
@@ -61,7 +62,7 @@ if (isMain) {
   }
 
   logger.info(`Parsing: ${optionsString}`);
-  const options = JSON.parse(optionsString) as OmnigenOptions;
+  const options = JSON.parse(optionsString) as OmnigenOptions<ParserOptions, TargetOptions, ImplementationOptions>;
 
   // This should move into using the options utils -- like being able to send "fallbacks" to the main entrypoint
   if (!options.schemaDirBase) {

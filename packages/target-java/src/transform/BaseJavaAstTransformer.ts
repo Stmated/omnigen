@@ -9,13 +9,10 @@ import {
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
-  OmniHardcodedReferenceType,
   OmniModel,
   OmniOptionallyNamedType,
   OmniPotentialInterfaceType,
-  OmniPrimitiveBoxMode,
   OmniPrimitiveKind,
-  OmniPrimitiveNonNullableBoxedType, OmniPrimitiveNonNullableSimpleType,
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
@@ -32,39 +29,11 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
-  private readonly _primitiveWrapperMap = new Map<string, Java.ClassDeclaration>();
-
   transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
     // TODO: Need to figure out where the wrong JsonRpcErrorResponse comes from. Something is missed in the replacement!
 
     const exportableTypes = OmniUtil.getAllExportableTypes(args.model, args.model.types);
-
-    for (const type of exportableTypes.all) {
-
-      if (type.kind == OmniTypeKind.PRIMITIVE && type.boxMode == OmniPrimitiveBoxMode.WRAP) {
-
-        // The primitive is said to not be nullable, but to still be a primitive.
-        // This is not really possible in Java, so we need to wrap it inside a custom class.
-        const kindName = Case.pascal(JavaUtil.getPrimitiveTypeName(type));
-        let primitiveClass = this._primitiveWrapperMap.get(kindName);
-        if (!primitiveClass) {
-
-          primitiveClass = this.createNotNullablePrimitiveWrapper(type, kindName);
-          this._primitiveWrapperMap.set(kindName, primitiveClass);
-
-          args.root.children.push(
-            new Java.CompilationUnit(
-              new Java.PackageDeclaration(JavaUtil.getPackageName(type, primitiveClass.name.value, args.options)),
-              new Java.ImportList([]),
-              primitiveClass,
-            ),
-          );
-        }
-
-        this.replaceTypeWithReference(type, type, args.options);
-      }
-    }
 
     const namePairs: NamePair<OmniOptionallyNamedType>[] = [];
     for (const type of exportableTypes.all) {
@@ -138,49 +107,6 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return Promise.resolve();
   }
 
-  private createNotNullablePrimitiveWrapper(type: OmniPrimitiveType, kindName: string): Java.ClassDeclaration {
-
-    const valuePrimitiveKind = type.primitiveKind;
-    if (valuePrimitiveKind == OmniPrimitiveKind.VOID || valuePrimitiveKind == OmniPrimitiveKind.NULL) {
-      throw new Error(`Cannot create a non-nullable primitive of type void`);
-    }
-
-    const valueType: OmniPrimitiveNonNullableSimpleType = {
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: valuePrimitiveKind,
-      nullable: false,
-    };
-
-    const valueIdentifier = new Java.Identifier('value');
-    const valueField = new Java.Field(
-      JavaAstUtils.createTypeNode(valueType),
-      valueIdentifier,
-      new Java.ModifierList(
-        new Java.Modifier(Java.ModifierType.PRIVATE),
-        new Java.Modifier(Java.ModifierType.FINAL),
-      ),
-      undefined,
-      new Java.AnnotationList(
-        new Java.Annotation(
-          new Java.RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonValue',
-          }),
-        ),
-      ),
-    );
-
-    return new Java.ClassDeclaration(
-      new Java.RegularType(type),
-      new Java.Identifier(`Primitive${kindName}`),
-      new Java.Block(
-        valueField,
-        // Force the name to be "getValue" so that it does not become "isValue" for a primitive boolean.
-        // new Java.FieldBackedGetter(valueField, undefined, undefined, new Java.Identifier('getValue')),
-      ),
-    );
-  }
-
   private transformEnum(
     model: OmniModel,
     type: OmniEnumType,
@@ -224,13 +150,15 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
       body.children.push(field);
 
+      const argumentDeclaration = new Java.ArgumentDeclaration(fieldType, fieldIdentifier);
+
       body.children.push(
         new Java.ConstructorDeclaration(
           enumDeclaration,
-          new Java.ArgumentDeclarationList(new Java.ArgumentDeclaration(fieldType, fieldIdentifier)),
+          new Java.ArgumentDeclarationList(argumentDeclaration),
           new Java.Block(
             new Java.Statement(
-              new Java.AssignExpression(new Java.FieldReference(field), new Java.VariableReference(fieldIdentifier)),
+              new Java.AssignExpression(new Java.FieldReference(field), new Java.DeclarationReference(argumentDeclaration)),
             ),
           ),
           new Java.ModifierList(),
@@ -432,10 +360,12 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       );
     }
 
-    const typeExtends = JavaUtil.getSuperClassOfSubType(model, type);
+    const typeExtends = JavaUtil.getSuperClassOfSubType(model, type, false);
 
     if (typeExtends) {
 
+      // TODO: Move this into a separate transformer, that adds the "extends" of the type to the AST!
+      //        We need it in other locations too, to re-use and make more generic!
       declaration.extends = new Java.ExtendsDeclaration(
         JavaAstUtils.createTypeNode(typeExtends),
       );
@@ -690,16 +620,28 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     const singletonFactoryParamIdentifier = new Java.Identifier('value');
     const createdIdentifier = new Java.Identifier('created');
 
+    const singletonFactoryDeclaration = new Java.ArgumentDeclaration(
+      fieldValueType,
+      singletonFactoryParamIdentifier,
+    );
+
+    const createdVariableDeclaration = new Java.VariableDeclaration(
+      createdIdentifier,
+      new Java.NewStatement(
+        declaration.type,
+        new Java.ArgumentList(
+          new Java.DeclarationReference(singletonFactoryDeclaration),
+        ),
+      ),
+      undefined,
+      true,
+    );
+
     const singletonFactory = new Java.MethodDeclaration(
       new Java.MethodDeclarationSignature(
         singletonFactoryMethodIdentifier,
         declaration.type,
-        new Java.ArgumentDeclarationList(
-          new Java.ArgumentDeclaration(
-            fieldValueType,
-            singletonFactoryParamIdentifier,
-          ),
-        ),
+        new Java.ArgumentDeclarationList(singletonFactoryDeclaration),
         new Java.ModifierList(
           new Java.Modifier(Java.ModifierType.PUBLIC),
           new Java.Modifier(Java.ModifierType.STATIC),
@@ -723,7 +665,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                   fieldValuesStaticTarget,
                   new Java.Identifier('containsKey'),
                   new Java.ArgumentList(
-                    new Java.VariableReference(singletonFactoryParamIdentifier),
+                    new Java.DeclarationReference(singletonFactoryDeclaration),
                   ),
                 ),
                 new Java.JavaToken(Java.TokenType.EQUALS),
@@ -736,7 +678,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
                       fieldValuesStaticTarget,
                       new Java.Identifier('get'),
                       new Java.ArgumentList(
-                        new Java.VariableReference(singletonFactoryParamIdentifier),
+                        new Java.DeclarationReference(singletonFactoryDeclaration),
                       ),
                     ),
                   ),
@@ -745,32 +687,20 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
             ),
           ],
           new Java.Block(
-            new Java.Statement(
-              new Java.VariableDeclaration(
-                createdIdentifier,
-                new Java.NewStatement(
-                  declaration.type,
-                  new Java.ArgumentList(
-                    new Java.VariableReference(singletonFactoryParamIdentifier),
-                  ),
-                ),
-                undefined,
-                true,
-              ),
-            ),
+            new Java.Statement(createdVariableDeclaration),
             new Java.Statement(
               new Java.MethodCall(
                 fieldValuesStaticTarget,
                 new Java.Identifier('set'),
                 new Java.ArgumentList(
-                  new Java.VariableReference(singletonFactoryParamIdentifier),
-                  new Java.VariableReference(createdIdentifier),
+                  new Java.DeclarationReference(singletonFactoryDeclaration),
+                  new Java.DeclarationReference(createdVariableDeclaration),
                 ),
               ),
             ),
             new Java.Statement(
               new Java.ReturnStatement(
-                new Java.VariableReference(createdIdentifier),
+                new Java.DeclarationReference(createdVariableDeclaration),
               ),
             ),
           ),
@@ -796,14 +726,18 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     // const typeName = JavaUtil.getPrimitiveKindName(primitiveKind, false);
 
     const parameterIdentifier = new Java.Identifier('value');
+    const parameterArgumentDeclaration = new Java.ArgumentDeclaration(fieldValueType, parameterIdentifier);
 
     declaration.body.children.push(
       new Java.ConstructorDeclaration(
         declaration,
-        new Java.ArgumentDeclarationList(new Java.ArgumentDeclaration(fieldValueType, parameterIdentifier)),
+        new Java.ArgumentDeclarationList(parameterArgumentDeclaration),
         new Java.Block(
           new Java.Statement(
-            new Java.AssignExpression(new Java.FieldReference(fieldValue), new Java.VariableReference(parameterIdentifier)),
+            new Java.AssignExpression(
+              new Java.FieldReference(fieldValue),
+              new Java.DeclarationReference(parameterArgumentDeclaration),
+            ),
           ),
         ),
         // Private constructor, since all creation should go through the singleton method.
@@ -847,14 +781,14 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   ): Java.BinaryExpression | undefined {
 
     let knownBinary: Java.BinaryExpression | undefined = undefined;
-    for (let i = 0; i < knownValueFields.length; i++) {
+    for (const element of knownValueFields) {
 
       const binaryExpression = new Java.BinaryExpression(
         new Java.SelfReference(),
         new Java.JavaToken(Java.TokenType.EQUALS),
         new Java.StaticMemberReference(
           new Java.ClassName(selfType),
-          knownValueFields[i].identifier,
+          element.identifier,
         ),
       );
 
@@ -868,6 +802,9 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     return knownBinary;
   }
 
+  /**
+   * TODO: Remove and do this in another transformer (is it not already?)
+   */
   private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
 
     // TODO: ComponentsSchemasIntegerOrNull SHOULD NOT HAVE BEEN CREATED! IT SHOULD NOT BE AN OBJECT! IT SHOULD BE A COMPOSITION OF XOR!
@@ -908,19 +845,5 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       delete (type as any)[key];
     }
-  }
-
-  private replaceTypeWithReference(
-    target: OmniType,
-    primitiveType: OmniPrimitiveType,
-    options: RealOptions<JavaOptions>,
-  ): void {
-
-    // TODO: Replace this with something else? REFERENCE should be for native classes, but this is sort of not?
-    target.kind = OmniTypeKind.HARDCODED_REFERENCE;
-
-    const referenceType = target as OmniHardcodedReferenceType;
-    const primitiveName = `Primitive${Case.pascal(JavaUtil.getPrimitiveTypeName(primitiveType))}`;
-    referenceType.fqn = JavaUtil.getClassNameWithPackageName(referenceType, primitiveName, options);
   }
 }

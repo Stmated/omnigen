@@ -17,6 +17,7 @@
     "@omnigen/core": "*",
     "@omnigen/parser-jsonschema": "*",
     "@omnigen/parser-openrpc": "*",
+    "@omnigen/target-impl-java-http": "*",
     "@omnigen/target-java": "*"
   },
   "devDependencies": {

@@ -1,16 +1,22 @@
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {JavaOptions} from '@omnigen/target-java';
+import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '@omnigen/target-java';
 
 describe('PackageResolver', () => {
 
-  const JAVA_OPTIONS: JavaOptions = {
-    ...DEFAULT_TEST_JAVA_OPTIONS,
+  const transformOptions: ModelTransformOptions = {
+    ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
     generifyTypes: false,
   };
 
+  // const targetOptions: JavaOptions = {
+  //   ...DEFAULT_TEST_JAVA_OPTIONS,
+  // };
+
   test('FromSchema', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json', JAVA_OPTIONS);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json', DEFAULT_OPENRPC_OPTIONS, transformOptions, DEFAULT_TEST_JAVA_OPTIONS);
     const fileNames = [...fileContents.keys()].sort();
     expect(fileNames).toEqual([
       'A.java',
@@ -93,8 +99,8 @@ describe('PackageResolver', () => {
 
   test('FromCode', async () => {
 
-    const options: JavaOptions = {
-      ...JAVA_OPTIONS,
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_JAVA_OPTIONS,
       packageResolver: (_type, typeName) => {
         if (typeName.match(/.*Error.*/i)) {
           return 'some.base.pkg.errors';
@@ -106,7 +112,12 @@ describe('PackageResolver', () => {
       },
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', options);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformOptions,
+      targetOptions,
+    );
+
     const fileNames = [...fileContents.keys()].sort();
     expect(fileNames).toEqual([
       'ErrorUnknown.java',

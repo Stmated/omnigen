@@ -1,7 +1,10 @@
 import {OmniProperty, OmniPropertyOrphan, OmniPropertyOwner, OmniType, OmniTypeKind} from './OmniModel.js';
 import {PropertiesInformation} from './PropertiesInformation.js';
 import {OmniUtil} from './OmniUtil.js';
-import {EqualityLevel, PropertyEquality} from './EqualityLevel.js';
+import {TargetFeatures} from '../interpret/index.js';
+import {PropertyDifference, PropertyEquality, TypeDifference} from '../equality/index.js';
+
+type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
 
 export class PropertyUtil {
 
@@ -22,9 +25,63 @@ export class PropertyUtil {
     return propertyWithOwner;
   }
 
+  public static isDisqualifyingPropertyDiff(diffs: PropertyDifference[] | undefined): boolean {
+
+    if (diffs) {
+      for (const diff of diffs) {
+        if (diff === PropertyDifference.NAME) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  public static isDiffMatch(diffs: PropertyDifference[] | undefined, ...needles: PropertyDifference[]): boolean {
+
+    if (diffs) {
+      for (const needle of needles) {
+        if (diffs.includes(needle)) {
+          return true;
+        }
+
+        if (needle == PropertyDifference.SIGNATURE) {
+          if (diffs.includes(PropertyDifference.TYPE)
+            || diffs.includes(PropertyDifference.NAME)
+            || diffs.includes(PropertyDifference.META)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  public static getPropertyDiffScore(diff?: PropertyDifference): number {
+
+    if (diff === PropertyDifference.NAME) {
+      return 10;
+    } else if (diff === PropertyDifference.FIELD_NAME) {
+      return 9;
+    } else if (diff === PropertyDifference.TYPE) {
+      return 8;
+    } else if (diff === PropertyDifference.SIGNATURE) {
+      return 7;
+    } else if (diff === PropertyDifference.REQUIRED) {
+      return 6;
+    } else if (diff === PropertyDifference.META) {
+      return 5;
+    }
+
+    return 0;
+  }
+
   public static getCommonProperties(
-    minPropertyEquality: EqualityLevel,
-    minTypeEquality: EqualityLevel,
+    bannedTypeDiff: (diff: TypeDifference) => boolean,
+    bannedPropDiff: (diff: PropertyDifference) => boolean,
+    targetFeatures: TargetFeatures,
     ...types: OmniType[]
   ): PropertiesInformation {
 
@@ -58,8 +115,9 @@ export class PropertyUtil {
 
       const propertyEquality = this.getLowestAllowedPropertyEquality(
         commonPropertiesWithSameName,
-        minTypeEquality,
-        minPropertyEquality,
+        bannedTypeDiff,
+        bannedPropDiff,
+        targetFeatures,
       );
 
       if (propertyEquality) {
@@ -68,8 +126,14 @@ export class PropertyUtil {
         for (const property of commonPropertiesWithSameName) {
 
           const sameType = distinctTypes.find(it => {
-            const common = OmniUtil.getCommonDenominatorBetween(property.type, it, false);
-            return common?.level && common?.level >= EqualityLevel.CLONE_MIN;
+            const common = OmniUtil.getCommonDenominatorBetween(property.type, it, targetFeatures, false);
+            if (!common) {
+              return false;
+            }
+
+            // NOTE: This is likely incorrect; we should be able to handle some insignificant diffs depending on context
+            const diffCount = (common?.diffs || []).length;
+            return diffCount == 0;
           });
 
           if (!sameType) {
@@ -79,8 +143,8 @@ export class PropertyUtil {
 
         information.byPropertyName[propertyName] = {
           properties: commonPropertiesWithSameName,
-          propertyEqualityLevel: propertyEquality.propertyEquality,
-          typeEqualityLevel: propertyEquality.typeEquality,
+          propertyDiffs: propertyEquality.propertyDiffs,
+          typeDiffs: propertyEquality.typeDiffs,
           commonType: propertyEquality.type || {kind: OmniTypeKind.UNKNOWN},
           distinctTypes: distinctTypes,
         };
@@ -92,14 +156,15 @@ export class PropertyUtil {
 
   private static getLowestAllowedPropertyEquality(
     properties: OmniProperty[],
-    minTypeEquality: EqualityLevel,
-    minPropertyEquality: EqualityLevel,
+    bannedTypeDiff: (diff: TypeDifference) => boolean,
+    bannedPropDiff: (diff: PropertyDifference) => boolean,
+    targetFeatures: TargetFeatures,
   ): PropertyEquality | undefined {
 
-    const propertyEquality: PropertyEquality = {
-      typeEquality: EqualityLevel.IDENTITY_MAX,
-      propertyEquality: EqualityLevel.IDENTITY_MAX,
-      type: undefined,
+    const propertyEquality: NonNullableProperties<PropertyEquality> = {
+      typeDiffs: [],
+      propertyDiffs: [],
+      type: {kind: OmniTypeKind.UNKNOWN},
     };
 
     if (properties.length == 1) {
@@ -108,70 +173,76 @@ export class PropertyUtil {
       return propertyEquality;
     }
 
+    const possiblePropertyTypes: OmniType[] = [];
     for (let i = 1; i < properties.length; i++) {
 
       // NOTE: Need good test cases for this, to check that it really finds the lowest equality level
       const previous = properties[i - 1];
       const current = properties[i];
 
-      const equalityLevel = PropertyUtil.getEqualityLevel(previous, current);
+      const equalityLevel = PropertyUtil.getPropertyEquality(previous, current, targetFeatures);
 
-      if (equalityLevel.typeEquality < propertyEquality.typeEquality) {
-        propertyEquality.typeEquality = equalityLevel.typeEquality;
-
-        if (propertyEquality.typeEquality < minTypeEquality) {
-          return undefined;
-        }
+      if (equalityLevel.propertyDiffs?.find(it => bannedPropDiff(it))) {
+        return undefined;
       }
 
-      if (equalityLevel.propertyEquality < propertyEquality.propertyEquality) {
-        propertyEquality.propertyEquality = equalityLevel.propertyEquality;
-        propertyEquality.type = equalityLevel.type;
-
-        if (propertyEquality.propertyEquality < minPropertyEquality) {
-          return undefined;
-        }
+      if (equalityLevel.typeDiffs?.find(it => bannedTypeDiff(it))) {
+        return undefined;
       }
+
+      if (equalityLevel.type) {
+        possiblePropertyTypes.push(equalityLevel.type);
+      }
+
+      if (equalityLevel.typeDiffs) {
+        propertyEquality.typeDiffs.push(...equalityLevel.typeDiffs);
+      }
+
+      if (equalityLevel.propertyDiffs) {
+        propertyEquality.propertyDiffs.push(...equalityLevel.propertyDiffs);
+      }
+    }
+
+    const commonType = OmniUtil.getCommonDenominator(targetFeatures, ...possiblePropertyTypes);
+    if (commonType) {
+
+      // We still want to keep the diffs that we collected.
+      // But we also want the common type between the different properties that we have found.
+      propertyEquality.type = commonType.type;
+      propertyEquality.typeDiffs = [...propertyEquality.typeDiffs, ...(commonType.diffs ?? [])];
     }
 
     return propertyEquality;
   }
 
-  public static getEqualityLevel(a: OmniProperty, b: OmniProperty): PropertyEquality {
+  public static getPropertyEquality(
+    a: OmniProperty,
+    b: OmniProperty,
+    targetFeatures: TargetFeatures,
+  ): PropertyEquality {
 
     if (a == b) {
-      return {propertyEquality: EqualityLevel.IDENTITY_MAX, typeEquality: EqualityLevel.IDENTITY_MAX, type: a.type};
+      return {type: a.type};
     }
 
     const aName = a.name;
     const bName = b.name;
     if (aName !== bName) {
-      return {propertyEquality: EqualityLevel.NOT_EQUAL_MIN, typeEquality: EqualityLevel.NOT_EQUAL_MIN};
+      return {propertyDiffs: [PropertyDifference.NAME]};
     }
 
-    let commonType = OmniUtil.getCommonDenominatorBetween(a.type, b.type, false);
+    let commonType = OmniUtil.getCommonDenominatorBetween(a.type, b.type, targetFeatures, false);
     if (!commonType) {
 
       // If no common type was found, we will set the type to UNKNOWN, and level to NOT_EQUAL.
       // The caller might still want to know how good a match the property is, and actually use the type as unknown.
-      commonType = {type: {kind: OmniTypeKind.UNKNOWN}, level: EqualityLevel.NOT_EQUAL_MIN};
-    }
-
-    if (a.type.kind == OmniTypeKind.PRIMITIVE && b.type.kind == OmniTypeKind.PRIMITIVE) {
-
-      if (a.type.value != b.type.value || a.type.valueMode != b.type.valueMode) {
-        return {
-          propertyEquality: EqualityLevel.SEMANTICS_MIN,
-          typeEquality: commonType.level,
-          type: commonType.type,
-        };
-      }
+      commonType = {type: {kind: OmniTypeKind.UNKNOWN}, diffs: [TypeDifference.FUNDAMENTAL_TYPE]};
     }
 
     if (a.required != b.required) {
       return {
-        propertyEquality: EqualityLevel.ISOMORPHIC_MIN,
-        typeEquality: commonType.level,
+        propertyDiffs: [PropertyDifference.REQUIRED],
+        typeDiffs: commonType.diffs,
         type: commonType.type,
       };
     }
@@ -179,23 +250,23 @@ export class PropertyUtil {
     if (((a.propertyName || b.propertyName) && a.propertyName != b.propertyName)
       || ((a.fieldName || b.fieldName) && a.fieldName != b.fieldName)) {
       return {
-        propertyEquality: EqualityLevel.SEMANTICS_MAX,
-        typeEquality: commonType.level,
+        propertyDiffs: [PropertyDifference.FIELD_NAME],
+        typeDiffs: commonType.diffs,
         type: commonType.type,
       };
     }
 
     if (a.description !== b.description) {
       return {
-        propertyEquality: EqualityLevel.FUNCTION_MAX,
-        typeEquality: commonType.level,
+        propertyDiffs: [PropertyDifference.META],
+        typeDiffs: commonType.diffs,
         type: commonType.type,
       };
     }
 
     return {
-      propertyEquality: EqualityLevel.CLONE_MAX,
-      typeEquality: commonType.level,
+      propertyDiffs: [],
+      typeDiffs: commonType.diffs,
       type: commonType.type,
     };
   }

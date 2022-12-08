@@ -3,12 +3,11 @@
   "extends": "@omnigen/config-typescript/build.json",
   "include": ["./**/*.ts"],
   "compilerOptions": {
-    "outDir": "./lib",
     "rootDir": "./src",
     "baseUrl": "./src",
 
-    "noEmit": false,
-    "declaration": true,
+    "noEmit": true,
+    "declaration": false,
     "declarationMap": false
   },
   "ts-node": {

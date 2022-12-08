@@ -1,8 +1,6 @@
 import {
   ExternalSyntaxTree,
-  OmniModel,
   OmniType,
-  OmniTypeKind,
   OmniUtil,
   RealOptions,
   VisitorFactoryManager,
@@ -40,7 +38,9 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
       // Get and move all type infos to the global one.
       this.getTypeNameInfos(external, objectStack)
-        .forEach((v, k) => typeNameMap.set(k, v));
+        .forEach((v, k) => {
+          typeNameMap.set(k, v);
+        });
     }
 
     if (objectStack.length > 0 || cuInfoStack.length > 0) {
@@ -78,6 +78,10 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclaration(node, visitor);
       },
 
+      // visitGenericTypeUse: node => {
+      //   node.
+      // },
+
       visitRegularType: node => {
 
         const cuInfo = cuInfoStack[cuInfoStack.length - 1];
@@ -93,6 +97,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         }
 
         const typeNameInfo = typeNameMap.get(OmniUtil.getUnwrappedType(node.omniType));
+
         if (typeNameInfo) {
           this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, args.options);
         } else {
@@ -129,19 +134,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       const nodePackage = JavaUtil.getPackageNameFromFqn(nodeImportName);
 
       if (nodePackage != cuInfo.packageName) {
-        const existing = cuInfo.cu.imports.children.find(it => {
-          // TODO: Cache this inside the import node? Set it in stone?
-          const otherImportName = JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
-          return otherImportName == nodeImportName;
-        });
-
-        if (!existing) {
-
-          // This is an import that has not already been added.
-          node.setImportName(nodeImportName);
-          cuInfo.importNameMap.set(node.omniType, nodeImportName);
-          cuInfo.cu.imports.children.push(new Java.ImportStatement(node));
-        }
+        this.addImportIfUnique(cuInfo, options, nodeImportName, node);
       }
     }
   }
@@ -162,23 +155,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         typeNameInfo.className,
       );
 
-      const existing = cuInfo.cu.imports.children.find(it => {
-        const otherImportName = JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
-        return otherImportName == nodeImportName;
-      });
-
-      if (!existing) {
-
-        // This is an import that has not already been added.
-        node.setImportName(nodeImportName);
-        cuInfo.importNameMap.set(node.omniType, nodeImportName);
-        cuInfo.cu.imports.children.push(new Java.ImportStatement(node));
-      }
-
-      // It is always just the className, since that is how it will be imported.
-      // TODO: Need to check for naming collisions. There might be multiple with the same name in one CompilationUnit!
-      //        For example a RequestA.Data and RequestB.Data, then both will be known as "Data"
-      //        In these cases we should include ONLY RequestA and RequestB and then QUALIFY as 'RequestA.Data' everywhere
+      this.addImportIfUnique(cuInfo, options, nodeImportName, node);
       node.setLocalName(typeNameInfo.className);
 
     } else {
@@ -190,6 +167,32 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         node.setLocalName(`${typeNameInfo.outerTypeNames.join('.')}.${typeNameInfo.className}`);
       } else {
         node.setLocalName(typeNameInfo.className);
+      }
+    }
+  }
+
+  private addImportIfUnique(
+    cuInfo: CompilationUnitInfo,
+    options: RealOptions<JavaOptions>,
+    nodeImportName: string,
+    node: Java.RegularType,
+  ): void {
+
+    const existing = cuInfo.cu.imports.children.find(it => {
+      const otherImportName = it.type.getImportName() ?? JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
+      return otherImportName == nodeImportName;
+    });
+
+    if (!existing) {
+
+      // This is an import that has not already been added.
+      node.setImportName(nodeImportName);
+      cuInfo.importNameMap.set(node.omniType, nodeImportName);
+
+      if (/java\.lang\.[a-zA-Z0-9]+/.test(nodeImportName)) {
+        // Ignored, since java.lang.* is always automatically imported.
+      } else {
+        cuInfo.cu.imports.children.push(new Java.ImportStatement(node));
       }
     }
   }

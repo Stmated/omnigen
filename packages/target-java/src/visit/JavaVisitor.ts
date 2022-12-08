@@ -102,6 +102,9 @@ export class JavaVisitor<R> implements AstVisitor<R> {
       if (node.parameters) {
         results.push(node.parameters.visit(visitor));
       }
+      if (node.throws) {
+        results.push(node.throws.visit(visitor));
+      }
       return results;
     };
 
@@ -136,19 +139,24 @@ export class JavaVisitor<R> implements AstVisitor<R> {
       node.constructorArguments?.visit(visitor),
     ];
 
+    this.visitThrowStatement = (node, visitor) => [
+      node.expression.visit(visitor),
+    ];
+
     this.visitArgumentList = (node, visitor) => node.children.map(it => it.visit(visitor));
 
     this.visitReturnStatement = (node, visitor) => node.expression.visit(visitor);
 
     this.visitVariableDeclaration = (node, visitor) => {
       return [
-        node.variableType?.visit(visitor),
-        node.variableName.visit(visitor),
+        node.type?.visit(visitor),
+        node.identifier.visit(visitor),
         node.initializer?.visit(visitor),
       ];
     };
 
-    this.visitVariableReference = (node, visitor) => node.variableName.visit(visitor);
+    // NOTE: Maybe not the most correct way of handling it.
+    this.visitDeclarationReference = (node, visitor) => node.declaration.identifier.visit(visitor);
 
     this.visitAnnotation = (node, visitor) => {
       if (node.pairs) {
@@ -179,7 +187,8 @@ export class JavaVisitor<R> implements AstVisitor<R> {
     this.visitBlock = (node, visitor) => node.children.map(it => it.visit(visitor));
 
     this.visitPackage = () => undefined; // Edge node
-    this.visitPredicate = () => undefined; // Edge node
+    this.visitPredicate = (node, visitor) => visitor.visitBinaryExpression(node, visitor);
+
     this.visitModifierList = (node, visitor) => node.children.map(it => it.visit(visitor));
 
     this.visitFieldGetterSetter = (node, visitor) => [
@@ -357,10 +366,11 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitImportList: JavaVisitFn<Java.ImportList, R>;
   visitMethodCall: JavaVisitFn<Java.MethodCall, R>;
   visitNewStatement: JavaVisitFn<Java.NewStatement, R>;
+  visitThrowStatement: JavaVisitFn<Java.ThrowStatement, R>;
   visitArgumentList: JavaVisitFn<Java.ArgumentList, R>;
   visitReturnStatement: JavaVisitFn<Java.ReturnStatement, R>;
   visitVariableDeclaration: JavaVisitFn<Java.VariableDeclaration, R>;
-  visitVariableReference: JavaVisitFn<Java.VariableReference, R>;
+  visitDeclarationReference: JavaVisitFn<Java.DeclarationReference, R>;
   visitAnnotation: JavaVisitFn<Java.Annotation, R>;
   visitAnnotationKeyValuePairList: JavaVisitFn<Java.AnnotationKeyValuePairList, R>;
   visitAnnotationKeyValuePair: JavaVisitFn<Java.AnnotationKeyValuePair, R>;

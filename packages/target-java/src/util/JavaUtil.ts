@@ -8,7 +8,6 @@ import {
   OmniModel,
   OmniObjectType,
   OmniPotentialInterfaceType,
-  OmniPrimitiveBoxMode,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniPrimitiveValueMode,
@@ -18,7 +17,7 @@ import {
   OmniType,
   OmniTypeKind,
   OmniUtil,
-  PackageOptions,
+  PackageOptions, PropertyUtil,
   RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
@@ -192,6 +191,9 @@ export class JavaUtil {
           return JavaUtil.getCleanedFullyQualifiedName(primitiveKindName, args.withSuffix);
         }
       }
+      case OmniTypeKind.WRAPPED: {
+        return `Wrapped${JavaUtil.getName({...args, type: args.type.of, boxed: true})}`;
+      }
       case OmniTypeKind.UNKNOWN: {
         const unknownType = args.type.isAny ? UnknownType.OBJECT : args.options?.unknownType;
         const unknownName = JavaUtil.getUnknownType(unknownType);
@@ -332,21 +334,19 @@ export class JavaUtil {
     return `${prefix}${[...uniqueNames].join(delimiter)}`;
   }
 
-  public static getPrimitiveTypeName(type: OmniPrimitiveType): string {
-
-    // The primitive nullable kind might be NOT_NULLABLE_PRIMITIVE.
-    // Then in the end it will probably be a completely other type, depending on the language.
-    // In Java, we cannot use a primitive as a generic parameter, but we want to be able to say it cannot be null.
-    return JavaUtil.getPrimitiveKindName(type.primitiveKind, JavaUtil.isPrimitiveBoxed(type));
-  }
-
   private static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
 
-    if (type.primitiveKind == OmniPrimitiveKind.NULL) {
-      return true;
+    if (type.primitiveKind == OmniPrimitiveKind.NULL || type.primitiveKind == OmniPrimitiveKind.VOID) {
+      return false;
     }
 
-    return type.boxMode == OmniPrimitiveBoxMode.BOX;
+    if (type.primitiveKind == OmniPrimitiveKind.STRING) {
+
+      // If it's a string it's not boxed, it it always the same.
+      return false;
+    }
+
+    return type.nullable == true;
   }
 
   public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean): string {
@@ -607,17 +607,6 @@ export class JavaUtil {
     return holder.ref;
   }
 
-  // public static isNullable(type: OmniType): boolean {
-  //   // NOTE: If changed, make sure toReferenceType is updated
-  //   if (type.kind == OmniTypeKind.PRIMITIVE) {
-  //     if (type.nullable || type.primitiveKind == OmniPrimitiveKind.STRING) {
-  //       return true;
-  //     }
-  //   }
-  //
-  //   return false;
-  // }
-
   public static getSpecifiedDefaultValue(type: OmniType): LiteralValue | undefined {
     if (type.kind == OmniTypeKind.PRIMITIVE && type.valueMode == OmniPrimitiveValueMode.DEFAULT) {
       return type.value;
@@ -625,40 +614,6 @@ export class JavaUtil {
       return undefined;
     }
   }
-
-  // public static toUnboxedPrimitiveType<T extends OmniPrimitiveType>(type: T): T | OmniPrimitiveType {
-  //   if (type.kind == OmniTypeKind.PRIMITIVE && type.nullable) {
-  //
-  //     const nullable: OmniPrimitiveNullableType = {...type};
-  //     delete nullable.boxMode;
-  //
-  //     const prunedNullable: Omit<OmniPrimitiveNullableType, 'boxMode'> = nullable;
-  //
-  //     const primitiveKind = prunedNullable.primitiveKind;
-  //     const primitiveValue = prunedNullable.value;
-  //     const primitiveBox = type.boxMode;
-  //     if (primitiveKind == OmniPrimitiveKind.NULL || primitiveKind == OmniPrimitiveKind.VOID || primitiveValue == null) {
-  //
-  //       // Cannot unbox NULL or VOID, and cannot unbox other primitives if the value is NULL.
-  //       return prunedNullable;
-  //     }
-  //
-  //     const nonNullable: OmniPrimitiveNonNullableType = {
-  //       ...prunedNullable,
-  //       primitiveKind: primitiveKind,
-  //       value: primitiveValue,
-  //       nullable: false,
-  //     };
-  //
-  //     if (primitiveBox == OmniPrimitiveBoxMode.WRAP) {
-  //       nonNullable.boxMode = primitiveBox;
-  //     }
-  //
-  //     return nonNullable;
-  //   }
-  //
-  //   return type;
-  // }
 
   public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
 
@@ -798,37 +753,37 @@ export class JavaUtil {
     return omniSuperType;
   }
 
-  public static getSubTypes(model: OmniModel, superType: OmniSuperTypeCapableType): [OmniSubtypeCapableType, number][] {
-
-    const result: [OmniSubtypeCapableType, number][] = [];
-    const superTypes = OmniUtil.getFlattenedSuperTypes(superType);
-
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-
-      if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
-        return 'skip';
-      }
-
-      if (ctx.type.kind == OmniTypeKind.OBJECT || ctx.type.kind == OmniTypeKind.INTERFACE || ctx.type.kind == OmniTypeKind.ENUM) {
-
-        const index = superTypes.indexOf(ctx.type);
-        if (index != -1) {
-          result.push([ctx.type, index]);
-        } else {
-          // Do anything here?
-        }
-
-      } else {
-
-        // Skip any type that is not a subtype capable type.
-        return 'skip';
-      }
-
-      return undefined;
-    });
-
-    return result;
-  }
+  // public static getSubTypes(model: OmniModel, superType: OmniSuperTypeCapableType): [OmniSubtypeCapableType, number][] {
+  //
+  //   const result: [OmniSubtypeCapableType, number][] = [];
+  //   const superTypes = OmniUtil.getFlattenedSuperTypes(superType);
+  //
+  //   OmniUtil.visitTypesDepthFirst(model, ctx => {
+  //
+  //     if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
+  //       return 'skip';
+  //     }
+  //
+  //     if (ctx.type.kind == OmniTypeKind.OBJECT || ctx.type.kind == OmniTypeKind.INTERFACE || ctx.type.kind == OmniTypeKind.ENUM) {
+  //
+  //       const index = superTypes.indexOf(ctx.type);
+  //       if (index != -1) {
+  //         result.push([ctx.type, index]);
+  //       } else {
+  //         // Do anything here?
+  //       }
+  //
+  //     } else {
+  //
+  //       // Skip any type that is not a subtype capable type.
+  //       return 'skip';
+  //     }
+  //
+  //     return undefined;
+  //   });
+  //
+  //   return result;
+  // }
 
   public static getFlattenedSuperTypes(type: JavaSuperTypeCapableType): JavaSuperTypeCapableType[] {
 
@@ -843,15 +798,6 @@ export class JavaUtil {
       }
 
       return superTypes;
-
-      // if (type.compositionKind == CompositionKind.XOR) {
-      //
-      // } else {
-      //
-      //   // Are there other composition kinds that can be allowed as a list of 'extends' and 'implements'?
-      //   return [];
-      // }
-
     } else {
       return [type];
     }
@@ -860,7 +806,11 @@ export class JavaUtil {
   /**
    * See {@link JavaUtil#getSuperInterfacesOfSubType} for information about definition of objects and interfaces.
    */
-  public static getSuperClassOfSubType(_model: OmniModel, subType: JavaSubTypeCapableType | undefined): JavaSuperTypeCapableType | undefined {
+  public static getSuperClassOfSubType(
+    _model: OmniModel,
+    subType: JavaSubTypeCapableType | undefined,
+    returnUnwrapped = true,
+  ): JavaSuperTypeCapableType | undefined {
 
     subType = OmniUtil.getUnwrappedType(subType);
     if (!subType || subType.kind == OmniTypeKind.COMPOSITION) {
@@ -886,8 +836,12 @@ export class JavaUtil {
       }
     }
 
-    // This is a single type, and if it's an object, then it's something we inherit from.
-    return JavaUtil.asSuperType(unwrapped);
+    if (returnUnwrapped) {
+      // This is a single type, and if it's an object, then it's something we inherit from.
+      return JavaUtil.asSuperType(unwrapped);
+    } else {
+      return JavaUtil.asSuperType(subType.extendedBy);
+    }
   }
 
   /**

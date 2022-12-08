@@ -1,8 +1,7 @@
-import {OmniType} from './OmniModel.js';
-import {EqualityLevel} from './EqualityLevel.js';
+import {TypeDifference} from '../equality/index.js';
 
-export interface CommonDenominatorType<T extends OmniType> {
+export interface CommonDenominatorType<T> {
 
   type: T;
-  level: EqualityLevel;
+  diffs?: TypeDifference[] | undefined;
 }

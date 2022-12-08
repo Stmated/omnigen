@@ -1,6 +1,5 @@
-import {Booleanish, Option, OptionResolvers, Options, StandardOptionResolvers} from '../options/index.js';
-import {CompressTypeLevel, DEFAULT_PARSER_OPTIONS, OmniPrimitiveBoxMode, OmniTypeKind} from '../parse/index.js';
-import {EqualityLevel} from '../parse/EqualityLevel.js';
+import {Option, Options} from '../options/index.js';
+import {CompressTypeLevel, OmniTypeKind} from '../parse/index.js';
 
 export enum CompressTypeNaming {
   EXACT,
@@ -55,18 +54,6 @@ export interface TargetOptions extends Options {
   //        So that no weird and stupid names become chosen if we are grabbing the common prefix?
   //        For example ALL names that exist inside java.lang or java.util should be excluded. Object, List, etc.
   //        Maybe also add a "minimum number of common words"?
-
-  elevateProperties: boolean;
-  elevatePropertiesMoreEqualThan: EqualityLevel;
-  elevatePropertiesWithTypesMoreEqualThan: EqualityLevel;
-
-  simplifyTypeHierarchy: boolean;
-}
-
-export interface GenericTargetOptions extends TargetOptions {
-  generifyTypes: Option<Booleanish, boolean>;
-  generificationBoxAllowed: Option<Booleanish, boolean>;
-  generificationBoxMode: OmniPrimitiveBoxMode;
 }
 
 export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
@@ -76,20 +63,4 @@ export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
   compressTypesLevel: CompressTypeLevel.EXACT,
   compressTypeNaming: CompressTypeNaming.EXACT,
   compressTypeNamingReducer: undefined,
-  elevateProperties: true,
-  elevatePropertiesMoreEqualThan: EqualityLevel.FUNCTION_MIN,
-  elevatePropertiesWithTypesMoreEqualThan: EqualityLevel.FUNCTION_MIN,
-  simplifyTypeHierarchy: true,
-};
-
-export const DEFAULT_GENERIC_TARGET_OPTIONS: GenericTargetOptions = {
-  ...DEFAULT_TARGET_OPTIONS,
-  generifyTypes: true,
-  generificationBoxAllowed: true,
-  generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
-};
-
-export const GENERIC_TARGET_OPTIONS_RESOLVER: OptionResolvers<GenericTargetOptions> = {
-  generificationBoxAllowed: StandardOptionResolvers.toBoolean,
-  generifyTypes: StandardOptionResolvers.toBoolean,
 };

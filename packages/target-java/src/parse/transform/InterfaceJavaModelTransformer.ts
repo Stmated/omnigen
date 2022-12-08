@@ -2,15 +2,13 @@ import {
   CompositionKind,
   OmniCompositionType,
   OmniInterfaceType,
-  OmniModel,
   OmniModelTransformer,
   OmniSubtypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
-  OmniUtil,
-  RealOptions,
-  TargetOptions,
+  OmniUtil, ParserOptions,
+  OmniModelTransformerArgs
 } from '@omnigen/core';
 import {JavaUtil} from '../../util/index.js';
 
@@ -19,22 +17,22 @@ import {JavaUtil} from '../../util/index.js';
  * One that is the original, and one that is the interface version, pointing to the original.
  * It then replaces the types where needed.
  */
-export class InterfaceJavaModelTransformer implements OmniModelTransformer<TargetOptions> {
+export class InterfaceJavaModelTransformer implements OmniModelTransformer<ParserOptions> {
 
-  transformModel(model: OmniModel, _options: RealOptions<TargetOptions>): void {
+  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
-    const exportableTypes = OmniUtil.getAllExportableTypes(model, model.types);
+    const exportableTypes = OmniUtil.getAllExportableTypes(args.model, args.model.types);
 
     const interfaceMap = new Map<OmniType, OmniInterfaceType>();
 
     for (const type of exportableTypes.all) {
 
-      const typeAsInterface = JavaUtil.getAsInterface(model, type);
+      const typeAsInterface = JavaUtil.getAsInterface(args.model, type);
       if (!typeAsInterface) {
         continue;
       }
 
-      const subTypesThatImplementUs = JavaUtil.getSubTypesOfInterface(model, typeAsInterface);
+      const subTypesThatImplementUs = JavaUtil.getSubTypesOfInterface(args.model, typeAsInterface);
       if (subTypesThatImplementUs.length > 0) {
 
         // This type is used as an interface in the model.

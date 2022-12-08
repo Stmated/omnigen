@@ -67,7 +67,7 @@ export class SchemaFile {
     }
 
     const path = this.getAbsolutePath() || '';
-    logger.debug(`Going to read content from ${path}`);
+    logger.debug(`Reading content from ${path}`);
     const buffer = await fs.readFile(path, {});
     this._readContent = buffer.toString();
     return this._readContent;

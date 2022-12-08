@@ -1,10 +1,9 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
   Case,
-  OmniModel,
   OmniPrimitiveKind,
   OmniPrimitiveValueMode,
-  OmniProperty,
+  OmniProperty, OmniType,
   OmniTypeKind,
   OmniUtil, RealOptions,
   VisitorFactoryManager,
@@ -19,7 +18,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
 
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
-      visitClassDeclaration: node => {
+      visitClassDeclaration: (node, visitor) => {
 
         // Let's add all the fields that belong to this object.
         // It is up to other transformers to later add getters/setters or lombok (Java) or whatever language-specific.
@@ -35,7 +34,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
 
           if (type.additionalProperties) {
 
-            if (!JavaUtil.superMatches(args.model, type, parent => parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true)) {
+            if (!JavaUtil.superMatches(args.model, type, parent => this.hasAdditionalProperties(parent))) {
 
               // No parent implements additional properties, so we should.
               body.children.push(new Java.AdditionalPropertiesDeclaration());
@@ -46,15 +45,29 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
         for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
           this.addOmniPropertyToBody(body, property, args.options);
         }
+
+        // Then keep searching deeper, into nested types
+        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
       },
     }));
 
     return Promise.resolve();
   }
 
+  private hasAdditionalProperties(parent: OmniType): boolean {
+    return parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true;
+  }
+
   private addOmniPropertyToBody(body: Java.Block, property: OmniProperty, options: RealOptions<JavaOptions>): void {
 
     if (OmniUtil.isNull(property.type) && !options.includeAlwaysNullProperties) {
+      return;
+    }
+
+    if (property.abstract) {
+
+      // If the property is abstract, then we should not be adding a field for it.
+      // Instead it will be added by another transformer that deals with the getters and setters.
       return;
     }
 

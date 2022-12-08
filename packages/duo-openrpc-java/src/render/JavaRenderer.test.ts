@@ -1,11 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as JavaParser from 'java-parser';
-import {JavaInterpreter, JavaOptions, JavaRenderer} from '@omnigen/target-java';
+import {JAVA_FEATURES, JavaInterpreter, JavaOptions, JavaRenderer} from '@omnigen/target-java';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {jest} from '@jest/globals';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
 
 describe('Java Rendering', () => {
 
@@ -27,8 +28,13 @@ describe('Java Rendering', () => {
 
       for (const fileName of fileNames) {
 
-        const result = await OpenRpcTestUtils.readExample(schemaName, fileName, DEFAULT_OPENRPC_OPTIONS, DEFAULT_TEST_JAVA_OPTIONS);
-        const interpretation = await new JavaInterpreter(result.options).buildSyntaxTree(result.model, [], result.options);
+        const result = await OpenRpcTestUtils.readExample(schemaName, fileName,
+          DEFAULT_OPENRPC_OPTIONS,
+          DEFAULT_MODEL_TRANSFORM_OPTIONS,
+          DEFAULT_TEST_JAVA_OPTIONS,
+        );
+
+        const interpretation = await new JavaInterpreter(result.options).buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
 
         let baseDir: string;
 
@@ -162,12 +168,21 @@ describe('Java Rendering', () => {
   test('Type compressions', async () => {
 
     // Check that the property 'common' from A and B are moved into Abs.
-    const optionsWithoutGenerics: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
+    const optionsWithoutGenerics: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
       generifyTypes: false,
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('compressable-types.json', optionsWithoutGenerics);
+    // const optionsWithoutGenerics: JavaOptions = {
+    //   ...DEFAULT_TEST_JAVA_OPTIONS,
+    //   generifyTypes: false,
+    // };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('compressable-types.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      optionsWithoutGenerics,
+      DEFAULT_TEST_JAVA_OPTIONS,
+    );
 
     const fileNames = [...fileContents.keys()].sort();
     // TODO: Make sure that JsonRpcRequest does not go completely bonkers with its generics
@@ -207,53 +222,76 @@ describe('Java Rendering', () => {
     const abs = JavaTestUtils.getParsedContent(fileContents, 'Abs.java');
     expect(abs.foundSuperInterfaces).toHaveLength(0);
     expect(abs.foundSuperClasses).toHaveLength(0);
-    expect(abs.foundFields).toEqual(['kind', 'common']);
+    expect(abs.foundFields).toEqual(['common', 'kind']);
   });
 
   test('Enum', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json');
+    const options: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      includeGeneratedAnnotation: false,
+    };
 
-    const filenames = [...fileContents.keys()];
-    expect(filenames).toHaveLength(18);
-    expect(filenames).toContain('Tag.java');
-    expect(filenames).toContain('TagCopy.java');
-    expect(filenames).toContain('TagOrSpeciesOrString.java');
-    // If it contains the below one, then the composite class has been incorrectly named
-    expect(filenames).not.toContain('TagXOrTagOrString.java');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_MODEL_TRANSFORM_OPTIONS, options);
+
+    const filenames = [...fileContents.keys()].sort();
+    expect(filenames).toEqual([
+      'ErrorUnknown.java',
+      'ErrorUnknownError.java',
+      'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
+      'JsonRpcRequest.java',
+      'JsonRpcRequestParams.java',
+      'JsonRpcResponse.java',
+      'ListThingsError100.java',
+      'ListThingsError100Error.java',
+      'ListThingsRequest.java',
+      'ListThingsRequestParams.java',
+      'ListThingsResponse.java',
+      'Species.java',
+      'String.java',
+      'Tag.java',
+      'TagCopy.java',
+      'TagOrSpeciesOrString.java',
+      'Thing.java',
+    ]);
 
     const tag = JavaTestUtils.getParsedContent(fileContents, 'Tag.java');
     expect(tag.foundMethods).toHaveLength(0);
     expect(tag.foundSuperClasses).toHaveLength(0);
     expect(tag.foundSuperInterfaces).toHaveLength(0);
     expect(tag.foundFields).toEqual(['value']);
-    expect(tag.foundLiterals).toHaveLength(5);
-    expect(tag.foundLiterals[2]).toEqual('"TagA"');
-    expect(tag.foundLiterals[3]).toEqual('"TagB"');
-    expect(tag.foundLiterals[4]).toEqual('"TagC"');
+    expect(tag.foundLiterals).toEqual([
+      '"TagA"',
+      '"TagB"',
+      '"TagC"',
+    ]);
 
     const tagOrString = JavaTestUtils.getParsedContent(fileContents, 'TagOrSpeciesOrString.java');
     expect(tagOrString.foundMethods).toEqual([
-      'get',
+      'getAsSpecies',
+      'getAsTag',
       'getValue',
       'isKnown',
-      'isTag',
-      'getAsTag',
       'isSpecies',
-      'getAsSpecies',
+      'isTag',
+      'get',
     ]);
 
     expect(tagOrString.foundSuperClasses).toHaveLength(0);
     expect(tagOrString.foundSuperInterfaces).toHaveLength(0);
     expect(tagOrString.foundFields).toHaveLength(9);
-    expect(tagOrString.foundLiterals).toHaveLength(10);
-    expect(tagOrString.foundLiterals[2]).toEqual('"TagA"');
-    expect(tagOrString.foundLiterals[3]).toEqual('"TagB"');
-    expect(tagOrString.foundLiterals[4]).toEqual('"TagC"');
-    expect(tagOrString.foundLiterals[5]).toEqual('"SpeciesA"');
-    expect(tagOrString.foundLiterals[6]).toEqual('"SpeciesB"');
-    expect(tagOrString.foundLiterals[7]).toEqual('"foo"');
-    expect(tagOrString.foundLiterals[8]).toEqual(1337);
+
+    expect(tagOrString.foundLiterals).toEqual([
+      1337,
+      '"foo"',
+      '"SpeciesA"',
+      '"SpeciesB"',
+      '"TagA"',
+      '"TagB"',
+      '"TagC"',
+      true,
+    ]);
   });
 
   test('AdditionalProperties', async () => {
@@ -268,8 +306,8 @@ describe('Java Rendering', () => {
     const thing = JavaTestUtils.getParsedContent(fileContents, 'Thing.java');
     expect(thing.foundMethods).toEqual([
       'addAdditionalProperty',
-      'getId',
       'getAdditionalProperties',
+      'getId',
     ]);
 
     expect(thing.foundSuperInterfaces).toHaveLength(1);
@@ -294,10 +332,19 @@ describe('Java Rendering', () => {
     expect(filenames).not.toContain('Pet1.java');
   });
 
-  test('primitive-generics-specialize', async () => {
+  test('primitive-generics', async () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('primitive-generics.json');
     const filenames = [...fileContents.keys()].sort();
+
+    // Would we benefit from also easily saving all known subtypes/implementations of a generic along with the source?
+    // That way we could know what it will be used as, and make easier assumptions in the target languages.
+    // Good idea; but is it easily implementable?
+
+    // TODO: MUST FIX!
+    // * JsonRpcRequest has "method" as generic even though all types in Java is a String -- has to be removed/fixed
+    //    - Only fixed by post-processor that removes unnecessary generics? Since generic transformer is target agnostic
+    //    - Should be enough to just ignore the rendering of the generic identifier for Java, and it should be fine
 
     expect(filenames).toEqual([
       'ErrorUnknown.java',
@@ -316,21 +363,12 @@ describe('Java Rendering', () => {
       'JsonRpcRequest.java',
       'JsonRpcRequestParams.java',
       'JsonRpcResponse.java',
-      'PrimitiveChar.java',
-      'PrimitiveDouble.java',
-      'PrimitiveInt.java',
     ]);
 
-    const primitiveChar = JavaTestUtils.getParsedContent(fileContents, 'PrimitiveChar.java');
-    const primitiveDouble = JavaTestUtils.getParsedContent(fileContents, 'PrimitiveDouble.java');
-    const primitiveInt = JavaTestUtils.getParsedContent(fileContents, 'PrimitiveInt.java');
+    const params = JavaTestUtils.getParsedContent(fileContents, 'GiveNumberGetCharRequestParams.java');
 
-    expect(primitiveChar.foundFields).toEqual(['value']);
-    expect(primitiveDouble.foundFields).toEqual(['value']);
-    expect(primitiveInt.foundFields).toEqual(['value']);
+    expect(params.foundTypes).toEqual(['Double', 'double']);
 
-    expect(primitiveChar.foundMethods).toEqual(['getValue']);
-    expect(primitiveDouble.foundMethods).toEqual(['getValue']);
-    expect(primitiveInt.foundMethods).toEqual(['getValue']);
+    // TODO: Add more exact checks for all generic types, making sure they have the correct amount of generics and whatever
   });
 });

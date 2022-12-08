@@ -8,3 +8,4 @@ export * from './transform/index.js';
 export * from './util/index.js';
 export * from './visit/index.js';
 export * from './write/index.js';
+export * from './equality/index.js';

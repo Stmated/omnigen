@@ -9,6 +9,10 @@ export class AddGeneratedAnnotationAstTransformer extends AbstractJavaAstTransfo
 
   transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
+    if (!args.options.includeGeneratedAnnotation) {
+      return Promise.resolve();
+    }
+
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitCompilationUnit: node => {

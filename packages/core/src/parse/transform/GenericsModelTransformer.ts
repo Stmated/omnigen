@@ -4,21 +4,21 @@ import {
   OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
-  OmniModel,
   OmniModelTransformer,
-  OmniPrimitiveBoxMode,
   OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
   OmniUtil,
+  ParserOptions,
 } from '../../parse/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {RealOptions} from '../../options/index.js';
-import {GenericTargetOptions} from '../../interpret/index.js';
+import {OMNI_GENERIC_FEATURES, TargetFeatures} from '../../interpret/index.js';
 import {PropertyUtil} from '../PropertyUtil.js';
-import {EqualityLevel} from '../EqualityLevel.js';
 import {Case, Sorters} from '../../util/index.js';
 import {PropertyInformation} from '../PropertiesInformation.js';
+import {OmniModelTransformerArgs} from './OmniModelTransformerArgs.js';
+import {EqualityFinder} from '../../equality/EqualityFinder.js';
+import {PropertyDifference} from '../../equality/index.js';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -26,36 +26,32 @@ const logger = LoggerFactory.create(import.meta.url);
  * Takes an OmniModel, and tries to modify it to use generics where possible.
  * This will remove the need for a lot of extra types, and make code more readable.
  */
-export class GenericsModelTransformer implements OmniModelTransformer<GenericTargetOptions> {
+export class GenericsModelTransformer implements OmniModelTransformer<ParserOptions> {
 
-  transformModel(model: OmniModel, options: RealOptions<GenericTargetOptions>): void {
+  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
-    if (!options.generifyTypes) {
+    if (!args.options.generifyTypes) {
       return;
     }
 
-    const subTypeToSuperTypes = OmniUtil.getSuperTypeToSubTypesMap(model);
+    const superTypeToSubTypes = OmniUtil.getSuperTypeToSubTypesMap(args.model);
 
-    const dependencySorter = Sorters.byDependencies(model);
+    const dependencySorter = Sorters.byDependencies(args.model);
 
-    const superTypes = [...subTypeToSuperTypes.keys()].sort((a, b) => {
-      const aSubType = (subTypeToSuperTypes.get(a) || [])[0];
-      const bSubType = (subTypeToSuperTypes.get(b) || [])[0];
+    const superTypes = [...superTypeToSubTypes.keys()].sort((a, b) => {
+      const aSubType = (superTypeToSubTypes.get(a) || [])[0];
+      const bSubType = (superTypeToSubTypes.get(b) || [])[0];
       return dependencySorter(aSubType, bSubType);
     });
 
-    const propertyTypeToGenericTypeMap = new Map<OmniType, OmniType>();
-
-    // TODO:
-    // * extends JsonRpcRequest<GiveStringGetStringRequestParams> should be extends JsonRpcRequest<String, GiveStringGetStringRequestParams>
-    //    - Is this because of a missed exploding of the parameters? Or because it is unknown? Need to fix! It should be exploded! But GenericTarget needs to be caught up!
-    // * Check if the "explode" code is still needed (it probably is)
+    // const propertyTypeToGenericTypeMap = new Map<OmniType, OmniType>();
 
     for (const superType of superTypes) {
 
       if (superType.kind == OmniTypeKind.GENERIC_TARGET
         || superType.kind == OmniTypeKind.COMPOSITION
-        || superType.kind == OmniTypeKind.ENUM) {
+        || superType.kind == OmniTypeKind.ENUM
+        || superType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
         continue;
       }
 
@@ -66,15 +62,17 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
         continue;
       }
 
-      const subTypes = subTypeToSuperTypes.get(superType);
+      const subTypes = superTypeToSubTypes.get(superType);
       if (!subTypes) {
         continue;
       }
 
       const commonProperties = PropertyUtil.getCommonProperties(
-        EqualityLevel.FUNCTION_MIN,
-        // We do not care *at all* if they have nothing in-common. But we try our best to get one.
-        EqualityLevel.NOT_EQUAL_MIN,
+        // We do not care *at all* if they have nothing in-common. Just nice if get one.
+        () => false,
+        pdiff => EqualityFinder.matchesPropDiff(pdiff, PropertyDifference.META),
+
+        OMNI_GENERIC_FEATURES,
         ...subTypes,
       );
 
@@ -94,15 +92,20 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
         const info = commonProperties.byPropertyName[propertyName];
         if (info.distinctTypes.length <= 1) {
 
-          // There are 1 or less distinct types, so we should replace it with generics.
+          // There are 1 or less distinct types, so we will not replace it with generics.
           continue;
         }
 
         const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(propertyName)}`;
 
-        const lowerBound = this.toGenericBoundType(info.commonType, options);
+        const lowerBound = this.toGenericBoundType(info.commonType, args, OMNI_GENERIC_FEATURES);
         if (lowerBound) {
-          const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfPossible(lowerBound, genericSource, options);
+          const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfPossible(
+            lowerBound,
+            genericSource,
+            args,
+            OMNI_GENERIC_FEATURES,
+          );
           if (expandedGenericSourceIdentifier) {
             propertyNameExpansions.set(propertyName, [expandedGenericSourceIdentifier]);
           }
@@ -115,10 +118,11 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
         };
         genericSource.sourceIdentifiers.push(genericSourceIdentifier);
 
-        const incorrectTypeCount = this.populateAllowedGenericTypes(info, options, propertyTypeToGenericTypeMap);
-        if (incorrectTypeCount > 0) {
-          logger.warn(`Skipping '${propertyName}' since some property types cannot be made generic`);
-          continue;
+        if (args.options.generificationBoxAllowed == false) {
+          if (info.properties.map(it => it.type).find(it => !OmniUtil.isGenericAllowedType(it))) {
+            logger.warn(`Skipping '${propertyName}' since some property types cannot be made generic`);
+            continue;
+          }
         }
 
         for (const property of info.properties) {
@@ -136,7 +140,7 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
 
               // Swap all places that uses the superType with the new GenericSource.
               // We do this for the first time we alter the GenericTarget, to do it as late as possible.
-              OmniUtil.swapType(model, superType, genericSource);
+              OmniUtil.swapType(args.model, superType, genericSource);
             }
 
             ownerToGenericTargetMap.set(property.owner, genericTarget);
@@ -167,7 +171,7 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
           const targetIdentifier: OmniGenericTargetIdentifierType = {
             kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
             // It will always find something in the map, but we do this to make the compiler happy.
-            type: propertyTypeToGenericTypeMap.get(property.type) || property.type,
+            type: property.type,
             sourceIdentifier: genericSourceIdentifier,
           };
           genericTarget.targetIdentifiers.push(targetIdentifier);
@@ -190,31 +194,11 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
     return;
   }
 
-  private populateAllowedGenericTypes(
-    info: PropertyInformation,
-    options: RealOptions<GenericTargetOptions>,
-    propertyTypeToGenericTypeMap: Map<OmniType, OmniType>,
-  ) {
-
-    let incorrectTypeCount = 0;
-    for (const property of info.properties) {
-
-      const genericType = this.getAllowedGenericPropertyType(property.type, options);
-      if (genericType == undefined) {
-        incorrectTypeCount++;
-        break;
-      } else if (genericType != property.type) {
-        propertyTypeToGenericTypeMap.set(property.type, genericType);
-      }
-    }
-
-    return incorrectTypeCount;
-  }
-
   private expandLowerBoundGenericIfPossible(
     lowerBound: OmniType,
     genericSource: OmniGenericSourceType,
-    options: RealOptions<GenericTargetOptions>,
+    args: OmniModelTransformerArgs<ParserOptions>,
+    targetFeatures: TargetFeatures,
   ): OmniGenericSourceIdentifierType | undefined {
 
     if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
@@ -234,7 +218,7 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
     // To make it better and more exact to work with, we should replace with this:
     // <TData extends AbstractRequestParams, T extends JsonRpcRequest<TData>>
     const targetIdentifier = lowerBound.targetIdentifiers[0];
-    const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type, options);
+    const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type, args, targetFeatures);
 
     const sourceIdentifier: OmniGenericSourceIdentifierType = {
       placeholderName: this.getExplodedSourceIdentifierName(targetIdentifier.sourceIdentifier),
@@ -252,17 +236,17 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
     return sourceIdentifier;
   }
 
-  private toGenericBoundType(targetIdentifierType: OmniType | undefined, options: RealOptions<GenericTargetOptions>): OmniType | undefined {
+  private toGenericBoundType(
+    targetIdentifierType: OmniType | undefined,
+    args: OmniModelTransformerArgs<ParserOptions>,
+    targetFeatures: TargetFeatures,
+  ): OmniType | undefined {
 
-    const targetIdentifierGenericType = targetIdentifierType
-      ? this.getAllowedGenericPropertyType(targetIdentifierType, options)
-      : undefined;
-
-    if (!targetIdentifierGenericType || targetIdentifierGenericType.kind == OmniTypeKind.UNKNOWN) {
+    if (!targetIdentifierType || targetIdentifierType.kind == OmniTypeKind.UNKNOWN) {
       return undefined;
     }
 
-    return targetIdentifierGenericType;
+    return targetIdentifierType;
   }
 
   private getExplodedSourceIdentifierName(identifier: OmniGenericSourceIdentifierType): string {
@@ -280,37 +264,5 @@ export class GenericsModelTransformer implements OmniModelTransformer<GenericTar
     }
 
     return `TExploded${identifier.placeholderName}`;
-  }
-
-  private getAllowedGenericPropertyType(
-    genericTargetType: OmniType,
-    options: RealOptions<GenericTargetOptions>,
-  ): OmniType | undefined {
-
-    if (!OmniUtil.isGenericAllowedType(genericTargetType)) {
-
-      if (!options.generificationBoxAllowed) {
-        return undefined;
-      }
-
-      switch (options.generificationBoxMode) {
-        case OmniPrimitiveBoxMode.BOX:
-        case OmniPrimitiveBoxMode.WRAP: {
-
-          const allowedGenericTargetType = OmniUtil.toGenericAllowedType(genericTargetType, options.generificationBoxMode);
-
-          const common = OmniUtil.getCommonDenominatorBetween(genericTargetType, allowedGenericTargetType, false)?.type;
-          if (common != genericTargetType) {
-            const from = OmniUtil.describe(genericTargetType);
-            const to = OmniUtil.describe(allowedGenericTargetType);
-            logger.debug(`Changing generic type from ${from} to ${to}`);
-            genericTargetType = allowedGenericTargetType;
-          }
-          break;
-        }
-      }
-    }
-
-    return genericTargetType;
   }
 }

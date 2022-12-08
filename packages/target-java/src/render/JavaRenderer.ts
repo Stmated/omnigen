@@ -1,22 +1,26 @@
 import {
-  CompilationUnitRenderCallback,
+  AbstractStNode,
   AstVisitor,
-  VisitResult,
+  CompilationUnitRenderCallback,
   OmniPrimitiveKind,
   OmniUtil,
   RealOptions,
   Renderer,
-  AbstractStNode, Case,
+  VisitResult,
 } from '@omnigen/core';
-import {AbstractJavaNode, Comment, GenericTypeDeclarationList} from '../ast/index.js';
-import {JavaVisitor, JavaVisitFn} from '../visit/index.js';
-import {JavaOptions} from '../options/index.js';
 import * as Java from '../ast/index.js';
+import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast/index.js';
+import {JavaVisitFn, JavaVisitor} from '../visit/index.js';
+import {JavaOptions} from '../options/index.js';
+import {LoggerFactory} from '@omnigen/core-log';
 
 type JavaRendererVisitFn<N extends AbstractStNode> = JavaVisitFn<N, string>;
 
+const logger = LoggerFactory.create(import.meta.url);
+
 export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   private _blockDepth = 0;
+  private _insideDeclaration = false;
   private readonly _patternLineStart = new RegExp(/(?<!$)^/mg);
   private _tokenPrefix = ' ';
   private _tokenSuffix = ' ';
@@ -85,9 +89,12 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   visitVariableDeclaration: JavaRendererVisitFn<Java.VariableDeclaration> = node => {
 
     const constant = (node.constant) ? 'final ' : '';
-    const type = node.variableType ? this.render(node.variableType) : 'var ';
-    const name = this.render(node.variableName);
+    const type = (this._options.preferVar || !node.type) ? 'var ' : `${this.render(node.type)} `;
+    const name = this.render(node.identifier);
+
+    this._insideDeclaration = true;
     const initializer = node.initializer ? ` = ${this.render(node.initializer)}` : '';
+    this._insideDeclaration = false;
 
     return `${constant}${type}${name}${initializer}`;
   };
@@ -301,7 +308,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitImplementsDeclaration: JavaRendererVisitFn<Java.ImplementsDeclaration> = (node, visitor) => {
-    return (node.types.children.map(it => this.render(it, visitor)).join(', '));
+    return this.render(node.types, visitor);
   };
 
   visitEnumItem: JavaRendererVisitFn<Java.EnumItem> = (node, visitor) => {
@@ -332,11 +339,12 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     const type = this.render(node.type, visitor);
     const name = this.render(node.identifier, visitor);
     const parameters = node.parameters ? this.render(node.parameters, visitor) : '';
+    const throws = node.throws ? ` throws ${this.render(node.throws, visitor)}` : '';
 
     return [
       comments,
       annotations,
-      `${modifiers} ${type} ${name}(${parameters})`,
+      `${modifiers} ${type} ${name}(${parameters})${throws}`,
     ];
   };
 
@@ -347,7 +355,17 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitMethodCall: JavaRendererVisitFn<Java.MethodCall> = (node, visitor) => {
-    return `${this.render(node.target, visitor)}.${this.render(node.methodName, visitor)}(${this.render(node.methodArguments, visitor)})`;
+
+    const targetString = this.render(node.target, visitor);
+    const methodString = this.render(node.methodName, visitor);
+    const argumentsString = this.render(node.methodArguments, visitor);
+
+    if (this._insideDeclaration && (node.target instanceof Java.MethodCall)) {
+      const indentation = this.getIndentation(2);
+      return `${targetString}\n${indentation}.${methodString}(${argumentsString})`;
+    } else {
+      return `${targetString}.${methodString}(${argumentsString})`;
+    }
   };
 
   visitStatement: JavaRendererVisitFn<Java.Statement> = node => {
@@ -437,6 +455,11 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     return `new ${this.render(node.type, visitor)}(${parameters})`;
   };
 
+  visitThrowStatement: JavaRendererVisitFn<Java.ThrowStatement> = (node, visitor) => {
+    const thrownExpression = this.render(node.expression, visitor);
+    return `throw ${thrownExpression}`;
+  };
+
   visitIdentifier: JavaRendererVisitFn<Java.Identifier> = node => {
     return node.value;
   };
@@ -468,7 +491,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   };
 
   visitTypeList: JavaRendererVisitFn<Java.TypeList> = (node, visitor) => {
-    return node.children.map(it => this.render(it, visitor)).join(' ');
+    return node.children.map(it => this.render(it, visitor)).join(', ');
   };
 
   visitRegularType: JavaRendererVisitFn<Java.RegularType> = node => {
@@ -508,6 +531,23 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
 
   visitIfStatement: JavaRendererVisitFn<Java.IfStatement> = (node, visitor) => {
     return `if (${this.render(node.predicate, visitor)}) {\n${this.render(node.body)}}\n`;
+  };
+
+  visitPredicate: JavaRendererVisitFn<Java.Predicate> = (node, visitor) => {
+
+    if (node.right instanceof Java.Literal) {
+      if (node.token.type == TokenType.EQUALS && node.right.value == true) {
+        return this.render(node.left, visitor);
+      } else if (node.token.type == TokenType.NOT_EQUALS && node.right.value == false) {
+        return this.render(node.left, visitor);
+      } else if (node.token.type == TokenType.EQUALS && node.right.value == false) {
+        return `!${this.render(node.left, visitor)}`;
+      } else if (node.token.type == TokenType.NOT_EQUALS && node.right.value == true) {
+        return `!${this.render(node.left, visitor)}`;
+      }
+    }
+
+    return visitor.visitBinaryExpression(node, visitor);
   };
 
   visitIfElseStatement: JavaRendererVisitFn<Java.IfElseStatement> = (node, visitor) => {

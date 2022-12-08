@@ -2,7 +2,7 @@ import {OmniModel} from '../parse/index.js';
 import {AstRootNode} from '../ast/index.js';
 import {ExternalSyntaxTree, AstTransformer, AstTransformerArguments} from '../transform/index.js';
 import {RealOptions} from '../options/index.js';
-import {TargetOptions, Interpreter} from '../interpret/index.js';
+import {TargetOptions, Interpreter, TargetFeatures} from '../interpret/index.js';
 
 export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements Interpreter<TOpt> {
   private readonly _transformers: AstTransformer<AstRootNode, TOpt>[] = [];
@@ -21,6 +21,7 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
     model: OmniModel,
     externals: ExternalSyntaxTree<AstRootNode, TOpt>[],
     options: RealOptions<TOpt>,
+    features: TargetFeatures,
   ): Promise<AstRootNode> {
 
     const rootNode = await this.newRootNode();
@@ -30,6 +31,7 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
       root: rootNode,
       externals,
       options,
+      features,
     };
 
     for (const transformer of this.getTransformers()) {

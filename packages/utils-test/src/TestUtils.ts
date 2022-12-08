@@ -91,4 +91,9 @@ export class TestUtils {
 
     return map;
   }
+
+  public static equalsRegex(given: string[], expected: string[]): void {
+
+    expect(given).toHaveLength(expected.length);
+  }
 }

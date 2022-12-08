@@ -44,10 +44,16 @@ export interface OmniProperty {
    */
   propertyName?: string | undefined;
   type: OmniType;
+  /**
+   * TODO: REMOVE! It is ugly and should not really be needed...
+   */
   owner: OmniPropertyOwner;
 
   description?: string | undefined;
   summary?: string | undefined;
+  /**
+   * TODO: Is this supposed to be a modifier? And have all the booleans as modifiers that can easily be added to
+   */
   deprecated?: boolean;
   /**
    * TODO: Move this into the type? A validation hint?
@@ -61,6 +67,10 @@ export interface OmniProperty {
    * TODO: Move this into the type? A validation hint?
    */
   writeOnly?: boolean;
+  /**
+   * TODO: Is this supposed to be a modifier?
+   */
+  abstract?: true;
 
   accessLevel?: OmniAccessLevel;
 
@@ -92,6 +102,10 @@ export enum OmniTypeKind {
   GENERIC_SOURCE_IDENTIFIER = 'GENERIC_SOURCE_IDENTIFIER',
   GENERIC_TARGET_IDENTIFIER = 'GENERIC_TARGET_IDENTIFIER',
   INTERFACE = 'INTERFACE',
+  /**
+   * TODO: Deprecated. Remove. Should be up to the target language to handle the original type as best it can!
+   */
+  WRAPPED = 'WRAPPED',
   /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
@@ -138,6 +152,7 @@ export type OmniSuperTypeCapableType = OmniObjectType
   | OmniCompositionType<OmniSuperTypeCapableType, CompositionKind>
   | OmniEnumType
   | OmniInterfaceType
+  | OmniHardcodedReferenceType
   | OmniExternalModelReferenceType<OmniSuperTypeCapableType> // Needs to be unwrapped/resolved every time
   ;
 
@@ -158,6 +173,7 @@ export type OmniType =
   | OmniEnumType
   | OmniGenericType
   | OmniInterfaceType
+  | OmniWrappedType<OmniType>
   ;
 
 export type SmartUnwrappedType<T> =
@@ -165,7 +181,9 @@ export type SmartUnwrappedType<T> =
     ? undefined
     : T extends OmniExternalModelReferenceType<infer R>
       ? Exclude<R, OmniExternalModelReferenceType<any>>
-      : T;
+      : T extends OmniWrappedType<infer W>
+        ? Exclude<W, OmniWrappedType<any>>
+        : T;
 
 export interface OmniNamedType {
 
@@ -313,15 +331,23 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind>, OmniN
   additionalProperties?: boolean | undefined;
 }
 
+type OmniWrappedKnownKind = OmniTypeKind.WRAPPED;
+
+/**
+ * It is required by contract for the target language to be able to convert between the wrapped and non-wrapped.
+ * The wrapper should work in exactly the same way as the wrapped type, or at least as closely as the language can try.
+ */
+export interface OmniWrappedType<T extends OmniType> extends OmniBaseType<OmniWrappedKnownKind> {
+  of: T;
+  nullable: boolean;
+}
+
 type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
 export type OmniPrimitiveConstantValue = string | boolean | number
 
-// export enum PrimitiveNullableKind {
-//   NOT_NULLABLE,
-//   NOT_NULLABLE_PRIMITIVE,
-//   NULLABLE,
-// }
-
+/**
+ * TODO: Remove and only have a boolean called 'isLiteral' on the primitive? Seems more intuitive
+ */
 export enum OmniPrimitiveValueMode {
   /**
    * This means the value is the default value of the type unless anything else has/can be set.
@@ -334,24 +360,10 @@ export enum OmniPrimitiveValueMode {
   LITERAL = 'LITERAL',
 }
 
-export enum OmniPrimitiveBoxMode {
-  /**
-   * Box means for example 'int' -> 'Integer'
-   */
-  BOX = 'BOX',
-  /**
-   * Wrap means for example 'int' -> 'PrimitiveInt'.
-   *
-   * A custom-generated class to hold a forced non-null primitive int, but usable as a generic.
-   */
-  WRAP = 'WRAP',
-}
-
 export interface OmniPrimitiveBaseType extends OmniBaseType<OmniPrimitiveKnownKind> {
 
   primitiveKind: OmniPrimitiveKind;
   nullable?: boolean;
-  boxMode?: OmniPrimitiveBoxMode | undefined;
   value?: OmniPrimitiveConstantValue | null | undefined;
   /**
    * Undefined = OmniPrimitiveValueMode.DEFAULT
@@ -362,7 +374,6 @@ export interface OmniPrimitiveBaseType extends OmniBaseType<OmniPrimitiveKnownKi
 export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
   primitiveKind: OmniPrimitiveKind.NULL;
   nullable?: true;
-  boxMode?: undefined; // OmniPrimitiveBoxMode.BOX;
   value?: null;
   valueMode?: OmniPrimitiveValueMode.LITERAL;
 }
@@ -370,48 +381,26 @@ export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
 export interface OmniPrimitiveVoidType extends OmniPrimitiveBaseType {
   primitiveKind: OmniPrimitiveKind.VOID;
   nullable?: true;
-  boxMode?: undefined; // OmniPrimitiveBoxMode.BOX;
   value?: undefined;
   valueMode?: OmniPrimitiveValueMode.LITERAL;
 }
 
-export interface OmniPrimitiveNullableType extends OmniPrimitiveBaseType {
-  primitiveKind: Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
+export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
+
+export interface OmniPrimitiveTangibleNullableType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveTangibleKind;
   nullable: true;
-  boxMode: OmniPrimitiveBoxMode;
   value?: OmniPrimitiveConstantValue | null;
   valueMode?: OmniPrimitiveValueMode;
 }
-
-export type OmniPrimitiveNonNullableKind = Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
-
-export interface OmniPrimitiveNonNullableBoxedType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveNonNullableKind;
-  nullable: false,
-  boxMode: OmniPrimitiveBoxMode.BOX;
-  value?: OmniPrimitiveConstantValue;
-  valueMode?: OmniPrimitiveValueMode;
-}
-
-export interface OmniPrimitiveNonNullableWrappedType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveNonNullableKind;
-  nullable: false,
-  boxMode: OmniPrimitiveBoxMode.WRAP;
-  value?: OmniPrimitiveConstantValue;
-  valueMode?: OmniPrimitiveValueMode;
-}
-
-export interface OmniPrimitiveNonNullableSimpleType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveNonNullableKind;
+export interface OmniPrimitiveNonNullableType extends OmniPrimitiveBaseType {
+  primitiveKind: OmniPrimitiveTangibleKind;
   nullable?: false,
-  boxMode?: undefined;
   value?: OmniPrimitiveConstantValue;
   valueMode?: OmniPrimitiveValueMode;
 }
 
-export type OmniPrimitiveNonNullableType = OmniPrimitiveNonNullableWrappedType
-  | OmniPrimitiveNonNullableBoxedType
-  | OmniPrimitiveNonNullableSimpleType;
+export type OmniPrimitiveNullableType = OmniPrimitiveTangibleNullableType | OmniPrimitiveNullType | OmniPrimitiveVoidType;
 
 export type OmniPrimitiveType =
   OmniPrimitiveVoidType
@@ -481,7 +470,7 @@ export interface OmniGenericSourceType extends OmniBaseType<OmniGenericSourceKno
 type OmniGenericTargetKnownKind = OmniTypeKind.GENERIC_TARGET;
 
 export interface OmniGenericTargetType extends OmniBaseType<OmniGenericTargetKnownKind> {
-  source: OmniGenericSourceType;
+  source: OmniGenericSourceType | OmniExternalModelReferenceType<OmniGenericSourceType>;
   targetIdentifiers: OmniGenericTargetIdentifierType[];
 }
 
@@ -500,8 +489,9 @@ export interface OmniOutput {
   type: OmniType;
   required: boolean;
   deprecated: boolean;
+  error: boolean;
 
-  qualifiers?: OmniPayloadPathQualifier[];
+  qualifiers: OmniPayloadPathQualifier[];
 }
 
 export interface OmniExampleParam {
@@ -553,8 +543,6 @@ export interface OmniEndpoint {
   request: OmniInput;
   responses: OmniOutput[];
   examples: OmniExamplePairing[];
-
-  // parameters: GenericParameter[];
 }
 
 export interface OmniServer {

@@ -1,16 +1,21 @@
 import {AbstractInterpreter, AstRootNode} from '@omnigen/core';
 import {FieldAccessorMode, JavaOptions} from '../options/index.js';
 import {
-  AddConstructorJavaAstTransformer, AddGeneratedAnnotationAstTransformer,
-  AdditionalPropertiesInterfaceAstTransformer,
+  AddConstructorJavaAstTransformer,
+  AddGeneratedAnnotationAstTransformer,
+  AddAdditionalPropertiesInterfaceAstTransformer,
   BaseJavaAstTransformer,
   InnerTypeCompressionAstTransformer,
   PackageResolverAstTransformer,
   AddJakartaValidationAstTransformer,
   PropertyNameDiscrepancyAstTransformer,
   AddFieldsAstTransformer,
-  AddGetterSetterAstTransformer,
-  AddLombokAstTransformer, AddCommentsAstTransformer,
+  AddAccessorsForFieldsAstTransformer,
+  AddLombokAstTransformer,
+  AddCommentsAstTransformer,
+  ReorderMembersTransformer,
+  AddThrowsForKnownMethodsAstTransformer,
+  AddAbstractAccessorsAstTransformer,
 } from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -25,7 +30,7 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
     this.registerTransformer(new PropertyNameDiscrepancyAstTransformer());
     switch (options.fieldAccessorMode) {
       case FieldAccessorMode.POJO:
-        this.registerTransformer(new AddGetterSetterAstTransformer());
+        this.registerTransformer(new AddAccessorsForFieldsAstTransformer());
         break;
       case FieldAccessorMode.LOMBOK:
         this.registerTransformer(new AddLombokAstTransformer());
@@ -36,13 +41,18 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
       default:
         throw new Error(`Do not know how to handle field accessor mode ${options.fieldAccessorMode}`);
     }
+
+    // Is possible abstract accessors might clash with the Lombok accessors, will need future revisions
+    this.registerTransformer(new AddAbstractAccessorsAstTransformer());
     this.registerTransformer(new AddConstructorJavaAstTransformer());
-    this.registerTransformer(new AdditionalPropertiesInterfaceAstTransformer());
+    this.registerTransformer(new AddAdditionalPropertiesInterfaceAstTransformer());
     this.registerTransformer(new AddCommentsAstTransformer());
     this.registerTransformer(new AddJakartaValidationAstTransformer());
     this.registerTransformer(new AddGeneratedAnnotationAstTransformer());
     this.registerTransformer(new InnerTypeCompressionAstTransformer());
+    this.registerTransformer(new AddThrowsForKnownMethodsAstTransformer());
     this.registerTransformer(new PackageResolverAstTransformer());
+    this.registerTransformer(new ReorderMembersTransformer());
   }
 
   newRootNode(): Promise<AstRootNode> {

@@ -1,8 +1,22 @@
-import {OmniPotentialInterfaceType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {
+  AstRootNode,
+  OmniPotentialInterfaceType,
+  OmniType,
+  OmniTypeKind,
+  OmniUtil,
+  VisitorFactoryManager,
+} from '@omnigen/core';
 import {JavaUtil} from '../util/index.js';
 import * as Java from '../ast/index.js';
+import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
+import {LoggerFactory} from '@omnigen/core-log';
+import {JavaVisitor} from '../visit/index.js';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaAstUtils {
+
+  private static readonly _JAVA_VISITOR = new JavaVisitor<void>();
 
   public static addInterfaceProperties(type: OmniPotentialInterfaceType, body: Java.Block): void {
 
@@ -41,11 +55,64 @@ export class JavaAstUtils {
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
 
       const baseType = new Java.RegularType(type, implementation);
-      const genericArguments = type.targetIdentifiers.map(it => JavaAstUtils.createTypeNode(it.type));
+
+      // NOTE: In future versions of Java it might be possible to have primitive generic arguments.
+      //        But for now we change all the primitive types into a reference type.
+      const genericArguments = type.targetIdentifiers.map(it => JavaAstUtils.createTypeNode(OmniUtil.toReferenceType(it.type)));
       return new Java.GenericType(baseType, genericArguments);
 
     } else {
       return new Java.RegularType(type, implementation);
     }
+  }
+
+  public static getSuperClassToSubClassDeclarations(root: AstRootNode): Map<Java.ClassDeclaration, Java.ClassDeclaration[]> {
+
+    const omniTypeToDeclaration = new Map<OmniType, Java.ClassDeclaration>();
+    root.visit(VisitorFactoryManager.create(JavaAstUtils._JAVA_VISITOR, {
+
+      visitEnumDeclaration: () => {
+      },
+      visitInterfaceDeclaration: () => {
+      },
+      visitMethodDeclaration: () => {
+      },
+
+      visitClassDeclaration: node => {
+        omniTypeToDeclaration.set(node.type.omniType, node);
+      },
+    }));
+
+    const superClassToSubClasses = new Map<Java.ClassDeclaration, Java.ClassDeclaration[]>();
+    root.visit(VisitorFactoryManager.create(JavaAstUtils._JAVA_VISITOR, {
+
+      visitEnumDeclaration: () => {
+      },
+      visitInterfaceDeclaration: () => {
+      },
+      visitMethodDeclaration: () => {
+      },
+
+      visitClassDeclaration: node => {
+
+        if (node.extends) {
+          const superType = node.extends.type.omniType;
+          const superClass = omniTypeToDeclaration.get(superType);
+          if (superClass) {
+
+            const subClasses = (superClassToSubClasses.has(superClass)
+              ? superClassToSubClasses
+              : superClassToSubClasses.set(superClass, [])).get(superClass)!;
+
+            subClasses.push(node);
+
+          } else {
+            logger.warn(`Could not find the class declaration of super type '${OmniUtil.describe(superType)}'`);
+          }
+        }
+      },
+    }));
+
+    return superClassToSubClasses;
   }
 }

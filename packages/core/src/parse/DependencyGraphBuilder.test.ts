@@ -1,5 +1,5 @@
 import {
-  CompositionKind,
+  CompositionKind, DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS,
   OmniCompositionType,
   OmniEndpoint,
   OmniModel,
@@ -7,7 +7,7 @@ import {
   OmniPrimitiveKind,
   OmniSuperTypeCapableType,
   OmniType,
-  OmniTypeKind, OmniUtil,
+  OmniTypeKind, OmniUtil, PARSER_OPTIONS_RESOLVERS, ParserOptions, TRANSFORM_OPTIONS_RESOLVER,
 } from '../parse/index.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 
@@ -15,6 +15,7 @@ import {MapArg, TestUtils} from '@omnigen/utils-test';
 import {JavaUtil} from '@omnigen/target-java';
 import {SimplifyInheritanceModelTransformer} from './transform/index.js';
 import {DEFAULT_TARGET_OPTIONS} from '../interpret/index.js';
+import {OptionsUtil, RealOptions} from '../options/index.js';
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -47,6 +48,8 @@ describe('Test CompositionDependencyUtil', () => {
             contentType: 'application/json',
             name: `Response${idx}`,
             deprecated: false,
+            qualifiers: [],
+            error: false,
           }],
         };
       })
@@ -254,9 +257,12 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C, D, E, F]);
 
-    new SimplifyInheritanceModelTransformer().transformModel(model, {
-      ...DEFAULT_TARGET_OPTIONS,
-      simplifyTypeHierarchy: true,
+    const parserOptions = await OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const transformOptions = await OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+
+    new SimplifyInheritanceModelTransformer().transformModel({
+      model: model,
+      options: {...parserOptions, ...transformOptions},
     });
 
     // This would change if the search was done breadth-first vs depth-first.
@@ -301,9 +307,12 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C]);
 
-    new SimplifyInheritanceModelTransformer().transformModel(model, {
-      ...DEFAULT_TARGET_OPTIONS,
-      simplifyTypeHierarchy: true,
+    const parserOptions = await OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const transformOptions = await OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+
+    new SimplifyInheritanceModelTransformer().transformModel({
+      model: model,
+      options: {...parserOptions, ...transformOptions},
     });
 
     expect(JavaUtil.getInterfaces(model)).toEqual([]);
@@ -372,4 +381,4 @@ const inlineClassWithProp = (name: string): OmniObjectType => {
     },
   ];
   return inline;
-}
+};

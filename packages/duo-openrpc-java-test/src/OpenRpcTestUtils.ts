@@ -5,16 +5,19 @@ import {
   Dereferencer,
   OmniModelParserResult,
   SchemaFile,
-  ElevateCommonPropertiesModelTransformer,
+  ElevatePropertiesModelTransformer,
   GenericsModelTransformer,
-  OptionsUtil, SimplifyInheritanceModelTransformer,
+  OptionsUtil,
+  SimplifyInheritanceModelTransformer,
+  ModelTransformOptions,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  TRANSFORM_OPTIONS_RESOLVER, OmniModelMerge, OmniModel2ndPassTransformer,
 } from '@omnigen/core';
-import {JavaOptions, JAVA_OPTIONS_RESOLVER, InterfaceJavaModelTransformer} from '@omnigen/target-java';
+import {JavaOptions, JAVA_OPTIONS_RESOLVER, InterfaceJavaModelTransformer, JAVA_FEATURES} from '@omnigen/target-java';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
 import {
   DEFAULT_OPENRPC_OPTIONS,
   OpenRpcParserOptions,
-  JSONRPC_OPTIONS_FALLBACK,
   OPENRPC_OPTIONS_RESOLVERS,
   OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_FALLBACK,
 } from '@omnigen/parser-openrpc';
@@ -40,6 +43,7 @@ export class OpenRpcTestUtils {
     type: KnownSchemaNames,
     fileName: string,
     openRpcOptions: OpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
+    modelTransformOptions: ModelTransformOptions = DEFAULT_MODEL_TRANSFORM_OPTIONS,
     javaOptions: JavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
   ): Promise<OmniModelParserResult<JavaOptions>> {
 
@@ -48,16 +52,9 @@ export class OpenRpcTestUtils {
       `../parser-${type}/examples/${fileName}`,
     );
 
-    const transformers: OmniModelTransformer<JavaOptions>[] = [
-      new SimplifyInheritanceModelTransformer(),
-      new ElevateCommonPropertiesModelTransformer(),
-      new GenericsModelTransformer(),
-      new InterfaceJavaModelTransformer(),
-    ];
-
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
     const openRpcParserBootstrap = (await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile));
-    const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<JavaOptions>();
+    const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<ModelTransformOptions & JavaOptions>();
     const openRpcRealOptions = await OptionsUtil.updateOptions(
       openRpcOptions,
       schemaIncomingOptions,
@@ -89,11 +86,37 @@ export class OpenRpcTestUtils {
       parseResult.model.options = schemaIncomingOptions;
     }
 
-    const realJavaOptions = await OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_RESOLVER);
+    const realTransformOptions = await OptionsUtil.updateOptions(modelTransformOptions, schemaIncomingOptions, TRANSFORM_OPTIONS_RESOLVER);
+
+    const transformers: OmniModelTransformer<OpenRpcParserOptions>[] = [
+      new SimplifyInheritanceModelTransformer(),
+      new ElevatePropertiesModelTransformer(),
+      new GenericsModelTransformer(),
+      new InterfaceJavaModelTransformer(),
+    ];
 
     for (const transformer of transformers) {
-      transformer.transformModel(parseResult.model, realJavaOptions);
+      transformer.transformModel({
+        model: parseResult.model,
+        options: {...openRpcRealOptions, ...realTransformOptions},
+      });
     }
+
+    const realJavaOptions = await OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_RESOLVER);
+
+    const transformers2: OmniModel2ndPassTransformer<OpenRpcParserOptions, JavaOptions>[] = [
+      new ElevatePropertiesModelTransformer(),
+    ];
+
+    for (const transformer of transformers2) {
+      transformer.transformModel2ndPass({
+        model: parseResult.model,
+        options: {...openRpcRealOptions, ...realTransformOptions, ...realJavaOptions},
+        targetFeatures: JAVA_FEATURES,
+      });
+    }
+
+    // TODO: 2nd pass
 
     return {
       model: parseResult.model,

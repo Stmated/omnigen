@@ -19,7 +19,6 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     if (!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes) {
 
       // The option for compressing types is disabled.
-      logger.info(`Not compressing any types`);
       return Promise.resolve();
     }
 
@@ -27,53 +26,33 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     const typeToCu = new Map<OmniType, Java.CompilationUnit>();
     this.gatherTypeMappings(cuUsedInTypes, typeToCu, args.root);
 
-    // const externalCuToTypes = new Map<Java.CompilationUnit, OmniType[]>();
-    // for (const external of args.externals) {
-    //
-    //   // We still gather the mappings for all externals as well.
-    //   // It will be useful for error messages and exclusions of some compressions.
-    //   // Like... we should never move types from specific models INTO the common types. That is just weird.
-    //   this.gatherTypeMappings(externalCuToTypes, external.node);
-    // }
-
     const typeUsedInCus = this.flipMultiMap(cuUsedInTypes);
-    // const externalTypeToCUs = this.flipMultiMap(externalCuToTypes);
     logger.info(typeUsedInCus);
 
-    for (const [type, units] of typeUsedInCus.entries()) {
+    for (const [type, usedInUnits] of typeUsedInCus.entries()) {
 
-      // const usedInUnits = typeMappings.usedIn;
+      logger.info(`${OmniUtil.describe(type)} used in ${usedInUnits.map(it => OmniUtil.describe(it.object.type.omniType))}`);
 
-      logger.info(`${OmniUtil.describe(type)} used in ${units.map(it => OmniUtil.describe(it.object.type.omniType))}`);
-
-      // or two? Since it contains itself?
-      if (units.length != 1) {
+      if (usedInUnits.length != 1) {
         continue;
       }
 
-      // const usedInUnit = [...usedInUnits.values()][0];
-      const definedUsedInSuperType = JavaUtil.superMatches(
-        args.model, JavaUtil.asSubType(type),
-        superType => (superType == type),
-      );
+      const singleUseInUnit = usedInUnits[0];
 
-      if (definedUsedInSuperType) {
+      // Check for supertype interference. Don't want a superclass to be inside a subclass.
+      const superType = JavaUtil.asSuperType(type);
+      let typeUsedInSuperType = false;
+      if (superType) {
+        const singleUseInType = JavaUtil.asSubType(singleUseInUnit.object.type.omniType);
+        const singleUseHierarchy = JavaUtil.getSuperClassHierarchy(args.model, singleUseInType);
+        typeUsedInSuperType = singleUseHierarchy.includes(superType);
+      }
+
+      if (typeUsedInSuperType) {
 
         // If the types are assignable, it means that the single use is a class extension.
         if (args.options.compressUnreferencedSubTypes && this.isAllowedKind(type, args.options)) {
-
-          // If the only use is as an extension, then IF we compress, the source/target should be reversed.
-          // If typeA is only used in typeB, and typeB is extending from typeA, then typeB should be inside typeA.
-
-          // const definedIn = typeToCu.get(type);
-          // if (!definedIn && externalTypeToCUs.has(type)) {
-          //   // If we could not find the target, but it is available in the external mappings,
-          //   // then we know that the other type is inside another model. We do not want to compress into them.
-          //   logger.debug(`Skipping compression of type '${OmniUtil.describe(type)}' inside external model`);
-          // } else {
-            // this.moveCompilationUnit(usedInUnit, definedIn, type, root);
           logger.info(`Could compress ${type} into ${OmniUtil.describe(type)}`);
-          // }
         }
 
       } else {
@@ -82,10 +61,13 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
           // This type is only ever used in one single unit.
           // To decrease the number of files, we can compress the types and make this an inner type.
-          const definedIn = typeToCu.get(type);
-          const singleUseIn = units[0];
+          const definedInCu = typeToCu.get(type);
+          if (!definedInCu) {
+            logger.warn(`Could not find the CompilationUnit source where '${OmniUtil.describe(type)}' is defined`);
+            continue;
+          }
 
-          this.moveCompilationUnit(definedIn, singleUseIn, type, args.root);
+          this.moveCompilationUnit(definedInCu, singleUseInUnit, type, args.root);
         }
       }
     }
@@ -134,6 +116,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
         cuInfoStack.pop();
       },
 
+      // We do not want texts with links to count as "references"
       visitFreeTextLine: () => {},
       visitFreeTextTypeLink: () => {},
       visitFreeTextMethodLink: () => {},
@@ -214,15 +197,11 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
   }
 
   private moveCompilationUnit(
-    sourceUnit: Java.CompilationUnit | undefined,
+    sourceUnit: Java.CompilationUnit,
     targetUnit: Java.CompilationUnit | undefined,
     type: OmniType,
     root: Java.JavaAstRootNode,
   ): void {
-
-    if (!sourceUnit) {
-      throw new Error(`Could not find the CompilationUnit source where '${OmniUtil.describe(type)}' is defined`);
-    }
 
     if (!targetUnit) {
       throw new Error(`Could not find the CompilationUnit target where '${OmniUtil.describe(type)}' is defined`);

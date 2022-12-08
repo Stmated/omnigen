@@ -13,10 +13,9 @@ import {
   OmniComparisonOperator,
   OmniModel,
   OmniObjectType,
-  OmniPrimitiveBoxMode,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
-  OmniPrimitiveNonNullableKind,
+  OmniPrimitiveTangibleKind,
   OmniPrimitiveNonNullableType,
   OmniProperty,
   OmniPropertyOwner,
@@ -26,7 +25,7 @@ import {
   OmniUtil,
   ParserOptions,
   RealOptions,
-  TypeName,
+  TypeName, OMNI_GENERIC_FEATURES,
 } from '@omnigen/core';
 import {JSONSchema} from '@open-rpc/meta-schema';
 import {JsonObject} from 'json-pointer';
@@ -340,7 +339,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   }
 
   private mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniObjectType): void {
-    const common = OmniUtil.getCommonDenominatorBetween(a.type, b.type)?.type;
+    const common = OmniUtil.getCommonDenominatorBetween(a.type, b.type, OMNI_GENERIC_FEATURES)?.type;
     if (common) {
       if (to.properties) {
         const idx = to.properties.indexOf(b);
@@ -426,7 +425,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     const lcFormat = format?.toLowerCase() ?? '';
-    let primitiveType: OmniPrimitiveNonNullableKind;
+    let primitiveType: OmniPrimitiveTangibleKind;
     switch (lcType) {
       case 'number':
         switch (lcFormat) {
@@ -482,7 +481,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
           primitiveKind: primitiveType,
           nullable: false,
           // NOTE: This is probably incorrect, since if boxing not allowed for generics, we should fail
-          boxMode: this._options.preferredWrapMode ? OmniPrimitiveBoxMode.WRAP : OmniPrimitiveBoxMode.BOX,
+          // boxMode: this._options.preferredWrapMode ? OmniPrimitiveBoxMode.WRAP : OmniPrimitiveBoxMode.BOX,
           description: description,
         };
 
@@ -543,7 +542,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private getIntegerPrimitiveFromFormat(
     format: string,
     fallback: OmniPrimitiveKind.INTEGER | OmniPrimitiveKind.NUMBER
-  ): OmniPrimitiveNonNullableKind {
+  ): OmniPrimitiveTangibleKind {
 
     switch (format) {
       case 'integer':
@@ -852,7 +851,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         return this.jsonSchemaToType(derefArrayItem.hash || 'UnknownArrayItem', derefArrayItem, undefined);
       });
 
-      const commonDenominator = OmniUtil.getCommonDenominator(...staticArrayTypes.map(it => it.type))?.type;
+      const commonDenominator = OmniUtil.getCommonDenominator(OMNI_GENERIC_FEATURES, ...staticArrayTypes.map(it => it.type))?.type;
 
       const arrayByPositionType: OmniArrayTypesByPositionType = {
         kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,

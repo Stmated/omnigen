@@ -19,6 +19,8 @@ import {
   SuperclassCtx,
   SuperinterfacesCtx,
   UnannClassTypeCtx,
+  MethodHeaderCtx,
+  MethodNameCtx,
 } from 'java-parser';
 
 export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
@@ -123,6 +125,14 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   methodDeclarator(ctx: MethodDeclaratorCtx, param?: any): any {
     this.foundMethods.push(ctx.Identifier[0].image);
     return super.methodDeclarator(ctx, param);
+  }
+
+  methodHeader(ctx: MethodHeaderCtx, param?: any): any {
+    return super.methodHeader(ctx, param);
+  }
+
+  methodName(ctx: MethodNameCtx, param?: any): any {
+    return super.methodName(ctx, param);
   }
 
   argumentList(ctx: ArgumentListCtx, param?: any): any {

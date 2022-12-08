@@ -1,10 +1,12 @@
 import {OmniProperty, OmniType} from './OmniModel.js';
-import {EqualityLevel} from './EqualityLevel.js';
+import {PropertyDifference, TypeDifference} from '../equality/index.js';
 
 export interface PropertyInformation {
   properties: OmniProperty[];
-  propertyEqualityLevel: EqualityLevel;
-  typeEqualityLevel: EqualityLevel;
+  // equality: EqualityGrades;
+  // typeEqualityLevel: EqualityLevel;
+  propertyDiffs: PropertyDifference[] | undefined,
+  typeDiffs: TypeDifference[] | undefined,
   commonType: OmniType;
   distinctTypes: OmniType[];
 }

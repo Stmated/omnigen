@@ -324,7 +324,7 @@ export class Predicate extends BinaryExpression {
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitBinaryExpression(this, visitor);
+    return visitor.visitPredicate(this, visitor);
   }
 }
 
@@ -594,6 +594,9 @@ export class CommentBlock extends AbstractJavaNode {
   }
 }
 
+/**
+ * NOTE: Split into Field and FieldDeclaration? Or rename it? ArgumentDeclaration and VariableDeclaration precedence
+ */
 export class Field extends AbstractJavaNode {
   identifier: Identifier;
   type: Type;
@@ -625,6 +628,7 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
   annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
   parameters?: ArgumentDeclarationList | undefined;
+  throws?: TypeList;
 
   constructor(
     identifier: Identifier,
@@ -633,6 +637,7 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
     modifiers?: ModifierList,
     annotations?: AnnotationList,
     comments?: CommentBlock,
+    throws?: TypeList,
   ) {
     super();
     this.modifiers = modifiers ?? new ModifierList(new Modifier(ModifierType.PUBLIC));
@@ -641,6 +646,9 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
     this.parameters = parameters;
     this.annotations = annotations;
     this.comments = comments;
+    if (throws) {
+      this.throws = throws;
+    }
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -713,33 +721,33 @@ export class FieldReference extends AbstractExpression {
   }
 }
 
-export class VariableReference extends AbstractJavaNode {
-  variableName: Identifier;
+export class DeclarationReference extends AbstractJavaNode {
+  declaration: VariableDeclaration | ArgumentDeclaration;
 
-  constructor(variableName: Identifier) {
+  constructor(declaration: VariableDeclaration | ArgumentDeclaration) {
     super();
-    this.variableName = variableName;
+    this.declaration = declaration;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitVariableReference(this, visitor);
+    return visitor.visitDeclarationReference(this, visitor);
   }
 }
 
 export class VariableDeclaration extends AbstractJavaNode {
-  variableName: Identifier;
-  variableType?: RegularType | undefined;
+  identifier: Identifier;
+  type?: Type | undefined;
   initializer?: AbstractExpression | undefined;
   constant?: boolean | undefined;
 
-  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: RegularType, constant?: boolean) {
+  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: Type | undefined, constant?: boolean) {
     super();
     if (!type && !initializer) {
       throw new Error(`Either a type or an initializer must be given to the field declaration`);
     }
 
-    this.variableName = variableName;
-    this.variableType = type;
+    this.identifier = variableName;
+    this.type = type;
     this.initializer = initializer;
     this.constant = constant;
   }
@@ -784,6 +792,11 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
 
   constructor(field: Field, annotations?: AnnotationList, comments?: CommentBlock) {
+    const argumentDeclaration = new ArgumentDeclaration(
+      field.type,
+      field.identifier,
+    );
+
     super(
       field,
       new MethodDeclarationSignature(
@@ -793,12 +806,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
           primitiveKind: OmniPrimitiveKind.VOID,
           nullable: true,
         }),
-        new ArgumentDeclarationList(
-          new ArgumentDeclaration(
-            field.type,
-            field.identifier,
-          ),
-        ),
+        new ArgumentDeclarationList(argumentDeclaration),
         undefined,
         annotations,
         comments,
@@ -807,7 +815,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
         new Statement(
           new AssignExpression(
             new FieldReference(field),
-            new VariableReference(field.identifier),
+            new DeclarationReference(argumentDeclaration),
           ),
         ),
       ));
@@ -966,6 +974,7 @@ export class ConstructorDeclaration extends AbstractJavaNode {
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
 
+  readonly adderMethod: MethodDeclaration;
   readonly keyType: OmniPrimitiveType;
   readonly valueType: OmniUnknownType;
   readonly mapType: OmniDictionaryType;
@@ -1013,7 +1022,10 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       fieldAnnotations,
     );
 
-    const addMethod = new MethodDeclaration(
+    const keyParameterDeclaration = new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.keyType), keyParameterIdentifier);
+    const valueParameterDeclaration = new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.valueType), valueParameterIdentifier);
+
+    this.adderMethod = new MethodDeclaration(
       new MethodDeclarationSignature(
         new Identifier('addAdditionalProperty'),
         JavaAstUtils.createTypeNode(<OmniPrimitiveType>{
@@ -1021,8 +1033,8 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
           primitiveKind: OmniPrimitiveKind.VOID,
         }),
         new ArgumentDeclarationList(
-          new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.keyType), keyParameterIdentifier),
-          new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.valueType), valueParameterIdentifier),
+          keyParameterDeclaration,
+          valueParameterDeclaration,
         ),
       ),
       new Block(
@@ -1031,15 +1043,15 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
             new FieldReference(additionalPropertiesField),
             new Identifier('put'),
             new ArgumentList(
-              new VariableReference(keyParameterIdentifier),
-              new VariableReference(valueParameterIdentifier),
+              new DeclarationReference(keyParameterDeclaration),
+              new DeclarationReference(valueParameterDeclaration),
             ),
           ),
         ),
       ),
     );
 
-    addMethod.signature.annotations = new AnnotationList(
+    this.adderMethod.signature.annotations = new AnnotationList(
       new Annotation(
         new RegularType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
@@ -1050,7 +1062,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     this.children = [
       additionalPropertiesField,
-      addMethod,
+      this.adderMethod,
     ];
   }
 
@@ -1295,6 +1307,19 @@ export class NewStatement extends AbstractJavaNode {
   }
 }
 
+export class ThrowStatement extends AbstractJavaNode {
+  expression: AbstractExpression;
+
+  constructor(expression: AbstractExpression) {
+    super();
+    this.expression = expression;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitThrowStatement(this, visitor);
+  }
+}
+
 export class HardCoded extends AbstractJavaNode {
   content: string;
 
@@ -1383,14 +1408,14 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       let conversionExpression: AbstractExpression;
       if (options.unknownType == UnknownType.JSON) {
         const objectMapperReference = new Identifier('objectMapper');
-        argumentDeclarationList.children.push(
-          new ArgumentDeclaration(
-            new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.ObjectMapper'}),
-            objectMapperReference,
-          ),
+        const objectMapperDeclaration = new ArgumentDeclaration(
+          new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.ObjectMapper'}),
+          objectMapperReference,
         );
+
+        argumentDeclarationList.children.push(objectMapperDeclaration);
         conversionExpression = new MethodCall(
-          new VariableReference(objectMapperReference),
+          new DeclarationReference(objectMapperDeclaration),
           new Identifier('convertValue'),
           new ArgumentList(
             new FieldReference(untypedField),

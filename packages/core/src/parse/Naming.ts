@@ -1,7 +1,5 @@
 import crypto from 'crypto';
-// @ts-ignore
 import {TypeName} from '../parse/TypeName.js';
-// @ts-ignore
 import {Case} from '../util/Case.js';
 
 export type NamePair<T> = { owner: T, name: TypeName };
@@ -84,7 +82,7 @@ export class Naming {
     return undefined;
   }
 
-  private static unwrapArray(input: Array<TypeName>, callback: NameCallback) {
+  private static unwrapArray(input: Array<TypeName>, callback: NameCallback): string | undefined {
 
     for (const entry of input) {
       const result = Naming.unwrap(entry, (name, parts) => {

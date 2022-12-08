@@ -2,51 +2,57 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJava
 import {
   AbortVisitingWithResult,
   AbstractStNode,
-  ExternalSyntaxTree,
-  OmniModel,
   OmniPrimitiveValueMode,
   OmniTypeKind,
-  RealOptions,
   VisitorFactoryManager,
   VisitResultFlattener,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {AnnotationList, CommentBlock, Identifier, JavaAstRootNode, ModifierType} from '../ast/index.js';
-import {JavaOptions} from '../options/index.js';
+import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast/index.js';
 import {JavaUtil} from '../util/index.js';
 
-export class AddGetterSetterAstTransformer extends AbstractJavaAstTransformer {
+export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
+
+  private readonly _skip: Java.Identifier[];
+
+  constructor(skip?: Java.Identifier[]) {
+    super();
+    this._skip = skip ?? [];
+  }
+
   transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
-    const latestCompilationUnit: { cu: Java.CompilationUnit | undefined } = {cu: undefined};
+    const owner: { node: Java.AbstractObjectDeclaration | undefined } = {node: undefined};
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
-      visitCompilationUnit: (node, visitor) => {
+      visitEnumDeclaration: () => {},
+      visitInterfaceDeclaration: () => {},
+      visitMethodDeclaration: () => {},
 
-        if (node.object instanceof Java.EnumDeclaration) {
-
-          // We do not add getters/setters for enums.
-          return;
-        }
+      visitClassDeclaration: (node, visitor) => {
 
         const foundGetter = this.findGetterMethodForField(node);
         if (foundGetter) {
 
-          // There already exists a getter in the class, so we will assume it has been handled by something earlier.
+          // There already exists a getter in the class, so something more specific was already done to it.
           return;
         }
 
-        latestCompilationUnit.cu = node;
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitCompilationUnit(node, visitor);
+        owner.node = node;
+        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
       },
 
       visitField: node => {
 
-        if (!latestCompilationUnit.cu) {
+        if (!owner.node) {
           throw new Error(`Visited a field before we ever encountered a compilation unit`);
         }
 
-        const body = latestCompilationUnit.cu.object.body;
+        if (this._skip.find(it => it.value == node.identifier.value)) {
+          return;
+        }
+
+        const body = owner.node.body;
 
         // Move comments from field over to the getter.
         const commentList: CommentBlock | undefined = node.comments;

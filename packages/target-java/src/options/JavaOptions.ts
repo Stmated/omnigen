@@ -1,14 +1,13 @@
 import {
-  Booleanish, DEFAULT_GENERIC_TARGET_OPTIONS,
+  Booleanish,
   DEFAULT_PACKAGE_OPTIONS,
-  DEFAULT_TARGET_OPTIONS, GENERIC_TARGET_OPTIONS_RESOLVER,
-  GenericTargetOptions,
-  OmniPrimitiveBoxMode,
+  DEFAULT_TARGET_OPTIONS,
+  TRANSFORM_OPTIONS_RESOLVER,
   Option,
   OptionResolvers,
   OptionsUtil,
   PackageOptions,
-  PackageResolverOptionsParser,
+  PackageResolverOptionsParser, TargetOptions,
 } from '@omnigen/core';
 
 export enum UnknownType {
@@ -23,7 +22,7 @@ export enum FieldAccessorMode {
   LOMBOK,
 }
 
-export interface JavaOptions extends GenericTargetOptions, PackageOptions {
+export interface JavaOptions extends TargetOptions, PackageOptions {
   immutableModels: Option<Booleanish, boolean>;
   includeAlwaysNullProperties: Option<Booleanish, boolean>;
   unknownType: UnknownType;
@@ -36,12 +35,14 @@ export interface JavaOptions extends GenericTargetOptions, PackageOptions {
   commentsOnFields: Option<Booleanish, boolean>;
   commentsOnGetters: Option<Booleanish, boolean>;
   commentsOnConstructors: Option<Booleanish, boolean>;
+  preferVar: Option<Booleanish, boolean>;
+  includeGeneratedAnnotation: Option<Booleanish, boolean>;
 }
 
 export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
   ...DEFAULT_PACKAGE_OPTIONS,
   ...DEFAULT_TARGET_OPTIONS,
-  ...DEFAULT_GENERIC_TARGET_OPTIONS,
+  // ...DEFAULT_GENERIC_TARGET_OPTIONS,
   immutableModels: true,
   includeAlwaysNullProperties: false,
   unknownType: UnknownType.JSON,
@@ -55,10 +56,12 @@ export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
   commentsOnFields: false,
   commentsOnGetters: true,
   commentsOnConstructors: true,
+  preferVar: true,
+  includeGeneratedAnnotation: true,
 };
 
 export const JAVA_OPTIONS_RESOLVER: OptionResolvers<JavaOptions> = {
-  ...GENERIC_TARGET_OPTIONS_RESOLVER,
+  ...TRANSFORM_OPTIONS_RESOLVER,
   packageResolver: v => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,
@@ -68,4 +71,6 @@ export const JAVA_OPTIONS_RESOLVER: OptionResolvers<JavaOptions> = {
   commentsOnFields: OptionsUtil.toBoolean,
   commentsOnGetters: OptionsUtil.toBoolean,
   commentsOnConstructors: OptionsUtil.toBoolean,
+  preferVar: OptionsUtil.toBoolean,
+  includeGeneratedAnnotation: OptionsUtil.toBoolean,
 };

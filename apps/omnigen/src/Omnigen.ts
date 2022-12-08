@@ -3,15 +3,25 @@ import {DEFAULT_FILE_WRITE_OPTIONS, DEFAULT_RUN_OPTIONS, FileWriteOptions, Omnig
 import {OmnigenResult} from './OmnigenResult.js';
 import {
   Dereferencer,
-  ElevateCommonPropertiesModelTransformer, FileWriter, GenericsModelTransformer, IncomingOptions,
+  ElevatePropertiesModelTransformer,
+  FileWriter,
+  GenericsModelTransformer,
+  IncomingOptions,
   OmniModelTransformer,
-  StandardOptionResolvers, OptionsUtil, RenderedCompilationUnit,
+  StandardOptionResolvers,
+  OptionsUtil,
+  RenderedCompilationUnit,
   SchemaFile,
-  SimplifyInheritanceModelTransformer, Writer,
+  SimplifyInheritanceModelTransformer,
+  ParserOptions,
+  TargetOptions,
+  RealOptions,
+  AstRootNode,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS, TRANSFORM_OPTIONS_RESOLVER,
 } from '@omnigen/core';
 import {
   DEFAULT_JAVA_OPTIONS,
-  InterfaceJavaModelTransformer,
+  InterfaceJavaModelTransformer, JAVA_FEATURES,
   JAVA_OPTIONS_RESOLVER, JavaInterpreter,
   JavaOptions, JavaRenderer,
 } from '@omnigen/target-java';
@@ -27,6 +37,11 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import {
+  DEFAULT_IMPLEMENTATION_OPTIONS, IMPLEMENTATION_OPTIONS_PARSERS,
+  ImplementationOptions,
+  JavaHttpImplementationGenerator,
+} from '@omnigen/target-impl-java-http';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -35,8 +50,12 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class Omnigen {
 
-  public async generateAndWriteToFile(
-    incomingOptions: IncomingOptions<OmnigenOptions>,
+  public async generateAndWriteToFile<
+    TParseOpt extends ParserOptions,
+    TTargetOpt extends TargetOptions,
+    TImplOpt extends ImplementationOptions,
+  >(
+    incomingOptions: IncomingOptions<OmnigenOptions<TParseOpt, TTargetOpt, TImplOpt>>,
     incomingFileWriteOptions: IncomingOptions<FileWriteOptions>,
   ): Promise<void> {
 
@@ -61,7 +80,7 @@ export class Omnigen {
     return this.generate(incomingOptions)
       .then(result => {
 
-        const results: OmnigenResult[] = [];
+        const results: OmnigenResult<TParseOpt, TTargetOpt>[] = [];
         if (!Array.isArray(result)) {
           results.push(result);
         } else {
@@ -80,7 +99,13 @@ export class Omnigen {
       });
   }
 
-  public async generate(incomingOptions: IncomingOptions<OmnigenOptions>): Promise<OmnigenResult | OmnigenResult[]> {
+  public async generate<
+    TParseOpt extends ParserOptions,
+    TTargetOpt extends TargetOptions,
+    TImplOpt extends ImplementationOptions,
+  >(
+    incomingOptions: IncomingOptions<OmnigenOptions<TParseOpt, TTargetOpt, TImplOpt>>,
+  ): Promise<OmnigenResult<TParseOpt, TTargetOpt>[]> {
 
     const runOptions = await OptionsUtil.updateOptions(
       DEFAULT_RUN_OPTIONS,
@@ -101,41 +126,107 @@ export class Omnigen {
 
     const excludePattern = await StandardOptionResolvers.toRegExp(runOptions.schemaPatternExclude);
     const includePattern = await StandardOptionResolvers.toRegExp(runOptions.schemaPatternInclude);
-    const fileNames = await this.getFileNames(runOptions.schemaDirBase, excludePattern, includePattern);
+    const schemaFilePaths = await this.getFileNames(runOptions.schemaDirBase, excludePattern, includePattern);
 
-    const promises: Promise<OmnigenResult>[] = [];
-    for (const fileName of fileNames) {
+    const promises: Promise<OmnigenResult<TParseOpt, TTargetOpt>[]>[] = [];
+    for (const schemaFilePath of schemaFilePaths) {
 
-      logger.info(`Found file ${fileName}`);
+      logger.info(`Found file ${schemaFilePath}`);
 
-      const schemaFile = new SchemaFile(fileName, fileName);
-      promises.push(this.generateFromSchemaFile(schemaFile, incomingOptions, incomingOptions));
+      const schemaFile = new SchemaFile(schemaFilePath, schemaFilePath);
+      promises.push(
+        this.generateFromSchemaFile<TParseOpt, TTargetOpt>(schemaFile, incomingOptions, incomingOptions)
+          .then(async result => {
+
+            const results: OmnigenResult<TParseOpt, TTargetOpt>[] = [];
+            results.push(result);
+
+            logger.info(`Getting companions!`);
+
+            const companions = await this.generateAccompanyingRootNodes(result, incomingOptions);
+            for (const companion of companions) {
+
+              logger.info(`Companion!`);
+
+              const rendered = this.renderRootNode(companion, result.targetOptions);
+
+              logger.info(`Got ${rendered.length} renders from companion`);
+
+              results.push({
+                ...result,
+                originRootNode: result.rootNode,
+                rootNode: companion,
+                renders: rendered,
+              });
+            }
+
+            return results;
+          }),
+      );
     }
 
-    return Promise.all<OmnigenResult>(promises)
-      .then(result => {
+    return Promise.all(promises)
+      .then(results => {
 
-        // TODO: Merge them? Or what do we want to do?
-        if (result.length == 1) {
-          return result[0];
-        } else if (result.length > 1) {
-          return result;
-        } else {
-          if (runOptions.failSilently) {
-            return [] as OmnigenResult[];
-          } else {
-            throw new Error(`There were no schemas found`);
-          }
+        const flat: OmnigenResult<TParseOpt, TTargetOpt>[] = [];
+        for (const result of results) {
+          flat.push(...result);
         }
+
+        return flat;
       })
       .catch(error => {
         if (runOptions.failSilently) {
           console.log(`Encountered a silent error ${JSON.stringify(error)}`);
-          return [] as OmnigenResult[];
+          return [] as OmnigenResult<TParseOpt, TTargetOpt>[];
         } else {
           throw error;
         }
       });
+  }
+
+  private renderRootNode<TTargetOpt extends TargetOptions>(
+    rootNode: AstRootNode,
+    targetOptions: RealOptions<TTargetOpt>,
+  ): RenderedCompilationUnit[] {
+
+    const renders: RenderedCompilationUnit[] = [];
+    const javaOptions = targetOptions as unknown as RealOptions<JavaOptions>;
+    const renderer = new JavaRenderer(javaOptions, rcu => {
+      renders.push(rcu);
+    });
+    renderer.render(rootNode);
+
+    return renders;
+  }
+
+  private async generateAccompanyingRootNodes<
+    TParseOpt extends ParserOptions,
+    TTargetOpt extends TargetOptions,
+    TImplOpt extends ImplementationOptions
+  >(
+    result: OmnigenResult<TParseOpt, TTargetOpt>,
+    incomingOptions: IncomingOptions<TImplOpt>,
+  ): Promise<AstRootNode[]> {
+
+    const generator = new JavaHttpImplementationGenerator();
+
+    const options = await OptionsUtil.updateOptions(
+      DEFAULT_IMPLEMENTATION_OPTIONS,
+      incomingOptions,
+      IMPLEMENTATION_OPTIONS_PARSERS,
+    );
+
+    const generated = await generator.generate({
+      model: result.model,
+      root: result.rootNode,
+      targetOptions: result.targetOptions as unknown as RealOptions<JavaOptions>,
+      implOptions: options,
+    });
+
+    logger.info(`Generated: ${generated.length} files`);
+
+    return generated;
   }
 
   private relativeToAbsolute(relative: PathLike): PathLike {
@@ -145,7 +236,7 @@ export class Omnigen {
       const homeDirectory = os.homedir();
       const homeResolved = homeDirectory ? relative.replace(/^~(?=$|\/|\\)/, homeDirectory) : relative;
 
-      logger.info(`HomeResolved: ${homeResolved}`);
+      logger.debug(`Relative to Absolute: ${homeResolved}`);
 
       return path.resolve(homeResolved);
     } else {
@@ -153,15 +244,15 @@ export class Omnigen {
     }
   }
 
-  private async generateFromSchemaFile(
+  private async generateFromSchemaFile<TParserOpt extends ParserOptions, TTargetOpt extends TargetOptions>(
     schemaFile: SchemaFile,
-    openRpcOptions: IncomingOptions<OpenRpcParserOptions>,
-    javaIncomingOptions: IncomingOptions<JavaOptions>,
-  ): Promise<OmnigenResult> {
+    parserOptions: IncomingOptions<TParserOpt>,
+    targetOptions: IncomingOptions<TTargetOpt>,
+  ): Promise<OmnigenResult<TParserOpt, TTargetOpt>> {
 
-    const transformers: OmniModelTransformer<JavaOptions>[] = [
+    const transformers: OmniModelTransformer<ParserOptions>[] = [
       new SimplifyInheritanceModelTransformer(),
-      new ElevateCommonPropertiesModelTransformer(),
+      new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
 
       // TODO: Java specific! Needs to be loaded in optionally!
@@ -171,14 +262,14 @@ export class Omnigen {
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
     const openRpcParserBootstrap = (await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile));
     const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<JavaOptions>();
-    const openRpcRealOptions = await OptionsUtil.updateOptions(
+    const realParserOptions = await OptionsUtil.updateOptions(
       DEFAULT_OPENRPC_OPTIONS,
-      openRpcOptions,
+      parserOptions as IncomingOptions<OpenRpcParserOptions>,
       OPENRPC_OPTIONS_RESOLVERS,
       OPENRPC_OPTIONS_FALLBACK,
     );
 
-    if (!openRpcRealOptions.jsonRpcErrorDataSchema && schemaIncomingOptions?.jsonRpcErrorDataSchema) {
+    if (!realParserOptions.jsonRpcErrorDataSchema && schemaIncomingOptions?.jsonRpcErrorDataSchema) {
 
       // TODO: How do we solve this properly? Feels ugly making exceptions for certain options like this.
       //        Have a sort of "post converters" that can take the whole options? Need to have a look.
@@ -186,14 +277,14 @@ export class Omnigen {
       if (!('kind' in errorSchema)) {
 
         const dereferencer = await Dereferencer.create<JSONSchema7>('', '', errorSchema);
-        const jsonSchemaParser = new JsonSchemaParser<JSONSchema7, OpenRpcParserOptions>(dereferencer, openRpcRealOptions);
+        const jsonSchemaParser = new JsonSchemaParser<JSONSchema7, OpenRpcParserOptions>(dereferencer, realParserOptions);
         const errorType = jsonSchemaParser.transformErrorDataSchemaToOmniType(dereferencer.getFirstRoot());
 
-        openRpcRealOptions.jsonRpcErrorDataSchema = errorType;
+        realParserOptions.jsonRpcErrorDataSchema = errorType;
       }
     }
 
-    const openRpcParser = openRpcParserBootstrap.createParser(openRpcRealOptions);
+    const openRpcParser = openRpcParserBootstrap.createParser(realParserOptions);
     const parseResult = openRpcParser.parse();
 
     // NOTE: Would be good if this could be handled in some more central way, so it can never be missed.
@@ -202,34 +293,44 @@ export class Omnigen {
       parseResult.model.options = schemaIncomingOptions;
     }
 
-    let optionsAndSchemaOptions = javaIncomingOptions;
+    let optionsAndSchemaOptions = targetOptions;
     if (schemaIncomingOptions) {
       optionsAndSchemaOptions = {...optionsAndSchemaOptions, ...schemaIncomingOptions};
     }
 
-    const realJavaOptions = await OptionsUtil.updateOptions(
-      DEFAULT_JAVA_OPTIONS,
-      optionsAndSchemaOptions,
-      JAVA_OPTIONS_RESOLVER,
+    const realTransformerOptions = await OptionsUtil.updateOptions(
+      DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      {},
+      TRANSFORM_OPTIONS_RESOLVER,
     );
 
     for (const transformer of transformers) {
-      transformer.transformModel(parseResult.model, realJavaOptions);
+      transformer.transformModel({
+        model: parseResult.model,
+        options: {...realParserOptions, ...realTransformerOptions},
+      });
     }
 
+    const realJavaOptions = await OptionsUtil.updateOptions(
+      DEFAULT_JAVA_OPTIONS,
+      optionsAndSchemaOptions as IncomingOptions<JavaOptions>,
+      JAVA_OPTIONS_RESOLVER,
+    );
+
     const interpreter = new JavaInterpreter(realJavaOptions);
-    const syntaxTree = await interpreter.buildSyntaxTree(parseResult.model, [], realJavaOptions);
+    const syntaxTree = await interpreter.buildSyntaxTree(parseResult.model, [], realJavaOptions, JAVA_FEATURES);
 
     const renders: RenderedCompilationUnit[] = [];
-    const renderer = new JavaRenderer(realJavaOptions, cu => {
-      renders.push(cu);
+    const renderer = new JavaRenderer(realJavaOptions, rcu => {
+      renders.push(rcu);
     });
     renderer.render(syntaxTree);
 
-    // For now just log it!
-    // console.log(util.inspect(renders));
-
     return {
+      model: parseResult.model,
+      parseOptions: parseResult.options as unknown as RealOptions<TParserOpt>,
+      targetOptions: realJavaOptions as unknown as RealOptions<TTargetOpt>,
+      rootNode: syntaxTree,
       renders: renders,
     };
   }

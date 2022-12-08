@@ -1,20 +1,25 @@
 import {FieldAccessorMode, JavaOptions} from '@omnigen/target-java';
-import {OmniPrimitiveBoxMode} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
+import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 
 test('lombok', async () => {
 
-  const options: JavaOptions = {
-    ...DEFAULT_TEST_JAVA_OPTIONS,
-    generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
-    compressSoloReferencedTypes: false,
-    compressUnreferencedSubTypes: false,
+  const transformOptions: ModelTransformOptions = {
+    ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
     generifyTypes: false,
     elevateProperties: false,
+    generificationWrapAllowed: true,
+  };
+
+  const targetOptions: JavaOptions = {
+    ...DEFAULT_TEST_JAVA_OPTIONS,
+    compressSoloReferencedTypes: false,
+    compressUnreferencedSubTypes: false,
     fieldAccessorMode: FieldAccessorMode.LOMBOK,
   };
 
-  const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', options);
+  const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', DEFAULT_OPENRPC_OPTIONS, transformOptions, targetOptions);
 
   const inClass = JavaTestUtils.getParsedContent(fileContents, 'In.java');
   expect(inClass.foundImports).toEqual([
@@ -33,15 +38,15 @@ test('lombok', async () => {
   ]);
   expect(inClass.foundAnnotations).toEqual([
     'Generated',
-    'Value',
-    'With',
     'AllArgsConstructor',
-    'RequiredArgsConstructor',
-    'NoArgsConstructor',
+    'EqualsAndHashCode',
     'NonFinal',
     'SuperBuilder',
     'Jacksonized',
-    'EqualsAndHashCode',
+    'NoArgsConstructor',
+    'RequiredArgsConstructor',
+    'Value',
+    'With',
     'JsonProperty',
     'Default',
   ]);

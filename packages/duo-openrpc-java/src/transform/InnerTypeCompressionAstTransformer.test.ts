@@ -1,22 +1,27 @@
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 import {JavaOptions} from '@omnigen/target-java';
-import {OmniPrimitiveBoxMode} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
 
 describe('InnerTypeCompression', () => {
 
   test('CompressNo', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
-      compressSoloReferencedTypes: false,
-      compressUnreferencedSubTypes: false,
+    const transformOptions: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      generificationWrapAllowed: true,
       generifyTypes: false,
       elevateProperties: false,
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', options, DEFAULT_OPENRPC_OPTIONS);
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      compressSoloReferencedTypes: false,
+      compressUnreferencedSubTypes: false,
+    };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', DEFAULT_OPENRPC_OPTIONS, transformOptions, targetOptions);
+
     const fileNames = [...fileContents.keys()].sort();
 
     expect(fileNames)
@@ -56,16 +61,25 @@ describe('InnerTypeCompression', () => {
 
   test('CompressYes', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
-      compressSoloReferencedTypes: true,
-      compressUnreferencedSubTypes: true,
+    const transformOptions: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      generificationWrapAllowed: true,
       generifyTypes: false,
       elevateProperties: false,
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', options, DEFAULT_OPENRPC_OPTIONS);
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: true,
+    };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformOptions,
+      targetOptions
+    );
+
     const fileNames = [...fileContents.keys()].sort();
 
     expect(fileNames)
@@ -120,16 +134,24 @@ describe('InnerTypeCompression', () => {
 
   test('CompressYes-error-structure', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
-      compressSoloReferencedTypes: true,
-      compressUnreferencedSubTypes: true,
+    const transformOptions: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      generificationWrapAllowed: true,
       generifyTypes: false,
       elevateProperties: false,
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', options, DEFAULT_OPENRPC_OPTIONS);
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: true,
+    };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformOptions,
+      targetOptions
+    );
     const fileNames = [...fileContents.keys()].sort();
 
     // NOTE: This *could* be more aggressive, but it starts to become confusing merging some of them.
@@ -150,16 +172,24 @@ describe('InnerTypeCompression', () => {
 
   test('CompressYes-error-structure w/ generics', async () => {
 
-    const options: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-      generificationBoxMode: OmniPrimitiveBoxMode.WRAP,
-      compressSoloReferencedTypes: true,
-      compressUnreferencedSubTypes: true,
+    const transformOptions: ModelTransformOptions = {
+      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      generificationWrapAllowed: true,
       generifyTypes: true,
       elevateProperties: false,
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', options, DEFAULT_OPENRPC_OPTIONS);
+    const targetOptions: JavaOptions = {
+      ...DEFAULT_TEST_JAVA_OPTIONS,
+      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: true,
+    };
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformOptions,
+      targetOptions,
+    );
     const fileNames = [...fileContents.keys()].sort();
 
     expect(fileNames)

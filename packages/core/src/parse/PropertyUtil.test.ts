@@ -1,15 +1,18 @@
 import {
   OmniObjectType,
   OmniPrimitiveKind,
-  OmniPrimitiveNonNullableKind,
+  OmniPrimitiveTangibleKind,
   OmniProperty,
   OmniPropertyOwner,
   OmniTypeKind,
 } from './OmniModel.js';
 import {PropertyUtil} from './PropertyUtil.js';
-import {EqualityLevel} from './EqualityLevel.js';
+import {OMNI_GENERIC_FEATURES} from '../interpret/index.js';
+import {PropertyDifference, TypeDifference} from '../equality/index.js';
 
 describe('Test PropertyUtil', () => {
+
+  const f = OMNI_GENERIC_FEATURES;
 
   test('EqualityLevel Primitives', async () => {
 
@@ -43,25 +46,25 @@ describe('Test PropertyUtil', () => {
     const cy = addPrim(c, 'y', OmniPrimitiveKind.INTEGER);
     const cz = addPrim(c, 'z', OmniPrimitiveKind.DOUBLE, 'baz');
 
-    expect(PropertyUtil.getEqualityLevel(ax, ay).propertyEquality).toEqual(EqualityLevel.NOT_EQUAL_MIN);
-    expect(PropertyUtil.getEqualityLevel(az, by).propertyEquality).toEqual(EqualityLevel.NOT_EQUAL_MIN);
+    expect(PropertyUtil.getPropertyEquality(ax, ay, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
+    expect(PropertyUtil.getPropertyEquality(az, by, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
 
-    expect(PropertyUtil.getEqualityLevel(by, cy).typeEquality).toEqual(EqualityLevel.ISOMORPHIC_MIN);
-    expect(PropertyUtil.getEqualityLevel(by, cy).propertyEquality).toEqual(EqualityLevel.FUNCTION_MAX);
+    expect(PropertyUtil.getPropertyEquality(by, cy, f).typeDiffs).toEqual([TypeDifference.ISOMORPHIC_TYPE]);
+    expect(PropertyUtil.getPropertyEquality(by, cy, f).propertyDiffs).toEqual([PropertyDifference.META]);
 
-    expect(PropertyUtil.getEqualityLevel(ay, cy).typeEquality).toEqual(EqualityLevel.SEMANTICS_MIN);
-    expect(PropertyUtil.getEqualityLevel(ay, cy).propertyEquality).toEqual(EqualityLevel.CLONE_MAX);
+    expect(PropertyUtil.getPropertyEquality(ay, cy, f).typeDiffs).toEqual([TypeDifference.ISOMORPHIC_TYPE]);
+    expect(PropertyUtil.getPropertyEquality(ay, cy, f).propertyDiffs).toEqual([]);
 
-    expect(PropertyUtil.getEqualityLevel(ax, bx).propertyEquality).toEqual(EqualityLevel.FUNCTION_MAX);
-    expect(PropertyUtil.getEqualityLevel(bz, cz).propertyEquality).toEqual(EqualityLevel.FUNCTION_MAX);
+    expect(PropertyUtil.getPropertyEquality(ax, bx, f).propertyDiffs).toEqual([PropertyDifference.META]);
+    expect(PropertyUtil.getPropertyEquality(bz, cz, f).propertyDiffs).toEqual([PropertyDifference.META]);
 
-    expect(PropertyUtil.getEqualityLevel(ax, cx).propertyEquality).toEqual(EqualityLevel.CLONE_MAX);
+    expect(PropertyUtil.getPropertyEquality(ax, cx, f).propertyDiffs).toEqual([]);
 
-    expect(PropertyUtil.getEqualityLevel(ax, ax).propertyEquality).toEqual(EqualityLevel.IDENTITY_MAX);
+    expect(PropertyUtil.getPropertyEquality(ax, ax, f).propertyDiffs ?? []).toEqual([]);
   });
 });
 
-function addPrim(owner: OmniPropertyOwner, name: string, primitiveKind: OmniPrimitiveNonNullableKind, description?: string): OmniProperty {
+function addPrim(owner: OmniPropertyOwner, name: string, primitiveKind: OmniPrimitiveTangibleKind, description?: string): OmniProperty {
 
   return PropertyUtil.addProperty(owner, {
     type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: primitiveKind},

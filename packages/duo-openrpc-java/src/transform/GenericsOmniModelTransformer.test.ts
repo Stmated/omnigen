@@ -1,5 +1,5 @@
 import {TestUtils} from '@omnigen/utils-test';
-import {JAVA_OPTIONS_RESOLVER, JavaUtil} from '@omnigen/target-java';
+import {JavaUtil} from '@omnigen/target-java';
 import {
   OmniModel,
   OmniPrimitiveKind,
@@ -7,8 +7,11 @@ import {
   GenericsModelTransformer,
   OmniUtil,
   OptionsUtil,
+  DEFAULT_PARSER_OPTIONS,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  TRANSFORM_OPTIONS_RESOLVER,
+  PARSER_OPTIONS_RESOLVERS,
 } from '@omnigen/core';
-import {DEFAULT_TEST_JAVA_OPTIONS} from '@omnigen/duo-openrpc-java-test';
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -28,13 +31,13 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    const realJavaOptions = await OptionsUtil.updateOptions(
-      DEFAULT_TEST_JAVA_OPTIONS,
-      undefined,
-      JAVA_OPTIONS_RESOLVER,
-    );
+    const realParserOpt = await OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const realTransformOpt = await OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
-    transformer.transformModel(model, realJavaOptions);
+    transformer.transformModel({
+      model: model,
+      options: {...realParserOpt, ...realTransformOpt},
+    });
 
     expect(model.types).toHaveLength(1);
 
@@ -84,13 +87,20 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    const realJavaOptions = await OptionsUtil.updateOptions(
-      DEFAULT_TEST_JAVA_OPTIONS,
-      undefined,
-      JAVA_OPTIONS_RESOLVER,
-    );
+    // const realJavaOptions = await OptionsUtil.updateOptions(
+    //   DEFAULT_TEST_JAVA_OPTIONS,
+    //   undefined,
+    //   JAVA_OPTIONS_RESOLVER,
+    // );
 
-    transformer.transformModel(model, realJavaOptions);
+    const realParserOpt = await OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const realTransformOpt = await OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+
+    // TODO: Will not work -- will need to call the 2nd pass
+    transformer.transformModel({
+      model: model,
+      options: {...realParserOpt, ...realTransformOpt},
+    });
 
     expect(model.types).toHaveLength(3);
 

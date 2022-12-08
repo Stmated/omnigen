@@ -3,7 +3,7 @@ import {
   DEFAULT_PARSER_OPTIONS,
   Dereferenced,
   Dereferencer,
-  IncomingOptions,
+  IncomingOptions, OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniComparisonOperator,
@@ -23,7 +23,6 @@ import {
   OmniObjectType,
   OmniOutput,
   OmniPayloadPathQualifier,
-  OmniPrimitiveBoxMode,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniPrimitiveValueMode,
@@ -284,13 +283,12 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
 
     // And then one response for each potential error
     const errorsOrReferences: MethodObjectErrors = method.obj.errors || [];
-    // if (errorsOrReferences.length == 0) {
+
     // We will always add the generic error classes, since we can never trust that the server will be truthful.
     errorsOrReferences.push({
       code: -1234567890,
       message: 'Unknown Error',
     });
-    // }
 
     const errorOutputs = errorsOrReferences.map(it => {
       const deref = this._deref.get(it, method.root);
@@ -420,6 +418,7 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         summary: contentDescriptor.obj.summary,
         deprecated: contentDescriptor.obj.deprecated || false,
         required: contentDescriptor.obj.required || false,
+        error: false,
         type: resultType,
         contentType: 'application/json',
         qualifiers: [
@@ -504,7 +503,6 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.INTEGER,
         nullable: true,
-        boxMode: OmniPrimitiveBoxMode.BOX,
       };
     } else {
       codeType = {
@@ -606,6 +604,7 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
       name: `error-${isUnknownCode ? 'unknown' : error.code}`,
       deprecated: false,
       required: false,
+      error: true,
       type: errorType,
       contentType: 'application/json',
       qualifiers: qualifiers,
@@ -763,7 +762,10 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._deref.get(it, method.root));
       });
 
-      requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(...requestParamsType.properties.map(it => it.type))?.type;
+      requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(
+        OMNI_GENERIC_FEATURES,
+        ...requestParamsType.properties.map(it => it.type)
+      )?.type;
 
     } else {
 
@@ -865,7 +867,6 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: OmniPrimitiveKind.STRING,
         nullable: true,
-        boxMode: OmniPrimitiveBoxMode.BOX,
       };
 
       if (hasConstantVersion) {
@@ -903,7 +904,6 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.STRING,
           nullable: true,
-          boxMode: OmniPrimitiveBoxMode.BOX,
         };
       }
 

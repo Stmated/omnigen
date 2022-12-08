@@ -4,28 +4,27 @@ import {
   OmniModel,
   OmniModelTransformer, OmniType,
   OmniTypeKind,
-  OmniUtil, TypeOwner,
+  OmniUtil, ParserOptions, TypeOwner,
 } from '../../parse/index.js';
-import {RealOptions} from '../../options/index.js';
-import {TargetOptions} from '../../interpret/index.js';
+import {OmniModelTransformerArgs} from './OmniModelTransformerArgs.js';
 
 /**
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.
  * It does this by seeing if types have common ancestors and skipping the superfluously stated ones.
  */
-export class SimplifyInheritanceModelTransformer implements OmniModelTransformer<TargetOptions> {
+export class SimplifyInheritanceModelTransformer implements OmniModelTransformer<ParserOptions> {
 
-  transformModel(model: OmniModel, options: RealOptions<TargetOptions>): void {
+  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
-    if (!options.simplifyTypeHierarchy) {
+    if (!args.options.simplifyTypeHierarchy) {
 
       // We will not simplify the types, for some reason. This transformer should be non-destructive/lossless.
       return;
     }
 
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
+    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
       if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
-        SimplifyInheritanceModelTransformer.simplifyComposition(model, ctx.type, ctx.parent);
+        SimplifyInheritanceModelTransformer.simplifyComposition(args.model, ctx.type, ctx.parent);
       }
     });
   }
@@ -40,9 +39,6 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
       // If the composition is an AND, there might be paths that have overlapping supertypes.
       // We should try to resolve and simplify if any of the types are superfluous.
-
-      // JavaUtil.getMostCommonTypeInHierarchies()
-
       const hierarchies: OmniType[][] = [];
       for (let i = 0; i < composition.types.length; i++) {
 
@@ -66,15 +62,6 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
           composition.types.splice(i, 1);
           i--;
         }
-
-        // const currentAsSub = JavaUtil.asSubType(composition.types[i]);
-        // const nextAsSub = JavaUtil.asSubType(composition.types[i + 1]);
-        //
-        // if (currentAsSub && nextAsSub) {
-        //
-        //   const common = JavaUtil.getCommonSuperClasses(model, currentAsSub, nextAsSub);
-        //
-        // }
       }
 
       if (composition.types.length == 1) {

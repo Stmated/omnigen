@@ -1,16 +1,26 @@
 import {JavaOptions} from '@omnigen/target-java';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
+import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 
 describe('Error-Schema', () => {
 
-  const JAVA_OPT: JavaOptions = {
-    ...DEFAULT_TEST_JAVA_OPTIONS,
+  const transformOptions: ModelTransformOptions = {
+    ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
     elevateProperties: false,
+  };
+
+  const targetOptions: JavaOptions = {
+    ...DEFAULT_TEST_JAVA_OPTIONS,
   };
 
   test('ErrorStructure', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', JAVA_OPT);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      transformOptions,
+      targetOptions,
+    );
     const filenames = [...fileContents.keys()].sort();
 
     // TODO: Figure out where ObjectThing.java is coming from
@@ -39,7 +49,11 @@ describe('Error-Schema', () => {
 
   test('ErrorStructure-1.1', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', JAVA_OPT);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      targetOptions,
+    );
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
 
     expect(errorResponse.foundFields).toContain('version');
@@ -50,7 +64,11 @@ describe('Error-Schema', () => {
 
   test('ErrorStructure-Custom', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-custom.json', JAVA_OPT);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-custom.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      targetOptions,
+    );
     const filenames = [...fileContents.keys()];
 
     expect(filenames).toContain('ListThingsError100Error.java');

@@ -1,6 +1,7 @@
 import {OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from './OmniModel.js';
 import {OmniUtil, TypeOwner} from './OmniUtil.js';
 import {LoggerFactory} from '@omnigen/core-log';
+import * as repl from 'repl';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -101,10 +102,6 @@ export class OmniTypeVisitor {
         result = onDown(dq);
         if (result !== undefined) return result;
         if (dq.skip) {
-
-          // We have been told to skip. In a breadth-first context this means skipping all remaining siblings.
-          // Then back to the start, we will be picking up the last peeked node inside eatSiblings.
-          // this.eatSiblings(q, dq, it => it.shift());
           continue;
         }
       }
@@ -146,6 +143,7 @@ export class OmniTypeVisitor {
           q.push({...dq, owner: type, parent: undefined, type: type.valueType, useDepth: dq.useDepth + 1});
           break;
         case OmniTypeKind.GENERIC_SOURCE:
+          q.push({...dq, owner: type, parent: type, type: type.of, useDepth: dq.useDepth + 1});
           q.push(...type.sourceIdentifiers.map(it => {
             return {...dq, owner: type, parent: undefined, type: it, useDepth: dq.useDepth + 1};
           }));
@@ -175,6 +173,9 @@ export class OmniTypeVisitor {
         case OmniTypeKind.EXTERNAL_MODEL_REFERENCE:
           // NOTE: Should it be allowed to follow this?
           // TODO: Allow to follow if the external reference is into our own model
+          break;
+        case OmniTypeKind.WRAPPED:
+          q.push({...dq, owner: type, parent: type, type: type.of, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
           break;
         default:
           throw new Error(`Do not know how to handle kind '${(type as any)?.kind || '?'}`);
@@ -300,12 +301,13 @@ export class OmniTypeVisitor {
       ctx.type = input;
       const result = onDown(ctx);
 
-      if (ctx.replacement) {
+      const replacement = ctx.replacement;
+      if (replacement) {
 
         // We have been told to replace the input with this other type.
         // The caller probably modified the type tree somehow.
         if (ctx.parent) {
-          OmniUtil.swapType(ctx.parent, ctx.type, ctx.replacement, 1);
+          OmniUtil.swapType(ctx.parent, ctx.type, replacement, 1);
         } else {
           const from = OmniUtil.describe(ctx.type);
           const to = OmniUtil.describe(ctx.replacement);
@@ -313,21 +315,22 @@ export class OmniTypeVisitor {
         }
 
         // And we will instead keep searching downwards along the replacement.
-        input = ctx.replacement;
+        input = replacement;
         ctx.replacement = undefined;
-
-        // return undefined;
-        // ctx.replacement = undefined;
       }
 
       if (result !== undefined) return result;
-      // if (ctx.replacement) {
-      //   return undefined;
-      // }
 
       if (ctx.skip) {
         ctx.skip = false;
         return undefined;
+      }
+
+      if (replacement) {
+        const replacementResult = this.visitTypesDepthFirstInternal(replacement, ctx, onDown, onUp);
+        if (replacementResult !== undefined) {
+          return replacementResult;
+        }
       }
     }
 
@@ -377,6 +380,7 @@ export class OmniTypeVisitor {
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.GENERIC_SOURCE:
+        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp);
         result = this.visitTypesDepthFirstInternal(input.sourceIdentifiers, ctx, onDown, onUp);
         if (result !== undefined) return result;
         break;
@@ -409,6 +413,10 @@ export class OmniTypeVisitor {
       case OmniTypeKind.EXTERNAL_MODEL_REFERENCE:
         // NOTE: Should it be allowed to follow this?
         // TODO: Allow to follow if the external reference is into our own model
+        break;
+      case OmniTypeKind.WRAPPED:
+        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp);
+        if (result !== undefined) return result;
         break;
       default:
         throw new Error(`Do not know how to handle kind '${(input as any).kind || '?'}`);

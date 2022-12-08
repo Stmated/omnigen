@@ -1,7 +1,6 @@
-import {JavaOptions} from '@omnigen/target-java';
-import {JsonRpcParserOptions} from '@omnigen/parser-openrpc';
-import {Option, Options} from '@omnigen/core';
+import {Option, Options, ParserOptions, TargetOptions} from '@omnigen/core';
 import {PathLike} from 'fs';
+import {ImplementationOptions} from '@omnigen/target-impl-java-http';
 
 export interface RunOptions extends Options {
   schemaDirBase: Option<string | undefined, PathLike>;
@@ -10,6 +9,7 @@ export interface RunOptions extends Options {
   schemaPatternExclude: Option<string | undefined, RegExp | undefined>;
   failSilently: boolean;
 }
+
 export interface FileWriteOptions extends Options {
   outputDirBase: Option<string | undefined, PathLike>;
 }
@@ -26,4 +26,8 @@ export const DEFAULT_FILE_WRITE_OPTIONS: FileWriteOptions = {
   outputDirBase: undefined,
 };
 
-export type OmnigenOptions = RunOptions & JavaOptions & JsonRpcParserOptions & Partial<FileWriteOptions>;
+export type OmnigenOptions<
+  TParseOpt extends ParserOptions,
+  TTargetOpt extends TargetOptions,
+  TImplOpt extends ImplementationOptions
+> = RunOptions & TParseOpt & TTargetOpt & TImplOpt & Partial<FileWriteOptions>;

@@ -1,16 +1,12 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
-  ExternalSyntaxTree,
-  OmniModel,
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
-  RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {AnnotationList, JavaAstRootNode, ModifierType} from '../ast/index.js';
-import {JavaOptions} from '../options/index.js';
+import {AnnotationList, ModifierType} from '../ast/index.js';
 
 export interface StackInfo {
   cu: Java.CompilationUnit;
@@ -30,6 +26,8 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
     const cuStack: StackInfo[] = [];
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
+      visitMethodDeclaration: () => {},
+
       visitCompilationUnit: (node, visitor) => {
 
         if (node.object instanceof Java.EnumDeclaration) {
@@ -38,7 +36,13 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
           return;
         }
 
-        const annotations = node.object.annotations || new AnnotationList(...[]);
+        let annotations: AnnotationList;
+        if (node.object.annotations) {
+          annotations = node.object.annotations;
+        } else {
+          annotations = new AnnotationList(...[]);
+          node.object.annotations = annotations;
+        }
 
         cuStack.push({
           cu: node,

@@ -25,7 +25,7 @@ export interface StNodeWithChildren<T extends AbstractStNode> {
   children: T[];
 }
 
-export interface AstNode<C extends AbstractStNode> extends AbstractStNode {
-
-  toConcrete<P extends AbstractStNode>(parent: P): C;
-}
+// export interface AstNode<C extends AbstractStNode> extends AbstractStNode {
+//
+//   toConcrete<P extends AbstractStNode>(parent: P): C;
+// }

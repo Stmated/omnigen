@@ -1,15 +1,15 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform/index.js';
 import {
   AbortVisitingWithResult,
-  ExternalSyntaxTree, LiteralValue,
+  LiteralValue,
   OmniModel,
+  OmniPrimitiveValueMode,
   OmniTypeKind,
   OmniUtil,
-  RealOptions,
   VisitorFactoryManager,
   VisitResultFlattener,
 } from '@omnigen/core';
-import {FieldAccessorMode, JavaOptions} from '../options/index.js';
+import {FieldAccessorMode} from '../options/index.js';
 import {JavaUtil} from '../util/index.js';
 import * as Java from '../ast/index.js';
 import {TokenType} from '../ast/index.js';
@@ -111,7 +111,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       } else {
         blockExpressions.push(new Java.Statement(new Java.AssignExpression(
           new Java.FieldReference(constructorField),
-          new Java.VariableReference(argumentDeclaration.identifier),
+          new Java.DeclarationReference(argumentDeclaration),
         )));
       }
     }
@@ -139,13 +139,13 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       [
         new Java.IfStatement(
           new Java.Predicate(
-            new Java.VariableReference(argumentDeclaration.identifier),
+            new Java.DeclarationReference(argumentDeclaration),
             TokenType.NOT_EQUALS,
             new Java.Literal(null),
           ),
           new Java.Block(new Java.Statement(new Java.AssignExpression(
             new Java.FieldReference(targetField),
-            new Java.VariableReference(argumentDeclaration.identifier),
+            new Java.DeclarationReference(argumentDeclaration),
           ))),
         ),
       ],
@@ -189,9 +189,15 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     const requiredSuperArguments: Java.ArgumentDeclaration[] = [];
     const superConstructorArguments: Java.AbstractExpression[] = [];
     for (const requiredArgument of superTypeRequirements) {
-      superConstructorArguments.push(new Java.VariableReference(requiredArgument.identifier));
-      const actualType = this.getResolvedGenericArgumentType(requiredArgument, node);
-      requiredSuperArguments.push(this.createArgumentDeclaration(actualType, requiredArgument.identifier));
+      const resolvedType = this.getResolvedGenericArgumentType(requiredArgument, node);
+      const type = resolvedType.omniType;
+      if (type.kind == OmniTypeKind.PRIMITIVE && type.valueMode == OmniPrimitiveValueMode.LITERAL) {
+        const literalValue = type.value ?? null;
+        superConstructorArguments.push(new Java.Literal(literalValue));
+      } else {
+        superConstructorArguments.push(new Java.DeclarationReference(requiredArgument));
+        requiredSuperArguments.push(this.createArgumentDeclaration(resolvedType, requiredArgument.identifier));
+      }
     }
 
     if (superConstructorArguments.length > 0) {

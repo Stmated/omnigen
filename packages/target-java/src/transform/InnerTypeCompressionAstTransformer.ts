@@ -2,7 +2,7 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/i
 import {
   OmniType,
   OmniTypeKind,
-  OmniUtil,
+  OmniUtil, RealOptions,
   TargetOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
@@ -24,7 +24,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
     const cuUsedInTypes = new Map<Java.CompilationUnit, OmniType[]>();
     const typeToCu = new Map<OmniType, Java.CompilationUnit>();
-    this.gatherTypeMappings(cuUsedInTypes, typeToCu, args.root);
+    this.gatherTypeMappings(cuUsedInTypes, typeToCu, args.root, args.options);
 
     const typeUsedInCus = this.flipMultiMap(cuUsedInTypes);
     logger.info(typeUsedInCus);
@@ -97,6 +97,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     typeMapping: Map<Java.CompilationUnit, OmniType[]>,
     typeToCu: Map<OmniType, Java.CompilationUnit>,
     root: Java.JavaAstRootNode,
+    options: RealOptions<TargetOptions>,
   ) {
 
     const cuInfoStack: Java.CompilationUnit[] = [];
@@ -130,7 +131,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
           if (usedType.kind == OmniTypeKind.OBJECT
             || usedType.kind == OmniTypeKind.COMPOSITION
             || usedType.kind == OmniTypeKind.ENUM
-            || usedType.kind == OmniTypeKind.INTERFACE) {
+            || (usedType.kind == OmniTypeKind.INTERFACE && options.allowCompressInterfaceToInner)) {
 
             const cu = cuInfoStack[cuInfoStack.length - 1];
             if (usedType != cu.object.type.omniType) {
@@ -175,10 +176,10 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.source.of);
       const targetTypes = type.targetIdentifiers.flatMap(it => InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(it.type));
       return [...sourceType, ...targetTypes];
-    } else if (type.kind == OmniTypeKind.INTERFACE) {
+    } /*else if (type.kind == OmniTypeKind.INTERFACE) {
       const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.of);
       return [type, ...sourceType];
-    }
+    }*/
 
     // Should we follow external model references here?
 

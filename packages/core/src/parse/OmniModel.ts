@@ -1,5 +1,4 @@
 import {JSONSchema7Definition} from 'json-schema';
-// @ts-ignore
 import {TypeName} from './TypeName.js';
 
 export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
@@ -173,7 +172,6 @@ export type OmniType =
   | OmniEnumType
   | OmniGenericType
   | OmniInterfaceType
-  | OmniWrappedType<OmniType>
   ;
 
 export type SmartUnwrappedType<T> =
@@ -181,9 +179,7 @@ export type SmartUnwrappedType<T> =
     ? undefined
     : T extends OmniExternalModelReferenceType<infer R>
       ? Exclude<R, OmniExternalModelReferenceType<any>>
-      : T extends OmniWrappedType<infer W>
-        ? Exclude<W, OmniWrappedType<any>>
-        : T;
+      : T;
 
 export interface OmniNamedType {
 
@@ -293,11 +289,18 @@ export interface OmniInterfaceType extends OmniBaseType<OmniInterfaceTypeKnownKi
   extendedBy?: OmniSuperTypeCapableType | undefined;
 }
 
-type OmniUnknownKnownKind = OmniTypeKind.UNKNOWN;
+type OmniTypeKindUnknown = OmniTypeKind.UNKNOWN;
 
-export interface OmniUnknownType extends OmniBaseType<OmniUnknownKnownKind> {
+export enum UnknownKind {
+  MAP,
+  MUTABLE_OBJECT,
+  OBJECT,
+  WILDCARD,
+}
+
+export interface OmniUnknownType extends OmniBaseType<OmniTypeKindUnknown> {
   valueDefault?: OmniPrimitiveConstantValue | null;
-  isAny?: boolean;
+  unknownKind?: UnknownKind,
 }
 
 type OmniObjectKnownKind = OmniTypeKind.OBJECT;
@@ -331,34 +334,8 @@ export interface OmniObjectType extends OmniBaseType<OmniObjectKnownKind>, OmniN
   additionalProperties?: boolean | undefined;
 }
 
-type OmniWrappedKnownKind = OmniTypeKind.WRAPPED;
-
-/**
- * It is required by contract for the target language to be able to convert between the wrapped and non-wrapped.
- * The wrapper should work in exactly the same way as the wrapped type, or at least as closely as the language can try.
- */
-export interface OmniWrappedType<T extends OmniType> extends OmniBaseType<OmniWrappedKnownKind> {
-  of: T;
-  nullable: boolean;
-}
-
 type OmniPrimitiveKnownKind = OmniTypeKind.PRIMITIVE;
 export type OmniPrimitiveConstantValue = string | boolean | number
-
-/**
- * TODO: Remove and only have a boolean called 'isLiteral' on the primitive? Seems more intuitive
- */
-export enum OmniPrimitiveValueMode {
-  /**
-   * This means the value is the default value of the type unless anything else has/can be set.
-   */
-  DEFAULT = 'DEFAULT',
-  /**
-   * This means that the value is the ONLY value that is allowed for the type.
-   * It is not really the type, it is the value itself.
-   */
-  LITERAL = 'LITERAL',
-}
 
 export interface OmniPrimitiveBaseType extends OmniBaseType<OmniPrimitiveKnownKind> {
 
@@ -368,21 +345,21 @@ export interface OmniPrimitiveBaseType extends OmniBaseType<OmniPrimitiveKnownKi
   /**
    * Undefined = OmniPrimitiveValueMode.DEFAULT
    */
-  valueMode?: OmniPrimitiveValueMode;
+  literal?: boolean;
 }
 
 export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
   primitiveKind: OmniPrimitiveKind.NULL;
   nullable?: true;
   value?: null;
-  valueMode?: OmniPrimitiveValueMode.LITERAL;
+  literal?: true;
 }
 
 export interface OmniPrimitiveVoidType extends OmniPrimitiveBaseType {
   primitiveKind: OmniPrimitiveKind.VOID;
   nullable?: true;
   value?: undefined;
-  valueMode?: OmniPrimitiveValueMode.LITERAL;
+  literal?: true;
 }
 
 export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
@@ -391,16 +368,20 @@ export interface OmniPrimitiveTangibleNullableType extends OmniPrimitiveBaseType
   primitiveKind: OmniPrimitiveTangibleKind;
   nullable: true;
   value?: OmniPrimitiveConstantValue | null;
-  valueMode?: OmniPrimitiveValueMode;
+  literal?: boolean;
 }
+
 export interface OmniPrimitiveNonNullableType extends OmniPrimitiveBaseType {
   primitiveKind: OmniPrimitiveTangibleKind;
   nullable?: false,
   value?: OmniPrimitiveConstantValue;
-  valueMode?: OmniPrimitiveValueMode;
+  literal?: boolean;
 }
 
-export type OmniPrimitiveNullableType = OmniPrimitiveTangibleNullableType | OmniPrimitiveNullType | OmniPrimitiveVoidType;
+export type OmniPrimitiveNullableType =
+  OmniPrimitiveTangibleNullableType
+  | OmniPrimitiveNullType
+  | OmniPrimitiveVoidType;
 
 export type OmniPrimitiveType =
   OmniPrimitiveVoidType
@@ -441,8 +422,14 @@ type OmniGenericSourceIdentifierKnownKind = OmniTypeKind.GENERIC_SOURCE_IDENTIFI
 export interface OmniGenericSourceIdentifierType extends OmniBaseType<OmniGenericSourceIdentifierKnownKind> {
 
   placeholderName: string;
-  lowerBound?: OmniType | undefined;
-  upperBound?: OmniType | undefined;
+  lowerBound?: OmniType;
+  upperBound?: OmniType;
+
+  /**
+   * List of distinct known types used as bounds for the generic source.
+   * This can be used to quickly know in some places what the implementations of a certain generic identifier is.
+   */
+  knownEdgeTypes?: OmniType[];
 }
 
 type OmniGenericTargetIdentifierKnownKind = OmniTypeKind.GENERIC_TARGET_IDENTIFIER;
@@ -468,9 +455,10 @@ export interface OmniGenericSourceType extends OmniBaseType<OmniGenericSourceKno
 }
 
 type OmniGenericTargetKnownKind = OmniTypeKind.GENERIC_TARGET;
+export type OmniGenericTargetSourcePropertyType = OmniGenericSourceType | OmniExternalModelReferenceType<OmniGenericSourceType>;
 
 export interface OmniGenericTargetType extends OmniBaseType<OmniGenericTargetKnownKind> {
-  source: OmniGenericSourceType | OmniExternalModelReferenceType<OmniGenericSourceType>;
+  source: OmniGenericTargetSourcePropertyType;
   targetIdentifiers: OmniGenericTargetIdentifierType[];
 }
 

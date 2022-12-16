@@ -1,4 +1,4 @@
-import {Option, Options} from '../options/index.js';
+import {Booleanish, Option, OptionResolvers, Options, StandardOptionResolvers} from '../options/index.js';
 import {CompressTypeLevel, OmniTypeKind} from '../parse/index.js';
 
 export enum CompressTypeNaming {
@@ -48,7 +48,11 @@ export interface TargetOptions extends Options {
 
   compressTypesLevel: CompressTypeLevel;
   compressTypeNaming: CompressTypeNaming;
+  allowCompressInterfaceToInner: Option<Booleanish, boolean>,
   compressTypeNamingReducer: Option<undefined, OmniTypeNameReducer | undefined>;
+
+  additionalPropertiesInterfaceAfterDuplicateCount: number;
+
 
   // TODO: Introduce naming options for things like banning certain words? Like "Object" or "List" or something?
   //        So that no weird and stupid names become chosen if we are grabbing the common prefix?
@@ -63,4 +67,10 @@ export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
   compressTypesLevel: CompressTypeLevel.EXACT,
   compressTypeNaming: CompressTypeNaming.EXACT,
   compressTypeNamingReducer: undefined,
+  additionalPropertiesInterfaceAfterDuplicateCount: 2,
+  allowCompressInterfaceToInner: true,
+};
+
+export const TARGET_OPTION_RESOLVERS: OptionResolvers<TargetOptions> = {
+  allowCompressInterfaceToInner: StandardOptionResolvers.toBoolean,
 };

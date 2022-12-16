@@ -10,8 +10,9 @@ export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJava
 
   transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
-    const createdInterface: { obj?: Java.InterfaceDeclaration } = {};
     const currentClassDeclaration: { obj?: Java.ClassDeclaration | undefined } = {};
+    type AddType = {classDeclaration: Java.ClassDeclaration, node: Java.AdditionalPropertiesDeclaration};
+    const additions: AddType[] = [];
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitClassDeclaration: (node, visitor) => {
@@ -22,61 +23,59 @@ export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJava
 
       visitAdditionalPropertiesDeclaration: node => {
 
-        if (!createdInterface.obj) {
-
-          // TODO: It would be beneficial if we could add "methods" to interfaces.
-          //        That way we could also add the "addAdditionalProperty" method to the interface.
-          const additionalPropertiesObjectType: OmniObjectType = {
-            kind: OmniTypeKind.OBJECT,
-            properties: [],
-            name: 'IAdditionalProperties',
-          };
-
-          additionalPropertiesObjectType.properties.push({
-            type: node.mapType,
-            name: 'additionalProperties',
-            owner: additionalPropertiesObjectType,
-          });
-
-          const interfaceType: OmniInterfaceType = {
-            kind: OmniTypeKind.INTERFACE,
-            name: 'IAdditionalProperties',
-            of: additionalPropertiesObjectType,
-          };
-
-          createdInterface.obj = new Java.InterfaceDeclaration(
-            JavaAstUtils.createTypeNode(interfaceType, false),
-            new Java.Identifier(Naming.unwrap(interfaceType.name ?? additionalPropertiesObjectType.name)),
-            new Java.Block(),
-          );
-
-          JavaAstUtils.addInterfaceProperties(interfaceType, createdInterface.obj.body);
-        }
-
         if (currentClassDeclaration.obj) {
-          if (!currentClassDeclaration.obj.implements) {
-            currentClassDeclaration.obj.implements = new Java.ImplementsDeclaration(
-              new Java.TypeList([]),
-            );
-          }
-
-          currentClassDeclaration.obj.implements.types.children.push(
-            createdInterface.obj.type,
-          );
+          additions.push({classDeclaration: currentClassDeclaration.obj, node: node});
         }
-
-        // Add the interface to the class declaration, if it does not already exist
       },
     }));
 
-    const obj = createdInterface.obj;
-    if (obj) {
+    if (additions.length >= args.options.additionalPropertiesInterfaceAfterDuplicateCount) {
+
+      const additionalPropertiesObjectType: OmniObjectType = {
+        kind: OmniTypeKind.OBJECT,
+        properties: [],
+        name: 'IAdditionalProperties',
+      };
+
+      additionalPropertiesObjectType.properties.push({
+        // TODO: Wrong! Should have one interface per map type, or use common denominator
+        type: additions[0].node.mapType,
+        name: 'additionalProperties',
+        owner: additionalPropertiesObjectType,
+      });
+
+      const interfaceType: OmniInterfaceType = {
+        kind: OmniTypeKind.INTERFACE,
+        name: 'IAdditionalProperties',
+        of: additionalPropertiesObjectType,
+      };
+
+      const createdInterface = new Java.InterfaceDeclaration(
+        JavaAstUtils.createTypeNode(interfaceType, false),
+        new Java.Identifier(Naming.unwrap(interfaceType.name ?? additionalPropertiesObjectType.name)),
+        new Java.Block(),
+      );
+
+      JavaAstUtils.addInterfaceProperties(interfaceType, createdInterface.body);
+
+      for (const addTo of additions) {
+        if (!addTo.classDeclaration.implements) {
+          addTo.classDeclaration.implements = new Java.ImplementsDeclaration(
+            new Java.TypeList([]),
+          );
+        }
+
+        addTo.classDeclaration.implements.types.children.push(
+          createdInterface.type,
+        );
+      }
+
       args.root.children.push(new Java.CompilationUnit(
         new Java.PackageDeclaration(
-          JavaUtil.getPackageName(obj.type.omniType, obj.name.value, args.options),
+          JavaUtil.getPackageName(createdInterface.type.omniType, createdInterface.name.value, args.options),
         ),
         new Java.ImportList([]),
-        obj,
+        createdInterface,
       ));
     }
 

@@ -9,7 +9,6 @@ describe('InnerTypeCompression', () => {
 
     const transformOptions: ModelTransformOptions = {
       ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generificationWrapAllowed: true,
       generifyTypes: false,
       elevateProperties: false,
     };
@@ -63,7 +62,6 @@ describe('InnerTypeCompression', () => {
 
     const transformOptions: ModelTransformOptions = {
       ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generificationWrapAllowed: true,
       generifyTypes: false,
       elevateProperties: false,
     };
@@ -136,7 +134,6 @@ describe('InnerTypeCompression', () => {
 
     const transformOptions: ModelTransformOptions = {
       ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generificationWrapAllowed: true,
       generifyTypes: false,
       elevateProperties: false,
     };
@@ -174,7 +171,6 @@ describe('InnerTypeCompression', () => {
 
     const transformOptions: ModelTransformOptions = {
       ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generificationWrapAllowed: true,
       generifyTypes: true,
       elevateProperties: false,
     };

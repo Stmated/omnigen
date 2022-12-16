@@ -1,14 +1,13 @@
 import {
-  AstRootNode,
+  OmniDictionaryType, OmniGenericTargetType,
   OmniPotentialInterfaceType,
   OmniType,
   OmniTypeKind,
   OmniUtil,
-  VisitorFactoryManager,
+  UnknownKind,
 } from '@omnigen/core';
 import {JavaUtil} from '../util/index.js';
 import * as Java from '../ast/index.js';
-import {AbstractJavaAstTransformer} from './AbstractJavaAstTransformer.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaVisitor} from '../visit/index.js';
 
@@ -40,79 +39,55 @@ export class JavaAstUtils {
     }
   }
 
-  public static createTypeNode(type: OmniType, implementation?: boolean): Java.RegularType | Java.GenericType {
+  public static createTypeNode<T extends OmniType>(type: T, implementation?: boolean): Java.RegularType<T> | Java.GenericType {
 
     if (type.kind == OmniTypeKind.DICTIONARY) {
-
-      const mapClassOrInterface = implementation == false ? 'Map' : 'HashMap';
-      const mapClass = `java.util.${mapClassOrInterface}`;
-      const mapType = new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
-      const keyType = JavaAstUtils.createTypeNode(type.keyType, true);
-      const valueType = JavaAstUtils.createTypeNode(type.valueType, true);
-
-      return new Java.GenericType(mapType, [keyType, valueType]);
-
+      return this.createMapTypeNode(type, implementation);
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-
-      const baseType = new Java.RegularType(type, implementation);
-
-      // NOTE: In future versions of Java it might be possible to have primitive generic arguments.
-      //        But for now we change all the primitive types into a reference type.
-      const genericArguments = type.targetIdentifiers.map(it => JavaAstUtils.createTypeNode(OmniUtil.toReferenceType(it.type)));
-      return new Java.GenericType(baseType, genericArguments);
-
+      return this.createGenericTargetTypeNode(type, implementation);
     } else {
-      return new Java.RegularType(type, implementation);
+      return new Java.RegularType<T>(type, implementation);
     }
   }
 
-  public static getSuperClassToSubClassDeclarations(root: AstRootNode): Map<Java.ClassDeclaration, Java.ClassDeclaration[]> {
+  private static createGenericTargetTypeNode<T extends OmniGenericTargetType>(
+    type: T,
+    implementation: boolean | undefined,
+  ): Java.GenericType {
 
-    const omniTypeToDeclaration = new Map<OmniType, Java.ClassDeclaration>();
-    root.visit(VisitorFactoryManager.create(JavaAstUtils._JAVA_VISITOR, {
+    const baseType = new Java.RegularType(type, implementation);
 
-      visitEnumDeclaration: () => {
-      },
-      visitInterfaceDeclaration: () => {
-      },
-      visitMethodDeclaration: () => {
-      },
+    // NOTE: In future versions of Java it might be possible to have primitive generic arguments.
+    //        But for now we change all the primitive types into a reference type.
+    const mappedGenericTargetArguments = type.targetIdentifiers.map(it => {
 
-      visitClassDeclaration: node => {
-        omniTypeToDeclaration.set(node.type.omniType, node);
-      },
-    }));
+      let referenceType = OmniUtil.toReferenceType(it.type);
+      if (referenceType.kind == OmniTypeKind.UNKNOWN && (!referenceType.unknownKind || referenceType.unknownKind == UnknownKind.OBJECT)) {
 
-    const superClassToSubClasses = new Map<Java.ClassDeclaration, Java.ClassDeclaration[]>();
-    root.visit(VisitorFactoryManager.create(JavaAstUtils._JAVA_VISITOR, {
+        // No set unknown type and Object, are probably better off as wildcard type ?
+        referenceType = {
+          ...referenceType,
+          unknownKind: UnknownKind.WILDCARD,
+        };
+      }
 
-      visitEnumDeclaration: () => {
-      },
-      visitInterfaceDeclaration: () => {
-      },
-      visitMethodDeclaration: () => {
-      },
+      return JavaAstUtils.createTypeNode(referenceType);
+    });
 
-      visitClassDeclaration: node => {
+    return new Java.GenericType(baseType, mappedGenericTargetArguments);
+  }
 
-        if (node.extends) {
-          const superType = node.extends.type.omniType;
-          const superClass = omniTypeToDeclaration.get(superType);
-          if (superClass) {
+  private static createMapTypeNode(
+    type: OmniDictionaryType,
+    implementation: boolean | undefined,
+  ): Java.GenericType {
 
-            const subClasses = (superClassToSubClasses.has(superClass)
-              ? superClassToSubClasses
-              : superClassToSubClasses.set(superClass, [])).get(superClass)!;
+    const mapClassOrInterface = implementation == false ? 'Map' : 'HashMap';
+    const mapClass = `java.util.${mapClassOrInterface}`;
+    const mapType = new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
+    const keyType = JavaAstUtils.createTypeNode(type.keyType, true);
+    const valueType = JavaAstUtils.createTypeNode(type.valueType, true);
 
-            subClasses.push(node);
-
-          } else {
-            logger.warn(`Could not find the class declaration of super type '${OmniUtil.describe(superType)}'`);
-          }
-        }
-      },
-    }));
-
-    return superClassToSubClasses;
+    return new Java.GenericType(mapType, [keyType, valueType]);
   }
 }

@@ -7,22 +7,14 @@ import {
   OmniPrimitiveKind,
   OmniSuperTypeCapableType,
   OmniType,
-  OmniTypeKind, OmniUtil, PARSER_OPTIONS_RESOLVERS, ParserOptions, TRANSFORM_OPTIONS_RESOLVER,
-} from '../parse/index.js';
+  OmniTypeKind, OmniUtil, PARSER_OPTIONS_RESOLVERS, TRANSFORM_OPTIONS_RESOLVER,
+  SimplifyInheritanceModelTransformer,
+  OptionsUtil,
+} from '@omnigen/core';
+import {JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 
-// TODO: Check if this test can be ran! Because it should not be able to! Since we do not depend on target-java!
-import {JavaUtil} from '@omnigen/target-java';
-import {SimplifyInheritanceModelTransformer} from './transform/index.js';
-import {DEFAULT_TARGET_OPTIONS} from '../interpret/index.js';
-import {OptionsUtil, RealOptions} from '../options/index.js';
-
 describe('Test CompositionDependencyUtil', () => {
-
-  // const javaOptions: DependencyGraphOptions = {
-  //   ...DEFAULT_GRAPH_OPTIONS,
-  //   ...{},
-  // };
 
   const createModel = (namedTypes: OmniType[]): OmniModel => {
 

@@ -163,8 +163,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     if (schemaObj.type) {
       names.push({
-        prefix: Case.pascal(String(schemaObj.type)),
         name: name,
+        suffix: Case.pascal(String(schemaObj.type)),
       });
     }
 
@@ -211,15 +211,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     type.properties = properties;
-    // type.requiredProperties = requiredProperties;
-
-    if (schema.obj.not) {
-      // ???
-    }
-
-    if (schema.obj.multipleOf) {
-      // TODO: Make this general, so that all other places call it.
-    }
 
     return this.extendOrEnhanceClassType(schema, type, name);
   }
@@ -255,20 +246,18 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // The type name will be replaced if the schema is a $ref to another type.
     const schema = this.unwrapJsonSchema(schemaOrRef);
 
-    const propertyType = this.jsonSchemaToType(
-      this.getPreferredName(
-        schema,
-        schemaOrRef,
-        // NOTE: This might not be the best way to create the property name
-        // But for now it will have to do, since most type names will be a simple type.
-        {
-          prefix: OmniUtil.getVirtualTypeName(owner),
-          name: Case.pascal(propertyName),
-        },
-      ),
+    const preferredName = this.getPreferredName(
       schema,
-      undefined,
+      schemaOrRef,
+      // NOTE: This might not be the best way to create the property name
+      // But for now it will have to do, since most type names will be a simple type.
+      {
+        prefix: OmniUtil.getVirtualTypeName(owner),
+        name: Case.pascal(propertyName),
+      },
     );
+
+    const propertyType = this.jsonSchemaToType(preferredName, schema, undefined);
 
     return {
       name: propertyName,
@@ -283,15 +272,17 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private getPreferredName(
     schema: Dereferenced<JSONSchema7>,
     dereferenced: Dereferenced<unknown>,
-    fallback: TypeName,
+    fallback: TypeName | undefined,
   ): TypeName {
 
     const names = this.getMostPreferredNames(dereferenced, schema);
-    names.push(...this.getFallbackNamesOfJsonSchemaType(schema));
 
     if (fallback) {
       names.push(fallback);
     }
+
+    const ultimateFallbackNames = this.getFallbackNamesOfJsonSchemaType(schema);
+    names.push(...ultimateFallbackNames);
 
     return names;
   }
@@ -592,7 +583,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
           //        ALSO! For Java, the composite class should be merged with parent if it is empty!
           //        It is just stupid to have TagOrString extend TagXOrString
           const unwrapped = this.unwrapJsonSchema(deref);
-          const oneOfTitle = this.getPreferredName(unwrapped, unwrapped, '');
+          const oneOfTitle = this.getPreferredName(unwrapped, unwrapped, undefined);
           compositionsOneOfOr.push(this.jsonSchemaToType(oneOfTitle, deref, undefined).type);
         }
       }
@@ -911,7 +902,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return to;
   }
 
-  public transformErrorDataSchemaToOmniType(schema: JSONSchema7 | undefined): OmniType | undefined {
+  public transformErrorDataSchemaToOmniType(name: string, schema: JSONSchema7 | undefined): OmniType | undefined {
 
     if (!schema) {
       return schema;
@@ -920,7 +911,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // The type is a JSONSchema7, though the type system seems unsure of that fact.
     const jsonSchema = schema as JSONSchema7;
     const derefJsonSchema = this._deref.get(jsonSchema, this._deref.getFirstRoot());
-    const omniType = this.jsonSchemaToType('JsonRpcCustomErrorPayload', derefJsonSchema, undefined).type;
+    const omniType = this.jsonSchemaToType(name, derefJsonSchema, undefined).type;
     logger.debug(`Using the from jsonschema converted omni type '${OmniUtil.describe(omniType)}'`);
     return omniType;
   }

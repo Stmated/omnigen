@@ -32,7 +32,7 @@ export const DEFAULT_JSONRPC_OPTIONS: JsonRpcParserOptions = {
 
 export const JSONRPC_10_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
   jsonRpcVersion: '1.0',
-  jsonRpcIdIncluded: false,
+  jsonRpcIdIncluded: true,
   jsonRpcPropertyName: undefined,
   jsonRpcErrorPropertyName: 'error',
   jsonRpcErrorNameIncluded: true,
@@ -41,7 +41,7 @@ export const JSONRPC_10_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
 
 export const JSONRPC_11_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
   jsonRpcVersion: '1.1',
-  jsonRpcIdIncluded: false,
+  jsonRpcIdIncluded: true,
   jsonRpcPropertyName: 'version',
   jsonRpcErrorPropertyName: 'error',
   jsonRpcErrorNameIncluded: true,
@@ -50,7 +50,7 @@ export const JSONRPC_11_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
 
 export const JSONRPC_20_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
   jsonRpcVersion: '2.0',
-  jsonRpcIdIncluded: false,
+  jsonRpcIdIncluded: true,
   jsonRpcPropertyName: 'jsonrpc',
   jsonRpcErrorPropertyName: 'data',
   jsonRpcErrorNameIncluded: false,

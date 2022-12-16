@@ -9,10 +9,6 @@ export interface ModelTransformOptions extends Options {
    * TODO: Deprecated -- remove in favor of using a language feature and only relying on 'generifyTypes' as option
    */
   generificationBoxAllowed: Option<Booleanish, boolean>;
-  /**
-   * TODO: Deprecated -- remove
-   */
-  generificationWrapAllowed: Option<Booleanish, boolean>;
 }
 
 export const DEFAULT_MODEL_TRANSFORM_OPTIONS: ModelTransformOptions = {
@@ -21,11 +17,9 @@ export const DEFAULT_MODEL_TRANSFORM_OPTIONS: ModelTransformOptions = {
 
   generifyTypes: true,
   generificationBoxAllowed: true,
-  generificationWrapAllowed: true,
 };
 
 export const TRANSFORM_OPTIONS_RESOLVER: OptionResolvers<ModelTransformOptions> = {
   generificationBoxAllowed: StandardOptionResolvers.toBoolean,
-  generificationWrapAllowed: StandardOptionResolvers.toBoolean,
   generifyTypes: StandardOptionResolvers.toBoolean,
 };

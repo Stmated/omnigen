@@ -10,7 +10,7 @@ import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/c
 
 describe('Java Rendering', () => {
 
-  jest.setTimeout(10_000);
+  jest.setTimeout(20_000);
 
   test('renderAll', async () => {
 
@@ -232,7 +232,12 @@ describe('Java Rendering', () => {
       includeGeneratedAnnotation: false,
     };
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json', DEFAULT_OPENRPC_OPTIONS, DEFAULT_MODEL_TRANSFORM_OPTIONS, options);
+    const fileContents = await JavaTestUtils.getFileContentsFromFile(
+      'enum.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      options,
+    );
 
     const filenames = [...fileContents.keys()].sort();
     expect(filenames).toEqual([
@@ -249,11 +254,11 @@ describe('Java Rendering', () => {
       'ListThingsRequestParams.java',
       'ListThingsResponse.java',
       'Species.java',
-      'String.java',
       'Tag.java',
       'TagCopy.java',
       'TagOrSpeciesOrString.java',
       'Thing.java',
+      'ThingType.java',
     ]);
 
     const tag = JavaTestUtils.getParsedContent(fileContents, 'Tag.java');
@@ -296,7 +301,15 @@ describe('Java Rendering', () => {
 
   test('AdditionalProperties', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile(
+      'additional-properties.json',
+      DEFAULT_OPENRPC_OPTIONS,
+      DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        additionalPropertiesInterfaceAfterDuplicateCount: 1,
+      },
+    );
 
     const filenames = [...fileContents.keys()];
     expect(filenames).toHaveLength(12);
@@ -336,15 +349,6 @@ describe('Java Rendering', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('primitive-generics.json');
     const filenames = [...fileContents.keys()].sort();
-
-    // Would we benefit from also easily saving all known subtypes/implementations of a generic along with the source?
-    // That way we could know what it will be used as, and make easier assumptions in the target languages.
-    // Good idea; but is it easily implementable?
-
-    // TODO: MUST FIX!
-    // * JsonRpcRequest has "method" as generic even though all types in Java is a String -- has to be removed/fixed
-    //    - Only fixed by post-processor that removes unnecessary generics? Since generic transformer is target agnostic
-    //    - Should be enough to just ignore the rendering of the generic identifier for Java, and it should be fine
 
     expect(filenames).toEqual([
       'ErrorUnknown.java',

@@ -15,7 +15,6 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {OMNI_GENERIC_FEATURES, TargetFeatures} from '../../interpret/index.js';
 import {PropertyUtil} from '../PropertyUtil.js';
 import {Case, Sorters} from '../../util/index.js';
-import {PropertyInformation} from '../PropertiesInformation.js';
 import {OmniModelTransformerArgs} from './OmniModelTransformerArgs.js';
 import {EqualityFinder} from '../../equality/EqualityFinder.js';
 import {PropertyDifference} from '../../equality/index.js';
@@ -43,8 +42,6 @@ export class GenericsModelTransformer implements OmniModelTransformer<ParserOpti
       const bSubType = (superTypeToSubTypes.get(b) || [])[0];
       return dependencySorter(aSubType, bSubType);
     });
-
-    // const propertyTypeToGenericTypeMap = new Map<OmniType, OmniType>();
 
     for (const superType of superTypes) {
 
@@ -112,10 +109,15 @@ export class GenericsModelTransformer implements OmniModelTransformer<ParserOpti
         }
 
         const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
-          placeholderName: genericName,
           kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-          lowerBound: lowerBound,
+          placeholderName: genericName,
+          // knownEdgeTypes: info.distinctTypes,
         };
+
+        if (lowerBound) {
+          genericSourceIdentifier.lowerBound = lowerBound;
+        }
+
         genericSource.sourceIdentifiers.push(genericSourceIdentifier);
 
         if (args.options.generificationBoxAllowed == false) {
@@ -213,6 +215,14 @@ export class GenericsModelTransformer implements OmniModelTransformer<ParserOpti
       return undefined;
     }
 
+    const lowerBoundLowerBound = lowerBound.targetIdentifiers[0].sourceIdentifier.lowerBound;
+    if (!lowerBoundLowerBound || lowerBoundLowerBound.kind == OmniTypeKind.UNKNOWN) {
+
+      // If the lower bound of the identifier is unknown, then it makes no sense exploding it.
+      // It should just be rendered as "Class" or "Class<?>" or "Class<>" depending on context.
+      return undefined;
+    }
+
     // The property generic type is itself a generic target.
     // This can for example be: <T extends JsonRpcRequest<AbstractRequestParams>>
     // To make it better and more exact to work with, we should replace with this:
@@ -220,11 +230,19 @@ export class GenericsModelTransformer implements OmniModelTransformer<ParserOpti
     const targetIdentifier = lowerBound.targetIdentifiers[0];
     const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type, args, targetFeatures);
 
+    const sourceDesc = OmniUtil.describe(targetIdentifier.sourceIdentifier);
+    const targetDesc = OmniUtil.describe(targetIdentifier);
+    const lowerDesc = OmniUtil.describe(lowerBound);
+
     const sourceIdentifier: OmniGenericSourceIdentifierType = {
       placeholderName: this.getExplodedSourceIdentifierName(targetIdentifier.sourceIdentifier),
       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-      lowerBound: sourceIdentifierLowerBound,
+      debug: `Exploded from '${sourceDesc}' of '${targetDesc}' of '${lowerDesc}'`,
     };
+
+    if (sourceIdentifierLowerBound) {
+      sourceIdentifier.lowerBound = sourceIdentifierLowerBound;
+    }
 
     genericSource.sourceIdentifiers.push(sourceIdentifier);
     lowerBound.targetIdentifiers[0] = {

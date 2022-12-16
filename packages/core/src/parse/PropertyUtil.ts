@@ -122,24 +122,10 @@ export class PropertyUtil {
 
       if (propertyEquality) {
 
-        const distinctTypes: OmniType[] = [];
-        for (const property of commonPropertiesWithSameName) {
-
-          const sameType = distinctTypes.find(it => {
-            const common = OmniUtil.getCommonDenominatorBetween(property.type, it, targetFeatures, false);
-            if (!common) {
-              return false;
-            }
-
-            // NOTE: This is likely incorrect; we should be able to handle some insignificant diffs depending on context
-            const diffCount = (common?.diffs || []).length;
-            return diffCount == 0;
-          });
-
-          if (!sameType) {
-            distinctTypes.push(property.type);
-          }
-        }
+        const distinctTypes = OmniUtil.getDistinctTypes(
+          commonPropertiesWithSameName.map(it => it.type),
+          targetFeatures,
+        );
 
         information.byPropertyName[propertyName] = {
           properties: commonPropertiesWithSameName,
@@ -174,13 +160,20 @@ export class PropertyUtil {
     }
 
     const possiblePropertyTypes: OmniType[] = [];
-    for (let i = 1; i < properties.length; i++) {
+    for (let i = 0; i < properties.length; i++) {
 
       // NOTE: Need good test cases for this, to check that it really finds the lowest equality level
-      const previous = properties[i - 1];
       const current = properties[i];
+      if (i == properties.length - 1) {
 
-      const equalityLevel = PropertyUtil.getPropertyEquality(previous, current, targetFeatures);
+        // This is the last property. There is no next to compare to.
+        possiblePropertyTypes.push(current.type);
+        continue;
+      }
+
+      const next = properties[i + 1];
+
+      const equalityLevel = PropertyUtil.getPropertyEquality(current, next, targetFeatures);
 
       if (equalityLevel.propertyDiffs?.find(it => bannedPropDiff(it))) {
         return undefined;

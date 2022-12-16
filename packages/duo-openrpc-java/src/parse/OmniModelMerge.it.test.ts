@@ -148,6 +148,7 @@ describe('OmniModelMerge-it', () => {
       DEFAULT_OPENRPC_OPTIONS,
       {
         ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+        generifyTypes: true,
       },
       {
         ...DEFAULT_TEST_JAVA_OPTIONS,
@@ -160,6 +161,7 @@ describe('OmniModelMerge-it', () => {
       DEFAULT_OPENRPC_OPTIONS,
       {
         ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+        generifyTypes: true,
       },
       {
         ...DEFAULT_TEST_JAVA_OPTIONS,
@@ -172,8 +174,8 @@ describe('OmniModelMerge-it', () => {
     const resultMerged = OmniModelMerge.merge<JavaOptions>([result10, result11], {
       // TODO: Add capability of figuring out package automatically, common denominator for all given options
       package: 'com.common',
-      compressUnreferencedSubTypes: true,
-      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: false,
+      compressSoloReferencedTypes: false,
       compressTypeNaming: CompressTypeNaming.COMMON_PREFIX,
     });
 
@@ -195,18 +197,18 @@ describe('OmniModelMerge-it', () => {
     const filesBNames = [...files11.keys()].sort();
 
     expect(filesCommonNames).toEqual([
+      'ErrorUnknown.java',
       'ErrorUnknownError.java',
       'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
       'JsonRpcRequestParams.java',
     ]);
 
     expect(filesANames).toEqual([
-      'ErrorUnknown.java',
-      'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
       'ListThingsError100.java',
-      'ListThingsError100Error.java',
+      // 'ListThingsError100Error.java', // Included only if we do not compress types
       'ListThingsRequest.java',
       'ListThingsRequestParams.java',
       'ListThingsResponse.java',
@@ -216,12 +218,10 @@ describe('OmniModelMerge-it', () => {
 
     expect(filesBNames).toEqual([
       'Element.java',
-      'ErrorUnknown.java',
-      'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
       'ListElementsError100.java',
-      'ListElementsError100Error.java',
+      // 'ListElementsError100Error.java', // Included only if we do not compress types
       'ListElementsRequest.java',
       'ListElementsRequestParams.java',
       'ListElementsResponse.java',

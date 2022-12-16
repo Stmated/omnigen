@@ -2,10 +2,8 @@ import {
   OmniPrimitiveBaseType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
-  OmniPrimitiveValueMode,
   OmniType,
   OmniTypeKind,
-  OmniWrappedType,
 } from './OmniModel.js';
 import {TypeDifference} from '../equality/index.js';
 import {OmniUtil} from './OmniUtil.js';
@@ -29,14 +27,14 @@ describe('OmniUtil', () => {
 
     // With default features, we cannot handle the literal types
     expect(expectCommon(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, valueMode: OmniPrimitiveValueMode.LITERAL, value: 'hello'},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, valueMode: OmniPrimitiveValueMode.LITERAL, value: 'bye'},
+      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
     ).diffs).toEqual([TypeDifference.FUNDAMENTAL_TYPE]);
 
     // With Java, the literal types become the same type in the signature
     const literalString = expectCommon(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, valueMode: OmniPrimitiveValueMode.LITERAL, value: 'hello'},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, valueMode: OmniPrimitiveValueMode.LITERAL, value: 'bye'},
+      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
       JAVA_FEATURES,
     );
 
@@ -46,7 +44,7 @@ describe('OmniUtil', () => {
     const literalPrimitiveString = (literalString.type as OmniPrimitiveBaseType);
     expect(literalPrimitiveString.primitiveKind).toEqual(OmniPrimitiveKind.STRING);
     expect(literalPrimitiveString.value).toBeUndefined();
-    expect(literalPrimitiveString.valueMode).toBeUndefined();
+    expect(literalPrimitiveString.literal).toBeUndefined();
 
     expectA(
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, nullable: true},
@@ -57,66 +55,24 @@ describe('OmniUtil', () => {
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: true},
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: false},
     );
-
-    // TODO: Lots and lots of comparisons with box modes and value modes and values and nullable!
-    //           Need to create a complete grid where we test ALL combinations and get the EXACT expected result
-
-    expectA(
-      {
-        kind: OmniTypeKind.WRAPPED,
-        of: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: true},
-        nullable: false,
-      },
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: false},
-    );
-
-    expectB(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: false},
-      {
-        kind: OmniTypeKind.WRAPPED,
-        of: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: true},
-        nullable: false,
-      },
-    );
-
-    // The nullability goes in the wrong direction where it is not covariant
-    expectNone(
-      {
-        kind: OmniTypeKind.WRAPPED,
-        of: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: true},
-        nullable: false,
-      },
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.DOUBLE, nullable: false},
-    );
-
-    // The nullability goes in the right direction here
-    const res = expectCommon(
-      {
-        kind: OmniTypeKind.WRAPPED,
-        of: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: false},
-        nullable: false,
-      },
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.DOUBLE, nullable: true},
-    );
-    expect(res.type.kind).toEqual(OmniTypeKind.WRAPPED);
   });
 });
 
-type PrimitiveOrWrapped = OmniPrimitiveType | OmniWrappedType<OmniPrimitiveType>;
+// type PrimitiveOrWrapped = OmniPrimitiveType | OmniWrappedType<OmniPrimitiveType>;
 
-const expectA = (a: PrimitiveOrWrapped, b: PrimitiveOrWrapped): void => {
+const expectA = (a: OmniPrimitiveType, b: OmniPrimitiveType): void => {
   expect(expectCommon(a, b).type).toEqual(a);
 };
 
-const expectB = (a: PrimitiveOrWrapped, b: PrimitiveOrWrapped): void => {
+const expectB = (a: OmniPrimitiveType, b: OmniPrimitiveType): void => {
   expect(expectCommon(a, b).type).toEqual(b);
 };
 
-const expectNone = (a: PrimitiveOrWrapped, b: PrimitiveOrWrapped): void => {
+const expectNone = (a: OmniPrimitiveType, b: OmniPrimitiveType): void => {
   expect(OmniUtil.getCommonDenominatorBetween(a, b, OMNI_GENERIC_FEATURES)).toBeUndefined();
 };
 
-const expectCommon = (a: PrimitiveOrWrapped, b: PrimitiveOrWrapped, features = OMNI_GENERIC_FEATURES): CommonDenominatorType<OmniType> => {
+const expectCommon = (a: OmniPrimitiveType, b: OmniPrimitiveType, features = OMNI_GENERIC_FEATURES): CommonDenominatorType<OmniType> => {
 
   return OmniUtil.getCommonDenominatorBetween(a, b, features)
     || {type: {kind: OmniTypeKind.UNKNOWN}, diffs: [TypeDifference.FUNDAMENTAL_TYPE]};

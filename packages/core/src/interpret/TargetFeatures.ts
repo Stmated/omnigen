@@ -2,6 +2,7 @@
 export interface TargetFeatures {
 
   literalTypes: boolean;
+  primitiveGenerics: boolean;
 }
 
 /**
@@ -10,4 +11,5 @@ export interface TargetFeatures {
  */
 export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   literalTypes: true,
+  primitiveGenerics: true,
 };

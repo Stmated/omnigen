@@ -48,71 +48,11 @@ describe('JavaInterpreter', () => {
     ]);
   });
 
-  test('ensureGenericsAreSpecialized', async () => {
-
-    const transformerOptions: ModelTransformOptions = {
-      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generificationBoxAllowed: false,
-      generificationWrapAllowed: true,
-    };
-
-    const targetOptions: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-    };
-
-    const interpreter = new JavaInterpreter(targetOptions);
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
-      DEFAULT_OPENRPC_OPTIONS,
-      transformerOptions,
-      targetOptions,
-    );
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
-
-    expect(root).toBeDefined();
-
-    const compilationUnits = JavaTestUtils.getCompilationUnits(root);
-    const fileNames = compilationUnits.map(it => it.object.name.value).sort();
-
-    expect(fileNames)
-      .toEqual([
-        'ErrorUnknown',
-        'ErrorUnknownError',
-        'GiveIntGetDoubleRequest',
-        'GiveIntGetDoubleRequestParams',
-        'GiveIntGetDoubleResponse',
-        'GiveNumberGetCharRequest',
-        'GiveNumberGetCharRequestParams',
-        'GiveNumberGetCharResponse',
-        'GiveStringGetStringRequest',
-        'GiveStringGetStringRequestParams',
-        'GiveStringGetStringResponse',
-        'JsonRpcError',
-        'JsonRpcErrorResponse',
-        'JsonRpcRequest',
-        'JsonRpcRequestParams',
-        'JsonRpcResponse',
-        'WrappedCharacter',
-        'WrappedDouble',
-        'WrappedInteger',
-      ]);
-
-    const givIntGetDoubleRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
-    expect(givIntGetDoubleRequestParams.object.extends).toBeDefined();
-
-    const type = givIntGetDoubleRequestParams.object.extends?.type.omniType;
-    if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind`);
-
-    expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
-    expect(type.targetIdentifiers).toHaveLength(1);
-    expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.WRAPPED);
-  });
-
   test('ensureGenericsAreBoxed', async () => {
 
     const transformerOptions: ModelTransformOptions = {
       ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
       generificationBoxAllowed: true,
-      generificationWrapAllowed: false,
     };
 
     const targetOptions: JavaOptions = {
@@ -176,7 +116,6 @@ describe('JavaInterpreter', () => {
     const transformerOptions: ModelTransformOptions = {
       ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
       generificationBoxAllowed: false,
-      generificationWrapAllowed: false,
     };
 
     const targetOptions: JavaOptions = {

@@ -8,12 +8,21 @@ import {
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
-  LiteralValue, StNodeWithChildren, Case, OmniProperty,
+  LiteralValue,
+  StNodeWithChildren,
+  Case,
+  OmniProperty,
+  UnknownKind,
+  OmniGenericTargetType,
+  OmniSuperTypeCapableType,
+  OmniInterfaceType,
+  OmniPotentialInterfaceType,
+  OmniSubtypeCapableType, OmniObjectType, OmniEnumType, OmniHardcodedReferenceType, OmniGenericSourceIdentifierType,
 } from '@omnigen/core';
 import {JavaAstUtils} from '../transform/index.js';
-import {JavaUtil} from '../util/index.js';
+import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
 import {JavaVisitor} from '../visit/index.js';
-import {JavaOptions, UnknownType} from '../options/index.js';
+import {JavaOptions} from '../options/index.js';
 
 export enum TokenType {
   ASSIGN,
@@ -49,8 +58,8 @@ export abstract class AbstractJavaNode extends AbstractStNode {
 
 }
 
-export class RegularType extends AbstractJavaNode {
-  omniType: OmniType;
+export class RegularType<T extends OmniType> extends AbstractJavaNode {
+  omniType: T;
   private _localName?: string | undefined;
   private _importName?: string | undefined;
   readonly implementation?: boolean | undefined;
@@ -76,7 +85,7 @@ export class RegularType extends AbstractJavaNode {
   }
 
   // TODO: Remove the restriction. It's not going to work. Need another way of doing it
-  constructor(omniType: OmniType, implementation?: boolean) {
+  constructor(omniType: T, implementation?: boolean) {
     super();
     this.omniType = omniType;
     this.implementation = implementation;
@@ -87,24 +96,26 @@ export class RegularType extends AbstractJavaNode {
   }
 }
 
-export type Type = RegularType | GenericType;
+export type Type<T extends OmniType> = RegularType<T> | GenericType;
 
 /**
  * TODO: Remove this, and move the functionality of deciding way to render to the renderer itself?
  *        That way RegularType and GenericType can just become Type, and skip the JavaAstUtils method
+ *
+ * TODO: Introduce generics to this? So we can be more restrictive
  */
 export class GenericType extends AbstractJavaNode {
-  baseType: RegularType;
-  genericArguments: Type[];
+  baseType: RegularType<OmniGenericTargetType | OmniHardcodedReferenceType>;
+  genericArguments: Type<OmniType>[];
 
   /**
    * A getter of kindness to make it compliant to the reglar Java.Type node.
    */
-  get omniType(): OmniType {
+  get omniType(): OmniGenericTargetType | OmniHardcodedReferenceType {
     return this.baseType.omniType;
   }
 
-  constructor(baseType: RegularType, genericArguments: Type[]) {
+  constructor(baseType: RegularType<OmniGenericTargetType | OmniHardcodedReferenceType>, genericArguments: Type<OmniType>[]) {
     super();
     this.baseType = baseType;
     this.genericArguments = genericArguments;
@@ -181,10 +192,10 @@ export class AnnotationKeyValuePairList extends AbstractJavaNode implements StNo
 }
 
 export class Annotation extends AbstractJavaNode {
-  type: RegularType;
+  type: RegularType<OmniType>;
   pairs?: AnnotationKeyValuePairList | undefined;
 
-  constructor(type: RegularType, pairs?: AnnotationKeyValuePairList) {
+  constructor(type: RegularType<OmniType>, pairs?: AnnotationKeyValuePairList) {
     super();
     this.type = type;
     this.pairs = pairs;
@@ -240,11 +251,11 @@ export class StaticMemberReference extends AbstractJavaNode {
 }
 
 export class ArgumentDeclaration extends AbstractJavaNode {
-  type: Type;
+  type: Type<OmniType>;
   identifier: Identifier;
   annotations?: AnnotationList | undefined;
 
-  constructor(type: Type, identifier: Identifier, annotations?: AnnotationList) {
+  constructor(type: Type<OmniType>, identifier: Identifier, annotations?: AnnotationList) {
     super();
     this.type = type;
     this.identifier = identifier;
@@ -499,9 +510,9 @@ export class FreeTextSection extends AbstractFreeText {
 }
 
 export class FreeTextTypeLink extends AbstractFreeText {
-  readonly type: Type;
+  readonly type: Type<OmniType>;
 
-  constructor(type: Type) {
+  constructor(type: Type<OmniType>) {
     super();
     this.type = type;
   }
@@ -512,10 +523,10 @@ export class FreeTextTypeLink extends AbstractFreeText {
 }
 
 export class FreeTextMethodLink extends AbstractFreeText {
-  readonly type: Type;
+  readonly type: Type<OmniType>;
   readonly method: MethodDeclarationSignature;
 
-  constructor(type: Type, method: MethodDeclarationSignature) {
+  constructor(type: Type<OmniType>, method: MethodDeclarationSignature) {
     super();
     this.type = type;
     this.method = method;
@@ -527,10 +538,10 @@ export class FreeTextMethodLink extends AbstractFreeText {
 }
 
 export class FreeTextPropertyLink extends AbstractFreeText {
-  readonly type: Type;
+  readonly type: Type<OmniType>;
   readonly property: OmniProperty;
 
-  constructor(type: Type, property: OmniProperty) {
+  constructor(type: Type<OmniType>, property: OmniProperty) {
     super();
     this.type = type;
     this.property = property;
@@ -599,14 +610,14 @@ export class CommentBlock extends AbstractJavaNode {
  */
 export class Field extends AbstractJavaNode {
   identifier: Identifier;
-  type: Type;
+  type: Type<OmniType>;
   initializer?: AbstractExpression | undefined;
   comments?: CommentBlock | undefined;
   modifiers: ModifierList;
   annotations?: AnnotationList | undefined;
   property?: OmniProperty;
 
-  constructor(type: Type, name: Identifier, modifiers?: ModifierList, initializer?: AbstractExpression, annotations?: AnnotationList) {
+  constructor(type: Type<OmniType>, name: Identifier, modifiers?: ModifierList, initializer?: AbstractExpression, annotations?: AnnotationList) {
     super();
     this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PRIVATE));
     this.type = type;
@@ -623,21 +634,21 @@ export class Field extends AbstractJavaNode {
 export class MethodDeclarationSignature extends AbstractJavaNode {
 
   identifier: Identifier;
-  type: Type;
+  type: Type<OmniType>;
   comments?: CommentBlock | undefined;
   annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
   parameters?: ArgumentDeclarationList | undefined;
-  throws?: TypeList;
+  throws?: TypeList<OmniType>;
 
   constructor(
     identifier: Identifier,
-    type: Type,
+    type: Type<OmniType>,
     parameters?: ArgumentDeclarationList,
     modifiers?: ModifierList,
     annotations?: AnnotationList,
     comments?: CommentBlock,
-    throws?: TypeList,
+    throws?: TypeList<OmniType>,
   ) {
     super();
     this.modifiers = modifiers ?? new ModifierList(new Modifier(ModifierType.PUBLIC));
@@ -736,11 +747,11 @@ export class DeclarationReference extends AbstractJavaNode {
 
 export class VariableDeclaration extends AbstractJavaNode {
   identifier: Identifier;
-  type?: Type | undefined;
+  type?: Type<OmniType> | undefined;
   initializer?: AbstractExpression | undefined;
   constant?: boolean | undefined;
 
-  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: Type | undefined, constant?: boolean) {
+  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: Type<OmniType> | undefined, constant?: boolean) {
     super();
     if (!type && !initializer) {
       throw new Error(`Either a type or an initializer must be given to the field declaration`);
@@ -832,7 +843,7 @@ export class FieldGetterSetter extends AbstractJavaNode {
   readonly setter: FieldBackedSetter;
 
   constructor(
-    type: Type,
+    type: Type<OmniType>,
     fieldIdentifier: Identifier,
     getterAnnotations?: AnnotationList,
     comments?: CommentBlock,
@@ -850,10 +861,10 @@ export class FieldGetterSetter extends AbstractJavaNode {
 }
 
 export class Cast extends AbstractJavaNode {
-  toType: Type;
+  toType: Type<OmniType>;
   expression: AbstractExpression;
 
-  constructor(toType: Type, expression: AbstractExpression) {
+  constructor(toType: Type<OmniType>, expression: AbstractExpression) {
     super();
     this.toType = toType;
     this.expression = expression;
@@ -864,10 +875,10 @@ export class Cast extends AbstractJavaNode {
   }
 }
 
-export class TypeList extends AbstractJavaNode implements StNodeWithChildren<Type> {
-  children: Type[];
+export class TypeList<T extends OmniType> extends AbstractJavaNode implements StNodeWithChildren<Type<T>> {
+  children: Type<T>[];
 
-  constructor(types: Type[]) {
+  constructor(types: Type<T>[]) {
     super();
     this.children = types;
   }
@@ -878,9 +889,9 @@ export class TypeList extends AbstractJavaNode implements StNodeWithChildren<Typ
 }
 
 export class ExtendsDeclaration extends AbstractJavaNode {
-  type: Type;
+  type: Type<OmniSuperTypeCapableType>;
 
-  constructor(type: Type) {
+  constructor(type: Type<OmniSuperTypeCapableType>) {
     super();
     this.type = type;
   }
@@ -891,9 +902,9 @@ export class ExtendsDeclaration extends AbstractJavaNode {
 }
 
 export class ImplementsDeclaration extends AbstractJavaNode {
-  types: TypeList;
+  types: TypeList<OmniPotentialInterfaceType>;
 
-  constructor(types: TypeList) {
+  constructor(types: TypeList<OmniPotentialInterfaceType>) {
     super();
     this.types = types;
   }
@@ -906,9 +917,12 @@ export class ImplementsDeclaration extends AbstractJavaNode {
 /**
  * TODO: Make the Type node generic, and possible to limit which OmniType is allowed: Class, Interface, Enum
  */
-export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
+export abstract class AbstractObjectDeclaration<T extends JavaSubTypeCapableType> extends AbstractJavaNode {
   name: Identifier;
-  type: Type;
+  /**
+   * TODO: Make the "Type" generic if possible, since we for example here can know what type it is.
+   */
+  type: Type<T>;
   comments?: CommentBlock;
   annotations?: AnnotationList;
   modifiers: ModifierList;
@@ -916,7 +930,7 @@ export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
   implements?: ImplementsDeclaration;
   body: Block;
 
-  protected constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
+  protected constructor(type: Type<T>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super();
     this.type = type;
     this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
@@ -930,11 +944,14 @@ export abstract class AbstractObjectDeclaration extends AbstractJavaNode {
 }
 
 export class CompilationUnit extends AbstractJavaNode {
-  object: AbstractObjectDeclaration;
+  /**
+   * TODO: This type should be a generic, but too many changes spread out
+   */
+  object: AbstractObjectDeclaration<JavaSubTypeCapableType>;
   packageDeclaration: PackageDeclaration;
   imports: ImportList;
 
-  constructor(packageDeclaration: PackageDeclaration, imports: ImportList, object: AbstractObjectDeclaration) {
+  constructor(packageDeclaration: PackageDeclaration, imports: ImportList, object: AbstractObjectDeclaration<JavaSubTypeCapableType>) {
     super();
     this.packageDeclaration = packageDeclaration;
     this.imports = imports;
@@ -1071,8 +1088,8 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   }
 }
 
-export class ClassDeclaration extends AbstractObjectDeclaration {
-  constructor(type: RegularType, name: Identifier, body: Block, modifiers?: ModifierList) {
+export class ClassDeclaration extends AbstractObjectDeclaration<JavaSubTypeCapableType> {
+  constructor(type: RegularType<JavaSubTypeCapableType>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 
@@ -1084,8 +1101,8 @@ export class ClassDeclaration extends AbstractObjectDeclaration {
 /**
  * TODO: Remove this and instead just add a boolean to the ClassDeclaration and GenericClassDeclaration?
  */
-export class InterfaceDeclaration extends AbstractObjectDeclaration {
-  constructor(type: Type, name: Identifier, body: Block, modifiers?: ModifierList) {
+export class InterfaceDeclaration extends AbstractObjectDeclaration<OmniPotentialInterfaceType> {
+  constructor(type: Type<OmniPotentialInterfaceType>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 
@@ -1094,10 +1111,13 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration {
   }
 }
 
+/**
+ * TODO: Can this be removed? Should it even be needed to be separated from the regular ClassDeclaration?
+ */
 export class GenericClassDeclaration extends ClassDeclaration {
   typeList: GenericTypeDeclarationList;
 
-  constructor(name: Identifier, type: RegularType, typeList: GenericTypeDeclarationList, body: Block) {
+  constructor(name: Identifier, type: RegularType<JavaSubTypeCapableType>, typeList: GenericTypeDeclarationList, body: Block) {
     super(type, name, body);
     this.typeList = typeList;
   }
@@ -1108,13 +1128,15 @@ export class GenericClassDeclaration extends ClassDeclaration {
 }
 
 export class GenericTypeDeclaration extends AbstractStNode {
+  sourceIdentifier?: OmniGenericSourceIdentifierType | undefined;
   name: Identifier;
-  lowerBounds?: AbstractStNode | undefined;
-  upperBounds?: AbstractStNode | undefined;
+  lowerBounds?: Type<OmniType> | undefined;
+  upperBounds?: Type<OmniType> | undefined;
 
-  constructor(name: Identifier, lowerBounds?: AbstractStNode, upperBounds?: AbstractStNode) {
+  constructor(name: Identifier, sourceIdentifier?: OmniGenericSourceIdentifierType, lowerBounds?: Type<OmniType>, upperBounds?: Type<OmniType>) {
     super();
     this.name = name;
+    this.sourceIdentifier = sourceIdentifier;
     this.lowerBounds = lowerBounds;
     this.upperBounds = upperBounds;
   }
@@ -1137,35 +1159,9 @@ export class GenericTypeDeclarationList extends AbstractJavaNode {
   }
 }
 
-export class GenericTypeUse extends AbstractStNode {
-  name: Identifier;
-
-  constructor(name: Identifier) {
-    super();
-    this.name = name;
-  }
-
-  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitGenericTypeUse(this, visitor);
-  }
-}
-
-export class GenericTypeUseList extends AbstractJavaNode {
-  types: GenericTypeUse[];
-
-  constructor(types: GenericTypeUse[]) {
-    super();
-    this.types = types;
-  }
-
-  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitGenericTypeUseList(this, visitor);
-  }
-}
-
 // Simplify so we don't give block, but enum entries?
-export class EnumDeclaration extends AbstractObjectDeclaration {
-  constructor(type: RegularType, name: Identifier, body: Block, modifiers?: ModifierList) {
+export class EnumDeclaration extends AbstractObjectDeclaration<OmniEnumType> {
+  constructor(type: RegularType<OmniEnumType>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 
@@ -1219,10 +1215,27 @@ export class IfElseStatement extends AbstractJavaNode {
   }
 }
 
-export class ImportStatement extends AbstractJavaNode {
-  type: RegularType;
+export class TernaryExpression extends AbstractJavaNode {
+  predicate: Predicate;
+  passing: AbstractExpression;
+  failing: AbstractExpression;
 
-  constructor(type: RegularType) {
+  constructor(condition: Predicate, passing: AbstractExpression, failing: AbstractExpression) {
+    super();
+    this.predicate = condition;
+    this.passing = passing;
+    this.failing = failing;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitTernaryExpression(this, visitor);
+  }
+}
+
+export class ImportStatement extends AbstractJavaNode {
+  type: RegularType<OmniType>;
+
+  constructor(type: RegularType<OmniType>) {
     super();
     this.type = type;
   }
@@ -1293,10 +1306,10 @@ export class MethodCall extends AbstractJavaNode {
  * TODO: Make this inherit from MethodCall?
  */
 export class NewStatement extends AbstractJavaNode {
-  type: Type;
+  type: Type<OmniType>;
   constructorArguments?: ArgumentList | undefined;
 
-  constructor(type: Type, constructorArguments?: ArgumentList) {
+  constructor(type: Type<OmniType>, constructorArguments?: ArgumentList) {
     super();
     this.type = type;
     this.constructorArguments = constructorArguments;
@@ -1334,9 +1347,9 @@ export class HardCoded extends AbstractJavaNode {
 }
 
 export class ClassName extends AbstractExpression {
-  type: Type;
+  type: Type<OmniType>;
 
-  constructor(type: Type) {
+  constructor(type: Type<OmniType>) {
     super();
     this.type = type;
   }
@@ -1349,7 +1362,7 @@ export class ClassName extends AbstractExpression {
 export class ClassReference extends AbstractExpression {
   className: ClassName;
 
-  constructor(type: Type) {
+  constructor(type: Type<OmniType>) {
     super();
     this.className = new ClassName(type);
   }
@@ -1406,7 +1419,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
 
       const argumentDeclarationList = new ArgumentDeclarationList();
       let conversionExpression: AbstractExpression;
-      if (options.unknownType == UnknownType.JSON) {
+      if (options.unknownType == UnknownKind.MUTABLE_OBJECT) {
         const objectMapperReference = new Identifier('objectMapper');
         const objectMapperDeclaration = new ArgumentDeclaration(
           new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.ObjectMapper'}),

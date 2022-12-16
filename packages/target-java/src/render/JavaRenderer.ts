@@ -2,7 +2,7 @@ import {
   AbstractStNode,
   AstVisitor,
   CompilationUnitRenderCallback,
-  OmniPrimitiveKind,
+  OmniPrimitiveKind, OmniType,
   OmniUtil,
   RealOptions,
   Renderer,
@@ -13,6 +13,7 @@ import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast/in
 import {JavaVisitFn, JavaVisitor} from '../visit/index.js';
 import {JavaOptions} from '../options/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
+import {JavaSubTypeCapableType} from '../util/index.js';
 
 type JavaRendererVisitFn<N extends AbstractStNode> = JavaVisitFn<N, string>;
 
@@ -159,7 +160,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
 
   visitCommonTypeDeclaration(
     visitor: JavaVisitor<string>,
-    node: Java.AbstractObjectDeclaration,
+    node: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
     typeString: string,
     generics?: GenericTypeDeclarationList,
   ): VisitResult<string> {
@@ -219,19 +220,6 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     }
 
     return `<${genericTypes.join(', ')}>`;
-  };
-
-  visitGenericTypeUseList: JavaRendererVisitFn<Java.GenericTypeUseList> = (node, visitor) => {
-    const genericTypes = node.types.map(it => this.render(it, visitor));
-    if (genericTypes.length == 0) {
-      return '';
-    }
-
-    return genericTypes;
-  };
-
-  visitGenericTypeUse: JavaRendererVisitFn<Java.GenericTypeUse> = (node, visitor) => {
-    return this.render(node.name, visitor);
   };
 
   visitCommentBlock: JavaRendererVisitFn<Java.CommentBlock> = (node, visitor) => {
@@ -490,13 +478,14 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     return node.children.map(it => this.render(it, visitor)).join(', ');
   };
 
-  visitTypeList: JavaRendererVisitFn<Java.TypeList> = (node, visitor) => {
+  visitTypeList: JavaRendererVisitFn<Java.TypeList<OmniType>> = (node, visitor) => {
     return node.children.map(it => this.render(it, visitor)).join(', ');
   };
 
-  visitRegularType: JavaRendererVisitFn<Java.RegularType> = node => {
+  visitRegularType: JavaRendererVisitFn<Java.RegularType<OmniType>> = node => {
     const localName = node.getLocalName();
     if (localName) {
+      // return `${localName} /*${OmniUtil.describe(node.omniType)}*/`;
       return localName;
     } else {
       throw new Error(`Local name must be set. Package name transformer not ran for ${OmniUtil.describe(node.omniType)}`);
@@ -508,7 +497,14 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     const baseTypeString = this.render(node.baseType, visitor);
     const genericArgumentStrings = node.genericArguments.map(it => this.render(it, visitor));
 
-    return `${baseTypeString}<${genericArgumentStrings.join(', ')}>`;
+    if (genericArgumentStrings.length == 0) {
+
+      // There is a possibility that the generic arguments have been filtered away by a transformer.
+      // But it was never replaced with a RegularType. But we'll be nice and just render it as one.
+      return `${baseTypeString}`;
+    } else {
+      return `${baseTypeString}<${genericArgumentStrings.join(', ')}>`;
+    }
   };
 
   visitModifierList: JavaRendererVisitFn<Java.ModifierList> = (node, visitor) => {
@@ -556,6 +552,15 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     const el = node.elseBlock ? ` else {\n${this.render(node.elseBlock)}}\n` : '';
 
     return `${ifs.join('else ').trim()}${el}`;
+  };
+
+  visitTernaryExpression: JavaRendererVisitFn<Java.TernaryExpression> = (node, visitor) => {
+
+    const condition = this.render(node.predicate, visitor);
+    const passing = this.render(node.passing);
+    const failing = this.render(node.failing);
+
+    return `((${condition}) ? ${passing} : ${failing})`;
   };
 
   visitRuntimeTypeMapping: JavaRendererVisitFn<Java.RuntimeTypeMapping> = (node, visitor) => {

@@ -16,6 +16,7 @@ import {
   ReorderMembersTransformer,
   AddThrowsForKnownMethodsAstTransformer,
   AddAbstractAccessorsAstTransformer,
+  AddSubTypeHintsAstTransformer, SimplifyGenericsAstTransformer,
 } from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -49,8 +50,10 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
     this.registerTransformer(new AddCommentsAstTransformer());
     this.registerTransformer(new AddJakartaValidationAstTransformer());
     this.registerTransformer(new AddGeneratedAnnotationAstTransformer());
+    this.registerTransformer(new AddSubTypeHintsAstTransformer());
     this.registerTransformer(new InnerTypeCompressionAstTransformer());
     this.registerTransformer(new AddThrowsForKnownMethodsAstTransformer());
+    this.registerTransformer(new SimplifyGenericsAstTransformer())
     this.registerTransformer(new PackageResolverAstTransformer());
     this.registerTransformer(new ReorderMembersTransformer());
   }

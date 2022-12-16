@@ -2,7 +2,6 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJava
 import {
   Case,
   OmniPrimitiveKind,
-  OmniPrimitiveValueMode,
   OmniProperty, OmniType,
   OmniTypeKind,
   OmniUtil, RealOptions,
@@ -86,7 +85,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
       if (property.type.primitiveKind == OmniPrimitiveKind.NULL) {
         field.initializer = new Java.Literal(property.type.value ?? null, property.type.primitiveKind);
       } else if (property.type.value !== undefined) {
-        if (options.immutableModels && property.type.valueMode == OmniPrimitiveValueMode.DEFAULT) {
+        if (options.immutableModels && !property.type.literal) {
 
           // If the model is immutable and the value given is just a default,
           // then it will have to be given through the constructor in the constructor transformer.

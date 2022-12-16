@@ -1,11 +1,11 @@
 import {
-  ExternalSyntaxTree,
+  ExternalSyntaxTree, OmniObjectType,
   OmniType,
   OmniUtil,
   RealOptions,
   VisitorFactoryManager,
 } from '@omnigen/core';
-import {JavaUtil, TypeNameInfo} from '../util/index.js';
+import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util/index.js';
 import {JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
@@ -16,12 +16,12 @@ const logger = LoggerFactory.create(import.meta.url);
 interface CompilationUnitInfo {
   cu: Java.CompilationUnit;
   packageName: string;
-  addedTypeNodes: Java.RegularType[];
+  addedTypeNodes: Java.RegularType<OmniType>[];
   importNameMap: Map<OmniType, string>;
 }
 
 interface ObjectInfo {
-  object: Java.AbstractObjectDeclaration;
+  object: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>;
 }
 
 export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
@@ -78,10 +78,6 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclaration(node, visitor);
       },
 
-      // visitGenericTypeUse: node => {
-      //   node.
-      // },
-
       visitRegularType: node => {
 
         const cuInfo = cuInfoStack[cuInfoStack.length - 1];
@@ -112,7 +108,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private setLocalNameAndImportForUnknownTypeName(
-    node: Java.RegularType,
+    node: Java.RegularType<OmniType>,
     cuInfo: CompilationUnitInfo,
     typeNameMap: Map<OmniType, TypeNameInfo>,
     options: RealOptions<JavaOptions>,
@@ -141,7 +137,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
   private setLocalNameAndAddImportForKnownTypeName(
     typeNameInfo: TypeNameInfo,
-    node: Java.RegularType,
+    node: Java.RegularType<OmniType>,
     cuInfo: CompilationUnitInfo,
     options: RealOptions<JavaOptions>,
   ): void {
@@ -175,7 +171,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     cuInfo: CompilationUnitInfo,
     options: RealOptions<JavaOptions>,
     nodeImportName: string,
-    node: Java.RegularType,
+    node: Java.RegularType<OmniType>,
   ): void {
 
     const existing = cuInfo.cu.imports.children.find(it => {

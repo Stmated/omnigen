@@ -1,5 +1,6 @@
-import {AstRootNode, AstVisitor, VisitFn, VisitResult, AbstractStNode} from '@omnigen/core';
+import {AstRootNode, AstVisitor, VisitFn, VisitResult, AbstractStNode, OmniType} from '@omnigen/core';
 import * as Java from '../ast/index.js';
+import {JavaSubTypeCapableType} from '../util/index.js';
 
 export type JavaVisitFn<in N extends AbstractStNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
@@ -124,6 +125,12 @@ export class JavaVisitor<R> implements AstVisitor<R> {
       node.ifStatements.map(it => it.visit(visitor))
         .concat(node.elseBlock?.visit(visitor));
 
+    this.visitTernaryExpression = (node, visitor) => [
+      node.predicate.visit(visitor),
+      node.passing.visit(visitor),
+      node.failing.visit(visitor),
+    ];
+
     this.visitImportStatement = (node, visitor) => node.type.visit(visitor);
 
     this.visitImportList = (node, visitor) => node.children.map(it => it.visit(visitor));
@@ -238,8 +245,6 @@ export class JavaVisitor<R> implements AstVisitor<R> {
         node.upperBounds?.visit(visitor),
       ];
     };
-    this.visitGenericTypeUseList = (node, visitor) => node.types.map(it => it.visit(visitor));
-    this.visitGenericTypeUse = () => undefined;
     this.visitInterfaceDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
     this.visitEnumDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
     this.visitFieldReference = () => undefined;
@@ -329,7 +334,7 @@ export class JavaVisitor<R> implements AstVisitor<R> {
 
   visitorJava: JavaVisitor<R>;
   visitRootNode: VisitFn<AstRootNode, R, AstVisitor<R>>;
-  visitRegularType: JavaVisitFn<Java.RegularType, R>;
+  visitRegularType: JavaVisitFn<Java.RegularType<OmniType>, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;
   visitToken: JavaVisitFn<Java.JavaToken, R>;
@@ -358,10 +363,11 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitAbstractMethodDeclaration: JavaVisitFn<Java.AbstractMethodDeclaration, R>;
   visitExtendsDeclaration: JavaVisitFn<Java.ExtendsDeclaration, R>;
   visitImplementsDeclaration: JavaVisitFn<Java.ImplementsDeclaration, R>;
-  visitTypeList: JavaVisitFn<Java.TypeList, R>;
+  visitTypeList: JavaVisitFn<Java.TypeList<OmniType>, R>;
   visitLiteral: JavaVisitFn<Java.Literal, R>;
   visitIfStatement: JavaVisitFn<Java.IfStatement, R>;
   visitIfElseStatement: JavaVisitFn<Java.IfElseStatement, R>;
+  visitTernaryExpression: JavaVisitFn<Java.TernaryExpression, R>;
   visitImportStatement: JavaVisitFn<Java.ImportStatement, R>;
   visitImportList: JavaVisitFn<Java.ImportList, R>;
   visitMethodCall: JavaVisitFn<Java.MethodCall, R>;
@@ -381,13 +387,11 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitModifierList: JavaVisitFn<Java.ModifierList, R>;
   visitFieldGetterSetter: JavaVisitFn<Java.FieldGetterSetter, R>;
   visitCast: JavaVisitFn<Java.Cast, R>;
-  visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
+  visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration<JavaSubTypeCapableType>, R>;
   visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
   visitGenericClassDeclaration: JavaVisitFn<Java.GenericClassDeclaration, R>;
   visitGenericTypeDeclarationList: JavaVisitFn<Java.GenericTypeDeclarationList, R>;
   visitGenericTypeDeclaration: JavaVisitFn<Java.GenericTypeDeclaration, R>;
-  visitGenericTypeUseList: JavaVisitFn<Java.GenericTypeUseList, R>;
-  visitGenericTypeUse: JavaVisitFn<Java.GenericTypeUse, R>;
   visitInterfaceDeclaration: JavaVisitFn<Java.InterfaceDeclaration, R>;
   visitEnumDeclaration: JavaVisitFn<Java.EnumDeclaration, R>;
   visitEnumItem: JavaVisitFn<Java.EnumItem, R>;

@@ -9,7 +9,6 @@ test('lombok', async () => {
     ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
     generifyTypes: false,
     elevateProperties: false,
-    generificationWrapAllowed: true,
   };
 
   const targetOptions: JavaOptions = {
@@ -19,7 +18,10 @@ test('lombok', async () => {
     fieldAccessorMode: FieldAccessorMode.LOMBOK,
   };
 
-  const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', DEFAULT_OPENRPC_OPTIONS, transformOptions, targetOptions);
+  const fileContents = await JavaTestUtils.getFileContentsFromFile(
+    'multiple-inheritance.json',
+    DEFAULT_OPENRPC_OPTIONS, transformOptions, targetOptions,
+  );
 
   const inClass = JavaTestUtils.getParsedContent(fileContents, 'In.java');
   expect(inClass.foundImports).toEqual([

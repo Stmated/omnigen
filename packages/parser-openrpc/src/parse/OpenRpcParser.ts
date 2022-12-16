@@ -25,7 +25,6 @@ import {
   OmniPayloadPathQualifier,
   OmniPrimitiveKind,
   OmniPrimitiveType,
-  OmniPrimitiveValueMode,
   OmniProperty,
   OmniPropertyOwner,
   OmniServer,
@@ -456,14 +455,6 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
       ? `ErrorUnknown`
       : `${parentName}Error${error.code}`;
 
-    const errorPropertyType: OmniObjectType = {
-      kind: OmniTypeKind.OBJECT,
-      name: `${typeName}Error`,
-      additionalProperties: false,
-      properties: [],
-      debug: `Created by ${this.doc.info.title}`,
-    };
-
     if (!this._jsonRpcErrorResponseClass) {
 
       const className = 'JsonRpcErrorResponse';
@@ -495,75 +486,6 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
       this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcErrorInstanceClass);
     }
 
-    errorPropertyType.extendedBy = this._jsonRpcErrorInstanceClass;
-
-    let codeType: OmniPrimitiveType;
-    if (isUnknownCode) {
-      codeType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER,
-        nullable: true,
-      };
-    } else {
-      codeType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER,
-        nullable: false,
-        value: error.code,
-        valueMode: OmniPrimitiveValueMode.LITERAL,
-      };
-    }
-
-    errorPropertyType.properties = [
-      {
-        name: 'code',
-        type: codeType,
-        owner: errorPropertyType,
-      },
-      {
-        name: 'message',
-        type: {
-          kind: OmniTypeKind.PRIMITIVE,
-          valueDefault: error.message,
-          valueMode: OmniPrimitiveValueMode.DEFAULT,
-          primitiveKind: OmniPrimitiveKind.STRING,
-        },
-        owner: errorPropertyType,
-      },
-    ];
-
-    if (error.data || !this._options.jsonRpcErrorDataSchema) {
-      // TODO: Check if "data" is a schema object and then create a type, instead of making it an unknown constant?
-      errorPropertyType.properties.push({
-        name: this._options.jsonRpcErrorPropertyName,
-        type: this._options.jsonRpcErrorDataSchema || {
-          kind: OmniTypeKind.UNKNOWN,
-          valueDefault: error.data,
-        },
-        owner: errorPropertyType,
-      });
-    } else {
-      errorPropertyType.properties.push({
-        name: this._options.jsonRpcErrorPropertyName,
-        type: this._options.jsonRpcErrorDataSchema,
-        owner: errorPropertyType,
-      });
-    }
-
-    if (this._options.jsonRpcErrorNameIncluded) {
-
-      errorPropertyType.properties.push({
-        name: 'name',
-        type: {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
-          valueDefault: 'JSONRPCError',
-          valueMode: OmniPrimitiveValueMode.LITERAL,
-        },
-        owner: errorPropertyType,
-      });
-    }
-
     const errorType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
       name: typeName,
@@ -574,18 +496,9 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
       debug: `Created by ${this.doc.info.title}`,
     };
 
-    OpenRpcParser.addJsonRpcErrorProperties(errorType, this._options);
-
-    const errorProperty: OmniProperty = {
-      name: 'error',
-      type: errorPropertyType,
-      owner: errorType,
-      required: true,
-    };
-
-    errorType.properties = [
-      errorProperty,
-    ];
+    OpenRpcParser.addJsonRpcErrorProperties(
+      errorType, error, isUnknownCode, this._jsonRpcErrorInstanceClass, this.doc, this._options,
+    );
 
     const qualifiers: OmniPayloadPathQualifier[] = [{
       path: ['error'],
@@ -613,6 +526,10 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
 
   private static addJsonRpcErrorProperties(
     target: OmniObjectType,
+    error: ErrorObject,
+    isUnknownCode: boolean,
+    errorPropertySuperType: OmniObjectType,
+    doc: OpenrpcDocument,
     options: RealOptions<OpenRpcParserOptions>,
   ): void {
 
@@ -626,6 +543,98 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
         owner: target,
       });
     }
+
+    const errorPropertyType: OmniObjectType = {
+      kind: OmniTypeKind.OBJECT,
+      name: {
+        name: target.name,
+        suffix: 'Error',
+      },
+      additionalProperties: false,
+      properties: [],
+      debug: `Created by ${doc.info.title}`,
+      extendedBy: errorPropertySuperType,
+    };
+
+    let codeType: OmniPrimitiveType;
+    if (isUnknownCode) {
+      codeType = {
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.INTEGER,
+        nullable: true,
+        value: -1,
+        literal: false,
+      };
+    } else {
+      codeType = {
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.INTEGER,
+        nullable: false,
+        value: error.code,
+        literal: true,
+      };
+    }
+
+    const messageType: OmniPrimitiveType = {
+      kind: OmniTypeKind.PRIMITIVE,
+      value: error.message,
+      literal: false,
+      primitiveKind: OmniPrimitiveKind.STRING,
+    };
+
+    errorPropertyType.properties.push({
+      name: 'code',
+      type: codeType,
+      owner: errorPropertyType,
+    });
+    errorPropertyType.properties.push({
+      name: 'message',
+      type: messageType,
+      owner: errorPropertyType,
+    });
+
+    if (error.data || !options.jsonRpcErrorDataSchema) {
+      // TODO: Check if "data" is a schema object and then create a type, instead of making it an unknown constant?
+      errorPropertyType.properties.push({
+        name: options.jsonRpcErrorPropertyName,
+        type: options.jsonRpcErrorDataSchema || {
+          kind: OmniTypeKind.UNKNOWN,
+          valueDefault: error.data,
+        },
+        owner: errorPropertyType,
+      });
+    } else {
+      errorPropertyType.properties.push({
+        name: options.jsonRpcErrorPropertyName,
+        type: options.jsonRpcErrorDataSchema,
+        owner: errorPropertyType,
+      });
+    }
+
+    if (options.jsonRpcErrorNameIncluded) {
+
+      const nameType: OmniPrimitiveType = {
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.STRING,
+        value: 'JSONRPCError',
+        literal: true,
+      };
+
+      errorPropertyType.properties.push({
+        name: 'name',
+        type: nameType,
+        owner: errorPropertyType,
+      });
+    }
+
+    const errorProperty: OmniProperty = {
+      name: 'error',
+      type: errorPropertyType,
+      owner: target,
+      required: true,
+    };
+
+    target.properties.push(errorProperty);
 
     target.properties.push({
       name: 'result',
@@ -856,7 +865,7 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING,
       value: method.name,
-      valueMode: OmniPrimitiveValueMode.LITERAL,
+      literal: true,
       nullable: false,
     };
 
@@ -871,7 +880,7 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
 
       if (hasConstantVersion) {
         requestJsonRpcType.value = options.jsonRpcVersion;
-        requestJsonRpcType.valueMode = OmniPrimitiveValueMode.DEFAULT;
+        requestJsonRpcType.literal = false;
       }
 
       targetObject.properties.push({
@@ -933,7 +942,7 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
 
       if (hasConstantVersion) {
         responseJsonRpcPropertyType.value = options.jsonRpcVersion;
-        responseJsonRpcPropertyType.valueMode = OmniPrimitiveValueMode.LITERAL;
+        responseJsonRpcPropertyType.literal = true;
       }
 
       target.properties.push({

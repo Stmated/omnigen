@@ -2,7 +2,6 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJava
 import {
   AbortVisitingWithResult,
   AbstractStNode,
-  OmniPrimitiveValueMode,
   OmniTypeKind,
   VisitorFactoryManager,
   VisitResultFlattener,
@@ -71,7 +70,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
           ? new Java.Identifier(JavaUtil.getGetterName(node.property?.propertyName, type))
           : undefined;
 
-        if (type.kind == OmniTypeKind.PRIMITIVE && type.valueMode == OmniPrimitiveValueMode.LITERAL) {
+        if (type.kind == OmniTypeKind.PRIMITIVE && type.literal) {
 
           const literalMethod = new Java.MethodDeclaration(
             new Java.MethodDeclarationSignature(

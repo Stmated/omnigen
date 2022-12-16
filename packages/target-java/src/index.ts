@@ -12,4 +12,5 @@ export * as Java from './ast/index.js';
 export const JAVA_FEATURES: Readonly<TargetFeatures> = {
   ...OMNI_GENERIC_FEATURES,
   literalTypes: false,
+  primitiveGenerics: false,
 };

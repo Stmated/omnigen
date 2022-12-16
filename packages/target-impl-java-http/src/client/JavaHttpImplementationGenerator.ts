@@ -1,15 +1,16 @@
 import {ImplementationGenerator} from './ImplementationGenerator.js';
 import {
+  AddAbstractAccessorsAstTransformer,
+  AddAccessorsForFieldsAstTransformer,
   AddConstructorJavaAstTransformer,
   AddFieldsAstTransformer,
-  AddAccessorsForFieldsAstTransformer,
   AddThrowsForKnownMethodsAstTransformer,
   Java,
+  JAVA_FEATURES,
   JavaAstUtils,
   JavaOptions,
   PackageResolverAstTransformer,
   ReorderMembersTransformer,
-  AddAbstractAccessorsAstTransformer, JAVA_FEATURES,
 } from '@omnigen/target-java';
 import {ImplementationArgs} from './ImplementationArgs.js';
 import {
@@ -27,6 +28,7 @@ import {
   OmniTypeKind,
   OmniUtil,
   RealOptions,
+  UnknownKind,
 } from '@omnigen/core';
 import {ImplementationOptions} from './ImplementationOptions.js';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -290,7 +292,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     );
 
     const requestArgumentDeclaration = new Java.ArgumentDeclaration(
-      new Java.RegularType({kind: OmniTypeKind.UNKNOWN, isAny: true}, false),
+      new Java.RegularType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.MUTABLE_OBJECT}, false),
       requestIdentifier,
     );
 
@@ -392,7 +394,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const callMethod = new Java.MethodDeclaration(
       new Java.MethodDeclarationSignature(
         new Java.Identifier('_call'),
-        new Java.RegularType({kind: OmniTypeKind.UNKNOWN, isAny: false}, false),
+        new Java.RegularType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.OBJECT}, false),
         new Java.ArgumentDeclarationList(
           new Java.ArgumentDeclaration(
             new Java.RegularType({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}),
@@ -535,7 +537,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     fromValueDeclaration: Java.VariableDeclaration | Java.ArgumentDeclaration,
     type: OmniType,
     cuBody: Java.Block,
-    throws: Java.TypeList,
+    throws: Java.TypeList<OmniType>,
   ): Java.Statement[] {
 
     const result = this.createConverterMethodCall(converterField, fromValueDeclaration, type);
@@ -564,9 +566,9 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     ];
   }
 
-  private readonly _typeToExceptionMap = new Map<OmniType, Java.RegularType>();
+  private readonly _typeToExceptionMap = new Map<OmniType, Java.RegularType<OmniType>>();
 
-  private getOrCreateExceptionAstType(type: OmniType, cuBody: Java.Block): Java.RegularType {
+  private getOrCreateExceptionAstType(type: OmniType, cuBody: Java.Block): Java.RegularType<OmniType> {
 
     const existing = this._typeToExceptionMap.get(type);
     if (existing) {
@@ -640,7 +642,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     args: JavaHttpArgs,
     regularResponses: OmniOutput[],
     errorResponses: OmniOutput[],
-  ): Java.Type {
+  ): Java.Type<OmniType> {
 
     if (regularResponses.length == 1) {
 

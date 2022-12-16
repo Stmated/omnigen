@@ -1,20 +1,16 @@
 import {
   Booleanish,
+  Option,
+  OptionResolvers,
+  PackageOptions,
+  TargetOptions,
+  PackageResolverOptionsParser,
+  OptionsUtil,
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
   TRANSFORM_OPTIONS_RESOLVER,
-  Option,
-  OptionResolvers,
-  OptionsUtil,
-  PackageOptions,
-  PackageResolverOptionsParser, TargetOptions,
+  UnknownKind, TARGET_OPTION_RESOLVERS,
 } from '@omnigen/core';
-
-export enum UnknownType {
-  MAP,
-  JSON,
-  OBJECT,
-}
 
 export enum FieldAccessorMode {
   NONE,
@@ -25,7 +21,7 @@ export enum FieldAccessorMode {
 export interface JavaOptions extends TargetOptions, PackageOptions {
   immutableModels: Option<Booleanish, boolean>;
   includeAlwaysNullProperties: Option<Booleanish, boolean>;
-  unknownType: UnknownType;
+  unknownType: UnknownKind;
   includeLinksOnType: Option<Booleanish, boolean>;
   includeLinksOnProperty: Option<Booleanish, boolean>;
   interfaceNamePrefix: string,
@@ -42,10 +38,9 @@ export interface JavaOptions extends TargetOptions, PackageOptions {
 export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
   ...DEFAULT_PACKAGE_OPTIONS,
   ...DEFAULT_TARGET_OPTIONS,
-  // ...DEFAULT_GENERIC_TARGET_OPTIONS,
   immutableModels: true,
   includeAlwaysNullProperties: false,
-  unknownType: UnknownType.JSON,
+  unknownType: UnknownKind.MUTABLE_OBJECT,
   includeLinksOnType: false,
   includeLinksOnProperty: true,
   packageResolver: undefined,
@@ -62,6 +57,7 @@ export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
 
 export const JAVA_OPTIONS_RESOLVER: OptionResolvers<JavaOptions> = {
   ...TRANSFORM_OPTIONS_RESOLVER,
+  ...TARGET_OPTION_RESOLVERS,
   packageResolver: v => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,

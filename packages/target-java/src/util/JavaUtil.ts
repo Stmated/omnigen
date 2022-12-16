@@ -10,18 +10,18 @@ import {
   OmniPotentialInterfaceType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
-  OmniPrimitiveValueMode,
   OmniProperty,
   OmniSubtypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   OmniUtil,
-  PackageOptions, PropertyUtil,
+  PackageOptions,
   RealOptions,
   VisitorFactoryManager,
+  UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions, UnknownType} from '../options/index.js';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options/index.js';
 import {JavaVisitor} from '../visit/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -172,7 +172,7 @@ export class JavaUtil {
           // Return the common denominator instead. That is this static type array's "representation" in the code.
           javaType = JavaUtil.getName({...args, type: args.type.commonDenominator});
         } else {
-          javaType = this.getUnknownType(UnknownType.OBJECT);
+          javaType = this.getUnknownType(UnknownKind.OBJECT);
         }
 
         if (args.withSuffix === false) {
@@ -191,11 +191,8 @@ export class JavaUtil {
           return JavaUtil.getCleanedFullyQualifiedName(primitiveKindName, args.withSuffix);
         }
       }
-      case OmniTypeKind.WRAPPED: {
-        return `Wrapped${JavaUtil.getName({...args, type: args.type.of, boxed: true})}`;
-      }
       case OmniTypeKind.UNKNOWN: {
-        const unknownType = args.type.isAny ? UnknownType.OBJECT : args.options?.unknownType;
+        const unknownType = args.type.unknownKind ?? args.options?.unknownType;
         const unknownName = JavaUtil.getUnknownType(unknownType);
         if (!args.withPackage) {
           return JavaUtil.cleanClassName(unknownName, args.withSuffix);
@@ -440,14 +437,16 @@ export class JavaUtil {
     }
   }
 
-  private static getUnknownType(unknownType: UnknownType = DEFAULT_JAVA_OPTIONS.unknownType): string {
+  private static getUnknownType(unknownType: UnknownKind = DEFAULT_JAVA_OPTIONS.unknownType): string {
     switch (unknownType) {
-      case UnknownType.JSON:
+      case UnknownKind.MUTABLE_OBJECT:
         return 'com.fasterxml.jackson.databind.JsonNode';
-      case UnknownType.MAP:
+      case UnknownKind.MAP:
         return 'java.util.Map<String, Object>';
-      case UnknownType.OBJECT:
+      case UnknownKind.OBJECT:
         return 'java.lang.Object';
+      case UnknownKind.WILDCARD:
+        return '?';
     }
   }
 
@@ -501,7 +500,7 @@ export class JavaUtil {
 
   public static getConstructorRequirements(
     root: AstRootNode,
-    node: Java.AbstractObjectDeclaration,
+    node: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
     followSupertype = false,
   ): [Java.Field[], Java.ArgumentDeclaration[]] {
 
@@ -608,7 +607,7 @@ export class JavaUtil {
   }
 
   public static getSpecifiedDefaultValue(type: OmniType): LiteralValue | undefined {
-    if (type.kind == OmniTypeKind.PRIMITIVE && type.valueMode == OmniPrimitiveValueMode.DEFAULT) {
+    if (type.kind == OmniTypeKind.PRIMITIVE && !type.literal) {
       return type.value;
     } else {
       return undefined;

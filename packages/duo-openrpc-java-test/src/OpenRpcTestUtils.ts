@@ -71,7 +71,7 @@ export class OpenRpcTestUtils {
 
         const dereferencer = await Dereferencer.create<JSONSchema7>('', '', errorSchema);
         const jsonSchemaParser = new JsonSchemaParser<JSONSchema7, OpenRpcParserOptions>(dereferencer, openRpcRealOptions);
-        const errorType = jsonSchemaParser.transformErrorDataSchemaToOmniType(dereferencer.getFirstRoot());
+        const errorType = jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', dereferencer.getFirstRoot());
 
         openRpcRealOptions.jsonRpcErrorDataSchema = errorType;
       }

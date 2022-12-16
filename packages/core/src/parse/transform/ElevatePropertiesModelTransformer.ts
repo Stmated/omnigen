@@ -65,19 +65,19 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer<P
       PropertyDifference.SIGNATURE,
     ];
 
+    if (targetFeatures.literalTypes) {
+
+      // If the target allows literal types, then we need to care about the visible signature type,
+      // and not just about the underlying fundamental type and/or isomorphic type differences.
+      bannedTypeDifferences.push(TypeDifference.NARROWED_LITERAL_TYPE);
+    }
+
     for (const superType of superTypes) {
       if (!('properties' in superType)) {
         continue;
       }
 
       const subTypes = superTypeToSubTypes.get(superType)!;
-
-      if (targetFeatures.literalTypes) {
-
-        // If the target allows literal types, then we need to care about the visible signature type,
-        // and not just about the underlying fundamental type and/or isomorphic type differences.
-        bannedTypeDifferences.push(TypeDifference.NARROWED_LITERAL_TYPE);
-      }
 
       const properties = PropertyUtil.getCommonProperties(
         tdiff => OmniUtil.isDiffMatch([tdiff], ...bannedTypeDifferences),

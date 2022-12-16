@@ -3,7 +3,6 @@ import {
   AbortVisitingWithResult,
   LiteralValue,
   OmniModel,
-  OmniPrimitiveValueMode,
   OmniTypeKind,
   OmniUtil,
   VisitorFactoryManager,
@@ -191,9 +190,22 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     for (const requiredArgument of superTypeRequirements) {
       const resolvedType = this.getResolvedGenericArgumentType(requiredArgument, node);
       const type = resolvedType.omniType;
-      if (type.kind == OmniTypeKind.PRIMITIVE && type.valueMode == OmniPrimitiveValueMode.LITERAL) {
+      if (type.kind == OmniTypeKind.PRIMITIVE && type.literal) {
         const literalValue = type.value ?? null;
         superConstructorArguments.push(new Java.Literal(literalValue));
+      } else if (type.kind == OmniTypeKind.PRIMITIVE && type.value !== undefined) {
+        const literalValue = type.value ?? null;
+        const argumentDeclaration = this.createArgumentDeclaration(resolvedType, requiredArgument.identifier);
+        requiredSuperArguments.push(argumentDeclaration);
+        superConstructorArguments.push(new Java.TernaryExpression(
+          new Java.Predicate(
+            new Java.DeclarationReference(argumentDeclaration),
+            TokenType.EQUALS,
+            new Java.Literal(null),
+          ),
+          new Java.Literal(literalValue),
+          new Java.DeclarationReference(argumentDeclaration),
+        ));
       } else {
         superConstructorArguments.push(new Java.DeclarationReference(requiredArgument));
         requiredSuperArguments.push(this.createArgumentDeclaration(resolvedType, requiredArgument.identifier));

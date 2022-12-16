@@ -160,6 +160,11 @@ export class OmniTypeVisitor {
         case OmniTypeKind.GENERIC_SOURCE_IDENTIFIER:
           if (type.lowerBound) q.push({...dq, owner: type, parent: undefined, type: type.lowerBound, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
           if (type.upperBound) q.push({...dq, owner: type, parent: undefined, type: type.upperBound, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
+          if (type.knownEdgeTypes) {
+            for (const edge of type.knownEdgeTypes) {
+              q.push({...dq, owner: type, parent: undefined, type: edge, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
+            }
+          }
           break;
         case OmniTypeKind.INTERFACE:
           q.push({...dq, owner: type, parent: type, type: type.of, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
@@ -174,9 +179,6 @@ export class OmniTypeVisitor {
           // NOTE: Should it be allowed to follow this?
           // TODO: Allow to follow if the external reference is into our own model
           break;
-        case OmniTypeKind.WRAPPED:
-          q.push({...dq, owner: type, parent: type, type: type.of, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
-          break;
         default:
           throw new Error(`Do not know how to handle kind '${(type as any)?.kind || '?'}`);
       }
@@ -189,6 +191,7 @@ export class OmniTypeVisitor {
     input: TypeOwner<OmniType> | undefined,
     onDown?: DFSTraverseCallback<R>,
     onUp?: DFSTraverseCallback<R>,
+    onlyOnce = true,
   ) {
 
     if (!input) {
@@ -204,13 +207,13 @@ export class OmniTypeVisitor {
     };
 
     if ('endpoints' in input) {
-      return this.visitModelDepthFirst(input, ctx, onDown, onUp);
+      return this.visitModelDepthFirst(input, ctx, onDown, onUp, onlyOnce);
     } else if ('type' in input) {
 
       ctx.parent = input;
-      this.visitTypesDepthFirstInternal(input.type, ctx, onDown, onUp);
+      this.visitTypesDepthFirstInternal(input.type, ctx, onDown, onUp, onlyOnce);
     } else {
-      return this.visitTypesDepthFirstInternal(input, ctx, onDown, onUp);
+      return this.visitTypesDepthFirstInternal(input, ctx, onDown, onUp, onlyOnce);
     }
 
     return undefined;
@@ -221,18 +224,19 @@ export class OmniTypeVisitor {
     ctx: DFSTraverseContext,
     onDown: DFSTraverseCallback<R> | undefined,
     onUp: DFSTraverseCallback<R> | undefined,
+    onlyOnce = true,
   ) {
 
     let result: R | undefined = undefined;
     for (const e of input.endpoints) {
 
       ctx.parent = e.request;
-      result = this.visitTypesDepthFirstInternal(e.request.type, ctx, onDown, onUp);
+      result = this.visitTypesDepthFirstInternal(e.request.type, ctx, onDown, onUp, onlyOnce);
       if (result !== undefined) return result;
 
       for (const r of e.responses) {
         ctx.parent = r;
-        result = this.visitTypesDepthFirstInternal(r.type, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(r.type, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
       }
     }
@@ -242,20 +246,20 @@ export class OmniTypeVisitor {
 
         for (const p of m.source.propertyPath || []) {
           ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.owner, ctx, onDown, onUp);
+          result = this.visitTypesDepthFirstInternal(p.owner, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
 
           ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp);
+          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
         }
         for (const p of m.target.propertyPath || []) {
           ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.owner, ctx, onDown, onUp);
+          result = this.visitTypesDepthFirstInternal(p.owner, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
 
           ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp);
+          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
         }
       }
@@ -263,7 +267,7 @@ export class OmniTypeVisitor {
 
     for (const t of input.types) {
       ctx.parent = input;
-      result = this.visitTypesDepthFirstInternal(t, ctx, onDown, onUp);
+      result = this.visitTypesDepthFirstInternal(t, ctx, onDown, onUp, onlyOnce);
       if (result !== undefined) return result;
     }
 
@@ -275,6 +279,7 @@ export class OmniTypeVisitor {
     ctx: DFSTraverseContext,
     onDown?: DFSTraverseCallback<R>,
     onUp?: DFSTraverseCallback<R>,
+    onlyOnce = true,
   ): R | undefined {
 
     if (!input) {
@@ -285,17 +290,22 @@ export class OmniTypeVisitor {
 
     if (Array.isArray(input)) {
       for (const entry of input) {
-        result = this.visitTypesDepthFirstInternal(entry, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(entry, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
       }
       return undefined;
     }
 
-    if (ctx.visited.includes(input)) {
-      return undefined;
-    }
+    if (onlyOnce) {
 
-    ctx.visited.push(input);
+      // TODO: This "visited" should not be in every context, it should be global or something.
+      //        The whole algorithm could need a big cleanup to be more versatile and easier to handle depth vs breadth
+      if (ctx.visited.includes(input)) {
+        return undefined;
+      }
+
+      ctx.visited.push(input);
+    }
 
     if (onDown) {
       ctx.type = input;
@@ -340,68 +350,74 @@ export class OmniTypeVisitor {
 
     switch (input.kind) {
       case OmniTypeKind.OBJECT:
-        result = this.visitTypesDepthFirstInternal(input.extendedBy, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.extendedBy, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
 
         for (const p of input.properties) {
           ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp);
+          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
         }
         break;
       case OmniTypeKind.ARRAY_TYPES_BY_POSITION:
-        result = this.visitTypesDepthFirstInternal(input.types, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.types, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
-        result = this.visitTypesDepthFirstInternal(input.commonDenominator, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.commonDenominator, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION:
         for (const p of input.properties) {
           ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp);
+          result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
         }
         ctx.parent = input;
-        result = this.visitTypesDepthFirstInternal(input.commonDenominator, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.commonDenominator, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.COMPOSITION:
-        result = this.visitTypesDepthFirstInternal(input.types, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.types, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.ARRAY:
-        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.DICTIONARY:
-        result = this.visitTypesDepthFirstInternal(input.keyType, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.keyType, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
-        result = this.visitTypesDepthFirstInternal(input.valueType, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.valueType, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.GENERIC_SOURCE:
-        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp);
-        result = this.visitTypesDepthFirstInternal(input.sourceIdentifiers, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp, onlyOnce);
+        result = this.visitTypesDepthFirstInternal(input.sourceIdentifiers, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.GENERIC_TARGET:
-        result = this.visitTypesDepthFirstInternal(input.source, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.source, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
-        result = this.visitTypesDepthFirstInternal(input.targetIdentifiers, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.targetIdentifiers, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.GENERIC_TARGET_IDENTIFIER:
-        result = this.visitTypesDepthFirstInternal(input.type, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.type, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.GENERIC_SOURCE_IDENTIFIER:
-        result = this.visitTypesDepthFirstInternal(input.lowerBound, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.lowerBound, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
-        result = this.visitTypesDepthFirstInternal(input.upperBound, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.upperBound, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
+        if (input.knownEdgeTypes) {
+          for (const edge of input.knownEdgeTypes) {
+            result = this.visitTypesDepthFirstInternal(edge, ctx, onDown, onUp, onlyOnce);
+            if (result !== undefined) return result;
+          }
+        }
         break;
       case OmniTypeKind.INTERFACE:
-        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp);
+        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
       case OmniTypeKind.PRIMITIVE:
@@ -413,10 +429,6 @@ export class OmniTypeVisitor {
       case OmniTypeKind.EXTERNAL_MODEL_REFERENCE:
         // NOTE: Should it be allowed to follow this?
         // TODO: Allow to follow if the external reference is into our own model
-        break;
-      case OmniTypeKind.WRAPPED:
-        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp);
-        if (result !== undefined) return result;
         break;
       default:
         throw new Error(`Do not know how to handle kind '${(input as any).kind || '?'}`);

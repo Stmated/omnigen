@@ -11,6 +11,9 @@ import {Options, RealOptions} from '../options/index.js';
 import {TargetOptions} from '../interpret/index.js';
 import {BFSTraverseContext} from './OmniTypeVisitor.js';
 import {HashUtil} from './HashUtil.js';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export interface Replacement<T extends TypeOwner<OmniType>> {
   root: T;
@@ -40,12 +43,15 @@ export class OmniModelMerge {
     const collections = new Map<T, BFSTraverseContext[]>();
     for (const model of roots) {
 
-      const reversed: BFSTraverseContext[] = [];
+      const collection: BFSTraverseContext[] = [];
       OmniUtil.visitTypesBreadthFirst(model, ctx => {
-        reversed.push(ctx);
+        collection.push(ctx);
+        if (ctx.type.kind == OmniTypeKind.GENERIC_SOURCE) {
+          ctx.skip = true;
+        }
       });
 
-      collections.set(model, reversed);
+      collections.set(model, collection);
     }
 
     const noopContext: BFSTraverseContext = {
@@ -167,10 +173,7 @@ export class OmniModelMerge {
     // Skip the simple type
     const skippedKinds = [
       OmniTypeKind.UNKNOWN, OmniTypeKind.PRIMITIVE, OmniTypeKind.ARRAY,
-
-      // also never replace the generic source/target itself, but could replace the wrapped type.
-      // OmniTypeKind.GENERIC_SOURCE, OmniTypeKind.GENERIC_TARGET,
-      // OmniTypeKind.GENERIC_SOURCE_IDENTIFIER, OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
+      OmniTypeKind.GENERIC_TARGET, OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
     ];
     const usefulReplacements = replacements.filter(it => !skippedKinds.includes(it.from.kind));
 
@@ -195,16 +198,24 @@ export class OmniModelMerge {
       OmniUtil.swapType(replacement.root, replacement.from, toExternal);
     }
 
-    OmniUtil.visitTypesDepthFirst(common, ctx => {
+    const externalReplacements: [number] = [0];
+    do {
 
-      if (ctx.type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      externalReplacements[0] = 0;
+      OmniUtil.visitTypesDepthFirst(common, ctx => {
 
-        // If the common model has an external model reference, then we should resolve it to the true type.
-        // This removes some chance of recursive models, and simplifies the model.
-        ctx.replacement = ctx.type.of;
-        ctx.visited.length = 0;
-      }
-    });
+        if (ctx.type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+
+          // If the common model has an external model reference, then we should resolve it to the true type.
+          // This removes some chance of recursive models, and simplifies the model.
+          ctx.replacement = ctx.type.of;
+          externalReplacements[0]++;
+        }
+      }, undefined, false);
+
+      logger.debug(`Swapped out ${externalReplacements[0]} types from external references to resolved type`);
+
+    } while (externalReplacements[0] > 0);
 
     return {
       model: common,

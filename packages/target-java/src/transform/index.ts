@@ -15,4 +15,6 @@ export * from './AddGeneratedAnnotationAstTransformer.js';
 export * from './AddCommentsAstTransformer.js';
 export * from './ReorderMembersTransformer.js';
 export * from './AddThrowsForKnownMethodsAstTransformer.js';
+export * from './AddSubTypeHintsAstTransformer.js';
+export * from './SimplifyGenericsAstTransformer.js';
 export * from './JavaAstUtils.js';

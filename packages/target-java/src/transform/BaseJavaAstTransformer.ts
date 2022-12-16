@@ -13,11 +13,12 @@ import {
   OmniOptionallyNamedType,
   OmniPotentialInterfaceType,
   OmniPrimitiveKind,
-  OmniPrimitiveType,
+  OmniPrimitiveType, OmniSubtypeCapableType,
   OmniType,
   OmniTypeKind,
   OmniUtil,
   RealOptions,
+  UnknownKind,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
 import {AbstractObjectDeclaration} from '../ast/index.js';
@@ -230,30 +231,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       }
     }
 
-    const javaClassName = JavaUtil.getClassName(originalType || type, options);
-    const javaType = new Java.RegularType(type);
-
-    let declaration: Java.ClassDeclaration | Java.GenericClassDeclaration | Java.InterfaceDeclaration;
-    if (genericSourceIdentifiers) {
-      declaration = new Java.GenericClassDeclaration(
-        new Java.Identifier(javaClassName),
-        javaType,
-        new Java.GenericTypeDeclarationList(
-          genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
-            new Java.Identifier(it.placeholderName),
-            it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
-            it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
-          )),
-        ),
-        body,
-      );
-    } else {
-      declaration = new Java.ClassDeclaration(
-        javaType,
-        new Java.Identifier(javaClassName),
-        body,
-      );
-    }
+    const declaration = this.createSubTypeDeclaration(genericSourceIdentifiers, type, originalType, body, options);
 
     if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
       this.addXOrMappingToBody(model, type, declaration, options);
@@ -270,95 +248,46 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     ));
   }
 
+  private createSubTypeDeclaration(
+    genericSourceIdentifiers: OmniGenericSourceIdentifierType[] | undefined,
+    type: JavaSubTypeCapableType,
+    originalType: OmniGenericSourceType | undefined,
+    body: Java.Block,
+    options: RealOptions<JavaOptions>,
+  ): Java.AbstractObjectDeclaration<JavaSubTypeCapableType> {
+
+    const javaClassName = JavaUtil.getClassName(originalType || type, options);
+    const javaType = new Java.RegularType(type);
+
+    if (genericSourceIdentifiers) {
+
+      const genericSourceArgExpressions = genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
+        new Java.Identifier(it.placeholderName),
+        it,
+        it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
+        it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
+      ));
+
+      return new Java.GenericClassDeclaration(
+        new Java.Identifier(javaClassName),
+        javaType,
+        new Java.GenericTypeDeclarationList(genericSourceArgExpressions),
+        body,
+      );
+    }
+
+    return new Java.ClassDeclaration(
+      javaType,
+      new Java.Identifier(javaClassName),
+      body,
+    );
+  }
+
   private addExtendsAndImplements(
     model: OmniModel,
     type: JavaSubTypeCapableType,
-    declaration: Java.AbstractObjectDeclaration,
+    declaration: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
   ): void {
-
-    if (type.kind == OmniTypeKind.OBJECT && type.subTypeHints) {
-
-      // Instead of making the current class inherit from something,
-      // We will with the help of external libraries note what kind of class this might be.
-      // Goes against how polymorphism is supposed to work, in a way, but some webservices do it this way.
-      // That way methods can receive an Abstract class, but be deserialized as the correct implementation.
-      // See: https://swagger.io/docs/specification/data-models/inheritance-and-polymorphism/
-
-      // We make use the the same property for all, since it is not supported in Java to have many different ones anyway.
-      const propertyName = type.subTypeHints[0].qualifiers[0].path[0];
-
-      // TODO: Need to figure out an actual way of handling the inheritance
-      //         If "In" is itself empty and only inherits, then use "Abs" directly instead?
-      //         What to do if that is not possible? Need to make it work as if "In" also has properties!
-
-      declaration.annotations?.children.push(
-        new Java.Annotation(
-          new Java.RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
-          }),
-          new Java.AnnotationKeyValuePairList(
-            new Java.AnnotationKeyValuePair(
-              new Java.Identifier('use'),
-              new Java.StaticMemberReference(
-                new Java.ClassName(
-                  new Java.RegularType({
-                    kind: OmniTypeKind.HARDCODED_REFERENCE,
-                    fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
-                  }),
-                ),
-                new Java.Identifier(
-                  'NAME',
-                ),
-              ),
-            ),
-            new Java.AnnotationKeyValuePair(
-              new Java.Identifier('property'),
-              new Java.Literal(propertyName),
-            ),
-          ),
-        ),
-      );
-
-      const subTypes: Java.Annotation[] = [];
-      for (const subTypeHint of type.subTypeHints) {
-
-        const qualifier = subTypeHint.qualifiers[0];
-        subTypes.push(new Java.Annotation(
-          new Java.RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
-          }),
-          new Java.AnnotationKeyValuePairList(
-            new Java.AnnotationKeyValuePair(
-              new Java.Identifier('name'),
-              new Java.Literal(OmniUtil.toLiteralValue(qualifier.value)),
-            ),
-            new Java.AnnotationKeyValuePair(
-              new Java.Identifier('value'),
-              new Java.ClassReference(JavaAstUtils.createTypeNode(subTypeHint.type)),
-            ),
-          ),
-        ));
-      }
-
-      declaration.annotations?.children.push(
-        new Java.Annotation(
-          new Java.RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
-          }),
-          new Java.AnnotationKeyValuePairList(
-            new Java.AnnotationKeyValuePair(
-              undefined,
-              new Java.ArrayInitializer<Java.Annotation>(
-                ...subTypes,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
 
     const typeExtends = JavaUtil.getSuperClassOfSubType(model, type, false);
 
@@ -384,7 +313,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private addXOrMappingToBody(
     model: OmniModel,
     type: OmniCompositionType<JavaSubTypeCapableType | OmniPrimitiveType, CompositionKind>,
-    declaration: AbstractObjectDeclaration,
+    declaration: AbstractObjectDeclaration<JavaSubTypeCapableType>,
     options: JavaOptions,
   ): void {
 
@@ -424,7 +353,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private addEnumAndPrimitivesAsObjectEnum(
     enumTypes: OmniEnumType[],
     primitiveTypes: OmniPrimitiveType[],
-    declaration: Java.AbstractObjectDeclaration,
+    declaration: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
   ): void {
 
     // Java does not support advanced enums. We need to handle it some other way.
@@ -442,7 +371,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     const fieldValueIdentifier = new Java.Identifier(`_value`);
     const fieldValueType = new Java.RegularType({
       kind: OmniTypeKind.UNKNOWN,
-      isAny: true,
+      unknownKind: UnknownKind.MUTABLE_OBJECT,
     });
     const fieldValue = new Java.Field(
       fieldValueType,
@@ -750,7 +679,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private addSelfIfOfOneOfStaticFieldsMethod(
     knownValueFields: Java.Field[],
-    declaration: Java.AbstractObjectDeclaration,
+    declaration: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
   ): void {
 
     const knownBinary = this.createSelfIfOneOfStaticFieldsBinary(knownValueFields, declaration.type);
@@ -777,7 +706,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private createSelfIfOneOfStaticFieldsBinary(
     knownValueFields: Java.Field[],
-    selfType: Java.Type,
+    selfType: Java.Type<JavaSubTypeCapableType>,
   ): Java.BinaryExpression | undefined {
 
     let knownBinary: Java.BinaryExpression | undefined = undefined;

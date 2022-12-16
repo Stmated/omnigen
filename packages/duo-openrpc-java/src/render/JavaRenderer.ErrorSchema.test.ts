@@ -54,12 +54,18 @@ describe('Error-Schema', () => {
       DEFAULT_MODEL_TRANSFORM_OPTIONS,
       targetOptions,
     );
-    const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
 
-    expect(errorResponse.foundFields).toContain('version');
+    const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
+    expect(errorResponse.foundFields).toEqual(['error', 'id', 'version']);
+
+    const jsonRpcError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcError.java');
+    expect(jsonRpcError.foundFields).toEqual(['code', 'error', 'message']);
+    expect(jsonRpcError.foundTypes).toEqual(['int', 'JsonNode', 'String']);
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
-    expect(error100.foundFields).toHaveLength(4);
+    expect(error100.foundFields).toEqual([
+      // TODO: Add the expected ones
+    ]);
   });
 
   test('ErrorStructure-Custom', async () => {
@@ -74,13 +80,15 @@ describe('Error-Schema', () => {
     expect(filenames).toContain('ListThingsError100Error.java');
     expect(filenames).toContain('JsonRpcCustomErrorPayload.java');
     expect(filenames).not.toContain('Data.java'); // Class for property 'Data' should be better named
-    expect(filenames).toContain('JsonRpcCustomErrorPayload.java');
+    expect(filenames).toContain('JsonRpcCustomErrorPayloadData.java');
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
-    expect(error100.foundFields).toEqual(['code', 'message', 'error', 'name']);
-    expect(error100.foundLiterals[7]).toEqual('"JSONRPCError"');
+    expect(error100.foundFields).toEqual([]);
+    expect(error100.foundLiterals).toHaveLength(3);
+    expect(error100.foundLiterals[0]).toEqual('"omnigen"');
+    expect(error100.foundLiterals[2]).toEqual(100);
 
     const customError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
-    expect(customError.foundFields).toEqual(['signature', 'uuid', 'method', 'data', '_additionalProperties']);
+    expect(customError.foundFields).toEqual(['data', 'method', 'signature', 'uuid', '_additionalProperties']);
   });
 });

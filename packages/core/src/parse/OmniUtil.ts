@@ -749,14 +749,14 @@ export class OmniUtil {
         break;
       }
       case OmniTypeKind.INTERFACE: {
-        const inheritableReplacement = OmniUtil.asSuperType(to);
-        if (inheritableReplacement) {
-          const found = OmniUtil.swapType(parent.of, from, inheritableReplacement, maxDepth - 1);
-          if (found) {
+        const found = OmniUtil.swapType(parent.of, from, to, maxDepth - 1);
+        if (found) {
+          const inheritableReplacement = OmniUtil.asSuperType(to);
+          if (inheritableReplacement) {
             parent.of = inheritableReplacement;
+          } else {
+            throw new Error(`Cannot replace, since the interface requires a replacement that is inheritable`);
           }
-        } else {
-          throw new Error(`Cannot replace, since the interface requires a replacement that is inheritable`);
         }
         break;
       }

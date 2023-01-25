@@ -4,7 +4,6 @@ import {
   BaseJavaCstVisitorWithDefaults,
   BooleanLiteralCtx,
   ClassOrInterfaceTypeCtx,
-  ExtendsInterfacesCtx,
   FieldDeclarationCtx,
   FloatingPointLiteralCtx,
   FloatingPointTypeCtx,
@@ -157,11 +156,6 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
     this.foundFields.push(identifiers.join(','));
 
     return super.fieldDeclaration(ctx, param);
-  }
-
-  extendsInterfaces(ctx: ExtendsInterfacesCtx, param?: any): any {
-
-    return super.extendsInterfaces(ctx, param);
   }
 
   superclass(ctx: SuperclassCtx, param?: any): any {

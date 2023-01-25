@@ -61,11 +61,13 @@ describe('Error-Schema', () => {
     const jsonRpcError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcError.java');
     expect(jsonRpcError.foundFields).toEqual(['code', 'error', 'message']);
     expect(jsonRpcError.foundTypes).toEqual(['int', 'JsonNode', 'String']);
+    expect(jsonRpcError.foundSuperClasses).toEqual([]);
+    expect(jsonRpcError.foundSuperInterfaces).toEqual([]);
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
-    expect(error100.foundFields).toEqual([
-      // TODO: Add the expected ones
-    ]);
+    expect(error100.foundFields).toEqual([]);
+    expect(error100.foundSuperClasses).toEqual(['JsonRpcError']);
+    expect(error100.foundTypes).toEqual(['JsonNode', 'String']);
   });
 
   test('ErrorStructure-Custom', async () => {

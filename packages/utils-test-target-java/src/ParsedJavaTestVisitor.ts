@@ -19,7 +19,7 @@ import {
   SuperinterfacesCtx,
   UnannClassTypeCtx,
   MethodHeaderCtx,
-  MethodNameCtx,
+  MethodNameCtx, ClassDeclarationCtx, TypeDeclarationCtx, ClassMemberDeclarationCtx, NormalClassDeclarationCtx,
 } from 'java-parser';
 
 export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
@@ -32,10 +32,27 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   readonly foundImports: string[] = [];
   readonly foundTypes: string[] = [];
 
+  readonly classDeclarationNames: string[] = [];
+  readonly foundInnerInterfaces: string[] = [];
+
   public foundPackage: string | undefined;
 
   readonly foundSuperClasses: string[] = [];
   readonly foundSuperInterfaces: string[] = [];
+
+  classDeclaration(ctx: ClassDeclarationCtx, param?: any): any {
+    return super.classDeclaration(ctx, param);
+  }
+
+  normalClassDeclaration(ctx: NormalClassDeclarationCtx, param?: any): any {
+    for (const typeIdentifier of ctx.typeIdentifier) {
+      for (const identifier of typeIdentifier.children.Identifier) {
+        this.classDeclarationNames.push(identifier.image);
+      }
+    }
+
+    return super.normalClassDeclaration(ctx, param);
+  }
 
   normalInterfaceDeclaration(ctx: NormalInterfaceDeclarationCtx, param?: any): any {
     if (ctx.typeIdentifier) {

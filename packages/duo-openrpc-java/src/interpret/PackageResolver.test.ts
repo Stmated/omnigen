@@ -147,7 +147,7 @@ describe('PackageResolver', () => {
     const ErrorUnknown = JavaTestUtils.getParsedContent(fileContents, 'ErrorUnknown.java');
     expect(ErrorUnknown.foundImports).toEqual([]);
     expect(ErrorUnknown.foundPackage).toEqual('some.base.pkg.errors');
-    expect(ErrorUnknown.foundTypes).toEqual(['ErrorUnknownError']);
+    expect(ErrorUnknown.foundTypes).toEqual(['ErrorUnknownError', 'String']);
 
     const ErrorUnknownError = JavaTestUtils.getParsedContent(fileContents, 'ErrorUnknownError.java');
     expect(ErrorUnknownError.foundImports).toEqual(['com.fasterxml.jackson.databind.JsonNode']);
@@ -167,7 +167,7 @@ describe('PackageResolver', () => {
     const JsonRpcErrorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
     expect(JsonRpcErrorResponse.foundImports).toEqual([]);
     expect(JsonRpcErrorResponse.foundPackage).toEqual('some.base.pkg.errors');
-    expect(JsonRpcErrorResponse.foundTypes).toEqual(['ErrorUnknownError']);
+    expect(JsonRpcErrorResponse.foundTypes).toEqual(['ErrorUnknownError', 'String']);
 
     const JsonRpcRequest = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcRequest.java');
     expect(JsonRpcRequest.foundImports).toEqual(['some.other.pkg.ListThingsRequestParams']);
@@ -182,7 +182,7 @@ describe('PackageResolver', () => {
     const JsonRpcResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcResponse.java');
     expect(JsonRpcResponse.foundImports).toEqual(['some.other.pkg.Thing']);
     expect(JsonRpcResponse.foundPackage).toEqual('some.base.pkg');
-    expect(JsonRpcResponse.foundTypes).toEqual(['Thing', 'String']);
+    expect(JsonRpcResponse.foundTypes).toEqual(['String', 'Thing']);
 
     const ListThingsRequest = JavaTestUtils.getParsedContent(fileContents, 'ListThingsRequest.java');
     expect(ListThingsRequest.foundImports).toEqual(['some.base.pkg.JsonRpcRequest']);
@@ -197,6 +197,6 @@ describe('PackageResolver', () => {
     const ListThingsResponse = JavaTestUtils.getParsedContent(fileContents, 'ListThingsResponse.java');
     expect(ListThingsResponse.foundImports).toEqual(['some.base.pkg.JsonRpcResponse']);
     expect(ListThingsResponse.foundPackage).toEqual('some.other.pkg');
-    expect(ListThingsResponse.foundTypes).toEqual(['Thing']);
+    expect(ListThingsResponse.foundTypes).toEqual(['String', 'Thing']);
   });
 });

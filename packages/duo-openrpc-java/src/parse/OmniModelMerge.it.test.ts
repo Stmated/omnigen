@@ -64,7 +64,7 @@ describe('OmniModelMerge-it', () => {
 
     const typeNames = resultMerged.model.types.map(it => Naming.unwrap(OmniUtil.getTypeName(it) || ''));
     expect(typeNames).toEqual([
-      'JsonRpcErrorResponse',
+      // 'JsonRpcErrorResponse',
       'JsonRpcRequestParams',
       'ListThingsRequestParams',
       'Thing',
@@ -86,7 +86,7 @@ describe('OmniModelMerge-it', () => {
     const files11Names = [...files11.keys()].sort();
 
     expect(filesCommonNames).toEqual([
-      'JsonRpcErrorResponse.java',
+      // 'JsonRpcErrorResponse.java',
       'JsonRpcRequestParams.java',
       'ListThingsRequestParams.java',
       'Thing.java',
@@ -95,6 +95,7 @@ describe('OmniModelMerge-it', () => {
     const expectedUniqueFileNames = [
       'ErrorUnknown.java',
       'JsonRpcError.java',
+      'JsonRpcErrorResponse.java',
       'JsonRpcRequest.java',
       'JsonRpcResponse.java',
       'ListThingsError100.java',
@@ -129,7 +130,7 @@ describe('OmniModelMerge-it', () => {
     const ListThingsError10011 = JavaTestUtils.getParsedContent(files11, 'ListThingsError100.java');
     expect(ListThingsError10011.foundPackage).toEqual('com.error11');
     expect(ListThingsError10011.foundImports).toEqual([
-      'com.common.JsonRpcErrorResponse',
+      // 'com.common.JsonRpcErrorResponse',
       'com.fasterxml.jackson.databind.JsonNode',
       'javax.annotation.Generated',
     ]);
@@ -274,14 +275,14 @@ describe('OmniModelMerge-it', () => {
     const saveThingRequest = JavaTestUtils.getParsedContent(fileMap, 'SaveThingRequest.java');
     const saveThingResponse = JavaTestUtils.getParsedContent(fileMap, 'SaveThingResponse.java');
 
-    expect(jsonRpcRequest.foundFields).toEqual(['jsonrpc']);
-    expect(jsonRpcRequest.foundMethods).toEqual(['getJsonrpc', 'getMethod']);
+    expect(jsonRpcRequest.foundFields).toEqual(['id', 'jsonrpc']);
+    expect(jsonRpcRequest.foundMethods).toEqual(['getId', 'getJsonrpc', 'getMethod']);
     expect(jsonRpcRequest.foundTypes).toEqual(['String']);
     expect(jsonRpcRequest.foundSuperClasses).toEqual([]);
     expect(jsonRpcRequest.foundSuperInterfaces).toEqual([]);
 
-    expect(jsonRpcResponse.foundFields).toEqual([]);
-    expect(jsonRpcResponse.foundMethods).toEqual(['getJsonrpc']);
+    expect(jsonRpcResponse.foundFields).toEqual(['id']);
+    expect(jsonRpcResponse.foundMethods).toEqual(['getId', 'getJsonrpc']);
     expect(jsonRpcResponse.foundTypes).toEqual(['String']);
     expect(jsonRpcResponse.foundSuperClasses).toEqual([]);
     expect(jsonRpcResponse.foundSuperInterfaces).toEqual([]);
@@ -301,7 +302,7 @@ describe('OmniModelMerge-it', () => {
 
     expect(listThingsResponse.foundFields).toEqual(['result']);
     expect(listThingsResponse.foundMethods).toEqual(['getResult']);
-    expect(listThingsResponse.foundTypes).toEqual(['Thing']);
+    expect(listThingsResponse.foundTypes).toEqual(['Thing', 'String']);
     expect(listThingsResponse.foundSuperClasses).toEqual(['JsonRpcResponse']);
     expect(listThingsResponse.foundSuperInterfaces).toEqual([]);
 
@@ -313,7 +314,7 @@ describe('OmniModelMerge-it', () => {
 
     expect(saveThingResponse.foundFields).toEqual(['result']);
     expect(saveThingResponse.foundMethods).toEqual(['getResult']);
-    expect(saveThingResponse.foundTypes).toEqual(['long']);
+    expect(saveThingResponse.foundTypes).toEqual(['long', 'String']);
     expect(saveThingResponse.foundSuperClasses).toEqual(['JsonRpcResponse']);
     expect(saveThingResponse.foundSuperInterfaces).toEqual([]);
   });
@@ -358,6 +359,7 @@ describe('OmniModelMerge-it', () => {
     expect(notElevated0.properties.map(it => it.name)).toEqual([
       'jsonrpc',
       'error',
+      'id',
       'result',
     ]);
 

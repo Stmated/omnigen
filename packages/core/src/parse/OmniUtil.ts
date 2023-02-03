@@ -1336,7 +1336,8 @@ export class OmniUtil {
 
     // Then check if one of them is literal, but if the literal is the common type, then they are not covariant.
     if (a.literal && b.literal) {
-      return {type: OmniUtil.getGeneralizedType(common.type ?? a), diffs: [...(common.diffs ?? []), TypeDifference.NARROWED_LITERAL_TYPE]};
+      const newTypeDifference = (targetFeatures.literalTypes) ? TypeDifference.FUNDAMENTAL_TYPE : TypeDifference.NARROWED_LITERAL_TYPE;
+      return {type: OmniUtil.getGeneralizedType(common.type ?? a), diffs: [...(common.diffs ?? []), newTypeDifference]};
     } else if (a.literal && !b.literal && common.type == a) {
       return {type: b, diffs: [...(common.diffs ?? []), TypeDifference.NARROWED_LITERAL_TYPE]};
     } else if (!a.literal && b.literal && common.type == b) {

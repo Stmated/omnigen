@@ -5,21 +5,18 @@ import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 
 describe('Error-Schema', () => {
 
-  const transformOptions: ModelTransformOptions = {
-    ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-    elevateProperties: false,
-  };
-
-  const targetOptions: JavaOptions = {
-    ...DEFAULT_TEST_JAVA_OPTIONS,
-  };
-
   test('ErrorStructure', async () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json',
       DEFAULT_OPENRPC_OPTIONS,
-      transformOptions,
-      targetOptions,
+      {
+        ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
+        elevateProperties: false,
+        generifyTypes: true,
+      },
+      {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+      },
     );
     const filenames = [...fileContents.keys()].sort();
 
@@ -41,10 +38,18 @@ describe('Error-Schema', () => {
     ]);
 
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
-    expect(errorResponse.foundFields).toEqual(['jsonrpc', 'error']);
+    expect(errorResponse.foundFields).toEqual(['error']);
 
-    const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
-    expect(error100.foundFields).toEqual(['code', 'message', 'data']);
+    const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100.java');
+    expect(error100.foundFields).toEqual(['id']);
+    expect(error100.foundMethods).toEqual(['getId', 'getJsonrpc']);
+    expect(error100.foundSuperClasses).toEqual(['JsonRpcErrorResponse']);
+
+    const error100error = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
+    expect(error100error.foundFields).toEqual(['data']);
+
+    const jsonRpcError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcError.java');
+    expect(jsonRpcError.foundFields).toEqual(['code', 'message']);
   });
 
   test('ErrorStructure-1.1', async () => {
@@ -52,11 +57,14 @@ describe('Error-Schema', () => {
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json',
       DEFAULT_OPENRPC_OPTIONS,
       DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      targetOptions,
+      {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+      },
     );
 
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
-    expect(errorResponse.foundFields).toEqual(['error', 'id', 'version']);
+    expect(errorResponse.foundFields).toEqual(['error', 'id']);
+    expect(errorResponse.foundMethods).toEqual(['getError', 'getId', 'getVersion']);
 
     const jsonRpcError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcError.java');
     expect(jsonRpcError.foundFields).toEqual(['code', 'error', 'message']);
@@ -75,7 +83,9 @@ describe('Error-Schema', () => {
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-custom.json',
       DEFAULT_OPENRPC_OPTIONS,
       DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      targetOptions,
+      {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+      },
     );
     const filenames = [...fileContents.keys()];
 
@@ -86,7 +96,7 @@ describe('Error-Schema', () => {
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toEqual([]);
-    expect(error100.foundLiterals).toHaveLength(3);
+    expect(error100.foundLiterals).toHaveLength(5);
     expect(error100.foundLiterals[0]).toEqual('"omnigen"');
     expect(error100.foundLiterals[2]).toEqual(100);
 

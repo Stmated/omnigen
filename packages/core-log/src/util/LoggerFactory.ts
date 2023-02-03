@@ -74,6 +74,6 @@ export class LoggerFactory {
       }
     }
 
-    return pino.pino(modifiedOptions);
+    return pino(modifiedOptions);
   }
 }

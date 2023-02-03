@@ -29,7 +29,8 @@ import {
   DEFAULT_OPENRPC_OPTIONS,
   OpenRpcParserOptions,
   OPENRPC_OPTIONS_RESOLVERS,
-  OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_FALLBACK,
+  OpenRpcParserBootstrapFactory,
+  OPENRPC_OPTIONS_FALLBACK,
 } from '@omnigen/parser-openrpc';
 import {JSONSchema7} from 'json-schema';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';

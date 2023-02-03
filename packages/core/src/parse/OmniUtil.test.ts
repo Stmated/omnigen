@@ -5,11 +5,10 @@ import {
   OmniType,
   OmniTypeKind,
 } from './OmniModel.js';
-import {TypeDifference} from '../equality/index.js';
+import {TypeDifference} from '../equality';
 import {OmniUtil} from './OmniUtil.js';
 import {CommonDenominatorType} from './CommonDenominatorType.js';
-import {OMNI_GENERIC_FEATURES} from '../interpret/index.js';
-import {JAVA_FEATURES} from '@omnigen/target-java';
+import {OMNI_GENERIC_FEATURES} from '../interpret';
 
 describe('OmniUtil', () => {
 
@@ -29,13 +28,14 @@ describe('OmniUtil', () => {
     expect(expectCommon(
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
+      {primitiveGenerics: false, literalTypes: true},
     ).diffs).toEqual([TypeDifference.FUNDAMENTAL_TYPE]);
 
     // With Java, the literal types become the same type in the signature
     const literalString = expectCommon(
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
-      JAVA_FEATURES,
+      {primitiveGenerics: false, literalTypes: false},
     );
 
     expect(literalString.diffs).toEqual([TypeDifference.NARROWED_LITERAL_TYPE]);

@@ -75,7 +75,7 @@ describe('InnerTypeCompression', () => {
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json',
       DEFAULT_OPENRPC_OPTIONS,
       transformOptions,
-      targetOptions
+      targetOptions,
     );
 
     const fileNames = [...fileContents.keys()].sort();
@@ -147,7 +147,7 @@ describe('InnerTypeCompression', () => {
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json',
       DEFAULT_OPENRPC_OPTIONS,
       transformOptions,
-      targetOptions
+      targetOptions,
     );
     const fileNames = [...fileContents.keys()].sort();
 

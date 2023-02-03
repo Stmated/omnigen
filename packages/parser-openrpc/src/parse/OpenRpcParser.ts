@@ -534,12 +534,22 @@ export class OpenRpcParser implements Parser<OpenRpcParserOptions> {
   ): void {
 
     if (options.jsonRpcPropertyName) {
+
+      const hasConstantVersion = (options.jsonRpcVersion || '').length > 0;
+      const responseJsonRpcPropertyType: OmniPrimitiveType = {
+        kind: OmniTypeKind.PRIMITIVE,
+        primitiveKind: OmniPrimitiveKind.STRING,
+        nullable: false,
+      };
+
+      if (hasConstantVersion) {
+        responseJsonRpcPropertyType.value = options.jsonRpcVersion;
+        responseJsonRpcPropertyType.literal = true;
+      }
+
       target.properties.push({
         name: options.jsonRpcPropertyName,
-        type: {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
-        },
+        type: responseJsonRpcPropertyType,
         owner: target,
       });
     }

@@ -1,7 +1,15 @@
 
 export interface TargetFeatures {
 
+  /**
+   * If true, then literal types are supported. A literal type of String is for example "Hello".
+   * In for example TypeScript, you can say a function can return either "A" or "B" but not a general string.
+   */
   literalTypes: boolean;
+
+  /**
+   * If true, then primitives can be used as generics for objects. Such as List<int>
+   */
   primitiveGenerics: boolean;
 }
 

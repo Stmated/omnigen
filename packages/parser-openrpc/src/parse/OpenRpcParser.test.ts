@@ -4,13 +4,12 @@ import {DEFAULT_PARSER_OPTIONS, OptionsUtil} from '@omnigen/core';
 import {OmniTypeKind, OmniUtil, SchemaFile} from '@omnigen/core';
 import {JavaUtil} from '@omnigen/target-java';
 import {OpenRpcParserOptions, OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_RESOLVERS} from './OpenRpcParser.js';
-import {JSONRPC_20_PARSER_OPTIONS, JSONRPC_OPTIONS_RESOLVERS} from '../options/index.js';
+import {JSONRPC_20_PARSER_OPTIONS} from '../options';
 
 describe('Test Generic Model Creation', () => {
 
   const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
 
-  // TODO: This is a bit stupid, no?
   const options: OpenRpcParserOptions = {
     ...DEFAULT_PARSER_OPTIONS,
     ...JSONRPC_20_PARSER_OPTIONS,
@@ -68,8 +67,14 @@ describe('Test Generic Model Creation', () => {
 
     const response0properties = ((response0.type.kind == OmniTypeKind.OBJECT) ? response0.type.properties : []) || [];
     expect(response0properties).toBeDefined();
-    expect(response0properties).toHaveLength(1); // The others are in abstract supertype
-    expect(response0properties[0].name).toEqual('result');
+
+    // All the properties are there, since we have not yet ran any model transformers over the parsed schema
+    expect(response0properties.map(it => it.name)).toEqual([
+      'jsonrpc',
+      'error',
+      'id',
+      'result',
+    ]); // The others are in abstract supertype
 
     const allTypes = OmniUtil.getAllExportableTypes(model, model.types);
     expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('DeletePetByIdResponse');

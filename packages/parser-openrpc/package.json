@@ -10,20 +10,31 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest | pino-pretty -c -S -t --sync false",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "jest --watch --passWithNoTests"
   },
   "jest": {
     "preset": "@omnigen/config-jest"
   },
   "dependencies": {
-    "@omnigen/core": "*",
-    "@omnigen/parser-jsonschema": "*"
+    "@omnigen/core": "0.0.0",
+    "@omnigen/core-log": "0.0.0",
+    "@omnigen/target-java": "0.0.0",
+    "@omnigen/parser-jsonschema": "0.0.0",
+    "@open-rpc/meta-schema": "1.14.2",
+    "@open-rpc/schema-utils-js": "^1.16.1",
+    "json-schema": "^0.4.0",
+    "string-similarity": "^4.0.4"
   },
   "devDependencies": {
-    "@omnigen/config-jest": "*",
-    "@omnigen/config-typescript": "*",
-    "@omnigen/eslint-config-custom": "*",
-    "typescript": "^4.9.3"
+    "@omnigen/config-jest": "0.0.0",
+    "@omnigen/config-typescript": "0.0.0",
+    "@omnigen/eslint-config-custom": "0.0.0",
+    "@types/json-schema": "^7.0.11",
+    "@types/string-similarity": "^4.0.0",
+    "@types/jest": "^29.4.0",
+    "typescript": "beta",
+    "jest": "^29.4.1",
+    "pino-pretty": "^9.1.1"
   }
 }

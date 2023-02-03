@@ -10,24 +10,31 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests | pino-pretty -c -S -t --sync false",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests"
   },
   "jest": {
     "preset": "@omnigen/config-jest"
   },
   "dependencies": {
-    "@omnigen/parser-openrpc": "*",
-    "@omnigen/target-java": "*"
+    "@omnigen/core": "0.0.0",
+    "@omnigen/core-log": "0.0.0",
+    "@omnigen/parser-jsonschema": "0.0.0",
+    "@omnigen/parser-openrpc": "0.0.0",
+    "@omnigen/target-java": "0.0.0"
   },
   "devDependencies": {
-    "@omnigen/config-jest": "*",
-    "@omnigen/config-typescript": "*",
-    "@omnigen/core-log": "*",
-    "@omnigen/duo-openrpc-java-test": "*",
-    "@omnigen/eslint-config-custom": "*",
-    "@omnigen/utils-test": "*",
-    "@omnigen/utils-test-target-java": "*",
-    "typescript": "^4.9.3"
+    "@types/jest": "^29.4.0",
+    "@omnigen/config-jest": "0.0.0",
+    "@omnigen/config-typescript": "0.0.0",
+    "@omnigen/duo-openrpc-java-test": "0.0.0",
+    "@omnigen/eslint-config-custom": "0.0.0",
+    "@omnigen/utils-test": "0.0.0",
+    "@omnigen/utils-test-target-java": "0.0.0",
+    "typescript": "beta",
+    "jest": "^29.4.1",
+    "@jest/globals": "^29.4.1",
+    "pino-pretty": "^9.1.1",
+    "java-parser": "^2.0.3"
   }
 }

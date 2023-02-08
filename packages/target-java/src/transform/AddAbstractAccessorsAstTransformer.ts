@@ -2,10 +2,10 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJava
 import {
   OmniUtil,
   VisitorFactoryManager,
-} from '@omnigen/core';
+} from '@omnigen/core-util';
 import * as Java from '../ast/index.js';
-import {Identifier} from '../ast/index.js';
-import {JavaUtil} from '../util/index.js';
+import {Identifier} from '../ast';
+import {JavaUtil} from '../util';
 
 export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransformer {
 

@@ -11,14 +11,14 @@ export * from './Parser.js';
 
 export * from './OmniModel.js';
 export * from './OmniModelParserResult.js';
-export * from './CompositionUtil.js';
-export * from './OmniModelMerge.js';
-export * from './OmniUtil.js';
-export * from './Naming.js';
 
 export * from './ModelTransformOptions.js';
 
-export * from './PropertyUtil.js';
+export * from './CommonDenominatorType';
+export * from './ParserBootstrapFactory';
+export * from './ParserBootstrap';
+
+export * from './TypeOwner';
 
 // Other sub-directories
 export * from './transform/index.js';

@@ -1,6 +1,6 @@
 import {
-  AbstractStNode,
-  AbstractToken,
+  AstNode,
+  AstToken,
   VisitResult,
   OmniDictionaryType,
   OmniPrimitiveKind,
@@ -9,20 +9,22 @@ import {
   OmniTypeKind,
   OmniUnknownType,
   LiteralValue,
-  StNodeWithChildren,
-  Case,
+  AstNodeWithChildren,
   OmniProperty,
   UnknownKind,
   OmniGenericTargetType,
   OmniSuperTypeCapableType,
-  OmniInterfaceType,
   OmniPotentialInterfaceType,
-  OmniSubtypeCapableType, OmniObjectType, OmniEnumType, OmniHardcodedReferenceType, OmniGenericSourceIdentifierType,
+  OmniEnumType,
+  OmniHardcodedReferenceType,
+  OmniGenericSourceIdentifierType,
+  AstVisitor,
 } from '@omnigen/core';
-import {JavaAstUtils} from '../transform/index.js';
-import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
-import {JavaVisitor} from '../visit/index.js';
-import {JavaOptions} from '../options/index.js';
+import {JavaAstUtils} from '../transform';
+import {JavaSubTypeCapableType, JavaUtil} from '../util';
+import {JavaVisitor} from '../visit';
+import {JavaOptions} from '../options';
+import {Case} from '@omnigen/core-util';
 
 export enum TokenType {
   ASSIGN,
@@ -41,11 +43,10 @@ export enum TokenType {
   AND,
 }
 
-export class JavaToken extends AbstractToken {
+export class JavaToken implements AstToken {
   type: TokenType;
 
   constructor(type: TokenType) {
-    super();
     this.type = type;
   }
 
@@ -54,8 +55,8 @@ export class JavaToken extends AbstractToken {
   }
 }
 
-export abstract class AbstractJavaNode extends AbstractStNode {
-
+export abstract class AbstractJavaNode implements AstNode {
+  abstract visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
 }
 
 export class RegularType<T extends OmniType> extends AbstractJavaNode {
@@ -178,7 +179,7 @@ export class AnnotationKeyValuePair extends AbstractJavaNode {
   }
 }
 
-export class AnnotationKeyValuePairList extends AbstractJavaNode implements StNodeWithChildren<AnnotationKeyValuePair> {
+export class AnnotationKeyValuePairList extends AbstractJavaNode implements AstNodeWithChildren<AnnotationKeyValuePair> {
   children: AnnotationKeyValuePair[];
 
   constructor(...children: AnnotationKeyValuePair[]) {
@@ -206,7 +207,7 @@ export class Annotation extends AbstractJavaNode {
   }
 }
 
-export class AnnotationList extends AbstractJavaNode implements StNodeWithChildren<Annotation> {
+export class AnnotationList extends AbstractJavaNode implements AstNodeWithChildren<Annotation> {
   children: Annotation[];
   multiline = true;
 
@@ -220,7 +221,7 @@ export class AnnotationList extends AbstractJavaNode implements StNodeWithChildr
   }
 }
 
-export class ArrayInitializer<T extends AbstractJavaNode> extends AbstractJavaNode implements StNodeWithChildren<T> {
+export class ArrayInitializer<T extends AbstractJavaNode> extends AbstractJavaNode implements AstNodeWithChildren<T> {
   children: T[];
 
   constructor(...children: T[]) {
@@ -267,7 +268,7 @@ export class ArgumentDeclaration extends AbstractJavaNode {
   }
 }
 
-export class ArgumentDeclarationList extends AbstractJavaNode implements StNodeWithChildren<ArgumentDeclaration> {
+export class ArgumentDeclarationList extends AbstractJavaNode implements AstNodeWithChildren<ArgumentDeclaration> {
   children: ArgumentDeclaration[];
 
   constructor(...children: ArgumentDeclaration[]) {
@@ -339,7 +340,7 @@ export class Predicate extends BinaryExpression {
   }
 }
 
-export class ArgumentList extends AbstractJavaNode implements StNodeWithChildren<AbstractExpression> {
+export class ArgumentList extends AbstractJavaNode implements AstNodeWithChildren<AbstractExpression> {
   children: AbstractExpression[];
 
   constructor(...children: AbstractExpression[]) {
@@ -352,7 +353,7 @@ export class ArgumentList extends AbstractJavaNode implements StNodeWithChildren
   }
 }
 
-export class EnumItemList extends AbstractJavaNode implements StNodeWithChildren<EnumItem> {
+export class EnumItemList extends AbstractJavaNode implements AstNodeWithChildren<EnumItem> {
   children: EnumItem[];
 
   constructor(...children: EnumItem[]) {
@@ -365,7 +366,7 @@ export class EnumItemList extends AbstractJavaNode implements StNodeWithChildren
   }
 }
 
-export class Block extends AbstractJavaNode implements StNodeWithChildren<AbstractJavaNode> {
+export class Block extends AbstractJavaNode implements AstNodeWithChildren<AbstractJavaNode> {
   children: AbstractJavaNode[];
 
   constructor(...children: AbstractJavaNode[]) {
@@ -402,7 +403,7 @@ export class Modifier extends AbstractJavaNode {
   }
 }
 
-export class ModifierList extends AbstractJavaNode implements StNodeWithChildren<Modifier> {
+export class ModifierList extends AbstractJavaNode implements AstNodeWithChildren<Modifier> {
   children: Modifier[];
 
   constructor(...modifiers: Modifier[]) {
@@ -875,7 +876,7 @@ export class Cast extends AbstractJavaNode {
   }
 }
 
-export class TypeList<T extends OmniType> extends AbstractJavaNode implements StNodeWithChildren<Type<T>> {
+export class TypeList<T extends OmniType> extends AbstractJavaNode implements AstNodeWithChildren<Type<T>> {
   children: Type<T>[];
 
   constructor(types: Type<T>[]) {
@@ -1127,14 +1128,13 @@ export class GenericClassDeclaration extends ClassDeclaration {
   }
 }
 
-export class GenericTypeDeclaration extends AbstractStNode {
+export class GenericTypeDeclaration implements AstNode {
   sourceIdentifier?: OmniGenericSourceIdentifierType | undefined;
   name: Identifier;
   lowerBounds?: Type<OmniType> | undefined;
   upperBounds?: Type<OmniType> | undefined;
 
   constructor(name: Identifier, sourceIdentifier?: OmniGenericSourceIdentifierType, lowerBounds?: Type<OmniType>, upperBounds?: Type<OmniType>) {
-    super();
     this.name = name;
     this.sourceIdentifier = sourceIdentifier;
     this.lowerBounds = lowerBounds;
@@ -1245,7 +1245,7 @@ export class ImportStatement extends AbstractJavaNode {
   }
 }
 
-export class ImportList extends AbstractJavaNode implements StNodeWithChildren<ImportStatement> {
+export class ImportList extends AbstractJavaNode implements AstNodeWithChildren<ImportStatement> {
   children: ImportStatement[];
 
   constructor(children: ImportStatement[]) {

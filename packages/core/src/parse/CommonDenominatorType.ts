@@ -1,4 +1,4 @@
-import {TypeDifference} from '../equality/index.js';
+import {TypeDifference} from '../equality';
 
 export interface CommonDenominatorType<T> {
 

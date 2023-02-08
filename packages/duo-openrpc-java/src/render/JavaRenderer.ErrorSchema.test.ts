@@ -1,6 +1,5 @@
-import {JavaOptions} from '@omnigen/target-java';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
 
 describe('Error-Schema', () => {

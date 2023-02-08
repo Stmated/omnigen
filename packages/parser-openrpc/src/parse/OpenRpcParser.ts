@@ -1,9 +1,7 @@
 import {
-  Case,
   DEFAULT_PARSER_OPTIONS,
-  Dereferenced,
-  Dereferencer,
-  IncomingOptions, OMNI_GENERIC_FEATURES,
+  IncomingOptions,
+  OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniComparisonOperator,
@@ -31,13 +29,10 @@ import {
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
-  OmniUtil,
   OptionAdditions,
   OptionResolvers,
   OptionsSource,
-  OptionsUtil,
   Parser,
-  PARSER_OPTIONS_RESOLVERS,
   ParserBootstrap,
   ParserBootstrapFactory,
   ParserOptions,
@@ -46,6 +41,7 @@ import {
   TargetOptions,
   TypeName,
 } from '@omnigen/core';
+import {Case, Dereferenced, Dereferencer, OmniUtil, OptionsUtil, PARSER_OPTIONS_RESOLVERS} from '@omnigen/core-util';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
@@ -72,7 +68,7 @@ import {
   JSONRPC_OPTIONS_FALLBACK,
   JSONRPC_OPTIONS_RESOLVERS,
   JsonRpcParserOptions,
-} from '../options/index.js';
+} from '../options';
 import {JsonSchemaParser, SchemaToTypeResult} from '@omnigen/parser-jsonschema';
 
 const logger = LoggerFactory.create(import.meta.url);

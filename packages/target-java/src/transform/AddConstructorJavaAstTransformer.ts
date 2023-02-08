@@ -1,17 +1,18 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform/index.js';
 import {
-  AbortVisitingWithResult,
   LiteralValue,
-  OmniModel,
+  OmniModel, OmniType,
   OmniTypeKind,
-  OmniUtil,
+} from '@omnigen/core';
+import {
+  AbortVisitingWithResult, OmniUtil,
   VisitorFactoryManager,
   VisitResultFlattener,
-} from '@omnigen/core';
-import {FieldAccessorMode} from '../options/index.js';
-import {JavaUtil} from '../util/index.js';
+} from '@omnigen/core-util';
+import {FieldAccessorMode} from '../options';
+import {JavaUtil} from '../util';
 import * as Java from '../ast/index.js';
-import {TokenType} from '../ast/index.js';
+import {TokenType} from '../ast';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
@@ -226,7 +227,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   }
 
 
-  private createArgumentDeclaration(type: Java.Type, identifier: Java.Identifier): Java.ArgumentDeclaration {
+  private createArgumentDeclaration(type: Java.Type<OmniType>, identifier: Java.Identifier): Java.ArgumentDeclaration {
 
     const annotations: Java.Annotation[] = [];
     const schemaIdentifier = identifier.original || identifier.value;
@@ -267,7 +268,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     );
   }
 
-  private getResolvedGenericArgumentType(requiredArgument: Java.ArgumentDeclaration, node: Java.ClassDeclaration): Java.Type {
+  private getResolvedGenericArgumentType(requiredArgument: Java.ArgumentDeclaration, node: Java.ClassDeclaration): Java.Type<OmniType> {
 
     if (requiredArgument.type.omniType.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
       // The type is 'T' or something. Need to get the actual type from our current parent class.

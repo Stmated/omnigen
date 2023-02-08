@@ -1,14 +1,16 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
-  AbortVisitingWithResult,
-  AbstractStNode,
+  AstNode,
   OmniTypeKind,
+} from '@omnigen/core';
+import {
+  AbortVisitingWithResult,
   VisitorFactoryManager,
   VisitResultFlattener,
-} from '@omnigen/core';
+} from '@omnigen/core-util';
 import * as Java from '../ast/index.js';
-import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast/index.js';
-import {JavaUtil} from '../util/index.js';
+import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
+import {JavaSubTypeCapableType, JavaUtil} from '../util';
 
 export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
 
@@ -21,7 +23,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
 
   transformAst(args: JavaAstTransformerArgs): Promise<void> {
 
-    const owner: { node: Java.AbstractObjectDeclaration | undefined } = {node: undefined};
+    const owner: { node: Java.AbstractObjectDeclaration<JavaSubTypeCapableType> | undefined } = {node: undefined};
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
       visitEnumDeclaration: () => {},
@@ -98,7 +100,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
     return Promise.resolve();
   }
 
-  private findGetterMethodForField(latestBody: AbstractStNode): string | string[] | undefined {
+  private findGetterMethodForField(latestBody: AstNode): string | string[] | undefined {
 
     const visitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_STRING_VISITOR, {
 

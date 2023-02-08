@@ -26,7 +26,6 @@
     "@omnigen/eslint-config-custom": "0.0.0",
     "typescript": "beta",
     "jest": "^29.4.1",
-    "pino-pretty": "^9.1.1",
     "java-parser": "^2.0.3"
   }
 }

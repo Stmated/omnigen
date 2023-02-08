@@ -1,9 +1,7 @@
-import {
-  OmniTypeKind,
-  VisitorFactoryManager,
-} from '@omnigen/core';
+import {OmniTypeKind} from '@omnigen/core';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
+import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddGeneratedAnnotationAstTransformer extends AbstractJavaAstTransformer {
 

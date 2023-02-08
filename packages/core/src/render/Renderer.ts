@@ -1,5 +1,5 @@
-import {AbstractStNode} from '../ast/index.js';
+import {AstNode} from '../ast';
 
 export interface Renderer {
-  render(node: AbstractStNode): string;
+  render(node: AstNode): string;
 }

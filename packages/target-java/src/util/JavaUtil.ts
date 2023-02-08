@@ -1,9 +1,7 @@
 import {
-  AstRootNode,
-  Case,
+  AstNode,
   CompositionKind,
   LiteralValue,
-  Naming,
   OmniCompositionType,
   OmniModel,
   OmniObjectType,
@@ -15,16 +13,15 @@ import {
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
-  OmniUtil,
   PackageOptions,
   RealOptions,
-  VisitorFactoryManager,
   UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options/index.js';
-import {JavaVisitor} from '../visit/index.js';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options';
+import {JavaVisitor} from '../visit';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
+import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -499,7 +496,7 @@ export class JavaUtil {
   }
 
   public static getConstructorRequirements(
-    root: AstRootNode,
+    root: AstNode,
     node: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
     followSupertype = false,
   ): [Java.Field[], Java.ArgumentDeclaration[]] {
@@ -580,7 +577,7 @@ export class JavaUtil {
     }
   }
 
-  public static getClassDeclaration(root: AstRootNode, type: OmniType): Java.ClassDeclaration | undefined {
+  public static getClassDeclaration(root: AstNode, type: OmniType): Java.ClassDeclaration | undefined {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
     const holder: { ref?: Java.ClassDeclaration } = {};

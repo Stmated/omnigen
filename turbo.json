@@ -5,11 +5,7 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "test": {
-      "inputs": ["src/**/*.ts"],
-      "outputs": [],
-      "cache": false
-    },
+    "test": {},
     "test:watch": {
       "dependsOn": ["build"],
       "cache": false

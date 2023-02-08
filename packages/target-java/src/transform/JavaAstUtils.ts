@@ -3,13 +3,13 @@ import {
   OmniPotentialInterfaceType,
   OmniType,
   OmniTypeKind,
-  OmniUtil,
   UnknownKind,
 } from '@omnigen/core';
-import {JavaUtil} from '../util/index.js';
+import {JavaUtil} from '../util';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaVisitor} from '../visit/index.js';
+import {JavaVisitor} from '../visit';
+import {OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 

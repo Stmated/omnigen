@@ -1,0 +1,23 @@
+{
+  "name": "@omnigen/implementation-typescript-test",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "npx tsc",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "generate": "omnigen -i ./resources/schemas/ethereum.json -o ./src/generated/ -t java"
+  },
+  "dependencies": {
+    "@omnigen/omnigen": "0.0.0"
+  },
+  "devDependencies": {
+    "@omnigen/config-typescript": "0.0.0",
+    "@omnigen/eslint-config-custom": "0.0.0",
+    "typescript": "beta",
+    "@omnigen/omnigen-cli": "0.0.0"
+  }
+}

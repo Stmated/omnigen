@@ -1,28 +1,7 @@
-import {Booleanish, Option, OptionResolvers, Options, StandardOptionResolvers} from '../options/index.js';
-import {CompressTypeLevel, OmniTypeKind} from '../parse/index.js';
-
-export enum CompressTypeNaming {
-  EXACT,
-  /**
-   * Not implemented
-   */
-  FIRST,
-  /**
-   * Not implemented
-   */
-  JOIN,
-  COMMON_PREFIX,
-  /**
-   * Not implemented
-   */
-  COMMON_SUFFIX,
-  /**
-   * Not implemented
-   */
-  COMMON_PREFIX_AND_SUFFIX,
-}
-
-export type OmniTypeNameReducer = (groups: string[][]) => string | CompressTypeNaming | undefined;
+import {Booleanish, Option, OptionResolvers, Options} from '../options';
+import {CompressTypeLevel, OmniTypeKind} from '../parse';
+import {OmniTypeNameReducer} from './OmniTypeNameReducer';
+import {CompressTypeNaming} from './CompressTypeNaming';
 
 export interface TargetOptions extends Options {
 
@@ -69,8 +48,4 @@ export const DEFAULT_TARGET_OPTIONS: TargetOptions = {
   compressTypeNamingReducer: undefined,
   additionalPropertiesInterfaceAfterDuplicateCount: 2,
   allowCompressInterfaceToInner: true,
-};
-
-export const TARGET_OPTION_RESOLVERS: OptionResolvers<TargetOptions> = {
-  allowCompressInterfaceToInner: StandardOptionResolvers.toBoolean,
 };

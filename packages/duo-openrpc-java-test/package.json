@@ -19,12 +19,15 @@
   "dependencies": {
     "@omnigen/core": "0.0.0",
     "@omnigen/core-log": "0.0.0",
+    "@omnigen/core-util": "0.0.0",
     "@omnigen/parser-jsonschema": "0.0.0",
     "@omnigen/parser-openrpc": "0.0.0",
-    "@omnigen/target-java": "0.0.0"
+    "@omnigen/target-java": "0.0.0",
+    "json-schema": "^0.4.0"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",
+    "@types/json-schema": "^7.0.11",
     "@omnigen/config-jest": "0.0.0",
     "@omnigen/config-typescript": "0.0.0",
     "@omnigen/eslint-config-custom": "0.0.0",
@@ -32,7 +35,6 @@
     "@omnigen/utils-test-target-java": "0.0.0",
     "typescript": "beta",
     "jest": "^29.4.1",
-    "pino-pretty": "^9.1.1",
     "java-parser": "^2.0.3"
   }
 }

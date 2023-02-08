@@ -1,13 +1,8 @@
 import {JSONSchema7, JSONSchema7Definition, JSONSchema7Type} from 'json-schema';
 import {
   AllowedEnumTsTypes,
-  Case,
   CompositionKind,
-  CompositionUtil,
-  Dereferenced,
-  Dereferencer,
   JSONSchema7Items,
-  Naming,
   OmniArrayTypes,
   OmniArrayTypesByPositionType,
   OmniComparisonOperator,
@@ -22,7 +17,6 @@ import {
   OmniSubTypeHint,
   OmniType,
   OmniTypeKind,
-  OmniUtil,
   ParserOptions,
   RealOptions,
   TypeName, OMNI_GENERIC_FEATURES,
@@ -31,6 +25,7 @@ import {JSONSchema} from '@open-rpc/meta-schema';
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js';
+import {Case, CompositionUtil, Dereferenced, Dereferencer, Naming, OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -361,7 +356,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     });
   }
 
-  private getVendorExtension<R>(obj: Dereferenced<JsonObject> | JsonObject, key: string): R | undefined {
+  private getVendorExtension<R>(obj: JSONSchema7, key: string): R | undefined {
 
     if ('obj' in obj && 'root' in obj) {
       throw new Error(`You seem to have given a dereference object, when you should give the inner object.`);

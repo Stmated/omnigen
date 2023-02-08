@@ -1,5 +1,6 @@
-import {AbstractInterpreter, AstRootNode} from '@omnigen/core';
-import {FieldAccessorMode, JavaOptions} from '../options/index.js';
+import {AstNode} from '@omnigen/core';
+import {AbstractInterpreter} from '@omnigen/core-util';
+import {FieldAccessorMode, JavaOptions} from '../options';
 import {
   AddConstructorJavaAstTransformer,
   AddGeneratedAnnotationAstTransformer,
@@ -17,8 +18,8 @@ import {
   AddThrowsForKnownMethodsAstTransformer,
   AddAbstractAccessorsAstTransformer,
   AddSubTypeHintsAstTransformer, SimplifyGenericsAstTransformer,
-} from '../transform/index.js';
-import * as Java from '../ast/index.js';
+} from '../transform';
+import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -53,12 +54,12 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
     this.registerTransformer(new AddSubTypeHintsAstTransformer());
     this.registerTransformer(new InnerTypeCompressionAstTransformer());
     this.registerTransformer(new AddThrowsForKnownMethodsAstTransformer());
-    this.registerTransformer(new SimplifyGenericsAstTransformer())
+    this.registerTransformer(new SimplifyGenericsAstTransformer());
     this.registerTransformer(new PackageResolverAstTransformer());
     this.registerTransformer(new ReorderMembersTransformer());
   }
 
-  newRootNode(): Promise<AstRootNode> {
+  newRootNode(): Promise<AstNode> {
     return Promise.resolve(new Java.JavaAstRootNode());
   }
 }

@@ -1,8 +1,8 @@
-import {AstRootNode, OmniModel, RealOptions, TargetOptions} from '@omnigen/core';
+import {AstNode, OmniModel, RealOptions, TargetOptions} from '@omnigen/core';
 import {ImplementationOptions} from './ImplementationOptions.js';
 
 export interface ImplementationArgs<
-  TAst extends AstRootNode,
+  TAst extends AstNode,
   TTargetOpt extends TargetOptions,
   TImplOpt extends ImplementationOptions,
 > {

@@ -1,8 +1,8 @@
-import {AstRootNode, AstVisitor, VisitFn, VisitResult, AbstractStNode, OmniType} from '@omnigen/core';
+import {AstVisitor, VisitFn, VisitResult, AstNode, OmniType, AstNodeWithChildren} from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {JavaSubTypeCapableType} from '../util/index.js';
+import {JavaSubTypeCapableType} from '../util';
 
-export type JavaVisitFn<in N extends AbstractStNode, R> = VisitFn<N, R, JavaVisitor<R>>;
+export type JavaVisitFn<in N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
 export class JavaVisitor<R> implements AstVisitor<R> {
 
@@ -333,7 +333,7 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitFreeTextGlobal: {(freeText: Java.FreeTextType, visitor: JavaVisitor<R>, translator: {(v: string): R}): VisitResult<R>};
 
   visitorJava: JavaVisitor<R>;
-  visitRootNode: VisitFn<AstRootNode, R, AstVisitor<R>>;
+  visitRootNode: VisitFn<AstNodeWithChildren<AstNode>, R, AstVisitor<R>>;
   visitRegularType: JavaVisitFn<Java.RegularType<OmniType>, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;

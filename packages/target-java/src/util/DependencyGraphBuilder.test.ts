@@ -1,5 +1,6 @@
 import {
-  CompositionKind, DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS,
+  CompositionKind,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS,
   OmniCompositionType,
   OmniEndpoint,
   OmniModel,
@@ -7,12 +8,17 @@ import {
   OmniPrimitiveKind,
   OmniSuperTypeCapableType,
   OmniType,
-  OmniTypeKind, OmniUtil, PARSER_OPTIONS_RESOLVERS, TRANSFORM_OPTIONS_RESOLVER,
-  SimplifyInheritanceModelTransformer,
-  OptionsUtil,
+  OmniTypeKind,
 } from '@omnigen/core';
 import {JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
+import {
+  OmniUtil,
+  OptionsUtil,
+  PARSER_OPTIONS_RESOLVERS,
+  SimplifyInheritanceModelTransformer,
+  TRANSFORM_OPTIONS_RESOLVER,
+} from '@omnigen/core-util';
 
 describe('Test CompositionDependencyUtil', () => {
 

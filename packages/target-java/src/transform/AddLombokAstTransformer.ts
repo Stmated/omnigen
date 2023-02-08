@@ -3,10 +3,10 @@ import {
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
-  VisitorFactoryManager,
 } from '@omnigen/core';
-import * as Java from '../ast/index.js';
-import {AnnotationList, ModifierType} from '../ast/index.js';
+import * as Java from '../ast';
+import {AnnotationList, ModifierType} from '../ast';
+import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export interface StackInfo {
   cu: Java.CompilationUnit;

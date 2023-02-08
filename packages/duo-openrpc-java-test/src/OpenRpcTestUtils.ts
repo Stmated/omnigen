@@ -5,13 +5,9 @@ import {
   Dereferencer,
   OmniModelParserResult,
   SchemaFile,
-  ElevatePropertiesModelTransformer,
-  GenericsModelTransformer,
-  OptionsUtil,
-  SimplifyInheritanceModelTransformer,
   ModelTransformOptions,
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
-  TRANSFORM_OPTIONS_RESOLVER, OmniModelMerge, OmniModel2ndPassTransformer,
+  OmniModel2ndPassTransformer,
 } from '@omnigen/core';
 import {JavaOptions, JAVA_OPTIONS_RESOLVER, InterfaceJavaModelTransformer, JAVA_FEATURES} from '@omnigen/target-java';
 import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
@@ -22,6 +18,12 @@ import {
   OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_FALLBACK,
 } from '@omnigen/parser-openrpc';
 import {DEFAULT_TEST_JAVA_OPTIONS} from './JavaTestUtils.js';
+import {
+  ElevatePropertiesModelTransformer, GenericsModelTransformer,
+  OptionsUtil,
+  SimplifyInheritanceModelTransformer,
+  TRANSFORM_OPTIONS_RESOLVER,
+} from '@omnigen/core-util';
 
 export type KnownSchemaNames = 'openrpc';
 

@@ -3,13 +3,11 @@ import {JavaOptions} from '@omnigen/target-java';
 import {
   CompressTypeNaming,
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
-  Naming,
-  OmniModelMerge,
   OmniObjectType,
   OmniTypeKind,
-  OmniUtil,
 } from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {Naming, OmniModelMerge, OmniUtil} from '@omnigen/core-util';
 
 describe('OmniModelMerge-it', () => {
 

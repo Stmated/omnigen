@@ -1,10 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
-import {
-  OmniTypeKind,
-  VisitorFactoryManager,
-} from '@omnigen/core';
-import * as Java from '../ast/index.js';
-import {AnnotationList} from '../ast/index.js';
+import {OmniTypeKind} from '@omnigen/core';
+import * as Java from '../ast';
+import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export class PropertyNameDiscrepancyAstTransformer extends AbstractJavaAstTransformer {
 
@@ -32,7 +29,7 @@ export class PropertyNameDiscrepancyAstTransformer extends AbstractJavaAstTransf
 
         if (fieldName != jsonFieldName) {
 
-          const annotations = node.annotations || new AnnotationList(...[]);
+          const annotations = node.annotations || new Java.AnnotationList(...[]);
 
           annotations.children.push(new Java.Annotation(
             new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonProperty'}),

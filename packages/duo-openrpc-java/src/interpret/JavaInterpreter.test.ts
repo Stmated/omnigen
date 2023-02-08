@@ -1,7 +1,8 @@
 import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {JAVA_FEATURES, JavaInterpreter, JavaOptions, JavaUtil} from '@omnigen/target-java';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions, OmniTypeKind, OmniUtil} from '@omnigen/core';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions, OmniTypeKind} from '@omnigen/core';
 import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
+import {OmniUtil} from '@omnigen/core-util';
 
 describe('JavaInterpreter', () => {
 

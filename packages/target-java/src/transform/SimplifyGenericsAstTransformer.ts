@@ -4,10 +4,9 @@ import {
   OmniGenericTargetSourcePropertyType,
   OmniType,
   OmniTypeKind,
-  OmniUtil,
   TypeDifference,
-  VisitorFactoryManager,
 } from '@omnigen/core';
+import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 /**
  * If all target identifiers to a source have the same type, then replace the source identifiers with inline type.

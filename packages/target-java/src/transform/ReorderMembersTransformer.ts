@@ -1,7 +1,8 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
-import {AbstractStNode, OmniUtil, VisitorFactoryManager} from '@omnigen/core';
+import {AstNode} from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {ModifierType} from '../ast/index.js';
+import {ModifierType} from '../ast';
+import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 
 export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
@@ -55,7 +56,7 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
     return Promise.resolve();
   }
 
-  private getWeight(node: AbstractStNode): [number, string] {
+  private getWeight(node: AstNode): [number, string] {
 
     let weight = 0;
     if (node instanceof Java.Field) {

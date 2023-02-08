@@ -1,4 +1,4 @@
-import {Booleanish, Option, OptionResolvers, Options, StandardOptionResolvers} from '../options/index.js';
+import {Booleanish, Option, OptionResolvers, Options} from '../options/index.js';
 
 export interface ModelTransformOptions extends Options {
   simplifyTypeHierarchy: boolean;
@@ -22,9 +22,4 @@ export const DEFAULT_MODEL_TRANSFORM_OPTIONS: ModelTransformOptions = {
 
   generifyTypes: true,
   generificationBoxAllowed: true,
-};
-
-export const TRANSFORM_OPTIONS_RESOLVER: OptionResolvers<ModelTransformOptions> = {
-  generificationBoxAllowed: StandardOptionResolvers.toBoolean,
-  generifyTypes: StandardOptionResolvers.toBoolean,
 };

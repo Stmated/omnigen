@@ -19,6 +19,7 @@
   "dependencies": {
     "@omnigen/core": "0.0.0",
     "@omnigen/core-log": "0.0.0",
+    "@omnigen/core-util": "0.0.0",
     "@omnigen/parser-jsonschema": "0.0.0",
     "@omnigen/parser-openrpc": "0.0.0",
     "@omnigen/target-java": "0.0.0"
@@ -34,7 +35,6 @@
     "typescript": "beta",
     "jest": "^29.4.1",
     "@jest/globals": "^29.4.1",
-    "pino-pretty": "^9.1.1",
     "java-parser": "^2.0.3"
   }
 }

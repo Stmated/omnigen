@@ -2,13 +2,13 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/i
 import {
   OmniType,
   OmniTypeKind,
-  OmniUtil, RealOptions,
+  RealOptions,
   TargetOptions,
-  VisitorFactoryManager,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaUtil} from '../util/index.js';
+import {JavaUtil} from '../util';
+import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -176,10 +176,11 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.source.of);
       const targetTypes = type.targetIdentifiers.flatMap(it => InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(it.type));
       return [...sourceType, ...targetTypes];
-    } /*else if (type.kind == OmniTypeKind.INTERFACE) {
-      const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.of);
-      return [type, ...sourceType];
-    }*/
+    }
+    // else if (type.kind == OmniTypeKind.INTERFACE) {
+    //   const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.of);
+    //   return [type, ...sourceType];
+    // }
 
     // Should we follow external model references here?
 

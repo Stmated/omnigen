@@ -4,6 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
+  "main": "./src/index.ts",
   "files": [
     "dist"
   ],
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "@omnigen/core": "0.0.0",
+    "@omnigen/core-util": "0.0.0",
     "@omnigen/core-log": "0.0.0",
     "@omnigen/parser-jsonschema": "0.0.0",
     "@omnigen/parser-openrpc": "0.0.0",

@@ -4,14 +4,15 @@ import {
   OmniModel,
   OmniPrimitiveKind,
   OmniTypeKind,
-  GenericsModelTransformer,
-  OmniUtil,
-  OptionsUtil,
   DEFAULT_PARSER_OPTIONS,
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
-  TRANSFORM_OPTIONS_RESOLVER,
-  PARSER_OPTIONS_RESOLVERS,
 } from '@omnigen/core';
+import {
+  GenericsModelTransformer, OmniUtil,
+  OptionsUtil,
+  PARSER_OPTIONS_RESOLVERS,
+  TRANSFORM_OPTIONS_RESOLVER,
+} from '@omnigen/core-util';
 
 describe('Test CompositionDependencyUtil', () => {
 

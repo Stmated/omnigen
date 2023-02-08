@@ -2,22 +2,14 @@ import fs from 'fs/promises';
 import {DEFAULT_FILE_WRITE_OPTIONS, DEFAULT_RUN_OPTIONS, FileWriteOptions, OmnigenOptions} from './OmnigenOptions.js';
 import {OmnigenResult} from './OmnigenResult.js';
 import {
-  Dereferencer,
-  ElevatePropertiesModelTransformer,
-  FileWriter,
-  GenericsModelTransformer,
   IncomingOptions,
   OmniModelTransformer,
-  StandardOptionResolvers,
-  OptionsUtil,
   RenderedCompilationUnit,
   SchemaFile,
-  SimplifyInheritanceModelTransformer,
   ParserOptions,
   TargetOptions,
   RealOptions,
-  AstRootNode,
-  DEFAULT_MODEL_TRANSFORM_OPTIONS, TRANSFORM_OPTIONS_RESOLVER,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS, AstNode,
 } from '@omnigen/core';
 import {
   DEFAULT_JAVA_OPTIONS,
@@ -43,6 +35,15 @@ import {
   ImplementationOptions,
   JavaHttpImplementationGenerator,
 } from '@omnigen/target-impl-java-http';
+import {
+  OptionsUtil,
+  FileWriter,
+  StandardOptionResolvers,
+  SimplifyInheritanceModelTransformer,
+  ElevatePropertiesModelTransformer,
+  GenericsModelTransformer,
+  TRANSFORM_OPTIONS_RESOLVER, Dereferencer,
+} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -147,8 +148,6 @@ export class Omnigen {
             const companions = await this.generateAccompanyingRootNodes(result, incomingOptions);
             for (const companion of companions) {
 
-              logger.info(`Companion!`);
-
               const rendered = this.renderRootNode(companion, result.targetOptions);
 
               logger.info(`Got ${rendered.length} renders from companion`);
@@ -187,7 +186,7 @@ export class Omnigen {
   }
 
   private renderRootNode<TTargetOpt extends TargetOptions>(
-    rootNode: AstRootNode,
+    rootNode: AstNode,
     targetOptions: RealOptions<TTargetOpt>,
   ): RenderedCompilationUnit[] {
 
@@ -208,7 +207,7 @@ export class Omnigen {
   >(
     result: OmnigenResult<TParseOpt, TTargetOpt>,
     incomingOptions: IncomingOptions<TImplOpt>,
-  ): Promise<AstRootNode[]> {
+  ): Promise<AstNode[]> {
 
     const generator = new JavaHttpImplementationGenerator();
 

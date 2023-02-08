@@ -7,10 +7,11 @@ import {
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
-  OmniUtil, ParserOptions,
-  OmniModelTransformerArgs
+  ParserOptions,
+  OmniModelTransformerArgs,
 } from '@omnigen/core';
-import {JavaUtil} from '../../util/index.js';
+import {JavaUtil} from '../../util';
+import {OmniUtil} from '@omnigen/core-util';
 
 /**
  * Checks for object types that are used as interfaces, and splits the type into two types.

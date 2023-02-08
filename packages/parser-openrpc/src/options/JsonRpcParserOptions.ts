@@ -6,9 +6,9 @@ import {
   RealOptions,
   OptionAdditions,
   OptionResolvers,
-  OptionsUtil,
   Options,
 } from '@omnigen/core';
+import {OptionsUtil} from '@omnigen/core-util';
 
 export type JsonRpcVersion = '1.0' | '1.1' | '2.0';
 

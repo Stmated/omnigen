@@ -1,21 +1,7 @@
-import {OmniModel} from '../parse/index.js';
-import {AstRootNode} from '../ast/index.js';
-import {Options, RealOptions} from '../options/index.js';
-import {TargetFeatures} from '../interpret/index.js';
+import {AstNode} from '../ast';
+import {AstTransformerArguments} from './AstTransformerArguments';
+import {TargetOptions} from '../interpret';
 
-export interface ExternalSyntaxTree<TRoot extends AstRootNode, TOpt extends Options> {
-  node: TRoot;
-  options: RealOptions<TOpt>;
-}
-
-export interface AstTransformerArguments<TRoot extends AstRootNode, TOpt extends Options> {
-  model: OmniModel;
-  root: TRoot;
-  externals: ExternalSyntaxTree<TRoot, TOpt>[];
-  options: RealOptions<TOpt>;
-  features: TargetFeatures;
-}
-
-export interface AstTransformer<TRoot extends AstRootNode, TOpt extends Options> {
+export interface AstTransformer<TRoot extends AstNode, TOpt extends TargetOptions> {
   transformAst(args: AstTransformerArguments<TRoot, TOpt>): Promise<void>;
 }

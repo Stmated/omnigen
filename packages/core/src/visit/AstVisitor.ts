@@ -1,26 +1,7 @@
-import {AstRootNode, AbstractStNode} from '../ast/index.js';
-
-export type VisitResult<R> = void | R | Array<R> | Array<VisitResult<R>>;
-
-export type VisitFn<N extends AbstractStNode, R, V extends AstVisitor<R>> = (node: N, visitor: V) => VisitResult<R>;
+import {AstNode, AstNodeWithChildren} from '../ast';
+import {VisitFn} from './VisitFn';
 
 export interface AstVisitor<R> {
-  visitRootNode: VisitFn<AstRootNode, R, AstVisitor<R>>;
+  visitRootNode: VisitFn<AstNodeWithChildren<AstNode>, R, AstVisitor<R>>;
 }
 
-export class AbortVisitingWithResult<T> extends Error {
-
-  private readonly _result: T;
-
-  get result(): T {
-    return this._result;
-  }
-
-  constructor(result: T) {
-    super();
-    this._result = result;
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, AbortVisitingWithResult.prototype);
-  }
-}

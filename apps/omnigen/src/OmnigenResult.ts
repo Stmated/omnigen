@@ -1,5 +1,5 @@
 import {
-  AstRootNode,
+  AstNode,
   OmniModel,
   ParserOptions,
   RealOptions,
@@ -12,7 +12,7 @@ export interface OmnigenResult<TParseOpt extends ParserOptions, TTargetOpt exten
   model: OmniModel;
   parseOptions: RealOptions<TParseOpt>;
   targetOptions: RealOptions<TTargetOpt>;
-  originRootNode?: AstRootNode;
-  rootNode: AstRootNode;
+  originRootNode?: AstNode;
+  rootNode: AstNode;
   renders: RenderedCompilationUnit[];
 }

@@ -1,7 +1,7 @@
 import {
   OmniUtil,
   VisitorFactoryManager,
-} from '@omnigen/core';
+} from '@omnigen/core-util';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 
 export class AddJakartaValidationAstTransformer extends AbstractJavaAstTransformer {

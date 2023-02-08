@@ -1,15 +1,15 @@
-import {OmniModel} from '../parse/index.js';
-import {AstRootNode} from '../ast/index.js';
-import {RealOptions} from '../options/index.js';
-import {TargetFeatures, TargetOptions} from '../interpret/index.js';
-import {ExternalSyntaxTree} from '../transform/index.js';
+import {OmniModel} from '../parse';
+import {AstNode} from '../ast';
+import {RealOptions} from '../options';
+import {TargetFeatures, TargetOptions} from '../interpret';
+import {ExternalSyntaxTree} from '../transform';
 
 export interface Interpreter<TOpt extends TargetOptions> {
   buildSyntaxTree(
     model: OmniModel,
-    externals: ExternalSyntaxTree<AstRootNode, TOpt>[],
+    externals: ExternalSyntaxTree<AstNode, TOpt>[],
     options: RealOptions<TOpt>,
     features: TargetFeatures,
-  ): Promise<AstRootNode>;
+  ): Promise<AstNode>;
 }
 

@@ -1,16 +1,15 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {
-  Case,
   OmniPrimitiveKind,
   OmniProperty, OmniType,
   OmniTypeKind,
-  OmniUtil, RealOptions,
-  VisitorFactoryManager,
+  RealOptions,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {JavaOptions} from '../options/index.js';
-import {JavaUtil} from '../util/index.js';
+import {JavaOptions} from '../options';
+import {JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.js';
+import {Case, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): Promise<void> {

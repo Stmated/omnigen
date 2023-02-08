@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
-import {OmniHardcodedReferenceType, OmniType, OmniTypeKind, OmniUtil, VisitorFactoryManager} from '@omnigen/core';
+import {OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/core';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
+import {VisitorFactoryManager} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 

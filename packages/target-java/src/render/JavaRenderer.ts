@@ -1,21 +1,21 @@
 import {
-  AbstractStNode,
+  AstNode,
   AstVisitor,
   CompilationUnitRenderCallback,
   OmniPrimitiveKind, OmniType,
-  OmniUtil,
   RealOptions,
   Renderer,
   VisitResult,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast/index.js';
-import {JavaVisitFn, JavaVisitor} from '../visit/index.js';
-import {JavaOptions} from '../options/index.js';
+import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast';
+import {JavaVisitFn, JavaVisitor} from '../visit';
+import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaSubTypeCapableType} from '../util/index.js';
+import {JavaSubTypeCapableType} from '../util';
+import {OmniUtil} from '@omnigen/core-util';
 
-type JavaRendererVisitFn<N extends AbstractStNode> = JavaVisitFn<N, string>;
+type JavaRendererVisitFn<N extends AstNode> = JavaVisitFn<N, string>;
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -39,7 +39,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     return '  '.repeat(d);
   }
 
-  public render<N extends AbstractStNode, V extends AstVisitor<string>>(node: N | undefined, visitor?: V): string {
+  public render<N extends AstNode, V extends AstVisitor<string>>(node: N | undefined, visitor?: V): string {
     if (node === undefined) {
       return '';
     }

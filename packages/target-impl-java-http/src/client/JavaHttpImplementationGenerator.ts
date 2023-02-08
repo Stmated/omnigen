@@ -14,11 +14,9 @@ import {
 } from '@omnigen/target-java';
 import {ImplementationArgs} from './ImplementationArgs.js';
 import {
-  AstRootNode,
+  AstNode,
   AstTransformer,
-  Case,
   LiteralValue,
-  Naming,
   OmniComparisonOperator,
   OmniHardcodedReferenceType,
   OmniObjectType,
@@ -26,17 +24,17 @@ import {
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
-  OmniUtil,
   RealOptions,
   UnknownKind,
 } from '@omnigen/core';
 import {ImplementationOptions} from './ImplementationOptions.js';
 import {LoggerFactory} from '@omnigen/core-log';
+import {Case, Naming, OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-type JavaHttpGeneratorType = ImplementationGenerator<Java.JavaAstRootNode, JavaOptions, ImplementationOptions>;
-type JavaHttpArgs = ImplementationArgs<Java.JavaAstRootNode, JavaOptions, ImplementationOptions>;
+type JavaHttpGeneratorType = ImplementationGenerator<AstNode, JavaOptions, ImplementationOptions>;
+type JavaHttpArgs = ImplementationArgs<AstNode, JavaOptions, ImplementationOptions>;
 
 /**
  * TODO: Transformer that checks the response object, and counts the number of non-literal final values
@@ -59,9 +57,9 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
    *
    * @param args
    */
-  generate(args: JavaHttpArgs): Promise<AstRootNode[]> {
+  generate(args: JavaHttpArgs): Promise<AstNode[]> {
 
-    const promises: Promise<AstRootNode>[] = [];
+    const promises: Promise<AstNode>[] = [];
 
     if (args.implOptions.generateClient) {
 
@@ -83,7 +81,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       });
   }
 
-  private async generateClient(args: JavaHttpArgs): Promise<Java.JavaAstRootNode> {
+  private async generateClient(args: JavaHttpArgs): Promise<AstNode> {
 
     const root = new Java.JavaAstRootNode();
 
@@ -111,7 +109,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       package: args.implOptions.clientPackage,
     };
 
-    const transformers: AstTransformer<Java.JavaAstRootNode, JavaOptions>[] = [
+    const transformers: AstTransformer<AstNode, JavaOptions>[] = [
       // new ElevateAsAbstractMembersAstTransformer(),
       new AddFieldsAstTransformer(),
       new AddConstructorJavaAstTransformer(),

@@ -4,13 +4,16 @@ import {
   OptionResolvers,
   PackageOptions,
   TargetOptions,
-  PackageResolverOptionsParser,
-  OptionsUtil,
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
-  TRANSFORM_OPTIONS_RESOLVER,
-  UnknownKind, TARGET_OPTION_RESOLVERS,
+  UnknownKind,
 } from '@omnigen/core';
+import {
+  OptionsUtil,
+  PackageResolverOptionsParser,
+  TARGET_OPTION_RESOLVERS,
+  TRANSFORM_OPTIONS_RESOLVER,
+} from '@omnigen/core-util';
 
 export enum FieldAccessorMode {
   NONE,

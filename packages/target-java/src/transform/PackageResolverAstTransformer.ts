@@ -1,15 +1,14 @@
 import {
-  ExternalSyntaxTree, OmniObjectType,
+  ExternalSyntaxTree,
   OmniType,
-  OmniUtil,
   RealOptions,
-  VisitorFactoryManager,
 } from '@omnigen/core';
-import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util/index.js';
-import {JavaOptions} from '../options/index.js';
+import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util';
+import {JavaOptions} from '../options';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
+import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 

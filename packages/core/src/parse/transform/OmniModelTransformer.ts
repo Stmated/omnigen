@@ -1,6 +1,7 @@
-import {OmniModelTransformer2ndPassArgs, ParserOptions} from '../index.js';
 import {OmniModelTransformerArgs} from './OmniModelTransformerArgs.js';
-import {TargetOptions} from '../../interpret/index.js';
+import {TargetOptions} from '../../interpret';
+import {ParserOptions} from '../ParserOptions';
+import {OmniModelTransformer2ndPassArgs} from './OmniModelTransformer2ndPassArgs';
 
 export interface OmniModelTransformer<TParserOpt extends ParserOptions> {
   transformModel(args: OmniModelTransformerArgs<TParserOpt>): void;

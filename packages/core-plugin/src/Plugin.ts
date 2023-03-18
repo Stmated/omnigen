@@ -1,9 +1,7 @@
-import {PluginInitializationResult} from './PluginInitializationResult';
-import {PluginOptions} from './PluginOptions';
-
-export type PluginInitializer = {(options: PluginOptions): PluginInitializationResult};
+import {PluginHookCreator} from './PluginHookCreator';
 
 export interface Plugin {
+  name: string;
 
-  init: PluginInitializer;
+  init: PluginHookCreator;
 }

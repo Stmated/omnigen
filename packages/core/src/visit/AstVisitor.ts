@@ -1,4 +1,4 @@
-import {AstNode, AstNodeWithChildren} from '../ast';
+import {AstNode, AstNodeWithChildren} from '../ast/index.js';
 import {VisitFn} from './VisitFn';
 
 export interface AstVisitor<R> {

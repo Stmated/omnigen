@@ -3,7 +3,7 @@ import {
   OmniCompositionType,
   OmniType,
   OmniTypeKind,
-} from '../../../core/src/parse/index.js';
+} from '@omnigen/core';
 
 export class CompositionUtil {
 

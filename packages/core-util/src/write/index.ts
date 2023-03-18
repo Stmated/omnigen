@@ -1,2 +1,2 @@
 
-export * from './FileWriter';
+export * from './FileWriter.js';

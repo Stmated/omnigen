@@ -9,8 +9,8 @@ import {
   VisitResultFlattener,
 } from '@omnigen/core-util';
 import * as Java from '../ast/index.js';
-import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
-import {JavaSubTypeCapableType, JavaUtil} from '../util';
+import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast/index.js';
+import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
 
 export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
 

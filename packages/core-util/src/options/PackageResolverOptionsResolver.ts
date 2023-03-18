@@ -1,8 +1,8 @@
-import {IPackageResolver, OptionParser} from '@omnigen/core';
+import {IPackageResolver} from '@omnigen/core';
 
-export class PackageResolverOptionsParser implements OptionParser<IPackageResolver | undefined> {
+export class PackageResolverOptionsResolver {
 
-  parse(raw: unknown): IPackageResolver | undefined {
+  async parse(raw: unknown): Promise<IPackageResolver | undefined> {
 
     if (!raw) {
       return undefined;
@@ -11,12 +11,12 @@ export class PackageResolverOptionsParser implements OptionParser<IPackageResolv
     if (typeof raw == 'string') {
       const obj = JSON.parse(raw) as object;
       if (typeof obj == 'object') {
-        return PackageResolverOptionsParser.parseObject(obj);
+        return PackageResolverOptionsResolver.parseObject(obj);
       }
     } else if (typeof raw == 'function') {
       return raw as IPackageResolver;
     } else if (typeof raw == 'object') {
-      return PackageResolverOptionsParser.parseObject(raw);
+      return PackageResolverOptionsResolver.parseObject(raw);
     }
 
     throw new Error(`Cannot convert value '${String(raw)}' into a package resolver`);

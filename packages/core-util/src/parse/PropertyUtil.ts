@@ -1,8 +1,14 @@
-import {OmniProperty, OmniPropertyOrphan, OmniPropertyOwner, OmniType, OmniTypeKind} from '../../../core/src/parse/OmniModel.js';
-import {PropertiesInformation} from '../../../core/src/parse/PropertiesInformation.js';
-import {OmniUtil} from './OmniUtil';
-import {TargetFeatures} from '../../../core/src/interpret/index.js';
-import {PropertyDifference, PropertyEquality, TypeDifference} from '../../../core/src/equality/index.js';
+import {
+  OmniProperty,
+  OmniPropertyOrphan,
+  OmniPropertyOwner,
+  OmniType,
+  OmniTypeKind,
+  PropertiesInformation,
+} from '@omnigen/core';
+import {OmniUtil} from './OmniUtil.js';
+import {TargetFeatures} from '@omnigen/core';
+import {PropertyDifference, PropertyEquality, TypeDifference} from '@omnigen/core';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
 

@@ -11,13 +11,13 @@ import {
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
-import {PropertyUtil} from '../PropertyUtil';
+import {PropertyUtil} from '../PropertyUtil.js';
 import {OmniModelTransformerArgs} from '@omnigen/core';
 import {PropertyDifference} from '@omnigen/core';
-import {OmniUtil} from '../OmniUtil';
-import {EqualityFinder} from '../../equality';
-import {Naming} from '../Naming';
-import {Case, Sorters} from '../../util';
+import {OmniUtil} from '../OmniUtil.js';
+import {EqualityFinder} from '../../equality/index.js';
+import {Naming} from '../Naming.js';
+import {Case, Sorters} from '../../util/index.js';
 
 const logger = LoggerFactory.create(import.meta.url);
 

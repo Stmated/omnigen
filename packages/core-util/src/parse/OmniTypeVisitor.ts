@@ -1,9 +1,8 @@
 import {OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from '@omnigen/core';
-// import {OmniUtil} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as repl from 'repl';
-import {TypeOwner} from '../../../core/src/parse/TypeOwner';
-import {OmniUtil} from './OmniUtil';
+import {TypeOwner} from '@omnigen/core';
+import {OmniUtil} from './OmniUtil.js';
 
 const logger = LoggerFactory.create(import.meta.url);
 

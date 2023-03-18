@@ -20,10 +20,10 @@ import {
   OmniGenericSourceIdentifierType,
   AstVisitor,
 } from '@omnigen/core';
-import {JavaAstUtils} from '../transform';
-import {JavaSubTypeCapableType, JavaUtil} from '../util';
-import {JavaVisitor} from '../visit';
-import {JavaOptions} from '../options';
+import {JavaAstUtils} from '../transform/index.js';
+import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
+import {JavaVisitor} from '../visit/index.js';
+import {JavaOptions} from '../options/index.js';
 import {Case} from '@omnigen/core-util';
 
 export enum TokenType {

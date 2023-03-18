@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {OmniTypeKind} from '@omnigen/core';
-import * as Java from '../ast';
+import * as Java from '../ast/index.js';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export class PropertyNameDiscrepancyAstTransformer extends AbstractJavaAstTransformer {

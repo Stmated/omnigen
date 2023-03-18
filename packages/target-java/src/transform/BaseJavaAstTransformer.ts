@@ -1,5 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
-import {JavaOptions} from '../options';
+import {JavaOptions} from '../options/index.js';
 import {
   CompositionKind,
   OmniCompositionType,
@@ -17,8 +17,8 @@ import {
   UnknownKind,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {AbstractObjectDeclaration} from '../ast';
-import {JavaSubTypeCapableType, JavaUtil} from '../util';
+import {AbstractObjectDeclaration} from '../ast/index.js';
+import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
 import {JavaAstUtils} from './JavaAstUtils.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';

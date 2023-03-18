@@ -3,8 +3,8 @@ import {
   OmniType,
   RealOptions,
 } from '@omnigen/core';
-import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util';
-import {JavaOptions} from '../options';
+import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util/index.js';
+import {JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';

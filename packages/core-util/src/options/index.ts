@@ -1,4 +1,4 @@
 
-export * from './PackageResolverOptionsParser';
-export * from './OptionsUtil';
-export * from './StandardOptionResolvers';
+export * from './PackageResolverOptionsResolver';
+export * from './OptionsUtil.js';
+export * from './StandardOptionResolvers.js';

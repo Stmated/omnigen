@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./lib/index.js",
   "types": "./src/index.ts",
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
@@ -23,6 +23,6 @@
     "colors": "^1.4.0",
     "typescript": "beta",
     "jest": "^29.4.1",
-    "pino-pretty": "^9.1.1"
+    "pino-pretty": "^10.0.0"
   }
 }

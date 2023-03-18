@@ -1,2 +1,2 @@
 
-export * from './EqualityFinder';
+export * from './EqualityFinder.js';

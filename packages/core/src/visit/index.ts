@@ -1,5 +1,5 @@
 
 export * from './AstVisitor.js';
-export * from './VisitFn';
-export * from './VisitResult';
+export * from './VisitFn.js';
+export * from './VisitResult.js';
 

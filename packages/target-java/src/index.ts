@@ -8,6 +8,7 @@ export * from './util/index.js';
 export * from './render/index.js';
 export * from './parse/index.js';
 export * as Java from './ast/index.js';
+export {init} from './JavaPluginInit';
 
 export const JAVA_FEATURES: Readonly<TargetFeatures> = {
   ...OMNI_GENERIC_FEATURES,

@@ -10,7 +10,7 @@ import {
   ParserOptions,
   OmniModelTransformerArgs,
 } from '@omnigen/core';
-import {JavaUtil} from '../../util';
+import {JavaUtil} from '../../util/index.js';
 import {OmniUtil} from '@omnigen/core-util';
 
 /**

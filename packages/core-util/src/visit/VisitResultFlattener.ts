@@ -1,5 +1,5 @@
 import {AstNode, AstVisitor, VisitResult} from '@omnigen/core';
-import {AbortVisitingWithResult} from './AbortVisitingWithResult';
+import {AbortVisitingWithResult} from './AbortVisitingWithResult.js';
 
 export class VisitResultFlattener {
 

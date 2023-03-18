@@ -5,11 +5,10 @@ import {
   IncomingOptions,
   OmniModelTransformer,
   RenderedCompilationUnit,
-  SchemaFile,
   ParserOptions,
   TargetOptions,
   RealOptions,
-  DEFAULT_MODEL_TRANSFORM_OPTIONS, AstNode,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS, AstNode, SchemaSource,
 } from '@omnigen/core';
 import {
   DEFAULT_JAVA_OPTIONS,
@@ -42,7 +41,7 @@ import {
   SimplifyInheritanceModelTransformer,
   ElevatePropertiesModelTransformer,
   GenericsModelTransformer,
-  TRANSFORM_OPTIONS_RESOLVER, Dereferencer,
+  TRANSFORM_OPTIONS_RESOLVER, Dereferencer, SchemaFile,
 } from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -245,7 +244,7 @@ export class Omnigen {
   }
 
   private async generateFromSchemaFile<TParserOpt extends ParserOptions, TTargetOpt extends TargetOptions>(
-    schemaFile: SchemaFile,
+    schemaFile: SchemaSource,
     parserOptions: IncomingOptions<TParserOpt>,
     targetOptions: IncomingOptions<TTargetOpt>,
   ): Promise<OmnigenResult<TParserOpt, TTargetOpt>> {

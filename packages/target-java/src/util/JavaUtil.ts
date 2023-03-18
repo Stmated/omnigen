@@ -17,8 +17,8 @@ import {
   RealOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options';
-import {JavaVisitor} from '../visit';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options/index.js';
+import {JavaVisitor} from '../visit/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';

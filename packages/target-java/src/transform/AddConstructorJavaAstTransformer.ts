@@ -9,10 +9,10 @@ import {
   VisitorFactoryManager,
   VisitResultFlattener,
 } from '@omnigen/core-util';
-import {FieldAccessorMode} from '../options';
-import {JavaUtil} from '../util';
+import {FieldAccessorMode} from '../options/index.js';
+import {JavaUtil} from '../util/index.js';
 import * as Java from '../ast/index.js';
-import {TokenType} from '../ast';
+import {TokenType} from '../ast/index.js';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 

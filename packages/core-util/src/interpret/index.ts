@@ -1,2 +1,2 @@
 
-export * from './AbstractInterpreter';
+export * from './AbstractInterpreter.js';

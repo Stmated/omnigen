@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
-import {OmniTypeKind, SchemaFile} from '@omnigen/core';
+import {OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '@omnigen/target-java';
 import {OpenRpcParserOptions, OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_RESOLVERS} from './OpenRpcParser.js';
-import {JSONRPC_20_PARSER_OPTIONS} from '../options';
-import {OmniUtil, OptionsUtil} from '@omnigen/core-util';
+import {JSONRPC_20_PARSER_OPTIONS} from '../options/index.js';
+import {OmniUtil, OptionsUtil, SchemaFile} from '@omnigen/core-util';
 
 describe('Test Generic Model Creation', () => {
 

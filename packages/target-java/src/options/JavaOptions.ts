@@ -10,7 +10,7 @@ import {
 } from '@omnigen/core';
 import {
   OptionsUtil,
-  PackageResolverOptionsParser,
+  PackageResolverOptionsResolver,
   TARGET_OPTION_RESOLVERS,
   TRANSFORM_OPTIONS_RESOLVER,
 } from '@omnigen/core-util';
@@ -61,7 +61,7 @@ export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
 export const JAVA_OPTIONS_RESOLVER: OptionResolvers<JavaOptions> = {
   ...TRANSFORM_OPTIONS_RESOLVER,
   ...TARGET_OPTION_RESOLVERS,
-  packageResolver: v => Promise.resolve(new PackageResolverOptionsParser().parse(v)),
+  packageResolver: v => new PackageResolverOptionsResolver().parse(v),
   immutableModels: OptionsUtil.toBoolean,
   includeAlwaysNullProperties: OptionsUtil.toBoolean,
   includeLinksOnProperty: OptionsUtil.toBoolean,

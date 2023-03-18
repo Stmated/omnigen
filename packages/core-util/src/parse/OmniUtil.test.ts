@@ -4,11 +4,11 @@ import {
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
-} from '../../../core/src/parse/OmniModel.js';
-import {TypeDifference} from '../../../core/src/equality';
+} from '@omnigen/core';
+import {TypeDifference} from '@omnigen/core';
 import {OmniUtil} from './OmniUtil';
-import {CommonDenominatorType} from '../../../core/src/parse/CommonDenominatorType.js';
-import {OMNI_GENERIC_FEATURES} from '../../../core/src/interpret';
+import {CommonDenominatorType} from '@omnigen/core';
+import {OMNI_GENERIC_FEATURES} from '@omnigen/core';
 
 describe('OmniUtil', () => {
 

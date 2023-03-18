@@ -8,10 +8,10 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import {JavaOptions} from '../options';
+import {JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
-import {JavaUtil} from '../util';
+import {JavaUtil} from '../util/index.js';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {

@@ -4,8 +4,8 @@ import {
   VisitorFactoryManager,
 } from '@omnigen/core-util';
 import * as Java from '../ast/index.js';
-import {Identifier} from '../ast';
-import {JavaUtil} from '../util';
+import {Identifier} from '../ast/index.js';
+import {JavaUtil} from '../util/index.js';
 
 export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransformer {
 

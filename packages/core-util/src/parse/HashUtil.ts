@@ -1,8 +1,8 @@
-import {OmniType} from '../../../core/src/parse/OmniModel.js';
+import {OmniType} from '@omnigen/core';
 import hash from 'object-hash';
 import crypto from 'crypto';
-import {Naming} from './Naming';
-import {TypeName} from '../../../core/src/parse/TypeName.js';
+import {Naming} from './Naming.js';
+import {TypeName} from '@omnigen/core';
 
 export class HashUtil {
 

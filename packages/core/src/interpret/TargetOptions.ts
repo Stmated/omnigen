@@ -1,7 +1,7 @@
-import {Booleanish, Option, OptionResolvers, Options} from '../options';
-import {CompressTypeLevel, OmniTypeKind} from '../parse';
-import {OmniTypeNameReducer} from './OmniTypeNameReducer';
-import {CompressTypeNaming} from './CompressTypeNaming';
+import {Booleanish, Option, Options} from '../options/index.js';
+import {CompressTypeLevel, OmniTypeKind} from '../parse/index.js';
+import {OmniTypeNameReducer} from './OmniTypeNameReducer.js';
+import {CompressTypeNaming} from './CompressTypeNaming.js';
 
 export interface TargetOptions extends Options {
 

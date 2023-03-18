@@ -1,4 +1,4 @@
 
-export * from './VisitorFactoryManager';
-export * from './VisitResultFlattener';
-export {AbortVisitingWithResult} from './AbortVisitingWithResult';
+export * from './VisitorFactoryManager.js';
+export * from './VisitResultFlattener.js';
+export * from './AbortVisitingWithResult.js';

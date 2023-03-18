@@ -1,7 +1,7 @@
 import {ParserOptions} from './ParserOptions';
-import {SchemaFile} from './SchemaFile';
 import {ParserBootstrap} from './ParserBootstrap';
+import {SchemaSource} from './SchemaSource';
 
 export interface ParserBootstrapFactory<TOpt extends ParserOptions> {
-  createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<TOpt>>;
+  createParserBootstrap(schemaSource: SchemaSource): Promise<ParserBootstrap<TOpt>>;
 }

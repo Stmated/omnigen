@@ -4,8 +4,8 @@ import {
   Option,
   OptionResolvers,
   Options,
-  StandardOptionResolvers,
 } from '@omnigen/core';
+import {StandardOptionResolvers} from '@omnigen/core-util';
 
 export interface ImplementationOptions extends Options {
   generateClient: Option<Booleanish, boolean>;

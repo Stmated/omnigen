@@ -37,7 +37,7 @@ import {
   ParserBootstrapFactory,
   ParserOptions,
   RealOptions,
-  SchemaFile,
+  SchemaSource,
   TargetOptions,
   TypeName,
 } from '@omnigen/core';
@@ -68,7 +68,7 @@ import {
   JSONRPC_OPTIONS_FALLBACK,
   JSONRPC_OPTIONS_RESOLVERS,
   JsonRpcParserOptions,
-} from '../options';
+} from '../options/index.js';
 import {JsonSchemaParser, SchemaToTypeResult} from '@omnigen/parser-jsonschema';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -114,14 +114,14 @@ export const OPENRPC_OPTIONS_FALLBACK: OptionAdditions<OpenRpcParserOptions> = {
 
 export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<OpenRpcParserOptions> {
 
-  async createParserBootstrap(schemaFile: SchemaFile): Promise<ParserBootstrap<OpenRpcParserOptions>> {
+  async createParserBootstrap(schemaSource: SchemaSource): Promise<ParserBootstrap<OpenRpcParserOptions>> {
 
-    const schemaObject = await schemaFile.asObject();
+    const schemaObject = await schemaSource.asObject();
     const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
       dereference: false,
     });
 
-    const absolutePath = schemaFile.getAbsolutePath();
+    const absolutePath = schemaSource.getAbsolutePath();
     if (!absolutePath) {
       throw new Error(`The schema file must have a path, to able to dereference documents`);
     }

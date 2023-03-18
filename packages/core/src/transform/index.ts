@@ -1,4 +1,4 @@
 
 export * from './AstTransformer.js';
-export * from './AstTransformerArguments';
-export * from './ExternalSyntaxTree';
+export * from './AstTransformerArguments.js';
+export * from './ExternalSyntaxTree.js';

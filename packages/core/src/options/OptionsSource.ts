@@ -1,7 +1,7 @@
-import {ParserOptions} from '../parse';
+import {ParserOptions} from '../parse/index.js';
 import {TargetOptions} from '../interpret';
 import {IncomingOptions} from './IncomingOptions.js';
 
-export interface OptionsSource<TOpt extends ParserOptions> {
-  getIncomingOptions<TTargetOptions extends TargetOptions>(): IncomingOptions<TOpt & TTargetOptions> | undefined;
+export interface OptionsSource<TParserOpt extends ParserOptions> {
+  getIncomingOptions<TTargetOpt extends TargetOptions>(): IncomingOptions<TParserOpt & TTargetOpt> | undefined;
 }

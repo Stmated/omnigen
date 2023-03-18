@@ -1,6 +1,6 @@
 
-export * from './Dereferencer';
-export * from './ProtocolHandler';
-export * from './Sorters';
-export * from './ToString';
-export * from './Case';
+export * from './Dereferencer.js';
+export * from './ProtocolHandler.js';
+export * from './Sorters.js';
+export * from './ToString.js';
+export * from './Case.js';

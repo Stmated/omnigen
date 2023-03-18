@@ -1,6 +1,6 @@
 import {AstVisitor, VisitFn, VisitResult, AstNode, OmniType, AstNodeWithChildren} from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {JavaSubTypeCapableType} from '../util';
+import {JavaSubTypeCapableType} from '../util/index.js';
 
 export type JavaVisitFn<in N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 

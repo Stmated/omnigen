@@ -22,7 +22,7 @@
     "@omnigen/core-log": "0.0.0",
     "@omnigen/target-java": "0.0.0",
     "@omnigen/parser-jsonschema": "0.0.0",
-    "@open-rpc/meta-schema": "1.14.2",
+    "@open-rpc/meta-schema": "^1.14.4",
     "@open-rpc/schema-utils-js": "^1.16.1",
     "json-schema": "^0.4.0",
     "string-similarity": "^4.0.4"

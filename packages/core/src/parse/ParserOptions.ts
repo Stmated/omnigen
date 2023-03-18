@@ -2,7 +2,7 @@ import {
   Booleanish,
   Option,
   Options,
-} from '../options';
+} from '../options/index.js';
 
 export interface ParserOptions extends Options {
   relaxedLookup: Option<Booleanish, boolean>;

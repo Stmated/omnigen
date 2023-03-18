@@ -1,5 +1,5 @@
 import {HashUtil} from './HashUtil';
-import {OmniTypeKind} from '../../../core/src/parse/OmniModel.js';
+import {OmniTypeKind} from '@omnigen/core';
 
 test('Unknown', async () => {
 

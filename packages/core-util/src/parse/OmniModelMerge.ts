@@ -7,11 +7,11 @@ import {
 } from '@omnigen/core';
 import {Options, RealOptions} from '@omnigen/core';
 import {TargetOptions} from '@omnigen/core';
-import {BFSTraverseContext} from './OmniTypeVisitor';
-import {HashUtil} from './HashUtil';
+import {BFSTraverseContext} from './OmniTypeVisitor.js';
+import {HashUtil} from './HashUtil.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil} from './OmniUtil';
-import {TypeOwner} from '../../../core/src/parse/TypeOwner';
+import {OmniUtil} from './OmniUtil.js';
+import {TypeOwner} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 

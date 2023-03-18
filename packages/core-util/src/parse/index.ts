@@ -5,7 +5,9 @@ export * from './OmniUtil.js';
 export * from './Naming.js';
 export * from './PropertyUtil.js';
 
-export * from './transform';
-export * from './NamePair';
-export * from './ResolvedNamePair';
-export * from './NameCallback';
+export * from './transform/index.js';
+export * from './NamePair.js';
+export * from './ResolvedNamePair.js';
+export * from './NameCallback.js';
+
+export * from './SchemaFile.js';

@@ -4,11 +4,11 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./lib/index.js",
   "types": "./src/index.ts",
   "exports": {
-    "default": "./src/index.ts",
-    "ast": "./src/ast/index.ts"
+    "default": "./lib/index.js",
+    "ast": "./lib/ast/index.js"
   },
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
@@ -23,7 +23,8 @@
   "dependencies": {
     "@omnigen/core": "0.0.0",
     "@omnigen/core-util": "0.0.0",
-    "@omnigen/core-log": "0.0.0"
+    "@omnigen/core-log": "0.0.0",
+    "@omnigen/core-plugin": "0.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",

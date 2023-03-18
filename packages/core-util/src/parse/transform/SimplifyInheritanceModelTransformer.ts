@@ -7,7 +7,7 @@ import {
   ParserOptions, TypeOwner,
 } from '@omnigen/core';
 import {OmniModelTransformerArgs} from '@omnigen/core';
-import {OmniUtil} from '../OmniUtil';
+import {OmniUtil} from '../OmniUtil.js';
 
 /**
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.

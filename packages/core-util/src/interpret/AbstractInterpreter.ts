@@ -4,15 +4,8 @@ import {RealOptions} from '@omnigen/core';
 import {TargetOptions, Interpreter, TargetFeatures} from '@omnigen/core';
 
 export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements Interpreter<TOpt> {
-  private readonly _transformers: AstTransformer<AstNode, TOpt>[] = [];
 
-  protected getTransformers(): AstTransformer<AstNode, TOpt>[] {
-    return this._transformers;
-  }
-
-  protected registerTransformer(transformer: AstTransformer<AstNode, TOpt>): void {
-    this._transformers.push(transformer);
-  }
+  protected abstract getTransformers(options: RealOptions<TOpt>): AstTransformer<AstNode, TOpt>[];
 
   abstract newRootNode(): Promise<AstNode>;
 
@@ -33,7 +26,7 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
       features,
     };
 
-    for (const transformer of this.getTransformers()) {
+    for (const transformer of this.getTransformers(options)) {
 
       // We do the transformers in order.
       // Later we might batch them together based on "type" or "group" or whatever.

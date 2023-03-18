@@ -1,6 +1,6 @@
-import {AstNode} from '../ast';
-import {Options, RealOptions} from '../options';
-import {OmniModel} from '../parse';
+import {AstNode} from '../ast/index.js';
+import {Options, RealOptions} from '../options/index.js';
+import {OmniModel} from '../parse/index.js';
 import {TargetFeatures} from '../interpret';
 import {ExternalSyntaxTree} from './ExternalSyntaxTree';
 

@@ -30,18 +30,12 @@ import {
 } from '@omnigen/core';
 import {LiteralValue} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-// import {
-//   BFSTraverseCallback,
-//   BFSTraverseContext,
-//   DFSTraverseCallback,
-//   OmniTypeVisitor,
-// } from '@omnigen/core';
 import {CommonDenominatorType} from '@omnigen/core';
-import {PropertyUtil} from './PropertyUtil';
+import {PropertyUtil} from './PropertyUtil.js';
 import {TargetFeatures} from '@omnigen/core';
 import {PropertyDifference, TypeDifference, TypeOwner} from '@omnigen/core';
-import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
-import {Naming} from './Naming';
+import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.js';
+import {Naming} from './Naming.js';
 
 const logger = LoggerFactory.create(import.meta.url);
 

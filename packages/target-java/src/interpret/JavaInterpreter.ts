@@ -1,6 +1,6 @@
-import {AstNode} from '@omnigen/core';
+import {AstNode, AstTransformer, RealOptions} from '@omnigen/core';
 import {AbstractInterpreter} from '@omnigen/core-util';
-import {FieldAccessorMode, JavaOptions} from '../options';
+import {FieldAccessorMode, JavaOptions} from '../options/index.js';
 import {
   AddConstructorJavaAstTransformer,
   AddGeneratedAnnotationAstTransformer,
@@ -18,24 +18,25 @@ import {
   AddThrowsForKnownMethodsAstTransformer,
   AddAbstractAccessorsAstTransformer,
   AddSubTypeHintsAstTransformer, SimplifyGenericsAstTransformer,
-} from '../transform';
-import * as Java from '../ast';
+} from '../transform/index.js';
+import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
-  constructor(options: JavaOptions) {
-    super();
-    this.registerTransformer(new BaseJavaAstTransformer());
-    this.registerTransformer(new AddFieldsAstTransformer());
-    this.registerTransformer(new PropertyNameDiscrepancyAstTransformer());
+  getTransformers(options: RealOptions<JavaOptions>): AstTransformer<AstNode, JavaOptions>[] {
+    const transformers: AstTransformer<AstNode, JavaOptions>[] = [];
+
+    transformers.push(new BaseJavaAstTransformer());
+    transformers.push(new AddFieldsAstTransformer());
+    transformers.push(new PropertyNameDiscrepancyAstTransformer());
     switch (options.fieldAccessorMode) {
       case FieldAccessorMode.POJO:
-        this.registerTransformer(new AddAccessorsForFieldsAstTransformer());
+        transformers.push(new AddAccessorsForFieldsAstTransformer());
         break;
       case FieldAccessorMode.LOMBOK:
-        this.registerTransformer(new AddLombokAstTransformer());
+        transformers.push(new AddLombokAstTransformer());
         break;
       case FieldAccessorMode.NONE:
         logger.info(`Will not generate any getters or setters for fields`);
@@ -45,18 +46,20 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
     }
 
     // Is possible abstract accessors might clash with the Lombok accessors, will need future revisions
-    this.registerTransformer(new AddAbstractAccessorsAstTransformer());
-    this.registerTransformer(new AddConstructorJavaAstTransformer());
-    this.registerTransformer(new AddAdditionalPropertiesInterfaceAstTransformer());
-    this.registerTransformer(new AddCommentsAstTransformer());
-    this.registerTransformer(new AddJakartaValidationAstTransformer());
-    this.registerTransformer(new AddGeneratedAnnotationAstTransformer());
-    this.registerTransformer(new AddSubTypeHintsAstTransformer());
-    this.registerTransformer(new InnerTypeCompressionAstTransformer());
-    this.registerTransformer(new AddThrowsForKnownMethodsAstTransformer());
-    this.registerTransformer(new SimplifyGenericsAstTransformer());
-    this.registerTransformer(new PackageResolverAstTransformer());
-    this.registerTransformer(new ReorderMembersTransformer());
+    transformers.push(new AddAbstractAccessorsAstTransformer());
+    transformers.push(new AddConstructorJavaAstTransformer());
+    transformers.push(new AddAdditionalPropertiesInterfaceAstTransformer());
+    transformers.push(new AddCommentsAstTransformer());
+    transformers.push(new AddJakartaValidationAstTransformer());
+    transformers.push(new AddGeneratedAnnotationAstTransformer());
+    transformers.push(new AddSubTypeHintsAstTransformer());
+    transformers.push(new InnerTypeCompressionAstTransformer());
+    transformers.push(new AddThrowsForKnownMethodsAstTransformer());
+    transformers.push(new SimplifyGenericsAstTransformer());
+    transformers.push(new PackageResolverAstTransformer());
+    transformers.push(new ReorderMembersTransformer());
+
+    return transformers;
   }
 
   newRootNode(): Promise<AstNode> {

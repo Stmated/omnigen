@@ -8,11 +8,11 @@ import {
   VisitResult,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast';
-import {JavaVisitFn, JavaVisitor} from '../visit';
-import {JavaOptions} from '../options';
+import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast/index.js';
+import {JavaVisitFn, JavaVisitor} from '../visit/index.js';
+import {JavaOptions} from '../options/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaSubTypeCapableType} from '../util';
+import {JavaSubTypeCapableType} from '../util/index.js';
 import {OmniUtil} from '@omnigen/core-util';
 
 type JavaRendererVisitFn<N extends AstNode> = JavaVisitFn<N, string>;

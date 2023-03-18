@@ -1,6 +1,6 @@
 
-export * from './AstNode';
-export * from './AstToken';
+export * from './AstNode.js';
+export * from './AstToken.js';
 export * from './CompilationUnitRenderCallback.js';
 export * from './RenderedCompilationUnit.js';
-export * from './AstNodeWithChildren';
+export * from './AstNodeWithChildren.js';

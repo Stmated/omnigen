@@ -5,12 +5,12 @@ import {
   ParserOptions,
 } from '@omnigen/core';
 import {OMNI_GENERIC_FEATURES, TargetFeatures, TargetOptions} from '@omnigen/core';
-import {PropertyUtil} from '../PropertyUtil';
+import {PropertyUtil} from '../PropertyUtil.js';
 import {OmniModelTransformerArgs} from '@omnigen/core';
 import {PropertyDifference, TypeDifference} from '@omnigen/core';
 import {OmniModelTransformer2ndPassArgs} from '@omnigen/core';
-import {OmniUtil} from '../OmniUtil';
-import {Sorters} from '../../util';
+import {OmniUtil} from '../OmniUtil.js';
+import {Sorters} from '../../util/index.js';
 
 /**
  * Takes an OmniModel, and tries to compress types as much as possible.
@@ -28,8 +28,7 @@ import {Sorters} from '../../util';
  * b (abs): [x4]
  * </pre>
  */
-export class ElevatePropertiesModelTransformer implements OmniModelTransformer<ParserOptions>,
-  OmniModel2ndPassTransformer<ParserOptions, TargetOptions> {
+export class ElevatePropertiesModelTransformer implements OmniModelTransformer, OmniModel2ndPassTransformer {
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions, TargetOptions>): void {
     this.transformInner(args, args.targetFeatures);

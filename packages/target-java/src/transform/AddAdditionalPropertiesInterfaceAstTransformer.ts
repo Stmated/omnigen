@@ -1,7 +1,7 @@
 import {
   OmniInterfaceType, OmniObjectType, OmniTypeKind,
 } from '@omnigen/core';
-import {JavaUtil} from '../util';
+import {JavaUtil} from '../util/index.js';
 import {JavaAstUtils, AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {Naming, VisitorFactoryManager} from '@omnigen/core-util';

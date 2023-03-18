@@ -5,10 +5,11 @@
     "outDir": "dist",
     "strict": true,
     "target": "es6",
-    "module": "commonjs",
-    "sourceMap": true,
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "sourceMap": false,
     "esModuleInterop": true,
-    "moduleResolution": "node",
     "skipLibCheck": true
-  }
+  },
+  "include": ["./src/**/*.ts"]
 }

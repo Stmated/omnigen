@@ -5,10 +5,10 @@ import {
   OmniProperty,
   OmniPropertyOwner,
   OmniTypeKind,
-} from '../../../core/src/parse/OmniModel.js';
+} from '@omnigen/core';
 import {PropertyUtil} from './PropertyUtil';
-import {OMNI_GENERIC_FEATURES} from '../../../core/src/interpret/index.js';
-import {PropertyDifference, TypeDifference} from '../../../core/src/equality/index.js';
+import {OMNI_GENERIC_FEATURES} from '@omnigen/core';
+import {PropertyDifference, TypeDifference} from '@omnigen/core';
 
 describe('Test PropertyUtil', () => {
 

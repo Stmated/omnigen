@@ -1,5 +1,5 @@
 import pointer, {JsonObject} from 'json-pointer';
-import {ProtocolHandler} from './ProtocolHandler';
+import {ProtocolHandler} from './ProtocolHandler.js';
 import * as deepmerge from 'deepmerge';
 import * as path from 'path';
 import {LoggerFactory} from '@omnigen/core-log';

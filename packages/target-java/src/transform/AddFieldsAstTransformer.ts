@@ -6,8 +6,8 @@ import {
   RealOptions,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
-import {JavaOptions} from '../options';
-import {JavaUtil} from '../util';
+import {JavaOptions} from '../options/index.js';
+import {JavaUtil} from '../util/index.js';
 import {JavaAstUtils} from './JavaAstUtils.js';
 import {Case, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 

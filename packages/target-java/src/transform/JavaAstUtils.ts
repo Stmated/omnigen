@@ -5,10 +5,10 @@ import {
   OmniTypeKind,
   UnknownKind,
 } from '@omnigen/core';
-import {JavaUtil} from '../util';
+import {JavaUtil} from '../util/index.js';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaVisitor} from '../visit';
+import {JavaVisitor} from '../visit/index.js';
 import {OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);

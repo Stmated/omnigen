@@ -2,9 +2,7 @@ import fs from 'fs/promises';
 import {JSONSchema7} from 'json-schema';
 import {
   OmniModelTransformer,
-  Dereferencer,
   OmniModelParserResult,
-  SchemaFile,
   ModelTransformOptions,
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
   OmniModel2ndPassTransformer,
@@ -19,10 +17,12 @@ import {
 } from '@omnigen/parser-openrpc';
 import {DEFAULT_TEST_JAVA_OPTIONS} from './JavaTestUtils.js';
 import {
+  Dereferencer,
   ElevatePropertiesModelTransformer, GenericsModelTransformer,
   OptionsUtil,
   SimplifyInheritanceModelTransformer,
   TRANSFORM_OPTIONS_RESOLVER,
+  SchemaFile,
 } from '@omnigen/core-util';
 
 export type KnownSchemaNames = 'openrpc';

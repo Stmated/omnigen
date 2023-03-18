@@ -1,4 +1,4 @@
-import {OmniType} from '../parse';
+import {OmniType} from '../parse/index.js';
 import {PropertyDifference} from './PropertyDifference.js';
 import {TypeDifference} from './TypeDifference.js';
 

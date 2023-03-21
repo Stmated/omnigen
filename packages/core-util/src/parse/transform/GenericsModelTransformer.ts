@@ -82,7 +82,7 @@ export class GenericsModelTransformer implements OmniModelTransformer<ParserOpti
       const ownerToGenericTargetMap = new Map<OmniPropertyOwner, OmniGenericTargetType>();
       const propertyNameExpansions = new Map<string, OmniGenericSourceIdentifierType[]>();
       for (const propertyName in commonProperties.byPropertyName) {
-        if (!Object.hasOwn(commonProperties.byPropertyName, propertyName)) {
+        if (!(propertyName in commonProperties.byPropertyName)) {
           continue;
         }
 

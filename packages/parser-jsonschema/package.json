@@ -22,16 +22,16 @@
     "@omnigen/core-util": "0.0.0",
     "json-pointer": "^0.6.2",
     "json-schema": "^0.4.0",
-    "@open-rpc/meta-schema": "^1.14.4"
+    "@open-rpc/meta-schema": "1.14.2"
   },
   "devDependencies": {
-    "@types/jest": "^29.4.0",
+    "@types/jest": "^29.5.0",
     "@types/json-schema": "^7.0.11",
     "@types/json-pointer": "^1.0.31",
     "@omnigen/config-jest": "0.0.0",
     "@omnigen/config-typescript": "0.0.0",
     "@omnigen/eslint-config-custom": "0.0.0",
-    "typescript": "beta",
-    "jest": "^29.4.1"
+    "typescript": "^5.0.2",
+    "jest": "^29.5.0"
   }
 }

@@ -1,14 +1,13 @@
-import {
-  PipelineBuilderEntrypoint,
-  PipelineBuilderWithParser, PipelineBuilderWithDeserializer,
-} from './PipelineBuilder';
-import {RunOptions} from './RunOptions';
+import {Pipeline} from '@omnigen/core';
+
+export type Optional<T extends object, K extends keyof T = keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+export type OptionalExcept<T extends object, K extends keyof T> = Omit<Partial<T>, K> & Pick<T, K>;
 
 export interface PluginHook {
 
-  entry?: (runOptions: RunOptions, builder: PipelineBuilderEntrypoint) => void;
-
-  beforeParse?: (runOptions: RunOptions, builder: PipelineBuilderWithDeserializer) => void;
-
-  afterParse?: (runOptions: RunOptions, builder: PipelineBuilderWithParser) => void;
+  entry?: <P extends OptionalExcept<Pipeline, 'run'>>(pipeline: P) => P;
+  beforeParse?: <P extends OptionalExcept<Pipeline, 'run' | 'input'>>(pipeline: P) => P;
+  afterParse?: <P extends OptionalExcept<Pipeline, 'run' | 'input' | 'parserOptions'>>(pipeline: P) => P;
+  beforeRender?: <P extends OptionalExcept<Pipeline, 'run' | 'input' | 'parserOptions' | 'targetOptions'>>(pipeline: P) => P;
 }

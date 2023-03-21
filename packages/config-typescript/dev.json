@@ -3,7 +3,6 @@
   "display": "dev",
   "extends": "./base.json",
   "compilerOptions": {
-    "outDir": "./lib",
     "rootDir": "./src"
   }
 }

@@ -12,10 +12,10 @@ export const DEFAULT_CLIENT_OPTIONS: ServerOptions = {
 export const CLIENT_OPTIONS_PARSER: OptionResolvers<ServerOptions> = {
   serverPackage: v => {
     if (v) {
-      return Promise.resolve(v);
+      return v;
     }
 
     // TODO: Wrong, since it gets the default options and not the options we'd want.
-    return Promise.resolve(`${DEFAULT_PACKAGE_OPTIONS.package}.server`);
+    return `${DEFAULT_PACKAGE_OPTIONS.package}.server`;
   },
 };

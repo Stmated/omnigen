@@ -2,7 +2,7 @@ import {IPackageResolver} from '@omnigen/core';
 
 export class PackageResolverOptionsResolver {
 
-  async parse(raw: unknown): Promise<IPackageResolver | undefined> {
+  parse(raw: unknown): IPackageResolver | undefined {
 
     if (!raw) {
       return undefined;

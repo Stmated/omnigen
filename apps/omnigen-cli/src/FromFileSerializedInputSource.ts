@@ -8,7 +8,9 @@ export class FromFileSerializedInputSource implements SerializedInputSource {
     this._path = path;
   }
 
-  getInputs(): SerializedInput[] {
-    return [];
-  }
+  inputs: SerializedInput[] = [];
+
+  // getInputs(): SerializedInput[] {
+  //   return [];
+  // }
 }

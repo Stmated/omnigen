@@ -6,11 +6,11 @@
   "dependencies": {
     "@omnigen/config-typescript": "0.0.0",
     "@omnigen/core-log": "0.0.0",
-    "jest": "^29.4.1",
-    "typescript": "beta"
+    "jest": "^29.5.0",
+    "typescript": "^5.0.2"
   },
   "devDependencies": {
-    "@types/jest": "^29.4.0",
+    "@types/jest": "^29.5.0",
     "ts-jest": "^29.0.5"
   }
 }

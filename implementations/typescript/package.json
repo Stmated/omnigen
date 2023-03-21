@@ -17,7 +17,7 @@
   "devDependencies": {
     "@omnigen/config-typescript": "0.0.0",
     "@omnigen/eslint-config-custom": "0.0.0",
-    "typescript": "beta",
+    "typescript": "^5.0.2",
     "@omnigen/omnigen-cli": "0.0.0"
   }
 }

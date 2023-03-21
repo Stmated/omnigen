@@ -34,7 +34,7 @@ describe('Java Rendering', () => {
           DEFAULT_TEST_JAVA_OPTIONS,
         );
 
-        const interpretation = await new JavaInterpreter(result.options).buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
+        const interpretation = await new JavaInterpreter().buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
 
         let baseDir: string;
 

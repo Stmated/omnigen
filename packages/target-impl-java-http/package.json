@@ -24,11 +24,11 @@
     "@omnigen/duo-openrpc-java": "0.0.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.4.0",
+    "@types/jest": "^29.5.0",
     "@omnigen/config-jest": "0.0.0",
     "@omnigen/config-typescript": "0.0.0",
     "@omnigen/eslint-config-custom": "0.0.0",
-    "typescript": "beta",
-    "jest": "^29.4.1"
+    "typescript": "^5.0.2",
+    "jest": "^29.5.0"
   }
 }

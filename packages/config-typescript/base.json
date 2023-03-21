@@ -6,7 +6,6 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
-    "lib": ["es2022", "es2022.error"],
     "composite": false,
     "declaration": true,
     "declarationMap": true,
@@ -25,6 +24,8 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "exactOptionalPropertyTypes": true,
+
+    "allowImportingTsExtensions": true,
 
     "noEmit": true
   }

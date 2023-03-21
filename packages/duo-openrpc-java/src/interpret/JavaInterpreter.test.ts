@@ -9,7 +9,7 @@ describe('JavaInterpreter', () => {
   test('ensureBasicParsingDoesNotCrash', async () => {
 
     const options = DEFAULT_TEST_JAVA_OPTIONS;
-    const interpreter = new JavaInterpreter(options);
+    const interpreter = new JavaInterpreter();
     const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json',
       DEFAULT_OPENRPC_OPTIONS,
       DEFAULT_MODEL_TRANSFORM_OPTIONS,
@@ -60,7 +60,7 @@ describe('JavaInterpreter', () => {
       ...DEFAULT_TEST_JAVA_OPTIONS,
     };
 
-    const interpreter = new JavaInterpreter(targetOptions);
+    const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
       DEFAULT_OPENRPC_OPTIONS,
       transformerOptions,
@@ -123,7 +123,7 @@ describe('JavaInterpreter', () => {
       ...DEFAULT_TEST_JAVA_OPTIONS,
     };
 
-    const interpreter = new JavaInterpreter(targetOptions);
+    const interpreter = new JavaInterpreter();
     const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
       DEFAULT_OPENRPC_OPTIONS,
       transformerOptions,

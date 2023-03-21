@@ -7,7 +7,6 @@
     "rootDir": "./src",
     "baseUrl": "./src",
 
-    "noEmit": true,
     "declaration": false,
     "declarationMap": false
   },

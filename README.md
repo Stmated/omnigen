@@ -41,6 +41,21 @@ Less hack. More structure.
 
 And to make your generated code work for you. With you. In actual projects.
 
+## How it works:
+Every code generation goes through these steps:
+* Conversion from schema to common model
+* Execution of transformers over the common model
+* Conversion from common model to Abstract Syntax Tree (AST)
+* Execution of transformers over the AST
+* Conversion from AST to Concrete Syntax Tree (CST)
+* Execution of transformers over the CST
+* Conversion of CST to strings by use of renderers
+* Outputting of strings to disk or other target
+
+By splitting the work in these many steps, it means we have many different layers of specificity to make our code generation.
+
+It means that we can create re-usable parts of code that we can use for many different languages. Adding support for new languages should hence be quite easy, since most languages share many common factors.
+
 ## Supported Inputs
 * OpenApi3 (coming)
 * OpenApi2 - Swagger (coming)

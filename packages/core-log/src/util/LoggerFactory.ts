@@ -11,7 +11,6 @@ export type ModifierCallback = (options: LoggerOptions | DestinationStream) => L
 export class LoggerFactory {
 
   private static _pretty: boolean | undefined = undefined;
-  // private static _basePath = __dirname.substring(0, __dirname.lastIndexOf('/'));
 
   private static readonly _MODIFIERS: ModifierCallback[] = [];
 

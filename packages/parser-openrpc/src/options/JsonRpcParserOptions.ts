@@ -58,18 +58,18 @@ export const JSONRPC_20_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
 };
 
 export const JSONRPC_OPTIONS_RESOLVERS: OptionResolvers<JsonRpcParserOptions> = {
-  jsonRpcVersion: v => Promise.resolve(v || '2.0'),
+  jsonRpcVersion: v => v || '2.0',
   jsonRpcErrorDataSchema: v => {
 
     if (!v || 'kind' in v) {
-      return Promise.resolve(v);
+      return v;
     }
 
-    return Promise.resolve(undefined);
+    return undefined;
   },
   jsonRpcErrorPropertyName: v => {
     if (v) {
-      return Promise.resolve(v);
+      return v;
     }
 
     throw new Error(`There must be a JsonRpc version override given`);

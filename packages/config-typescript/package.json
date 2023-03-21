@@ -7,6 +7,6 @@
     "access": "public"
   },
   "dependencies": {
-    "typescript": "beta"
+    "typescript": "^5.0.2"
   }
 }

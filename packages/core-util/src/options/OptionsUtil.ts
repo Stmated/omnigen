@@ -15,7 +15,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class OptionsUtil {
 
-  public static async updateOptions<
+  public static updateOptions<
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TResolver extends OptionResolvers<TOpt>,
@@ -26,14 +26,14 @@ export class OptionsUtil {
     incoming: TInc | undefined,
     resolvers?: TResolver,
     additions?: TAdditions,
-  ): Promise<TReturn> {
+  ): TReturn {
 
     const copiedBase = {...base};
-    const alteredBase = await this.getBaseWithOptionalAdditions(copiedBase, incoming, resolvers, additions);
+    const alteredBase = this.getBaseWithOptionalAdditions(copiedBase, incoming, resolvers, additions);
     return this.replaceOptionsWithConverted(alteredBase, incoming, resolvers);
   }
 
-  private static async replaceOptionsWithConverted<
+  private static replaceOptionsWithConverted<
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TResolver extends OptionResolvers<TOpt>,
@@ -42,10 +42,10 @@ export class OptionsUtil {
     base: Required<TOpt>,
     incoming: TInc | undefined,
     resolvers?: TResolver,
-  ): Promise<TReturn> {
+  ): TReturn {
 
     for (const baseKey in base) {
-      if (!Object.hasOwn(base, baseKey)) {
+      if (!(baseKey in base)) {
         continue;
       }
 
@@ -56,12 +56,12 @@ export class OptionsUtil {
       if (converter) {
 
         const rawValue = (incoming && baseKey in incoming) ? incoming[baseKey] : base[baseKey];
-        const convertedPromise = converter(rawValue);
-        const convertedValue = await convertedPromise;
+        // const convertedValue =
+        // const convertedValue = convertedPromise;
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        base[baseKey] = convertedValue;
+        base[baseKey] = converter(rawValue);
       } else if (incoming && baseKey in incoming) {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -74,7 +74,7 @@ export class OptionsUtil {
     return base as TReturn;
   }
 
-  private static async getBaseWithOptionalAdditions<
+  private static getBaseWithOptionalAdditions<
     TOpt extends Options,
     TInc extends IncomingOptions<TOpt>,
     TAdditions extends OptionAdditions<TOpt>,
@@ -84,14 +84,14 @@ export class OptionsUtil {
     incoming: TInc | undefined,
     resolvers?: TResolver,
     additions?: TAdditions,
-  ): Promise<TOpt> {
+  ): TOpt {
 
     if (!additions) {
       return base;
     }
 
     for (const additionKey in additions) {
-      if (!Object.hasOwn(additions, additionKey)) {
+      if (!(additionKey in additions)) {
         continue;
       }
 
@@ -111,7 +111,7 @@ export class OptionsUtil {
       if (converter) {
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const converted = await converter(value);
+        const converted = converter(value);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const newBase = addition(converted);
 
@@ -133,11 +133,11 @@ export class OptionsUtil {
     return base;
   }
 
-  public static toBoolean(this: void, value: Booleanish | undefined): Promise<boolean> {
+  public static toBoolean(this: void, value: Booleanish | undefined): boolean {
     return StandardOptionResolvers.toBoolean(value);
   }
 
-  public static toString(this: void, value: string | number): Promise<string> {
+  public static toString(this: void, value: string | number): string {
     return StandardOptionResolvers.toString(value);
   }
 

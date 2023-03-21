@@ -44,7 +44,7 @@ export class JavaTestUtils {
     parseResult: OmniModelParserResult<JavaOptions>,
     externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
   ): Promise<AstNode> {
-    return new JavaInterpreter(parseResult.options).buildSyntaxTree(parseResult.model, externals, parseResult.options, JAVA_FEATURES);
+    return new JavaInterpreter().buildSyntaxTree(parseResult.model, externals, parseResult.options, JAVA_FEATURES);
   }
 
   public static async getFileContentsFromParseResult(

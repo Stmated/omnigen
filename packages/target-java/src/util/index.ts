@@ -1,2 +1,2 @@
 
-export * from './JavaUtil.js';
+export * from './JavaUtil';

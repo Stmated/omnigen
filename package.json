@@ -19,7 +19,7 @@
   "devDependencies": {
     "@omnigen/eslint-config-custom": "0.0.0",
     "prettier": "^2.8.4",
-    "turbo": "^1.8.3",
+    "turbo": "^1.8.5",
     "syncpack": "^9.8.4",
     "pino-pretty": "^10.0.0"
   }

@@ -2,14 +2,14 @@ import {Booleanish, ModelTransformOptions, OptionResolvers, ParserOptions, Targe
 
 export class StandardOptionResolvers {
 
-  public static toBoolean(this: void, value: Booleanish | undefined): Promise<boolean> {
+  public static toBoolean(this: void, value: Booleanish | undefined): boolean {
 
     if (value == undefined) {
-      return Promise.resolve(false);
+      return false;
     }
 
     if (typeof value == 'boolean') {
-      return Promise.resolve(value);
+      return value;
     }
 
     if (typeof value == 'string' && /^-?\d+$/.test(value)) {
@@ -17,35 +17,35 @@ export class StandardOptionResolvers {
     }
 
     if (typeof value == 'number') {
-      return Promise.resolve(value !== 0);
+      return value !== 0;
     }
 
     const lowercase = value.toLowerCase();
     if (lowercase == 'true' || lowercase == 't' || lowercase == 'yes' || lowercase == 'y') {
-      return Promise.resolve(true);
+      return true;
     } else if (lowercase == 'false' || lowercase == 'f' || lowercase == 'no' || lowercase == 'n') {
-      return Promise.resolve(false);
+      return false;
     }
 
     // Any other string will count as false.
-    return Promise.resolve(false);
+    return false;
   }
 
-  public static toString(this: void, value: string | number): Promise<string> {
-    return Promise.resolve(String(value));
+  public static toString(this: void, value: string | number): string {
+    return String(value);
   }
 
-  public static toRegExp(this: void, value: string | RegExp | undefined): Promise<RegExp | undefined> {
+  public static toRegExp(this: void, value: string | RegExp | undefined): RegExp | undefined {
 
     if (!value) {
-      return Promise.resolve(undefined);
+      return undefined;
     }
 
     if (value instanceof RegExp) {
-      return Promise.resolve(value);
+      return value;
     }
 
-    return Promise.resolve(new RegExp(value));
+    return new RegExp(value);
   }
 }
 

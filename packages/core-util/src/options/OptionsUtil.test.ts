@@ -19,7 +19,7 @@ interface NoDynamicOptions extends Options {
   c: boolean;
 }
 
-test('Booleanish', async () => {
+test('Booleanish', () => {
 
   const input: Booleanish[] = [
     true,
@@ -41,7 +41,7 @@ test('Booleanish', async () => {
     'something',
   ];
 
-  const converted = await Promise.all(input.map(it => OptionsUtil.toBoolean(it)));
+  const converted = input.map(it => OptionsUtil.toBoolean(it));
 
   expect(converted).toEqual([
     true,
@@ -64,7 +64,7 @@ test('Booleanish', async () => {
   ]);
 });
 
-test('Booleans', async () => {
+test('Booleans', () => {
 
   const base: BoolOptions = {
     a: 'true',
@@ -76,7 +76,7 @@ test('Booleans', async () => {
     b: 0, // Checks that the incoming value is used even though "false-ish"
   };
 
-  const real = await OptionsUtil.updateOptions(base, inc1, {
+  const real = OptionsUtil.updateOptions(base, inc1, {
     a: OptionsUtil.toBoolean,
     b: OptionsUtil.toBoolean,
     c: OptionsUtil.toBoolean,
@@ -87,7 +87,7 @@ test('Booleans', async () => {
   expect(real.c).toEqual(true);
 });
 
-test('NoDynamics', async () => {
+test('NoDynamics', () => {
 
   const base: NoDynamicOptions = {
     a: 'string',
@@ -99,7 +99,7 @@ test('NoDynamics', async () => {
     a: 'replacement',
   };
 
-  const real = await OptionsUtil.updateOptions(base, inc1);
+  const real = OptionsUtil.updateOptions(base, inc1);
 
   expect(real).toBeDefined();
   expect(real.a).toEqual('replacement');
@@ -107,7 +107,7 @@ test('NoDynamics', async () => {
   expect(real.c).toEqual(true);
 });
 
-test('Additions', async () => {
+test('Additions', () => {
 
   const base: AOptions = {
     foo: 'true',
@@ -127,7 +127,7 @@ test('Additions', async () => {
     qwe: 2,
   };
 
-  const real = await OptionsUtil.updateOptions(base, {...inc1, ...inc2}, {
+  const real = OptionsUtil.updateOptions(base, {...inc1, ...inc2}, {
     foo: OptionsUtil.toBoolean,
     qwe: OptionsUtil.toString,
   }, {

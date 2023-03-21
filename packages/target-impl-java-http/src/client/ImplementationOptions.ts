@@ -27,19 +27,19 @@ export const DEFAULT_IMPLEMENTATION_OPTIONS: ImplementationOptions = {
 export const IMPLEMENTATION_OPTIONS_PARSERS: OptionResolvers<ImplementationOptions> = {
   clientPackage: v => {
     if (v) {
-      return Promise.resolve(v);
+      return v;
     }
 
     // TODO: Wrong, since it gets the default options and not the options we'd want.
-    return Promise.resolve(`${DEFAULT_PACKAGE_OPTIONS.package}.client`);
+    return `${DEFAULT_PACKAGE_OPTIONS.package}.client`;
   },
   serverPackage: v => {
     if (v) {
-      return Promise.resolve(v);
+      return v;
     }
 
     // TODO: Wrong, since it gets the default options and not the options we'd want.
-    return Promise.resolve(`${DEFAULT_PACKAGE_OPTIONS.package}.server`);
+    return `${DEFAULT_PACKAGE_OPTIONS.package}.server`;
   },
   generateClient: StandardOptionResolvers.toBoolean,
   generateServer: StandardOptionResolvers.toBoolean,

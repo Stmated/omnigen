@@ -4,11 +4,9 @@ export * from './PluginQualifier';
 export * from './PluginHook';
 export * from './PluginOptions';
 export * from './PluginHookCreator';
-export * from './RunOptions';
 export * from './PluginAutoRegistry';
 
 export * from './PipelineBuilder';
-
 
 export * from './AstTransformerCreator';
 export * from './InterpreterCreator';

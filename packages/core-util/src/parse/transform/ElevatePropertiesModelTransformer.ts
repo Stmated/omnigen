@@ -90,7 +90,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
       );
 
       for (const propertyName in properties.byPropertyName) {
-        if (!Object.hasOwn(properties.byPropertyName, propertyName)) {
+        if (!(propertyName in properties.byPropertyName)) {
           continue;
         }
 

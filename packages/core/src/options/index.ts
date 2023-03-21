@@ -11,3 +11,4 @@ export * from './OptionsSource.js';
 export * from './OptionResolvers.js';
 export * from './IncomingResolver.js';
 export * from './OptionAdditions.js';
+export * from './OmitNever.js';

@@ -60,15 +60,15 @@ export class Omnigen {
     incomingFileWriteOptions: IncomingOptions<FileWriteOptions>,
   ): Promise<void> {
 
-    const fileWriteOptions = await OptionsUtil.updateOptions(
+    const fileWriteOptions = OptionsUtil.updateOptions(
       DEFAULT_FILE_WRITE_OPTIONS,
       incomingFileWriteOptions,
       {
         outputDirBase: v => {
           if (!v) {
-            return Promise.reject(new Error(`You must specify a base dir`));
+            throw new Error(`You must specify a base dir`);
           }
-          return Promise.resolve(this.relativeToAbsolute(v));
+          return this.relativeToAbsolute(v);
         },
       });
 
@@ -108,15 +108,15 @@ export class Omnigen {
     incomingOptions: IncomingOptions<OmnigenOptions<TParseOpt, TTargetOpt, TImplOpt>>,
   ): Promise<OmnigenResult<TParseOpt, TTargetOpt>[]> {
 
-    const runOptions = await OptionsUtil.updateOptions(
+    const runOptions = OptionsUtil.updateOptions(
       DEFAULT_RUN_OPTIONS,
       incomingOptions,
       {
         schemaDirBase: v => {
           if (!v) {
-            return Promise.reject(new Error(`You must specify a base dir`));
+            throw new Error(`You must specify a base dir`);
           }
-          return Promise.resolve(this.relativeToAbsolute(v));
+          return this.relativeToAbsolute(v);
         },
         schemaPatternExclude: v => StandardOptionResolvers.toRegExp(v),
         schemaPatternInclude: v => StandardOptionResolvers.toRegExp(v),
@@ -210,7 +210,7 @@ export class Omnigen {
 
     const generator = new JavaHttpImplementationGenerator();
 
-    const options = await OptionsUtil.updateOptions(
+    const options = OptionsUtil.updateOptions(
       DEFAULT_IMPLEMENTATION_OPTIONS,
       incomingOptions,
       IMPLEMENTATION_OPTIONS_PARSERS,
@@ -261,7 +261,7 @@ export class Omnigen {
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
     const openRpcParserBootstrap = (await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile));
     const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<JavaOptions>();
-    const realParserOptions = await OptionsUtil.updateOptions(
+    const realParserOptions = OptionsUtil.updateOptions(
       DEFAULT_OPENRPC_OPTIONS,
       parserOptions as IncomingOptions<OpenRpcParserOptions>,
       OPENRPC_OPTIONS_RESOLVERS,
@@ -297,7 +297,7 @@ export class Omnigen {
       optionsAndSchemaOptions = {...optionsAndSchemaOptions, ...schemaIncomingOptions};
     }
 
-    const realTransformerOptions = await OptionsUtil.updateOptions(
+    const realTransformerOptions = OptionsUtil.updateOptions(
       DEFAULT_MODEL_TRANSFORM_OPTIONS,
       {},
       TRANSFORM_OPTIONS_RESOLVER,
@@ -310,13 +310,13 @@ export class Omnigen {
       });
     }
 
-    const realJavaOptions = await OptionsUtil.updateOptions(
+    const realJavaOptions = OptionsUtil.updateOptions(
       DEFAULT_JAVA_OPTIONS,
       optionsAndSchemaOptions as IncomingOptions<JavaOptions>,
       JAVA_OPTIONS_RESOLVER,
     );
 
-    const interpreter = new JavaInterpreter(realJavaOptions);
+    const interpreter = new JavaInterpreter();
     const syntaxTree = await interpreter.buildSyntaxTree(parseResult.model, [], realJavaOptions, JAVA_FEATURES);
 
     const renders: RenderedCompilationUnit[] = [];

@@ -3,7 +3,7 @@
 import {Command} from '@commander-js/extra-typings';
 import figlet from 'figlet';
 import {PluginManager} from './PluginManager.js';
-import {RunOptions} from '@omnigen/core-plugin';
+import {RunOptions} from '@omnigen/core';
 
 console.log(figlet.textSync('Omnigen', 'Chunky'));
 

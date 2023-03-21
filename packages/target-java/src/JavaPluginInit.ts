@@ -7,7 +7,7 @@ const init: PluginHookCreator = options => {
   console.log('Init');
 
   const hook: PluginHook = {
-    afterParse: (runOptions, builder) => {
+    afterParse: pipeline => {
 
       // TODO:
       //  * Ability to add "File Loaders" that can parse different incoming paths -- which plugins can add to
@@ -22,18 +22,40 @@ const init: PluginHookCreator = options => {
       // We then need to make sure this can be ran with and without the CLI, and make it work smoothly!
       // Then we can actually start using this code in example projects! :D
 
-      if (!runOptions.types.includes('java')) {
-        return;
+      if (!pipeline.run.types.includes('java')) {
+        return pipeline;
       }
 
-      builder
-        .fork()
-        .withModelTransformer(opt => new InterfaceJavaModelTransformer())
-        .thenInterpret(opt => new JavaInterpreter())
-        .thenRender(opt => new JavaRenderer(opt, rcu => {
-          console.log(`Rendered`);
-          console.table(rcu);
-        }));
+      if (!pipeline.modelTransformers) {
+        pipeline.modelTransformers = [];
+      }
+      pipeline.modelTransformers.push(new InterfaceJavaModelTransformer());
+
+      if (!pipeline.interpreter) {
+        pipeline.interpreter = new JavaInterpreter();
+      }
+
+      if (pipeline.interpreter instanceof JavaInterpreter) {
+
+        if (!pipeline.renderers) {
+          pipeline.renderers = [];
+        }
+
+        // pipeline.renderers.push(new JavaRenderer(opt, rcu => {
+        //
+        // });
+      }
+
+      // builder
+      //   .fork()
+      //   .withModelTransformer(opt => new InterfaceJavaModelTransformer())
+      //   .thenInterpret(opt => new JavaInterpreter())
+      //   .thenRender(opt => new JavaRenderer(opt, rcu => {
+      //     console.log(`Rendered`);
+      //     console.table(rcu);
+      //   }));
+
+      return pipeline;
     },
   };
 

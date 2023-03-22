@@ -3,11 +3,11 @@ import {
   DeserializePipeFunc,
   FromPipeFunc,
   InterpretPipeFunc,
-  ModelTransformer2PipeFunc,
+  LateModelTransformerPipeFunc,
   ModelTransformerPipeFunc, ParseOptionsDefaultResolverPipeFunc,
   ParseOptionsPipeFunc, ParseOptionsResolverPipeFunc,
   ParsePipeFunc, ParseTargetOptionsDefaultResolverPipeFunc,
-  ParseTargetOptionsPipeFunc, ParseTargetOptionsResolverPipeFunc,
+  TargetOptionsPipeFunc, ParseTargetOptionsResolverPipeFunc,
   PipelineArgs,
   PipelineBuilder,
   PipeStep,
@@ -269,19 +269,19 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A> {
   };
 
   // @ts-ignore
-  thenParseOptions: ParseOptionsPipeFunc<A> = step => {
+  withOptions: ParseOptionsPipeFunc<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'options'));
     return this;
   };
 
   // @ts-ignore
-  thenParseOptionsResolver: ParseOptionsResolverPipeFunc<A> = step => {
+  resolveParserOptions: ParseOptionsResolverPipeFunc<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'options'));
     return this;
   };
 
   // @ts-ignore
-  thenParseOptionsDefaultResolver: ParseOptionsDefaultResolverPipeFunc<A> = () => {
+  resolveParserOptionsDefault: ParseOptionsDefaultResolverPipeFunc<A> = () => {
     this._steps.push(new PropertyPipeStep(async a => {
 
       // TODO: Will this work properly? Will all the options be translated?
@@ -303,7 +303,7 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A> {
   };
 
   // @ts-ignore
-  thenParseTargetOptions: ParseTargetOptionsPipeFunc<A> = step => {
+  withTargetOptions: TargetOptionsPipeFunc<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'options'));
     return this;
   };
@@ -331,7 +331,7 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A> {
   };
 
   // @ts-ignore
-  withModelTransformer2: ModelTransformer2PipeFunc<A> = step => {
+  withLateModelTransformer: LateModelTransformerPipeFunc<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'model'));
     return this;
   };

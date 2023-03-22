@@ -1,7 +1,7 @@
 import {expect, test} from '@jest/globals';
 import {PipelineFactory} from './PluginManager';
 import {LoggerFactory} from '@omnigen/core-log';
-import {DEFAULT_PARSER_OPTIONS, DEFAULT_TARGET_OPTIONS, ParserOptions, RealOptions} from '@omnigen/core';
+import {DEFAULT_PARSER_OPTIONS, DEFAULT_TARGET_OPTIONS, IncomingOptions, TargetOptions} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -34,14 +34,8 @@ test('Run Through Pipeline Builder', async () => {
     .thenDeserialize(a => {
       return `deserialized-${a.input.absolutePath}`;
     })
-    .thenParseOptions(() => {
-      return DEFAULT_PARSER_OPTIONS;
-    })
-    .thenParseOptionsDefaultResolver()
-    // .thenParseOptionsResolver(a => {
-    //
-    //   return DEFAULT_PARSER_OPTIONS;
-    // })
+    .withOptions(() => DEFAULT_PARSER_OPTIONS)
+    .resolveParserOptionsDefault()
     .thenParse(a => {
       return {
         name: `${a.options.trustedClients}`,
@@ -78,8 +72,11 @@ test('Run Through Pipeline Builder', async () => {
     .withModelTransformer(a => {
 
     })
-    .thenParseTargetOptions(a => {
-      return {...a.options, ...DEFAULT_TARGET_OPTIONS};
+    .withTargetOptions(a => {
+      const override: Partial<IncomingOptions<TargetOptions>> = {
+        allowCompressInterfaceToInner: 'true',
+      };
+      return {...a.options, ...DEFAULT_TARGET_OPTIONS, ...override};
     })
     .resolveTargetOptionsDefault()
     .thenInterpret(a => {
@@ -89,13 +86,14 @@ test('Run Through Pipeline Builder', async () => {
         },
       };
     })
-    .withModelTransformer2(a => {
+    .withLateModelTransformer(a => {
 
     })
     .withAstTransformer(a => {
 
     })
     .thenRender(a => {
+
       return {
         getFileNames: () => [],
         getFileContent: fileName => `${a.options.allowCompressInterfaceToInner}`,

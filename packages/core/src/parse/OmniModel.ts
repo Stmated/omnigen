@@ -1,5 +1,5 @@
 import {JSONSchema7Definition} from 'json-schema';
-import {TypeName} from './TypeName.js';
+import {TypeName} from './TypeName';
 
 export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
 

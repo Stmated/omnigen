@@ -10,7 +10,7 @@ import {
   SerializedInput,
   TargetOptions,
 } from '@omnigen/core';
-
+import {Simplify} from 'type-fest';
 
 /**
  * Mutable Generic State args for the pipeline building
@@ -32,15 +32,22 @@ type Args<T> = { [KeyType in keyof T]: T[KeyType] } & {};
 
 export type PipeStep<A, V> = { (args: Args<A>): V };
 
+type Prop<O extends Partial<PipelineArgs>, RK extends string, RT> = {
+  [K in Exclude<keyof O, RK>]: O[K]
+} & Record<RK, RT>
+
 export type PipeNext<
   P extends Partial<PipelineArgs>,
   K extends keyof PipelineArgs,
   N extends keyof PipelineBuilder<P>,
-  V extends PipelineArgs[K] | void = PipelineArgs[K]
-> = Pick<PipelineBuilder<P & Record<K, V>>, N | 'build'>
+  V extends PipelineArgs[K] | void
+> = V extends void
+    ? Pick<PipelineBuilder<P>, N | 'build'>
+    : Pick<PipelineBuilder<Simplify<Prop<P, K, V>>>, N | 'build'>
 
 // TODO: Figure out a way to hide the "build" function, unless we are in test cases or whatever
-//          so it follows along if created it as a test pipeline builder
+//          so it follows along if created it as a test pipeline builder.
+//          Send along as a generic to the PipelineBuilder? So we can globally show/hide methods?
 export type PipeFunc<
   P extends Partial<PipelineArgs>,
   K extends keyof PipelineArgs,
@@ -48,9 +55,9 @@ export type PipeFunc<
   PV extends PipelineArgs[K] | void = PipelineArgs[K],
   SA extends P | void = P
 > =
-  SA extends P
-  ? { <V extends PV>(step: PipeStep<SA, V>): PipeNext<P, K, N, V> }
-  : { (): PipeNext<P, K, N, PV> }
+  SA extends void
+    ? { (): PipeNext<P, K, N, PV> }
+    : { <V extends PV>(step: PipeStep<SA, V>): PipeNext<P, K, N, V> }
 
 // TODO: Check if instead of strings we can refer to the other Func types as filters for what to see on the next step
 //        Less code, and maybe easier to understand what goes to what in what order
@@ -58,29 +65,29 @@ export type PipeFunc<
 export type FromPipeFunc<P extends Partial<PipelineArgs>>
   = PipeFunc<P, 'input', 'thenDeserialize'>;
 export type DeserializePipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'deserialized', 'thenParseOptions'>;
+  = PipeFunc<P, 'deserialized', 'withOptions'>;
 export type ParseOptionsPipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'options', 'thenParseOptionsResolver' | 'thenParseOptionsDefaultResolver' | 'thenParse', IncomingOptions<ParserOptions>>;
+  = PipeFunc<P, 'options', 'withOptions' | 'resolveParserOptions' | 'resolveParserOptionsDefault' | 'thenParse', IncomingOptions<ParserOptions & Partial<IncomingOptions<TargetOptions>>>>;
 export type ParseOptionsResolverPipeFunc<P extends Partial<PipelineArgs>>
   = PipeFunc<P, 'options', 'thenParse', RealOptions<ParserOptions>>;
 export type ParseOptionsDefaultResolverPipeFunc<P extends Partial<PipelineArgs>>
   = PipeFunc<P, 'options', 'thenParse', RealOptions<ParserOptions>, void>;
 export type ParsePipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'model', 'withModelTransformer' | 'thenParseTargetOptions'>;
+  = PipeFunc<P, 'model', 'withModelTransformer' | 'withTargetOptions'>;
 export type ModelTransformerPipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'model', 'withModelTransformer' | 'thenParseTargetOptions', void>;
-export type ParseTargetOptionsPipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'options', 'resolveTargetOptions' | 'resolveTargetOptionsDefault', RealOptions<ParserOptions> & IncomingOptions<TargetOptions>>;
+  = PipeFunc<P, 'model', 'withModelTransformer' | 'withTargetOptions', void>;
+export type TargetOptionsPipeFunc<P extends Partial<PipelineArgs>>
+  = PipeFunc<P, 'options', 'withTargetOptions' | 'resolveTargetOptions' | 'resolveTargetOptionsDefault', RealOptions<ParserOptions> & IncomingOptions<TargetOptions>>;
 export type ParseTargetOptionsResolverPipeFunc<P extends Partial<PipelineArgs>>
   = PipeFunc<P, 'options', 'thenInterpret', RealOptions<ParserOptions & TargetOptions>>;
 export type ParseTargetOptionsDefaultResolverPipeFunc<P extends Partial<PipelineArgs>>
   = PipeFunc<P, 'options', 'thenInterpret', RealOptions<ParserOptions & TargetOptions>, void>;
 export type InterpretPipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'node', 'withModelTransformer2' | 'withAstTransformer' | 'thenRender'>;
-export type ModelTransformer2PipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'model', 'withModelTransformer2' | 'withAstTransformer' | 'thenRender', void>;
+  = PipeFunc<P, 'node', 'withLateModelTransformer' | 'withAstTransformer' | 'thenRender'>;
+export type LateModelTransformerPipeFunc<P extends Partial<PipelineArgs>>
+  = PipeFunc<P, 'model', 'withLateModelTransformer' | 'withAstTransformer' | 'thenRender', void>;
 export type AstTransformerPipeFunc<P extends Partial<PipelineArgs>>
-  = PipeFunc<P, 'node', 'withModelTransformer2' | 'withAstTransformer' | 'thenRender', void>;
+  = PipeFunc<P, 'node', 'withLateModelTransformer' | 'withAstTransformer' | 'thenRender', void>;
 export type RenderPipeFunc<P extends Partial<PipelineArgs>>
   = PipeFunc<P, 'rendered', 'thenWrite'>;
 export type WritePipeFunc<P extends Partial<PipelineArgs>>
@@ -89,16 +96,16 @@ export type WritePipeFunc<P extends Partial<PipelineArgs>>
 export interface PipelineBuilder<P extends Partial<PipelineArgs>> {
   from: FromPipeFunc<P>;
   thenDeserialize: DeserializePipeFunc<P>;
-  thenParseOptions: ParseOptionsPipeFunc<P>;
-  thenParseOptionsResolver: ParseOptionsResolverPipeFunc<P>;
-  thenParseOptionsDefaultResolver: ParseOptionsDefaultResolverPipeFunc<P>;
+  withOptions: ParseOptionsPipeFunc<P>;
+  resolveParserOptions: ParseOptionsResolverPipeFunc<P>;
+  resolveParserOptionsDefault: ParseOptionsDefaultResolverPipeFunc<P>;
   thenParse: ParsePipeFunc<P>;
   withModelTransformer: ModelTransformerPipeFunc<P>;
-  thenParseTargetOptions: ParseTargetOptionsPipeFunc<P>;
+  withTargetOptions: TargetOptionsPipeFunc<P>;
   resolveTargetOptions: ParseTargetOptionsResolverPipeFunc<P>;
   resolveTargetOptionsDefault: ParseTargetOptionsDefaultResolverPipeFunc<P>;
   thenInterpret: InterpretPipeFunc<P>;
-  withModelTransformer2: ModelTransformer2PipeFunc<P>;
+  withLateModelTransformer: LateModelTransformerPipeFunc<P>;
   withAstTransformer: AstTransformerPipeFunc<P>;
   thenRender: RenderPipeFunc<P>;
   thenWrite: WritePipeFunc<P>;
@@ -108,50 +115,3 @@ export interface PipelineBuilder<P extends Partial<PipelineArgs>> {
    */
   build(): Args<P>;
 }
-
-
-// export type PipelineFunc<I, P extends Partial<PipelineArgs>> = { (args: P): I };
-//
-// export interface PipelineBuilderWithInput<A extends PipelineArgs, P extends Partial<A>> {
-//   thenDeserialize<T>(creator: PipelineFunc<T, A>)
-//     : PipelineBuilderWithDeserializer<With<A, 'deserialized', T>>;
-// }
-//
-// export interface PipelineBuilderWithDeserializer<A extends Partial<PipelineArgs>> {
-//   thenParseOptions<O extends ParserOptions>(creator: PipelineFunc<O, A>)
-//     : PipelineBuilderWithParserOptions<With<A, 'options', O>>;
-// }
-//
-// export interface PipelineBuilderWithParserOptions<A extends Partial<PipelineArgs>> {
-//   thenParse<M extends OmniModel>(creator: PipelineFunc<M, A>)
-//     : PipelineBuilderWithParser<With<A, 'model', M>>;
-// }
-//
-// export interface PipelineBuilderWithParser<A extends Partial<PipelineArgs>> {
-//   withModelTransformer(creator: PipelineFunc<A['model'], A>)
-//     : this;
-//
-//   thenParseTargetOptions<O extends TargetOptions>(creator: PipelineFunc<O, A>)
-//     : PipelineBuilderWithTargetOptions<With<A, 'options', A['options'] & O>>;
-// }
-//
-// export interface PipelineBuilderWithTargetOptions<A extends Partial<PipelineArgs>> {
-//   thenInterpret<N extends AstNode>(creator: PipelineFunc<N, A>)
-//     : PipelineBuilderWithInterpreter<With<A, 'node', N>>;
-// }
-//
-// export interface PipelineBuilderWithInterpreter<A extends Partial<PipelineArgs>> {
-//   withModelTransformer2(creator: PipelineFunc<A['model'], A>)
-//     : this;
-//
-//   withAstTransformer(creator: PipelineFunc<A['node'], A>)
-//     : this;
-//
-//   thenRender<R extends RenderResult>(creator: PipelineFunc<R, A>)
-//     : PipelineBuilderWithRenderer<With<A, 'rendered', R>>;
-// }
-//
-// export interface PipelineBuilderWithRenderer<A extends Partial<PipelineArgs>> {
-//   thenWrite(creator: { (args: A): void })
-//     : void;
-// }

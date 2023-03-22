@@ -1,4 +1,4 @@
-import {ImplementationGenerator} from './ImplementationGenerator.js';
+import {ImplementationGenerator} from './ImplementationGenerator';
 import {
   AddAbstractAccessorsAstTransformer,
   AddAccessorsForFieldsAstTransformer,
@@ -12,7 +12,7 @@ import {
   PackageResolverAstTransformer,
   ReorderMembersTransformer,
 } from '@omnigen/target-java';
-import {ImplementationArgs} from './ImplementationArgs.js';
+import {type ImplementationArgs} from './ImplementationArgs';
 import {
   AstNode,
   AstTransformer,
@@ -27,7 +27,7 @@ import {
   RealOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {ImplementationOptions} from './ImplementationOptions.js';
+import {ImplementationOptions} from './ImplementationOptions';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil} from '@omnigen/core-util';
 

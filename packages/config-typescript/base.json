@@ -26,6 +26,8 @@
     "exactOptionalPropertyTypes": true,
 
     "allowImportingTsExtensions": true,
+    "resolvePackageJsonExports": true,
+    "verbatimModuleSyntax": false,
 
     "noEmit": true
   }

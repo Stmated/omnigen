@@ -1,7 +1,7 @@
 import {TestUtils} from '@omnigen/utils-test';
 import {JavaUtil} from '@omnigen/target-java';
 import {
-  OmniModel,
+  type OmniModel,
   OmniPrimitiveKind,
   OmniTypeKind,
   DEFAULT_PARSER_OPTIONS,

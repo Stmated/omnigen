@@ -1,22 +1,28 @@
 import {
-  AstTransformerPipeFunc,
-  DeserializePipeFunc,
-  FromPipeFunc,
-  InterpretPipeFunc,
-  LateModelTransformerPipeFunc,
-  ModelTransformerPipeFunc, ParseOptionsDefaultResolverPipeFunc,
-  ParseOptionsPipeFunc, ParseOptionsResolverPipeFunc,
-  ParsePipeFunc, ParseTargetOptionsDefaultResolverPipeFunc,
-  TargetOptionsPipeFunc, ParseTargetOptionsResolverPipeFunc,
+  AstTransformerStep,
+  BuilderMethods,
+  DeserializeStep,
+  InputStep,
+  InterpretStep,
+  LateModelTransformerStep,
+  ModelTransformerStep,
+  ResolveOptionsDefaultStep,
+  ParseOptionsStep,
+  ResolveOptionsStep,
+  ParseStep,
+  ResolveTargetOptionsDefaultStep,
+  ResolveTargetOptionsStep,
   PipelineArgs,
   PipelineBuilder,
-  PipeStep,
+  PipeStart,
+  StepSupplier,
   Plugin,
   PluginAutoRegistry,
   PluginHookCreator,
   PluginQualifier,
-  RenderPipeFunc,
-  WritePipeFunc,
+  RenderStep,
+  TargetOptionsStep,
+  WriteStep,
 } from '@omnigen/core-plugin';
 import {DEFAULT_PARSER_OPTIONS, DEFAULT_TARGET_OPTIONS, Pipeline, RunOptions} from '@omnigen/core';
 import {OptionsUtil, PARSER_OPTIONS_RESOLVERS, TARGET_OPTION_RESOLVERS} from '@omnigen/core-util';
@@ -191,9 +197,17 @@ export class PluginManager {
 
 export class PipelineFactory {
 
-  public create(supplier: () => RunOptions): PipelineBuilder<{ run: RunOptions }> {
+  /**
+   * Create a new {@link PipelineBuilder}, given a starting {@link supplier} that gives us the initial {@link RunOptions}.
+   * <p />
+   * You can add visibility of builder internal methods by altering the `X` generic argument.
+   *
+   * @param supplier - Supplier of initial run options.
+   * @param M - Useful if you want to expose the {@link PipelineBuilder#build} build method of the builder.
+   */
+  public create<M extends BuilderMethods = keyof {}>(supplier: () => RunOptions): PipeStart<{ run: RunOptions }, M> {
 
-    const step: PipeStep<{}, RunOptions> = () => supplier();
+    const step: StepSupplier<{}, RunOptions> = () => supplier();
     const propertyStep = new PropertyPipeStep(step, 'run');
     return new PipelineImpl(propertyStep);
   }
@@ -203,10 +217,10 @@ type StepValue<K extends keyof PipelineArgs> = PipelineArgs[K] | void;
 
 class PropertyPipeStep<P extends Partial<PipelineArgs>, K extends keyof PipelineArgs, V extends StepValue<K>> {
 
-  private readonly _step: PipeStep<P, V>;
+  private readonly _step: StepSupplier<P, V>;
   private readonly _key: K;
 
-  constructor(step: PipeStep<P, V>, key: K) {
+  constructor(step: StepSupplier<P, V>, key: K) {
     this._step = step;
     this._key = key;
   }
@@ -232,7 +246,7 @@ class PropertyPipeStep<P extends Partial<PipelineArgs>, K extends keyof Pipeline
   }
 }
 
-class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A> {
+class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A, BuilderMethods> {
 
   // We lie. We trust that the end-user of the builder cannot create a type-unsafe builder because of chaining.
   private readonly _steps: PropertyPipeStep<A, keyof PipelineArgs, StepValue<keyof PipelineArgs>>[] = [];
@@ -257,31 +271,31 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A> {
   }
 
   // @ts-ignore
-  from: FromPipeFunc<A> = step => {
+  from: InputStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'input'));
     return this;
   };
 
   // @ts-ignore
-  thenDeserialize: DeserializePipeFunc<A> = step => {
+  deserialize: DeserializeStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'deserialized'));
     return this;
   };
 
   // @ts-ignore
-  withOptions: ParseOptionsPipeFunc<A> = step => {
+  withOptions: ParseOptionsStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'options'));
     return this;
   };
 
   // @ts-ignore
-  resolveParserOptions: ParseOptionsResolverPipeFunc<A> = step => {
+  resolveOptions: ResolveOptionsStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'options'));
     return this;
   };
 
   // @ts-ignore
-  resolveParserOptionsDefault: ParseOptionsDefaultResolverPipeFunc<A> = () => {
+  resolveParserOptionsDefault: ResolveOptionsDefaultStep<A> = () => {
     this._steps.push(new PropertyPipeStep(async a => {
 
       // TODO: Will this work properly? Will all the options be translated?
@@ -291,31 +305,31 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A> {
   };
 
   // @ts-ignore
-  thenParse: ParsePipeFunc<A> = step => {
+  parse: ParseStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'model'));
     return this;
   };
 
   // @ts-ignore
-  withModelTransformer: ModelTransformerPipeFunc<A> = step => {
+  withModelTransformer: ModelTransformerStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'model'));
     return this;
   };
 
   // @ts-ignore
-  withTargetOptions: TargetOptionsPipeFunc<A> = step => {
+  withTargetOptions: TargetOptionsStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'options'));
     return this;
   };
 
   // @ts-ignore
-  resolveTargetOptions: ParseTargetOptionsResolverPipeFunc<A> = step => {
+  resolveTargetOptions: ResolveTargetOptionsStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'options'));
     return this;
   };
 
   // @ts-ignore
-  resolveTargetOptionsDefault: ParseTargetOptionsDefaultResolverPipeFunc<A> = () => {
+  resolveTargetOptionsDefault: ResolveTargetOptionsDefaultStep<A> = () => {
     this._steps.push(new PropertyPipeStep(async a => {
 
       // TODO: Will this work properly? Will all the options be translated?
@@ -325,133 +339,32 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A> {
   };
 
   // @ts-ignore
-  thenInterpret: InterpretPipeFunc<A> = step => {
+  interpret: InterpretStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'node'));
     return this;
   };
 
   // @ts-ignore
-  withLateModelTransformer: LateModelTransformerPipeFunc<A> = step => {
+  withLateModelTransformer: LateModelTransformerStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'model'));
     return this;
   };
 
   // @ts-ignore
-  withAstTransformer: AstTransformerPipeFunc<A> = step => {
+  withAstTransformer: AstTransformerStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'node'));
     return this;
   };
 
   // @ts-ignore
-  thenRender: RenderPipeFunc<A> = step => {
+  render: RenderStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'rendered'));
     return this;
   };
 
   // @ts-ignore
-  thenWrite: WritePipeFunc<A> = step => {
+  write: WriteStep<A> = step => {
     this._steps.push(new PropertyPipeStep(step, 'rendered'));
     return this;
   };
 }
-
-// class UnsafePipelineBuilder implements PipelineAggregate {
-//
-//   serializedInputSourceCreator?: SerializedInputSourceCreator;
-//   serializedInputDeserializerCreator?: SerializedInputDeserializerCreator;
-//   optionsParserCreator?: OptionsParserCreator;
-//   parserCreator?: ParserCreator;
-//   modelTransformerCreators: ModelTransformerCreator[] = [];
-//   interpreterCreator?: InterpreterCreator;
-//   modelTransformer2Creators: ModelTransformer2Creator[] = [];
-//   astTransformerCreators: AstTransformerCreator[] = [];
-//   rendererCreator?: RendererCreator;
-//   writerCreator?: WriterCreator;
-//
-//   private readonly _forks: UnsafePipelineBuilder[] = [];
-//
-//   constructor() {
-//     this.thenWrite = creator => {
-//
-//     };
-//   }
-//
-//   private clone(): this {
-//
-//     const clone = new UnsafePipelineBuilder();
-//
-//     clone.serializedInputSourceCreator = this.serializedInputSourceCreator;
-//     clone.serializedInputDeserializerCreator = this.serializedInputDeserializerCreator;
-//     clone.optionsParserCreator = this.optionsParserCreator;
-//     clone.parserCreator = this.parserCreator;
-//     clone.modelTransformerCreators = [...this.modelTransformerCreators];
-//     clone.interpreterCreator = this.interpreterCreator;
-//     clone.modelTransformer2Creators = [...this.modelTransformer2Creators];
-//     clone.astTransformerCreators = [...this.astTransformerCreators];
-//     clone.rendererCreator = this.rendererCreator;
-//     clone.writerCreator = this.writerCreator;
-//
-//     return clone as this;
-//   }
-//
-//   getEdges(): UnsafePipelineBuilder[] {
-//     if (this._forks.length == 0) {
-//       return [this];
-//     } else {
-//       return this._forks.flatMap(it => it.getEdges());
-//     }
-//   }
-//
-//   fork(): this {
-//
-//     const forked = this.clone();
-//     this._forks.push(forked);
-//
-//     return forked;
-//   }
-//
-//   from(sourceCreator: SerializedInputSourceCreator): PipelineBuilderWithInput {
-//     this.serializedInputSourceCreator = sourceCreator;
-//     return this;
-//   }
-//
-//   thenDeserialize(creator: SerializedInputDeserializerCreator): PipelineBuilderWithDeserializer {
-//     this.serializedInputDeserializerCreator = creator;
-//     return this;
-//   }
-//
-//   thenParseOptions<TCreator extends OptionsParserCreator>(creator: TCreator): SmartPipelineBuilderWithParserOptions<any, TCreator> {
-//     this.optionsParserCreator = creator;
-//     return this as SmartPipelineBuilderWithParserOptions<any, TCreator>;
-//   }
-//
-//   thenParse(creator: ParserCreator): PipelineBuilderWithParser {
-//     this.parserCreator = creator;
-//     return this;
-//   }
-//
-//   withModelTransformer(creator: ModelTransformerCreator): this {
-//     this.modelTransformerCreators.push(creator);
-//     return this;
-//   }
-//
-//   thenInterpret<TCreator extends InterpreterCreator>(creator: TCreator): SmartPipelineBuilderWithInterpreter<ParserOptions, TCreator> {
-//     this.interpreterCreator = creator;
-//     return this as unknown as SmartPipelineBuilderWithInterpreter<ParserOptions, TCreator>;
-//   }
-//
-//   withModelTransformer2(creator: ModelTransformer2Creator): this {
-//     this.modelTransformer2Creators.push(creator);
-//     return this;
-//   }
-//
-//   withAstTransformer(creator: AstTransformerCreator): this {
-//     this.astTransformerCreators.push(creator);
-//     return this;
-//   }
-//
-//   thenRender(creator: RendererCreator): PipelineBuilderWithRenderer {
-//     this.rendererCreator = creator;
-//     return this;
-//   }
-// }

@@ -9,7 +9,7 @@ test('Run Through Pipeline Builder', async () => {
 
   expect(1).toEqual(1);
 
-  const builder = new PipelineFactory().create(() => ({
+  const builder = new PipelineFactory().create<'build'>(() => ({
     input: ['a'],
     types: ['java'],
     output: 'somewhere',
@@ -31,12 +31,12 @@ test('Run Through Pipeline Builder', async () => {
   expect(res1.input.contentString).toEqual('java-content');
 
   const builderWithModel = builderWithInput
-    .thenDeserialize(a => {
+    .deserialize(a => {
       return `deserialized-${a.input.absolutePath}`;
     })
     .withOptions(() => DEFAULT_PARSER_OPTIONS)
     .resolveParserOptionsDefault()
-    .thenParse(a => {
+    .parse(a => {
       return {
         name: `${a.options.trustedClients}`,
         types: [],
@@ -79,7 +79,7 @@ test('Run Through Pipeline Builder', async () => {
       return {...a.options, ...DEFAULT_TARGET_OPTIONS, ...override};
     })
     .resolveTargetOptionsDefault()
-    .thenInterpret(a => {
+    .interpret(a => {
       return {
         visit: visitor => {
 
@@ -92,14 +92,14 @@ test('Run Through Pipeline Builder', async () => {
     .withAstTransformer(a => {
 
     })
-    .thenRender(a => {
+    .render(a => {
 
       return {
         getFileNames: () => [],
         getFileContent: fileName => `${a.options.allowCompressInterfaceToInner}`,
       };
     })
-    .thenWrite(a => {
+    .write(a => {
       console.log(`We write`);
     });
 

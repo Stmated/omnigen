@@ -1,6 +1,10 @@
 module.exports = {
-  extends: ['eslint:recommended', 'prettier', 'google', 'turbo',
-    'plugin:jsdoc/recommended'],
+  extends: [
+    'eslint:recommended',
+    'prettier',
+    'google',
+    'turbo'
+  ],
   ignorePatterns: ['node_modules'],
   env: {
     browser: false,
@@ -8,7 +12,7 @@ module.exports = {
     es2021: true,
     es6: true,
   },
-  plugins: ['@typescript-eslint', 'jsdoc'],
+  plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
@@ -138,7 +142,8 @@ module.exports = {
         jest: true,
       },
       rules: {
-        'jsdoc/require-jsdoc': 0,
+        'tsdoc/syntax': 0,
+        // 'jsdoc/require-jsdoc': 0,
         'no-undef': 0,
         '@typescript-eslint/naming-convention': 0,
       },
@@ -151,12 +156,16 @@ module.exports = {
     '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/no-unused-vars': [1,
       {'args': 'all', 'varsIgnorePattern': '^_', 'argsIgnorePattern': '^_'}],
+
+    'tsdoc/syntax': 'warn',
+
     'require-jsdoc': 0,
     'valid-jsdoc': 0,
-    'jsdoc/require-jsdoc': 2,
-    'jsdoc/require-param-type': 0,
-    'jsdoc/require-returns': 0,
-    'jsdoc/require-returns-type': 0,
+    // 'jsdoc/require-jsdoc': 2,
+    // 'jsdoc/require-param-type': 0,
+    // 'jsdoc/require-returns': 0,
+    // 'jsdoc/require-returns-type': 0,
+
     'no-trailing-spaces': 0,
     'max-len': [1, {'code': 140}],
     'comma-dangle': 0,

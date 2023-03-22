@@ -75,6 +75,7 @@ test('Run Through Pipeline Builder', async () => {
     .withTargetOptions(a => {
       const override: Partial<IncomingOptions<TargetOptions>> = {
         allowCompressInterfaceToInner: 'true',
+        compressUnreferencedSubTypes: 'false',
       };
       return {...a.options, ...DEFAULT_TARGET_OPTIONS, ...override};
     })
@@ -106,5 +107,6 @@ test('Run Through Pipeline Builder', async () => {
   const all = builderWithAll.build();
 
   expect(all.rendered).toBeDefined();
-  expect(all.options.compressSoloReferencedTypes).toEqual(DEFAULT_TARGET_OPTIONS.compressSoloReferencedTypes);
+  expect(all.options.allowCompressInterfaceToInner).toEqual(DEFAULT_TARGET_OPTIONS.allowCompressInterfaceToInner);
+  expect(all.options.compressUnreferencedSubTypes).toEqual(false);
 });

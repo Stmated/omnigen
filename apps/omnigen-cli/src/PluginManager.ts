@@ -258,10 +258,10 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A, Builder
 
   public build(): A {
 
-    let args: Partial<A> = {};
+    // We lie, and act as if this is the full object.
+    // To the outward user of the builder, it will look like another type based on the steps taken.
+    let args: A = {} as A;
     for (const step of this._steps) {
-
-      // @ts-ignore
       args = step.execute(args);
     }
 

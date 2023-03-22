@@ -1,7 +1,7 @@
-import {Booleanish, Option, Options} from '../options/index.js';
-import {CompressTypeLevel, OmniTypeKind} from '../parse/index.js';
-import {OmniTypeNameReducer} from './OmniTypeNameReducer.js';
-import {CompressTypeNaming} from './CompressTypeNaming.js';
+import {Booleanish, Option, Options} from '../options';
+import {CompressTypeLevel, OmniTypeKind} from '../parse';
+import {OmniTypeNameReducer} from './OmniTypeNameReducer';
+import {CompressTypeNaming} from './CompressTypeNaming';
 
 export interface TargetOptions extends Options {
 
@@ -10,14 +10,14 @@ export interface TargetOptions extends Options {
    * This creates less files, and can be easier to read, since the solo-referenced type is probably
    * strongly linked to the target type... such as an Enum, or an extra-attribute type of a data object.
    */
-  compressSoloReferencedTypes: boolean;
+  compressSoloReferencedTypes: Option<Booleanish, boolean>;
 
   /**
    * Means to compress types that inherit from another type, but is never used anywhere.
    * This can for example be error response types, with different error codes.
    * It can clutter to have each error response type be in its own compilation unit, so we can compress them.
    */
-  compressUnreferencedSubTypes: boolean;
+  compressUnreferencedSubTypes: Option<Booleanish, boolean>;
 
   /**
    * The kinds of types that are allowed to be compressed.

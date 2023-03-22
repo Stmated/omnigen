@@ -1,5 +1,5 @@
-import {Options, RealOptions} from '../options/index.js';
-import {OmniModel} from './OmniModel.js';
+import {Options, RealOptions} from '../options';
+import {OmniModel} from './OmniModel';
 
 export interface OmniModelParserResult<TOpt extends Options> {
   model: OmniModel;

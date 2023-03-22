@@ -60,6 +60,8 @@ export const PARSER_OPTIONS_RESOLVERS: OptionResolvers<ParserOptions> = {
 
 export const TARGET_OPTION_RESOLVERS: OptionResolvers<TargetOptions> = {
   allowCompressInterfaceToInner: StandardOptionResolvers.toBoolean,
+  compressUnreferencedSubTypes: StandardOptionResolvers.toBoolean,
+  compressSoloReferencedTypes: StandardOptionResolvers.toBoolean,
 };
 
 export const TRANSFORM_OPTIONS_RESOLVER: OptionResolvers<ModelTransformOptions> = {

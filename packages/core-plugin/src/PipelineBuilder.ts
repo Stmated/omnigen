@@ -33,12 +33,10 @@ type Args<T> = { [KeyType in keyof T]: T[KeyType] } & {};
 export type StepSupplier<A, V> = { (args: Args<A>): V };
 
 type Prop<O extends Partial<PipelineArgs>, RK extends string, RT> = {
-  [K in Exclude<keyof O, RK>]: O[K]
+  [K in keyof O as K extends RK ? never : K]: O[K]
 } & Record<RK, RT>
 
 export type BuilderMethods = keyof PipelineBuilder<any, any>;
-type P = Partial<PipelineArgs>;
-
 /**
  * @param A - Current known built arguments
  * @param M - Exposed extra methods of the builder
@@ -47,7 +45,7 @@ type P = Partial<PipelineArgs>;
  * @param V - The value given to property {@link K} of arguments.
  */
 export type PipeNext<
-  A extends P,
+  A extends Partial<PipelineArgs>,
   M extends BuilderMethods,
   K extends keyof PipelineArgs,
   N extends BuilderMethods,
@@ -61,7 +59,7 @@ export type PipeNext<
  * @param SA - The arguments given to the {@link StepSupplier} or no-args supplier if `void`.
  */
 export type S<
-  A extends P,
+  A extends Partial<PipelineArgs>,
   M extends BuilderMethods,
   K extends keyof PipelineArgs,
   N extends BuilderMethods,
@@ -75,35 +73,35 @@ export type S<
 export type PipeInitialOptions = IncomingOptions<ParserOptions & Partial<IncomingOptions<TargetOptions>>>;
 export type PipeLateOptions = RealOptions<ParserOptions> & IncomingOptions<TargetOptions>;
 
-export type InputStep<A extends P, M extends BuilderMethods>
+export type InputStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'input', 'deserialize'>;
-export type DeserializeStep<A extends P, M extends BuilderMethods>
+export type DeserializeStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'deserialized', 'withOptions'>;
-export type ParseOptionsStep<A extends P, M extends BuilderMethods>
+export type ParseOptionsStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'options', 'withOptions' | 'resolveOptions' | 'resolveParserOptionsDefault' | 'parse', PipeInitialOptions>;
-export type ResolveOptionsStep<A extends P, M extends BuilderMethods>
+export type ResolveOptionsStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'options', 'parse', RealOptions<ParserOptions>>;
-export type ResolveOptionsDefaultStep<A extends P, M extends BuilderMethods>
+export type ResolveOptionsDefaultStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'options', 'parse', RealOptions<ParserOptions>, void>;
-export type ParseStep<A extends P, M extends BuilderMethods>
+export type ParseStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'model', 'withModelTransformer' | 'withTargetOptions'>;
-export type ModelTransformerStep<A extends P, M extends BuilderMethods>
+export type ModelTransformerStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'model', 'withModelTransformer' | 'withTargetOptions', void>;
-export type TargetOptionsStep<A extends P, M extends BuilderMethods>
+export type TargetOptionsStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'options', 'withTargetOptions' | 'resolveTargetOptions' | 'resolveTargetOptionsDefault', PipeLateOptions>;
-export type ResolveTargetOptionsStep<A extends P, M extends BuilderMethods>
+export type ResolveTargetOptionsStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'options', 'interpret', RealOptions<ParserOptions & TargetOptions>>;
-export type ResolveTargetOptionsDefaultStep<A extends P, M extends BuilderMethods>
+export type ResolveTargetOptionsDefaultStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'options', 'interpret', RealOptions<ParserOptions & TargetOptions>, void>;
-export type InterpretStep<A extends P, M extends BuilderMethods>
+export type InterpretStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'node', 'withLateModelTransformer' | 'withAstTransformer' | 'render'>;
-export type LateModelTransformerStep<A extends P, M extends BuilderMethods>
+export type LateModelTransformerStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'model', 'withLateModelTransformer' | 'withAstTransformer' | 'render', void>;
-export type AstTransformerStep<A extends P, M extends BuilderMethods>
+export type AstTransformerStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'node', 'withLateModelTransformer' | 'withAstTransformer' | 'render', void>;
-export type RenderStep<A extends P, M extends BuilderMethods>
+export type RenderStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'rendered', 'write'>;
-export type WriteStep<A extends P, M extends BuilderMethods>
+export type WriteStep<A extends Partial<PipelineArgs>, M extends BuilderMethods>
   = S<A, M, 'rendered', keyof {}, void>;
 
 /**
@@ -111,11 +109,11 @@ export type WriteStep<A extends P, M extends BuilderMethods>
  * <p />
  * Pick&lt;,&gt; can create confusion about what is a property or method, and we get some help remedying it this way.
  */
-export interface PipeStart<A extends P, M extends BuilderMethods> {
+export interface PipeStart<A extends Partial<PipelineArgs>, M extends BuilderMethods> {
   from: InputStep<A, M>;
 }
 
-export interface PipelineBuilder<A extends P, M extends BuilderMethods> extends PipeStart<A, M> {
+export interface PipelineBuilder<A extends Partial<PipelineArgs>, M extends BuilderMethods> extends PipeStart<A, M> {
   deserialize: DeserializeStep<A, M>;
   withOptions: ParseOptionsStep<A, M>;
   resolveOptions: ResolveOptionsStep<A, M>;

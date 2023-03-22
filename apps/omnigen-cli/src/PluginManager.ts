@@ -296,7 +296,7 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A, Builder
 
   // @ts-ignore
   resolveParserOptionsDefault: ResolveOptionsDefaultStep<A> = () => {
-    this._steps.push(new PropertyPipeStep(async a => {
+    this._steps.push(new PropertyPipeStep(a => {
 
       // TODO: Will this work properly? Will all the options be translated?
       return OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, a.options, PARSER_OPTIONS_RESOLVERS);
@@ -330,7 +330,7 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A, Builder
 
   // @ts-ignore
   resolveTargetOptionsDefault: ResolveTargetOptionsDefaultStep<A> = () => {
-    this._steps.push(new PropertyPipeStep(async a => {
+    this._steps.push(new PropertyPipeStep(a => {
 
       // TODO: Will this work properly? Will all the options be translated?
       return OptionsUtil.updateOptions(DEFAULT_TARGET_OPTIONS, a.options, TARGET_OPTION_RESOLVERS);

@@ -1,4 +1,4 @@
 import {PluginOptions} from './PluginOptions';
-import {PluginHook} from './PluginHook';
+import {PipelineCustomizer} from './PipelineCustomizer.ts';
 
-export type PluginHookCreator = { (options: PluginOptions): PluginHook };
+export type PluginHookCreator = { (options: PluginOptions): PipelineCustomizer };

@@ -1,12 +1,11 @@
-import {PluginHook, PluginHookCreator, PluginAutoRegistry} from '@omnigen/core-plugin';
-import {JavaRenderer} from './render/index.js';
-import {JavaInterpreter} from './interpret/index.js';
-import {InterfaceJavaModelTransformer} from './parse/index.js';
+import {PipelineCustomizer, PluginHookCreator, PluginAutoRegistry} from '@omnigen/core-plugin';
+import {JavaInterpreter} from './interpret';
+import {InterfaceJavaModelTransformer} from './parse';
 
 const init: PluginHookCreator = options => {
   console.log('Init');
 
-  const hook: PluginHook = {
+  const hook: PipelineCustomizer = {
     afterParse: pipeline => {
 
       // TODO:

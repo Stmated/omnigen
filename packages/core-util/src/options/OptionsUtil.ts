@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {StandardOptionResolvers} from './StandardOptionResolvers.js';
+import {StandardOptionResolvers} from './StandardOptionResolvers';
 import {
   Booleanish,
   IncomingOptions,
@@ -9,7 +9,7 @@ import {
   IncomingResolver,
   OptionAdditions,
 } from '@omnigen/core';
-import {Case} from '../util/index.js';
+import {Case} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 

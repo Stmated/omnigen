@@ -1,7 +1,7 @@
 
 export * from './Plugin';
 export * from './PluginQualifier';
-export * from './PluginHook';
+export * from './PipelineCustomizer.ts';
 export * from './PluginOptions';
 export * from './PluginHookCreator';
 export * from './PluginAutoRegistry';

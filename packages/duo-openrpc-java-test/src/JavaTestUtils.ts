@@ -40,11 +40,11 @@ export class JavaTestUtils {
     return this.getFileContentsFromParseResult(parseResult, []);
   }
 
-  public static async getRootNodeFromParseResult(
+  public static getRootNodeFromParseResult(
     parseResult: OmniModelParserResult<JavaOptions>,
     externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
-  ): Promise<AstNode> {
-    return new JavaInterpreter().buildSyntaxTree(parseResult.model, externals, parseResult.options, JAVA_FEATURES);
+  ): AstNode {
+    return new JavaInterpreter(parseResult.options, JAVA_FEATURES).buildSyntaxTree(parseResult.model, externals);
   }
 
   public static async getFileContentsFromParseResult(
@@ -52,7 +52,7 @@ export class JavaTestUtils {
     externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
   ): Promise<Map<string, string>> {
 
-    const interpretation = await this.getRootNodeFromParseResult(parseResult, externals);
+    const interpretation = this.getRootNodeFromParseResult(parseResult, externals);
     return JavaTestUtils.getFileContents(parseResult.options, interpretation);
   }
 

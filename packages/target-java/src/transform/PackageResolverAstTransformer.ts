@@ -25,7 +25,7 @@ interface ObjectInfo {
 
 export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     const typeNameMap = new Map<OmniType, TypeNameInfo>();
     const cuInfoStack: CompilationUnitInfo[] = [];
@@ -102,8 +102,6 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         cuInfo.addedTypeNodes.push(node);
       },
     }));
-
-    return Promise.resolve(undefined);
   }
 
   private setLocalNameAndImportForUnknownTypeName(

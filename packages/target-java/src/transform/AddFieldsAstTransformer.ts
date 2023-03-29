@@ -12,7 +12,7 @@ import {JavaAstUtils} from './JavaAstUtils.js';
 import {Case, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
@@ -48,8 +48,6 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
       },
     }));
-
-    return Promise.resolve();
   }
 
   private hasAdditionalProperties(parent: OmniType): boolean {

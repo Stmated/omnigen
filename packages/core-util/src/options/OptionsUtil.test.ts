@@ -76,7 +76,7 @@ test('Booleans', () => {
     b: 0, // Checks that the incoming value is used even though "false-ish"
   };
 
-  const real = OptionsUtil.updateOptions(base, inc1, {
+  const real = OptionsUtil.resolve(base, inc1, {
     a: OptionsUtil.toBoolean,
     b: OptionsUtil.toBoolean,
     c: OptionsUtil.toBoolean,
@@ -99,7 +99,7 @@ test('NoDynamics', () => {
     a: 'replacement',
   };
 
-  const real = OptionsUtil.updateOptions(base, inc1);
+  const real = OptionsUtil.resolve(base, inc1);
 
   expect(real).toBeDefined();
   expect(real.a).toEqual('replacement');
@@ -127,7 +127,7 @@ test('Additions', () => {
     qwe: 2,
   };
 
-  const real = OptionsUtil.updateOptions(base, {...inc1, ...inc2}, {
+  const real = OptionsUtil.resolve(base, {...inc1, ...inc2}, {
     foo: OptionsUtil.toBoolean,
     qwe: OptionsUtil.toString,
   }, {

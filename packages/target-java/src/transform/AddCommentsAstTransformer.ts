@@ -16,7 +16,7 @@ import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     const baseVisitor = AbstractJavaAstTransformer.JAVA_VISITOR;
     args.root.visit(VisitorFactoryManager.create(baseVisitor, {
@@ -81,8 +81,6 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
         // typedGetter.signature.comments = (comment) ? new CommentBlock(comment) : undefined;
       },
     }));
-
-    return Promise.resolve(undefined);
   }
 
   private addToCommentsOwner(node: Java.Field | Java.MethodDeclarationSignature, args: JavaAstTransformerArgs) {

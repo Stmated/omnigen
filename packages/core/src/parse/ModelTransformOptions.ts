@@ -1,4 +1,4 @@
-import {Booleanish, Option, OptionResolvers, Options} from '../options/index.js';
+import {Booleanish, Option, Options} from '../options';
 
 export interface ModelTransformOptions extends Options {
   simplifyTypeHierarchy: boolean;

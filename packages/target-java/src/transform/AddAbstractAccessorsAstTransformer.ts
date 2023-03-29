@@ -9,7 +9,7 @@ import {JavaUtil} from '../util/index.js';
 
 export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
@@ -38,7 +38,5 @@ export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransform
         }
       },
     }));
-
-    return Promise.resolve();
   }
 }

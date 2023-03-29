@@ -16,12 +16,12 @@ import {TokenType} from '../ast/index.js';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     if (args.options.fieldAccessorMode == FieldAccessorMode.LOMBOK) {
 
       // If the fields are managed by lombok, then we add no constructor.
-      return Promise.resolve();
+      return;
     }
 
     const classDeclarations: Java.ClassDeclaration[] = [];
@@ -83,8 +83,6 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
         classDeclaration.body.children.push(constructorDeclaration);
       }
     }
-
-    return Promise.resolve(undefined);
   }
 
   private createConstructorDeclaration(

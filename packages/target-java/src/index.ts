@@ -8,7 +8,7 @@ export * from './util';
 export * from './render';
 export * from './parse';
 export * as Java from './ast';
-export {init} from './JavaPluginInit';
+export {default as JavaBoot} from './JavaPluginInit';
 
 export const JAVA_FEATURES: Readonly<TargetFeatures> = {
   ...OMNI_GENERIC_FEATURES,

@@ -1,15 +1,15 @@
 import {expect, test} from '@jest/globals';
-import {PipelineFactory} from './PluginManager';
-import {LoggerFactory} from '@omnigen/core-log';
+import {PipelineFactory, PluginManager} from './PluginManager';
 import {DEFAULT_PARSER_OPTIONS, DEFAULT_TARGET_OPTIONS, IncomingOptions, TargetOptions} from '@omnigen/core';
-
-const logger = LoggerFactory.create(import.meta.url);
+import {JavaBoot} from '@omnigen/target-java';
 
 test('Run Through Pipeline Builder', async () => {
 
   expect(1).toEqual(1);
 
-  const builder = new PipelineFactory().create<'build'>(() => ({
+  const factory = new PipelineFactory();
+
+  const builder = factory.create(() => ({
     input: ['a'],
     types: ['java'],
     output: 'somewhere',
@@ -23,7 +23,7 @@ test('Run Through Pipeline Builder', async () => {
       };
     });
 
-  const res1 = builderWithInput.build();
+  const res1 = factory.exposeBuilder(builderWithInput).build();
 
   expect(res1.run).toBeDefined();
   expect(res1.input).toBeDefined();
@@ -53,7 +53,7 @@ test('Run Through Pipeline Builder', async () => {
       };
     });
 
-  const res2 = builderWithModel.build();
+  const res2 = factory.exposeBuilder(builderWithModel).build();
 
   // Should get the "same" content, but should be created again from the ground up.
   expect(res2.run).toBeDefined();
@@ -66,11 +66,13 @@ test('Run Through Pipeline Builder', async () => {
   expect(res2.input).not.toBe(res1.input);
 
   const builderWithAll = builderWithModel
+    .resolveTransformOptionsDefault()
     .withModelTransformer(a => {
+      return {
+        transformModel: () => {
 
-    })
-    .withModelTransformer(a => {
-
+        },
+      };
     })
     .withTargetOptions(a => {
       const override: Partial<IncomingOptions<TargetOptions>> = {
@@ -82,8 +84,12 @@ test('Run Through Pipeline Builder', async () => {
     .resolveTargetOptionsDefault()
     .interpret(a => {
       return {
-        visit: visitor => {
+        buildSyntaxTree: () => {
+          return {
+            visit: visitor => {
 
+            },
+          };
         },
       };
     })
@@ -96,17 +102,30 @@ test('Run Through Pipeline Builder', async () => {
     .render(a => {
 
       return {
-        getFileNames: () => [],
-        getFileContent: fileName => `${a.options.allowCompressInterfaceToInner}`,
+        render: node => {
+          return '';
+        },
       };
+
+      // return {
+      //   getFileNames: () => [],
+      //   getFileContent: fileName => `${a.options.allowCompressInterfaceToInner}`,
+      // };
     })
     .write(a => {
       console.log(`We write`);
     });
 
-  const all = builderWithAll.build();
+  const all = factory.exposeBuilder(builderWithAll).build();
 
-  expect(all.rendered).toBeDefined();
+  expect(all.renderer).toBeDefined();
   expect(all.options.allowCompressInterfaceToInner).toEqual(DEFAULT_TARGET_OPTIONS.allowCompressInterfaceToInner);
   expect(all.options.compressUnreferencedSubTypes).toEqual(false);
+});
+
+test('OpenRpc + Java Plugin Hooks', async () => {
+
+  const manager = new PluginManager();
+  manager.addPluginBoot(JavaBoot);
+
 });

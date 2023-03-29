@@ -60,7 +60,7 @@ export class Omnigen {
     incomingFileWriteOptions: IncomingOptions<FileWriteOptions>,
   ): Promise<void> {
 
-    const fileWriteOptions = OptionsUtil.updateOptions(
+    const fileWriteOptions = OptionsUtil.resolve(
       DEFAULT_FILE_WRITE_OPTIONS,
       incomingFileWriteOptions,
       {
@@ -108,7 +108,7 @@ export class Omnigen {
     incomingOptions: IncomingOptions<OmnigenOptions<TParseOpt, TTargetOpt, TImplOpt>>,
   ): Promise<OmnigenResult<TParseOpt, TTargetOpt>[]> {
 
-    const runOptions = OptionsUtil.updateOptions(
+    const runOptions = OptionsUtil.resolve(
       DEFAULT_RUN_OPTIONS,
       incomingOptions,
       {
@@ -210,7 +210,7 @@ export class Omnigen {
 
     const generator = new JavaHttpImplementationGenerator();
 
-    const options = OptionsUtil.updateOptions(
+    const options = OptionsUtil.resolve(
       DEFAULT_IMPLEMENTATION_OPTIONS,
       incomingOptions,
       IMPLEMENTATION_OPTIONS_PARSERS,
@@ -261,7 +261,7 @@ export class Omnigen {
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
     const openRpcParserBootstrap = (await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile));
     const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<JavaOptions>();
-    const realParserOptions = OptionsUtil.updateOptions(
+    const realParserOptions = OptionsUtil.resolve(
       DEFAULT_OPENRPC_OPTIONS,
       parserOptions as IncomingOptions<OpenRpcParserOptions>,
       OPENRPC_OPTIONS_RESOLVERS,
@@ -297,7 +297,7 @@ export class Omnigen {
       optionsAndSchemaOptions = {...optionsAndSchemaOptions, ...schemaIncomingOptions};
     }
 
-    const realTransformerOptions = OptionsUtil.updateOptions(
+    const realTransformerOptions = OptionsUtil.resolve(
       DEFAULT_MODEL_TRANSFORM_OPTIONS,
       {},
       TRANSFORM_OPTIONS_RESOLVER,
@@ -310,14 +310,14 @@ export class Omnigen {
       });
     }
 
-    const realJavaOptions = OptionsUtil.updateOptions(
+    const realJavaOptions = OptionsUtil.resolve(
       DEFAULT_JAVA_OPTIONS,
       optionsAndSchemaOptions as IncomingOptions<JavaOptions>,
       JAVA_OPTIONS_RESOLVER,
     );
 
-    const interpreter = new JavaInterpreter();
-    const syntaxTree = await interpreter.buildSyntaxTree(parseResult.model, [], realJavaOptions, JAVA_FEATURES);
+    const interpreter = new JavaInterpreter(realJavaOptions, JAVA_FEATURES);
+    const syntaxTree = interpreter.buildSyntaxTree(parseResult.model, []);
 
     const renders: RenderedCompilationUnit[] = [];
     const renderer = new JavaRenderer(realJavaOptions, rcu => {

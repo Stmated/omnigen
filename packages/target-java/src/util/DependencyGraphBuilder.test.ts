@@ -255,8 +255,8 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C, D, E, F]);
 
-    const parserOptions = OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const transformOptions = OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    const parserOptions = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const transformOptions = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
     new SimplifyInheritanceModelTransformer().transformModel({
       model: model,
@@ -305,8 +305,8 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C]);
 
-    const parserOptions = OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const transformOptions = OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    const parserOptions = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const transformOptions = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
     new SimplifyInheritanceModelTransformer().transformModel({
       model: model,

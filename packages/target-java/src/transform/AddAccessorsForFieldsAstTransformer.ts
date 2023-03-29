@@ -21,7 +21,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
     this._skip = skip ?? [];
   }
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     const owner: { node: Java.AbstractObjectDeclaration<JavaSubTypeCapableType> | undefined } = {node: undefined};
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
@@ -96,8 +96,6 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
         }
       },
     }));
-
-    return Promise.resolve();
   }
 
   private findGetterMethodForField(latestBody: AstNode): string | string[] | undefined {

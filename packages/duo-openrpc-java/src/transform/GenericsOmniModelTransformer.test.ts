@@ -32,8 +32,8 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    const realParserOpt = OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const realTransformOpt = OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    const realParserOpt = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const realTransformOpt = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
     transformer.transformModel({
       model: model,
@@ -94,8 +94,8 @@ describe('Test CompositionDependencyUtil', () => {
     //   JAVA_OPTIONS_RESOLVER,
     // );
 
-    const realParserOpt = OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const realTransformOpt = OptionsUtil.updateOptions(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    const realParserOpt = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    const realTransformOpt = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
     // TODO: Will not work -- will need to call the 2nd pass
     transformer.transformModel({

@@ -1,34 +1,24 @@
-import {Pipeline} from '@omnigen/core';
-import {BuilderMethods, PipelineArgs, PipelineBuilder} from './PipelineBuilder.ts';
+import {RunOptions} from '@omnigen/core';
+import {
+  Pipeline,
+  PipelineArgs,
+  PipeParserOptions,
+} from './PipelineBuilder.ts';
 
-export type OptionalExcept<T extends object, K extends keyof T> = Omit<Partial<T>, K> & Pick<T, K>;
 
-// TODO: Fix the type of the arguments on "after" -- since we can be sure it is set there
-//        Even better would be if we could know of ALL previous steps -- but not sure how? Is it possible to use index?
-//          Reference to the "previous step" for the step functions?
-export type PipelineCustomizerAfter<A extends Partial<PipelineArgs>, M extends BuilderMethods, B extends PipelineBuilder<A, M>> = {
-  [K in keyof B as K extends string ? `after${Capitalize<K>}` : never]?: { (builder: B): void }
-};
+type ArgsAfter<K extends keyof PipelineArgs, Specific extends Partial<PipelineArgs> = {}> = Pick<PipelineArgs, K> & Specific;
 
-export type PipelineCustomizer<
-  A extends Partial<PipelineArgs> = Partial<PipelineArgs>,
-  M extends BuilderMethods = BuilderMethods,
-  B extends PipelineBuilder<A, M> = PipelineBuilder<A, M>
-> = PipelineCustomizerAfter<A, M, B>;
+// TODO: If possible, it would be nice to get the correct types based on the step dynamically instead of this ever being out-of-sync
+type ArgsAfterParse = ArgsAfter<'run' | 'input' | 'model', {options: PipeParserOptions}>;
 
-const c: PipelineCustomizer = {
-  afterFrom: builder => {
+export interface PipelineCustomizer {
 
-    builder.withOptions(a => ({})).write(a => {
+  afterRun?(run: RunOptions, pipeline: Pick<Pipeline<Pick<PipelineArgs, 'run'>>, 'from'>): void;
 
-    });
-  },
-};
+  afterInput?(run: RunOptions, pipeline: Pick<Pipeline<Pick<PipelineArgs, 'run' | 'input'>>, 'deserialize'>): void;
 
-export interface PipelineCustomizer2 {
+  afterParseOptions?(run: RunOptions, pipeline: Pick<Pipeline<Pick<PipelineArgs, 'run' | 'input' | 'options'>>, 'parse'>): void;
 
-  entry?: <P extends OptionalExcept<Pipeline, 'run'>>(pipeline: P) => P;
-  beforeParse?: <P extends OptionalExcept<Pipeline, 'run' | 'input'>>(pipeline: P) => P;
-  afterParse?: <P extends OptionalExcept<Pipeline, 'run' | 'input' | 'parserOptions'>>(pipeline: P) => P;
-  beforeRender?: <P extends OptionalExcept<Pipeline, 'run' | 'input' | 'parserOptions' | 'targetOptions'>>(pipeline: P) => P;
+  afterParse?(run: RunOptions, pipeline: Pick<Pipeline<ArgsAfterParse>, 'resolveTransformOptions' | 'resolveTransformOptionsDefault' | 'withTargetOptions'>): void;
 }
+

@@ -33,7 +33,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     ]
   };
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     const methodStack: MethodInfo[] = [];
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
@@ -99,8 +99,6 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
         AbstractJavaAstTransformer.JAVA_VISITOR.visitMethodCall(node, visitor);
       },
     }));
-
-    return Promise.resolve();
   }
 
   private hasSuperException(ex: string, needle: string | string[]): boolean {

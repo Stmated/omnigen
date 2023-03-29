@@ -8,7 +8,7 @@ import {Naming, VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     const currentClassDeclaration: { obj?: Java.ClassDeclaration | undefined } = {};
     type AddType = {classDeclaration: Java.ClassDeclaration, node: Java.AdditionalPropertiesDeclaration};
@@ -78,7 +78,5 @@ export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJava
         createdInterface,
       ));
     }
-
-    return Promise.resolve(undefined);
   }
 }

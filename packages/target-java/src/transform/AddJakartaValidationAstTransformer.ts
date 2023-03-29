@@ -6,7 +6,7 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/i
 
 export class AddJakartaValidationAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
@@ -59,7 +59,5 @@ export class AddJakartaValidationAstTransformer extends AbstractJavaAstTransform
     //     );
     //   }
     // }
-
-    return Promise.resolve(undefined);
   }
 }

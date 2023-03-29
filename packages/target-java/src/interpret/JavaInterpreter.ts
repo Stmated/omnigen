@@ -1,6 +1,6 @@
 import {AstNode, AstTransformer, RealOptions} from '@omnigen/core';
 import {AbstractInterpreter} from '@omnigen/core-util';
-import {FieldAccessorMode, JavaOptions} from '../options/index.js';
+import {FieldAccessorMode, JavaOptions} from '../options';
 import {
   AddConstructorJavaAstTransformer,
   AddGeneratedAnnotationAstTransformer,
@@ -18,13 +18,14 @@ import {
   AddThrowsForKnownMethodsAstTransformer,
   AddAbstractAccessorsAstTransformer,
   AddSubTypeHintsAstTransformer, SimplifyGenericsAstTransformer,
-} from '../transform/index.js';
+} from '../transform';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
+
   getTransformers(options: RealOptions<JavaOptions>): AstTransformer<AstNode, JavaOptions>[] {
     const transformers: AstTransformer<AstNode, JavaOptions>[] = [];
 
@@ -62,7 +63,7 @@ export class JavaInterpreter extends AbstractInterpreter<JavaOptions> {
     return transformers;
   }
 
-  newRootNode(): Promise<AstNode> {
-    return Promise.resolve(new Java.JavaAstRootNode());
+  newRootNode(): AstNode {
+    return new Java.JavaAstRootNode();
   }
 }

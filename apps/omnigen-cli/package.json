@@ -20,6 +20,7 @@
     "@omnigen/core-plugin": "0.0.0",
     "@omnigen/core-log": "0.0.0",
     "@omnigen/core-util": "0.0.0",
+    "@omnigen/parser-openrpc": "0.0.0",
     "@omnigen/target-java": "0.0.0",
     "commander": "^10.0.0",
     "@commander-js/extra-typings": "^10.0.2",

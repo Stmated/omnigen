@@ -1,31 +1,30 @@
 import {
-  AstTransformerStep,
-  BuilderMethods,
-  DeserializeStep,
-  InputStep,
-  InterpretStep,
-  LateModelTransformerStep,
-  ModelTransformerStep,
-  ResolveOptionsDefaultStep,
-  ParseOptionsStep,
-  ResolveOptionsStep,
-  ParseStep,
-  ResolveTargetOptionsDefaultStep,
-  ResolveTargetOptionsStep,
+  PipeResolvedTargetOptions,
+  PipeInitialOptions,
+  PipeTargetOptions,
   PipelineArgs,
-  PipelineBuilder,
-  PipeStart,
-  StepSupplier,
+  PipelineIn,
+  PipeParserOptions,
   Plugin,
   PluginAutoRegistry,
-  PluginHookCreator,
-  PluginQualifier,
-  RenderStep,
-  TargetOptionsStep,
-  WriteStep,
+  PluginBoot,
+  PluginQualifier, PipeResolvedModelTransformOptions, PluginHook, PipelineCustomizer, Pipeline,
 } from '@omnigen/core-plugin';
-import {DEFAULT_PARSER_OPTIONS, DEFAULT_TARGET_OPTIONS, Pipeline, RunOptions} from '@omnigen/core';
-import {OptionsUtil, PARSER_OPTIONS_RESOLVERS, TARGET_OPTION_RESOLVERS} from '@omnigen/core-util';
+import {
+  DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  DEFAULT_PARSER_OPTIONS,
+  DEFAULT_TARGET_OPTIONS, Interpreter,
+  OmniModel, OmniModelTransformer,
+  Renderer,
+  RunOptions,
+  SerializedInput,
+} from '@omnigen/core';
+import {
+  OptionsUtil,
+  PARSER_OPTIONS_RESOLVERS,
+  TARGET_OPTION_RESOLVERS,
+  TRANSFORM_OPTIONS_RESOLVER,
+} from '@omnigen/core-util';
 import * as path from 'path';
 
 interface ImportedPlugin {
@@ -35,7 +34,12 @@ interface ImportedPlugin {
 
 export class PluginManager {
 
+  private readonly _pluginBoots: PluginBoot[] = [];
   private readonly _plugins = new Map<string, ImportedPlugin>();
+
+  public addPluginBoot(pluginBoot: PluginBoot): void {
+    this._pluginBoots.push(pluginBoot);
+  }
 
   public async importPlugin(qualifier: PluginQualifier): Promise<boolean> {
 
@@ -62,7 +66,7 @@ export class PluginManager {
         const init = packageContents.init;
         if (typeof init == 'function') {
 
-          const hookCreator = init as PluginHookCreator;
+          const hookCreator = init as PluginBoot;
           const globalAutoPlugins = PluginAutoRegistry.getGlobalAutoPlugins();
 
           if (globalAutoPlugins.find(it => it.init == hookCreator)) {
@@ -100,159 +104,86 @@ export class PluginManager {
     }
   }
 
-  public async createPipelines(runOptions: RunOptions): Promise<Pipeline[]> {
+  public execute(runOptions: RunOptions): void {
 
     const importedPlugins = [...this._plugins.values()].map(it => it.plugin);
     const globalAutoPlugins = PluginAutoRegistry.getGlobalAutoPlugins();
 
-    // Get all inputs
-    // Get all parsers
-    // Deserialize inputs with help of parser
-
     const plugins = [...importedPlugins, ...globalAutoPlugins];
 
-    // const rootBuilder = new UnsafePipelineBuilder();
+    const customizers: PipelineCustomizer[] = [];
+    const hook: PluginHook = {
+      registerCustomizer(customizer) {
+        customizers.push(customizer);
+      },
+    };
 
-    const pluginHooks = plugins.map(it => it.init({qualifier: {name: it.name}, args: {}}));
+    for (const plugin of plugins) {
+      plugin.init(hook);
+    }
 
-    // for (const pluginHook of pluginHooks) {
-    //   if (pluginHook.entry) {
-    //     pluginHook.entry(runOptions, rootBuilder);
-    //   }
-    // }
-    //
-    // for (const builder of rootBuilder.getEdges()) {
-    //   for (const pluginHook of pluginHooks) {
-    //     if (pluginHook.beforeParse) {
-    //       pluginHook.beforeParse(runOptions, builder);
-    //     }
-    //   }
-    // }
-    //
-    // for (const builder of rootBuilder.getEdges()) {
-    //   for (const pluginHook of pluginHooks) {
-    //     if (pluginHook.afterParse) {
-    //       pluginHook.afterParse(runOptions, builder);
-    //     }
-    //   }
-    // }
+    for (const pluginBoot of this._pluginBoots) {
+      pluginBoot(hook);
+    }
 
-    // TODO: REDO THE WHOLE SYSTEM! DO NOT HAVE CREATORS AND INSTEAD JUST GIVE THE ACTUAL INPUT AND EXPECT DIRECT OUTPUT
-    //        THE BUILDER IS THE PIPELINE! The PipelineBuilder should be a merged type of all steps!
-    //        It is then up to each plugin to return the builder at any stage it wants!
-    //        Then we check up to what stage that there are methods defined!
-    //        Then we call into into a method of the next plugin to continue building on it!
-    //        If possible, it would be *awesome* if this could be automated somehow
-    //            -- by getting the keys and values, and auto-adding the "before" and "after" hooks into the PluginHook
+    const pipelineFactory = new PipelineFactory();
+    const pipeline = pipelineFactory.create(() => runOptions);
 
-    const pipelines: Pipeline[] = [];
-
-    // for (const builder of rootBuilder.getEdges()) {
-    //
-    //   // TODO: For each edge, we will need to fill in the missing parts of the pipeline.
-    //   // TODO: When we have the builder fully populated, we will create the pipeline
-    //   if (!builder.serializedInputSourceCreator) {
-    //     throw new Error(`There is no input source`);
-    //   }
-    //
-    //   if (!builder.serializedInputDeserializerCreator) {
-    //     throw new Error(`There is no deserializer`);
-    //   }
-    //
-    //   if (!builder.parserCreator) {
-    //     throw new Error(`There is no parser creator`);
-    //   }
-    //
-    //   // const safeBuilder = builder as Required<UnsafePipelineBuilder>;
-    //   //
-    //   // const deserializer = builder.serializedInputDeserializerCreator();
-    //   // const serializedInputSource = builder.serializedInputSourceCreator();
-    //   // const inputs = serializedInputSource.inputs;
-    //   //
-    //   // const deserializedInputs = inputs.map(it => deserializer.deserialize(it));
-    //   //
-    //   // const parsers = deserializedInputs.map(it => {
-    //   //   const optionsParser = safeBuilder.optionsParserCreator(it);
-    //   //   const options = optionsParser.parse({}); // TODO: Send anything along here?
-    //   //   return safeBuilder.parserCreator(it, options);
-    //   // });
-    //
-    //   // pipelines.push({
-    //   //   input: serializedInputSource.inputs,
-    //   //
-    //   // });
-    // }
-
-    return pipelines;
+    this.executeWith(runOptions, customizers, pipeline);
   }
 
-  public async executePipelines(pipelines: Pipeline[]): Promise<void> {
+  private executeWith(runOptions: RunOptions, customizers: PipelineCustomizer[], pipeline: Pick<Pipeline<Pick<PipelineArgs, 'run'>>, 'from'>): void {
 
-    for (const batch of pipelines) {
+    // TODO: Figure out how to continue here... there must be a GOOD way to make sure we are called back to the right next step.
+    //        Send back the pipeline from the customizer?
+    //        Send back method reference from the customizer?
+    //        Call some "next" method where we give the current builder, and the target method must match requirements?
 
-      // TODO: Actually run everything. In sequence. Then return when everything is done.
+    for (const customizer of customizers) {
+      if (customizer.afterRun) {
+        customizer.afterRun(runOptions, pipeline);
+      }
     }
   }
 }
 
 export class PipelineFactory {
 
-  /**
-   * Create a new {@link PipelineBuilder}, given a starting {@link supplier} that gives us the initial {@link RunOptions}.
-   * <p />
-   * You can add visibility of builder internal methods by altering the `X` generic argument.
-   *
-   * @param supplier - Supplier of initial run options.
-   * @param M - Useful if you want to expose the {@link PipelineBuilder#build} build method of the builder.
-   */
-  public create<M extends BuilderMethods = keyof {}>(supplier: () => RunOptions): PipeStart<{ run: RunOptions }, M> {
+  public create<A extends PipelineArgs = PipelineArgs>(supplier: () => RunOptions): Pick<Pipeline<Pick<A, 'run'>>, 'from'> {
 
-    const step: StepSupplier<{}, RunOptions> = () => supplier();
-    const propertyStep = new PropertyPipeStep(step, 'run');
-    return new PipelineImpl(propertyStep);
-  }
-}
+    const step: PropertyPipeStep<A, 'run'> = {
+      key: 'run',
+      step: () => supplier(),
+    };
 
-type StepValue<K extends keyof PipelineArgs> = PipelineArgs[K] | void;
-
-class PropertyPipeStep<P extends Partial<PipelineArgs>, K extends keyof PipelineArgs, V extends StepValue<K>> {
-
-  private readonly _step: StepSupplier<P, V>;
-  private readonly _key: K;
-
-  constructor(step: StepSupplier<P, V>, key: K) {
-    this._step = step;
-    this._key = key;
+    return new PipelineImpl<A>(step);
   }
 
-  public execute(args: P): V extends void ? P : P & Record<K, PipelineArgs[K]> {
-
-    const result = this._step(args);
-
-    if (result) {
-
-      const typedResult = result as PipelineArgs[K];
-      return {
-        ...args,
-        ...{
-          [this._key]: typedResult,
-        },
-      };
+  public exposeBuilder<A, P extends Partial<Pipeline<A>>>(pipeline: P): WithExposedBuild<A, P> {
+    if (pipeline instanceof PipelineImpl) {
+      return pipeline as unknown as WithExposedBuild<A, P>;
     } else {
-      return args;
-
-      // throw new Error(`No result given by step: ${result}`);
+      throw new Error(`The pipeline must be created by this factory`);
     }
   }
 }
 
-class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A, BuilderMethods> {
+export type WithExposedBuild<A, P extends Partial<Pipeline<A>>> = P extends Partial<Pipeline<infer RA>>
+  ? P & {build: {(): RA}}
+  : never;
+
+interface PropertyPipeStep<A extends PipelineArgs, K extends keyof A, I extends PipelineIn<A, A[K]> = PipelineIn<A, A[K]>> {
+
+  readonly step: I;
+  readonly key: (K & string) | undefined;
+}
+
+class PipelineImpl<A extends PipelineArgs = PipelineArgs> implements Pipeline<A> {
 
   // We lie. We trust that the end-user of the builder cannot create a type-unsafe builder because of chaining.
-  private readonly _steps: PropertyPipeStep<A, keyof PipelineArgs, StepValue<keyof PipelineArgs>>[] = [];
+  private readonly _steps: PropertyPipeStep<A, keyof PipelineArgs, PipelineIn<A, any>>[] = [];
 
-  constructor(runStep: PropertyPipeStep<{}, 'run', RunOptions>) {
-    // @ts-ignore
+  constructor(runStep: PropertyPipeStep<A, 'run'>) {
     this._steps.push(runStep);
   }
 
@@ -260,9 +191,25 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A, Builder
 
     // We lie, and act as if this is the full object.
     // To the outward user of the builder, it will look like another type based on the steps taken.
-    let args: A = {} as A;
+    const args = {
+      modelTransformers: [] as OmniModelTransformer[],
+    } as A;
+
     for (const step of this._steps) {
-      args = step.execute(args);
+
+      if (step.key) {
+        const result = step.step(args);
+        if (result) {
+          const target = args[step.key];
+          if (Array.isArray(target)) {
+            target.push(result);
+          } else {
+            args[step.key] = result;
+          }
+        }
+      } else {
+        step.step(args);
+      }
     }
 
     // TODO: Do sanity check?
@@ -270,101 +217,103 @@ class PipelineImpl<A extends PipelineArgs> implements PipelineBuilder<A, Builder
     return args as A;
   }
 
-  // @ts-ignore
-  from: InputStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'input'));
+  start<V extends RunOptions>(supplier: PipelineIn<A, V>) {
+    this._steps.push({key: 'run', step: supplier});
+    return this as any;
+  }
+
+  from<V extends SerializedInput>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'input'});
+    return this as any;
+  }
+
+  deserialize<V>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'deserialized'});
+    return this as any;
+  }
+
+  withOptions<V extends PipeInitialOptions>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'options'});
+    return this as any;
+  }
+
+  resolveOptions<V extends PipeParserOptions>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'options'});
+    return this as any;
+  }
+
+  resolveParserOptionsDefault<V extends PipeParserOptions>() {
+    this._steps.push({
+      step: a => OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, a.options, PARSER_OPTIONS_RESOLVERS),
+      key: 'options',
+    });
+    return this as any;
+  }
+
+  parse<V extends OmniModel>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'options'});
+    return this as any;
+  }
+
+  resolveTransformOptions<V extends PipeResolvedModelTransformOptions>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'options'});
+    return this as any;
+  }
+
+  resolveTransformOptionsDefault() {
+    this._steps.push({
+      step: a => OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, a.options, TRANSFORM_OPTIONS_RESOLVER),
+      key: 'options',
+    });
+    return this as any;
+  }
+
+  withModelTransformer<V extends OmniModelTransformer>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'modelTransformers'});
+    return this as any;
+  }
+
+  withTargetOptions<V extends PipeTargetOptions>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'options'});
+    return this as any;
+  }
+
+  resolveTargetOptions<V extends PipeResolvedTargetOptions>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'options'});
+    return this as any;
+  }
+
+  resolveTargetOptionsDefault<V extends PipeResolvedTargetOptions>() {
+    this._steps.push({
+      step: a => OptionsUtil.resolve(DEFAULT_TARGET_OPTIONS, a.options, TARGET_OPTION_RESOLVERS),
+      key: 'options',
+    });
+    return this as any;
+  }
+
+  interpret<V extends Interpreter>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'interpreter'});
+    return this as any;
+  }
+
+  withLateModelTransformer(supplier: PipelineIn<A, void>) {
+    this._steps.push({step: supplier, key: undefined});
+    return this as any;
+  }
+
+  withAstTransformer(supplier: PipelineIn<A, void>) {
+    this._steps.push({step: supplier, key: undefined});
+    return this as any;
+  }
+
+  render<V extends Renderer>(supplier: PipelineIn<A, V>) {
+    this._steps.push({step: supplier, key: 'renderer'});
+    return this as any;
+  }
+
+  write(supplier: PipelineIn<A, void>) {
+    this._steps.push({step: supplier, key: undefined});
     return this;
-  };
+  }
 
-  // @ts-ignore
-  deserialize: DeserializeStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'deserialized'));
-    return this;
-  };
-
-  // @ts-ignore
-  withOptions: ParseOptionsStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'options'));
-    return this;
-  };
-
-  // @ts-ignore
-  resolveOptions: ResolveOptionsStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'options'));
-    return this;
-  };
-
-  // @ts-ignore
-  resolveParserOptionsDefault: ResolveOptionsDefaultStep<A> = () => {
-    this._steps.push(new PropertyPipeStep(a => {
-
-      // TODO: Will this work properly? Will all the options be translated?
-      return OptionsUtil.updateOptions(DEFAULT_PARSER_OPTIONS, a.options, PARSER_OPTIONS_RESOLVERS);
-    }, 'options'));
-    return this;
-  };
-
-  // @ts-ignore
-  parse: ParseStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'model'));
-    return this;
-  };
-
-  // @ts-ignore
-  withModelTransformer: ModelTransformerStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'model'));
-    return this;
-  };
-
-  // @ts-ignore
-  withTargetOptions: TargetOptionsStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'options'));
-    return this;
-  };
-
-  // @ts-ignore
-  resolveTargetOptions: ResolveTargetOptionsStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'options'));
-    return this;
-  };
-
-  // @ts-ignore
-  resolveTargetOptionsDefault: ResolveTargetOptionsDefaultStep<A> = () => {
-    this._steps.push(new PropertyPipeStep(a => {
-
-      // TODO: Will this work properly? Will all the options be translated?
-      return OptionsUtil.updateOptions(DEFAULT_TARGET_OPTIONS, a.options, TARGET_OPTION_RESOLVERS);
-    }, 'options'));
-    return this;
-  };
-
-  // @ts-ignore
-  interpret: InterpretStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'node'));
-    return this;
-  };
-
-  // @ts-ignore
-  withLateModelTransformer: LateModelTransformerStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'model'));
-    return this;
-  };
-
-  // @ts-ignore
-  withAstTransformer: AstTransformerStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'node'));
-    return this;
-  };
-
-  // @ts-ignore
-  render: RenderStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'rendered'));
-    return this;
-  };
-
-  // @ts-ignore
-  write: WriteStep<A> = step => {
-    this._steps.push(new PropertyPipeStep(step, 'rendered'));
-    return this;
-  };
 }

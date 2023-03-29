@@ -64,6 +64,7 @@ importers:
       '@omnigen/core-plugin': 0.0.0
       '@omnigen/core-util': 0.0.0
       '@omnigen/eslint-config-custom': 0.0.0
+      '@omnigen/parser-openrpc': 0.0.0
       '@omnigen/target-java': 0.0.0
       '@types/figlet': 1.5.2
       '@types/node': ^18.13.0
@@ -79,6 +80,7 @@ importers:
       '@omnigen/core-log': link:../../packages/core-log
       '@omnigen/core-plugin': link:../../packages/core-plugin
       '@omnigen/core-util': link:../../packages/core-util
+      '@omnigen/parser-openrpc': link:../../packages/parser-openrpc
       '@omnigen/target-java': link:../../packages/target-java
       commander: 10.0.0
       figlet: 1.5.2

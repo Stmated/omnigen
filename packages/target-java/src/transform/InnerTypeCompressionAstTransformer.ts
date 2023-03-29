@@ -14,12 +14,12 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     if (!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes) {
 
       // The option for compressing types is disabled.
-      return Promise.resolve();
+      return;
     }
 
     const cuUsedInTypes = new Map<Java.CompilationUnit, OmniType[]>();
@@ -71,8 +71,6 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
         }
       }
     }
-
-    return Promise.resolve(undefined);
   }
 
   private flipMultiMap<A, B>(original: Map<A, B[]>): Map<B, A[]> {

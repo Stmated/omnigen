@@ -1,12 +1,14 @@
-import {PipelineCustomizer, PluginHookCreator, PluginAutoRegistry} from '@omnigen/core-plugin';
+import {PluginAutoRegistry, PluginBoot} from '@omnigen/core-plugin';
 import {JavaInterpreter} from './interpret';
 import {InterfaceJavaModelTransformer} from './parse';
+import {OptionsUtil} from '@omnigen/core-util';
+import {DEFAULT_JAVA_OPTIONS, JAVA_OPTIONS_RESOLVER} from './options';
+import {JAVA_FEATURES, JavaRenderer} from './index.ts';
 
-const init: PluginHookCreator = options => {
-  console.log('Init');
+const CREATOR: PluginBoot = hook => {
 
-  const hook: PipelineCustomizer = {
-    afterParse: pipeline => {
+  hook.registerCustomizer({
+    afterParse(run, pipeline) {
 
       // TODO:
       //  * Ability to add "File Loaders" that can parse different incoming paths -- which plugins can add to
@@ -18,52 +20,28 @@ const init: PluginHookCreator = options => {
       //  * Either the options given to the hook creator says the input and we decide from that...
       //      Or we could actually decide that during runtime/lazily with the help of the builder? Like stream filters
 
-      // We then need to make sure this can be ran with and without the CLI, and make it work smoothly!
-      // Then we can actually start using this code in example projects! :D
-
-      if (!pipeline.run.types.includes('java')) {
-        return pipeline;
+      if (!run.types.includes('java')) {
+        return;
       }
 
-      if (!pipeline.modelTransformers) {
-        pipeline.modelTransformers = [];
-      }
-      pipeline.modelTransformers.push(new InterfaceJavaModelTransformer());
+      pipeline
+        .resolveTransformOptionsDefault()
+        .withModelTransformer(a => new InterfaceJavaModelTransformer())
+        .resolveTargetOptions(a => OptionsUtil.resolve(DEFAULT_JAVA_OPTIONS, a.options, JAVA_OPTIONS_RESOLVER))
+        .interpret(a => new JavaInterpreter(a.options, JAVA_FEATURES))
+        .render(a => new JavaRenderer(a.options, rcu => {
 
-      if (!pipeline.interpreter) {
-        pipeline.interpreter = new JavaInterpreter();
-      }
-
-      if (pipeline.interpreter instanceof JavaInterpreter) {
-
-        if (!pipeline.renderers) {
-          pipeline.renderers = [];
-        }
-
-        // pipeline.renderers.push(new JavaRenderer(opt, rcu => {
-        //
-        // });
-      }
-
-      // builder
-      //   .fork()
-      //   .withModelTransformer(opt => new InterfaceJavaModelTransformer())
-      //   .thenInterpret(opt => new JavaInterpreter())
-      //   .thenRender(opt => new JavaRenderer(opt, rcu => {
-      //     console.log(`Rendered`);
-      //     console.table(rcu);
-      //   }));
-
-      return pipeline;
+          // TODO: Remove callback? Should not work this way? Should give back a RenderedResult that contains files?
+          console.log(`Rendered`);
+          console.table(rcu);
+        }));
     },
-  };
-
-  return hook;
+  });
 };
 
 PluginAutoRegistry.register({
   name: 'java',
-  init: init,
+  init: CREATOR,
 });
 
-export {init};
+export default CREATOR;

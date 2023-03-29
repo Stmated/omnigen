@@ -28,7 +28,7 @@ describe('Test Generic Model Creation', () => {
       const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
         new SchemaFile(filePath),
       );
-      const realOptions = OptionsUtil.updateOptions(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
+      const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
       const parser = parserBootstrap.createParser(realOptions);
       const model = parser.parse().model;
       expect(model).toBeDefined();
@@ -41,7 +41,7 @@ describe('Test Generic Model Creation', () => {
       new SchemaFile('../parser-openrpc/examples/petstore-expanded.json'),
     );
 
-    const realOptions = OptionsUtil.updateOptions(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
+    const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
     const parser = parserBootstrap.createParser(realOptions);
     const model = parser.parse().model;
 

@@ -15,18 +15,17 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class OptionsUtil {
 
-  public static updateOptions<
-    TOpt extends Options,
-    TInc extends IncomingOptions<TOpt>,
-    TResolver extends OptionResolvers<TOpt>,
-    TAdditions extends OptionAdditions<TOpt>,
-    TReturn extends RealOptions<TOpt>
+  public static resolve<
+    TBase extends Options,
+    TInc extends Options | IncomingOptions<TBase>,
+    TResolver extends OptionResolvers<TBase>,
+    TAdditions extends OptionAdditions<TBase>
   >(
-    base: TOpt,
+    base: TBase,
     incoming: TInc | undefined,
     resolvers?: TResolver,
     additions?: TAdditions,
-  ): TReturn {
+  ): Exclude<TInc, keyof TBase> & RealOptions<Pick<TBase, keyof TBase>> {
 
     const copiedBase = {...base};
     const alteredBase = this.getBaseWithOptionalAdditions(copiedBase, incoming, resolvers, additions);

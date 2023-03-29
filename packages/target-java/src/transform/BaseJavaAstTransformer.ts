@@ -27,7 +27,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     // TODO: Need to figure out where the wrong JsonRpcErrorResponse comes from. Something is missed in the replacement!
 
@@ -101,8 +101,6 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
         this.transformSubType(args.model, type.of, type, args.options, args.root, type.sourceIdentifiers);
       }
     }
-
-    return Promise.resolve();
   }
 
   private transformEnum(

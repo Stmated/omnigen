@@ -18,7 +18,7 @@ import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
  */
 export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     type TargetInfo = { source: OmniGenericTargetSourcePropertyType, targetTypes: Set<OmniType> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
@@ -127,7 +127,5 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitGenericClassDeclaration(node, visitor);
       },
     }));
-
-    return Promise.resolve();
   }
 }

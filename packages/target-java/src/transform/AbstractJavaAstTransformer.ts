@@ -12,5 +12,5 @@ export abstract class AbstractJavaAstTransformer implements AstTransformer<Java.
   protected static readonly JAVA_STRING_VISITOR: JavaVisitor<string> = new JavaVisitor<string>();
   protected static readonly JAVA_BOOLEAN_VISITOR: JavaVisitor<boolean> = new JavaVisitor<boolean>();
 
-  abstract transformAst(args: JavaAstTransformerArgs): Promise<void>;
+  abstract transformAst(args: JavaAstTransformerArgs): void;
 }

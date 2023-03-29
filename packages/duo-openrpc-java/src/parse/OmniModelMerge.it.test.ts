@@ -68,7 +68,7 @@ describe('OmniModelMerge-it', () => {
       'Thing',
     ]);
 
-    const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
+    const rootNodeCommon = JavaTestUtils.getRootNodeFromParseResult(resultMerged);
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
     const files10 = (await JavaTestUtils.getFileContentsFromParseResult(result10, [{
       node: rootNodeCommon,
@@ -180,7 +180,7 @@ describe('OmniModelMerge-it', () => {
 
     resultMerged.model.types.sort((a, b) => OmniUtil.describe(a).localeCompare(OmniUtil.describe(b)));
 
-    const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
+    const rootNodeCommon = JavaTestUtils.getRootNodeFromParseResult(resultMerged);
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
     const files10 = (await JavaTestUtils.getFileContentsFromParseResult(result10, [{
       node: rootNodeCommon,
@@ -408,7 +408,7 @@ describe('OmniModelMerge-it', () => {
       compressTypeNaming: CompressTypeNaming.COMMON_PREFIX,
     });
 
-    const rootNodeCommon = (await JavaTestUtils.getRootNodeFromParseResult(resultMerged));
+    const rootNodeCommon = JavaTestUtils.getRootNodeFromParseResult(resultMerged);
     const filesCommon = (await JavaTestUtils.getFileContentsFromRootNode(rootNodeCommon, resultMerged.options));
     const filesA = (await JavaTestUtils.getFileContentsFromParseResult(resultA, [{
       node: rootNodeCommon,

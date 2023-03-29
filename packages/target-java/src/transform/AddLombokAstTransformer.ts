@@ -21,7 +21,7 @@ export interface StackInfo {
  * This will be improved as we move along, and right now it is enough to work for 80% of cases, in an ugly way.
  */
 export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     const cuStack: StackInfo[] = [];
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
@@ -196,8 +196,6 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
         node.annotations = annotations;
       },
     }));
-
-    return Promise.resolve();
   }
 
   private getDefaultValue(type: OmniType): Java.Literal {

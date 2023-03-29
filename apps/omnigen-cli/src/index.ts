@@ -45,7 +45,7 @@ console.log(figlet.textSync('Omnigen', 'Chunky'));
       });
     }
 
-    const pipelines = await pluginManager.createPipelines(runOptions);
+    const pipelines = pluginManager.execute(runOptions);
     console.table(pipelines);
   }
 

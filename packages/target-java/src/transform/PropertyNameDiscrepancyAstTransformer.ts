@@ -5,7 +5,7 @@ import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export class PropertyNameDiscrepancyAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     // TODO: Add @JsonProperty to the constructor parameters?
 
@@ -45,7 +45,5 @@ export class PropertyNameDiscrepancyAstTransformer extends AbstractJavaAstTransf
         }
       },
     }));
-
-    return Promise.resolve();
   }
 }

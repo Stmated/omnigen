@@ -5,34 +5,40 @@ import {TargetOptions, Interpreter, TargetFeatures} from '@omnigen/core';
 
 export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements Interpreter<TOpt> {
 
+  protected readonly options: RealOptions<TOpt>;
+  protected readonly features: TargetFeatures;
+
+  constructor(options: RealOptions<TOpt>, features: TargetFeatures) {
+    this.options = options;
+    this.features = features;
+  }
+
   protected abstract getTransformers(options: RealOptions<TOpt>): AstTransformer<AstNode, TOpt>[];
 
-  abstract newRootNode(): Promise<AstNode>;
+  abstract newRootNode(): AstNode;
 
-  public async buildSyntaxTree(
+  public buildSyntaxTree(
     model: OmniModel,
-    externals: ExternalSyntaxTree<AstNode, TOpt>[],
-    options: RealOptions<TOpt>,
-    features: TargetFeatures,
-  ): Promise<AstNode> {
+    externals: ExternalSyntaxTree<AstNode, TOpt>[]
+  ): AstNode {
 
-    const rootNode = await this.newRootNode();
+    const rootNode = this.newRootNode();
 
     const args: AstTransformerArguments<AstNode, TOpt> = {
       model,
       root: rootNode,
       externals,
-      options,
-      features,
+      options: this.options,
+      features: this.features,
     };
 
-    for (const transformer of this.getTransformers(options)) {
+    for (const transformer of this.getTransformers(this.options)) {
 
       // We do the transformers in order.
       // Later we might batch them together based on "type" or "group" or whatever.
-      await transformer.transformAst(args);
+      transformer.transformAst(args);
     }
 
-    return Promise.resolve(rootNode);
+    return rootNode;
   }
 }

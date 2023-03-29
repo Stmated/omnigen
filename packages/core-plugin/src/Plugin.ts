@@ -1,7 +1,7 @@
-import {PluginHookCreator} from './PluginHookCreator';
+import {PluginBoot} from './PluginBoot.ts';
 
 export interface Plugin {
   name: string;
 
-  init: PluginHookCreator;
+  init: PluginBoot;
 }

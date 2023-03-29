@@ -1,4 +1,4 @@
-import {AstNode} from '../ast/index.js';
+import {AstNode} from '../ast';
 
 export interface Renderer {
   render(node: AstNode): string;

@@ -1,11 +1,15 @@
 import {
   AstNode,
   IncomingOptions,
+  Interpreter,
+  ModelTransformOptions,
   OmniModel,
+  OmniModelTransformer,
   Options,
+  Parser,
   ParserOptions,
   RealOptions,
-  RenderResult,
+  Renderer,
   RunOptions,
   SerializedInput,
   TargetOptions,
@@ -20,9 +24,13 @@ export interface PipelineArgs {
   input: SerializedInput;
   deserialized: any;
   options: Options;
+  parser: Parser;
   model: OmniModel;
+  modelTransformers: OmniModelTransformer[];
+  interpreter: Interpreter;
   node: AstNode;
-  rendered: RenderResult;
+  renderer: Renderer;
+  // rendered: RenderResult;
 }
 
 /**
@@ -30,111 +38,114 @@ export interface PipelineArgs {
  */
 type Args<T> = { [KeyType in keyof T]: T[KeyType] } & {};
 
-export type StepSupplier<A, V> = { (args: Args<A>): V };
+type IncParse = IncomingOptions<ParserOptions>;
+type IncTransform = IncomingOptions<ModelTransformOptions>;
+type PreIncTransform = Partial<IncTransform>;
+type IncTarget = IncomingOptions<TargetOptions>;
+type PreIncTarget = Partial<IncTarget>;
 
-type Prop<
-  A,
-  RK extends string,
-  RT
-> = {
-  [K in Exclude<keyof A, RK>]: A[K]
-} & Record<RK, RT>
+export type PipeInitialOptions = IncParse & PreIncTransform & PreIncTarget;
+export type PipeParserOptions = RealOptions<ParserOptions> & PreIncTransform & PreIncTarget;
 
-export type BuilderMethods = keyof PipelineBuilder<any, any>;
-/**
- * @param A - Current known built arguments
- * @param M - Exposed extra methods of the builder
- * @param K - The argument this step will update
- * @param N - The exposed builder methods for next step
- * @param V - The value given to property {@link K} of arguments.
- */
-export type PipeNext<
-  A,
-  M extends BuilderMethods,
-  K extends keyof PipelineArgs,
-  N extends BuilderMethods,
-  V
-> = V extends void
-    ? Pick<PipelineBuilder<A, M>, N | M>
-    : Pick<PipelineBuilder<Simplify<Prop<A, K, V>>, M>, N | M>
+export type PipeModelTransformOptions = RealOptions<ParserOptions> & IncTransform & PreIncTarget;
+export type PipeResolvedModelTransformOptions =
+  RealOptions<ParserOptions>
+  & RealOptions<ModelTransformOptions>
+  & PreIncTarget;
 
-/**
- * @param PV - The value type required to be returned by the {@link StepSupplier}, same as args if not specified.
- * @param SA - The arguments given to the {@link StepSupplier} or no-args supplier if `void`.
- */
-export type S<
-  A,
-  M extends BuilderMethods,
-  K extends keyof PipelineArgs,
-  N extends BuilderMethods,
-  PV extends PipelineArgs[K] | void = PipelineArgs[K],
-  SA extends A | void = A
-> =
-  SA extends void
-    ? { (): PipeNext<A, M, K, N, PV> }
-    : { <V extends PV>(supplier: StepSupplier<SA, V>): PipeNext<A, M, K, N, V> }
+export type PipeTargetOptions = RealOptions<ParserOptions & ModelTransformOptions> & IncTarget;
+export type PipeResolvedTargetOptions = RealOptions<ParserOptions & ModelTransformOptions & TargetOptions>;
 
-export type PipeInitialOptions = IncomingOptions<ParserOptions & Partial<IncomingOptions<TargetOptions>>>;
-export type PipeLateOptions = RealOptions<ParserOptions> & IncomingOptions<TargetOptions>;
+export type PipelineIn<A, V> = { (args: Args<A>): V };
 
-export type InputStep<A, M extends BuilderMethods>
-  = S<A, M, 'input', 'deserialize'>;
-export type DeserializeStep<A, M extends BuilderMethods>
-  = S<A, M, 'deserialized', 'withOptions'>;
-export type ParseOptionsStep<A, M extends BuilderMethods>
-  = S<A, M, 'options', 'withOptions' | 'resolveOptions' | 'resolveParserOptionsDefault' | 'parse', PipeInitialOptions>;
-export type ResolveOptionsStep<A, M extends BuilderMethods>
-  = S<A, M, 'options', 'parse', RealOptions<ParserOptions>>;
-export type ResolveOptionsDefaultStep<A, M extends BuilderMethods>
-  = S<A, M, 'options', 'parse', RealOptions<ParserOptions>, void>;
-export type ParseStep<A, M extends BuilderMethods>
-  = S<A, M, 'model', 'withModelTransformer' | 'withTargetOptions'>;
-export type ModelTransformerStep<A, M extends BuilderMethods>
-  = S<A, M, 'model', 'withModelTransformer' | 'withTargetOptions', void>;
-export type TargetOptionsStep<A, M extends BuilderMethods>
-  = S<A, M, 'options', 'withTargetOptions' | 'resolveTargetOptions' | 'resolveTargetOptionsDefault', PipeLateOptions>;
-export type ResolveTargetOptionsStep<A, M extends BuilderMethods>
-  = S<A, M, 'options', 'interpret', RealOptions<ParserOptions & TargetOptions>>;
-export type ResolveTargetOptionsDefaultStep<A, M extends BuilderMethods>
-  = S<A, M, 'options', 'interpret', RealOptions<ParserOptions & TargetOptions>, void>;
-export type InterpretStep<A, M extends BuilderMethods>
-  = S<A, M, 'node', 'withLateModelTransformer' | 'withAstTransformer' | 'render'>;
-export type LateModelTransformerStep<A, M extends BuilderMethods>
-  = S<A, M, 'model', 'withLateModelTransformer' | 'withAstTransformer' | 'render', void>;
-export type AstTransformerStep<A, M extends BuilderMethods>
-  = S<A, M, 'node', 'withLateModelTransformer' | 'withAstTransformer' | 'render', void>;
-export type RenderStep<A, M extends BuilderMethods>
-  = S<A, M, 'rendered', 'write'>;
-export type WriteStep<A, M extends BuilderMethods>
-  = S<A, M, 'rendered', keyof {}, void>;
 
-/**
- * Separated so we get better IDE auto-complete when starting the pipeline.
- * <p />
- * Pick&lt;,&gt; can create confusion about what is a property or method, and we get some help remedying it this way.
- */
-export interface PipeStart<A, M extends BuilderMethods> {
-  from: InputStep<A, M>;
+export type PipelineNext<A, N extends Partial<PipelineArgs>, PK extends keyof Pipeline<A> = keyof {}> = Simplify<Pick<Pipeline<{
+  [AK in Exclude<keyof A, keyof N>]: A[AK]
+} & N>, PK>>;
+
+export type TypeAfterStart = Pick<PipelineArgs, 'run'>;
+export type TypeAfterFrom = TypeAfterStart & Pick<PipelineArgs, 'input'>;
+export type TypeAfterDeserialize = TypeAfterStart & Pick<PipelineArgs, 'deserialized'>;
+
+// type Modify<A extends Partial<PipelineArgs>, R extends Partial<PipelineArgs> /*K extends keyof PipelineArgs, V extends PipelineArgs[K]*/>
+//   = Omit<A, keyof R> & R;
+//
+// export type TypeAfterStart = Pick<PipelineArgs, 'run'>;
+// export type TypeAfterFrom = TypeAfterStart & Pick<PipelineArgs, 'input'>;
+// export type TypeAfterDeserialize<A, V> = Modify<TypeAfterFrom, {deserialized: V}>; //  & Pick<PipelineArgs, 'deserialized'>;
+// export type TypeAfterWithOptions<A, V extends PipeInitialOptions> = Modify<TypeAfterDeserialize<A>, {options: V}>;
+
+export interface Pipeline<A> {
+
+  start<V extends RunOptions>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'run': V}, 'from'>;
+
+
+  from<V extends SerializedInput>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'input': V}, 'deserialize'>;
+
+
+  deserialize<V>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'deserialized': V}, 'withOptions'>;
+
+
+  withOptions<V extends PipeInitialOptions>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'options': V}, 'withOptions' | 'resolveOptions' | 'resolveParserOptionsDefault'>;
+
+
+  resolveOptions<V extends PipeParserOptions>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'options': V}, 'resolveOptions' | 'parse'>;
+
+  resolveParserOptionsDefault():
+    PipelineNext<A, {'options': PipeParserOptions}, 'parse'>;
+
+
+  parse<V extends OmniModel>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'model': V}, 'resolveTransformOptions' | 'resolveTransformOptionsDefault' | 'withTargetOptions'>;
+
+
+  resolveTransformOptions<V extends PipeResolvedModelTransformOptions>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'options': V}, 'resolveTransformOptions' | 'resolveTransformOptionsDefault' | 'withModelTransformer' | 'withTargetOptions'>;
+
+  resolveTransformOptionsDefault():
+    PipelineNext<A, {'options': PipeResolvedModelTransformOptions}, 'withModelTransformer' | 'withTargetOptions'>;
+
+
+  withModelTransformer<V extends OmniModelTransformer>(supplier: PipelineIn<A, V>):
+    Pick<Pipeline<A>, 'withModelTransformer' | 'withTargetOptions' | 'resolveTargetOptions'>;
+
+
+  withTargetOptions<V extends PipeTargetOptions>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'options': V}, 'withTargetOptions' | 'resolveTargetOptions' | 'resolveTargetOptionsDefault'>;
+
+
+  resolveTargetOptions<V extends PipeResolvedTargetOptions>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'options': V}, 'resolveTargetOptions' | 'interpret'>;
+
+  resolveTargetOptionsDefault():
+    PipelineNext<A, {'options': PipeResolvedTargetOptions}, 'interpret'>;
+
+
+  interpret<V extends Interpreter>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'interpreter': V}, 'withLateModelTransformer' | 'withAstTransformer' | 'render'>;
+
+
+  withLateModelTransformer(supplier: PipelineIn<A, void>):
+    PipelineNext<A, {}, 'withLateModelTransformer' | 'withAstTransformer' | 'render'>;
+
+  withAstTransformer(supplier: PipelineIn<A, void>):
+    PipelineNext<A, {}, 'withAstTransformer' | 'render'>;
+
+
+  render<V extends Renderer>(supplier: PipelineIn<A, V>):
+    PipelineNext<A, {'renderer': V}, 'write'>;
+
+
+  write(supplier: PipelineIn<A, void>):
+    PipelineNext<A, {}, 'write' | 'build'>;
+
+
+  build(): A;
 }
 
-export interface PipelineBuilder<A, M extends BuilderMethods> extends PipeStart<A, M> {
-  deserialize: DeserializeStep<A, M>;
-  withOptions: ParseOptionsStep<A, M>;
-  resolveOptions: ResolveOptionsStep<A, M>;
-  resolveParserOptionsDefault: ResolveOptionsDefaultStep<A, M>;
-  parse: ParseStep<A, M>;
-  withModelTransformer: ModelTransformerStep<A, M>;
-  withTargetOptions: TargetOptionsStep<A, M>;
-  resolveTargetOptions: ResolveTargetOptionsStep<A, M>;
-  resolveTargetOptionsDefault: ResolveTargetOptionsDefaultStep<A, M>;
-  interpret: InterpretStep<A, M>;
-  withLateModelTransformer: LateModelTransformerStep<A, M>;
-  withAstTransformer: AstTransformerStep<A, M>;
-  render: RenderStep<A, M>;
-  write: WriteStep<A, M>;
-
-  /**
-   * Do not call this method yourself, it is called by the creating pipeline manager.
-   */
-  build(): Args<A>;
-}
+export type PipelineFor<A> = {};

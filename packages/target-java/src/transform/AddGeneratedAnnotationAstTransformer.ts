@@ -5,10 +5,10 @@ import {VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddGeneratedAnnotationAstTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
+  transformAst(args: JavaAstTransformerArgs): void {
 
     if (!args.options.includeGeneratedAnnotation) {
-      return Promise.resolve();
+      return;
     }
 
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
@@ -38,7 +38,5 @@ export class AddGeneratedAnnotationAstTransformer extends AbstractJavaAstTransfo
         );
       },
     }));
-
-    return Promise.resolve(undefined);
   }
 }

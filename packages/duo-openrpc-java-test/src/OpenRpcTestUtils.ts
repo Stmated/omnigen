@@ -57,7 +57,7 @@ export class OpenRpcTestUtils {
     const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
     const openRpcParserBootstrap = (await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile));
     const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<ModelTransformOptions & JavaOptions>();
-    const openRpcRealOptions = OptionsUtil.updateOptions(
+    const openRpcRealOptions = OptionsUtil.resolve(
       openRpcOptions,
       schemaIncomingOptions,
       OPENRPC_OPTIONS_RESOLVERS,
@@ -88,7 +88,7 @@ export class OpenRpcTestUtils {
       parseResult.model.options = schemaIncomingOptions;
     }
 
-    const realTransformOptions = OptionsUtil.updateOptions(modelTransformOptions, schemaIncomingOptions, TRANSFORM_OPTIONS_RESOLVER);
+    const realTransformOptions = OptionsUtil.resolve(modelTransformOptions, schemaIncomingOptions, TRANSFORM_OPTIONS_RESOLVER);
 
     const transformers: OmniModelTransformer<OpenRpcParserOptions>[] = [
       new SimplifyInheritanceModelTransformer(),
@@ -104,7 +104,7 @@ export class OpenRpcTestUtils {
       });
     }
 
-    const realJavaOptions = OptionsUtil.updateOptions(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_RESOLVER);
+    const realJavaOptions = OptionsUtil.resolve(javaOptions, schemaIncomingOptions, JAVA_OPTIONS_RESOLVER);
 
     const transformers2: OmniModel2ndPassTransformer<OpenRpcParserOptions, JavaOptions>[] = [
       new ElevatePropertiesModelTransformer(),

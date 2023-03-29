@@ -7,8 +7,7 @@ import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
 
-  transformAst(args: JavaAstTransformerArgs): Promise<void> {
-
+  transformAst(args: JavaAstTransformerArgs): void {
 
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
@@ -52,8 +51,6 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
       visitMethodDeclaration: () => {},
       visitConstructor: () => {},
     }));
-
-    return Promise.resolve();
   }
 
   private getWeight(node: AstNode): [number, string] {

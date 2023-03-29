@@ -3,7 +3,7 @@ export * from './Plugin';
 export * from './PluginQualifier';
 export * from './PipelineCustomizer.ts';
 export * from './PluginOptions';
-export * from './PluginHookCreator';
+export * from './PluginBoot.ts';
 export * from './PluginAutoRegistry';
 
 export * from './PipelineBuilder';

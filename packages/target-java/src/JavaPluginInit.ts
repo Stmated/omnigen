@@ -34,7 +34,8 @@ const CREATOR: PluginBoot = hook => {
           // TODO: Remove callback? Should not work this way? Should give back a RenderedResult that contains files?
           console.log(`Rendered`);
           console.table(rcu);
-        }));
+        }))
+        .delegateBack().write(run);
     },
   });
 };

@@ -26,16 +26,10 @@ export interface PipelineOptionsParser<T extends Options, P extends Pipeline> {
  */
 export interface RunOptions {
 
-  input: string[];
+  input: string | string[];
   output?: string | undefined;
   types: string[];
 }
-
-export interface PipelineStep<T> {
-  value: T;
-  listeners: any[];
-}
-
 
 // TODO: Should each step be built with some form of callback system?
 //        Where we can return a pipeline from a method, and say "call me back when this is handled, with safe types"

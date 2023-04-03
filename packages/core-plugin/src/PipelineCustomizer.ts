@@ -5,7 +5,6 @@ import {
   PipeParserOptions,
 } from './PipelineBuilder.ts';
 
-
 type ArgsAfter<K extends keyof PipelineArgs, Specific extends Partial<PipelineArgs> = {}> = Pick<PipelineArgs, K> & Specific;
 
 // TODO: If possible, it would be nice to get the correct types based on the step dynamically instead of this ever being out-of-sync

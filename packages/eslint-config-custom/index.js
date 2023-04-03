@@ -119,6 +119,7 @@ module.exports = {
           },
         ],
         'no-dupe-class-members': 0,
+        '@typescript-eslint/explicit-function-return-type': 'off',
       },
     },
     {
@@ -161,10 +162,8 @@ module.exports = {
 
     'require-jsdoc': 0,
     'valid-jsdoc': 0,
-    // 'jsdoc/require-jsdoc': 2,
-    // 'jsdoc/require-param-type': 0,
-    // 'jsdoc/require-returns': 0,
-    // 'jsdoc/require-returns-type': 0,
+
+    '@typescript-eslint/explicit-function-return-type': 'off',
 
     'no-trailing-spaces': 0,
     'max-len': [1, {'code': 140}],

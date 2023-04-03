@@ -1,6 +1,12 @@
 import {expect, test} from '@jest/globals';
 import {PipelineFactory, PluginManager} from './PluginManager';
-import {DEFAULT_PARSER_OPTIONS, DEFAULT_TARGET_OPTIONS, IncomingOptions, TargetOptions} from '@omnigen/core';
+import {
+  DEFAULT_PARSER_OPTIONS,
+  DEFAULT_TARGET_OPTIONS,
+  IncomingOptions,
+  RunOptions,
+  TargetOptions,
+} from '@omnigen/core';
 import {JavaBoot} from '@omnigen/target-java';
 
 test('Run Through Pipeline Builder', async () => {
@@ -125,7 +131,21 @@ test('Run Through Pipeline Builder', async () => {
 
 test('OpenRpc + Java Plugin Hooks', async () => {
 
-  const manager = new PluginManager();
+  const manager = new PluginManager({includeAuto: false});
   manager.addPluginBoot(JavaBoot);
+  manager.addPluginBoot(hook => {
+    hook.registerCustomizer({
 
+    });
+  })
+
+  const runOptions: RunOptions = {
+    input: 'fake',
+    types: ['java'],
+    output: undefined,
+  }
+
+  const executions = manager.execute(runOptions);
+
+  expect(executions).toHaveLength(1);
 });

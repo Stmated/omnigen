@@ -61,73 +61,63 @@ export type PipelineIn<A, V> = { (args: Args<A>): V };
 
 export type PipelineNext<A, N extends Partial<PipelineArgs>, PK extends keyof Pipeline<A> = keyof {}> = Simplify<Pick<Pipeline<{
   [AK in Exclude<keyof A, keyof N>]: A[AK]
-} & N>, PK>>;
-
-export type TypeAfterStart = Pick<PipelineArgs, 'run'>;
-export type TypeAfterFrom = TypeAfterStart & Pick<PipelineArgs, 'input'>;
-export type TypeAfterDeserialize = TypeAfterStart & Pick<PipelineArgs, 'deserialized'>;
-
-// type Modify<A extends Partial<PipelineArgs>, R extends Partial<PipelineArgs> /*K extends keyof PipelineArgs, V extends PipelineArgs[K]*/>
-//   = Omit<A, keyof R> & R;
-//
-// export type TypeAfterStart = Pick<PipelineArgs, 'run'>;
-// export type TypeAfterFrom = TypeAfterStart & Pick<PipelineArgs, 'input'>;
-// export type TypeAfterDeserialize<A, V> = Modify<TypeAfterFrom, {deserialized: V}>; //  & Pick<PipelineArgs, 'deserialized'>;
-// export type TypeAfterWithOptions<A, V extends PipeInitialOptions> = Modify<TypeAfterDeserialize<A>, {options: V}>;
+} & N>, PK> & PipelineBackDelegatorAware<A>>;
 
 export interface Pipeline<A> {
 
   start<V extends RunOptions>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'run': V}, 'from'>;
+    PipelineNext<A, { 'run': V }, 'from'>;
 
 
   from<V extends SerializedInput>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'input': V}, 'deserialize'>;
+    PipelineNext<A, { 'input': V }, 'deserialize'>;
 
 
   deserialize<V>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'deserialized': V}, 'withOptions'>;
+    PipelineNext<A, { 'deserialized': V }, 'withOptions'>;
 
 
   withOptions<V extends PipeInitialOptions>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'options': V}, 'withOptions' | 'resolveOptions' | 'resolveParserOptionsDefault'>;
+    PipelineNext<A, { options: V }, 'withOptions' | 'resolveOptions' | 'resolveParserOptionsDefault'>;
 
 
   resolveOptions<V extends PipeParserOptions>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'options': V}, 'resolveOptions' | 'parse'>;
+    PipelineNext<A, { 'options': V }, 'resolveOptions' | 'parse'>;
 
   resolveParserOptionsDefault():
-    PipelineNext<A, {'options': PipeParserOptions}, 'parse'>;
+    PipelineNext<A, { 'options': PipeParserOptions }, 'parse'>;
 
 
   parse<V extends OmniModel>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'model': V}, 'resolveTransformOptions' | 'resolveTransformOptionsDefault' | 'withTargetOptions'>;
+    PipelineNext<A, { 'model': V }, 'resolveTransformOptions' | 'resolveTransformOptionsDefault' | 'withTargetOptions'>;
 
 
   resolveTransformOptions<V extends PipeResolvedModelTransformOptions>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'options': V}, 'resolveTransformOptions' | 'resolveTransformOptionsDefault' | 'withModelTransformer' | 'withTargetOptions'>;
+    PipelineNext<A, {
+      'options': V
+    }, 'resolveTransformOptions' | 'resolveTransformOptionsDefault' | 'withModelTransformer' | 'withTargetOptions'>;
 
   resolveTransformOptionsDefault():
-    PipelineNext<A, {'options': PipeResolvedModelTransformOptions}, 'withModelTransformer' | 'withTargetOptions'>;
+    PipelineNext<A, { 'options': PipeResolvedModelTransformOptions }, 'withModelTransformer' | 'withTargetOptions'>;
 
 
   withModelTransformer<V extends OmniModelTransformer>(supplier: PipelineIn<A, V>):
-    Pick<Pipeline<A>, 'withModelTransformer' | 'withTargetOptions' | 'resolveTargetOptions'>;
+    PipelineNext<A, {}, 'withModelTransformer' | 'withTargetOptions' | 'resolveTargetOptions'>;
 
 
   withTargetOptions<V extends PipeTargetOptions>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'options': V}, 'withTargetOptions' | 'resolveTargetOptions' | 'resolveTargetOptionsDefault'>;
+    PipelineNext<A, { 'options': V }, 'withTargetOptions' | 'resolveTargetOptions' | 'resolveTargetOptionsDefault'>;
 
 
   resolveTargetOptions<V extends PipeResolvedTargetOptions>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'options': V}, 'resolveTargetOptions' | 'interpret'>;
+    PipelineNext<A, { 'options': V }, 'resolveTargetOptions' | 'interpret'>;
 
   resolveTargetOptionsDefault():
-    PipelineNext<A, {'options': PipeResolvedTargetOptions}, 'interpret'>;
+    PipelineNext<A, { 'options': PipeResolvedTargetOptions }, 'interpret'>;
 
 
   interpret<V extends Interpreter>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'interpreter': V}, 'withLateModelTransformer' | 'withAstTransformer' | 'render'>;
+    PipelineNext<A, { 'interpreter': V }, 'withLateModelTransformer' | 'withAstTransformer' | 'render'>;
 
 
   withLateModelTransformer(supplier: PipelineIn<A, void>):
@@ -138,7 +128,7 @@ export interface Pipeline<A> {
 
 
   render<V extends Renderer>(supplier: PipelineIn<A, V>):
-    PipelineNext<A, {'renderer': V}, 'write'>;
+    PipelineNext<A, { 'renderer': V }, 'write'>;
 
 
   write(supplier: PipelineIn<A, void>):
@@ -148,4 +138,15 @@ export interface Pipeline<A> {
   build(): A;
 }
 
-export type PipelineFor<A> = {};
+export type PipelineBackDelegator<A, P extends Pipeline<A> = Pipeline<A>> = {
+  [K in keyof P]: (runOptions: RunOptions) => void
+};
+
+export interface PipelineBackDelegatorInterface<A> extends PipelineBackDelegator<A> {
+
+
+}
+
+export interface PipelineBackDelegatorAware<A> {
+  delegateBack(): PipelineBackDelegator<A>
+}

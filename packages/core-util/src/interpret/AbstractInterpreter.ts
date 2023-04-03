@@ -19,7 +19,7 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
 
   public buildSyntaxTree(
     model: OmniModel,
-    externals: ExternalSyntaxTree<AstNode, TOpt>[]
+    externals: ExternalSyntaxTree<AstNode, TOpt>[],
   ): AstNode {
 
     const rootNode = this.newRootNode();

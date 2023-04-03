@@ -54,9 +54,7 @@ export class OptionsUtil {
       const converter: IncomingResolver<unknown, unknown> | undefined = resolvers?.[baseKey];
       if (converter) {
 
-        const rawValue = (incoming && baseKey in incoming) ? incoming[baseKey] : base[baseKey];
-        // const convertedValue =
-        // const convertedValue = convertedPromise;
+        const rawValue = incoming?.[baseKey] ?? base[baseKey];
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore

@@ -1,4 +1,4 @@
-import {AstNode, OmniModel, RealOptions, TargetOptions} from '@omnigen/core';
+import {AstNode, OmniModel, TargetOptions} from '@omnigen/core';
 import {ImplementationOptions} from './ImplementationOptions.js';
 
 export interface ImplementationArgs<
@@ -8,6 +8,6 @@ export interface ImplementationArgs<
 > {
   model: OmniModel;
   root: TAst;
-  targetOptions: RealOptions<TTargetOpt>;
-  implOptions: RealOptions<TImplOpt>;
+  targetOptions: TTargetOpt;
+  implOptions: TImplOpt;
 }

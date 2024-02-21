@@ -1,5 +1,5 @@
 import {AstNode} from '../ast/index.js';
-import {Options, RealOptions} from '../options/index.js';
+import {Options} from '../options/index.js';
 import {OmniModel} from '../parse/index.js';
 import {TargetFeatures} from '../interpret';
 import {ExternalSyntaxTree} from './ExternalSyntaxTree';
@@ -8,6 +8,6 @@ export interface AstTransformerArguments<TRoot extends AstNode, TOpt extends Opt
   model: OmniModel;
   root: TRoot;
   externals: ExternalSyntaxTree<TRoot, TOpt>[];
-  options: RealOptions<TOpt>;
+  options: TOpt;
   features: TargetFeatures;
 }

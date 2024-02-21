@@ -1,27 +1,19 @@
-import {FieldAccessorMode, JavaOptions} from '@omnigen/target-java';
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
-import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
+import {FieldAccessorMode} from '@omnigen/target-java';
+import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
+import {expect, test} from 'vitest';
 
 test('lombok', async () => {
 
-  const transformOptions: ModelTransformOptions = {
-    ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-    generifyTypes: false,
-    elevateProperties: false,
-  };
-
-  const targetOptions: JavaOptions = {
-    ...DEFAULT_TEST_JAVA_OPTIONS,
-    compressSoloReferencedTypes: false,
-    compressUnreferencedSubTypes: false,
-    fieldAccessorMode: FieldAccessorMode.LOMBOK,
-  };
-
-  const fileContents = await JavaTestUtils.getFileContentsFromFile(
-    'multiple-inheritance.json',
-    DEFAULT_OPENRPC_OPTIONS, transformOptions, targetOptions,
-  );
+  const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
+    modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false, elevateProperties: false},
+    javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, fieldAccessorMode: FieldAccessorMode.LOMBOK},
+    targetOptions: {
+      ...DEFAULT_TEST_TARGET_OPTIONS,
+      compressSoloReferencedTypes: false,
+      compressUnreferencedSubTypes: false,
+    },
+  });
 
   const inClass = JavaTestUtils.getParsedContent(fileContents, 'In.java');
   expect(inClass.foundImports).toEqual([

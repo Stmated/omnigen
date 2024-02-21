@@ -1,0 +1,41 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PackageResolver > FromCode 1`] = `
+[
+  "ErrorUnknown.java",
+  "ErrorUnknownError.java",
+  "IAdditionalProperties.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+  "ListThingsRequest.java",
+  "ListThingsRequestParams.java",
+  "ListThingsResponse.java",
+  "Thing.java",
+]
+`;
+
+exports[`PackageResolver > FromSchema 1`] = `
+[
+  "A.java",
+  "Abs.java",
+  "B.java",
+  "ErrorUnknown.java",
+  "ErrorUnknownError.java",
+  "GiveIn1GetOut1Request.java",
+  "GiveIn1GetOut1RequestParams.java",
+  "GiveIn1GetOut1Response.java",
+  "GiveIn2GetOut2Request.java",
+  "GiveIn2GetOut2RequestParams.java",
+  "GiveIn2GetOut2Response.java",
+  "In1.java",
+  "In2.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+]
+`;

@@ -7,7 +7,6 @@
     },
     "test": {},
     "test:watch": {
-      "dependsOn": ["build"],
       "cache": false
     },
     "dev": {

@@ -24,7 +24,6 @@ import {
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
-  RealOptions,
   UnknownKind,
 } from '@omnigen/core';
 import {ImplementationOptions} from './ImplementationOptions';
@@ -41,8 +40,11 @@ type JavaHttpArgs = ImplementationArgs<AstNode, JavaOptions, ImplementationOptio
  *        If there is only one possible thing that changes between the different responses, then only give that (optional)
  *
  * TODO: Set more headers depending on the endpoint properties
+ *
  * TODO: Able to decide if it should be a POST or GET, etc
+ *
  * TODO: Able to decide if the request should be sync or async
+ *
  * TODO: Either taking a HttpClientBuilder, or taking a HttpClient, or building it on our own
  *        Should still always go through a central "getHttpClient" method?
  *
@@ -62,7 +64,6 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const promises: Promise<AstNode>[] = [];
 
     if (args.implOptions.generateClient) {
-
       promises.push(this.generateClient(args));
     }
 
@@ -76,7 +77,6 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
     return Promise.all(promises)
       .then(rootNodes => {
-
         return rootNodes;
       });
   }
@@ -104,7 +104,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
     this.addFieldAndMethods(client, args, root, objectMapperField);
 
-    const implTargetOptions: RealOptions<JavaOptions> = {
+    const implTargetOptions: JavaOptions = {
       ...args.targetOptions,
       package: args.implOptions.clientPackage,
     };

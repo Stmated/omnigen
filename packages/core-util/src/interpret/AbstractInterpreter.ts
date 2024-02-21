@@ -1,19 +1,18 @@
 import {AstNode, OmniModel} from '@omnigen/core';
 import {ExternalSyntaxTree, AstTransformer, AstTransformerArguments} from '@omnigen/core';
-import {RealOptions} from '@omnigen/core';
 import {TargetOptions, Interpreter, TargetFeatures} from '@omnigen/core';
 
 export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements Interpreter<TOpt> {
 
-  protected readonly options: RealOptions<TOpt>;
+  protected readonly options: TOpt;
   protected readonly features: TargetFeatures;
 
-  constructor(options: RealOptions<TOpt>, features: TargetFeatures) {
+  constructor(options: TOpt, features: TargetFeatures) {
     this.options = options;
     this.features = features;
   }
 
-  protected abstract getTransformers(options: RealOptions<TOpt>): AstTransformer<AstNode, TOpt>[];
+  protected abstract getTransformers(options: TOpt): AstTransformer<AstNode, TOpt>[];
 
   abstract newRootNode(): AstNode;
 

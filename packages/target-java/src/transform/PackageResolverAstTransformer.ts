@@ -1,12 +1,7 @@
-import {
-  ExternalSyntaxTree,
-  OmniType,
-  RealOptions,
-} from '@omnigen/core';
-import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util/index.js';
-import {JavaOptions} from '../options/index.js';
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
-import * as Java from '../ast/index.js';
+import {ExternalSyntaxTree, OmniType} from '@omnigen/core';
+import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from '../transform';
+import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
@@ -31,8 +26,11 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     const cuInfoStack: CompilationUnitInfo[] = [];
     const objectStack: ObjectInfo[] = [];
 
-    // First we go through all the types and find their true Full-Qualified Name.
-    const all: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>[] = [...args.externals, {node: args.root, options: args.options}];
+    // First we go through all the types and find their true Fully-Qualified Name.
+    const all: ExternalSyntaxTree<Java.JavaAstRootNode, JavaAndTargetOptions>[] = [...args.externals, {
+      node: args.root,
+      options: args.options,
+    }];
     for (const external of all) {
 
       // Get and move all type infos to the global one.
@@ -108,7 +106,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     node: Java.RegularType<OmniType>,
     cuInfo: CompilationUnitInfo,
     typeNameMap: Map<OmniType, TypeNameInfo>,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
   ): void {
 
     const relativeLocalName = JavaUtil.getName({
@@ -136,7 +134,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     typeNameInfo: TypeNameInfo,
     node: Java.RegularType<OmniType>,
     cuInfo: CompilationUnitInfo,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
   ): void {
 
     // We already have this type's name resolved. Perhaps as a regular type, or as a nested type.
@@ -166,7 +164,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
   private addImportIfUnique(
     cuInfo: CompilationUnitInfo,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
     nodeImportName: string,
     node: Java.RegularType<OmniType>,
   ): void {
@@ -191,7 +189,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private getTypeNameInfos(
-    external: ExternalSyntaxTree<Java.JavaAstRootNode, JavaOptions>,
+    external: ExternalSyntaxTree<Java.JavaAstRootNode, JavaAndTargetOptions>,
     objectStack: ObjectInfo[],
   ): Map<OmniType, TypeNameInfo> {
 

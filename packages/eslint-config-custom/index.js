@@ -3,7 +3,7 @@ module.exports = {
     'eslint:recommended',
     'prettier',
     'google',
-    'turbo'
+    'turbo',
   ],
   ignorePatterns: ['node_modules'],
   env: {
@@ -72,17 +72,17 @@ module.exports = {
             'leadingUnderscore': 'forbid',
             'trailingUnderscore': 'forbid',
             'modifiers': ['global', 'const'],
-            'format': ['UPPER_CASE'],
+            'format': ['UPPER_CASE', 'PascalCase', 'camelCase'],
             'filter': {
               'regex': 'logger',
               'match': false,
-            },
+            }
           },
           {
             'selector': 'property',
             'leadingUnderscore': 'forbid',
             'trailingUnderscore': 'forbid',
-            'format': ['camelCase'],
+            'format': ['camelCase', 'UPPER_CASE'],
           },
           {
             'selector': 'property',
@@ -120,6 +120,10 @@ module.exports = {
         ],
         'no-dupe-class-members': 0,
         '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/no-redeclare': 'off',
+
+        // This should be removed in favor of @stylistic/eslint-plugin-js indent
+        '@typescript-eslint/indent': 'off',
       },
     },
     {
@@ -140,7 +144,7 @@ module.exports = {
     {
       files: ['**/test/**/*', '**/*.test.*'],
       env: {
-        jest: true,
+        jest: false,
       },
       rules: {
         'tsdoc/syntax': 0,
@@ -154,6 +158,7 @@ module.exports = {
   rules: {
     // Disable default no-unused-vars, and use typescript validation
     'no-unused-vars': 0,
+    'no-redeclare': 0,
     '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/no-unused-vars': [1,
       {'args': 'all', 'varsIgnorePattern': '^_', 'argsIgnorePattern': '^_'}],
@@ -166,14 +171,9 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
 
     'no-trailing-spaces': 0,
-    'max-len': [1, {'code': 140}],
+    'max-len': [1, {'code': 200}],
     'comma-dangle': 0,
-    'indent': ['error', 2, {
-      'FunctionDeclaration': {
-        'parameters': 2,
-      },
-      'SwitchCase': 1,
-    }],
+    'indent': 'off',
     'operator-linebreak': [
       'error',
       'before', {'overrides': {'?': 'before', ':': 'before'}},

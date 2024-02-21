@@ -18,7 +18,6 @@ import {
   OmniType,
   OmniTypeKind,
   ParserOptions,
-  RealOptions,
   TypeName, OMNI_GENERIC_FEATURES,
 } from '@omnigen/core';
 import {JSONSchema} from '@open-rpc/meta-schema';
@@ -50,9 +49,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   private readonly _deref: Dereferencer<TRoot>;
 
-  private readonly _options: RealOptions<TOpt>;
+  private readonly _options: TOpt;
 
-  constructor(deref: Dereferencer<TRoot>, options: RealOptions<TOpt>) {
+  constructor(deref: Dereferencer<TRoot>, options: TOpt) {
     this._deref = deref;
     this._options = options;
   }

@@ -1,4 +1,8 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
+import {
+  AbstractJavaAstTransformer,
+  JavaAndTargetOptions,
+  JavaAstTransformerArgs,
+} from './AbstractJavaAstTransformer.js';
 import {JavaOptions} from '../options/index.js';
 import {
   CompositionKind,
@@ -13,12 +17,11 @@ import {
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
-  RealOptions,
   UnknownKind,
 } from '@omnigen/core';
-import * as Java from '../ast/index.js';
-import {AbstractObjectDeclaration} from '../ast/index.js';
-import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
+import * as Java from '../ast';
+import {AbstractObjectDeclaration} from '../ast';
+import {JavaSubTypeCapableType, JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';
@@ -108,7 +111,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     type: OmniEnumType,
     originalType: OmniType | undefined,
     root: Java.JavaAstRootNode,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
   ): void {
     const body = new Java.Block();
 
@@ -173,7 +176,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private transformInterface(
     type: OmniPotentialInterfaceType,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
     root: Java.JavaAstRootNode,
     prefix?: string,
     suffix?: string,
@@ -203,7 +206,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     model: OmniModel,
     type: JavaSubTypeCapableType,
     originalType: OmniGenericSourceType | undefined,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
     root: Java.JavaAstRootNode,
     genericSourceIdentifiers?: OmniGenericSourceIdentifierType[],
   ): void {
@@ -248,7 +251,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     type: JavaSubTypeCapableType,
     originalType: OmniGenericSourceType | undefined,
     body: Java.Block,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
   ): Java.AbstractObjectDeclaration<JavaSubTypeCapableType> {
 
     const javaClassName = JavaUtil.getClassName(originalType || type, options);

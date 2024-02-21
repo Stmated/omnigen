@@ -18,7 +18,7 @@ import {OmniUtil} from '@omnigen/core-util';
  * One that is the original, and one that is the interface version, pointing to the original.
  * It then replaces the types where needed.
  */
-export class InterfaceJavaModelTransformer implements OmniModelTransformer<ParserOptions> {
+export class InterfaceJavaModelTransformer implements OmniModelTransformer {
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 

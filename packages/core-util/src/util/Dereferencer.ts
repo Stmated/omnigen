@@ -362,11 +362,11 @@ export class Dereferencer<T> {
 
       const namedSource: ReduceMap = source.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        '': []
+        '': [],
       });
       const namedTarget: ReduceMap = target.reduce((map, obj) => Dereferencer.reduceArrayToIdMap(map, obj), {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        '': []
+        '': [],
       });
 
       const replacements: any[] = [];

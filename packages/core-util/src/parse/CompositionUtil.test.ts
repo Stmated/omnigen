@@ -1,5 +1,6 @@
 import {CompositionKind, OmniPrimitiveKind, OmniType, OmniTypeKind} from '@omnigen/core';
 import {CompositionUtil} from './CompositionUtil';
+import {describe, test, expect} from 'vitest';
 
 describe('Test Composition Types', () => {
 

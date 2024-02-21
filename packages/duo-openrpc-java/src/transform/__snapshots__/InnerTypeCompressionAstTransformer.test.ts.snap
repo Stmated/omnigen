@@ -1,0 +1,79 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`InnerTypeCompression > CompressNo 1`] = `
+[
+  "A.java",
+  "AXOrB.java",
+  "Abs.java",
+  "B.java",
+  "C.java",
+  "ErrorUnknown.java",
+  "ErrorUnknownError.java",
+  "GiveInGetOut2Request.java",
+  "GiveInGetOut2RequestParams.java",
+  "GiveInGetOut2Response.java",
+  "GiveInGetOutRequest.java",
+  "GiveInGetOutRequestParams.java",
+  "GiveInGetOutResponse.java",
+  "IB.java",
+  "IC.java",
+  "In.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+  "Out.java",
+  "Out2.java",
+]
+`;
+
+exports[`InnerTypeCompression > CompressYes 1`] = `
+[
+  "A.java",
+  "AXOrB.java",
+  "Abs.java",
+  "C.java",
+  "ErrorUnknown.java",
+  "GiveInGetOut2Request.java",
+  "GiveInGetOut2Response.java",
+  "GiveInGetOutRequest.java",
+  "GiveInGetOutResponse.java",
+  "IB.java",
+  "IC.java",
+  "In.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+]
+`;
+
+exports[`InnerTypeCompression > CompressYes-error-structure 1`] = `
+[
+  "ErrorUnknown.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+  "ListThingsError100.java",
+  "ListThingsRequest.java",
+  "ListThingsResponse.java",
+]
+`;
+
+exports[`InnerTypeCompression > CompressYes-error-structure+generics 1`] = `
+[
+  "ErrorUnknown.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+  "ListThingsError100.java",
+  "ListThingsRequest.java",
+  "ListThingsResponse.java",
+]
+`;

@@ -1,5 +1,5 @@
-import {AstNode} from '../ast';
+import {AstNode, RenderedCompilationUnit} from '../ast';
 
 export interface Renderer {
-  render(node: AstNode): string;
+  executeRender(node: AstNode): RenderedCompilationUnit[];
 }

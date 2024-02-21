@@ -10,7 +10,7 @@ import {OmniModelTransformerArgs} from '@omnigen/core';
 import {PropertyDifference, TypeDifference} from '@omnigen/core';
 import {OmniModelTransformer2ndPassArgs} from '@omnigen/core';
 import {OmniUtil} from '../OmniUtil.js';
-import {Sorters} from '../../util/index.js';
+import {Sorters} from '../../util';
 
 /**
  * Takes an OmniModel, and tries to compress types as much as possible.

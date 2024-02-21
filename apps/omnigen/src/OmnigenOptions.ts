@@ -1,33 +1,15 @@
-import {Option, Options, ParserOptions, TargetOptions} from '@omnigen/core';
-import {PathLike} from 'fs';
-import {ImplementationOptions} from '@omnigen/target-impl-java-http';
+import {ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {z} from 'zod';
 
-export interface RunOptions extends Options {
-  schemaDirBase: Option<string | undefined, PathLike>;
-  schemaDirRecursive: Option<boolean | undefined, boolean>;
-  schemaPatternInclude: Option<string | undefined, RegExp | undefined>;
-  schemaPatternExclude: Option<string | undefined, RegExp | undefined>;
-  failSilently: boolean;
-}
+export const ZodRunOptions = ZodOptions.extend({
 
-export interface FileWriteOptions extends Options {
-  outputDirBase: Option<string | undefined, PathLike>;
-}
+  schemaDirBase: z.string().default('./'),
+  schemaDirRecursive: ZodCoercedBoolean.default('t'),
+  schemaPatternInclude: z.string().default(`/^.*\\.(?:json|ya?ml)$/`).transform(v => v ? new RegExp(v) : undefined),
+  schemaPatternExclude: z.string().transform(v => v ? new RegExp(v) : undefined),
+  failSilently: ZodCoercedBoolean.default('f'),
+});
 
-export const DEFAULT_RUN_OPTIONS: RunOptions = {
-  schemaDirBase: undefined,
-  schemaPatternInclude: /^.*\.(?:json|ya?ml)$/,
-  schemaPatternExclude: undefined,
-  schemaDirRecursive: true,
-  failSilently: false,
-};
+export type RunOptions = z.output<typeof ZodRunOptions>;
 
-export const DEFAULT_FILE_WRITE_OPTIONS: FileWriteOptions = {
-  outputDirBase: undefined,
-};
 
-export type OmnigenOptions<
-  TParseOpt extends ParserOptions,
-  TTargetOpt extends TargetOptions,
-  TImplOpt extends ImplementationOptions
-> = RunOptions & TParseOpt & TTargetOpt & TImplOpt & Partial<FileWriteOptions>;

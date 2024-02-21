@@ -14,11 +14,9 @@ import {JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 import {
   OmniUtil,
-  OptionsUtil,
-  PARSER_OPTIONS_RESOLVERS,
   SimplifyInheritanceModelTransformer,
-  TRANSFORM_OPTIONS_RESOLVER,
 } from '@omnigen/core-util';
+import {describe, test, expect} from 'vitest';
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -255,12 +253,12 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C, D, E, F]);
 
-    const parserOptions = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const transformOptions = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    // const parserOptions = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    // const transformOptions = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
     new SimplifyInheritanceModelTransformer().transformModel({
       model: model,
-      options: {...parserOptions, ...transformOptions},
+      options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS},
     });
 
     // This would change if the search was done breadth-first vs depth-first.
@@ -305,12 +303,12 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C]);
 
-    const parserOptions = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const transformOptions = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    // const parserOptions = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    // const transformOptions = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
     new SimplifyInheritanceModelTransformer().transformModel({
       model: model,
-      options: {...parserOptions, ...transformOptions},
+      options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS},
     });
 
     expect(JavaUtil.getInterfaces(model)).toEqual([]);

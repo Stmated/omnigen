@@ -1,75 +1,31 @@
-import {
-  Booleanish,
-  Option,
-  OptionResolvers,
-  PackageOptions,
-  TargetOptions,
-  DEFAULT_PACKAGE_OPTIONS,
-  DEFAULT_TARGET_OPTIONS,
-  UnknownKind,
-} from '@omnigen/core';
-import {
-  OptionsUtil,
-  PackageResolverOptionsResolver,
-  TARGET_OPTION_RESOLVERS,
-  TRANSFORM_OPTIONS_RESOLVER,
-} from '@omnigen/core-util';
+import {getEnumValues, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {z} from 'zod';
 
-export enum FieldAccessorMode {
-  NONE,
-  POJO,
-  LOMBOK,
-}
+export const FieldAccessorMode = {
+  NONE: 'NONE',
+  POJO: 'POJO',
+  LOMBOK: 'LOMBOK',
+} as const;
+export type FieldAccessorMode = ToEnum<typeof FieldAccessorMode>;
 
-export interface JavaOptions extends TargetOptions, PackageOptions {
-  immutableModels: Option<Booleanish, boolean>;
-  includeAlwaysNullProperties: Option<Booleanish, boolean>;
-  unknownType: UnknownKind;
-  includeLinksOnType: Option<Booleanish, boolean>;
-  includeLinksOnProperty: Option<Booleanish, boolean>;
-  interfaceNamePrefix: string,
-  interfaceNameSuffix: string,
-  fieldAccessorMode: FieldAccessorMode;
-  commentsOnTypes: Option<Booleanish, boolean>;
-  commentsOnFields: Option<Booleanish, boolean>;
-  commentsOnGetters: Option<Booleanish, boolean>;
-  commentsOnConstructors: Option<Booleanish, boolean>;
-  preferVar: Option<Booleanish, boolean>;
-  includeGeneratedAnnotation: Option<Booleanish, boolean>;
-}
+export const ZodJavaOptions = ZodOptions.extend({
+  immutableModels: ZodCoercedBoolean.default('true'),
+  includeAlwaysNullProperties: ZodCoercedBoolean.default('false'),
+  unknownType: z.enum(getEnumValues(UnknownKind)).default(UnknownKind.MUTABLE_OBJECT),
+  includeLinksOnType: ZodCoercedBoolean.default('false'),
+  includeLinksOnProperty: ZodCoercedBoolean.default('true'),
+  interfaceNamePrefix: z.string().default('I'),
+  interfaceNameSuffix: z.string().default(''),
+  fieldAccessorMode: z.enum(getEnumValues(FieldAccessorMode)).default(FieldAccessorMode.POJO),
+  commentsOnTypes: ZodCoercedBoolean.default('true'),
+  commentsOnFields: ZodCoercedBoolean.default('false'),
+  commentsOnGetters: ZodCoercedBoolean.default('true'),
+  commentsOnConstructors: ZodCoercedBoolean.default('true'),
+  preferVar: ZodCoercedBoolean.default('true'),
+  includeGeneratedAnnotation: ZodCoercedBoolean.default('true'),
+});
 
-export const DEFAULT_JAVA_OPTIONS: JavaOptions = {
-  ...DEFAULT_PACKAGE_OPTIONS,
-  ...DEFAULT_TARGET_OPTIONS,
-  immutableModels: true,
-  includeAlwaysNullProperties: false,
-  unknownType: UnknownKind.MUTABLE_OBJECT,
-  includeLinksOnType: false,
-  includeLinksOnProperty: true,
-  packageResolver: undefined,
-  interfaceNamePrefix: 'I',
-  interfaceNameSuffix: '',
-  fieldAccessorMode: FieldAccessorMode.POJO,
-  commentsOnTypes: true,
-  commentsOnFields: false,
-  commentsOnGetters: true,
-  commentsOnConstructors: true,
-  preferVar: true,
-  includeGeneratedAnnotation: true,
-};
+export type IncomingJavaOptions = z.input<typeof ZodJavaOptions>;
+export type JavaOptions = z.infer<typeof ZodJavaOptions>;
 
-export const JAVA_OPTIONS_RESOLVER: OptionResolvers<JavaOptions> = {
-  ...TRANSFORM_OPTIONS_RESOLVER,
-  ...TARGET_OPTION_RESOLVERS,
-  packageResolver: v => new PackageResolverOptionsResolver().parse(v),
-  immutableModels: OptionsUtil.toBoolean,
-  includeAlwaysNullProperties: OptionsUtil.toBoolean,
-  includeLinksOnProperty: OptionsUtil.toBoolean,
-  includeLinksOnType: OptionsUtil.toBoolean,
-  commentsOnTypes: OptionsUtil.toBoolean,
-  commentsOnFields: OptionsUtil.toBoolean,
-  commentsOnGetters: OptionsUtil.toBoolean,
-  commentsOnConstructors: OptionsUtil.toBoolean,
-  preferVar: OptionsUtil.toBoolean,
-  includeGeneratedAnnotation: OptionsUtil.toBoolean,
-};
+export const DEFAULT_JAVA_OPTIONS: Readonly<JavaOptions> = ZodJavaOptions.parse({});

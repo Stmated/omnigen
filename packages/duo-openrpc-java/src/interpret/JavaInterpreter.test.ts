@@ -1,22 +1,29 @@
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {JAVA_FEATURES, JavaInterpreter, type JavaOptions, JavaUtil} from '@omnigen/target-java';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, type ModelTransformOptions, OmniTypeKind} from '@omnigen/core';
-import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
+import {
+  DEFAULT_TEST_JAVA_OPTIONS,
+  DEFAULT_TEST_TARGET_OPTIONS,
+  JavaTestUtils,
+  OpenRpcTestUtils,
+} from '@omnigen/duo-openrpc-java-test';
+import {JAVA_FEATURES, JavaInterpreter, JavaUtil} from '@omnigen/target-java';
+import {
+  DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  DEFAULT_PACKAGE_OPTIONS,
+  OmniTypeKind,
+} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
+import {describe, expect, test} from 'vitest';
+
+const DEFAULT_JAVA_TARGET_OPT = {...DEFAULT_TEST_JAVA_OPTIONS, ...DEFAULT_TEST_TARGET_OPTIONS, ...DEFAULT_PACKAGE_OPTIONS};
 
 describe('JavaInterpreter', () => {
 
   test('ensureBasicParsingDoesNotCrash', async () => {
 
-    const options = DEFAULT_TEST_JAVA_OPTIONS;
-    const interpreter = new JavaInterpreter();
-    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json',
-      DEFAULT_OPENRPC_OPTIONS,
-      DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      options,
-    );
+    const interpreter = new JavaInterpreter(DEFAULT_JAVA_TARGET_OPT, JAVA_FEATURES);
+    const model = await OpenRpcTestUtils.readExample('openrpc', 'petstore-expanded.json', {
+    });
 
-    const interpretation = await interpreter.buildSyntaxTree(model.model, [], model.options, JAVA_FEATURES);
+    const interpretation = await interpreter.buildSyntaxTree(model.model, []);
 
     expect(interpretation).toBeDefined();
 
@@ -51,23 +58,12 @@ describe('JavaInterpreter', () => {
 
   test('ensureGenericsAreBoxed', async () => {
 
-    const transformerOptions: ModelTransformOptions = {
-      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generificationBoxAllowed: true,
-    };
+    const interpreter = new JavaInterpreter(DEFAULT_JAVA_TARGET_OPT, JAVA_FEATURES);
+    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', {
+      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generificationBoxAllowed: true},
+    });
 
-    const targetOptions: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-    };
-
-    const interpreter = new JavaInterpreter();
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
-      DEFAULT_OPENRPC_OPTIONS,
-      transformerOptions,
-      targetOptions,
-    );
-
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
+    const root = await interpreter.buildSyntaxTree(result.model, []);
 
     expect(root).toBeDefined();
 
@@ -114,23 +110,12 @@ describe('JavaInterpreter', () => {
 
   test('ensureGenericsAreSkipped', async () => {
 
-    const transformerOptions: ModelTransformOptions = {
-      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generificationBoxAllowed: false,
-    };
+    const interpreter = new JavaInterpreter(DEFAULT_JAVA_TARGET_OPT, JAVA_FEATURES);
+    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json', {
+      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generificationBoxAllowed: false},
+    });
 
-    const targetOptions: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
-    };
-
-    const interpreter = new JavaInterpreter();
-    const result = await OpenRpcTestUtils.readExample('openrpc', 'primitive-generics.json',
-      DEFAULT_OPENRPC_OPTIONS,
-      transformerOptions,
-      targetOptions,
-    );
-
-    const root = await interpreter.buildSyntaxTree(result.model, [], result.options, JAVA_FEATURES);
+    const root = await interpreter.buildSyntaxTree(result.model, []);
 
     expect(root).toBeDefined();
 

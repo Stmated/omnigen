@@ -672,7 +672,10 @@ export class OmniUtil {
    * If a type is returned from this method, then it is up to the caller to replace the type relative to the root's owner.
    *
    * TODO: Implement a general way of traversing all the types, so we do not need to duplicate this functionality everywhere!
+   *
    * TODO: This feels very inefficient right now... needs a very good revamp
+   *
+   * TODO: Replace with a tree-folding traverser/visitor instead
    *
    * @param parent Parent to start looking within
    * @param from Type to replace from, the needle
@@ -707,6 +710,9 @@ export class OmniUtil {
     return undefined;
   }
 
+  /**
+   * TODO: Replace with a tree-folding traverser/visitor instead
+   */
   private static swapTypeInsideType<T extends OmniType, R extends OmniType>(parent: OmniType, from: T, to: R, maxDepth: number): void {
 
     switch (parent.kind) {

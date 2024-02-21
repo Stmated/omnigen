@@ -1,12 +1,13 @@
-import {AstTransformer, AstTransformerArguments} from '@omnigen/core';
-import {JavaOptions} from '../options/index.js';
-import {JavaVisitor} from '../visit/index.js';
-import * as Java from '../ast/index.js';
-import {JavaAstRootNode} from '../ast/index.js';
+import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
+import {JavaOptions} from '../options';
+import {JavaVisitor} from '../visit';
+import * as Java from '../ast';
+import {JavaAstRootNode} from '../ast';
 
-export type JavaAstTransformerArgs = AstTransformerArguments<JavaAstRootNode, JavaOptions>;
+export type JavaAndTargetOptions = JavaOptions & TargetOptions & PackageOptions;
+export type JavaAstTransformerArgs = AstTransformerArguments<JavaAstRootNode, JavaAndTargetOptions>;
 
-export abstract class AbstractJavaAstTransformer implements AstTransformer<Java.JavaAstRootNode, JavaOptions> {
+export abstract class AbstractJavaAstTransformer implements AstTransformer<Java.JavaAstRootNode, JavaAndTargetOptions> {
 
   protected static readonly JAVA_VISITOR: JavaVisitor<void> = new JavaVisitor<void>();
   protected static readonly JAVA_STRING_VISITOR: JavaVisitor<string> = new JavaVisitor<string>();

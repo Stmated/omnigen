@@ -1,2 +1,3 @@
 
-export * from './JsonRpcParserOptions.js';
+export * from './JsonRpcParserOptions';
+export * from './OpenRpcOptions';

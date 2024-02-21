@@ -1,4 +1,9 @@
+import {PluginAutoRegistry} from '@omnigen/core-plugin';
+import {OpenRpcArgsSourcePlugin, OpenRpcPlugin} from './OpenRpcPluginInit.ts';
 
-export * from './options/index.js';
-export * from './model/index.js';
-export * from './parse/index.js';
+export * from './options';
+export * from './model';
+export * from './parse';
+export * from './OpenRpcPluginInit';
+
+export default PluginAutoRegistry.register([OpenRpcArgsSourcePlugin, OpenRpcPlugin]);

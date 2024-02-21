@@ -1,25 +1,25 @@
-import {Booleanish, Option, Options} from '../options';
+import {ZodCoercedBoolean, ZodOptions} from '../options';
+import {z} from 'zod';
 
-export interface ModelTransformOptions extends Options {
-  simplifyTypeHierarchy: boolean;
+export const ZodModelTransformOptions = ZodOptions.extend({
+
+  simplifyTypeHierarchy: ZodCoercedBoolean.default('true'),
   /**
    * Elevate properties that are the same to their superclass.
    */
-  elevateProperties: boolean;
+  elevateProperties: ZodCoercedBoolean.default('true'),
   /**
    * Simplify properties by elevating types that can be made generic in the subclasses.
    */
-  generifyTypes: Option<Booleanish, boolean>;
+  generifyTypes: ZodCoercedBoolean.default('true'),
   /**
    * TODO: Deprecated -- remove in favor of using a language feature and only relying on 'generifyTypes' as option
    */
-  generificationBoxAllowed: Option<Booleanish, boolean>;
-}
+  generificationBoxAllowed: ZodCoercedBoolean.default('true'),
+});
 
-export const DEFAULT_MODEL_TRANSFORM_OPTIONS: ModelTransformOptions = {
-  elevateProperties: true,
-  simplifyTypeHierarchy: true,
+export type IncomingModelTransformOptions = z.input<typeof ZodModelTransformOptions>;
+export type ModelTransformOptions = z.output<typeof ZodModelTransformOptions>;
+export type UnknownModelTransformOptions = IncomingModelTransformOptions | ModelTransformOptions;
 
-  generifyTypes: true,
-  generificationBoxAllowed: true,
-};
+export const DEFAULT_MODEL_TRANSFORM_OPTIONS: Readonly<ModelTransformOptions> = ZodModelTransformOptions.parse({});

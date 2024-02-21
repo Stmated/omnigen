@@ -8,11 +8,10 @@ import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
 } from '@omnigen/core';
 import {
-  GenericsModelTransformer, OmniUtil,
-  OptionsUtil,
-  PARSER_OPTIONS_RESOLVERS,
-  TRANSFORM_OPTIONS_RESOLVER,
+  GenericsModelTransformer,
+  OmniUtil,
 } from '@omnigen/core-util';
+import {expect, test, describe} from 'vitest';
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -32,8 +31,8 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    const realParserOpt = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const realTransformOpt = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    const realParserOpt = DEFAULT_PARSER_OPTIONS;
+    const realTransformOpt = DEFAULT_MODEL_TRANSFORM_OPTIONS;
 
     transformer.transformModel({
       model: model,
@@ -94,8 +93,11 @@ describe('Test CompositionDependencyUtil', () => {
     //   JAVA_OPTIONS_RESOLVER,
     // );
 
-    const realParserOpt = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    const realTransformOpt = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
+    const realParserOpt = DEFAULT_PARSER_OPTIONS;
+    const realTransformOpt = DEFAULT_MODEL_TRANSFORM_OPTIONS;
+
+    // const realParserOpt = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
+    // const realTransformOpt = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
 
     // TODO: Will not work -- will need to call the 2nd pass
     transformer.transformModel({

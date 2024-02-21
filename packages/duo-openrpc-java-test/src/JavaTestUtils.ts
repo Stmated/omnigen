@@ -1,72 +1,118 @@
 import * as JavaParser from 'java-parser';
 import {
-  RealOptions,
-  OmniModelParserResult,
-  ExternalSyntaxTree,
-  AstNode, ModelTransformOptions,
+  AstNode,
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  DEFAULT_PACKAGE_OPTIONS,
+  DEFAULT_PARSER_OPTIONS,
+  ExternalSyntaxTree,
+  ModelTransformOptions,
+  OmniModelParserResult,
+  PackageOptions,
+  ParserOptions,
+  RenderedCompilationUnit,
+  TargetOptions,
+  ZodAstNodeContext,
+  ZodTargetOptions,
 } from '@omnigen/core';
-import {DEFAULT_OPENRPC_OPTIONS, OpenRpcParserOptions} from '@omnigen/parser-openrpc';
 import {
-  DEFAULT_JAVA_OPTIONS,
+  JAVA_FEATURES,
+  Java,
+  JavaBoot,
   JavaOptions,
-  JavaInterpreter,
   JavaRenderer,
   JavaVisitor,
-  JAVA_FEATURES,
+  ZodJavaOptions,
 } from '@omnigen/target-java';
-import {OpenRpcTestUtils} from './OpenRpcTestUtils.js';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
-import {Java} from '@omnigen/target-java';
-import {VisitorFactoryManager} from '@omnigen/core-util';
+import {VisitorFactoryManager, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {PluginManager} from '@omnigen/plugin';
+import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
+import {z, ZodObject} from 'zod';
+import {LoggerFactory} from '@omnigen/core-log';
+import {OpenRpcPlugin} from '@omnigen/parser-openrpc';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export const DEFAULT_TEST_JAVA_OPTIONS: JavaOptions = {
-  ...DEFAULT_JAVA_OPTIONS,
+  ...ZodJavaOptions.parse({}),
+};
+
+export const DEFAULT_TEST_TARGET_OPTIONS: TargetOptions = {
+  ...ZodTargetOptions.parse({}),
   compressSoloReferencedTypes: false,
   compressUnreferencedSubTypes: false,
 };
 
+export interface JavaTestUtilsOptions {
+  parserOptions?: ParserOptions,
+  // jsonRpcOptions?: JsonRpcParserOptions,
+  modelTransformOptions?: ModelTransformOptions,
+  targetOptions?: TargetOptions,
+  packageOptions?: PackageOptions,
+  javaOptions?: JavaOptions,
+  arguments?: Record<string, any>,
+}
+
 export class JavaTestUtils {
 
-  public static async getFileContentsFromFile(
+  constructor() {
+    logger.debug(`Loaded OpenRPC: ${OpenRpcPlugin}`);
+  }
+
+  public static async getFileContentsFromFile(fileName: string, options?: JavaTestUtilsOptions): Promise<Map<string, string>> {
+
+    const result = await JavaTestUtils.getResultFromFile(fileName, options || {}, ZodCompilationUnitsContext);
+    return JavaTestUtils.cuToContentMap(result.compilationUnits);
+  }
+
+  public static async getResultFromFile<Z extends ZodObject<any>>(
     fileName: string,
-    openRpcOptions: OpenRpcParserOptions = DEFAULT_OPENRPC_OPTIONS,
-    transformOptions: ModelTransformOptions = DEFAULT_MODEL_TRANSFORM_OPTIONS,
-    javaOptions: JavaOptions = DEFAULT_TEST_JAVA_OPTIONS,
-  ): Promise<Map<string, string>> {
+    options: JavaTestUtilsOptions,
+    expected: Z,
+  ): Promise<z.output<Z>> {
 
-    const parseResult = await OpenRpcTestUtils.readExample('openrpc', fileName, openRpcOptions, transformOptions, javaOptions);
-    return this.getFileContentsFromParseResult(parseResult, []);
+    const filePath = `../parser-openrpc/examples/${fileName}`;
+    return JavaTestUtils.getResultFromFilePath(filePath, options, expected);
   }
 
-  public static getRootNodeFromParseResult(
-    parseResult: OmniModelParserResult<JavaOptions>,
-    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
-  ): AstNode {
-    return new JavaInterpreter(parseResult.options, JAVA_FEATURES).buildSyntaxTree(parseResult.model, externals);
-  }
+  public static async getResultFromFilePath<
+    E extends ZodObject<any>,
+    S extends ZodObject<any>
+  >(
+    filePath: string,
+    options: JavaTestUtilsOptions,
+    expected: E,
+    stopAt?: S,
+  ): Promise<z.output<E>> {
 
-  public static async getFileContentsFromParseResult(
-    parseResult: OmniModelParserResult<JavaOptions>,
-    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
-  ): Promise<Map<string, string>> {
+    const all: Required<typeof options> = {
+      parserOptions: options.parserOptions ?? DEFAULT_PARSER_OPTIONS,
+      modelTransformOptions: options.modelTransformOptions ?? DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      targetOptions: options.targetOptions ?? DEFAULT_TEST_TARGET_OPTIONS,
+      packageOptions: options.packageOptions ?? DEFAULT_PACKAGE_OPTIONS,
+      javaOptions: options.javaOptions ?? DEFAULT_TEST_JAVA_OPTIONS,
+      arguments: options.arguments ?? {},
+    };
 
-    const interpretation = this.getRootNodeFromParseResult(parseResult, externals);
-    return JavaTestUtils.getFileContents(parseResult.options, interpretation);
-  }
+    const ctx: BaseContext & FileContext & TargetContext = {
+      file: filePath,
+      target: 'java',
+      arguments: {
+        ...all.modelTransformOptions,
+        ...all.parserOptions,
+        ...all.targetOptions,
+        ...all.packageOptions,
+        ...all.javaOptions,
+        ...all.arguments,
+      },
+    };
 
-  public static async getFileContentsFromRootNode(rootNode: AstNode, options: RealOptions<JavaOptions>): Promise<Map<string, string>> {
-    return JavaTestUtils.getFileContents(options, rootNode);
-  }
+    const pm = new PluginManager({includeAuto: true});
+    const result = await pm.execute({ctx: ctx, debug: true, stopAt: stopAt});
+    const last = result.results[result.results.length - 1];
 
-  public static getFileContents(javaOptions: RealOptions<JavaOptions>, interpretation: AstNode): Map<string, string> {
-    const fileContents = new Map<string, string>();
-    const renderer = new JavaRenderer(javaOptions, cu => {
-      fileContents.set(cu.fileName, cu.content);
-    });
-    renderer.render(interpretation);
-    return fileContents;
+    return expected.parse(last.ctx) as z.output<E>;
   }
 
   public static getParsedContent(fileContents: Map<string, string>, fileName: string): ParsedJavaTestVisitor {
@@ -87,6 +133,69 @@ export class JavaTestUtils {
     visitor.visit(cst);
 
     return visitor;
+  }
+
+  public static async getRootNodeFromParseResult(
+    parseResult: OmniModelParserResult<JavaOptions & PackageOptions & TargetOptions>,
+    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
+  ): Promise<AstNode> {
+
+    const typed = await JavaTestUtils.getResultFromParseResult(parseResult, externals, ZodAstNodeContext);
+    return typed.astNode;
+  }
+
+  public static async getFileContentsFromParseResult(
+    parseResult: OmniModelParserResult<JavaOptions & PackageOptions & TargetOptions>,
+    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
+  ): Promise<Map<string, string>> {
+
+    const typed = await JavaTestUtils.getResultFromParseResult(parseResult, externals, ZodCompilationUnitsContext);
+    return JavaTestUtils.cuToContentMap(typed.compilationUnits);
+  }
+
+  public static async getResultFromParseResult<Z extends ZodObject<any>>(
+    parseResult: OmniModelParserResult<JavaOptions & PackageOptions & TargetOptions>,
+    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
+    stopAt: Z,
+  ): Promise<z.output<Z>> {
+
+    const ctx: z.output<typeof JavaBoot.ZodJavaContextIn> = {
+      target: 'java',
+      model: parseResult.model,
+      modelTransformOptions: DEFAULT_MODEL_TRANSFORM_OPTIONS,
+      parserOptions: DEFAULT_PARSER_OPTIONS,
+      packageOptions: parseResult.options,
+      targetOptions: parseResult.options,
+      javaOptions: parseResult.options,
+      targetFeatures: JAVA_FEATURES,
+      arguments: {},
+    };
+
+    // TODO: Need to be able to send along the externals!
+    //  Then later remake the system so can register types between different schemas!
+    // TODO: Need to be able to send along a "startAt" to skip any early plugins! So we can send our model without going through any of the earlier stuff!!!
+
+    const pm = new PluginManager({includeAuto: true});
+    const result = await pm.execute({
+      ctx: ctx,
+      debug: true,
+      stopAt: stopAt,
+    });
+    const last = result.results[result.results.length - 1];
+
+    const typed = stopAt.safeParse(last.ctx);
+    if (!typed.success) {
+      throw new Error(typed.error.message);
+    }
+
+    return typed.data;
+  }
+
+  public static async getFileContentsFromRootNode(rootNode: AstNode, options: JavaOptions): Promise<Map<string, string>> {
+
+    const renderer = new JavaRenderer(options);
+    const cus = renderer.executeRender(rootNode);
+    return JavaTestUtils.cuToContentMap(cus);
   }
 
   public static getMethod(node: AstNode, name: string): Java.MethodDeclaration {
@@ -143,4 +252,13 @@ export class JavaTestUtils {
     return result;
   }
 
+  public static cuToContentMap(compilationUnits: RenderedCompilationUnit[]) {
+    const fileContents = new Map<string, string>();
+
+    for (const render of compilationUnits) {
+      fileContents.set(render.fileName, render.content);
+    }
+
+    return fileContents;
+  }
 }

@@ -4,14 +4,16 @@ root = true
 end_of_line = lf
 insert_final_newline = true
 charset = utf-8
+indent_style = space
+indent_size = 2
+max_line_length = 200
 
 [.turbo]
 generated_code = true
 ij_formatter_enabled = false
 
 [*.{js,ts,json,yml}]
-indent_style = space
-indent_size = 2
+
 ij_editorconfig_space_after_comma = true
 ij_any_space_after_colon = true
 

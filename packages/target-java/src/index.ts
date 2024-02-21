@@ -1,4 +1,5 @@
-import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
+import {TargetFeatures} from '@omnigen/core';
+import {z} from 'zod';
 
 export * from './visit';
 export * from './transform';
@@ -8,10 +9,15 @@ export * from './util';
 export * from './render';
 export * from './parse';
 export * as Java from './ast';
-export {default as JavaBoot} from './JavaPluginInit';
+export * as JavaBoot from './JavaPluginInit';
 
-export const JAVA_FEATURES: Readonly<TargetFeatures> = {
-  ...OMNI_GENERIC_FEATURES,
+// export const ZodJavaFeatures = z.object({
+//   literalTypes: z.literal(false).default(false),
+//   primitiveGenerics: z.literal(false).default(false),
+// });
+
+export const JAVA_FEATURES: TargetFeatures = {
   literalTypes: false,
   primitiveGenerics: false,
 };
+

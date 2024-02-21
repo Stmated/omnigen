@@ -15,23 +15,25 @@
     "dev": "tsc -w"
   },
   "dependencies": {
-    "@omnigen/core": "0.0.0",
-    "@omnigen/core-util": "0.0.0",
-    "@omnigen/core-log": "0.0.0",
-    "@omnigen/parser-jsonschema": "0.0.0",
-    "@omnigen/parser-openrpc": "0.0.0",
-    "@omnigen/target-impl-java-http": "0.0.0",
-    "@omnigen/target-java": "0.0.0",
-    "json-schema": "^0.4.0"
+    "@omnigen/core": "workspace:*",
+    "@omnigen/core-util": "workspace:*",
+    "@omnigen/core-log": "workspace:*",
+    "@omnigen/core-plugin": "workspace:*",
+    "@omnigen/plugin": "workspace:*",
+    "@omnigen/parser-jsonschema": "workspace:*",
+    "@omnigen/parser-openrpc": "workspace:*",
+    "@omnigen/target-impl-java-http": "workspace:*",
+    "@omnigen/target-java": "workspace:*",
+    "json-schema": "^0.4.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@omnigen/config-jest": "0.0.0",
-    "@omnigen/config-typescript": "0.0.0",
-    "@omnigen/eslint-config-custom": "0.0.0",
+    "@omnigen/config-typescript": "workspace:*",
+    "@omnigen/eslint-config-custom": "workspace:*",
     "@types/json-schema": "^7.0.11",
     "@types/node": "^18.13.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.2",
+    "typescript": "^5.3.3",
     "vite": "^4.1.1"
   }
 }

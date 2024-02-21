@@ -1,23 +1,21 @@
 import {
-  Booleanish,
-  Option,
-  Options,
-} from '../options/index.js';
+  ZodCoercedBoolean,
+  ZodOptions,
+} from '../options';
+import {z} from 'zod';
 
-export interface ParserOptions extends Options {
-  relaxedLookup: Option<Booleanish, boolean>;
-  relaxedPlaceholders: Option<Booleanish, boolean>;
-  autoTypeHints: Option<Booleanish, boolean>;
-  relaxedUnknownTypes: Option<Booleanish, boolean>;
-  trustedClients: Option<Booleanish, boolean>;
-  preferredWrapMode: Option<Booleanish, boolean>;
-}
+export const ZodParserOptions = ZodOptions.extend({
 
-export const DEFAULT_PARSER_OPTIONS: ParserOptions = {
-  relaxedLookup: true,
-  relaxedPlaceholders: true,
-  autoTypeHints: true,
-  relaxedUnknownTypes: false,
-  trustedClients: false,
-  preferredWrapMode: false,
-};
+  relaxedLookup: ZodCoercedBoolean.default('t'),
+  relaxedPlaceholders: ZodCoercedBoolean.default('t'),
+  autoTypeHints: ZodCoercedBoolean.default('t'),
+  relaxedUnknownTypes: ZodCoercedBoolean.default('f'),
+  trustedClients: ZodCoercedBoolean.default('f'),
+  preferredWrapMode: ZodCoercedBoolean.default('f'),
+});
+
+export type IncomingParserOptions = z.input<typeof ZodParserOptions>;
+export type ParserOptions = z.infer<typeof ZodParserOptions>;
+export type UnknownParserOptions = IncomingParserOptions | ParserOptions;
+
+export const DEFAULT_PARSER_OPTIONS: ParserOptions = ZodParserOptions.parse({});

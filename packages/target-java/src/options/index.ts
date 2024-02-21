@@ -1,2 +1,2 @@
 
-export * from './JavaOptions.js';
+export * from './JavaOptions.ts';

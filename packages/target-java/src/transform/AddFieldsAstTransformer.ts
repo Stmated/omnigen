@@ -3,7 +3,6 @@ import {
   OmniPrimitiveKind,
   OmniProperty, OmniType,
   OmniTypeKind,
-  RealOptions,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
 import {JavaOptions} from '../options/index.js';
@@ -54,7 +53,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
     return parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true;
   }
 
-  private addOmniPropertyToBody(body: Java.Block, property: OmniProperty, options: RealOptions<JavaOptions>): void {
+  private addOmniPropertyToBody(body: Java.Block, property: OmniProperty, options: JavaOptions): void {
 
     if (OmniUtil.isNull(property.type) && !options.includeAlwaysNullProperties) {
       return;

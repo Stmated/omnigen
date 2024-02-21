@@ -9,6 +9,7 @@ import {TypeDifference} from '@omnigen/core';
 import {OmniUtil} from './OmniUtil';
 import {CommonDenominatorType} from '@omnigen/core';
 import {OMNI_GENERIC_FEATURES} from '@omnigen/core';
+import {describe, test, expect} from 'vitest';
 
 describe('OmniUtil', () => {
 

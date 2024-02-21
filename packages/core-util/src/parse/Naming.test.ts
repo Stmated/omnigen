@@ -1,4 +1,5 @@
 import {Naming} from './Naming';
+import {describe, test, expect} from 'vitest';
 
 const obj1 = {};
 const obj2 = {};

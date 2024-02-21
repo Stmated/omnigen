@@ -1,6 +1,5 @@
 import {OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import * as repl from 'repl';
 import {TypeOwner} from '@omnigen/core';
 import {OmniUtil} from './OmniUtil.js';
 

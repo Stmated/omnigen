@@ -1,17 +1,27 @@
 import {
   AstNode,
-  OmniModel,
+  OmniModel, Options,
   ParserOptions,
-  RealOptions,
   RenderedCompilationUnit,
   TargetOptions,
 } from '@omnigen/core';
 
-export interface OmnigenResult<TParseOpt extends ParserOptions, TTargetOpt extends TargetOptions> {
+export interface OmnigenResult<TOpt extends Options | undefined> {
 
   model: OmniModel;
-  parseOptions: RealOptions<TParseOpt>;
-  targetOptions: RealOptions<TTargetOpt>;
+
+  // /**
+  //  * TODO: Remove -- instead all options should be in a map, since we do not know which ones we will get
+  //  */
+  // parseOptions: TParseOpt;
+  // /**
+  //  * TODO: Remove -- instead all options should be in a map, since we do not know which ones we will get
+  //  */
+  // targetOptions: TTargetOpt;
+
+  options: TOpt;
+
+
   originRootNode?: AstNode;
   rootNode: AstNode;
   renders: RenderedCompilationUnit[];

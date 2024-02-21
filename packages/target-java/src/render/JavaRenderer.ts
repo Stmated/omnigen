@@ -1,18 +1,17 @@
 import {
   AstNode,
   AstVisitor,
-  CompilationUnitRenderCallback,
   OmniPrimitiveKind, OmniType,
-  RealOptions,
+  RenderedCompilationUnit,
   Renderer,
   VisitResult,
 } from '@omnigen/core';
-import * as Java from '../ast/index.js';
-import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast/index.js';
-import {JavaVisitFn, JavaVisitor} from '../visit/index.js';
-import {JavaOptions} from '../options/index.js';
+import * as Java from '../ast';
+import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast';
+import {JavaVisitFn, JavaVisitor} from '../visit';
+import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaSubTypeCapableType} from '../util/index.js';
+import {JavaSubTypeCapableType} from '../util';
 import {OmniUtil} from '@omnigen/core-util';
 
 type JavaRendererVisitFn<N extends AstNode> = JavaVisitFn<N, string>;
@@ -25,21 +24,33 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
   private readonly _patternLineStart = new RegExp(/(?<!$)^/mg);
   private _tokenPrefix = ' ';
   private _tokenSuffix = ' ';
-  private readonly _options: RealOptions<JavaOptions>;
+  private readonly _options: JavaOptions;
 
-  private readonly _cuCallback: CompilationUnitRenderCallback;
+  /**
+   * TODO: Maybe change so that renderer either returns string OR the compilation unit.
+   */
+  private readonly _units: RenderedCompilationUnit[] = [];
 
-  constructor(options: RealOptions<JavaOptions>, callback: CompilationUnitRenderCallback) {
+  constructor(options: JavaOptions) {
     super();
     this._options = options;
-    this._cuCallback = callback;
   }
 
   private getIndentation(d: number = this._blockDepth): string {
     return '  '.repeat(d);
   }
 
-  public render<N extends AstNode, V extends AstVisitor<string>>(node: N | undefined, visitor?: V): string {
+  public executeRender(node: AstNode): RenderedCompilationUnit[] {
+    if (node === undefined) {
+      return [];
+    }
+
+    this._units.length = 0;
+    node.visit(this);
+    return this._units;
+  }
+
+  private render<N extends AstNode, V extends AstVisitor<string>>(node: N | undefined, visitor?: V): string {
     if (node === undefined) {
       return '';
     }
@@ -251,7 +262,7 @@ export class JavaRenderer extends JavaVisitor<string> implements Renderer {
     ]);
 
     // This was a top-level class/interface, so we will output it as a compilation unit.
-    this._cuCallback({
+    this._units.push({
       content: content,
       name: node.object.name.value,
       fileName: `${node.object.name.value}.java`,

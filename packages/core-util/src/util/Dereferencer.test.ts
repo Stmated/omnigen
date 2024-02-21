@@ -2,6 +2,7 @@ import {Dereferencer} from './index';
 import * as fs from 'fs/promises';
 import nock from 'nock';
 import {LoggerFactory} from '@omnigen/core-log';
+import {describe, test, expect} from 'vitest';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -73,12 +74,12 @@ describe('Test ObjectRefTraverser', () => {
 
     try {
       await Dereferencer.create<any>('https://omnigen.fake.localhost', 'https://omnigen.fake.localhost/a');
-      fail('This creation is supposed to fail, since the documents cannot be fetched');
+      throw new Error('This creation is supposed to fail, since the documents cannot be fetched');
     } catch (ex) {
       if (ex instanceof Error) {
         expect(ex.message).toContain('The file does not exist');
       } else {
-        fail('The exception should be an Error');
+        throw new Error('The exception should be an Error');
       }
     }
   });

@@ -1,20 +1,14 @@
-import {DEFAULT_TEST_JAVA_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
-import {DEFAULT_OPENRPC_OPTIONS} from '@omnigen/parser-openrpc';
+import {expect, test, describe, vi} from 'vitest';
 
 describe('Error-Schema', () => {
 
   test('ErrorStructure', async () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json',
-      DEFAULT_OPENRPC_OPTIONS,
       {
-        ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-        elevateProperties: false,
-        generifyTypes: true,
-      },
-      {
-        ...DEFAULT_TEST_JAVA_OPTIONS,
+        modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, elevateProperties: false, generifyTypes: true},
       },
     );
     const filenames = [...fileContents.keys()].sort();
@@ -53,13 +47,7 @@ describe('Error-Schema', () => {
 
   test('ErrorStructure-1.1', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json',
-      DEFAULT_OPENRPC_OPTIONS,
-      DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      {
-        ...DEFAULT_TEST_JAVA_OPTIONS,
-      },
-    );
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', {});
 
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
     expect(errorResponse.foundFields).toEqual(['error', 'id']);
@@ -79,13 +67,7 @@ describe('Error-Schema', () => {
 
   test('ErrorStructure-Custom', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-custom.json',
-      DEFAULT_OPENRPC_OPTIONS,
-      DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      {
-        ...DEFAULT_TEST_JAVA_OPTIONS,
-      },
-    );
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-custom.json', {});
     const filenames = [...fileContents.keys()];
 
     expect(filenames).toContain('ListThingsError100Error.java');

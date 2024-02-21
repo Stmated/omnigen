@@ -1,92 +1,56 @@
 import {JSONSchema7} from 'json-schema';
 import {
-  OmniType,
-  Booleanish,
-  Option,
-  RealOptions,
-  OptionAdditions,
-  OptionResolvers,
-  Options,
+  ZodOptions, ZodCoercedBoolean, OmniType,
 } from '@omnigen/core';
-import {OptionsUtil} from '@omnigen/core-util';
+import {z} from 'zod';
 
-export type JsonRpcVersion = '1.0' | '1.1' | '2.0';
+export const ZodJsonRpcParserOptionsBase = ZodOptions.extend({
+  jsonRpcErrorDataSchema: z.union([z.custom<JSONSchema7>(), z.custom<OmniType>()]).optional()
+    .transform((v, ctx) => {
 
-export interface JsonRpcParserOptions extends Options {
-  jsonRpcPropertyName: string | undefined;
-  jsonRpcVersion: Option<JsonRpcVersion | undefined, JsonRpcVersion>;
-  jsonRpcIdIncluded: Option<Booleanish | undefined, boolean>;
-  jsonRpcErrorPropertyName: Option<string | undefined, string>;
-  jsonRpcErrorNameIncluded: Option<Booleanish | undefined, boolean>;
-  jsonRpcErrorDataSchema: Option<JSONSchema7 | undefined, OmniType | undefined>;
-}
+      if (!v || 'kind' in v) {
+        return v;
+      }
 
-export const DEFAULT_JSONRPC_OPTIONS: JsonRpcParserOptions = {
-  jsonRpcVersion: undefined,
-  jsonRpcPropertyName: undefined,
-  jsonRpcIdIncluded: undefined,
-  jsonRpcErrorPropertyName: undefined,
-  jsonRpcErrorNameIncluded: undefined,
-  jsonRpcErrorDataSchema: undefined,
-};
-
-export const JSONRPC_10_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
-  jsonRpcVersion: '1.0',
-  jsonRpcIdIncluded: true,
-  jsonRpcPropertyName: undefined,
-  jsonRpcErrorPropertyName: 'error',
-  jsonRpcErrorNameIncluded: true,
-  jsonRpcErrorDataSchema: undefined,
-};
-
-export const JSONRPC_11_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
-  jsonRpcVersion: '1.1',
-  jsonRpcIdIncluded: true,
-  jsonRpcPropertyName: 'version',
-  jsonRpcErrorPropertyName: 'error',
-  jsonRpcErrorNameIncluded: true,
-  jsonRpcErrorDataSchema: undefined,
-};
-
-export const JSONRPC_20_PARSER_OPTIONS: RealOptions<JsonRpcParserOptions> = {
-  jsonRpcVersion: '2.0',
-  jsonRpcIdIncluded: true,
-  jsonRpcPropertyName: 'jsonrpc',
-  jsonRpcErrorPropertyName: 'data',
-  jsonRpcErrorNameIncluded: false,
-  jsonRpcErrorDataSchema: undefined,
-};
-
-export const JSONRPC_OPTIONS_RESOLVERS: OptionResolvers<JsonRpcParserOptions> = {
-  jsonRpcVersion: v => v || '2.0',
-  jsonRpcErrorDataSchema: v => {
-
-    if (!v || 'kind' in v) {
       return v;
-    }
+    }),
+});
 
-    return undefined;
-  },
-  jsonRpcErrorPropertyName: v => {
-    if (v) {
-      return v;
-    }
+export const ZodJsonRpc10ParserOptions = ZodJsonRpcParserOptionsBase.extend({
+  jsonRpcVersion: z.literal('1.0').default('1.0'),
+  jsonRpcPropertyName: z.string().optional(),
+  jsonRpcIdIncluded: ZodCoercedBoolean.default('true'),
+  jsonRpcErrorPropertyName: z.string().default('error'),
+  jsonRpcErrorNameIncluded: ZodCoercedBoolean.default('true'),
+});
+export const ZodJsonRpc11ParserOptions = ZodJsonRpcParserOptionsBase.extend({
+  jsonRpcVersion: z.literal('1.1').default('1.1'),
+  jsonRpcPropertyName: z.string().optional().default('version'),
+  jsonRpcIdIncluded: ZodCoercedBoolean.default('true'),
+  jsonRpcErrorPropertyName: z.string().default('error'),
+  jsonRpcErrorNameIncluded: ZodCoercedBoolean.default('true'),
+});
+export const ZodJsonRpc20ParserOptions = ZodJsonRpcParserOptionsBase.extend({
+  jsonRpcVersion: z.literal('2.0').default('2.0'),
+  jsonRpcPropertyName: z.string().optional().default('jsonrpc'),
+  jsonRpcIdIncluded: ZodCoercedBoolean.default('true'),
+  jsonRpcErrorPropertyName: z.string().default('data'),
+  jsonRpcErrorNameIncluded: ZodCoercedBoolean.default('false'),
+});
 
-    throw new Error(`There must be a JsonRpc version override given`);
-  },
-  jsonRpcErrorNameIncluded: OptionsUtil.toBoolean,
-  jsonRpcIdIncluded: OptionsUtil.toBoolean,
-};
+export const ZodJsonRpcParserOptions = z.union([
+  ZodJsonRpc20ParserOptions,
+  ZodJsonRpc11ParserOptions,
+  ZodJsonRpc10ParserOptions,
+]);
 
-export const JSONRPC_OPTIONS_FALLBACK: OptionAdditions<JsonRpcParserOptions> = {
-  jsonRpcVersion: v => {
-    switch (v) {
-      case '1.1':
-        return JSONRPC_11_PARSER_OPTIONS;
-      case '1.0':
-        return JSONRPC_10_PARSER_OPTIONS;
-      default:
-        return JSONRPC_20_PARSER_OPTIONS;
-    }
-  },
-};
+export type IncomingJsonRpcParserOptions = z.input<typeof ZodJsonRpcParserOptions>;
+export type JsonRpcParserOptions = z.output<typeof ZodJsonRpcParserOptions>;
+export type JsonRpc10ParserOptions = z.output<typeof ZodJsonRpc10ParserOptions>;
+export type JsonRpc11ParserOptions = z.output<typeof ZodJsonRpc11ParserOptions>;
+export type JsonRpc20ParserOptions = z.output<typeof ZodJsonRpc20ParserOptions>;
+export type JsonRpcVersion = JsonRpcParserOptions['jsonRpcVersion'];
+
+export const DEFAULT_JSONRPC20_PARSER_OPTIONS: Readonly<JsonRpc20ParserOptions> = ZodJsonRpc20ParserOptions.parse({});
+export const DEFAULT_JSONRPC11_PARSER_OPTIONS: Readonly<JsonRpc11ParserOptions> = ZodJsonRpc11ParserOptions.parse({});
+export const DEFAULT_JSONRPC10_PARSER_OPTIONS: Readonly<JsonRpc10ParserOptions> = ZodJsonRpc10ParserOptions.parse({});

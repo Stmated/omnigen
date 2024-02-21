@@ -1,7 +1,7 @@
 import {ParserOptions} from './ParserOptions';
-import {OptionsSource, RealOptions} from '../options/index.js';
+import {OptionsSource} from '../options';
 import {Parser} from './Parser';
 
-export interface ParserBootstrap<TOpt extends ParserOptions> extends OptionsSource<TOpt> {
-  createParser(options: RealOptions<TOpt>): Parser<TOpt>;
+export interface ParserBootstrap<TOpt extends ParserOptions> extends OptionsSource {
+  createParser(options: TOpt): Parser<TOpt>;
 }

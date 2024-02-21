@@ -1,4 +1,5 @@
 import {Case} from './Case';
+import {describe, test, expect} from 'vitest';
 
 describe('Case', () => {
 

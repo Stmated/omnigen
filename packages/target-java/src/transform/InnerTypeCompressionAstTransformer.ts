@@ -2,7 +2,6 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/i
 import {
   OmniType,
   OmniTypeKind,
-  RealOptions,
   TargetOptions,
 } from '@omnigen/core';
 import * as Java from '../ast/index.js';
@@ -95,7 +94,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     typeMapping: Map<Java.CompilationUnit, OmniType[]>,
     typeToCu: Map<OmniType, Java.CompilationUnit>,
     root: Java.JavaAstRootNode,
-    options: RealOptions<TargetOptions>,
+    options: TargetOptions,
   ) {
 
     const cuInfoStack: Java.CompilationUnit[] = [];

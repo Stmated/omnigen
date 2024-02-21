@@ -9,6 +9,7 @@ import {
 import {OmniModelMerge, Replacement} from './OmniModelMerge';
 import {PropertyUtil} from './PropertyUtil';
 import {OmniUtil} from './OmniUtil';
+import {describe, test, expect} from 'vitest';
 
 test('Not Similar', async () => {
 

@@ -25,3 +25,6 @@ export * from './PropertiesInformation.js';
 export * from './transform/index.js';
 export * from './TypeName.js';
 export * from './TypeNameModifier.js';
+export * from './OmniTypeKind.ts';
+
+export * from './OmniTypeLibrary.ts';

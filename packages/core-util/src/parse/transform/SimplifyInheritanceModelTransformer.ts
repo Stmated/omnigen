@@ -13,7 +13,7 @@ import {OmniUtil} from '../OmniUtil.js';
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.
  * It does this by seeing if types have common ancestors and skipping the superfluously stated ones.
  */
-export class SimplifyInheritanceModelTransformer implements OmniModelTransformer<ParserOptions> {
+export class SimplifyInheritanceModelTransformer implements OmniModelTransformer {
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 

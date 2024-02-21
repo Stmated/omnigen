@@ -5,8 +5,7 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import {Options, RealOptions} from '@omnigen/core';
-import {TargetOptions} from '@omnigen/core';
+import {Options} from '@omnigen/core';
 import {BFSTraverseContext} from './OmniTypeVisitor.js';
 import {HashUtil} from './HashUtil.js';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -130,9 +129,9 @@ export class OmniModelMerge {
    * @param results The different models that should be attempted to be merged
    * @param options The target options, which might be a merge of the different targets', or something of its own.
    */
-  public static merge<TOpt extends TargetOptions>(
+  public static merge<TOpt extends Options>(
     results: OmniModelParserResult<TOpt>[],
-    options: Partial<RealOptions<TOpt>>,
+    options: Partial<TOpt>,
   ): OmniModelParserResult<TOpt> {
 
     if (results.length == 0) {
@@ -171,7 +170,7 @@ export class OmniModelMerge {
     const replacements = OmniModelMerge.getReplacements(...results.map(it => it.model));
 
     // Skip the simple type
-    const skippedKinds = [
+    const skippedKinds: OmniTypeKind[] = [
       OmniTypeKind.UNKNOWN, OmniTypeKind.PRIMITIVE, OmniTypeKind.ARRAY,
       OmniTypeKind.GENERIC_TARGET, OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
     ];
@@ -239,10 +238,10 @@ export class OmniModelMerge {
 
   private static mergeOptions<TOpt extends Options>(
     results: OmniModelParserResult<TOpt>[],
-    options: Partial<RealOptions<TOpt>>,
-  ): RealOptions<TOpt> {
+    options: Partial<TOpt>,
+  ): TOpt {
 
-    let commonOptions: RealOptions<TOpt> = {...results[0].options};
+    let commonOptions: TOpt = {...results[0].options};
     for (let i = 1; i < results.length; i++) {
       commonOptions = {...results[i].options, ...commonOptions};
     }

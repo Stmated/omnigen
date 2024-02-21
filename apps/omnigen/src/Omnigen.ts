@@ -1,337 +1,140 @@
 import fs from 'fs/promises';
-import {DEFAULT_FILE_WRITE_OPTIONS, DEFAULT_RUN_OPTIONS, FileWriteOptions, OmnigenOptions} from './OmnigenOptions.js';
+import {ZodRunOptions} from './OmnigenOptions.js';
 import {OmnigenResult} from './OmnigenResult.js';
-import {
-  IncomingOptions,
-  OmniModelTransformer,
-  RenderedCompilationUnit,
-  ParserOptions,
-  TargetOptions,
-  RealOptions,
-  DEFAULT_MODEL_TRANSFORM_OPTIONS, AstNode, SchemaSource,
-} from '@omnigen/core';
-import {
-  DEFAULT_JAVA_OPTIONS,
-  InterfaceJavaModelTransformer, JAVA_FEATURES,
-  JAVA_OPTIONS_RESOLVER, JavaInterpreter,
-  JavaOptions, JavaRenderer,
-} from '@omnigen/target-java';
-import {
-  DEFAULT_OPENRPC_OPTIONS,
-  OpenRpcParserOptions,
-  OPENRPC_OPTIONS_RESOLVERS,
-  OpenRpcParserBootstrapFactory,
-  OPENRPC_OPTIONS_FALLBACK,
-} from '@omnigen/parser-openrpc';
-import {JSONSchema7} from 'json-schema';
-import {JsonSchemaParser} from '@omnigen/parser-jsonschema';
 import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import {
-  DEFAULT_IMPLEMENTATION_OPTIONS, IMPLEMENTATION_OPTIONS_PARSERS,
-  ImplementationOptions,
-  JavaHttpImplementationGenerator,
-} from '@omnigen/target-impl-java-http';
-import {
-  OptionsUtil,
-  FileWriter,
-  StandardOptionResolvers,
-  SimplifyInheritanceModelTransformer,
-  ElevatePropertiesModelTransformer,
-  GenericsModelTransformer,
-  TRANSFORM_OPTIONS_RESOLVER, Dereferencer, SchemaFile,
-} from '@omnigen/core-util';
+import {FileWriteOptions, Plugin2, PluginOrPlugins, ZodBaseContext, ZodFilesContext} from '@omnigen/core-plugin';
+import {PluginManager} from '@omnigen/plugin';
+import {z} from 'zod';
 
 const logger = LoggerFactory.create(import.meta.url);
+
+// TODO: Rewrite this whole class to use the PluginManager to execute things dynamically
+//         Remove any hard-coded stuff that relates to options -- it should be dynamically/runtime evaluated
+//         Simplify the available functions here so it is both more generic and easier to just execute
+//
+// TODO: There is likely a need for a ctx/local storage for types, with unique ids calculated based on full path/ref
+//         Then it should be possible for different schemas to properly reference types between them
+
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void
+  ? I
+  : never;
+
+type Flatten<T> = UnionToIntersection<T extends Record<string, any> ? { [K in keyof T]: T[K]; }[keyof T] : never>;
+
+type ExtractOptions<T> = {
+  [K in keyof T as K extends `${infer _}Options` ? K : never]: T[K]
+}
+
+type ToPluginInput<P extends Plugin2> = P extends Plugin2<infer In>
+  ? z.input<In>
+  : never;
+
+type ToPlugin<P> =
+  P extends Array<infer Item>
+    ? Item
+    : P
+
+/**
+ * This makes `Go To Declaration` not work properly. Live with it for now. Look up option by search in your IDE.
+ *
+ * Works exactly like Partial<T>, but this way you get this nice comment.
+ */
+type Maybe<T> = {
+  [K in keyof T]?: T[K];
+};
+
+type AdditionalProperties<T> = T & { [other: string]: any };
+
+export type OmnigenOptions<P extends PluginOrPlugins> = AdditionalProperties<Maybe<Flatten<ExtractOptions<ToPluginInput<ToPlugin<P>>>>>>;
+
+export interface OmnigenArgs<P extends PluginOrPlugins> {
+  input: string | string[];
+  types: string | string[];
+  output: string;
+  options: OmnigenOptions<P>;
+}
+
+const ZodRunContext = z.object({
+  runOptions: ZodRunOptions,
+});
+
+const ZodOmnigenContext = ZodBaseContext
+  .merge(ZodRunContext)
+  .merge(ZodFilesContext);
+
+type OmnigenContext = z.output<typeof ZodOmnigenContext>;
 
 /**
  * Main entry class which handles the default use-case for all the conversion from schema to output.
  */
 export class Omnigen {
 
-  public async generateAndWriteToFile<
-    TParseOpt extends ParserOptions,
-    TTargetOpt extends TargetOptions,
-    TImplOpt extends ImplementationOptions,
-  >(
-    incomingOptions: IncomingOptions<OmnigenOptions<TParseOpt, TTargetOpt, TImplOpt>>,
-    incomingFileWriteOptions: IncomingOptions<FileWriteOptions>,
-  ): Promise<void> {
+  public async generateAndWriteToFile<P extends PluginOrPlugins>(args: OmnigenArgs<P>): Promise<void> {
 
-    const fileWriteOptions = OptionsUtil.resolve(
-      DEFAULT_FILE_WRITE_OPTIONS,
-      incomingFileWriteOptions,
-      {
-        outputDirBase: v => {
-          if (!v) {
-            throw new Error(`You must specify a base dir`);
-          }
-          return this.relativeToAbsolute(v);
-        },
-      });
+    const partialFileWriteOptions: Partial<FileWriteOptions> = {
+      outputDirBase: args.output,
+    };
 
-    if (typeof fileWriteOptions.outputDirBase !== 'string') {
-      throw new Error(`The output dir must be a string and not a FileLike type`);
-    }
+    const enhancedArgs: OmnigenArgs<P> = {
+      ...args,
+      options: {
+        ...args.options,
+        ...partialFileWriteOptions,
+      },
+    };
 
-    const fileWriter = new FileWriter(fileWriteOptions.outputDirBase);
+    // const fileWriteOptions = ZodFileWriteOptions.parse(enhancedArgs.options);
+    // const fileWriter = new FileWriter(fileWriteOptions.outputDirBase);
 
-    return this.generate(incomingOptions)
-      .then(result => {
-
-        const results: OmnigenResult<TParseOpt, TTargetOpt>[] = [];
-        if (!Array.isArray(result)) {
-          results.push(result);
-        } else {
-          results.push(...result);
-        }
-
-        const promises = results.map(result => result.renders.flatMap(rcu => fileWriter.write(rcu)));
-
-        return Promise.all(promises)
-          .then(() => {
-
-            // TODO: After all files are written, we should optionally introduce some kind of lock file
-            //        Then we can know if files have been modified, or which to delete before generating new ones
-            return;
-          });
-      });
+    await this.generate(enhancedArgs);
   }
 
-  public async generate<
-    TParseOpt extends ParserOptions,
-    TTargetOpt extends TargetOptions,
-    TImplOpt extends ImplementationOptions,
-  >(
-    incomingOptions: IncomingOptions<OmnigenOptions<TParseOpt, TTargetOpt, TImplOpt>>,
-  ): Promise<OmnigenResult<TParseOpt, TTargetOpt>[]> {
+  public async generate<P extends PluginOrPlugins, O extends OmnigenOptions<P>>(options: O): Promise<OmnigenResult<O>[]> {
 
-    const runOptions = OptionsUtil.resolve(
-      DEFAULT_RUN_OPTIONS,
-      incomingOptions,
-      {
-        schemaDirBase: v => {
-          if (!v) {
-            throw new Error(`You must specify a base dir`);
-          }
-          return this.relativeToAbsolute(v);
-        },
-        schemaPatternExclude: v => StandardOptionResolvers.toRegExp(v),
-        schemaPatternInclude: v => StandardOptionResolvers.toRegExp(v),
-        schemaDirRecursive: v => StandardOptionResolvers.toBoolean(v),
-      });
+    const runOptions = ZodRunOptions.parse(options);
+
+    runOptions.schemaDirBase = this.relativeToAbsolute(runOptions.schemaDirBase);
 
     logger.info(`Schema base dir: ${runOptions.schemaDirBase}`);
 
-    const excludePattern = await StandardOptionResolvers.toRegExp(runOptions.schemaPatternExclude);
-    const includePattern = await StandardOptionResolvers.toRegExp(runOptions.schemaPatternInclude);
-    const schemaFilePaths = await this.getFileNames(runOptions.schemaDirBase, excludePattern, includePattern);
-
-    const promises: Promise<OmnigenResult<TParseOpt, TTargetOpt>[]>[] = [];
-    for (const schemaFilePath of schemaFilePaths) {
-
-      logger.info(`Found file ${schemaFilePath}`);
-
-      const schemaFile = new SchemaFile(schemaFilePath, schemaFilePath);
-      promises.push(
-        this.generateFromSchemaFile<TParseOpt, TTargetOpt>(schemaFile, incomingOptions, incomingOptions)
-          .then(async result => {
-
-            const results: OmnigenResult<TParseOpt, TTargetOpt>[] = [];
-            results.push(result);
-
-            logger.info(`Getting companions!`);
-
-            const companions = await this.generateAccompanyingRootNodes(result, incomingOptions);
-            for (const companion of companions) {
-
-              const rendered = this.renderRootNode(companion, result.targetOptions);
-
-              logger.info(`Got ${rendered.length} renders from companion`);
-
-              results.push({
-                ...result,
-                originRootNode: result.rootNode,
-                rootNode: companion,
-                renders: rendered,
-              });
-            }
-
-            return results;
-          }),
-      );
-    }
-
-    return Promise.all(promises)
-      .then(results => {
-
-        const flat: OmnigenResult<TParseOpt, TTargetOpt>[] = [];
-        for (const result of results) {
-          flat.push(...result);
-        }
-
-        return flat;
-      })
-      .catch(error => {
-        if (runOptions.failSilently) {
-          console.log(`Encountered a silent error ${JSON.stringify(error)}`);
-          return [] as OmnigenResult<TParseOpt, TTargetOpt>[];
-        } else {
-          throw error;
-        }
-      });
-  }
-
-  private renderRootNode<TTargetOpt extends TargetOptions>(
-    rootNode: AstNode,
-    targetOptions: RealOptions<TTargetOpt>,
-  ): RenderedCompilationUnit[] {
-
-    const renders: RenderedCompilationUnit[] = [];
-    const javaOptions = targetOptions as unknown as RealOptions<JavaOptions>;
-    const renderer = new JavaRenderer(javaOptions, rcu => {
-      renders.push(rcu);
-    });
-    renderer.render(rootNode);
-
-    return renders;
-  }
-
-  private async generateAccompanyingRootNodes<
-    TParseOpt extends ParserOptions,
-    TTargetOpt extends TargetOptions,
-    TImplOpt extends ImplementationOptions
-  >(
-    result: OmnigenResult<TParseOpt, TTargetOpt>,
-    incomingOptions: IncomingOptions<TImplOpt>,
-  ): Promise<AstNode[]> {
-
-    const generator = new JavaHttpImplementationGenerator();
-
-    const options = OptionsUtil.resolve(
-      DEFAULT_IMPLEMENTATION_OPTIONS,
-      incomingOptions,
-      IMPLEMENTATION_OPTIONS_PARSERS,
+    const schemaFilePaths = await this.getFileNames(
+      runOptions.schemaDirBase,
+      runOptions.schemaPatternExclude,
+      runOptions.schemaPatternInclude,
     );
 
-    const generated = await generator.generate({
-      model: result.model,
-      root: result.rootNode,
-      targetOptions: result.targetOptions as unknown as RealOptions<JavaOptions>,
-      implOptions: options,
+    const pluginManager = new PluginManager({
+      includeAuto: true,
     });
 
-    logger.info(`Generated: ${generated.length} files`);
-
-    return generated;
-  }
-
-  private relativeToAbsolute(relative: PathLike): PathLike {
-
-    if (typeof relative == 'string') {
-
-      const homeDirectory = os.homedir();
-      const homeResolved = homeDirectory ? relative.replace(/^~(?=$|\/|\\)/, homeDirectory) : relative;
-
-      logger.debug(`Relative to Absolute: ${homeResolved}`);
-
-      return path.resolve(homeResolved);
-    } else {
-      return relative;
-    }
-  }
-
-  private async generateFromSchemaFile<TParserOpt extends ParserOptions, TTargetOpt extends TargetOptions>(
-    schemaFile: SchemaSource,
-    parserOptions: IncomingOptions<TParserOpt>,
-    targetOptions: IncomingOptions<TTargetOpt>,
-  ): Promise<OmnigenResult<TParserOpt, TTargetOpt>> {
-
-    const transformers: OmniModelTransformer<ParserOptions>[] = [
-      new SimplifyInheritanceModelTransformer(),
-      new ElevatePropertiesModelTransformer(),
-      new GenericsModelTransformer(),
-
-      // TODO: Java specific! Needs to be loaded in optionally!
-      new InterfaceJavaModelTransformer(),
-    ];
-
-    const openRpcParserBootstrapFactory = new OpenRpcParserBootstrapFactory();
-    const openRpcParserBootstrap = (await openRpcParserBootstrapFactory.createParserBootstrap(schemaFile));
-    const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions<JavaOptions>();
-    const realParserOptions = OptionsUtil.resolve(
-      DEFAULT_OPENRPC_OPTIONS,
-      parserOptions as IncomingOptions<OpenRpcParserOptions>,
-      OPENRPC_OPTIONS_RESOLVERS,
-      OPENRPC_OPTIONS_FALLBACK,
-    );
-
-    if (!realParserOptions.jsonRpcErrorDataSchema && schemaIncomingOptions?.jsonRpcErrorDataSchema) {
-
-      // TODO: How do we solve this properly? Feels ugly making exceptions for certain options like this.
-      //        Have a sort of "post converters" that can take the whole options? Need to have a look.
-      const errorSchema = schemaIncomingOptions?.jsonRpcErrorDataSchema;
-      if (!('kind' in errorSchema)) {
-
-        const dereferencer = await Dereferencer.create<JSONSchema7>('', '', errorSchema);
-        const jsonSchemaParser = new JsonSchemaParser<JSONSchema7, OpenRpcParserOptions>(dereferencer, realParserOptions);
-        const errorType = jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', dereferencer.getFirstRoot());
-
-        realParserOptions.jsonRpcErrorDataSchema = errorType;
-      }
-    }
-
-    const openRpcParser = openRpcParserBootstrap.createParser(realParserOptions);
-    const parseResult = openRpcParser.parse();
-
-    // NOTE: Would be good if this could be handled in some more central way, so it can never be missed.
-    //        But I am unsure how and where that would be.
-    if (schemaIncomingOptions) {
-      parseResult.model.options = schemaIncomingOptions;
-    }
-
-    let optionsAndSchemaOptions = targetOptions;
-    if (schemaIncomingOptions) {
-      optionsAndSchemaOptions = {...optionsAndSchemaOptions, ...schemaIncomingOptions};
-    }
-
-    const realTransformerOptions = OptionsUtil.resolve(
-      DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      {},
-      TRANSFORM_OPTIONS_RESOLVER,
-    );
-
-    for (const transformer of transformers) {
-      transformer.transformModel({
-        model: parseResult.model,
-        options: {...realParserOptions, ...realTransformerOptions},
-      });
-    }
-
-    const realJavaOptions = OptionsUtil.resolve(
-      DEFAULT_JAVA_OPTIONS,
-      optionsAndSchemaOptions as IncomingOptions<JavaOptions>,
-      JAVA_OPTIONS_RESOLVER,
-    );
-
-    const interpreter = new JavaInterpreter(realJavaOptions, JAVA_FEATURES);
-    const syntaxTree = interpreter.buildSyntaxTree(parseResult.model, []);
-
-    const renders: RenderedCompilationUnit[] = [];
-    const renderer = new JavaRenderer(realJavaOptions, rcu => {
-      renders.push(rcu);
-    });
-    renderer.render(syntaxTree);
-
-    return {
-      model: parseResult.model,
-      parseOptions: parseResult.options as unknown as RealOptions<TParserOpt>,
-      targetOptions: realJavaOptions as unknown as RealOptions<TTargetOpt>,
-      rootNode: syntaxTree,
-      renders: renders,
+    const initialCtx: OmnigenContext = {
+      arguments: options,
+      runOptions: runOptions,
+      files: schemaFilePaths,
     };
+
+    // TODO: args.types --- Need to support multiple types... eventually. Do that later.
+
+    const result = await pluginManager.execute({ctx: initialCtx});
+
+    if (result.results.length == 0) {
+      throw new Error(`Wutt`);
+    }
+
+    console.table(result);
+
+    return [];
+  }
+
+  private relativeToAbsolute(relative: string): string {
+
+    const homeDirectory = os.homedir();
+    const homeResolved = homeDirectory ? relative.replace(/^~(?=$|\/|\\)/, homeDirectory) : relative;
+    logger.debug(`Relative to Absolute: ${homeResolved}`);
+    return path.resolve(homeResolved);
   }
 
   private async getFileNames(

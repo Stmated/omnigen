@@ -1,5 +1,6 @@
 import {HashUtil} from './HashUtil';
 import {OmniTypeKind} from '@omnigen/core';
+import {describe, test, expect} from 'vitest';
 
 test('Unknown', async () => {
 

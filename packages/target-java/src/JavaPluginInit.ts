@@ -1,48 +1,128 @@
-import {PluginAutoRegistry, PluginBoot} from '@omnigen/core-plugin';
+import {
+  createPlugin,
+  PluginAutoRegistry,
+  PluginScoreKind,
+  ZodModelContext, ZodModelTransformOptionsContext, ZodPackageOptionsContext, ZodRenderersContext,
+  ZodTargetContext, ZodTargetOptionsContext,
+} from '@omnigen/core-plugin';
 import {JavaInterpreter} from './interpret';
 import {InterfaceJavaModelTransformer} from './parse';
-import {OptionsUtil} from '@omnigen/core-util';
-import {DEFAULT_JAVA_OPTIONS, JAVA_OPTIONS_RESOLVER} from './options';
-import {JAVA_FEATURES, JavaRenderer} from './index.ts';
+import {JAVA_FEATURES, JavaRenderer, ZodJavaOptions} from './index.ts';
+import {
+  ZodAstNodeContext,
+  ZodParserOptions, ZodTargetFeatures,
+} from '@omnigen/core';
+import {z} from 'zod';
+import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 
-const CREATOR: PluginBoot = hook => {
-
-  hook.registerCustomizer({
-    afterParse(run, pipeline) {
-
-      // TODO:
-      //  * Ability to add "File Loaders" that can parse different incoming paths -- which plugins can add to
-      //  * Ability to add "Parsers" that can load the files that were loaded -- also dynamically through plugins
-      //  * Ability of setting priority to the different plugins so the loaders/parsers are loaded earlier/later
-      //  * The resulting plugin investigation should be a tree of pipelines that can diverge after certain steps!
-      //  * It must be possible to EASILY extend only what you want extended.
-      //    * For example the "InterfaceJavaModelTransformer" must ONLY run if the interpreter will be "Java"
-      //  * Either the options given to the hook creator says the input and we decide from that...
-      //      Or we could actually decide that during runtime/lazily with the help of the builder? Like stream filters
-
-      if (!run.types.includes('java')) {
-        return;
-      }
-
-      pipeline
-        .resolveTransformOptionsDefault()
-        .withModelTransformer(a => new InterfaceJavaModelTransformer())
-        .resolveTargetOptions(a => OptionsUtil.resolve(DEFAULT_JAVA_OPTIONS, a.options, JAVA_OPTIONS_RESOLVER))
-        .interpret(a => new JavaInterpreter(a.options, JAVA_FEATURES))
-        .render(a => new JavaRenderer(a.options, rcu => {
-
-          // TODO: Remove callback? Should not work this way? Should give back a RenderedResult that contains files?
-          console.log(`Rendered`);
-          console.table(rcu);
-        }))
-        .delegateBack().write(run);
-    },
-  });
-};
-
-PluginAutoRegistry.register({
-  name: 'java',
-  init: CREATOR,
+export const ZodParserOptionsContext = z.object({
+  parserOptions: ZodParserOptions,
 });
 
-export default CREATOR;
+export const ZodJavaOptionsContext = z.object({
+  javaOptions: ZodJavaOptions,
+});
+
+export const ZodJavaTargetContext = z.object({
+  target: z.literal('java'),
+  targetFeatures: ZodTargetFeatures, // z.custom<typeof JAVA_FEATURES>(),
+});
+
+export const ZodJavaInitContextIn = ZodModelContext
+  .merge(ZodTargetContext);
+
+export const ZodJavaInitContextOut = ZodModelContext
+  .merge(ZodJavaOptionsContext)
+  .merge(ZodJavaTargetContext);
+
+export const ZodJavaContextIn = ZodModelContext
+  .merge(ZodParserOptionsContext)
+  .merge(ZodPackageOptionsContext)
+  .merge(ZodTargetOptionsContext)
+  .merge(ZodModelTransformOptionsContext)
+  .merge(ZodJavaOptionsContext)
+  .merge(ZodJavaTargetContext);
+
+export const ZodJavaContextOut = ZodJavaContextIn
+  .merge(ZodAstNodeContext);
+
+export type JavaOptionsContext = z.output<typeof ZodJavaOptionsContext>;
+
+export const JavaPluginInit = createPlugin(
+  {
+    name: 'java-init', in: ZodJavaInitContextIn, out: ZodJavaInitContextOut,
+    scoreModifier: (score, count, idx) => score * (idx / count),
+  },
+  async ctx => {
+
+    if (ctx.target != 'java') {
+      return new z.ZodError([
+        {code: 'custom', path: ['target'], message: `Target is not Java`},
+      ]);
+    }
+
+    const javaOptions = ZodJavaOptions.safeParse(ctx.arguments);
+    if (!javaOptions.success) {
+      return javaOptions.error;
+    }
+
+    return {
+      ...ctx,
+      target: ctx.target,
+      javaOptions: javaOptions.data,
+      targetFeatures: JAVA_FEATURES,
+    } as const;
+  },
+);
+
+export const JavaPlugin = createPlugin(
+  {name: 'java', in: ZodJavaContextIn, out: ZodJavaContextOut, score: PluginScoreKind.REQUIRED},
+  async ctx => {
+    new InterfaceJavaModelTransformer().transformModel({
+      model: ctx.model,
+      options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
+    });
+
+    ctx.javaOptions.commentsOnFields = true;
+
+    const interpreter = new JavaInterpreter(
+      {...ctx.javaOptions, ...ctx.targetOptions, ...ctx.packageOptions},
+      JAVA_FEATURES,
+    );
+
+    const astNode = interpreter.buildSyntaxTree(ctx.model, []);
+
+    return {
+      ...ctx,
+      astNode: astNode,
+    };
+  },
+);
+
+export const JavaRendererCtxIn = ZodModelContext
+  .merge(ZodAstNodeContext)
+  .merge(ZodJavaOptionsContext)
+  .merge(ZodJavaTargetContext);
+
+export const JavaRendererCtxOut = JavaRendererCtxIn
+  .merge(ZodAstNodeContext)
+  .merge(ZodRenderersContext)
+  .merge(ZodCompilationUnitsContext);
+
+export const JavaRendererPlugin = createPlugin(
+  {name: 'java-render', in: JavaRendererCtxIn, out: JavaRendererCtxOut, score: PluginScoreKind.IMPORTANT},
+  async ctx => {
+
+    const renderer = new JavaRenderer(ctx.javaOptions);
+    const rendered = renderer.executeRender(ctx.astNode);
+
+    return {
+      ...ctx,
+      renderers: [renderer],
+      compilationUnits: rendered,
+    };
+  },
+);
+
+export default PluginAutoRegistry.register([JavaPluginInit, JavaPlugin, JavaRendererPlugin]);
+

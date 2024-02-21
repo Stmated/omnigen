@@ -14,7 +14,6 @@ import {
   OmniType,
   OmniTypeKind,
   PackageOptions,
-  RealOptions,
   UnknownKind,
 } from '@omnigen/core';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options';
@@ -22,6 +21,7 @@ import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {JavaAndTargetOptions} from '../transform';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -48,7 +48,7 @@ export interface TypeNameInfo {
 
 interface FqnOptions {
   type: OmniType,
-  options?: RealOptions<JavaOptions> | undefined;
+  options?: JavaAndTargetOptions | undefined;
   withSuffix?: boolean | undefined;
   withPackage?: boolean | undefined;
   withInner?: string[] | undefined;
@@ -85,7 +85,7 @@ export class JavaUtil {
 
   public static getClassNameForImport(
     type: OmniType,
-    options: RealOptions<JavaOptions>,
+    options: JavaAndTargetOptions,
     implementation: boolean | undefined,
   ): string | undefined {
 
@@ -110,7 +110,7 @@ export class JavaUtil {
    * @param type
    * @param options
    */
-  public static getClassName(type: OmniType, options?: RealOptions<JavaOptions>): string {
+  public static getClassName(type: OmniType, options?: JavaAndTargetOptions): string {
     return JavaUtil.getName({
       type: type,
       options: options,
@@ -235,14 +235,14 @@ export class JavaUtil {
         if (args.type.name) {
 
           const name = Naming.unwrap(args.type.name);
-          const commonOptions = args.type.model.options as RealOptions<JavaOptions> || args.options;
+          const commonOptions = args.type.model.options as JavaAndTargetOptions || args.options;
           return JavaUtil.getClassNameWithPackageName(args.type, name, commonOptions, args.withPackage);
         }
 
         if (args.type.model.options) {
 
           // TODO: This way of handling it is INCREDIBLY UGLY -- need a way to make this actually typesafe!
-          const commonOptions = args.type.model.options as RealOptions<JavaOptions>;
+          const commonOptions = args.type.model.options as JavaAndTargetOptions;
           return JavaUtil.getName({...args, type: args.type.of, options: commonOptions});
         }
 
@@ -254,7 +254,7 @@ export class JavaUtil {
   public static getClassNameWithPackageName(
     type: OmniType,
     typeName: string,
-    options?: RealOptions<PackageOptions>,
+    options?: PackageOptions,
     withPackage?: boolean,
   ): string {
 
@@ -273,7 +273,7 @@ export class JavaUtil {
     return typeName;
   }
 
-  public static getPackageName(type: OmniType, typeName: string, options: RealOptions<PackageOptions>): string {
+  public static getPackageName(type: OmniType, typeName: string, options: PackageOptions): string {
 
     return options.packageResolver
       ? options.packageResolver(type, typeName, options)

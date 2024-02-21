@@ -3,18 +3,19 @@ import * as path from 'path';
 import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
 import {OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '@omnigen/target-java';
-import {OpenRpcParserOptions, OpenRpcParserBootstrapFactory, OPENRPC_OPTIONS_RESOLVERS} from './OpenRpcParser.js';
-import {JSONRPC_20_PARSER_OPTIONS} from '../options/index.js';
-import {OmniUtil, OptionsUtil, SchemaFile} from '@omnigen/core-util';
+import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.js';
+import {OmniUtil, SchemaFile} from '@omnigen/core-util';
+import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
+import {describe, test, expect} from 'vitest';
 
 describe('Test Generic Model Creation', () => {
 
   const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
 
-  const options: OpenRpcParserOptions = {
-    ...DEFAULT_PARSER_OPTIONS,
-    ...JSONRPC_20_PARSER_OPTIONS,
-  };
+  // const options: OpenRpcParserOptions = {
+  //   ...DEFAULT_PARSER_OPTIONS,
+  //   ...ZodJsonRpc20ParserOptions.parse({}),
+  // };
 
   test('Test basic loading', async () => {
     const dirPath = '../parser-openrpc/examples/';
@@ -28,9 +29,11 @@ describe('Test Generic Model Creation', () => {
       const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
         new SchemaFile(filePath),
       );
-      const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
-      const parser = parserBootstrap.createParser(realOptions);
-      const model = parser.parse().model;
+
+      // const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
+
+      const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS});
+      const model = (await parser.parse()).model;
       expect(model).toBeDefined();
     }
   });
@@ -41,9 +44,9 @@ describe('Test Generic Model Creation', () => {
       new SchemaFile('../parser-openrpc/examples/petstore-expanded.json'),
     );
 
-    const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
-    const parser = parserBootstrap.createParser(realOptions);
-    const model = parser.parse().model;
+    // const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
+    const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS});
+    const model = (await parser.parse()).model;
 
     expect(model).toBeDefined();
     expect(model.name).toEqual('Petstore Expanded');

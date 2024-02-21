@@ -1,6 +1,6 @@
 {
   "name": "omnigen",
-  "packageManager": "pnpm@7.26.3",
+  "packageManager": "pnpm@8.15.1",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -14,13 +14,20 @@
     "sync:execute": "syncpack fix-mismatches"
   },
   "syncpack": {
-    "versionGroups": []
+    "versionGroups": [
+      {
+        "label": "Use workspace protocol when developing local packages",
+        "dependencies": ["$LOCAL"],
+        "dependencyTypes": ["dev"],
+        "pinVersion": "workspace:*"
+      }
+    ]
   },
   "devDependencies": {
-    "@omnigen/eslint-config-custom": "0.0.0",
-    "prettier": "^2.8.4",
-    "turbo": "^1.8.5",
-    "syncpack": "^9.8.4",
-    "pino-pretty": "^10.0.0"
+    "@omnigen/eslint-config-custom": "workspace:*",
+    "prettier": "^3.2.5",
+    "turbo": "^1.12.3",
+    "syncpack": "^12.3.0",
+    "pino-pretty": "^10.3.1"
   }
 }

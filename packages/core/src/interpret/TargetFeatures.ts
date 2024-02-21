@@ -1,17 +1,20 @@
+import {z} from 'zod';
+import {ZodCoercedBoolean} from '../options';
 
-export interface TargetFeatures {
-
+export const ZodTargetFeatures = z.object({
   /**
    * If true, then literal types are supported. A literal type of String is for example "Hello".
    * In for example TypeScript, you can say a function can return either "A" or "B" but not a general string.
    */
-  literalTypes: boolean;
+  literalTypes: ZodCoercedBoolean,
 
   /**
    * If true, then primitives can be used as generics for objects. Such as List<int>
    */
-  primitiveGenerics: boolean;
-}
+  primitiveGenerics: ZodCoercedBoolean,
+});
+
+export type TargetFeatures = z.output<typeof ZodTargetFeatures>;
 
 /**
  * Be careful when using this; you should always prefer using a more specific target's features.

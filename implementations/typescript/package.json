@@ -12,12 +12,12 @@
     "generate": "omnigen -i ./resources/schemas/ethereum.json -o ./src/generated/ -t java"
   },
   "dependencies": {
-    "@omnigen/omnigen": "0.0.0"
+    "@omnigen/omnigen": "workspace:*"
   },
   "devDependencies": {
-    "@omnigen/config-typescript": "0.0.0",
-    "@omnigen/eslint-config-custom": "0.0.0",
-    "typescript": "^5.0.2",
-    "@omnigen/omnigen-cli": "0.0.0"
+    "@omnigen/config-typescript": "workspace:*",
+    "@omnigen/eslint-config-custom": "workspace:*",
+    "typescript": "^5.3.3",
+    "@omnigen/omnigen-cli": "workspace:*"
   }
 }

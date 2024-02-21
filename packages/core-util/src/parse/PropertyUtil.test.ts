@@ -9,6 +9,7 @@ import {
 import {PropertyUtil} from './PropertyUtil';
 import {OMNI_GENERIC_FEATURES} from '@omnigen/core';
 import {PropertyDifference, TypeDifference} from '@omnigen/core';
+import {describe, test, expect} from 'vitest';
 
 describe('Test PropertyUtil', () => {
 

@@ -97,7 +97,7 @@ export class JavaTestUtils {
 
     const ctx: BaseContext & FileContext & TargetContext = {
       file: filePath,
-      target: 'java',
+      // target: 'java', // <-- implicit, because we have no other target plugin in this package
       arguments: {
         ...all.modelTransformOptions,
         ...all.parserOptions,

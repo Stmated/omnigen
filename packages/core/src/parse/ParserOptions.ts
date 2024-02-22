@@ -12,6 +12,14 @@ export const ZodParserOptions = ZodOptions.extend({
   relaxedUnknownTypes: ZodCoercedBoolean.default('f'),
   trustedClients: ZodCoercedBoolean.default('f'),
   preferredWrapMode: ZodCoercedBoolean.default('f'),
+
+  /**
+   * NOTE: `false` is not correct according to JsonSchema standard.
+   *
+   * TODO: Either we do not care, or we introduce a "strict" mode (and other modes) which can set other default values
+   *        Maybe we should have some kind of global repository which we initialize, and fetch the default settings from? Would be global per run though...
+   */
+  defaultAdditionalProperties: ZodCoercedBoolean.default('f'),
 });
 
 export type IncomingParserOptions = z.input<typeof ZodParserOptions>;

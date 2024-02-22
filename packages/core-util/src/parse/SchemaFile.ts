@@ -3,6 +3,7 @@ import * as path from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
 import {SchemaSource} from '@omnigen/core';
+import * as YAML from 'yaml';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -46,8 +47,20 @@ export class SchemaFile implements SchemaSource {
       return Promise.resolve(this._parsedObject as R);
     }
 
-    const str = await this.asString();
-    this._parsedObject = JSON.parse(str);
+    const str = (await this.asString()).trim();
+    const name = (this._fileName ?? '').toLowerCase();
+    if (name.endsWith('.yml') || name.endsWith('.yaml')) {
+      this._parsedObject = YAML.parse(str);
+    } else if (name.endsWith('.json')) {
+      this._parsedObject = JSON.parse(str);
+    } else {
+      if (str.startsWith('{') || str.startsWith('[')) {
+        this._parsedObject = JSON.parse(str);
+      } else {
+        this._parsedObject = YAML.parse(str);
+      }
+    }
+
     return this._parsedObject as R;
   }
 

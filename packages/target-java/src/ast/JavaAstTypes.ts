@@ -14,7 +14,7 @@ import {
   UnknownKind,
   OmniGenericTargetType,
   OmniSuperTypeCapableType,
-  OmniPotentialInterfaceType,
+  OmniInterfaceOrObjectType,
   OmniEnumType,
   OmniHardcodedReferenceType,
   OmniGenericSourceIdentifierType,
@@ -903,9 +903,9 @@ export class ExtendsDeclaration extends AbstractJavaNode {
 }
 
 export class ImplementsDeclaration extends AbstractJavaNode {
-  types: TypeList<OmniPotentialInterfaceType>;
+  types: TypeList<OmniInterfaceOrObjectType>;
 
-  constructor(types: TypeList<OmniPotentialInterfaceType>) {
+  constructor(types: TypeList<OmniInterfaceOrObjectType>) {
     super();
     this.types = types;
   }
@@ -1102,8 +1102,8 @@ export class ClassDeclaration extends AbstractObjectDeclaration<JavaSubTypeCapab
 /**
  * TODO: Remove this and instead just add a boolean to the ClassDeclaration and GenericClassDeclaration?
  */
-export class InterfaceDeclaration extends AbstractObjectDeclaration<OmniPotentialInterfaceType> {
-  constructor(type: Type<OmniPotentialInterfaceType>, name: Identifier, body: Block, modifiers?: ModifierList) {
+export class InterfaceDeclaration extends AbstractObjectDeclaration<OmniInterfaceOrObjectType> {
+  constructor(type: Type<OmniInterfaceOrObjectType>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 

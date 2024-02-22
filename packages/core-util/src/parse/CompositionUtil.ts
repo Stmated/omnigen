@@ -33,12 +33,11 @@ export class CompositionUtil {
       if (!composition) {
         composition = or;
       } else {
-        const compositionType: OmniCompositionType<OmniType, CompositionKind> = {
+        composition = {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, or],
-        };
-        composition = compositionType;
+        } satisfies OmniCompositionType<OmniType, CompositionKind>;
       }
     }
 
@@ -60,7 +59,7 @@ export class CompositionUtil {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, and],
-        } as OmniCompositionType<OmniType, CompositionKind>;
+        } satisfies OmniCompositionType<OmniType, CompositionKind>;
       }
     }
 
@@ -83,7 +82,7 @@ export class CompositionUtil {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, xor],
-        } as OmniCompositionType<OmniType, CompositionKind>;
+        } satisfies OmniCompositionType<OmniType, CompositionKind>;
       }
     }
 
@@ -101,7 +100,7 @@ export class CompositionUtil {
           kind: OmniTypeKind.COMPOSITION,
           compositionKind: CompositionKind.AND,
           types: [composition, not],
-        } as OmniCompositionType<OmniType, CompositionKind>;
+        } satisfies OmniCompositionType<OmniType, CompositionKind>;
       }
     }
 

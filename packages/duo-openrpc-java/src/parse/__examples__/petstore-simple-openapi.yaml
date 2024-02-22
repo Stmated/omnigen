@@ -1,0 +1,22 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: Some description
+  version: 0.1.9
+servers:
+  - url: http://localhost:8080
+    description: Some server description
+paths:
+  /pets:
+    get:
+      summary: Returns a list of pets.
+      description: Some endpoint description
+      responses:
+        '200':
+          description: A JSON array of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "/petstore-simple-jsonschema.json#/$defs/Pet"

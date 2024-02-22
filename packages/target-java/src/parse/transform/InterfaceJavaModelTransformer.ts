@@ -3,7 +3,7 @@ import {
   OmniCompositionType,
   OmniInterfaceType,
   OmniModelTransformer,
-  OmniSubtypeCapableType,
+  OmniSubTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
@@ -86,7 +86,7 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
     return [interfaceType, 'new'];
   }
 
-  private addInterfaceToOriginalType(type: OmniSubtypeCapableType, interfaceType: OmniInterfaceType): void {
+  private addInterfaceToOriginalType(type: OmniSubTypeCapableType, interfaceType: OmniInterfaceType): void {
 
     // NOTE: Should we actually unwrap here? Should we not want it to stay as the external reference type?
     // type = OmniUtil.getUnwrappedType(type);

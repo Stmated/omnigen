@@ -1,15 +1,7 @@
-import {
-  ActionKind,
-  Plugin2,
-  Plugin2ExecuteResult,
-  PluginAutoRegistry,
-  PluginOrPlugins,
-  PluginQualifier,
-  PluginScoreKind,
-} from '@omnigen/core-plugin';
+import {ActionKind, Plugin2, Plugin2ExecuteResult, PluginAutoRegistry, PluginOrPlugins, PluginQualifier, PluginScoreKind} from '@omnigen/core-plugin';
 import * as ioPath from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
-import {z, ZodError, ZodObject, ZodType} from 'zod';
+import {AnyZodObject, z, ZodError, ZodObject, ZodType} from 'zod';
 import {Compat, CompatResult, ZodUtils} from './ZodUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -208,9 +200,16 @@ export class PluginManager {
 
       const needsEvaluation = PluginManager.needsEvaluation(pathItem);
       if (needsEvaluation) {
-        const zodRuntimeSchema = ZodUtils.createZodSchemaFromObject(args.inCtx, true);
+
+        // TODO: Fix so that the literal creation cannot end up in endless recursion! But first try to figure out a way of getting a proper exception, for any future errors!!
+
+        const zodRuntimeSchema = ZodUtils.createZodSchemaFromObject(
+          args.inCtx, true,
+          ({keyPath}) => keyPath[0] == 'model' ? z.record(z.any()) : undefined,
+        );
+
         const compat = ZodUtils.isCompatibleWith(pathItem.plugin.input, zodRuntimeSchema);
-        if (compat.v !== Compat.SAME) {
+        if (compat.v == Compat.DIFF) {
           return {results: []};
         }
       }
@@ -291,7 +290,7 @@ export class PluginManager {
       const item = this.findExecutionPathsInner({
         plugin: plugin,
         plugins: remaining,
-        inType: startType,
+        inType: startType as AnyZodObject,
         path: [plugin.name],
         skipped: skipped,
       });
@@ -307,6 +306,7 @@ export class PluginManager {
       path: matchItem,
       length: PluginManager.getLength(matchItem),
       inType: startType as Z,
+      skipped: skipped,
     };
   }
 
@@ -344,7 +344,6 @@ export class PluginManager {
 
       const next = this.findExecutionPathsInner(
         {...args, plugin: nextPlugin, inType: merged, plugins: remaining, path: [...args.path, nextPlugin.name]},
-        // nextPlugin, remaining, merged, [...path, nextPlugin.name], skipped,
       );
 
       if (next) {
@@ -372,49 +371,59 @@ export class PluginManager {
 
   private static prune(plugin: Plugin2, item: RootPluginPathItem | PluginPathItem, path: string[]): void {
 
-    try {
+    if (item.next.length > 1) {
       item.next.sort((a, b) => b.score - a.score);
 
       // We should not filter away any of the first plugins that needs evaluation, since any could be true.
-      let i = 0;
-      while (i < item.next.length && PluginManager.needsEvaluation(item.next[i])) {
-        i++;
-      }
+      const firstWithoutEvalIdx = item.next.findIndex(it => !PluginManager.needsEvaluation(it));
+      if (firstWithoutEvalIdx == 0) {
 
-      i++;
-      for (; i < item.next.length; i++) {
-        if (!PluginManager.needsEvaluation(item.next[i])) {
+        // The best plugin is the first plugin without eval, no need for the rest.
+        item.next = [item.next[0]];
+      } else if (firstWithoutEvalIdx !== -1) {
 
-          // If this does not need evaluation and is after at least one other that does not need evaluation...
-          // Then we can remove it, because it will never be ran.
-          item.next = item.next.slice(0, i);
-
-          return;
-        }
-      }
-    } finally {
-
-      if (plugin.scoreModifier) {
-
-        const parentLength = path.length - 1;
-        const childLength = PluginManager.getLength(item);
-        const count = parentLength + childLength;
-        const modified = plugin.scoreModifier(plugin.score, count, path.length - 1);
-
-        if (item.next.length > 0) {
-          item.score = modified + item.next[0].score;
-        }
-      } else {
-
-        if (item.next.length > 0) {
-          item.score = plugin.score + item.next[0].score;
-        }
+        // We do have one without eval, but it is after some that needs eval. We keep the first without eval.
+        item.next = item.next.splice(0, firstWithoutEvalIdx + 1);
       }
     }
+
+    if (plugin.scoreModifier) {
+
+      const parentLength = path.length - 1;
+      const childLength = PluginManager.getLength(item);
+      const count = parentLength + childLength;
+      const modified = plugin.scoreModifier(plugin.score, count, path.length - 1);
+
+      if (item.next.length > 0) {
+        item.score = modified + item.next[0].score;
+      }
+    } else {
+
+      if (item.next.length > 0) {
+        item.score = plugin.score + item.next[0].score;
+      }
+    }
+
+    // let i = 0;
+    // while (i < item.next.length && PluginManager.needsEvaluation(item.next[i])) {
+    //   i++;
+    // }
+    //
+    // i++;
+    // for (; i < item.next.length; i++) {
+    //   if (!PluginManager.needsEvaluation(item.next[i])) {
+    //
+    //     // If this does not need evaluation and is after at least one other that does not need evaluation...
+    //     // Then we can remove it, because it will never be ran.
+    //     item.next = item.next.slice(0, i);
+    //
+    //     return;
+    //   }
+    // }
   }
 
   private static needsEvaluation(it: PluginPathItem) {
-    return it.compat.v == Compat.NEEDS_EVALUATION || it.plugin.action == ActionKind.RUNTIME_REFINES;
+    return it.compat.v == Compat.NEEDS_EVALUATION || it.plugin.action == ActionKind.RUNTIME_REFINES || it.needsEvaluation;
   }
 
   private static getCompatErrorMessage(compat: CompatResult): string {

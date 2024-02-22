@@ -13,9 +13,14 @@ generated_code = true
 ij_formatter_enabled = false
 
 [*.{js,ts,json,yml}]
-
 ij_editorconfig_space_after_comma = true
 ij_any_space_after_colon = true
+ij_yaml_sequence_on_new_line = false
+ij_json_array_wrapping = off
+ij_json_object_wrapping = off
+ij_json_spaces_within_braces = false
+ij_json_spaces_within_brackets = false
+ij_json_wrap_long_lines = false
 
 [*.{js,ts}]
 ij_typescript_enforce_trailing_comma = whenmultiline

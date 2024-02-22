@@ -8,6 +8,9 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export type RefAware = { $ref: string };
 
+/**
+ * Would be good to have the root as a generic, and make it linked to obj somehow, so we can reason about what kind of object it is.
+ */
 export type Dereferenced<out T> = { obj: T, root: object, hash?: string | undefined, mix?: boolean | undefined; };
 
 export type UriHash = { uri: string, hash: string };

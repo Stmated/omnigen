@@ -13,15 +13,18 @@ import {
   ZodNull,
   ZodNullable,
   ZodNumber,
-  ZodObject, ZodOptional,
+  ZodObject,
+  ZodOptional,
   ZodPipeline,
   ZodRawShape,
   ZodRecord,
-  ZodString, ZodType,
+  ZodString,
+  ZodType,
   ZodTypeAny,
   ZodUndefined,
   ZodUnion,
   ZodUnionOptions,
+  ZodUnknown,
 } from 'zod';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -44,7 +47,7 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class ZodUtils {
 
-  public static isCompatibleWith(expected: ZodTypeAny, actual: ZodTypeAny, path: string[] = []): CompatResult {
+  public static isCompatibleWith(expected: ZodTypeAny | ZodCustomNotSet, actual: ZodTypeAny | ZodCustomNotSet, path: string[] = [], silent = false): CompatResult {
 
     if (expected instanceof ZodNullable && actual instanceof ZodNull) {
       return {v: Compat.SAME};
@@ -52,56 +55,45 @@ export class ZodUtils {
       return {v: Compat.SAME};
     }
 
-    expected = ZodUtils.getBaseType(expected, true);
-    actual = ZodUtils.getBaseType(actual, true);
+    expected = ZodUtils.getBaseType(expected, false);
+    actual = ZodUtils.getBaseType(actual, false);
 
     if (expected instanceof ZodObject && actual instanceof ZodObject) {
       return ZodUtils.isObjectCompatibleWith(expected, actual, path);
-    } else if (expected instanceof ZodAny && actual instanceof ZodObject) {
+    } else if (ZodUtils.isUnknownOrAny(expected)) {
+      if (actual instanceof ZodCustomNotSet || actual instanceof ZodUndefined) {
+        return this.createError(Compat.DIFF, `Expected 'any', then Not-Set and Undefined are not allowed`, path);
+      }
+
       return {v: Compat.SAME};
+    } else if (expected instanceof ZodOptional) {
+
+      if (actual instanceof ZodOptional) {
+        return ZodUtils.isCompatibleWith(expected.unwrap(), actual.unwrap(), path, silent);
+      } else if (actual instanceof ZodCustomNotSet) {
+        return this.createError(Compat.NEEDS_EVALUATION, `Actual is not set, expected is optional, will need eval`, path); // {v: Compat.NEEDS_EVALUATION};
+      } else if (actual instanceof ZodUndefined) {
+        return {v: Compat.SAME};
+      } else {
+        return ZodUtils.isCompatibleWith(expected.unwrap(), actual, path, silent);
+        // return this.createError(Compat.DIFF, `Expected optional ${ZodUtils.getBaseType(expected.unwrap())._def.typeName} not compatible with ${actual._def.typeName}`, path);
+      }
+
     } else if (expected instanceof ZodRecord && actual instanceof ZodRecord) {
       return ZodUtils.isRecordCompatibleWith(expected, actual);
     } else if (expected instanceof ZodRecord && actual instanceof ZodObject) {
-
-      const key = ZodUtils.getBaseType(expected.keySchema);
-      const value = ZodUtils.getBaseType(expected.valueSchema);
-
-      if (key instanceof ZodString && value instanceof ZodAny) {
-        return {v: Compat.SAME};
-      }
-
-      const message = `Actual object is not comaptible with Record<${key._def.typeName}, ${value._def.typeName}>`;
-
-      logger.warn(message);
-      return this.createError(Compat.DIFF, message, path);
+      return ZodUtils.isRecordCompatibleWithObject(expected, path);
     } else if (expected instanceof ZodLiteral && actual instanceof ZodLiteral) {
-      const v = (expected.value == actual.value) ? Compat.SAME : Compat.DIFF;
-      return {v};
+      return (expected.value == actual.value) ? {v: Compat.SAME} : this.createError(Compat.DIFF, `${expected.value} != ${actual.value}`, path);
     } else if (expected instanceof ZodLiteral) {
       return {v: Compat.NEEDS_EVALUATION};
-    } else if (actual instanceof ZodLiteral) {
-      switch (typeof actual.value) {
-        case 'string':
-          return expected instanceof ZodString ? {v: Compat.SAME} : {v: Compat.DIFF};
-        case 'number':
-          return expected instanceof ZodNumber ? {v: Compat.SAME} : {v: Compat.DIFF};
-        case 'boolean':
-          return expected instanceof ZodBoolean ? {v: Compat.SAME} : {v: Compat.DIFF};
-        case 'undefined':
-          return expected instanceof ZodUndefined ? {v: Compat.SAME} : {v: Compat.DIFF};
-        default: {
-          logger.warn(`Unknown zod literal combo ${expected} - ${actual}`);
-        }
-      }
     } else if (expected instanceof ZodString && actual instanceof ZodString) {
       return {v: Compat.SAME};
     } else if (expected instanceof ZodNumber && actual instanceof ZodNumber) {
       return {v: Compat.SAME};
-    } else if (expected instanceof ZodUndefined && actual instanceof ZodUndefined) {
+    } else if (expected instanceof ZodUndefined && (actual instanceof ZodUndefined || actual instanceof ZodCustomNotSet)) {
       return {v: Compat.SAME};
     } else if (expected instanceof ZodBoolean && actual instanceof ZodBoolean) {
-      return {v: Compat.SAME};
-    } else if (expected instanceof ZodAny && actual instanceof ZodAny) {
       return {v: Compat.SAME};
     } else if (expected instanceof ZodIntersection) {
       return ZodUtils.isCompatibleWith(ZodUtils.flattenIntersection(expected, path), expected, path);
@@ -115,14 +107,64 @@ export class ZodUtils {
       return ZodUtils.isCompatibleWith(ZodUtils.getBaseType(expected.element), ZodUtils.getBaseType(actual.element));
     } else if (expected instanceof ZodEnum && actual instanceof ZodEnum) {
       return ZodUtils.isEnumCompatible(expected, actual, path);
+    } else if (expected instanceof ZodEnum) {
+
+      if (actual instanceof ZodString) {
+        return {v: Compat.NEEDS_EVALUATION};
+      } else if (actual instanceof ZodLiteral) {
+        const actualAsEnum = z.enum([actual.value]);
+        return ZodUtils.isEnumCompatible(expected, actualAsEnum, path);
+      }
+
+      if (!silent) {
+        logger.warn(`Possible enum comparison improvement needed for ${expected._def.typeName} vs ${actual._def.typeName}`);
+      }
     } else if (expected instanceof ZodFunction && actual instanceof ZodFunction) {
       // We do not care to compare functions. They should be the same. So far :)
       return {v: Compat.SAME};
+    } else if (actual instanceof ZodLiteral) {
+      return ZodUtils.isZodCompatibleWithJavaValue(expected, actual.value, actual._def.typeName, path);
     } else {
       logger.warn(`Unknown zod type combo ${expected._def.typeName} - ${actual._def.typeName}`);
     }
 
     return {v: Compat.DIFF};
+  }
+
+  private static isZodCompatibleWithJavaValue(zodType: ZodTypeAny | ZodCustomNotSet, literalValue: unknown, literalTypeName: string, path: string[]): CompatResult {
+
+    switch (typeof literalValue) {
+      case 'string':
+        return zodType instanceof ZodString ? {v: Compat.SAME} : {v: Compat.DIFF};
+      case 'number':
+        return zodType instanceof ZodNumber ? {v: Compat.SAME} : {v: Compat.DIFF};
+      case 'boolean':
+        return zodType instanceof ZodBoolean ? {v: Compat.SAME} : {v: Compat.DIFF};
+      case 'undefined':
+        return zodType instanceof ZodUndefined ? {v: Compat.SAME} : {v: Compat.DIFF};
+      default: {
+        return this.createError(Compat.DIFF, `Unknown zod literal combo ${zodType._def.typeName} - ${literalTypeName}`, path);
+      }
+    }
+  }
+
+  private static isRecordCompatibleWithObject(expected: ZodRecord, path: string[]): CompatResult {
+
+    const key = ZodUtils.getBaseType(expected.keySchema);
+    const value = ZodUtils.getBaseType(expected.valueSchema);
+
+    if (key instanceof ZodString && ZodUtils.isUnknownOrAny(value)) {
+      return {v: Compat.SAME};
+    }
+
+    const message = `Actual object is not comaptible with Record<${key._def.typeName}, ${value._def.typeName}>`;
+
+    logger.warn(message);
+    return this.createError(Compat.DIFF, message, path);
+  }
+
+  private static isUnknownOrAny(type: ZodTypeAny | ZodCustomNotSet): type is ZodAny | ZodUnknown {
+    return type instanceof ZodAny || type instanceof ZodUnknown;
   }
 
   private static createError(diff: Compat, message: string, path: string[]): CompatResult {
@@ -134,7 +176,7 @@ export class ZodUtils {
     };
   }
 
-  private static getBaseType(type: ZodTypeAny, resolveOptional = false): ZodTypeAny {
+  private static getBaseType(type: ZodTypeAny | ZodCustomNotSet, resolveOptional = false): ZodTypeAny | ZodCustomNotSet {
 
     if (type instanceof ZodDefault) {
       return ZodUtils.getBaseType(type.removeDefault(), resolveOptional);
@@ -210,17 +252,25 @@ export class ZodUtils {
       const newPath = [...(path ?? []), key];
       const expectedProp = ZodUtils.getBaseType(expectedShape[key]);
 
-      if (!(key in actualShape)) {
-        if (expectedProp instanceof ZodUndefined || expectedProp instanceof ZodOptional) {
-          // If the key is missing, then Undefined or Optional is okay.
-          // TODO: This might not be correct; ZodUndefined should probably mean it must not exist
-          continue;
-        } else {
-          return ZodUtils.createError(Compat.DIFF, `Missing path '${newPath.join('.')}'`, newPath);
-        }
-      }
+      // if (!(key in actualShape)) {
+      //
+      //
+      //   if (expectedProp instanceof ZodUndefined) {
+      //     // If the key is missing, then Undefined is okay.
+      //     // TODO: This might not be correct; ZodUndefined should probably mean it must not exist
+      //     continue;
+      //   } else if (expectedProp instanceof ZodOptional) {
+      //     const optionalCompat = this.createError(Compat.NEEDS_EVALUATION, `Evaluation needed on ${newPath.join(' -> ')}`, newPath);
+      //     if (optionalCompat.v > worstCompat.v) {
+      //       worstCompat = optionalCompat;
+      //     }
+      //     continue;
+      //   } else {
+      //     return ZodUtils.createError(Compat.DIFF, `Missing path '${newPath.join('.')}'`, newPath);
+      //   }
+      // }
 
-      const actualProp = actualShape[key]; // ZodUtils.getBaseType();
+      const actualProp = actualShape[key] ?? new ZodCustomNotSet(); // z.undefined();
 
       const propCompat = ZodUtils.isCompatibleWith(expectedProp, actualProp, newPath);
 
@@ -263,7 +313,6 @@ export class ZodUtils {
     // eslint-disable-next-line guard-for-in
     for (const [expectedKey, expectedValue] of expectedEntries) {
 
-      // const expectedValue = expectedEntries[expectedKey];
       const actualValue = actual.enum[expectedKey];
 
       if (expectedValue !== actualValue) {
@@ -281,7 +330,7 @@ export class ZodUtils {
     return {v: Compat.SAME};
   }
 
-  private static isUnionCompatibleWith(union: ZodUnion<ZodUnionOptions>, other: ZodTypeAny, path: string[]): CompatResult {
+  private static isUnionCompatibleWith(union: ZodUnion<ZodUnionOptions>, other: ZodTypeAny | ZodCustomNotSet, path: string[]): CompatResult {
 
     let worstCompat: CompatResult = {
       v: Compat.SAME,
@@ -289,7 +338,7 @@ export class ZodUtils {
 
     for (const option of union.options) {
 
-      const result = ZodUtils.isCompatibleWith(option, other, path);
+      const result = ZodUtils.isCompatibleWith(option, other, path, true);
       if (result.v == Compat.SAME) {
         return result;
       }
@@ -302,33 +351,135 @@ export class ZodUtils {
     return worstCompat;
   }
 
-  public static createZodSchemaFromObject(obj: Record<string, any>, literal = false) {
-    const schema: Record<string, ZodType> = {};
+  public static createZodSchemaFromObject<V>(
+    value: V,
+    literal = false,
+    mapper?: MapperFn<V>,
+    maxDepth = 4,
+    valuePath: unknown[] = [],
+    keyPath: string[] = [],
+  ): ZodType {
 
-    for (const [key, value] of Object.entries(obj)) {
-      try {
-        if (typeof value === 'string') {
-          schema[key] = literal ? z.literal(value) : z.string();
-        } else if (typeof value === 'number') {
-          schema[key] = literal ? z.literal(value) : z.number();
-        } else if (typeof value === 'boolean') {
-          schema[key] = literal ? z.literal(value) : z.boolean();
-        } else if (Array.isArray(value)) {
+    if (valuePath.length >= maxDepth) {
+      return z.any();
+    }
 
-          // For simplicity, this assumes all the array elements are of the same type
-          if (value.length == 0) {
-            schema[key] = z.array(z.any());
-          } else {
-            schema[key] = z.array(ZodUtils.createZodSchemaFromObject(value[0]));
-          }
-        } else if (typeof value === 'object') {
-          schema[key] = ZodUtils.createZodSchemaFromObject(value);
-        }
-      } catch (ex) {
-        throw new Error(`Could not convert ${key} with value ${value} to a Zod type`, {cause: ex});
+    if (mapper) {
+
+      const mapped = mapper({v: value, keyPath: keyPath});
+      if (mapped) {
+        return mapped;
       }
     }
 
-    return z.object(schema);
+    if (valuePath.includes(value)) {
+      throw new RecursiveObjectError();
+    }
+
+    if (Array.isArray(value)) {
+
+      // For simplicity, this assumes all the array elements are of the same type
+      if (value.length == 0) {
+        return z.array(z.unknown());
+      } else {
+        try {
+          valuePath.push(value);
+          keyPath.push('0');
+          return z.array(ZodUtils.createZodSchemaFromObject(value[0], literal, mapper, maxDepth, valuePath, keyPath));
+        } finally {
+          keyPath.pop();
+          valuePath.pop();
+        }
+      }
+    } else if (value && typeof value == 'object') {
+
+      const className = value?.constructor?.name;
+      if (className && className.toLowerCase() != 'object') {
+        return z.record(z.string(), z.unknown());
+      }
+
+      const schema: Record<string, ZodType> = {};
+      for (const [propKey, propValue] of Object.entries(value)) {
+
+        if (propKey.startsWith('_')) {
+          continue;
+        }
+
+        try {
+          valuePath.push(value);
+          keyPath.push(propKey);
+          schema[propKey] = ZodUtils.createZodSchemaFromObject(propValue, literal, mapper, maxDepth, valuePath, keyPath);
+        } catch (ex) {
+
+          if (ex instanceof RecursiveObjectError) {
+
+            // Since this object contains recursive properties, it is likely too advanced to be useful to represent as a Zod type.
+            return z.record(z.string(), z.unknown());
+          }
+
+          throw new Error(`Could not convert ${propKey} with value ${value} to a Zod type`, {cause: ex});
+        } finally {
+          keyPath.pop();
+          valuePath.pop();
+        }
+      }
+
+      return z.object(schema);
+    } else if (typeof value === 'string') {
+      return literal ? z.literal(value) : z.string();
+    } else if (typeof value === 'number') {
+      return literal ? z.literal(value) : z.number();
+    } else if (typeof value === 'boolean') {
+      return literal ? z.literal(value) : z.boolean();
+    } else if (typeof value === 'bigint') {
+      return literal ? z.literal(value) : z.bigint();
+    } else if (typeof value === 'function') {
+      return z.function();
+    } else if (typeof value === 'undefined') {
+      return z.undefined();
+    } else if (typeof value === 'symbol') {
+      return z.symbol();
+    } else {
+      throw new Error(`Unknown type ${typeof value}`);
+    }
   }
+}
+
+export interface MapperArgs<V> {
+  v: V,
+  keyPath: string[]
+}
+
+interface NotSetDef {
+  typeName: string;
+}
+
+class ZodCustomNotSet {
+
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  _def: NotSetDef = {
+    typeName: 'NotSet',
+  };
+}
+
+// export interface ZodNotSetDef extends ZodTypeDef {
+//   typeName: ZodFirstPartyTypeKind.ZodUndefined;
+// }
+// export class ZodNotSet extends ZodType<undefined, ZodNotSetDef> {
+//   // eslint-disable-next-line @typescript-eslint/naming-convention
+//   _parse(input: ParseInput): ParseReturnType<this['_output']> {
+//     return {
+//       status: 'valid',
+//       value: undefined,
+//     };
+//   }
+//
+//   params?: RawCreateParams;
+//   // static create: (params?: RawCreateParams) => ZodNotSet;
+// }
+
+export type MapperFn<V> = (args: MapperArgs<V>) => ZodType | undefined;
+
+class RecursiveObjectError extends Error {
+
 }

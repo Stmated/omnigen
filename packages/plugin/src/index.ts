@@ -1,6 +1,6 @@
-export * from './PluginManager';
-import {plugins} from './EntrypointPlugin';
+import {PluginAutoRegistry} from '@omnigen/core-plugin';
+// import {StdOptionsPlugin} from './EntrypointPlugin.ts';
 
-export default {
-  init: () => plugins,
-};
+export * from './PluginManager';
+
+// export default PluginAutoRegistry.register([StdOptionsPlugin]);

@@ -124,9 +124,6 @@ importers:
         specifier: ^3.22.4
         version: 3.22.4
     devDependencies:
-      '@jest/globals':
-        specifier: ^29.7.0
-        version: 29.7.0
       '@omnigen/config-typescript':
         specifier: workspace:*
         version: link:../../packages/config-typescript
@@ -299,9 +296,6 @@ importers:
         specifier: ^3.22.4
         version: 3.22.4
     devDependencies:
-      '@jest/globals':
-        specifier: ^29.7.0
-        version: 29.7.0
       '@omnigen/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
@@ -368,6 +362,9 @@ importers:
       ts-json-schema-generator:
         specifier: ^1.2.0
         version: 1.2.0
+      yaml:
+        specifier: ^2.3.4
+        version: 2.3.4
       zod:
         specifier: ^3.22.4
         version: 3.22.4
@@ -564,6 +561,9 @@ importers:
       '@omnigen/core-log':
         specifier: workspace:*
         version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
       '@omnigen/core-util':
         specifier: workspace:*
         version: link:../core-util
@@ -576,6 +576,9 @@ importers:
       json-schema:
         specifier: ^0.4.0
         version: 0.4.0
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
     devDependencies:
       '@omnigen/config-typescript':
         specifier: workspace:*
@@ -584,11 +587,11 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-custom
       '@types/json-pointer':
-        specifier: ^1.0.31
-        version: 1.0.31
+        specifier: ^1.0.34
+        version: 1.0.34
       '@types/json-schema':
-        specifier: ^7.0.11
-        version: 7.0.11
+        specifier: ^7.0.15
+        version: 7.0.15
       typescript:
         specifier: ^5.3.3
         version: 5.3.3
@@ -2242,8 +2245,15 @@ packages:
     resolution: {integrity: sha512-hTPul7Um6LqsHXHQpdkXTU7Oysjsf+9k4Yfmg6JhSKG/jj9QuQGyMUdj6trPH6WHiIdxw7nYSROgOxeFmCVK2w==}
     dev: true
 
+  /@types/json-pointer@1.0.34:
+    resolution: {integrity: sha512-JRnWcxzXSaLei98xgw1B7vAeBVOrkyw0+Rt9j1QoJrczE78OpHsyQC8GNbuhw+/2vxxDe58QvWnngS86CoIbRg==}
+    dev: true
+
   /@types/json-schema@7.0.11:
     resolution: {integrity: sha512-wOuvG1SN4Us4rez+tylwwwCV1psiNVOkJeM3AUWUNWg/jDQY2+HE/444y5gc+jBmRqASOm2Oeh5c1axHobwRKQ==}
+
+  /@types/json-schema@7.0.15:
+    resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
   /@types/node-fetch@2.6.2:
     resolution: {integrity: sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A==}
@@ -2420,7 +2430,7 @@ packages:
     peerDependencies:
       eslint: ^6.0.0 || ^7.0.0 || ^8.0.0
     dependencies:
-      '@types/json-schema': 7.0.11
+      '@types/json-schema': 7.0.15
       '@types/semver': 7.3.13
       '@typescript-eslint/scope-manager': 5.50.0
       '@typescript-eslint/types': 5.50.0
@@ -2441,7 +2451,7 @@ packages:
       eslint: ^6.0.0 || ^7.0.0 || ^8.0.0
     dependencies:
       '@eslint-community/eslint-utils': 4.3.0(eslint@8.36.0)
-      '@types/json-schema': 7.0.11
+      '@types/json-schema': 7.0.15
       '@types/semver': 7.3.13
       '@typescript-eslint/scope-manager': 5.55.0
       '@typescript-eslint/types': 5.55.0
@@ -5819,6 +5829,11 @@ packages:
 
   /yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
+
+  /yaml@2.3.4:
+    resolution: {integrity: sha512-8aAvwVUSHpfEqTQ4w/KMlf3HcRdt50E5ODIQJBw1fQ5RL34xabzxtUlzTXVqc4rkZsPbvrXKWnABCD7kWSmocA==}
+    engines: {node: '>= 14'}
+    dev: false
 
   /yargs-parser@21.1.1:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}

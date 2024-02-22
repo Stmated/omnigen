@@ -1,8 +1,6 @@
-import {JSONSchema7Definition} from 'json-schema';
 import {TypeName} from './TypeName';
 import {OmniTypeKind} from './OmniTypeKind.ts';
-
-export type JSONSchema7Items = JSONSchema7Definition | JSONSchema7Definition[] | undefined;
+import {OmniPrimitiveKind} from './OmniPrimitiveKind.ts';
 
 export interface OmniParameter {
   name: string;
@@ -79,40 +77,26 @@ export interface OmniProperty {
 
 export type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<OmniProperty, 'owner'>>;
 
-export enum OmniPrimitiveKind {
-  NUMBER = 'NUMBER',
-  INTEGER = 'INTEGER',
-  INTEGER_SMALL = 'INTEGER_SMALL',
-  DECIMAL = 'DECIMAL',
-  DOUBLE = 'DOUBLE',
-  FLOAT = 'FLOAT',
-  LONG = 'LONG',
-  STRING = 'STRING',
-  CHAR = 'CHAR',
-  BOOL = 'BOOL',
-  VOID = 'VOID',
-  NULL = 'NULL',
-}
-
 // TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
 
 export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType | OmniArrayTypesByPositionType;
 
 export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
 export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
-export type OmniSubtypeCapableType = OmniObjectType
+export type OmniSubTypeCapableType = OmniObjectType
   | OmniEnumType
   | OmniInterfaceType
-  | OmniExternalModelReferenceType<OmniSubtypeCapableType>
+  | OmniExternalModelReferenceType<OmniSubTypeCapableType>
   ;
 
 /**
  * TODO: Not a good name. Need to make it clearer that an Object can be an Interface in a target language
  *        And that this type represents both possibilities.
  */
-export type OmniPotentialInterfaceType = OmniInterfaceType | OmniObjectType;
+export type OmniInterfaceOrObjectType = OmniInterfaceType | OmniObjectType;
 
-// This might need to be moved to be more language-specific, since it is probably not true for most languages
+// TODO: This need to be moved to be more language-specific, since it is not true for many languages
+//
 export type OmniSuperTypeCapableType = OmniObjectType
   | OmniGenericTargetType
   | OmniCompositionType<OmniSuperTypeCapableType, CompositionKind>
@@ -200,7 +184,7 @@ export interface OmniHardcodedReferenceType extends OmniBaseType<'HARDCODED_REFE
   fqn: string;
 }
 
-export interface OmniExternalModelReferenceType<TType extends OmniType> extends OmniBaseType<'EXTERNAL_MODEL_REFERENCE'> {
+export interface OmniExternalModelReferenceType<TType extends OmniType> extends OmniBaseType<typeof OmniTypeKind.EXTERNAL_MODEL_REFERENCE>, OmniNamedType {
   model: OmniModel;
   of: TType;
   name: TypeName;
@@ -285,13 +269,18 @@ export interface OmniObjectType extends OmniBaseType<'OBJECT'>, OmniNamedType {
   subTypeHints?: OmniSubTypeHint[];
 
   properties: OmniProperty[];
+
+  /**
+   * In difference to JsonSchema, this needs to be specifically `true` to allow enable additional properties
+   */
   additionalProperties?: boolean | undefined;
 }
 
 export type OmniPrimitiveConstantValue = string | boolean | number
 
-export interface OmniPrimitiveBaseType extends OmniBaseType<'PRIMITIVE'> {
+export interface OmniPrimitiveBaseType extends OmniBaseType<'PRIMITIVE'>, OmniOptionallyNamedType {
 
+  name?: TypeName;
   primitiveKind: OmniPrimitiveKind;
   nullable?: boolean;
   value?: OmniPrimitiveConstantValue | null | undefined;
@@ -302,20 +291,20 @@ export interface OmniPrimitiveBaseType extends OmniBaseType<'PRIMITIVE'> {
 }
 
 export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveKind.NULL;
+  primitiveKind: typeof OmniPrimitiveKind.NULL;
   nullable?: true;
   value?: null;
   literal?: true;
 }
 
 export interface OmniPrimitiveVoidType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveKind.VOID;
+  primitiveKind: typeof OmniPrimitiveKind.VOID;
   nullable?: true;
   value?: undefined;
   literal?: true;
 }
 
-export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKind, OmniPrimitiveKind.NULL | OmniPrimitiveKind.VOID>;
+export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKind, typeof OmniPrimitiveKind.NULL | typeof OmniPrimitiveKind.VOID>;
 
 export interface OmniPrimitiveTangibleNullableType extends OmniPrimitiveBaseType {
   primitiveKind: OmniPrimitiveTangibleKind;
@@ -343,13 +332,13 @@ export type OmniPrimitiveType =
   | OmniPrimitiveNonNullableType;
 
 export type AllowedEnumTsTypes = number | string;
-export type OmniAllowedEnumPrimitiveKinds = OmniPrimitiveKind.STRING
-  | OmniPrimitiveKind.INTEGER
-  | OmniPrimitiveKind.INTEGER_SMALL
-  | OmniPrimitiveKind.DOUBLE
-  | OmniPrimitiveKind.FLOAT
-  | OmniPrimitiveKind.DECIMAL
-  | OmniPrimitiveKind.NUMBER;
+export type OmniAllowedEnumPrimitiveKinds = typeof OmniPrimitiveKind.STRING
+  | typeof OmniPrimitiveKind.INTEGER
+  | typeof OmniPrimitiveKind.INTEGER_SMALL
+  | typeof OmniPrimitiveKind.DOUBLE
+  | typeof OmniPrimitiveKind.FLOAT
+  | typeof OmniPrimitiveKind.DECIMAL
+  | typeof OmniPrimitiveKind.NUMBER;
 
 export interface OmniEnumType extends OmniBaseType<'ENUM'>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];
@@ -528,9 +517,21 @@ export interface OmniLink {
 
 export interface OmniModel {
   name: string;
+
+  /**
+   * TODO: Remove the optionality, this should always be required to uniquely identify a model. Based on disk uri or remote web uri, etc
+   */
+  absoluteUri?: string;
+
   description?: string | undefined;
+  /**
+   * The version of the schema itself, and not of the originating source schema type's specification version.
+   */
   version: string;
-  schemaType: 'openrpc' | 'openapi' | 'other';
+  schemaType: 'openrpc' | 'openapi' | 'jsonschema' | 'other';
+  /**
+   * The version of the source schema
+   */
   schemaVersion: string;
   contact?: OmniContact | undefined;
   license?: OmniLicense | undefined;

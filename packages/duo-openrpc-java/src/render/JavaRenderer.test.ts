@@ -36,8 +36,6 @@ describe('Java Rendering', () => {
           `../parser-openrpc/examples/${fileName}`, {}, ZodCompilationUnitsContext,
         );
 
-        // const interpretation = new JavaInterpreter(result.options, JAVA_FEATURES).buildSyntaxTree(result.model, []);
-        //
         let baseDir: string;
 
         try {
@@ -45,17 +43,6 @@ describe('Java Rendering', () => {
         } catch (ex) {
           throw new Error(`Could not resolve path of ${fileName}`);
         }
-        //
-        // try {
-        //   if (fs.existsSync(baseDir)) {
-        //     fs.rmSync(baseDir, {recursive: true, force: true});
-        //   }
-        // } catch (ex) {
-        //   // Ignore any error here and just hope for the best
-        // }
-
-        // const renderer = new JavaRenderer(result.options);
-        // const renders = renderer.executeRender(interpretation);
 
         for (const cu of result.compilationUnits) {
 

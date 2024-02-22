@@ -1,6 +1,6 @@
 import {
   OmniDictionaryType, OmniGenericTargetType,
-  OmniPotentialInterfaceType,
+  OmniInterfaceOrObjectType,
   OmniType,
   OmniTypeKind,
   UnknownKind,
@@ -17,7 +17,7 @@ export class JavaAstUtils {
 
   private static readonly _JAVA_VISITOR = new JavaVisitor<void>();
 
-  public static addInterfaceProperties(type: OmniPotentialInterfaceType, body: Java.Block): void {
+  public static addInterfaceProperties(type: OmniInterfaceOrObjectType, body: Java.Block): void {
 
     const interfaceLikeTarget = (type.kind == OmniTypeKind.INTERFACE)
       ? type.of

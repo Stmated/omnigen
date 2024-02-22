@@ -1,0 +1,69 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "version": "1.0.0",
+    "title": "Petstore",
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {"url": "http://localhost:8080"}
+  ],
+  "methods": [
+    {
+      "name": "list_pets",
+      "summary": "List all pets",
+      "params": [
+        {"$ref": "#/components/contentDescriptors/limit_1to100"}
+      ],
+      "result": {
+        "name": "pets",
+        "description": "A paged array of pets",
+        "schema": {"$ref": "#/components/schemas/Pets"}
+      },
+      "errors": [
+        {"code": 100, "message": "pets busy"}
+      ]
+    },
+    {
+      "name": "get_pet",
+      "summary": "Info for a specific pet",
+      "params": [
+        {"$ref": "#/components/contentDescriptors/PetId"}
+      ],
+      "result": {
+        "name": "pet",
+        "description": "Expected response to a valid request",
+        "schema": {"$ref": "#/components/schemas/Pet"}
+      }
+    }
+  ],
+  "components": {
+    "contentDescriptors": {
+      "limit_1to100": {
+        "name": "limit",
+        "description": "How many items to return at one time (max 100)",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "PetId": {
+        "name": "petId",
+        "required": true,
+        "description": "The id of the pet to retrieve",
+        "schema": {"$ref": "./petstore-simple-jsonschema.json#/$defs/PetId"}
+      }
+    },
+    "schemas": {
+      "Pet": {"$ref": "./petstore-simple-jsonschema.json#/$defs/Pet"},
+      "Pets": {
+        "type": "array",
+        "items": {"$ref": "./petstore-simple-jsonschema.json#/$defs/Pet"}
+      }
+    }
+  }
+}

@@ -1,17 +1,20 @@
 import {
+  ActionKind,
   createPlugin,
+  LATER_IS_BETTER,
   PluginAutoRegistry,
   PluginScoreKind,
-  ZodModelContext, ZodModelTransformOptionsContext, ZodPackageOptionsContext, ZodRenderersContext,
-  ZodTargetContext, ZodTargetOptionsContext,
+  ZodModelContext,
+  ZodModelTransformOptionsContext,
+  ZodPackageOptionsContext,
+  ZodRenderersContext,
+  ZodTargetContext,
+  ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
 import {JavaInterpreter} from './interpret';
 import {InterfaceJavaModelTransformer} from './parse';
 import {JAVA_FEATURES, JavaRenderer, ZodJavaOptions} from './index.ts';
-import {
-  ZodAstNodeContext,
-  ZodParserOptions, ZodTargetFeatures,
-} from '@omnigen/core';
+import {ZodAstNodeContext, ZodParserOptions, ZodTargetFeatures} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 
@@ -25,7 +28,7 @@ export const ZodJavaOptionsContext = z.object({
 
 export const ZodJavaTargetContext = z.object({
   target: z.literal('java'),
-  targetFeatures: ZodTargetFeatures, // z.custom<typeof JAVA_FEATURES>(),
+  targetFeatures: ZodTargetFeatures,
 });
 
 export const ZodJavaInitContextIn = ZodModelContext
@@ -51,11 +54,12 @@ export type JavaOptionsContext = z.output<typeof ZodJavaOptionsContext>;
 export const JavaPluginInit = createPlugin(
   {
     name: 'java-init', in: ZodJavaInitContextIn, out: ZodJavaInitContextOut,
-    scoreModifier: (score, count, idx) => score * (idx / count),
+    action: ActionKind.SPLITS,
+    scoreModifier: LATER_IS_BETTER,
   },
   async ctx => {
 
-    if (ctx.target != 'java') {
+    if (ctx.target !== undefined && ctx.target != 'java') {
       return new z.ZodError([
         {code: 'custom', path: ['target'], message: `Target is not Java`},
       ]);
@@ -68,7 +72,7 @@ export const JavaPluginInit = createPlugin(
 
     return {
       ...ctx,
-      target: ctx.target,
+      target: 'java',
       javaOptions: javaOptions.data,
       targetFeatures: JAVA_FEATURES,
     } as const;

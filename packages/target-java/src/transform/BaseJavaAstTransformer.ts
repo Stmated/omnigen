@@ -12,7 +12,7 @@ import {
   OmniGenericSourceType,
   OmniModel,
   OmniOptionallyNamedType,
-  OmniPotentialInterfaceType,
+  OmniInterfaceOrObjectType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniType,
@@ -175,7 +175,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   }
 
   private transformInterface(
-    type: OmniPotentialInterfaceType,
+    type: OmniInterfaceOrObjectType,
     options: JavaAndTargetOptions,
     root: Java.JavaAstRootNode,
     prefix?: string,

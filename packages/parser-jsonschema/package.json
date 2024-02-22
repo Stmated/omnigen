@@ -17,13 +17,15 @@
     "@omnigen/core": "workspace:*",
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-util": "workspace:*",
+    "@omnigen/core-plugin": "workspace:*",
     "json-pointer": "^0.6.2",
     "json-schema": "^0.4.0",
-    "@open-rpc/meta-schema": "1.14.2"
+    "@open-rpc/meta-schema": "1.14.2",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/json-schema": "^7.0.11",
-    "@types/json-pointer": "^1.0.31",
+    "@types/json-schema": "^7.0.15",
+    "@types/json-pointer": "^1.0.34",
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "typescript": "^5.3.3",

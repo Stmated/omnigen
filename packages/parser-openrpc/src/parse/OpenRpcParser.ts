@@ -162,6 +162,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   private _requestParamsClass?: OmniObjectType; // Used
 
   private readonly _deref: Dereferencer<OpenrpcDocument>;
+
+  /**
+   * TODO: Remove! Should delegate to some central thing which can decide if it can handle the given URI/Object
+   */
   private readonly _jsonSchemaParser: JsonSchemaParser<OpenrpcDocument, JsonRpcParserOptions & ParserOptions>;
 
   private get doc(): OpenrpcDocument {

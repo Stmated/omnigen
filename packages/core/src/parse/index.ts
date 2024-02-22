@@ -28,3 +28,6 @@ export * from './TypeNameModifier.js';
 export * from './OmniTypeKind.ts';
 
 export * from './OmniTypeLibrary.ts';
+export * from './OmniModelLibrary.ts';
+export * from './OmniPrimitiveKind.ts';
+

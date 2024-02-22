@@ -5,18 +5,18 @@ import {
   OmniCompositionType,
   OmniModel,
   OmniObjectType,
-  OmniPotentialInterfaceType,
+  OmniInterfaceOrObjectType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
-  OmniSubtypeCapableType,
+  OmniSubTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   PackageOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options';
+import {DEFAULT_JAVA_OPTIONS} from '../options';
 import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -32,7 +32,7 @@ export type JavaPotentialClassType = OmniObjectType;
 type JavaSubXOR = OmniCompositionType<JavaSubTypeCapableType | OmniPrimitiveType, CompositionKind.XOR>;
 
 // NOTE: This might not be the best way to look at things. Is an XOR Composition really a subtype?
-export type JavaSubTypeCapableType = OmniSubtypeCapableType | JavaSubXOR;
+export type JavaSubTypeCapableType = OmniSubTypeCapableType | JavaSubXOR;
 
 // FIX: IT MUST ONLY BE POSSIBLE TO HAVE COMPOSITION KIND XOR!
 
@@ -853,9 +853,9 @@ export class JavaUtil {
    * The schema might say "This object extends types A, B, C" but the language only allows inheriting from "A".
    * It then needs to handle B and C as interfaces and then try to live up to that contract on the subtype of A.
    */
-  public static getSuperInterfacesOfSubType(_model: OmniModel, subType: JavaSubTypeCapableType): OmniPotentialInterfaceType[] {
+  public static getSuperInterfacesOfSubType(_model: OmniModel, subType: JavaSubTypeCapableType): OmniInterfaceOrObjectType[] {
 
-    const interfaces: OmniPotentialInterfaceType[] = [];
+    const interfaces: OmniInterfaceOrObjectType[] = [];
     if (subType.kind == OmniTypeKind.COMPOSITION && subType.compositionKind == CompositionKind.XOR) {
       // The XOR composition class does in Java not actually implement anything.
       // Instead it solves things by becoming a manual mapping class with different getters.
@@ -920,7 +920,7 @@ export class JavaUtil {
    * TypeGuard version of an otherwise expected 'isInterface' method.
    * Returns undefined if it does not have the potential of being an interface, otherwise the type casted.
    */
-  public static getAsInterface(model: OmniModel, type: OmniType): OmniPotentialInterfaceType | undefined {
+  public static getAsInterface(model: OmniModel, type: OmniType): OmniInterfaceOrObjectType | undefined {
 
     const unwrapped = OmniUtil.getUnwrappedType(type);
     if (unwrapped.kind == OmniTypeKind.INTERFACE) {
@@ -998,9 +998,9 @@ export class JavaUtil {
     });
   }
 
-  public static getInterfaces(model: OmniModel): OmniPotentialInterfaceType[] {
+  public static getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
 
-    const interfaces: OmniPotentialInterfaceType[] = [];
+    const interfaces: OmniInterfaceOrObjectType[] = [];
 
     OmniUtil.visitTypesDepthFirst(model, ctx => {
       const asInterface = JavaUtil.getAsInterface(model, ctx.type);
@@ -1063,11 +1063,11 @@ export class JavaUtil {
     return concreteClasses;
   }
 
-  public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubtypeCapableType, OmniSuperTypeCapableType[]> {
+  public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]> {
     return OmniUtil.getSubTypeToSuperTypesMap(model);
   }
 
-  public static getSuperTypeToSubTypesMap(model: OmniModel): Map<OmniSuperTypeCapableType, OmniSubtypeCapableType[]> {
+  public static getSuperTypeToSubTypesMap(model: OmniModel): Map<OmniSuperTypeCapableType, OmniSubTypeCapableType[]> {
     return OmniUtil.getSuperTypeToSubTypesMap(model);
   }
 
@@ -1075,9 +1075,9 @@ export class JavaUtil {
    * Get the types that implement the given class.
    * There is a difference between implementing (interface) and extending (class)
    */
-  public static getSubTypesOfInterface(model: OmniModel, interfaceType: OmniPotentialInterfaceType): OmniSubtypeCapableType[] {
+  public static getSubTypesOfInterface(model: OmniModel, interfaceType: OmniInterfaceOrObjectType): OmniSubTypeCapableType[] {
 
-    const subTypesOfInterface: OmniSubtypeCapableType[] = [];
+    const subTypesOfInterface: OmniSubTypeCapableType[] = [];
 
     const superTypeToSubTypeMap = JavaUtil.getSuperTypeToSubTypesMap(model);
     const subTypes = superTypeToSubTypeMap.get(interfaceType);

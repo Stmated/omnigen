@@ -1,5 +1,5 @@
 import {z, ZodError, ZodType} from 'zod';
-import {OmniModel, OmniTypeLibrary, Renderer, ZodModelTransformOptions, ZodOptions, ZodPackageOptions, ZodParserOptions, ZodTargetFeatures, ZodTargetOptions} from '@omnigen/core';
+import {OmniModel, OmniModelLibrary, OmniTypeLibrary, Renderer, ZodModelTransformOptions, ZodOptions, ZodPackageOptions, ZodParserOptions, ZodTargetFeatures, ZodTargetOptions} from '@omnigen/core';
 
 export enum PluginScoreKind {
   SUITABLE = 1,
@@ -20,7 +20,11 @@ export const ZOD_CONTEXT_TARGETS = z.object({
 });
 
 export const ZodTargetContext = z.object({
-  target: z.string(),
+  target: z.string().optional(),
+});
+
+export const ZodSourceContext = z.object({
+  source: z.string(),
 });
 
 export const ZodBaseContext = ZodArgumentsContext;
@@ -73,9 +77,15 @@ export const ZodTypeLibraryContext = z.object({
   types: z.custom<OmniTypeLibrary>(),
 });
 
+export const ZodModelLibraryContext = z.object({
+  models: z.custom<OmniModelLibrary>(),
+});
+
 export type BaseContext = z.infer<typeof ZodBaseContext>;
+export type FilesContext = z.infer<typeof ZodFilesContext>;
 export type FileContext = z.infer<typeof ZodFileContext>;
 export type TargetContext = z.infer<typeof ZodTargetContext>;
+export type SourceContext = z.infer<typeof ZodSourceContext>;
 export type ParserOptionsContext = z.output<typeof ZodParserOptionsContext>;
 export type ModelContext = z.infer<typeof ZodModelContext>;
 export type PackageOptionsContext = z.output<typeof ZodPackageOptionsContext>;
@@ -91,6 +101,11 @@ export enum ActionKind {
   RUNTIME_REFINES = 3,
 }
 
+/**
+ * Return Zod error if the plugin is not valid to run, but there is no real *error*.
+ *
+ * If something goes actually wrong, then throw a new `Error`.
+ */
 export type Plugin2ExecuteResult<CR extends ZodType> = Promise<z.output<CR> | ZodError>;
 
 export interface Plugin2<
@@ -109,6 +124,9 @@ export interface Plugin2<
 }
 
 export type ScoreModifier = ((score: PluginScoreKind, count: number, idx: number) => PluginScoreKind);
+
+export const EARLIER_IS_BETTER: ScoreModifier = (score, count, idx) => score * (1 - (idx / (count - 1)));
+export const LATER_IS_BETTER: ScoreModifier = (score, count, idx) => score * (idx / count);
 
 export function createPlugin<In extends ZodType, Out extends ZodType, Res extends Plugin2ExecuteResult<Out>>(
   options: {

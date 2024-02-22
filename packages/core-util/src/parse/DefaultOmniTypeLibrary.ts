@@ -5,7 +5,12 @@ export class DefaultOmniTypeLibrary implements OmniTypeLibrary {
 
   private readonly _types: OmniType[] = [];
 
-  public get(absoluteUri: string): OmniType | undefined {
+  public get(absoluteUri: string | undefined): OmniType | undefined {
+
+    if (!absoluteUri) {
+      return undefined;
+    }
+
     return this._types.find(it => it.absoluteUri == absoluteUri);
   }
 

@@ -1,5 +1,5 @@
 import {
-  CompositionKind,
+  CompositionKind, OMNI_GENERIC_FEATURES,
   OmniArrayPropertiesByPositionType,
   OmniArrayType,
   OmniCompositionType,
@@ -19,7 +19,7 @@ import {
   OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
-  OmniSubtypeCapableType,
+  OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
@@ -145,7 +145,7 @@ export class OmniUtil {
     return type as SmartUnwrappedType<T>;
   }
 
-  public static asSubType(type: OmniType | undefined): OmniSubtypeCapableType | undefined {
+  public static asSubType(type: OmniType | undefined): OmniSubTypeCapableType | undefined {
 
     if (!type) {
       return undefined;
@@ -203,7 +203,7 @@ export class OmniUtil {
       if (of) {
 
         // NOTE: This cast should not exist here, work needs to be done to make this all-the-way generic.
-        return type as OmniExternalModelReferenceType<OmniSubtypeCapableType>;
+        return type as OmniExternalModelReferenceType<OmniSubTypeCapableType>;
       } else {
         return undefined;
       }
@@ -288,7 +288,7 @@ export class OmniUtil {
     }
   }
 
-  public static getSuperTypes(_model: OmniModel, type: OmniSubtypeCapableType | undefined): OmniSuperTypeCapableType[] {
+  public static getSuperTypes(_model: OmniModel, type: OmniSubTypeCapableType | undefined): OmniSuperTypeCapableType[] {
 
     if (type) {
       const unwrapped = OmniUtil.getUnwrappedType(type);
@@ -309,9 +309,9 @@ export class OmniUtil {
   /**
    * Heavy operation, use sparingly
    */
-  public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubtypeCapableType, OmniSuperTypeCapableType[]> {
+  public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]> {
 
-    const map = new Map<OmniSubtypeCapableType, OmniSuperTypeCapableType[]>();
+    const map = new Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]>();
     OmniUtil.visitTypesDepthFirst(model, ctx => {
       const subType = OmniUtil.getUnwrappedType(OmniUtil.asSubType(ctx.type));
       if (!subType) {
@@ -336,11 +336,11 @@ export class OmniUtil {
   /**
    * Heavy operation, mostly useful for testing or diagnostics
    */
-  public static getSuperTypeToSubTypesMap(model: OmniModel): Map<OmniSuperTypeCapableType, OmniSubtypeCapableType[]> {
+  public static getSuperTypeToSubTypesMap(model: OmniModel): Map<OmniSuperTypeCapableType, OmniSubTypeCapableType[]> {
 
     // We just take the sub-to-super map and flip it around.
     const subToSuperMap = OmniUtil.getSubTypeToSuperTypesMap(model);
-    const superToSubMap = new Map<OmniSuperTypeCapableType, OmniSubtypeCapableType[]>();
+    const superToSubMap = new Map<OmniSuperTypeCapableType, OmniSubTypeCapableType[]>();
     for (const entry of subToSuperMap.entries()) {
 
       const subType = entry[0];
@@ -366,14 +366,14 @@ export class OmniUtil {
   /**
    * One type might have multiple supertypes. It depends on target language if it is supported or not.
    */
-  public static getSuperTypeHierarchy(model: OmniModel, type: OmniSubtypeCapableType | undefined): OmniSuperTypeCapableType[] {
+  public static getSuperTypeHierarchy(model: OmniModel, type: OmniSubTypeCapableType | undefined): OmniSuperTypeCapableType[] {
 
     const path: OmniSuperTypeCapableType[] = [];
     if (!type) {
       return path;
     }
 
-    const queue: OmniSubtypeCapableType[] = [type];
+    const queue: OmniSubTypeCapableType[] = [type];
     while (queue.length > 0) {
 
       const dequeued = queue.pop();
@@ -405,6 +405,10 @@ export class OmniUtil {
     }
   }
 
+  public static hasAdditionalProperties(type: OmniObjectType): boolean {
+    return (type.additionalProperties != undefined && type.additionalProperties);
+  }
+
   /**
    * Does not take into account any type that this type extends from.
    * Only checks the direct type, if it is empty and could in theory be removed.
@@ -415,7 +419,7 @@ export class OmniUtil {
   public static isEmptyType(type: OmniType): boolean {
 
     if (type.kind == OmniTypeKind.OBJECT) {
-      if (type.properties.length == 0 && (type.additionalProperties == undefined || !type.additionalProperties)) {
+      if (type.properties.length == 0 && !OmniUtil.hasAdditionalProperties(type)) { // (type.additionalProperties == undefined || !type.additionalProperties)) {
         return true;
       }
     }
@@ -1637,5 +1641,60 @@ export class OmniUtil {
   ): CommonDenominatorType<OmniType> | undefined {
 
     return Naming.unwrap(a.name) == Naming.unwrap(b.name) ? {type: a} : undefined;
+  }
+
+  public static mergeType<T extends OmniType>(from: T, to: T, lossless = true): T {
+
+    if (from.kind == OmniTypeKind.OBJECT && to.kind == OmniTypeKind.OBJECT) {
+
+      for (const fromProperty of (from.properties || [])) {
+        const toProperty = to.properties?.find(p => p.name == fromProperty.name);
+        if (!toProperty) {
+          // This is a new property, and can just be added to the 'to'.
+          OmniUtil.addPropertyToClassType(fromProperty, to);
+        } else {
+          // This property already exists, so we should try and find common type.
+          if (lossless) {
+            throw new Error(`Property ${toProperty.name} already exists, and merging should be lossless`);
+          } else {
+            OmniUtil.mergeTwoPropertiesAndAddToClassType(fromProperty, toProperty, to);
+          }
+        }
+      }
+    }
+
+    return to;
+  }
+
+  public static mergeTwoPropertiesAndAddToClassType(a: OmniProperty, b: OmniProperty, to: OmniObjectType): void {
+    const common = OmniUtil.getCommonDenominatorBetween(a.type, b.type, OMNI_GENERIC_FEATURES)?.type;
+    if (common) {
+      if (to.properties) {
+        const idx = to.properties.indexOf(b);
+        if (idx !== -1) {
+          to.properties.splice(idx, 1);
+        }
+      }
+      OmniUtil.addPropertyToClassType(a, to, common);
+    } else {
+
+      // TODO: Can we introduce generics here in some way?
+      const vsString = `${OmniUtil.describe(a.type)} vs ${OmniUtil.describe(b.type)}`;
+      const errMessage = `No common type for merging properties ${a.name}. ${vsString}`;
+      throw new Error(errMessage);
+    }
+  }
+
+  public static addPropertyToClassType(property: OmniProperty, toType: OmniObjectType, as?: OmniType): void {
+
+    if (!toType.properties) {
+      toType.properties = [];
+    }
+
+    toType.properties.push({
+      ...property,
+      owner: toType,
+      type: as || property.type,
+    });
   }
 }

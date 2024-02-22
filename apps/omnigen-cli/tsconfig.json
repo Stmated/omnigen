@@ -3,13 +3,33 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "strict": true,
-    "target": "es6",
-    "module": "ES2022",
+    "target": "ESNext",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "sourceMap": false,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "isolatedModules": true,
+    "preserveWatchOutput": true,
+
+    "strict": true,
+    "alwaysStrict": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+
+    "preserveConstEnums": true,
+
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "exactOptionalPropertyTypes": true,
+
+    "allowImportingTsExtensions": true,
+    "resolvePackageJsonExports": true,
+    "verbatimModuleSyntax": false
   },
   "include": ["./src/**/*.ts"]
 }

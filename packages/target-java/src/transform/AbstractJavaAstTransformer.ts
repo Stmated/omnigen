@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
-import {JavaOptions} from '../options';
+import {JavaOptions} from '../options/index.ts';
 import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
 import {JavaAstRootNode} from '../ast';

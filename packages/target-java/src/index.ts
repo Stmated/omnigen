@@ -4,7 +4,7 @@ import {z} from 'zod';
 export * from './visit';
 export * from './transform';
 export * from './interpret';
-export * from './options';
+export * from './options/index.ts';
 export * from './util';
 export * from './render';
 export * from './parse';

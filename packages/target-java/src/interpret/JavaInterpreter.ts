@@ -1,6 +1,6 @@
 import {AstNode, AstTransformer, TargetOptions} from '@omnigen/core';
 import {AbstractInterpreter} from '@omnigen/core-util';
-import {FieldAccessorMode, JavaOptions} from '../options';
+import {FieldAccessorMode, JavaOptions} from '../options/index.ts';
 import {
   AddConstructorJavaAstTransformer,
   AddGeneratedAnnotationAstTransformer,

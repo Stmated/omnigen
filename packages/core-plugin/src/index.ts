@@ -1,4 +1,4 @@
 
-export * from './PluginQualifier';
-export * from './PluginAutoRegistry';
-export * from './Plugin2';
+export * from './PluginQualifier.ts';
+export * from './PluginAutoRegistry.ts';
+export * from './Plugin2.ts';

@@ -57,11 +57,11 @@ import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as path from 'path';
-import {JsonRpcParserOptions} from '../options';
+import {JsonRpcParserOptions} from '../options/index.ts';
 import {JsonSchemaParser, SchemaToTypeResult} from '@omnigen/parser-jsonschema';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
-import {OpenRpcOptions, OpenRpcVersion} from '../options';
+import {OpenRpcOptions, OpenRpcVersion} from '../options/index.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 

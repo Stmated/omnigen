@@ -1,5 +1,5 @@
 
-export * from './SerializedInput';
-export * from './SerializedInputSource';
-export * from './DeserializedInput';
-export * from './SerializedInputDeserializer';
+export * from './SerializedInput.ts';
+export * from './SerializedInputSource.ts';
+export * from './DeserializedInput.ts';
+export * from './SerializedInputDeserializer.ts';

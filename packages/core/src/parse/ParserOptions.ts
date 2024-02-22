@@ -1,7 +1,7 @@
 import {
   ZodCoercedBoolean,
   ZodOptions,
-} from '../options';
+} from '../options/index.ts';
 import {z} from 'zod';
 
 export const ZodParserOptions = ZodOptions.extend({

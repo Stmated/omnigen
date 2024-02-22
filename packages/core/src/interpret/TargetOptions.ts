@@ -1,7 +1,7 @@
-import {getEnumValues, ZodCoercedBoolean, ZodCoercedNumber, ZodOptions} from '../options';
-import {CompressTypeLevel, OmniTypeKind} from '../parse';
-import {ZodOmniTypeNameReducer} from './OmniTypeNameReducer';
-import {CompressTypeNaming} from './CompressTypeNaming';
+import {getEnumValues, ZodCoercedBoolean, ZodCoercedNumber, ZodOptions} from '../options/index.ts';
+import {CompressTypeLevel, OmniTypeKind} from '../parse/index.ts';
+import {ZodOmniTypeNameReducer} from './OmniTypeNameReducer.ts';
+import {CompressTypeNaming} from './CompressTypeNaming.ts';
 import {z} from 'zod';
 
 // TODO: Introduce naming options for things like banning certain words? Like "Object" or "List" or something?

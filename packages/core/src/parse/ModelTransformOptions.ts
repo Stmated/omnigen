@@ -1,4 +1,4 @@
-import {ZodCoercedBoolean, ZodOptions} from '../options';
+import {ZodCoercedBoolean, ZodOptions} from '../options/index.ts';
 import {z} from 'zod';
 
 export const ZodModelTransformOptions = ZodOptions.extend({

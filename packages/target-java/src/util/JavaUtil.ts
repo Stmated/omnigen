@@ -16,7 +16,7 @@ import {
   PackageOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS} from '../options';
+import {DEFAULT_JAVA_OPTIONS} from '../options/index.ts';
 import {JavaVisitor} from '../visit';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';

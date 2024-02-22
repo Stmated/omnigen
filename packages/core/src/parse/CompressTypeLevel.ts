@@ -1,4 +1,4 @@
-import {ToEnum} from '../options';
+import {ToEnum} from '../options/index.ts';
 
 export const CompressTypeLevel = {
   EXACT: 'EXACT',

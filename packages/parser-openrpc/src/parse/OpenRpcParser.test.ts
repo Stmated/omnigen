@@ -5,7 +5,7 @@ import {OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '@omnigen/target-java';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.js';
 import {OmniUtil, SchemaFile} from '@omnigen/core-util';
-import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
+import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options/index.ts';
 import {describe, test, expect} from 'vitest';
 
 describe('Test Generic Model Creation', () => {

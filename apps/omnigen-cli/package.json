@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "npx tsc",
-    "dev": "npx tsc -w"
+    "dev": "npx tsc -w",
+    "bin": "ts-node-esm src/index.ts"
   },
   "dependencies": {
     "@omnigen/core": "workspace:*",

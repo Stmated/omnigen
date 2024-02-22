@@ -1,18 +1,11 @@
 import {z} from 'zod';
-import {AstNode} from '../ast';
+import {AstNode} from '../ast/index.ts';
 
-export * from './Booleanish';
-export * from './Options';
-export * from './OptionsParser';
-export * from './IPackageResolver';
-export * from './PackageOptions';
-export * from './Option';
-export * from './IncomingOptions';
-export * from './OptionsSource';
-export * from './OptionResolvers';
-export * from './IncomingResolver';
-export * from './OptionAdditions';
-export * from './OmitNever';
+export * from './Options.ts';
+export * from './IPackageResolver.ts';
+export * from './PackageOptions.ts';
+export * from './Option.ts';
+export * from './OptionsSource.ts';
 
 const ZodAstNode = z.custom<AstNode>(d => d != undefined && typeof d == 'object' && 'visit' in d);
 

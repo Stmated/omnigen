@@ -1,4 +1,4 @@
-import {ToEnum} from '../options';
+import {ToEnum} from '../options/index.ts';
 
 /**
  * TODO: Change this into the values being strings instead. Maybe a bit more memory, but easier to read

@@ -1,4 +1,4 @@
-import {IPackageResolver, ZodOptions} from '../options';
+import {IPackageResolver, ZodOptions} from '../options/index.ts';
 import {PackageResolverOptionsResolver} from './PackageResolverOptionsResolver.ts';
 import {z} from 'zod';
 

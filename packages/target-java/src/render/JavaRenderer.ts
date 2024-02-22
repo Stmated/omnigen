@@ -9,7 +9,7 @@ import {
 import * as Java from '../ast';
 import {AbstractJavaNode, GenericTypeDeclarationList, TokenType} from '../ast';
 import {JavaVisitFn, JavaVisitor} from '../visit';
-import {JavaOptions} from '../options';
+import {JavaOptions} from '../options/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaSubTypeCapableType} from '../util';
 import {OmniUtil} from '@omnigen/core-util';

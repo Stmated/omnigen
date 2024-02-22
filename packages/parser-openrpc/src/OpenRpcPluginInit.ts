@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {JsonRpcParserOptions, ZodJsonRpcParserOptions} from './options';
+import {JsonRpcParserOptions, ZodJsonRpcParserOptions} from './options/index.ts';
 import {createPlugin, ZodModelContext, ZodPackageOptionsContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
 import {ZodSchemaFileContext} from '@omnigen/core-util';
 import {OpenRpcParserBootstrapFactory} from './parse';

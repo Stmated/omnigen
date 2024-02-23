@@ -20,7 +20,6 @@
     "@omnigen/core-plugin": "workspace:*",
     "json-pointer": "^0.6.2",
     "json-schema": "^0.4.0",
-    "@open-rpc/meta-schema": "1.14.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {

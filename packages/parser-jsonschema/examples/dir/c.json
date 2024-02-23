@@ -9,9 +9,9 @@
     "$ref": "../b.json#/b_a/value"
   },
   "c_d": {
-    "$ref": "file:../b.json#/b_a/value"
+    "$ref": "../b.json#/b_a/value"
   },
   "c_e": {
-    "$ref": "file:../b.json#/b_b"
+    "$ref": "../b.json#/b_b"
   }
 }

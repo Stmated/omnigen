@@ -115,7 +115,7 @@ module.exports = {
             'selector': 'method',
             'leadingUnderscore': 'forbid',
             'trailingUnderscore': 'forbid',
-            'format': ['camelCase'],
+            'format': null,
           },
         ],
         'no-dupe-class-members': 0,

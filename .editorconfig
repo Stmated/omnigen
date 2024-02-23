@@ -36,6 +36,8 @@ ij_typescript_force_quote_style = true
 
 trim_trailing_whitespace = true
 
+ij_any_blank_lines_around_method_in_interface = 0
+
 [*.{java,kt,kts}]
 indent_style = space
 indent_size = 2

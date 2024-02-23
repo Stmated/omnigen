@@ -23,19 +23,18 @@ import {
   TypeName,
 } from '@omnigen/core';
 
-// TODO: Remove this! We should not give one single crap about OpenRpc's version of JsonSchema here.
-//  More OpenRpc-specific things into a JsonRpc-specific parser. Then remove the dependency from this package!
-import {JSONSchema} from '@open-rpc/meta-schema';
-
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
+// TODO: Move into OpenApiJsonSchemaParser
 import {DiscriminatorAware} from './DiscriminatorAware.js';
 import {Case, CompositionUtil, Dereferenced, Dereferencer, Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
+import {DefaultJsonSchema7Visitor} from '../visit/DefaultJsonSchema7Visitor.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 export type SchemaToTypeResult = { type: OmniType; canInline: boolean };
 
+// TODO: Move into OpenApiJsonSchemaParser
 export interface PostDiscriminatorMapping {
   type: OmniObjectType;
   schema: Dereferenced<DiscriminatorAwareSchema>;
@@ -43,6 +42,7 @@ export interface PostDiscriminatorMapping {
 
 export type AnyJSONSchema = JSONSchema7 | JSONSchema6 | JSONSchema4;
 export type AnyJsonDefinition = JSONSchema7Definition | JSONSchema6Definition | JSONSchema4;
+// TODO: Move into OpenApiJsonSchemaParser
 export type DiscriminatorAwareSchema = boolean | (AnyJSONSchema & DiscriminatorAware);
 export type AnyJsonSchemaItems = AnyJsonDefinition | AnyJsonDefinition[] | undefined;
 
@@ -129,8 +129,6 @@ export class NewJsonSchemaParser implements Parser {
       }
     }
   }
-
-
 }
 
 /**
@@ -468,7 +466,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return value as R;
   }
 
-  public unwrapJsonSchema(schema: Dereferenced<AnyJsonDefinition | JSONSchema>): Dereferenced<AnyJSONSchema> {
+  public unwrapJsonSchema(schema: Dereferenced<AnyJsonDefinition>): Dereferenced<AnyJSONSchema> {
     if (typeof schema.obj == 'boolean') {
       if (schema.obj) {
         return {obj: {}, root: schema.root, hash: schema.hash, mix: schema.mix};

@@ -1,0 +1,63 @@
+import {JSONSchema7, JSONSchema7Array, JSONSchema7Definition, JSONSchema7Object, JSONSchema7Type, JSONSchema7TypeName} from 'json-schema';
+
+export type ToSingle<T> = T extends Array<infer I> ? I : T;
+export type JSONSchema7TypePrimitive = Exclude<JSONSchema7Type, JSONSchema7Object | JSONSchema7Array>;
+
+export interface JsonSchema7Visitor {
+
+  visit(v: JSONSchema7Definition, visitor: this): JSONSchema7Definition | undefined;
+  visit_jsonSchemaType(v: JSONSchema7Type, visitor: this): JSONSchema7Type | undefined;
+  visit_jsonSchemaArray(v: JSONSchema7Array, visitor: this): JSONSchema7Array | undefined;
+  visit_jsonSchemaObject(v: JSONSchema7Object, visitor: this): JSONSchema7Object | undefined;
+  visit_jsonSchemaTypePrimitive(v: JSONSchema7TypePrimitive, visitor: this): JSONSchema7TypePrimitive | undefined;
+  visit_jsonSchemaTypeName(v: JSONSchema7TypeName, visitor: this): JSONSchema7TypeName | undefined;
+  visit_definitions(v: JSONSchema7['definitions'], visitor: this): JSONSchema7['definitions'] | undefined;
+  visit_schemaVersion(v: JSONSchema7['$schema'], visitor: this): JSONSchema7['$schema'] | undefined;
+  visit_schemaId(v: JSONSchema7['$id'], visitor: this): JSONSchema7['$id'] | undefined;
+  visit_additionalItems(v: JSONSchema7['additionalItems'], visitor: this): JSONSchema7['additionalItems'] | undefined;
+  visit_additionalProperties(v: JSONSchema7['additionalProperties'], visitor: this): JSONSchema7['additionalProperties'] | undefined;
+  visit_allOf(v: JSONSchema7['allOf'], visitor: this): JSONSchema7['allOf'] | undefined;
+  visit_anyOf(v: JSONSchema7['anyOf'], visitor: this): JSONSchema7['anyOf'] | undefined;
+  visit_oneOf(v: JSONSchema7['oneOf'], visitor: this): JSONSchema7['oneOf'] | undefined;
+  visit_not(v: JSONSchema7['not'], visitor: this): JSONSchema7['not'] | undefined;
+  visit_const(v: JSONSchema7['const'], visitor: this): JSONSchema7['const'] | undefined;
+  visit_contains(v: JSONSchema7['contains'], visitor: this): JSONSchema7['contains'] | undefined;
+  visit_contentEncoding(v: JSONSchema7['contentEncoding'], visitor: this): JSONSchema7['contentEncoding'] | undefined;
+  visit_contentMediaType(v: JSONSchema7['contentMediaType'], visitor: this): JSONSchema7['contentMediaType'] | undefined;
+  visit_default(v: JSONSchema7['default'], visitor: this): JSONSchema7['default'] | undefined;
+  visit_dependencies(v: JSONSchema7['dependencies'], visitor: this): JSONSchema7['dependencies'] | undefined;
+  visit_dependencies_strings(v: string[], visitor: this): string[] | undefined;
+  visit_description(v: JSONSchema7['description'], visitor: this): JSONSchema7['description'] | undefined;
+  visit_enum(v: JSONSchema7['enum'], visitor: this): JSONSchema7['enum'] | undefined;
+  visit_enum_option(v: JSONSchema7Type, visitor: this): JSONSchema7Type | undefined;
+  visit_examples(v: JSONSchema7['examples'], visitor: this): JSONSchema7['examples'] | undefined;
+  visit_exclusiveMinimum(v: JSONSchema7['exclusiveMinimum'], visitor: this): JSONSchema7['exclusiveMinimum'] | undefined;
+  visit_exclusiveMaximum(v: JSONSchema7['exclusiveMaximum'], visitor: this): JSONSchema7['exclusiveMaximum'] | undefined;
+  visit_minimum(v: JSONSchema7['minimum'], visitor: this): JSONSchema7['minimum'] | undefined;
+  visit_maximum(v: JSONSchema7['maximum'], visitor: this): JSONSchema7['maximum'] | undefined;
+  visit_minItems(v: JSONSchema7['minItems'], visitor: this): JSONSchema7['minItems'] | undefined;
+  visit_maxItems(v: JSONSchema7['maxItems'], visitor: this): JSONSchema7['maxItems'] | undefined;
+  visit_minLength(v: JSONSchema7['minLength'], visitor: this): JSONSchema7['minLength'] | undefined;
+  visit_maxLength(v: JSONSchema7['maxLength'], visitor: this): JSONSchema7['maxLength'] | undefined;
+  visit_minProperties(v: JSONSchema7['minProperties'], visitor: this): JSONSchema7['minProperties'] | undefined;
+  visit_maxProperties(v: JSONSchema7['maxProperties'], visitor: this): JSONSchema7['maxProperties'] | undefined;
+  visit_multipleOf(v: JSONSchema7['multipleOf'], visitor: this): JSONSchema7['multipleOf'] | undefined;
+  visit_pattern(v: JSONSchema7['pattern'], visitor: this): JSONSchema7['pattern'] | undefined;
+  visit_patternProperties(v: JSONSchema7['patternProperties'], visitor: this): JSONSchema7['patternProperties'] | undefined;
+  visit_properties(v: JSONSchema7['properties'], visitor: this): JSONSchema7['properties'] | undefined;
+  visit_propertyNames(v: JSONSchema7['propertyNames'], visitor: this): JSONSchema7['propertyNames'] | undefined;
+  visit_required(v: JSONSchema7['required'], visitor: this): JSONSchema7['required'] | undefined;
+  visit_required_option(v: ToSingle<JSONSchema7['required']>, visitor: this): ToSingle<JSONSchema7['required']> | undefined;
+  visit_if(v: JSONSchema7['if'], visitor: this): JSONSchema7['if'] | undefined;
+  visit_then(v: JSONSchema7['then'], visitor: this): JSONSchema7['then'] | undefined;
+  visit_else(v: JSONSchema7['else'], visitor: this): JSONSchema7['else'] | undefined;
+  visit_title(v: JSONSchema7['title'], visitor: this): JSONSchema7['title'] | undefined;
+  visit_type(v: JSONSchema7['type'], visitor: this): JSONSchema7['type'] | undefined;
+  visit_type_array(v: Extract<JSONSchema7['type'], Array<any>>, visitor: this): Extract<JSONSchema7['type'], Array<any>> | undefined;
+  visit_type_option(v: JSONSchema7TypeName, visitor: this): JSONSchema7TypeName | undefined;
+  visit_uniqueItems(v: JSONSchema7['uniqueItems'], visitor: this): JSONSchema7['uniqueItems'] | undefined;
+  visit_readOnly(v: JSONSchema7['readOnly'], visitor: this): JSONSchema7['readOnly'] | undefined;
+  visit_writeOnly(v: JSONSchema7['writeOnly'], visitor: this): JSONSchema7['writeOnly'] | undefined;
+  visit_comment(v: JSONSchema7['$comment'], visitor: this): JSONSchema7['$comment'] | undefined;
+  visit_ref(v: JSONSchema7['$ref'], visitor: this): JSONSchema7['$ref'] | undefined;
+}

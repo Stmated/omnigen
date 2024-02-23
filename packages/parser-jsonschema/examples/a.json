@@ -9,7 +9,7 @@
     "$ref": "b.json#/b_a/value"
   },
   "a_d": {
-    "$ref": "file:b.json#/b_a/value"
+    "$ref": "./b.json#/b_a/value"
   },
   "a_e": {
     "$ref": "dir/c.json#"

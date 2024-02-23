@@ -1,5 +1,5 @@
 {
-  "name": "@omnigen/parser-openrpc",
+  "name": "@omnigen/parser-openapi3",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -20,8 +20,6 @@
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/target-java": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
-    "@open-rpc/meta-schema": "^1.14.6",
-    "@open-rpc/schema-utils-js": "^1.16.1",
     "json-schema": "^0.4.0",
     "string-similarity": "^4.0.4",
     "json-pointer": "^0.6.2",

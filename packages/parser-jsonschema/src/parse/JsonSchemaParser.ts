@@ -12,7 +12,8 @@ import {
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
   OmniPrimitiveNonNullableType,
-  OmniPrimitiveTangibleKind, OmniPrimitiveType,
+  OmniPrimitiveTangibleKind,
+  OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
   OmniSubTypeHint,
@@ -28,7 +29,9 @@ import {LoggerFactory} from '@omnigen/core-log';
 // TODO: Move into OpenApiJsonSchemaParser
 import {DiscriminatorAware} from './DiscriminatorAware.js';
 import {Case, CompositionUtil, Dereferenced, Dereferencer, Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
-import {DefaultJsonSchema7Visitor} from '../visit/DefaultJsonSchema7Visitor.ts';
+import {JsonSchema7Visitor} from '../visit/JsonSchema7Visitor.ts';
+import {NormalizeDefsJsonSchemaTransformerFactory} from '../transform/NormalizeDefsJsonSchemaTransformerFactory.ts';
+import {SimplifyJsonSchemaTransformerFactory} from '../transform/SimplifyJsonSchemaTransformerFactory.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -40,8 +43,10 @@ export interface PostDiscriminatorMapping {
   schema: Dereferenced<DiscriminatorAwareSchema>;
 }
 
-export type AnyJSONSchema = JSONSchema7 | JSONSchema6 | JSONSchema4;
-export type AnyJsonDefinition = JSONSchema7Definition | JSONSchema6Definition | JSONSchema4;
+export type JsonSchema6Or7 = JSONSchema7 | JSONSchema6;
+export type AnyJSONSchema = JsonSchema6Or7 | JSONSchema4;
+export type JsonDefinition6Or7 = JSONSchema7Definition | JSONSchema6Definition;
+export type AnyJsonDefinition = JsonDefinition6Or7 | JSONSchema4;
 // TODO: Move into OpenApiJsonSchemaParser
 export type DiscriminatorAwareSchema = boolean | (AnyJSONSchema & DiscriminatorAware);
 export type AnyJsonSchemaItems = AnyJsonDefinition | AnyJsonDefinition[] | undefined;
@@ -75,7 +80,25 @@ export class NewJsonSchemaParser implements Parser {
 
   async parse(): Promise<OmniModelParserResult<ParserOptions>> {
 
-    const root = await this._schemaFile.asObject<AnyJSONSchema>();
+    let root = await this._schemaFile.asObject<AnyJSONSchema>();
+
+    if (isJSONSchema7(root)) {
+
+      const transformers: JsonSchema7Visitor[] = [
+        new NormalizeDefsJsonSchemaTransformerFactory().create(),
+        new SimplifyJsonSchemaTransformerFactory().create(),
+      ];
+
+      let jsonSchema7: JSONSchema7 = root;
+      for (const transformer of transformers) {
+        const transformed = transformer.visit(jsonSchema7, transformer);
+        if (transformed && typeof transformed == 'object') {
+          jsonSchema7 = transformed;
+        }
+      }
+
+      root = jsonSchema7;
+    }
 
     const model: OmniModel = {
       name: (('id' in root && root.id) ? root.id : '') || root.$id || '',
@@ -254,11 +277,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       additionalProperties: !('additionalProperties' in schema.obj)
         ? this._options.defaultAdditionalProperties
         : (schema.obj.additionalProperties == undefined
-          ? undefined
-          : typeof schema.obj.additionalProperties == 'boolean'
-            ? schema.obj.additionalProperties
-            : true
-      ),
+            ? undefined
+            : typeof schema.obj.additionalProperties == 'boolean'
+              ? schema.obj.additionalProperties
+              : true
+        ),
     };
 
     if (actualRef) {

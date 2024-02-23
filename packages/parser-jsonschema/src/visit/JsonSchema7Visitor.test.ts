@@ -2,6 +2,7 @@ import {describe, test, expect} from 'vitest';
 import {DefaultJsonSchema7Visitor} from './DefaultJsonSchema7Visitor.ts';
 import * as fs from 'fs';
 import {JsonSchema7Visitor} from './JsonSchema7Visitor.ts';
+import {NormalizeDefsJsonSchemaTransformerFactory} from '../transform/NormalizeDefsJsonSchemaTransformerFactory.ts';
 
 describe('jsonschema-7-visit', () => {
 
@@ -20,7 +21,7 @@ describe('jsonschema-7-visit', () => {
     let callCount = 0;
     const visitor: JsonSchema7Visitor = {
       ...DefaultJsonSchema7Visitor,
-      visit_maximum: v => {
+      maximum: v => {
         if (v) {
           callCount++;
         }
@@ -37,7 +38,7 @@ describe('jsonschema-7-visit', () => {
     const content = JSON.parse(fs.readFileSync('./examples/pet.json').toString('utf-8'));
     const visitor: JsonSchema7Visitor = {
       ...DefaultJsonSchema7Visitor,
-      visit_maximum: v => v ? v * 2 : v,
+      maximum: v => v ? v * 2 : v,
     };
 
     const visited = visitor.visit(content, visitor);
@@ -50,9 +51,18 @@ describe('jsonschema-7-visit', () => {
     const content = JSON.parse(fs.readFileSync('./examples/pet.json').toString('utf-8'));
     const visitor: JsonSchema7Visitor = {
       ...DefaultJsonSchema7Visitor,
-      visit_description: () => undefined,
+      description: () => undefined,
     };
 
+    const visited = visitor.visit(content, visitor);
+
+    expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);
+  });
+
+  test('normalize_defs', async ({task}) => {
+
+    const content = JSON.parse(fs.readFileSync('./examples/pet_defs_and_definitions.json').toString('utf-8'));
+    const visitor = new NormalizeDefsJsonSchemaTransformerFactory().create();
     const visited = visitor.visit(content, visitor);
 
     expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);

@@ -1,0 +1,46 @@
+{
+  "$id": "https://example.com/petstore-simple-jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Root node for the petstore JSON-Schema",
+  "$defs": {
+    "Pet": {
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "description": "Description about the Pet",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PetId"
+        },
+        "age": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PetAge"
+            }
+          ],
+          "description": "Overriding age description of the Pet"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    },
+    "PetId": {
+      "type": "integer",
+      "description": "A unique ID for the Pet",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "PetAge": {
+      "type": "integer",
+      "description": "Age of the Pet",
+      "minimum": 0,
+      "maximum": 1000000
+    }
+  }
+}

@@ -7,7 +7,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export interface DFSTraverseContext {
   type: OmniType;
-  parent: TypeOwner<OmniType> | undefined;
+  parent: TypeOwner | undefined;
   replacement?: OmniType | undefined;
   depth: number;
   skip: boolean;
@@ -21,7 +21,7 @@ export interface DFSTraverseCallback<R> {
 export interface BFSTraverseContext {
   type: OmniType;
   parent: OmniType | undefined;
-  owner: TypeOwner<OmniType> | undefined;
+  owner: TypeOwner | undefined;
   typeDepth: number;
   useDepth: number;
   skip: boolean;
@@ -40,7 +40,7 @@ export class OmniTypeVisitor {
   };
 
   public visitTypesBreadthFirst<R>(
-    input: TypeOwner<OmniType> | undefined,
+    input: TypeOwner | undefined,
     onDown: BFSTraverseCallback<R>,
     visitOnce = true,
   ): R | undefined {
@@ -167,6 +167,9 @@ export class OmniTypeVisitor {
           }
           break;
         case OmniTypeKind.INTERFACE:
+          q.push({...dq, owner: type, parent: type, type: type.of, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
+          break;
+        case OmniTypeKind.DECORATING:
           q.push({...dq, owner: type, parent: type, type: type.of, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
           break;
         case OmniTypeKind.PRIMITIVE:
@@ -417,6 +420,10 @@ export class OmniTypeVisitor {
         }
         break;
       case OmniTypeKind.INTERFACE:
+        result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp, onlyOnce);
+        if (result !== undefined) return result;
+        break;
+      case OmniTypeKind.DECORATING:
         result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;

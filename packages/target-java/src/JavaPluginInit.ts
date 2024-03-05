@@ -11,10 +11,10 @@ import {
   ZodTargetContext,
   ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
-import {JavaInterpreter} from './interpret';
-import {InterfaceJavaModelTransformer} from './parse';
-import {JAVA_FEATURES, JavaRenderer, ZodJavaOptions} from './index.ts';
-import {ZodAstNodeContext, ZodParserOptions, ZodTargetFeatures} from '@omnigen/core';
+import {JavaInterpreter} from './interpret/index.ts';
+import {CompositionGenericTargetToObjectJavaModelTransformer, InterfaceJavaModelTransformer} from './parse/index.ts';
+import {createJavaRenderer, JAVA_FEATURES, JavaRenderer, ZodJavaOptions} from './index.ts';
+import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions, ZodTargetFeatures} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 
@@ -82,12 +82,20 @@ export const JavaPluginInit = createPlugin(
 export const JavaPlugin = createPlugin(
   {name: 'java', in: ZodJavaContextIn, out: ZodJavaContextOut, score: PluginScoreKind.REQUIRED},
   async ctx => {
-    new InterfaceJavaModelTransformer().transformModel({
+
+    const transformerArgs: OmniModelTransformerArgs<ParserOptions> = {
       model: ctx.model,
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
-    });
+    };
 
-    ctx.javaOptions.commentsOnFields = true;
+    const transformers = [
+      new CompositionGenericTargetToObjectJavaModelTransformer(),
+      new InterfaceJavaModelTransformer(),
+    ];
+
+    for (const transformer of transformers) {
+      transformer.transformModel(transformerArgs);
+    }
 
     const interpreter = new JavaInterpreter(
       {...ctx.javaOptions, ...ctx.targetOptions, ...ctx.packageOptions},
@@ -117,8 +125,8 @@ export const JavaRendererPlugin = createPlugin(
   {name: 'java-render', in: JavaRendererCtxIn, out: JavaRendererCtxOut, score: PluginScoreKind.IMPORTANT},
   async ctx => {
 
-    const renderer = new JavaRenderer(ctx.javaOptions);
-    const rendered = renderer.executeRender(ctx.astNode);
+    const renderer = createJavaRenderer(ctx.javaOptions);
+    const rendered = renderer.executeRender(ctx.astNode, renderer);
 
     return {
       ...ctx,

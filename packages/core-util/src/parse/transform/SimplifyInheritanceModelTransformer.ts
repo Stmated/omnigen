@@ -32,7 +32,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
   private static simplifyComposition(
     model: OmniModel,
-    composition: OmniCompositionType<OmniType, CompositionKind>,
+    composition: OmniCompositionType,
     parent: TypeOwner<OmniType> | undefined,
   ): void {
 

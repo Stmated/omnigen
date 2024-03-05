@@ -35,33 +35,30 @@ import {
   SchemaSource,
   TypeName,
 } from '@omnigen/core';
-import {Case, Dereferenced, Dereferencer, OmniUtil} from '@omnigen/core-util';
+import {Case, OmniUtil} from '@omnigen/core-util';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
-  ContentDescriptorObject,
+  ContentDescriptorObject, ContentDescriptorOrReference,
   ErrorObject,
   ExampleObject,
   ExamplePairingObject,
   ExternalDocumentationObject,
-  JSONSchemaObject,
   LicenseObject,
   LinkObject,
   MethodObject,
-  MethodObjectErrors,
+  MethodObjectErrors, MethodObjectResult, MethodOrReference,
   OpenrpcDocument,
   ServerObject,
 } from '@open-rpc/meta-schema';
-import {JSONSchema7} from 'json-schema';
+import {JSONSchema6, JSONSchema7} from 'json-schema';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
-import * as path from 'path';
-import {JsonRpcParserOptions} from '../options/index.ts';
-import {JsonSchemaParser, SchemaToTypeResult} from '@omnigen/parser-jsonschema';
+import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options/index.ts';
+import {AnyJSONSchema, ApplyIdJsonSchemaTransformerFactory, ExternalDocumentsFinder, JsonSchemaParser, RefResolver, SchemaToTypeResult, SimpleObjectWalker} from '@omnigen/parser-jsonschema';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
-import {OpenRpcOptions, OpenRpcVersion} from '../options/index.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -72,8 +69,10 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
 
   async createParserBootstrap(schemaSource: SchemaSource): Promise<ParserBootstrap<JsonRpcParserOptions & ParserOptions>> {
 
-    const schemaObject = await schemaSource.asObject();
-    const document = await parseOpenRPCDocument(schemaObject as OpenrpcDocument, {
+    // TODO: Write own models for OpenRPC -- the one that is available as a package does for example not have ExampleObject#externalValue
+
+    const schemaObject = await schemaSource.asObject<OpenrpcDocument>();
+    const document = await parseOpenRPCDocument(schemaObject, {
       dereference: false,
     });
 
@@ -82,24 +81,113 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
       throw new Error(`The schema file must have a path, to able to dereference documents`);
     }
 
-    const baseUri = path.dirname(absolutePath);
-    const dereferencer = await Dereferencer.create<OpenrpcDocument>(baseUri, absolutePath, document);
+    const applyIdTransformer = new ApplyIdJsonSchemaTransformerFactory(schemaSource.getAbsolutePath());
+    const transformers = [
+      applyIdTransformer.create(),
+    ];
 
-    return new OpenRpcParserBootstrap(dereferencer);
+    // TODO: Make the visitor able to handle OpenRpc documents as well, rethink how we build the transforms -- we should give a visitor to decorate with overriding things
+
+    const transform = (doc: JSONSchema7) => {
+      for (const transformer of transformers) {
+        const transformed = transformer.visit(doc, transformer);
+        if (transformed && typeof transformed == 'object') {
+          doc = transformed;
+        }
+      }
+
+      return doc;
+    };
+
+    // TODO: Need to create a new ApplyIdSchemaTransformer for OpenRpc, and only re-use the JsonSchema one where applicable
+
+    const documentFinder = new ExternalDocumentsFinder(absolutePath, document);
+    const refResolver = await (documentFinder.create());
+
+    for (const doc of documentFinder.documents) {
+
+      const walker = new SimpleObjectWalker(doc);
+      walker.walk((v, path, registerOnPop) => {
+
+        // There are potential JsonSchemas in these locations:
+        // contentDescriptors -> [key] -> schema
+        // methods -> [index] -> result -> schema
+        // methods -> [index] -> params -> [index] -> schema
+
+        // And we need to add information about the current path if we encounter:
+        // methods -> [index]
+        // params -> [index]
+
+        if (path.length > 0) {
+
+          const edgePath = path[path.length - 1];
+
+          if (path.length >= 2) {
+            if (path[path.length - 2] == 'methods' && typeof edgePath == 'number') {
+
+              // We are walking into a method. Need name for JsonSchema $id context.
+              const method = v as MethodOrReference;
+              if ('name' in method) {
+                applyIdTransformer.pushPath(method.name);
+                registerOnPop(() => applyIdTransformer.popPath());
+              }
+            }
+
+            if (path[path.length - 2] == 'params' && typeof edgePath == 'number') {
+
+              // We are walking into a param. Need name for JsonSchema $id context.
+              const param = v as ContentDescriptorOrReference;
+              if ('name' in param) {
+                applyIdTransformer.pushPath(param.name);
+                registerOnPop(() => applyIdTransformer.popPath());
+              }
+            }
+          }
+
+          if (path.length >= 3) {
+            if (path[path.length - 3] == 'methods' && typeof path[path.length - 2] == 'number' && path[path.length - 1] == 'result') {
+
+              // We are walking into a result. Need name for JsonSchema $id context.
+              const result = v as MethodObjectResult;
+              if ('name' in result) {
+                applyIdTransformer.pushPath(result.name);
+                registerOnPop(() => applyIdTransformer.popPath());
+              }
+            }
+          }
+
+          if (edgePath == 'schema') {
+            transform(v as JSONSchema7);
+          }
+
+          if (v && typeof v == 'object' && path.length >= 3 && path[path.length - 3] == 'components' && path[path.length - 2] == 'schemas' && typeof edgePath == 'string') {
+            applyIdTransformer.pushPath({name: edgePath});
+            transform(v as JSONSchema7);
+            registerOnPop(() => applyIdTransformer.popPath());
+          }
+        }
+
+        return v;
+      });
+    }
+
+    return new OpenRpcParserBootstrap(document, refResolver);
   }
 }
 
 export class OpenRpcParserBootstrap implements ParserBootstrap<JsonRpcParserOptions & ParserOptions>, OptionsSource {
 
-  private readonly _deref: Dereferencer<OpenrpcDocument>;
+  private readonly _doc: OpenrpcDocument;
+  private readonly _deref: RefResolver;
 
-  constructor(deref: Dereferencer<OpenrpcDocument>) {
+  constructor(doc: OpenrpcDocument, deref: RefResolver) {
+    this._doc = doc;
     this._deref = deref;
   }
 
   getIncomingOptions(): z.infer<typeof ZodArguments> | undefined {
 
-    const doc = this._deref.getFirstRoot();
+    const doc = this._doc;
     const documentOptions: Partial<JsonRpcParserOptions & OpenRpcOptions> = {
       openRpcVersion: this.toSimplifiedOpenRpcVersion(doc.openrpc),
     };
@@ -128,7 +216,7 @@ export class OpenRpcParserBootstrap implements ParserBootstrap<JsonRpcParserOpti
   }
 
   createParser(options: JsonRpcParserOptions & ParserOptions): Parser<JsonRpcParserOptions & ParserOptions> {
-    return new OpenRpcParser(this._deref, options);
+    return new OpenRpcParser(this._deref, this._doc, options);
   }
 }
 
@@ -161,7 +249,8 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
   private _requestParamsClass?: OmniObjectType; // Used
 
-  private readonly _deref: Dereferencer<OpenrpcDocument>;
+  private readonly _doc: OpenrpcDocument;
+  private readonly _refResolver: RefResolver;
 
   /**
    * TODO: Remove! Should delegate to some central thing which can decide if it can handle the given URI/Object
@@ -169,19 +258,20 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   private readonly _jsonSchemaParser: JsonSchemaParser<OpenrpcDocument, JsonRpcParserOptions & ParserOptions>;
 
   private get doc(): OpenrpcDocument {
-    return this._deref.getFirstRoot();
+    return this._doc;
   }
 
-  constructor(dereferencer: Dereferencer<OpenrpcDocument>, options: JsonRpcParserOptions & ParserOptions) {
-    this._deref = dereferencer;
+  constructor(refResolver: RefResolver, doc: OpenrpcDocument, options: JsonRpcParserOptions & ParserOptions) {
+    this._doc = doc;
+    this._refResolver = refResolver;
     this._options = options;
-    this._jsonSchemaParser = new JsonSchemaParser(this._deref, this._options);
+    this._jsonSchemaParser = new JsonSchemaParser(refResolver, this._options);
   }
 
   async parse(): Promise<OmniModelParserResult<JsonRpcParserOptions & ParserOptions>> {
 
     const endpoints = await Promise.all(
-      this.doc.methods.map(async it => await this.toOmniEndpointFromMethod(this._deref.get(it, this._deref.getFirstRoot()))),
+      this.doc.methods.map(async it => await this.toOmniEndpointFromMethod(this._refResolver.resolve(it))),
     );
     const contact = this.doc.info.contact ? this.toOmniContactFromContact(this.doc.info.contact) : undefined;
     const license = this.doc.info.license ? this.toOmniLicenseFromLicense(this.doc.info.license) : undefined;
@@ -194,13 +284,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     // const extraTypes: OmniType[] = [];
     if (this.doc.components?.schemas) {
       for (const key of Object.keys(this.doc.components.schemas)) {
-        const schema = this.doc.components.schemas[key] as JSONSchemaObject;
-        const deref = this._deref.get(schema, this._deref.getFirstRoot());
-        const unwrapped = this._jsonSchemaParser.unwrapJsonSchema(deref);
+        const schema = this.doc.components.schemas[key] as JSONSchema7;
+        const deref = this._refResolver.resolve(this._jsonSchemaParser.unwrapJsonSchema(schema));
+        // const unwrapped = deref);
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
-        this._jsonSchemaParser.jsonSchemaToType(deref.hash || key, unwrapped, `/components/schemas/${key}`);
+        this._jsonSchemaParser.jsonSchemaToType(deref.$id || key, deref);
       }
     }
 
@@ -243,13 +333,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  async toOmniEndpointFromMethod(method: Dereferenced<MethodObject>): Promise<OmniEndpoint> {
+  async toOmniEndpointFromMethod(method: MethodObject): Promise<OmniEndpoint> {
 
     const typeAndProperties = this.toTypeAndPropertiesFromMethod(method);
 
     const resultResponse = this.toOmniOutputFromContentDescriptor(
-      method.obj,
-      this._deref.get(method.obj.result, method.root),
+      method,
+      this._refResolver.resolve(method.result),
     );
 
     const responses: OmniOutput[] = [];
@@ -258,7 +348,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     responses.push(resultResponse.output);
 
     // And then one response for each potential error
-    const errorsOrReferences: MethodObjectErrors = method.obj.errors || [];
+    const errorsOrReferences: MethodObjectErrors = method.errors || [];
 
     // We will always add the generic error classes, since we can never trust that the server will be truthful.
     errorsOrReferences.push({
@@ -267,14 +357,14 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     });
 
     const errorOutputs = await Promise.all(errorsOrReferences.map(async it => {
-      const deref = this._deref.get(it, method.root);
-      return await this.errorToGenericOutput(Case.pascal(method.obj.name), deref);
+      const deref = this._refResolver.resolve(it);
+      return await this.errorToGenericOutput(Case.pascal(method.name), deref);
     }));
 
     responses.push(...errorOutputs);
 
-    const examples = (method.obj.examples || []).map(it => {
-      const deref = this._deref.get(it, method.root);
+    const examples = (method.examples || []).map(it => {
+      const deref = this._refResolver.resolve(it);
       return this.examplePairingToGenericExample(resultResponse.type, typeAndProperties.properties || [], deref);
     });
 
@@ -284,9 +374,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     // TODO: Also need to handle the "required" in a good way. JSR-303 annotations? If-cases? Both?
 
     return {
-      name: method.obj.name,
-      description: method.obj.description,
-      summary: method.obj.summary,
+      name: method.name,
+      description: method.description,
+      summary: method.summary,
       async: false,
       path: '',
       request: {
@@ -297,53 +387,51 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         {
           path: ['method'],
           operator: OmniComparisonOperator.EQUALS,
-          value: method.obj.name,
+          value: method.name,
         },
       ],
       responses: responses,
-      deprecated: method.obj.deprecated || false,
+      deprecated: method.deprecated || false,
       examples: examples,
-      externalDocumentations: method.obj.externalDocs
-        ? [this.toOmniExternalDocumentationFromExternalDocumentationObject(method.obj.externalDocs)]
+      externalDocumentations: method.externalDocs
+        ? [this.toOmniExternalDocumentationFromExternalDocumentationObject(method.externalDocs)]
         : [],
     };
   }
 
   private toOmniTypeFromContentDescriptor(
-    contentDescriptor: Dereferenced<ContentDescriptorObject>,
+    contentDescriptor: ContentDescriptorObject,
     fallbackName?: TypeName,
   ): SchemaToTypeResult {
 
-    const derefSchema = this._jsonSchemaParser.unwrapJsonSchema({
-      obj: contentDescriptor.obj.schema,
-      root: contentDescriptor.root,
-    });
+    const unwrapped = this._jsonSchemaParser.unwrapJsonSchema(contentDescriptor.schema);
+    const resolved = this._refResolver.resolve(unwrapped);
 
-    const preferredName = this.getPreferredContentDescriptorName(derefSchema, contentDescriptor, fallbackName);
-    return this._jsonSchemaParser.jsonSchemaToType(preferredName, derefSchema, contentDescriptor.hash);
+    const preferredName = this.getPreferredContentDescriptorName(resolved, contentDescriptor, fallbackName);
+    return this._jsonSchemaParser.jsonSchemaToType(preferredName, resolved);
   }
 
   private getPreferredContentDescriptorName(
-    schema: Dereferenced<JSONSchema7>,
-    contentDescriptor: Dereferenced<ContentDescriptorObject>,
+    schema: AnyJSONSchema,
+    contentDescriptor: ContentDescriptorObject,
     fallbackName?: TypeName,
   ): TypeName {
 
     const names = this._jsonSchemaParser.getMostPreferredNames(contentDescriptor, schema);
-    names.push(contentDescriptor.obj.name);
+    names.push(contentDescriptor.name);
     if (fallbackName) {
       names.push(fallbackName);
     }
-    if (contentDescriptor.obj && contentDescriptor.obj.description && contentDescriptor.obj.description.length < 20) {
+    if (contentDescriptor && contentDescriptor.description && contentDescriptor.description.length < 20) {
       // Very ugly, but it's something?
-      names.push(Case.pascal(contentDescriptor.obj.description));
+      names.push(Case.pascal(contentDescriptor.description));
     }
     names.push(...this._jsonSchemaParser.getFallbackNamesOfJsonSchemaType(schema));
 
     return names;
   }
 
-  private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: Dereferenced<ContentDescriptorObject>): OutputAndType {
+  private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: ContentDescriptorObject): OutputAndType {
 
     const typeNamePrefix = Case.pascal(method.name);
 
@@ -389,11 +477,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     return {
       output: {
-        name: contentDescriptor.obj.name,
-        description: contentDescriptor.obj.description,
-        summary: contentDescriptor.obj.summary,
-        deprecated: contentDescriptor.obj.deprecated || false,
-        required: contentDescriptor.obj.required || false,
+        name: contentDescriptor.name,
+        description: contentDescriptor.description,
+        summary: contentDescriptor.summary,
+        deprecated: contentDescriptor.deprecated || false,
+        required: contentDescriptor.required || false,
         error: false,
         type: resultType,
         contentType: 'application/json',
@@ -408,13 +496,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private async errorToGenericOutput(parentName: string, error: Dereferenced<ErrorObject>): Promise<OmniOutput> {
+  private async errorToGenericOutput(parentName: string, error: ErrorObject): Promise<OmniOutput> {
 
-    const isUnknownCode = (error.obj.code === -1234567890);
+    const isUnknownCode = (error.code === -1234567890);
     if (isUnknownCode && this._unknownError) {
       return this._unknownError;
     } else {
-      const errorOutput = await this.errorToGenericOutputReal(parentName, error.obj, isUnknownCode);
+      const errorOutput = await this.errorToGenericOutputReal(parentName, error, isUnknownCode);
       if (isUnknownCode) {
         if (!this._unknownError) {
           this._unknownError = errorOutput;
@@ -473,7 +561,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       debug: `Created by ${this.doc.info.title}`,
     };
 
-    await OpenRpcParser.addJsonRpcErrorProperties(
+    await this.addJsonRpcErrorProperties(
       errorType, error, isUnknownCode, this._jsonRpcErrorInstanceClass, this.doc, this._options,
     );
 
@@ -501,7 +589,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private static async addJsonRpcErrorProperties(
+  private async addJsonRpcErrorProperties(
     target: OmniObjectType,
     error: ErrorObject,
     isUnknownCode: boolean,
@@ -584,7 +672,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       // TODO: Check if "data" is a schema object and then create a type, instead of making it an unknown constant?
       errorPropertyType.properties.push({
         name: options.jsonRpcErrorPropertyName,
-        type: await OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options) || {
+        type: await OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver) || {
           kind: OmniTypeKind.UNKNOWN,
           valueDefault: error.data,
         },
@@ -594,7 +682,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       errorPropertyType.properties.push({
         name: options.jsonRpcErrorPropertyName,
-        type: await OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options) || {kind: OmniTypeKind.UNKNOWN},
+        type: await OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver) || {kind: OmniTypeKind.UNKNOWN},
         owner: errorPropertyType,
       });
     }
@@ -649,26 +737,27 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   private examplePairingToGenericExample(
     valueType: OmniType,
     inputProperties: OmniProperty[],
-    example: Dereferenced<ExamplePairingObject>,
+    example: ExamplePairingObject,
   ): OmniExamplePairing {
 
-    const params = example.obj.params.map((paramOrRef, idx) => {
-      const param = this._deref.get(paramOrRef, example.root);
+    const params = example.params.map((paramOrRef, idx) => {
+      const param = this._refResolver.resolve(paramOrRef);
       return this.exampleParamToGenericExampleParam(inputProperties, param, idx);
     });
 
     return <OmniExamplePairing>{
-      name: example.obj.name,
-      description: example.obj.description,
-      summary: example.obj['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
+      name: example.name,
+      description: example.description,
+      summary: example['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
       params: params,
-      result: this.toOmniExampleResultFromExampleObject(valueType, this._deref.get(example.obj.result, example.root)),
+      result: example.result ? this.toOmniExampleResultFromExampleObject(valueType, this._refResolver.resolve(example.result)) : undefined,
     };
   }
 
   private static async toOmniType(
-    source: JsonRpcParserOptions['jsonRpcErrorDataSchema'],
+    source: OmniType | JsonRpcParserOptions['jsonRpcErrorDataSchema'],
     openrpcParserOptions: JsonRpcParserOptions & ParserOptions,
+    refResolver: RefResolver,
   ): Promise<OmniType | undefined> {
 
     if (!source) {
@@ -679,27 +768,18 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       return source;
     }
 
-    // const errorSchema = schemaIncomingOptions?.jsonRpcErrorDataSchema;
-    // if (!('kind' in errorSchema)) {
-
-    const dereferencer = await Dereferencer.create<JSONSchema7>('', '', source);
-    const jsonSchemaParser = new JsonSchemaParser<JSONSchema7, JsonRpcParserOptions & ParserOptions>(dereferencer, openrpcParserOptions);
-    return jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', dereferencer.getFirstRoot());
-
-    // return errorType;
-    // }
-
-    // throw new Error(`Need to convert the JSON Schema into an OmniType`);
+    const jsonSchemaParser = new JsonSchemaParser<JSONSchema7 | JSONSchema6, JsonRpcParserOptions & ParserOptions>(refResolver, openrpcParserOptions);
+    return jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', source);
   }
 
   private exampleParamToGenericExampleParam(
     inputProperties: OmniProperty[],
-    param: Dereferenced<ExampleObject>,
+    param: ExampleObject,
     paramIndex: number,
   ): OmniExampleParam {
 
     // If the name of the example param is the same as the property name, it will match here.
-    let property = inputProperties.find(it => it.name == param.obj.name);
+    let property = inputProperties.find(it => it.name == param.name);
     if (!property) {
 
       // But most of the time, the example param is actually just in the same index as the request params.
@@ -715,26 +795,26 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     return {
-      name: param.obj.name,
+      name: param.name,
       property: property,
-      description: param.obj.description,
-      summary: param.obj.summary,
+      description: param.description,
+      summary: param.summary,
       type: valueType,
-      value: param.obj.value,
+      value: param.value,
     };
   }
 
-  private toOmniExampleResultFromExampleObject(valueType: OmniType, example: Dereferenced<ExampleObject>): OmniExampleResult {
+  private toOmniExampleResultFromExampleObject(valueType: OmniType, example: ExampleObject): OmniExampleResult {
 
-    if (example.obj['externalValue']) {
+    if (example['externalValue']) {
       // This is part of the specification, but not part of the OpenRPC interface.
     }
 
     return {
-      name: example.obj.name,
-      description: example.obj.description,
-      summary: example.obj.summary,
-      value: example.obj.value,
+      name: example.name,
+      description: example.description,
+      summary: example.summary,
+      value: example.value,
       type: valueType,
     };
   }
@@ -756,33 +836,33 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private toOmniPropertyFromContentDescriptor(owner: OmniPropertyOwner, descriptor: Dereferenced<ContentDescriptorObject>): OmniProperty {
+  private toOmniPropertyFromContentDescriptor(owner: OmniPropertyOwner, descriptor: ContentDescriptorObject): OmniProperty {
 
     const propertyType = this.toOmniTypeFromContentDescriptor(descriptor);
 
     return {
-      name: descriptor.obj.name,
-      description: descriptor.obj.description,
-      summary: descriptor.obj.summary,
-      deprecated: descriptor.obj.deprecated || false,
-      required: descriptor.obj.required || false,
+      name: descriptor.name,
+      description: descriptor.description,
+      summary: descriptor.summary,
+      deprecated: descriptor.deprecated || false,
+      required: descriptor.required || false,
       type: propertyType.type,
       owner: owner,
     };
   }
 
-  private toTypeAndPropertiesFromMethod(method: Dereferenced<MethodObject>): TypeAndProperties {
+  private toTypeAndPropertiesFromMethod(method: MethodObject): TypeAndProperties {
 
     let requestParamsType: OmniPropertyOwner;
-    if (method.obj.paramStructure == 'by-position') {
+    if (method.paramStructure == 'by-position') {
       // The params is an array values, and not a map nor properties.
       requestParamsType = <OmniArrayPropertiesByPositionType>{
-        // name: `${method.obj.name}RequestParams`,
+        // name: `${method.name}RequestParams`,
         kind: OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION,
       };
 
-      requestParamsType.properties = method.obj.params.map(it => {
-        return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._deref.get(it, method.root));
+      requestParamsType.properties = method.params.map(it => {
+        return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._refResolver.resolve(it));
       });
 
       requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(
@@ -794,13 +874,17 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       requestParamsType = {
         kind: OmniTypeKind.OBJECT,
-        name: `${method.obj.name}RequestParams`,
+        name: `${method.name}RequestParams`,
         properties: [],
         additionalProperties: false,
       } satisfies OmniObjectType;
 
-      const properties = method.obj.params.map(it => {
-        return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._deref.get(it, method.root));
+      const properties = method.params.map(it => {
+        try {
+          return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._refResolver.resolve(it));
+        } catch (ex) {
+          throw new Error(`Could not convert from property '${OmniUtil.describe(requestParamsType)}' to OpenRpc Content Descriptor for Method ${method.name}`, {cause: ex});
+        }
       });
 
       if (properties.length > 0) {
@@ -822,12 +906,12 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const objectRequestType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
-      name: `${method.obj.name}Request`,
-      title: method.obj.name,
+      name: `${method.name}Request`,
+      title: method.name,
       properties: [],
       additionalProperties: false,
-      description: method.obj.description,
-      summary: method.obj.summary,
+      description: method.description,
+      summary: method.summary,
     };
 
     // const requestType = objectRequestType;
@@ -840,7 +924,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       },
     ];
 
-    OpenRpcParser.addJsonRpcRequestProperties(objectRequestType, method.obj, this._options);
+    OpenRpcParser.addJsonRpcRequestProperties(objectRequestType, method, this._options);
 
     if (!this._jsonRpcRequestClass) {
 
@@ -993,13 +1077,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     for (const methodOrRef of this.doc.methods) {
 
       // TODO: This is probably wrong! The reference can exist in another file; in the file that contains the endpoint
-      const method = this._deref.get(methodOrRef, this._deref.getFirstRoot());
+      const method = this._refResolver.resolve(methodOrRef);
 
-      for (const linkOrRef of (method.obj.links || [])) {
-        const link = this._deref.get(linkOrRef, this._deref.getFirstRoot());
+      for (const linkOrRef of (method.links || [])) {
+        const link = this._refResolver.resolve(linkOrRef);
 
         try {
-          continuations.push(this.toOmniLinkFromLinkObject(endpoint, endpoints, link.obj, link.hash));
+          continuations.push(this.toOmniLinkFromLinkObject(endpoint, endpoints, link, link.hash));
         } catch (ex) {
           const errorMessage = `Could not build link for ${endpoint.name}: ${ex instanceof Error ? ex.message : ''}`;
           if (!this._preferablyUniqueErrorLogs.has(errorMessage)) {

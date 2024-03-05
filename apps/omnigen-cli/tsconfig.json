@@ -31,5 +31,13 @@
     "resolvePackageJsonExports": true,
     "verbatimModuleSyntax": false
   },
+  "ts-node": {
+    "esm": true,
+    "experimentalResolverFeatures": true,
+    "preferTsExts": true,
+    "swc": true,
+    "transpileOnly": true,
+    "pretty": true
+  },
   "include": ["./src/**/*.ts"]
 }

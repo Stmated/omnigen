@@ -1,339 +1,52 @@
-import {AstVisitor, VisitFn, VisitResult, AstNode, OmniType, AstNodeWithChildren} from '@omnigen/core';
-import * as Java from '../ast/index.js';
-import {JavaSubTypeCapableType} from '../util/index.js';
+import {AstNode, AstVisitor, OmniType, VisitFn, VisitResult} from '@omnigen/core';
+import * as Java from '../ast/index.ts';
 
-export type JavaVisitFn<in N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
+export type JavaVisitFn<N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
-export class JavaVisitor<R> implements AstVisitor<R> {
+export interface AstFreeTextVisitor<R> {
+  visitFreeTextGlobal: { (freeText: Java.FreeTextType, visitor: JavaVisitor<R>, translator: { (v: string): R | undefined }): VisitResult<R> };
+  visitFreeText: JavaVisitFn<Java.FreeText, R>;
+  visitFreeTextParagraph: JavaVisitFn<Java.FreeTextParagraph, R>;
+  visitFreeTextSection: JavaVisitFn<Java.FreeTextSection, R>;
+  visitFreeTextLine: JavaVisitFn<Java.FreeTextLine, R>;
+  visitFreeTextIndent: JavaVisitFn<Java.FreeTextIndent, R>;
+  visitFreeTextHeader: JavaVisitFn<Java.FreeTextHeader, R>;
+  visitFreeTextTypeLink: JavaVisitFn<Java.FreeTextTypeLink, R>;
+  visitFreeTextMethodLink: JavaVisitFn<Java.FreeTextMethodLink, R>;
+  visitFreeTextPropertyLink: JavaVisitFn<Java.FreeTextPropertyLink, R>;
+}
 
-  constructor() {
-
-    this.visitorJava = this;
-
-    this.visitRootNode = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitRegularType = () => undefined;
-    this.visitGenericType = (node, visitor) => {
-      return [
-        node.baseType.visit(visitor),
-        node.genericArguments.map(it => it.visit(visitor)),
-      ];
-    };
-    this.visitIdentifier = () => undefined;
-    this.visitToken = () => undefined;
-    this.visitAnnotationList = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitArgumentDeclaration = (node, visitor) => {
-      if (node.annotations) {
-        return [
-          node.annotations.visit(visitor),
-          node.type.visit(visitor),
-          node.identifier.visit(visitor),
-        ];
-      } else {
-        return [
-          node.type.visit(visitor),
-          node.identifier.visit(visitor),
-        ];
-      }
-    };
-
-    this.visitArgumentDeclarationList = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitBinaryExpression = (node, visitor) => [
-      node.left.visit(visitor),
-      node.token.visit(visitor),
-      node.right.visit(visitor),
-    ];
-
-    this.visitModifier = () => undefined;
-
-    this.visitField = (node, visitor) => {
-      const results: VisitResult<R>[] = [];
-      if (node.comments) {
-        results.push(node.comments.visit(visitor));
-      }
-      if (node.annotations) {
-        results.push(node.annotations.visit(visitor));
-      }
-      if (node.modifiers) {
-        results.push(node.modifiers.visit(visitor));
-      }
-      results.push(node.type.visit(visitor));
-      results.push(node.identifier.visit(visitor));
-      if (node.initializer) {
-        results.push(node.initializer.visit(visitor));
-      }
-
-      return results;
-    };
-
-    this.visitCommentBlock = (node, visitor) => {
-      return this.visitFreeTextGlobal(node.text, visitor, () => undefined as R);
-    };
-    this.visitComment = (node, visitor) => {
-      return this.visitFreeTextGlobal(node.text, visitor, () => undefined as R);
-    };
-    this.visitFieldBackedGetter = (node, visitor) => visitor.visitMethodDeclaration(node, visitor);
-    this.visitFieldBackedSetter = (node, visitor) => visitor.visitMethodDeclaration(node, visitor);
-
-    this.visitMethodDeclaration = (node, visitor) => {
-      if (node.body) {
-        return [
-          node.signature.visit(visitor),
-          node.body.visit(visitor),
-        ];
-      } else {
-        return node.signature.visit(visitor);
-      }
-    };
-
-    this.visitMethodDeclarationSignature = (node, visitor) => {
-      const results: VisitResult<R>[] = [];
-      if (node.comments) {
-        results.push(node.comments.visit(visitor));
-      }
-      if (node.annotations) {
-        results.push(node.annotations.visit(visitor));
-      }
-      if (node.modifiers) {
-        results.push(node.modifiers.visit(visitor));
-      }
-      results.push(node.type.visit(visitor));
-      results.push(node.identifier.visit(visitor));
-      if (node.parameters) {
-        results.push(node.parameters.visit(visitor));
-      }
-      if (node.throws) {
-        results.push(node.throws.visit(visitor));
-      }
-      return results;
-    };
-
-    this.visitAbstractMethodDeclaration = (node, visitor) => node.signature.visit(visitor);
-
-    this.visitExtendsDeclaration = (node, visitor) => node.type.visit(visitor);
-    this.visitImplementsDeclaration = (node, visitor) => node.types.visit(visitor);
-    this.visitTypeList = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitLiteral = () => undefined;
-
-    this.visitIfStatement = (node, visitor) => [
-      node.predicate.visit(visitor),
-      node.body.visit(visitor),
-    ];
-
-    this.visitIfElseStatement = (node, visitor) =>
-      node.ifStatements.map(it => it.visit(visitor))
-        .concat(node.elseBlock?.visit(visitor));
-
-    this.visitTernaryExpression = (node, visitor) => [
-      node.predicate.visit(visitor),
-      node.passing.visit(visitor),
-      node.failing.visit(visitor),
-    ];
-
-    this.visitImportStatement = (node, visitor) => node.type.visit(visitor);
-
-    this.visitImportList = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitMethodCall = (node, visitor) => [
-      node.target.visit(visitor),
-      node.methodName.visit(visitor),
-      node.methodArguments?.visit(visitor),
-    ];
-
-    this.visitNewStatement = (node, visitor) => [
-      node.type.visit(visitor),
-      node.constructorArguments?.visit(visitor),
-    ];
-
-    this.visitThrowStatement = (node, visitor) => [
-      node.expression.visit(visitor),
-    ];
-
-    this.visitArgumentList = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitReturnStatement = (node, visitor) => node.expression.visit(visitor);
-
-    this.visitVariableDeclaration = (node, visitor) => {
-      return [
-        node.type?.visit(visitor),
-        node.identifier.visit(visitor),
-        node.initializer?.visit(visitor),
-      ];
-    };
-
-    // NOTE: Maybe not the most correct way of handling it.
-    this.visitDeclarationReference = (node, visitor) => node.declaration.identifier.visit(visitor);
-
-    this.visitAnnotation = (node, visitor) => {
-      if (node.pairs) {
-        return [
-          node.type.visit(visitor),
-          node.pairs.visit(visitor),
-        ];
-      } else {
-        return node.type.visit(visitor);
-      }
-    };
-
-    this.visitAnnotationKeyValuePairList = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitAnnotationKeyValuePair = (node, visitor) => {
-      if (node.key) {
-        return [
-          node.key.visit(visitor),
-          node.value.visit(visitor),
-        ];
-      } else {
-        return node.value.visit(visitor);
-      }
-    };
-
-    this.visitHardCoded = () => undefined;
-
-    this.visitBlock = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitPackage = () => undefined; // Edge node
-    this.visitPredicate = (node, visitor) => visitor.visitBinaryExpression(node, visitor);
-
-    this.visitModifierList = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitFieldGetterSetter = (node, visitor) => [
-      node.field.visit(visitor),
-      node.getter.visit(visitor),
-      node.setter.visit(visitor),
-    ];
-
-    this.visitCast = (node, visitor) => [
-      node.expression.visit(visitor),
-      node.toType.visit(visitor),
-    ];
-
-    this.visitObjectDeclaration = (node, visitor) => {
-      const result: VisitResult<R>[] = [];
-      if (node.comments) {
-        result.push(node.comments.visit(visitor));
-      }
-      if (node.annotations) {
-        result.push(node.annotations.visit(visitor));
-      }
-      result.push(node.modifiers.visit(visitor));
-      result.push(node.name.visit(visitor));
-      if (node.extends) {
-        result.push(node.extends.visit(visitor));
-      }
-      if (node.implements) {
-        result.push(node.implements.visit(visitor));
-      }
-      result.push(node.body.visit(visitor));
-
-      return result;
-    };
-
-    this.visitClassDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
-    this.visitGenericClassDeclaration = (node, visitor) => {
-      return [
-        visitor.visitClassDeclaration(node, visitor),
-        visitor.visitGenericTypeDeclarationList(node.typeList, visitor),
-      ];
-    };
-    this.visitGenericTypeDeclarationList = (node, visitor) => node.types.map(it => it.visit(visitor));
-    this.visitGenericTypeDeclaration = (node, visitor) => {
-      return [
-        node.name.visit(visitor),
-        node.lowerBounds?.visit(visitor),
-        node.upperBounds?.visit(visitor),
-      ];
-    };
-    this.visitInterfaceDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
-    this.visitEnumDeclaration = (node, visitor) => visitor.visitObjectDeclaration(node, visitor);
-    this.visitFieldReference = () => undefined;
-    this.visitAssignExpression = (node, visitor) => visitor.visitBinaryExpression(node, visitor);
-
-    this.visitEnumItem = (node, visitor) => [
-      node.identifier.visit(visitor),
-      node.value.visit(visitor),
-    ];
-
-    this.visitEnumItemList = (node, visitor) => node.children.map(it => it.visit(visitor));
-
-    this.visitCompilationUnit = (node, visitor) => [
-      node.packageDeclaration.visit(visitor),
-      node.imports.visit(visitor),
-      node.object.visit(visitor),
-    ];
-
-    this.visitConstructor = (node, visitor) => [
-      node.modifiers.visit(visitor),
-      node.parameters?.visit(visitor),
-      node.comments?.visit(visitor),
-      node.annotations?.visit(visitor),
-      node.body?.visit(visitor),
-    ];
-
-    this.visitAdditionalPropertiesDeclaration = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitStatement = (node, visitor) => node.child.visit(visitor);
-    this.visitSuperConstructorCall = (node, visitor) => node.parameters.visit(visitor);
-    this.visitRuntimeTypeMapping = (node, visitor) => [
-      ...node.fields.flatMap(it => it.visit(visitor)),
-      ...node.getters.flatMap(it => it.visit(visitor)),
-      ...node.methods.flatMap(it => it.visit(visitor)),
-    ];
-
-    this.visitClassName = (node, visitor) => node.type.visit(visitor);
-    this.visitClassReference = (node, visitor) => node.className.visit(visitor);
-
-    this.visitArrayInitializer = (node, visitor) => node.children.map(it => it.visit(visitor));
-    this.visitStaticMemberReference = (node, visitor) => [
-      node.target.visit(visitor),
-      node.member.visit(visitor),
-    ];
-
-    this.visitFreeText = () => {
-      return [];
-    };
-    this.visitFreeTextParagraph = (node, visitor) => {
-      return this.visitFreeTextGlobal(node.child, visitor, () => undefined as R);
-    };
-    this.visitFreeTextLine = (node, visitor) => {
-      return this.visitFreeTextGlobal(node.child, visitor, () => undefined as R);
-    };
-    this.visitFreeTextIndent = (node, visitor) => {
-      return this.visitFreeTextGlobal(node.child, visitor, () => undefined as R);
-    };
-    this.visitFreeTextHeader = (node, visitor) => {
-      return this.visitFreeTextGlobal(node.child, visitor, () => undefined as R);
-    };
-    this.visitFreeTextTypeLink = (node, visitor) => node.type.visit(visitor);
-    this.visitFreeTextMethodLink = (node, visitor) => [
-      node.type.visit(visitor),
-      node.method.visit(visitor),
-    ];
-    this.visitFreeTextSection = (node, visitor) => [
-      node.header.visit(visitor),
-      this.visitFreeTextGlobal(node.content, visitor, () => undefined as R),
-    ];
-    this.visitFreeTextPropertyLink = (node, visitor) => node.type.visit(visitor);
-
-    this.visitSelfReference = () => undefined;
-
-    this.visitFreeTextGlobal = (freeText, visitor, translator) => {
+export const createJavaFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisitor<R>>, noop?: R | undefined): AstFreeTextVisitor<R> => {
+  return {
+    visitFreeTextGlobal: (freeText, visitor, translator) => {
       if (typeof freeText == 'string') {
         return translator(freeText);
       } else {
         if (Array.isArray(freeText)) {
-          return freeText.map(it => this.visitFreeTextGlobal(it, visitor, translator));
+          return freeText.map(it => visitor.visitFreeTextGlobal(it, visitor, translator));
         } else {
           return freeText.visit(visitor);
         }
       }
-    };
-  }
+    },
+    visitFreeText: () => [],
+    visitFreeTextParagraph: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
+    visitFreeTextSection: (node, visitor) => [
+      node.header.visit(visitor),
+      visitor.visitFreeTextGlobal(node.content, visitor, () => noop),
+    ],
+    visitFreeTextLine: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
+    visitFreeTextIndent: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
+    visitFreeTextHeader: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
+    visitFreeTextTypeLink: (node, visitor) => node.type.visit(visitor),
+    visitFreeTextMethodLink: (node, visitor) => [node.type.visit(visitor), node.method.visit(visitor)],
+    visitFreeTextPropertyLink: (node, visitor) => node.type.visit(visitor),
+    ...partial,
+  };
+};
 
-  visitFreeTextGlobal: {(freeText: Java.FreeTextType, visitor: JavaVisitor<R>, translator: {(v: string): R}): VisitResult<R>};
+export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
 
-  visitorJava: JavaVisitor<R>;
-  visitRootNode: VisitFn<AstNodeWithChildren<AstNode>, R, AstVisitor<R>>;
   visitRegularType: JavaVisitFn<Java.RegularType<OmniType>, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;
@@ -346,16 +59,6 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitField: JavaVisitFn<Java.Field, R>;
   visitCommentBlock: JavaVisitFn<Java.CommentBlock, R>;
   visitComment: JavaVisitFn<Java.Comment, R>;
-  visitFreeText: JavaVisitFn<Java.FreeText, R>;
-  visitFreeTextParagraph: JavaVisitFn<Java.FreeTextParagraph, R>;
-  visitFreeTextSection: JavaVisitFn<Java.FreeTextSection, R>;
-  visitFreeTextLine: JavaVisitFn<Java.FreeTextLine, R>;
-  visitFreeTextIndent: JavaVisitFn<Java.FreeTextIndent, R>;
-  visitFreeTextHeader: JavaVisitFn<Java.FreeTextHeader, R>;
-  visitFreeTextTypeLink: JavaVisitFn<Java.FreeTextTypeLink, R>;
-  visitFreeTextMethodLink: JavaVisitFn<Java.FreeTextMethodLink, R>;
-  visitFreeTextPropertyLink: JavaVisitFn<Java.FreeTextPropertyLink, R>;
-  // visitFreeTextList: JavaVisitFn<Java.FreeTextList, R>;
   visitFieldBackedGetter: JavaVisitFn<Java.FieldBackedGetter, R>;
   visitFieldBackedSetter: JavaVisitFn<Java.FieldBackedSetter, R>;
   visitMethodDeclaration: JavaVisitFn<Java.MethodDeclaration, R>;
@@ -363,7 +66,7 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitAbstractMethodDeclaration: JavaVisitFn<Java.AbstractMethodDeclaration, R>;
   visitExtendsDeclaration: JavaVisitFn<Java.ExtendsDeclaration, R>;
   visitImplementsDeclaration: JavaVisitFn<Java.ImplementsDeclaration, R>;
-  visitTypeList: JavaVisitFn<Java.TypeList<OmniType>, R>;
+  visitTypeList: JavaVisitFn<Java.TypeList, R>;
   visitLiteral: JavaVisitFn<Java.Literal, R>;
   visitIfStatement: JavaVisitFn<Java.IfStatement, R>;
   visitIfElseStatement: JavaVisitFn<Java.IfElseStatement, R>;
@@ -387,7 +90,7 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitModifierList: JavaVisitFn<Java.ModifierList, R>;
   visitFieldGetterSetter: JavaVisitFn<Java.FieldGetterSetter, R>;
   visitCast: JavaVisitFn<Java.Cast, R>;
-  visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration<JavaSubTypeCapableType>, R>;
+  visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
   visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
   visitGenericClassDeclaration: JavaVisitFn<Java.GenericClassDeclaration, R>;
   visitGenericTypeDeclarationList: JavaVisitFn<Java.GenericTypeDeclarationList, R>;
@@ -410,3 +113,248 @@ export class JavaVisitor<R> implements AstVisitor<R> {
   visitStaticMemberReference: JavaVisitFn<Java.StaticMemberReference, R>;
   visitSelfReference: JavaVisitFn<Java.SelfReference, R>;
 }
+
+export const createJavaVisitor = <R>(partial?: Partial<JavaVisitor<R>>, noop?: R | undefined): Readonly<JavaVisitor<R>> => {
+
+  if (noop === undefined && DefaultJavaVisitor) {
+
+    return {
+      ...(DefaultJavaVisitor as any as JavaVisitor<R>),
+      ...(partial || {}),
+    };
+  }
+
+  return createJavaVisitorInternal<R>(partial, noop);
+};
+
+export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, noop?: R | undefined): Readonly<JavaVisitor<R>> => {
+
+  return {
+    ...createJavaFreeTextVisitor<R>(undefined, noop),
+    visitRootNode: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitRegularType: () => noop,
+    visitGenericType: (node, visitor) => [
+      node.baseType.visit(visitor),
+      node.genericArguments.map(it => it.visit(visitor)),
+    ],
+    visitArgumentDeclaration: (node, visitor) => {
+      if (node.annotations) {
+        return [
+          node.annotations.visit(visitor),
+          node.type.visit(visitor),
+          node.identifier.visit(visitor),
+        ];
+      } else {
+        return [
+          node.type.visit(visitor),
+          node.identifier.visit(visitor),
+        ];
+      }
+    },
+    visitArgumentDeclarationList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitIdentifier: () => noop,
+    visitToken: () => noop,
+    visitAnnotationList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitBinaryExpression: (node, visitor) => [
+      node.left.visit(visitor),
+      node.token.visit(visitor),
+      node.right.visit(visitor),
+    ],
+    visitModifier: () => noop,
+    visitField: (node, visitor) => {
+      const results: VisitResult<R>[] = [];
+      if (node.comments) {
+        results.push(node.comments.visit(visitor));
+      }
+      if (node.annotations) {
+        results.push(node.annotations.visit(visitor));
+      }
+      if (node.modifiers) {
+        results.push(node.modifiers.visit(visitor));
+      }
+      results.push(node.type.visit(visitor));
+      results.push(node.identifier.visit(visitor));
+      if (node.initializer) {
+        results.push(node.initializer.visit(visitor));
+      }
+
+      return results;
+    },
+    visitCommentBlock: (node, visitor) => visitor.visitFreeTextGlobal(node.text, visitor, () => noop),
+    visitComment: (node, visitor) => visitor.visitFreeTextGlobal(node.text, visitor, () => noop),
+
+    visitFieldBackedGetter: (node, visitor) => visitor.visitMethodDeclaration(node, visitor),
+    visitFieldBackedSetter: (node, visitor) => visitor.visitMethodDeclaration(node, visitor),
+    visitMethodDeclaration: (node, visitor) => {
+      if (node.body) {
+        return [
+          node.signature.visit(visitor),
+          node.body.visit(visitor),
+        ];
+      } else {
+        return node.signature.visit(visitor);
+      }
+    },
+    visitMethodDeclarationSignature: (node, visitor) => {
+      const results: VisitResult<R>[] = [];
+      if (node.comments) {
+        results.push(node.comments.visit(visitor));
+      }
+      if (node.annotations) {
+        results.push(node.annotations.visit(visitor));
+      }
+      if (node.modifiers) {
+        results.push(node.modifiers.visit(visitor));
+      }
+      results.push(node.type.visit(visitor));
+      results.push(node.identifier.visit(visitor));
+      if (node.parameters) {
+        results.push(node.parameters.visit(visitor));
+      }
+      if (node.throws) {
+        results.push(node.throws.visit(visitor));
+      }
+      return results;
+    },
+    visitAbstractMethodDeclaration: (node, visitor) => node.signature.visit(visitor),
+    visitExtendsDeclaration: (node, visitor) => node.type.visit(visitor),
+    visitImplementsDeclaration: (node, visitor) => node.types.visit(visitor),
+    visitTypeList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitLiteral: () => noop,
+    visitIfStatement: (node, visitor) => [
+      node.predicate.visit(visitor),
+      node.body.visit(visitor),
+    ],
+    visitIfElseStatement: (node, visitor) => node.ifStatements.map(it => it.visit(visitor)).concat(node.elseBlock?.visit(visitor)),
+    visitTernaryExpression: (node, visitor) => [
+      node.predicate.visit(visitor),
+      node.passing.visit(visitor),
+      node.failing.visit(visitor),
+    ],
+    visitImportStatement: (node, visitor) => node.type.visit(visitor),
+    visitImportList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitMethodCall: (node, visitor) => [
+      node.target.visit(visitor),
+      node.methodName.visit(visitor),
+      node.methodArguments?.visit(visitor),
+    ],
+    visitNewStatement: (node, visitor) => [
+      node.type.visit(visitor),
+      node.constructorArguments?.visit(visitor),
+    ],
+    visitThrowStatement: (node, visitor) => [
+      node.expression.visit(visitor),
+    ],
+    visitArgumentList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitReturnStatement: (node, visitor) => node.expression.visit(visitor),
+    visitVariableDeclaration: (node, visitor) => [
+      node.type?.visit(visitor),
+      node.identifier.visit(visitor),
+      node.initializer?.visit(visitor),
+    ],
+    visitDeclarationReference: (node, visitor) => node.declaration.identifier.visit(visitor),
+    visitAnnotation: (node, visitor) => {
+      if (node.pairs) {
+        return [
+          node.type.visit(visitor),
+          node.pairs.visit(visitor),
+        ];
+      } else {
+        return node.type.visit(visitor);
+      }
+    },
+    visitAnnotationKeyValuePairList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitAnnotationKeyValuePair: (node, visitor) => {
+      if (node.key) {
+        return [
+          node.key.visit(visitor),
+          node.value.visit(visitor),
+        ];
+      } else {
+        return node.value.visit(visitor);
+      }
+    },
+    visitHardCoded: (node, visitor) => noop,
+    visitBlock: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitPackage: (node, visitor) => noop,
+    visitPredicate: (node, visitor) => visitor.visitBinaryExpression(node, visitor),
+    visitModifierList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitFieldGetterSetter: (node, visitor) => [
+      node.field.visit(visitor),
+      node.getter.visit(visitor),
+      node.setter.visit(visitor),
+    ],
+    visitCast: (node, visitor) => [
+      node.expression.visit(visitor),
+      node.toType.visit(visitor),
+    ],
+    visitObjectDeclaration: (node, visitor) => {
+      const result: VisitResult<R>[] = [];
+      if (node.comments) {
+        result.push(node.comments.visit(visitor));
+      }
+      if (node.annotations) {
+        result.push(node.annotations.visit(visitor));
+      }
+      result.push(node.modifiers.visit(visitor));
+      result.push(node.name.visit(visitor));
+      if (node.extends) {
+        result.push(node.extends.visit(visitor));
+      }
+      if (node.implements) {
+        result.push(node.implements.visit(visitor));
+      }
+      result.push(node.body.visit(visitor));
+
+      return result;
+    },
+    visitClassDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
+    visitGenericClassDeclaration: (node, visitor) => [
+      visitor.visitClassDeclaration(node, visitor),
+      visitor.visitGenericTypeDeclarationList(node.typeList, visitor),
+    ],
+    visitGenericTypeDeclarationList: (node, visitor) => node.types.map(it => it.visit(visitor)),
+    visitGenericTypeDeclaration: (node, visitor) => [
+      node.name.visit(visitor),
+      node.lowerBounds?.visit(visitor),
+      node.upperBounds?.visit(visitor),
+    ],
+    visitInterfaceDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
+    visitEnumDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
+    visitEnumItem: (node, visitor) => [
+      node.identifier.visit(visitor),
+      node.value.visit(visitor),
+    ],
+    visitEnumItemList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitFieldReference: (node, visitor) => noop,
+    visitAssignExpression: (node, visitor) => visitor.visitBinaryExpression(node, visitor),
+    visitCompilationUnit: (node, visitor) => [
+      node.packageDeclaration.visit(visitor),
+      node.imports.visit(visitor),
+      node.object.visit(visitor),
+    ],
+    visitConstructor: (node, visitor) => [
+      node.modifiers.visit(visitor),
+      node.parameters?.visit(visitor),
+      node.comments?.visit(visitor),
+      node.annotations?.visit(visitor),
+      node.body?.visit(visitor),
+    ],
+    visitAdditionalPropertiesDeclaration: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitStatement: (node, visitor) => node.child.visit(visitor),
+    visitSuperConstructorCall: (node, visitor) => node.parameters.visit(visitor),
+    visitRuntimeTypeMapping: (node, visitor) => [
+      ...node.fields.flatMap(it => it.visit(visitor)),
+      ...node.getters.flatMap(it => it.visit(visitor)),
+      ...node.methods.flatMap(it => it.visit(visitor)),
+    ],
+    visitClassName: (node, visitor) => node.type.visit(visitor),
+    visitClassReference: (node, visitor) => node.className.visit(visitor),
+    visitArrayInitializer: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitStaticMemberReference: (node, visitor) => [node.target.visit(visitor), node.member.visit(visitor)],
+    visitSelfReference: () => noop,
+    ...partial,
+  };
+};
+
+export const DefaultJavaVisitor = createJavaVisitorInternal<void>();

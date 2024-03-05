@@ -3,7 +3,7 @@ import {ModelTransformOptions, OmniModelParserResult, OmniPrimitiveKind, OmniPri
 import {Naming, OmniModelMerge, OmniUtil} from '@omnigen/core-util';
 import {describe, expect, test, vi} from 'vitest';
 import {PluginManager} from '@omnigen/plugin';
-import {BaseContext, FileContext, FilesContext, SourceContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
+import {BaseContext, FileContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
 import {OpenRpcPlugin} from '@omnigen/parser-openrpc';
 
 function expectKind<T extends OmniType, K extends OmniTypeKind>(value: T, kind: K): asserts value is Extract<T, { kind: K }> {
@@ -59,7 +59,7 @@ describe('merge-documents', () => {
 
     expect(model.types[2].properties.map(it => it.name)).toEqual(['id', 'age', 'name', 'tag']);
     expect(model.types[2].properties[1].description).toEqual('Overriding age description of the Pet');
-    expect(model.types[2].properties[1].type.description).toEqual('Age of the Pet');
+    expect(model.types[2].properties[1].type.description).toEqual('Overriding age description of the Pet');
   });
 
   test('cross-referenced_openrpc+jsonschema', async ({task}) => {

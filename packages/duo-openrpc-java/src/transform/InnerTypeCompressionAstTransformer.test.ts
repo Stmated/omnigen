@@ -43,8 +43,6 @@ describe('InnerTypeCompression', () => {
 
     // TODO: This is actually INCORRECT! It is not properly serializable with the @JsonValue annotation!
     //        Need to create some other way of handling this, like splitting into many different classes with unique parents
-
-    // 'GiveInGetOut2Response.java', // TODO: WRONG! Should be created from give_string_get_string_result. Is closest "name"
   });
 
   test('CompressYes-error-structure', async () => {

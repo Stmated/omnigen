@@ -1,12 +1,15 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
   OmniUtil,
   VisitorFactoryManager,
 } from '@omnigen/core-util';
-import * as Java from '../ast/index.js';
-import {Identifier} from '../ast';
-import {JavaUtil} from '../util';
+import * as Java from '../ast/index.ts';
+import {Identifier} from '../ast/index.ts';
+import {JavaUtil} from '../util/index.ts';
 
+/**
+ * TODO: Should this add the method declarations for interfaces as well?
+ */
 export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {

@@ -2,11 +2,13 @@ import {ImplementationGenerator} from './ImplementationGenerator';
 import {
   AddAbstractAccessorsAstTransformer,
   AddAccessorsForFieldsAstTransformer,
+  AddCompositionMembersJavaAstTransformer,
   AddConstructorJavaAstTransformer,
   AddFieldsAstTransformer,
   AddThrowsForKnownMethodsAstTransformer,
   Java,
   JAVA_FEATURES,
+  JavaAndTargetOptions,
   JavaAstUtils,
   JavaOptions,
   PackageResolverAstTransformer,
@@ -24,6 +26,7 @@ import {
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
+  TargetOptions,
   UnknownKind,
 } from '@omnigen/core';
 import {ImplementationOptions} from './ImplementationOptions';
@@ -32,8 +35,8 @@ import {Case, Naming, OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-type JavaHttpGeneratorType = ImplementationGenerator<AstNode, JavaOptions, ImplementationOptions>;
-type JavaHttpArgs = ImplementationArgs<AstNode, JavaOptions, ImplementationOptions>;
+type JavaHttpGeneratorType = ImplementationGenerator<AstNode, JavaAndTargetOptions, ImplementationOptions>;
+type JavaHttpArgs = ImplementationArgs<AstNode, JavaAndTargetOptions, ImplementationOptions>;
 
 /**
  * TODO: Transformer that checks the response object, and counts the number of non-literal final values
@@ -104,13 +107,14 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
     this.addFieldAndMethods(client, args, root, objectMapperField);
 
-    const implTargetOptions: JavaOptions = {
+    const implTargetOptions: JavaAndTargetOptions = {
       ...args.targetOptions,
       package: args.implOptions.clientPackage,
     };
 
-    const transformers: AstTransformer<AstNode, JavaOptions>[] = [
+    const transformers: AstTransformer<AstNode, TargetOptions & JavaOptions>[] = [
       // new ElevateAsAbstractMembersAstTransformer(),
+      new AddCompositionMembersJavaAstTransformer(),
       new AddFieldsAstTransformer(),
       new AddConstructorJavaAstTransformer(),
       new AddAccessorsForFieldsAstTransformer([objectMapperField.identifier]),

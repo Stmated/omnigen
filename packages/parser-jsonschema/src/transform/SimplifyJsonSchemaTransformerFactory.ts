@@ -8,6 +8,7 @@ const visitor: JsonSchema7Visitor = {
 
     if (v.oneOf && v.oneOf.length == 1) {
 
+      // Weird way of writing the schema, but if it's just 1 then it's same as "allOf"
       if (v.allOf) {
         v.allOf.push(v.oneOf[0]);
       } else {

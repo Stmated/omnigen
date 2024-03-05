@@ -30,7 +30,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     ],
     'com.fasterxml.jackson.core.JacksonException': [
       'java.io.IOException',
-    ]
+    ],
   };
 
   transformAst(args: JavaAstTransformerArgs): void {

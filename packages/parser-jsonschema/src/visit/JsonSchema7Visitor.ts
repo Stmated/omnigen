@@ -1,121 +1,93 @@
-import {
-  JSONSchema4,
-  JSONSchema4Array,
-  JSONSchema4Object,
-  JSONSchema4Type,
-  JSONSchema4TypeName, JSONSchema6,
-  JSONSchema6Array, JSONSchema6Definition,
-  JSONSchema6Object,
-  JSONSchema6Type,
-  JSONSchema6TypeName,
-  JSONSchema7,
-  JSONSchema7Array,
-  JSONSchema7Definition,
-  JSONSchema7Object,
-  JSONSchema7Type,
-  JSONSchema7TypeName,
-} from 'json-schema';
-import {AnyJsonDefinition, AnyJSONSchema} from '../parse';
+import {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema';
+import {AnyJSONSchema} from '../parse/index.ts';
+import {Defined, DocVisitorTransformer, DocVisitorUnknownTransformer, ToArray, ToSingle} from './helpers.ts';
 
-export type ToSingle<T> = T extends Array<infer I> ? I : T;
-
-export type AnyJsonSchemaType = JSONSchema7Type | JSONSchema6Type | JSONSchema4Type;
-export type AnyJsonSchemaTypeName = JSONSchema7TypeName | JSONSchema6TypeName | JSONSchema4TypeName;
-export type AnyJsonSchemaArray = JSONSchema7Array | JSONSchema6Array | JSONSchema4Array;
-export type AnyJsonSchemaObject = JSONSchema7Object | JSONSchema6Object | JSONSchema4Object;
-
-export type JsonSchema6Or7 = JSONSchema6 | JSONSchema7;
-
-export type AnyJsonSchemaVisitor = JsonSchema4Visitor | JsonSchema6Visitor | JsonSchema7Visitor;
-
-export type JsonSchema7Visitor = JsonSchema7Properties & JsonSchema6Properties<JSONSchema7> & JsonSchema7BaseVisitor;
-export type JsonSchema6Visitor = JsonSchema6OnlyVisitor & JsonSchema6Properties<JSONSchema6> & JsonSchema6BaseVisitor;
-export type JsonSchema4Visitor = JsonSchema4Properties & JsonSchema4BaseVisitor;
-
-type JsonSchema7BaseVisitor = JsonSchemaBaseProperties<JSONSchema7, JSONSchema7Definition, JSONSchema7Type, JSONSchema7TypeName, JSONSchema7Array, JSONSchema7Object>;
-type JsonSchema6BaseVisitor = JsonSchemaBaseProperties<JSONSchema6, JSONSchema6Definition, JSONSchema6Type, JSONSchema6TypeName, JSONSchema6Array, JSONSchema6Object>;
-type JsonSchema4BaseVisitor = JsonSchemaBaseProperties<JSONSchema4, JSONSchema4, JSONSchema4Type, JSONSchema4TypeName, JSONSchema4Array, JSONSchema4Object>;
-
-export interface JsonSchema7Properties<S extends JSONSchema7 = JSONSchema7> {
-  $defs(v: S['$defs'], visitor: this): typeof v | undefined;
-  contentEncoding(v: S['contentEncoding'], visitor: this): typeof v | undefined;
-  contentMediaType(v: S['contentMediaType'], visitor: this): typeof v | undefined;
-  if(v: S['if'], visitor: this): typeof v | undefined;
-  then(v: S['then'], visitor: this): typeof v | undefined;
-  else(v: S['else'], visitor: this): typeof v | undefined;
-  readOnly(v: S['readOnly'], visitor: this): typeof v | undefined;
-  writeOnly(v: S['writeOnly'], visitor: this): typeof v | undefined;
-  $comment(v: S['$comment'], visitor: this): typeof v | undefined;
-  examples(v: S['examples'], visitor: this): typeof v | undefined;
+export interface JsonSchema7Visitor<S extends JSONSchema7 = JSONSchema7> extends JsonSchema6PlusVisitor<S> {
+  $defs: DocVisitorTransformer<S['$defs'], this>;
+  $defs_option: DocVisitorTransformer<Entry<Defined<S['$defs']>[keyof Defined<S['$defs']>]>, this>;
+  contentEncoding: DocVisitorTransformer<S['contentEncoding'], this>;
+  contentMediaType: DocVisitorTransformer<S['contentMediaType'], this>;
+  if: DocVisitorTransformer<S['if'], this>;
+  then: DocVisitorTransformer<S['then'], this>;
+  else: DocVisitorTransformer<S['else'], this>;
+  readOnly: DocVisitorTransformer<S['readOnly'], this>;
+  writeOnly: DocVisitorTransformer<S['writeOnly'], this>;
+  $comment: DocVisitorTransformer<S['$comment'], this>;
 }
 
-export interface JsonSchema6Properties<S extends JsonSchema6Or7 = JsonSchema6Or7> {
-  $id(v: S['$id'], visitor: this): typeof v | undefined;
-  const(v: S['const'], visitor: this): typeof v | undefined;
-  contains(v: S['contains'], visitor: this): typeof v | undefined;
-  propertyNames(v: S['propertyNames'], visitor: this): typeof v | undefined;
-  required(v: S['required'], visitor: this): typeof v | undefined;
-  required_option(v: ToSingle<S['required']>, visitor: this): typeof v | undefined;
+export interface JsonSchema6PlusVisitor<S extends JSONSchema6 | JSONSchema7> extends JsonSchemaBaseProperties<S> {
+  schema_boolean: DocVisitorTransformer<boolean, this>;
+
+  $id: DocVisitorTransformer<S['$id'], this>;
+  const: DocVisitorTransformer<S['const'], this>;
+  contains: DocVisitorTransformer<S['contains'], this>;
+  propertyNames: DocVisitorTransformer<S['propertyNames'], this>;
+
+  examples: DocVisitorTransformer<ToSingle<S['examples']>, this>;
 }
 
-export interface JsonSchema6OnlyVisitor {
-  examples(v: JSONSchema6['examples'], visitor: this): typeof v | undefined;
+interface JsonSchema4OnlyProperties<S extends JSONSchema4> {
+
 }
 
-export interface JsonSchema4Properties<S extends JSONSchema4 = JSONSchema4> {
+type JsonSchemaDefinitionArray<S extends AnyJSONSchema> = Defined<ToArray<Defined<S['default']>>>;
+type JsonSchemaDefinitionObject<S extends AnyJSONSchema> = Exclude<Extract<Defined<S['default']>, object>, Array<any>>;
+type JsonSchemaDefinitionPrimitive<S extends AnyJSONSchema> = Exclude<Defined<S['default']>, JsonSchemaDefinitionObject<S> | JsonSchemaDefinitionArray<S>>;
 
-  required(v: S['required'], visitor: this): typeof v | undefined;
-  required_option(v: ToSingle<S['required']>, visitor: this): typeof v | undefined;
-}
+export type Entry<T> = {key: string, value: T};
+export type ArrayItem<T> = {idx: number, value: T};
 
-export interface JsonSchemaBaseProperties<
-  S extends AnyJSONSchema = AnyJSONSchema,
-  D extends AnyJsonDefinition = AnyJsonDefinition,
-  T extends AnyJsonSchemaType = AnyJsonSchemaType,
-  TN extends AnyJsonSchemaTypeName = AnyJsonSchemaTypeName,
-  A extends AnyJsonSchemaArray = AnyJsonSchemaArray,
-  O extends AnyJsonSchemaObject = AnyJsonSchemaObject
-> {
-  visit(v: D, visitor: this): typeof v | undefined;
-  schema_boolean(v: boolean, visitor: this): typeof v | undefined;
-  schema(v: S, visitor: this): typeof v | undefined;
-  jsonSchemaType(v: T, visitor: this): typeof v | undefined;
-  jsonSchemaArray(v: A, visitor: this): typeof v | undefined;
-  jsonSchemaObject(v: O, visitor: this): typeof v | undefined;
-  jsonSchemaTypePrimitive(v: Exclude<T, O | A>, visitor: this): typeof v | undefined;
-  jsonSchemaTypeName(v: TN, visitor: this): typeof v | undefined;
-  definitions(v: S['definitions'], visitor: this): typeof v | undefined;
-  schemaVersion(v: S['$schema'], visitor: this): typeof v | undefined;
-  additionalItems(v: S['additionalItems'], visitor: this): typeof v | undefined;
-  additionalProperties(v: S['additionalProperties'], visitor: this): typeof v | undefined;
-  allOf(v: S['allOf'], visitor: this): typeof v | undefined;
-  anyOf(v: S['anyOf'], visitor: this): typeof v | undefined;
-  oneOf(v: S['oneOf'], visitor: this): typeof v | undefined;
-  not(v: S['not'], visitor: this): typeof v | undefined;
-  default(v: S['default'], visitor: this): typeof v | undefined;
-  dependencies(v: S['dependencies'], visitor: this): typeof v | undefined;
-  dependencies_strings(v: string[], visitor: this): typeof v | undefined;
-  description(v: S['description'], visitor: this): typeof v | undefined;
-  enum(v: S['enum'], visitor: this): typeof v | undefined;
-  enum_option(v: T, visitor: this): typeof v | undefined;
-  exclusiveMinimum(v: S['exclusiveMinimum'], visitor: this): typeof v | undefined;
-  exclusiveMaximum(v: S['exclusiveMaximum'], visitor: this): typeof v | undefined;
-  minimum(v: S['minimum'], visitor: this): typeof v | undefined;
-  maximum(v: S['maximum'], visitor: this): typeof v | undefined;
-  minItems(v: S['minItems'], visitor: this): typeof v | undefined;
-  maxItems(v: S['maxItems'], visitor: this): typeof v | undefined;
-  minLength(v: S['minLength'], visitor: this): typeof v | undefined;
-  maxLength(v: S['maxLength'], visitor: this): typeof v | undefined;
-  minProperties(v: S['minProperties'], visitor: this): typeof v | undefined;
-  maxProperties(v: S['maxProperties'], visitor: this): typeof v | undefined;
-  multipleOf(v: S['multipleOf'], visitor: this): typeof v | undefined;
-  pattern(v: S['pattern'], visitor: this): typeof v | undefined;
-  patternProperties(v: S['patternProperties'], visitor: this): typeof v | undefined;
-  properties(v: S['properties'], visitor: this): typeof v | undefined;
-  title(v: S['title'], visitor: this): typeof v | undefined;
-  type(v: S['type'], visitor: this): typeof v | undefined;
-  type_array(v: Extract<S['type'], Array<any>>, visitor: this): typeof v | undefined;
-  type_option(v: TN, visitor: this): typeof v | undefined;
-  uniqueItems(v: S['uniqueItems'], visitor: this): typeof v | undefined;
-  $ref(v: S['$ref'], visitor: this): typeof v | undefined;
+export interface JsonSchemaBaseProperties<S extends AnyJSONSchema> {
+  visit: DocVisitorTransformer<Defined<ToSingle<S['items']>>, this>;
+  visit_unknown: DocVisitorTransformer<DocVisitorUnknownTransformer<unknown>, this>;
+
+  schema: DocVisitorTransformer<Exclude<Defined<ToSingle<S['items']>>, boolean>, this>;
+  schema_option: DocVisitorTransformer<ArrayItem<ToSingle<Defined<S['oneOf']>>>, this>;
+
+  $schema: DocVisitorTransformer<S['$schema'], this>;
+  jsonSchemaType: DocVisitorTransformer<Defined<S['default']>, this>;
+  jsonSchemaArray: DocVisitorTransformer<JsonSchemaDefinitionArray<S>, this>;
+  jsonSchemaObject: DocVisitorTransformer<JsonSchemaDefinitionObject<S>, this>;
+  jsonSchemaTypePrimitive: DocVisitorTransformer<JsonSchemaDefinitionPrimitive<S>, this>;
+  jsonSchemaTypeName: DocVisitorTransformer<Defined<ToSingle<S['type']>>, this>;
+  definitions: DocVisitorTransformer<S['definitions'], this>;
+  definitions_option: DocVisitorTransformer<Entry<Defined<S['definitions']>[keyof Defined<S['definitions']>]>, this>;
+  additionalItems: DocVisitorTransformer<S['additionalItems'], this>;
+  additionalProperties: DocVisitorTransformer<S['additionalProperties'], this>;
+  allOf: DocVisitorTransformer<S['allOf'], this>;
+  anyOf: DocVisitorTransformer<S['anyOf'], this>;
+  oneOf: DocVisitorTransformer<S['oneOf'], this>;
+  not: DocVisitorTransformer<S['not'], this>;
+  default: DocVisitorTransformer<S['default'], this>;
+  dependencies: DocVisitorTransformer<S['dependencies'], this>;
+  dependencies_strings: DocVisitorTransformer<string[], this>;
+  description: DocVisitorTransformer<S['description'], this>;
+  enum: DocVisitorTransformer<S['enum'], this>;
+  enum_option: DocVisitorTransformer<Defined<S['default']>, this>;
+  exclusiveMinimum: DocVisitorTransformer<S['exclusiveMinimum'], this>;
+  exclusiveMaximum: DocVisitorTransformer<S['exclusiveMaximum'], this>;
+  minimum: DocVisitorTransformer<S['minimum'], this>;
+  maximum: DocVisitorTransformer<S['maximum'], this>;
+  items: DocVisitorTransformer<S['items'], this>;
+  items_item: DocVisitorTransformer<ToSingle<Defined<S['items']>>, this>;
+  minItems: DocVisitorTransformer<S['minItems'], this>;
+  maxItems: DocVisitorTransformer<S['maxItems'], this>;
+  minLength: DocVisitorTransformer<S['minLength'], this>;
+  maxLength: DocVisitorTransformer<S['maxLength'], this>;
+  minProperties: DocVisitorTransformer<S['minProperties'], this>;
+  maxProperties: DocVisitorTransformer<S['maxProperties'], this>;
+  multipleOf: DocVisitorTransformer<S['multipleOf'], this>;
+  pattern: DocVisitorTransformer<S['pattern'], this>;
+  patternProperties: DocVisitorTransformer<S['patternProperties'], this>;
+  properties: DocVisitorTransformer<S['properties'], this>;
+  properties_option: DocVisitorTransformer<Entry<Defined<S['properties']>[keyof Defined<S['properties']>]>, this>;
+  required: DocVisitorTransformer<S['required'], this>;
+  required_option: DocVisitorTransformer<ToSingle<S['required']>, this>;
+  title: DocVisitorTransformer<S['title'], this>;
+  type: DocVisitorTransformer<S['type'], this>;
+  format: DocVisitorTransformer<S['format'], this>;
+  type_array: DocVisitorTransformer<Extract<S['type'], Array<any>>, this>;
+  type_option: DocVisitorTransformer<Defined<ToSingle<S['type']>>, this>;
+  uniqueItems: DocVisitorTransformer<S['uniqueItems'], this>;
+  $ref: DocVisitorTransformer<S['$ref'], this>;
 }

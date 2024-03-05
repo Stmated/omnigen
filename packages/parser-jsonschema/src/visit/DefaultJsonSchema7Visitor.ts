@@ -1,107 +1,160 @@
-import {AnyJsonSchemaVisitor, JsonSchema7Visitor, ToSingle} from './JsonSchema7Visitor.ts';
+import {JsonSchema7Visitor} from './JsonSchema7Visitor.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+import {JSONSchema7} from 'json-schema';
+import {z} from 'zod';
+import {DocVisitorTransformer, DocVisitorUnknownTransformer, safeSet, visitUniformArray, visitUniformObject} from './helpers.ts';
 
-function visitUniformObject<T>(obj: T, mapper: { (child: T[keyof T]): typeof child | undefined }): T {
+const logger = LoggerFactory.create(import.meta.url);
 
-  const newObj: Partial<T> = {};
-  let changeCount = 0;
-  for (const key in obj) {
-    if (!Object.prototype.hasOwnProperty.call(obj, key)) {
-      continue;
+function createUnknownPropertiesHandler<S extends JSONSchema7>(): DocVisitorTransformer<DocVisitorUnknownTransformer<unknown>, JsonSchema7Visitor<S>> {
+
+  return (v, visitor) => {
+    const value = v.value;
+
+    if (v.path[v.path.length - 1] == '$ref') {
+
+      const transformed = visitor.$ref(z.coerce.string().parse(v.value), visitor);
+      if (transformed === undefined) {
+        return transformed;
+      }
+      return {...v, value: transformed};
     }
 
-    const res = mapper(obj[key]);
-    if (res && res != obj[key]) {
-      changeCount++;
-      // @ts-ignore
-      newObj[key] = res;
-    } else if (!res) {
-      changeCount++;
+    if (value && Array.isArray(value)) {
+
+      const transformedArray = visitUniformArray(value, (it, idx) => {
+
+        const nextUnknown: DocVisitorUnknownTransformer<typeof it> = {
+          path: [...v.path, `${idx}`],
+          value: it,
+        };
+
+        return visitor.visit_unknown(nextUnknown, visitor)?.value;
+      });
+
+      if (transformedArray != v.value) {
+        return {...v, value: transformedArray};
+      }
+
+    } else if (value && typeof value == 'object') {
+
+      const transformedObject = visitUniformObject<any>(value, (it, key) => {
+        const nextUnknown: DocVisitorUnknownTransformer<typeof it> = {
+          path: [...v.path, key],
+          value: it,
+        };
+
+        return visitor.visit_unknown(nextUnknown, visitor)?.value;
+      });
+
+      if (transformedObject != v.value) {
+        return {...v, value: transformedObject};
+      }
     }
-  }
-
-  return ((changeCount > 0) ? newObj as T : obj);
-}
-
-function visitUniformArray<A extends Array<any>>(array: A, mapper: { (item: ToSingle<A>): ToSingle<A> | undefined }): A {
-
-  const newArr: Array<ToSingle<A>> = [];
-  let changeCount = 0;
-  for (let i = 0; i < array.length; i++) {
-    const item = array[i];
-
-    const res = mapper(item);
-    if (res && res != item) {
-      changeCount++;
-      newArr[i] = res;
-    } else if (!res) {
-      changeCount++;
-    }
-  }
-
-  return ((changeCount > 0) ? newArr as A : array);
-}
-
-export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
-  schema: (v, visitor) => {
-
-    v.$ref = visitor.$ref(v.$ref, visitor);
-    v.$schema = visitor.schemaVersion(v.$schema, visitor);
-    v.definitions = visitor.definitions(v.definitions, visitor);
-    v.additionalItems = visitor.additionalItems(v.additionalItems, visitor);
-    v.additionalProperties = visitor.additionalProperties(v.additionalProperties, visitor);
-    v.allOf = visitor.allOf(v.allOf, visitor);
-    v.anyOf = visitor.anyOf(v.anyOf, visitor);
-    v.oneOf = visitor.oneOf(v.oneOf, visitor);
-    v.not = visitor.not(v.not, visitor);
-    v.default = visitor.default(v.default, visitor);
-    v.dependencies = visitor.dependencies(v.dependencies, visitor);
-    v.description = visitor.description(v.description, visitor);
-    v.enum = visitor.enum(v.enum, visitor);
-    v.exclusiveMinimum = visitor.exclusiveMinimum(v.exclusiveMinimum, visitor);
-    v.exclusiveMaximum = visitor.exclusiveMaximum(v.exclusiveMaximum, visitor);
-    v.minimum = visitor.minimum(v.minimum, visitor);
-    v.maximum = visitor.maximum(v.maximum, visitor);
-    v.minItems = visitor.minItems(v.minItems, visitor);
-    v.maxItems = visitor.maxItems(v.maxItems, visitor);
-    v.minLength = visitor.minLength(v.minLength, visitor);
-    v.maxLength = visitor.maxLength(v.maxLength, visitor);
-    v.minProperties = visitor.minProperties(v.minProperties, visitor);
-    v.maxProperties = visitor.maxProperties(v.maxProperties, visitor);
-    v.multipleOf = visitor.multipleOf(v.multipleOf, visitor);
-    v.pattern = visitor.pattern(v.pattern, visitor);
-    v.patternProperties = visitor.patternProperties(v.patternProperties, visitor);
-    v.properties = visitor.properties(v.properties, visitor);
-    v.title = visitor.title(v.title, visitor);
-    v.type = visitor.type(v.type, visitor);
-    v.uniqueItems = visitor.uniqueItems(v.uniqueItems, visitor);
-
-    v.$id = visitor.$id(v.$id, visitor);
-    v.const = visitor.const(v.const, visitor);
-    v.contains = visitor.contains(v.contains, visitor);
-    v.examples = visitor.examples(v.examples, visitor);
-    v.propertyNames = visitor.propertyNames(v.propertyNames, visitor);
-
-    v.$defs = visitor.$defs(v.$defs, visitor);
-    v.$comment = visitor.$comment(v.$comment, visitor);
-    v.contentEncoding = visitor.contentEncoding(v.contentEncoding, visitor);
-    v.contentMediaType = visitor.contentMediaType(v.contentMediaType, visitor);
-    v.if = visitor.if(v.if, visitor);
-    v.then = visitor.then(v.then, visitor);
-    v.else = visitor.else(v.else, visitor);
-    v.readOnly = visitor.readOnly(v.readOnly, visitor);
-    v.writeOnly = visitor.writeOnly(v.writeOnly, visitor);
-
-    // TODO: Include any unknown properties, ie. any vendor stuff
 
     return v;
-  },
+  };
+}
 
+export const DefaultJsonSchema7Visitor: JsonSchema7Visitor<JSONSchema7> = {
   visit: (v, visitor) => {
     if (typeof v == 'boolean') {
       return visitor.schema_boolean(v, visitor);
     } else {
       return visitor.schema(v, visitor);
     }
+  },
+  visit_unknown: createUnknownPropertiesHandler<JSONSchema7>(),
+  schema: function(v, visitor) {
+
+    const handled: string[] = [];
+
+    // 6, order important, so that $id is handled before any $defs, definitions, oneOf, etc.
+    safeSet(v, visitor, '$id', handled);
+    safeSet(v, visitor, 'const', handled);
+    safeSet(v, visitor, 'contains', handled);
+    safeSet(v, visitor, 'examples', handled);
+    safeSet(v, visitor, 'propertyNames', handled);
+
+    // 7
+    safeSet(v, visitor, '$defs', handled);
+    safeSet(v, visitor, '$comment', handled);
+    safeSet(v, visitor, 'contentEncoding', handled);
+    safeSet(v, visitor, 'contentMediaType', handled);
+    safeSet(v, visitor, 'if', handled);
+    safeSet(v, visitor, 'then', handled);
+    safeSet(v, visitor, 'else', handled);
+    safeSet(v, visitor, 'readOnly', handled);
+    safeSet(v, visitor, 'writeOnly', handled);
+
+    // 4
+    safeSet(v, visitor, '$ref', handled);
+    safeSet(v, visitor, '$schema', handled);
+    safeSet(v, visitor, 'definitions', handled);
+    safeSet(v, visitor, 'additionalItems', handled);
+    safeSet(v, visitor, 'additionalProperties', handled);
+    safeSet(v, visitor, 'allOf', handled);
+    safeSet(v, visitor, 'anyOf', handled);
+    safeSet(v, visitor, 'oneOf', handled);
+    safeSet(v, visitor, 'not', handled);
+    safeSet(v, visitor, 'default', handled);
+    safeSet(v, visitor, 'dependencies', handled);
+    safeSet(v, visitor, 'description', handled);
+    safeSet(v, visitor, 'enum', handled);
+    safeSet(v, visitor, 'exclusiveMinimum', handled);
+    safeSet(v, visitor, 'exclusiveMaximum', handled);
+    safeSet(v, visitor, 'minimum', handled);
+    safeSet(v, visitor, 'maximum', handled);
+    safeSet(v, visitor, 'items', handled);
+    safeSet(v, visitor, 'minItems', handled);
+    safeSet(v, visitor, 'maxItems', handled);
+    safeSet(v, visitor, 'minLength', handled);
+    safeSet(v, visitor, 'maxLength', handled);
+    safeSet(v, visitor, 'minProperties', handled);
+    safeSet(v, visitor, 'maxProperties', handled);
+    safeSet(v, visitor, 'multipleOf', handled);
+    safeSet(v, visitor, 'pattern', handled);
+    safeSet(v, visitor, 'patternProperties', handled);
+    safeSet(v, visitor, 'properties', handled);
+    safeSet(v, visitor, 'title', handled);
+    safeSet(v, visitor, 'type', handled);
+    safeSet(v, visitor, 'format', handled);
+    safeSet(v, visitor, 'uniqueItems', handled);
+    safeSet(v, visitor, 'required', handled);
+
+    const keys = Object.keys(v);
+    for (const unknownKey of keys) {
+      if (handled.includes(unknownKey)) {
+        continue;
+      }
+
+      if (!Object.prototype.hasOwnProperty.call(v, unknownKey)) {
+        continue;
+      }
+
+      const unknownOwner = v as any;
+      const unknownProperty: DocVisitorUnknownTransformer<unknown> = {
+        // TODO: Would be much better if we had access to the full path here
+        path: [unknownKey],
+        value: unknownOwner[unknownKey] as unknown,
+      };
+
+      const handledUnknownProperty = visitor.visit_unknown(unknownProperty, visitor);
+
+      if (handledUnknownProperty === undefined) {
+
+        logger.trace(`Deleting unrecognized property ${unknownKey}`);
+        delete unknownOwner[unknownKey];
+      } else {
+
+        logger.trace(`Moving over unrecognized JSONSchema property '${unknownKey}'`);
+        unknownOwner[unknownKey] = handledUnknownProperty.value;
+      }
+    }
+
+    // TODO: Include any unknown properties, ie. any vendor stuff
+
+    return v;
   },
   schema_boolean: v => v,
   jsonSchemaType: (v, vi) => {
@@ -114,17 +167,20 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
 
     return vi.jsonSchemaTypePrimitive(v, vi);
   },
+  $schema: v => v,
+  schema_option: (option, visitor) => {
+    const res = visitor.visit(option.value, visitor);
+    return res ? {idx: option.idx, value: res} : undefined;
+  },
   jsonSchemaArray: (v, vi) => visitUniformArray(v, it => vi.jsonSchemaType(it, vi)),
   jsonSchemaObject: (v, visitor) => visitUniformObject(v, it => visitor.jsonSchemaType(it, visitor)),
   jsonSchemaTypePrimitive: v => v,
   jsonSchemaTypeName: v => v,
-  definitions: (v, visitor) => v ? visitUniformObject(v, it => visitor.visit(it, visitor)) : v,
-  schemaVersion: v => v,
   additionalItems: (v, visitor) => v ? visitor.visit(v, visitor) : v,
   additionalProperties: (v, visitor) => v ? visitor.visit(v, visitor) : v,
-  allOf: (v, visitor) => v ? visitUniformArray(v, it => visitor.visit(it, visitor)) : v,
-  anyOf: (v, visitor) => v ? visitUniformArray(v, it => visitor.visit(it, visitor)) : v,
-  oneOf: (v, visitor) => v ? visitUniformArray(v, it => visitor.visit(it, visitor)) : v,
+  allOf: (v, visitor) => v ? visitUniformArray(v, (it, idx) => visitor.schema_option({idx, value: it}, visitor)?.value) : v,
+  anyOf: (v, visitor) => v ? visitUniformArray(v, (it, idx) => visitor.schema_option({idx, value: it}, visitor)?.value) : v,
+  oneOf: (v, visitor) => v ? visitUniformArray(v, (it, idx) => visitor.schema_option({idx, value: it}, visitor)?.value) : v,
   not: (v, visitor) => v ? visitor.visit(v, visitor) : v,
   default: (v, visitor) => v ? visitor.jsonSchemaType(v, visitor) : v,
   dependencies: (v, visitor) => v ? visitUniformObject(v, it => Array.isArray(it) ? visitor.dependencies_strings(it, visitor) : visitor.visit(it, visitor)) : v,
@@ -136,6 +192,8 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
   exclusiveMaximum: v => v,
   minimum: v => v,
   maximum: v => v,
+  items: (v, visitor) => v ? Array.isArray(v) ? visitUniformArray(v, it => visitor.items_item(it, visitor)) : visitor.items_item(v, visitor) : v,
+  items_item: (v, visitor) => typeof v == 'boolean' ? v : visitor.visit(v, visitor),
   minItems: v => v,
   maxItems: v => v,
   minLength: v => v,
@@ -145,13 +203,30 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
   multipleOf: v => v,
   pattern: v => v,
   patternProperties: (v, visitor) => v ? visitUniformObject(v, it => visitor.visit(it, visitor)) : v,
-  properties: (v, visitor) => v ? visitUniformObject(v, it => visitor.visit(it, visitor)) : v,
+  properties: (v, visitor) => v ? visitUniformObject(v, (it, k) => visitor.properties_option({key: k, value: it}, visitor)) : v,
+  properties_option: (option, visitor) => {
+    const res = visitor.visit(option.value, visitor);
+    return res ? {key: option.key, value: res} : undefined;
+  },
   title: v => v,
   type: (v, visitor) => Array.isArray(v) ? visitor.type_array(v, visitor) : v ? visitor.type_option(v, visitor) : v,
   type_array: (v, visitor) => v ? visitUniformArray(v, it => visitor.type_option(it, visitor)) : v,
   type_option: (v, visitor) => visitor.jsonSchemaTypeName(v, visitor),
+  format: v => v,
   uniqueItems: v => v,
   $ref: v => v,
+
+  definitions: (v, visitor) => v ? visitUniformObject(v, (it, k) => visitor.definitions_option({key: k, value: it}, visitor)) : v,
+  $defs: (v, visitor) => v ? visitUniformObject(v, (it, k) => visitor.$defs_option({key: k, value: it}, visitor)) : v,
+
+  definitions_option: (option, visitor) => {
+    const res = visitor.visit(option.value, visitor);
+    return res ? {key: option.key, value: res} : undefined;
+  },
+  $defs_option: (option, visitor) => {
+    const res = visitor.visit(option.value, visitor);
+    return res ? {key: option.key, value: res} : undefined;
+  },
 
   $id: v => v,
   const: (v, visitor) => v ? visitor.jsonSchemaType(v, visitor) : v,
@@ -161,7 +236,6 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
   required: (v, visitor) => Array.isArray(v) ? visitUniformArray(v, it => visitor.required_option(it, visitor)) : v,
   required_option: v => v,
 
-  $defs: (v, visitor) => visitor.definitions(v, visitor),
   $comment: v => v,
   contentEncoding: v => v,
   contentMediaType: v => v,

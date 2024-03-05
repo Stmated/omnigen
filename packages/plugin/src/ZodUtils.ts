@@ -125,7 +125,7 @@ export class ZodUtils {
     } else if (actual instanceof ZodLiteral) {
       return ZodUtils.isZodCompatibleWithJavaValue(expected, actual.value, actual._def.typeName, path);
     } else {
-      logger.warn(`Unknown zod type combo ${expected._def.typeName} - ${actual._def.typeName}`);
+      logger.silent(`Unknown zod type combo ${expected._def.typeName} - ${actual._def.typeName}`);
     }
 
     return {v: Compat.DIFF};

@@ -1,7 +1,7 @@
 import {ExternalSyntaxTree, OmniType} from '@omnigen/core';
-import {JavaSubTypeCapableType, JavaUtil, TypeNameInfo} from '../util';
-import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from '../transform';
-import * as Java from '../ast';
+import {JavaUtil, TypeNameInfo} from '../util/index.ts';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from '../transform/index.ts';
+import * as Java from '../ast/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
@@ -15,7 +15,7 @@ interface CompilationUnitInfo {
 }
 
 interface ObjectInfo {
-  object: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>;
+  object: Java.AbstractObjectDeclaration;
 }
 
 export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {

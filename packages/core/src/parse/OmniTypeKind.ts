@@ -23,6 +23,7 @@ export const OmniTypeKind = {
   GENERIC_SOURCE_IDENTIFIER: 'GENERIC_SOURCE_IDENTIFIER',
   GENERIC_TARGET_IDENTIFIER: 'GENERIC_TARGET_IDENTIFIER',
   INTERFACE: 'INTERFACE',
+  DECORATING: 'DECORATING',
   /**
    * TODO: Deprecated. Remove. Should be up to the target language to handle the original type as best it can!
    */

@@ -52,6 +52,9 @@ type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGeneri
 
 export class OmniUtil {
 
+  /**
+   * TODO: Remove in favor of OmniModel visitor (make types into classes)
+   */
   public static visitTypesDepthFirst<R>(
     input: TypeOwner<OmniType> | undefined,
     onDown?: DFSTraverseCallback<R>,
@@ -61,6 +64,9 @@ export class OmniUtil {
     return new OmniTypeVisitor().visitTypesDepthFirst(input, onDown, onUp, onlyOnce);
   }
 
+  /**
+   * TODO: Remove in favor of OmniModel visitor (make types into classes)
+   */
   public static visitTypesBreadthFirst<R>(
     input: TypeOwner<OmniType> | undefined,
     onDown: BFSTraverseCallback<R>,
@@ -69,6 +75,9 @@ export class OmniUtil {
     return new OmniTypeVisitor().visitTypesBreadthFirst(input, onDown, visitOnce);
   }
 
+  /**
+   * TODO: Remove in favor of OmniModel visitor (make types into classes)
+   */
   public static getAllExportableTypes(model: OmniModel, refTypes?: OmniType[]): TypeCollection {
 
     // TODO: Should be an option to do a deep dive or a quick dive!
@@ -110,6 +119,12 @@ export class OmniUtil {
       }
     }
 
+    if (ctx.type.kind == OmniTypeKind.DECORATING) {
+
+      // We do not add the decorating type itself
+      return;
+    }
+
     set.add(ctx.type);
     if (ctx.typeDepth == 0) {
       setEdge.add(ctx.type);
@@ -138,8 +153,12 @@ export class OmniUtil {
    */
   public static getUnwrappedType<T extends OmniType | undefined>(type: T): SmartUnwrappedType<T> {
 
-    if (type && type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      return OmniUtil.getUnwrappedType(type.of) as SmartUnwrappedType<T>;
+    if (type) {
+      if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+        return OmniUtil.getUnwrappedType(type.of) as SmartUnwrappedType<T>;
+      } else if (type.kind == OmniTypeKind.DECORATING) {
+        return OmniUtil.getUnwrappedType(type.of) as SmartUnwrappedType<T>;
+      }
     }
 
     return type as SmartUnwrappedType<T>;
@@ -221,7 +240,7 @@ export class OmniUtil {
         return undefined;
       }
 
-      return type as OmniCompositionType<OmniSuperTypeCapableType, CompositionKind>;
+      return type as OmniCompositionType<OmniSuperTypeCapableType>;
     }
 
     return undefined;
@@ -618,6 +637,8 @@ export class OmniUtil {
       return type.placeholderName || type.sourceIdentifier.placeholderName;
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
       return type.placeholderName;
+    } else if (type.kind == OmniTypeKind.DECORATING) {
+      return `Decorated${OmniUtil.getVirtualTypeName(type.of)}`;
     } else if (type.kind == OmniTypeKind.DICTIONARY) {
 
       // TODO: Convert this into a generic type instead! Do NOT rely on this UGLY hardcoded string method!
@@ -634,6 +655,8 @@ export class OmniUtil {
       };
     } else if (type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
       return type.fqn;
+    } else if (type.kind == OmniTypeKind.COMPOSITION) {
+      return `Composition${type.compositionKind}(${type.types.map(it => OmniUtil.getVirtualTypeName(it)).join(',')})`;
     }
 
     const typeName = OmniUtil.getTypeName(type);
@@ -642,7 +665,7 @@ export class OmniUtil {
     }
 
     // TODO: All types should be able to return a "virtual" type name, which can be used for compositions or whatever!
-    return `[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`;
+    throw new Error(`[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`);
   }
 
   public static toReferenceType<T extends OmniType>(type: T): T {

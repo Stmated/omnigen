@@ -21,6 +21,7 @@ export class AddGeneratedAnnotationAstTransformer extends AbstractJavaAstTransfo
           declaration.annotations = new Java.AnnotationList(...[]);
         }
 
+        // TODO: This should not be hardcoded as 'javax', it needs to be abe to be jakarta as well -- maybe convert this into an abstract node, converted in a later stage?
         declaration.annotations.children.push(
           new Java.Annotation(
             new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'javax.annotation.Generated'}),

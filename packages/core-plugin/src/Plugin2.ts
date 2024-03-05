@@ -1,5 +1,17 @@
 import {z, ZodError, ZodType} from 'zod';
-import {OmniModel, OmniModelLibrary, OmniTypeLibrary, Renderer, ZodModelTransformOptions, ZodOptions, ZodPackageOptions, ZodParserOptions, ZodTargetFeatures, ZodTargetOptions} from '@omnigen/core';
+import {
+  OmniModel,
+  OmniModelLibrary,
+  OmniTypeLibrary,
+  Renderer,
+  ZodCoercedBoolean,
+  ZodModelTransformOptions,
+  ZodOptions,
+  ZodPackageOptions,
+  ZodParserOptions,
+  ZodTargetFeatures,
+  ZodTargetOptions,
+} from '@omnigen/core';
 
 export enum PluginScoreKind {
   SUITABLE = 1,
@@ -62,6 +74,7 @@ export const ZodPackageOptionsContext = ZodBaseContext.extend({
 });
 
 export const ZodFileWriteOptions = ZodOptions.extend({
+  outputFiles: ZodCoercedBoolean.default('f'),
   outputDirBase: z.string().default('./.generated'),
 });
 

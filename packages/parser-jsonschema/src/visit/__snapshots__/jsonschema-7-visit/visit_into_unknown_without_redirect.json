@@ -1,0 +1,35 @@
+{
+  "$id": "https://example.com/visit_unknown_properties.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "A": {
+      "type": "integer",
+      "x-unknown-property": [
+        {
+          "$ref": "#/$defs/C"
+        }
+      ]
+    },
+    "B": {
+      "type": "object",
+      "properties": {
+        "pb": {
+          "type": "number",
+          "minimum": 100,
+          "x-something": {
+            "x-format": "double"
+          }
+        }
+      }
+    },
+    "C": {
+      "type": "object",
+      "properties": {
+        "pc": {
+          "type": "string",
+          "pattern": "c+"
+        }
+      }
+    }
+  }
+}

@@ -82,7 +82,7 @@ module.exports = {
             'selector': 'property',
             'leadingUnderscore': 'forbid',
             'trailingUnderscore': 'forbid',
-            'format': ['camelCase', 'UPPER_CASE'],
+            'format': ['camelCase', 'UPPER_CASE', 'snake_case'],
           },
           {
             'selector': 'property',

@@ -5,12 +5,12 @@ import {
   ParserOptions,
 } from '@omnigen/core';
 import {OMNI_GENERIC_FEATURES, TargetFeatures, TargetOptions} from '@omnigen/core';
-import {PropertyUtil} from '../PropertyUtil.js';
+import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniModelTransformerArgs} from '@omnigen/core';
 import {PropertyDifference, TypeDifference} from '@omnigen/core';
 import {OmniModelTransformer2ndPassArgs} from '@omnigen/core';
-import {OmniUtil} from '../OmniUtil.js';
-import {Sorters} from '../../util';
+import {OmniUtil} from '../OmniUtil.ts';
+import {Sorters} from '../../util/index.ts';
 
 /**
  * Takes an OmniModel, and tries to compress types as much as possible.

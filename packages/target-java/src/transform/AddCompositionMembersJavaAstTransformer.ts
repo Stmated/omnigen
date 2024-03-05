@@ -1,317 +1,92 @@
-import {
-  AbstractJavaAstTransformer,
-  JavaAndTargetOptions,
-  JavaAstTransformerArgs,
-} from './AbstractJavaAstTransformer.js';
-import {JavaOptions} from '../options/index.js';
-import {
-  CompositionKind,
-  OmniCompositionType,
-  OmniEnumType,
-  OmniGenericSourceIdentifierType,
-  OmniGenericSourceType,
-  OmniModel,
-  OmniOptionallyNamedType,
-  OmniInterfaceOrObjectType,
-  OmniPrimitiveKind,
-  OmniPrimitiveType,
-  OmniType,
-  OmniTypeKind,
-  UnknownKind,
-} from '@omnigen/core';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
+import {CompositionKind, OmniCompositionAndType, OmniCompositionType, OmniEnumType, OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind, UnknownKind} from '@omnigen/core';
+import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {AbstractObjectDeclaration} from '../ast';
-import {JavaSubTypeCapableType, JavaUtil} from '../util';
-import {JavaAstUtils} from './JavaAstUtils.js';
-import {LoggerFactory} from '@omnigen/core-log';
-import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';
+import {AbstractObjectDeclaration, JavaAstRootNode} from '../ast';
+import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {JavaAstUtils} from './JavaAstUtils.ts';
+import {JavaOptions} from '../options';
 
-const logger = LoggerFactory.create(import.meta.url);
-
-export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
+/**
+ * There needs to be more centralized handling of adding fields to a class depending on if it is extending or implementing interfaces.
+ */
+export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    // TODO: Need to figure out where the wrong JsonRpcErrorResponse comes from. Something is missed in the replacement!
+    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
-    const exportableTypes = OmniUtil.getAllExportableTypes(args.model, args.model.types);
+      visitClassDeclaration: (node, visitor) => {
 
-    const namePairs: NamePair<OmniOptionallyNamedType>[] = [];
-    for (const type of exportableTypes.all) {
-      if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-        // These should keep their names, which are generally just 'T'.
-        continue;
-      }
+        const omniType = node.type.omniType;
 
-      // NOTE: Check if wrapped type has a name and resolve/change it too?
-      const unwrappedType = OmniUtil.getUnwrappedType(type);
-      if ('name' in unwrappedType) {
-        namePairs.push({
-          owner: unwrappedType,
-          name: unwrappedType.name,
-        });
-      }
-    }
-
-    if (namePairs.length > 0) {
-      const resolved = Naming.unwrap(namePairs);
-      for (const pair of resolved) {
-        pair.owner.name = Naming.prefixedPascalCase(pair.name);
-      }
-    }
-
-    const removedTypes: OmniType[] = [];
-    for (const type of exportableTypes.all) {
-      removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
-    }
-
-    // NOTE: Is this actually correct? Could it not delete types we actually want?
-    exportableTypes.all = exportableTypes.all.filter(it => !removedTypes.includes(it));
-
-    for (const type of exportableTypes.all) {
-
-      if (type.kind == OmniTypeKind.ARRAY) {
-
-        // What do we do here?
-
-      } else if (type.kind == OmniTypeKind.ENUM) {
-        this.transformEnum(args.model, type, undefined, args.root, args.options);
-      } else if (type.kind == OmniTypeKind.COMPOSITION) {
-
-        // A composition type is likely just like any other object.
-        // Just that has no real content in itself, but made up of the different parts.
-        // If the composition is a "extends A and B"
-        // Then it should be extending A, and implementing B interface, and rendering B properties
-        if (type.compositionKind == CompositionKind.XOR) {
-
-          // In Java only the XOR composition is rendered as a separate compilation unit.
-          // That is because multiple inheritance does not exist, so it needs to be done manually.
-          const subType = JavaUtil.asSubType(type);
-          if (subType) {
-            this.transformSubType(args.model, subType, undefined, args.options, args.root);
+        if (omniType.kind == OmniTypeKind.COMPOSITION) {
+          if (omniType.compositionKind == CompositionKind.XOR) {
+            this.addXOrMappingToBody(omniType, node, args.options);
+          } else if (omniType.compositionKind == CompositionKind.AND) {
+            this.addAndCompositionToClassDeclaration(args.model, args.root, omniType, node, args.options);
           }
         }
 
-      } else if (type.kind == OmniTypeKind.OBJECT) {
-        this.transformSubType(args.model, type, undefined, args.options, args.root);
-      } else if (type.kind == OmniTypeKind.INTERFACE) {
-        if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
-          throw new Error(`Do not know yet how to handle a generic interface. Fix it.`);
-        } else {
-          this.transformInterface(type, args.options, args.root);
-        }
-      } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-        this.transformSubType(args.model, type.of, type, args.options, args.root, type.sourceIdentifiers);
-      }
-    }
+        // Then keep searching deeper, into nested types
+        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
+      },
+    }));
   }
 
-  private transformEnum(
-    model: OmniModel,
-    type: OmniEnumType,
-    originalType: OmniType | undefined,
-    root: Java.JavaAstRootNode,
-    options: JavaAndTargetOptions,
-  ): void {
-    const body = new Java.Block();
+  /**
+   * This is quite wrong, since it is not for certain that one type should be a class and another an interface.
+   * This needs to be handled in some other way which orders and/or categorizes the extensions.
+   */
+  private addAndCompositionToClassDeclaration(model: OmniModel, root: JavaAstRootNode, andType: OmniCompositionAndType, classDec: Java.ClassDeclaration, options: JavaAndTargetOptions): void {
 
-    const enumDeclaration = new Java.EnumDeclaration(
-      new Java.RegularType(type),
-      new Java.Identifier(JavaUtil.getClassName(originalType || type, options)),
-      body,
+    const implementsDeclarations = new Java.ImplementsDeclaration(
+      new Java.TypeList([]),
     );
 
-    if (type.enumConstants) {
+    for (const type of andType.types) {
 
-      body.children.push(
-        new Java.EnumItemList(
-          ...type.enumConstants.map(item => new Java.EnumItem(
-            new Java.Identifier(Case.constant(String(item))),
-            new Java.Literal(item, type.primitiveKind),
-          )),
-        ),
-      );
+      if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.AND) {
 
-      // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
-      //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
-      const itemType: OmniPrimitiveType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: type.primitiveKind,
-      };
+        // We can continue deeper, and add fields for this composition as well.
 
-      const fieldType = new Java.RegularType(itemType);
-      const fieldIdentifier = new Java.Identifier('value');
-      const field = new Java.Field(
-        fieldType,
-        fieldIdentifier,
-        undefined,
-      );
+      } else {
+        const asSuperType = JavaUtil.asSuperType(type);
 
-      body.children.push(field);
+        if (asSuperType) {
 
-      const argumentDeclaration = new Java.ArgumentDeclaration(fieldType, fieldIdentifier);
+          if (!classDec.extends) {
+            classDec.extends = new Java.ExtendsDeclaration(
+              JavaAstUtils.createTypeNode(asSuperType),
+            );
+          } else {
 
-      body.children.push(
-        new Java.ConstructorDeclaration(
-          enumDeclaration,
-          new Java.ArgumentDeclarationList(argumentDeclaration),
-          new Java.Block(
-            new Java.Statement(
-              new Java.AssignExpression(new Java.FieldReference(field), new Java.DeclarationReference(argumentDeclaration)),
-            ),
-          ),
-          new Java.ModifierList(),
-        ),
-      );
-    }
+            if (asSuperType.kind == OmniTypeKind.OBJECT) {
+              const interfaceType = JavaAstUtils.addInterfaceOf(asSuperType, root, options);
+              implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(interfaceType));
+            } else if (asSuperType.kind == OmniTypeKind.INTERFACE) {
+              implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(asSuperType));
+            }
 
-    root.children.push(new Java.CompilationUnit(
-      new Java.PackageDeclaration(JavaUtil.getPackageName(type, enumDeclaration.name.value, options)),
-      new Java.ImportList(
-        [],
-      ),
-      enumDeclaration,
-    ));
-  }
+            for (const property of OmniUtil.getPropertiesOf(asSuperType)) {
+              JavaAstUtils.addOmniPropertyToBlockAsField(classDec.body, property, options);
+            }
+          }
 
-  private transformInterface(
-    type: OmniInterfaceOrObjectType,
-    options: JavaAndTargetOptions,
-    root: Java.JavaAstRootNode,
-    prefix?: string,
-    suffix?: string,
-  ): Java.InterfaceDeclaration {
-
-    const declaration = new Java.InterfaceDeclaration(
-      JavaAstUtils.createTypeNode(type),
-      new Java.Identifier(`${prefix ? prefix : ''}${JavaUtil.getClassName(type, options)}${suffix ? suffix : ''}`),
-      new Java.Block(),
-    );
-
-    JavaAstUtils.addInterfaceProperties(type, declaration.body);
-
-    root.children.push(new Java.CompilationUnit(
-      new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
-      new Java.ImportList(
-        [],
-      ),
-      declaration,
-    ));
-
-    return declaration;
-  }
-
-  // TODO: Merge functionality for object and composition
-  private transformSubType(
-    model: OmniModel,
-    type: JavaSubTypeCapableType,
-    originalType: OmniGenericSourceType | undefined,
-    options: JavaAndTargetOptions,
-    root: Java.JavaAstRootNode,
-    genericSourceIdentifiers?: OmniGenericSourceIdentifierType[],
-  ): void {
-
-    // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
-    //        Make use of the DependencyGraph to figure things out...
-    const body = new Java.Block();
-
-    if (type.kind == OmniTypeKind.OBJECT) {
-      if (type.extendedBy && type.extendedBy.kind == OmniTypeKind.ENUM) {
-        // TODO: Maybe this could be removed and instead simplified elsewhere, where we compress/fix "incorrect" types?
-        // In Java we cannot extend from an enum. So we will try and redirect the output.
-        if (OmniUtil.isEmptyType(type)) {
-          // TODO: The NAME of the resulting enum should still be the name of the current type, and not the extended class!
-          this.transformEnum(model, type.extendedBy, type, root, options);
-          return;
         } else {
-          throw new Error('Do not know how to handle this type, since Java cannot inherit from en Enum');
+          throw new Error(`Need to implement the addition of members of '${OmniUtil.describe(type)}'`);
         }
       }
     }
 
-    const declaration = this.createSubTypeDeclaration(genericSourceIdentifiers, type, originalType, body, options);
-
-    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
-      this.addXOrMappingToBody(model, type, declaration, options);
-    }
-
-    this.addExtendsAndImplements(model, type, declaration);
-
-    root.children.push(new Java.CompilationUnit(
-      new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
-      new Java.ImportList(
-        [],
-      ),
-      declaration,
-    ));
-  }
-
-  private createSubTypeDeclaration(
-    genericSourceIdentifiers: OmniGenericSourceIdentifierType[] | undefined,
-    type: JavaSubTypeCapableType,
-    originalType: OmniGenericSourceType | undefined,
-    body: Java.Block,
-    options: JavaAndTargetOptions,
-  ): Java.AbstractObjectDeclaration<JavaSubTypeCapableType> {
-
-    const javaClassName = JavaUtil.getClassName(originalType || type, options);
-    const javaType = new Java.RegularType(type);
-
-    if (genericSourceIdentifiers) {
-
-      const genericSourceArgExpressions = genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
-        new Java.Identifier(it.placeholderName),
-        it,
-        it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
-        it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
-      ));
-
-      return new Java.GenericClassDeclaration(
-        new Java.Identifier(javaClassName),
-        javaType,
-        new Java.GenericTypeDeclarationList(genericSourceArgExpressions),
-        body,
-      );
-    }
-
-    return new Java.ClassDeclaration(
-      javaType,
-      new Java.Identifier(javaClassName),
-      body,
-    );
-  }
-
-  private addExtendsAndImplements(
-    model: OmniModel,
-    type: JavaSubTypeCapableType,
-    declaration: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
-  ): void {
-
-    const typeExtends = JavaUtil.getSuperClassOfSubType(model, type, false);
-
-    if (typeExtends) {
-
-      // TODO: Move this into a separate transformer, that adds the "extends" of the type to the AST!
-      //        We need it in other locations too, to re-use and make more generic!
-      declaration.extends = new Java.ExtendsDeclaration(
-        JavaAstUtils.createTypeNode(typeExtends),
-      );
-    }
-
-    if (type.kind != OmniTypeKind.COMPOSITION) {
-      const typeImplements = JavaUtil.getSuperInterfacesOfSubType(model, type);
-      if (typeImplements.length > 0) {
-        declaration.implements = new Java.ImplementsDeclaration(
-          new Java.TypeList(typeImplements.map(it => JavaAstUtils.createTypeNode(it))),
-        );
-      }
+    if (implementsDeclarations.types.children.length > 0) {
+      classDec.implements = implementsDeclarations;
     }
   }
 
   private addXOrMappingToBody(
-    model: OmniModel,
-    type: OmniCompositionType<JavaSubTypeCapableType | OmniPrimitiveType, CompositionKind>,
-    declaration: AbstractObjectDeclaration<JavaSubTypeCapableType>,
+    type: OmniCompositionType<OmniType | OmniPrimitiveType>,
+    declaration: AbstractObjectDeclaration,
     options: JavaOptions,
   ): void {
 
@@ -351,7 +126,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
   private addEnumAndPrimitivesAsObjectEnum(
     enumTypes: OmniEnumType[],
     primitiveTypes: OmniPrimitiveType[],
-    declaration: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
+    declaration: Java.AbstractObjectDeclaration,
   ): void {
 
     // Java does not support advanced enums. We need to handle it some other way.
@@ -496,7 +271,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
       if (typeof valueConstant == 'string') {
         fieldIdentifier = new Java.Identifier(JavaUtil.getSafeIdentifierName(Case.constant(valueConstant)));
       } else {
-        fieldIdentifier = new Java.Identifier(`_${Case.constant(String(valueConstant))}`);
+        fieldIdentifier = new Java.Identifier(Case.constant(String(valueConstant)));
       }
 
       const field = new Java.Field(
@@ -677,7 +452,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private addSelfIfOfOneOfStaticFieldsMethod(
     knownValueFields: Java.Field[],
-    declaration: Java.AbstractObjectDeclaration<JavaSubTypeCapableType>,
+    declaration: Java.AbstractObjectDeclaration,
   ): void {
 
     const knownBinary = this.createSelfIfOneOfStaticFieldsBinary(knownValueFields, declaration.type);
@@ -704,7 +479,7 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private createSelfIfOneOfStaticFieldsBinary(
     knownValueFields: Java.Field[],
-    selfType: Java.Type<JavaSubTypeCapableType>,
+    selfType: Java.Type<OmniType>,
   ): Java.BinaryExpression | undefined {
 
     let knownBinary: Java.BinaryExpression | undefined = undefined;
@@ -727,50 +502,5 @@ export class BaseJavaAstTransformer extends AbstractJavaAstTransformer {
     }
 
     return knownBinary;
-  }
-
-  /**
-   * TODO: Remove and do this in another transformer (is it not already?)
-   */
-  private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
-
-    // TODO: ComponentsSchemasIntegerOrNull SHOULD NOT HAVE BEEN CREATED! IT SHOULD NOT BE AN OBJECT! IT SHOULD BE A COMPOSITION OF XOR!
-
-    if (type.kind == OmniTypeKind.COMPOSITION) {
-      if (type.compositionKind == CompositionKind.XOR) {
-        if (type.types.length == 2) {
-          const nullType = type.types.find(it => it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL);
-          if (nullType) {
-            const otherType = type.types.find(it => !(it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL));
-            if (otherType && otherType.kind == OmniTypeKind.PRIMITIVE) {
-
-              // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
-              this.clearProperties(type);
-              Object.assign(type, {
-                ...otherType,
-                nullable: true,
-              });
-              return [otherType];
-            } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
-
-              // For Java, any object can always be null.
-              // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
-              this.clearProperties(type);
-              Object.assign(type, otherType);
-              return [otherType];
-            }
-          }
-        }
-      }
-    }
-
-    return [];
-  }
-
-  private clearProperties(type: OmniType): void {
-    for (const key of Object.keys(type)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      delete (type as any)[key];
-    }
   }
 }

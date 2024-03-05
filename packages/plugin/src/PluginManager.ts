@@ -72,6 +72,7 @@ export class PluginManager {
     try {
 
       // Try to load the plugin
+      logger.info(`Importing ${qualifier.packageName}`);
       const packageContents = await import(qualifier.packageName);
 
       // TODO: Check if "default" exists and if it is an init function -- then use that.
@@ -103,7 +104,8 @@ export class PluginManager {
           return Promise.reject(new Error(`Imported 'init' member must be a function`));
         }
       } else {
-        return Promise.reject(new Error(`There is no 'init' exported member inside imported package '${qualifier.packageName}'`));
+        logger.info(`No 'init' inside imported plugin, instead: %o`, packageContents);
+        return true;
       }
 
     } catch (error) {
@@ -112,7 +114,7 @@ export class PluginManager {
     }
   }
 
-  private getPlugins(): Plugin2[] {
+  public getPlugins(): Plugin2[] {
 
     const plugins = [...this._pluginImports.values()].map(it => it.plugin);
     plugins.push(...this._plugins);
@@ -134,6 +136,8 @@ export class PluginManager {
       skip: args.skip,
     });
 
+    logger.info(`Will execute ${rootPath.length - 1} plugins: ${[...new Set(this.getPluginNames(rootPath.path))].join(', ')}`);
+
     const executed = await this.executeFromItemOnwards({
       inType: rootPath.inType,
       inCtx: args.ctx,
@@ -142,7 +146,7 @@ export class PluginManager {
     });
 
     if (executed.results.length == 0) {
-      throw new Error(`There was no plugin execution path found`);
+      throw new Error(`There was no plugin execution path found, skipped: ${JSON.stringify(rootPath.skipped)}`);
     }
 
     const lastResult = executed.results[executed.results.length - 1];
@@ -170,6 +174,21 @@ export class PluginManager {
         stoppedAt: executed.stoppedAt,
       };
     }
+  }
+
+  private getPluginNames(root: RootPluginPathItem): string[] {
+
+    const names: string[] = [];
+    if (root.next.length > 0) {
+      for (const next of root.next) {
+        names.push(`${next.plugin.name}${next.needsEvaluation ? '?' : ''}`);
+        names.push(...this.getPluginNames(next));
+      }
+    } else {
+      names.push('done');
+    }
+
+    return names;
   }
 
   public async executeFromItemOnwards<
@@ -210,10 +229,13 @@ export class PluginManager {
 
         const compat = ZodUtils.isCompatibleWith(pathItem.plugin.input, zodRuntimeSchema);
         if (compat.v == Compat.DIFF) {
+
+          logger.debug(`Skipping '${pathItem.plugin.name}' since current context did not match expected input validation schema`);
           return {results: []};
         }
       }
 
+      logger.info(`Executing '${pathItem.plugin.name}'${pathItem.needsEvaluation ? ', possibly not continuing' : ''}`);
       const result = await pathItem.plugin.execute(args.inCtx);
       if (result instanceof ZodError) {
 
@@ -300,7 +322,9 @@ export class PluginManager {
       }
     }
 
-    PluginManager.prune(plugins[0], matchItem, [plugins[0].name]);
+    if (plugins.length > 0) {
+      PluginManager.prune(plugins[0], matchItem, [plugins[0].name]);
+    }
 
     return {
       path: matchItem,

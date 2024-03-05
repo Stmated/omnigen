@@ -28,32 +28,9 @@ describe('JavaInterpreter', () => {
     expect(interpretation).toBeDefined();
 
     const compilationUnits = JavaTestUtils.getCompilationUnits(interpretation);
-    const classNames = compilationUnits.map(cu => cu.object.name.value).sort();
+    const classNames = compilationUnits.map(cu => cu.object.name.value);
 
-    expect(classNames).toEqual([
-      'CreatePetRequest',
-      'CreatePetRequestParams',
-      'CreatePetResponse',
-      'DeletePetByIdRequest',
-      'DeletePetByIdRequestParams',
-      'DeletePetByIdResponse',
-      'DeletePetByIdResponsePayload',
-      'ErrorUnknown',
-      'ErrorUnknownError',
-      'GetPetByIdRequest',
-      'GetPetByIdRequestParams',
-      'GetPetByIdResponse',
-      'GetPetsRequest',
-      'GetPetsRequestParams',
-      'GetPetsResponse',
-      'JsonRpcError',
-      'JsonRpcErrorResponse',
-      'JsonRpcRequest',
-      'JsonRpcRequestParams',
-      'JsonRpcResponse',
-      'NewPet',
-      'Pet',
-    ]);
+    expect(classNames.sort()).toMatchSnapshot();
   });
 
   test('ensureGenericsAreBoxed', async () => {

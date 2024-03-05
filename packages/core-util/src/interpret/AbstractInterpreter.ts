@@ -12,7 +12,7 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
     this.features = features;
   }
 
-  protected abstract getTransformers(options: TOpt): AstTransformer<AstNode, TOpt>[];
+  protected abstract getTransformers(options: TOpt): IterableIterator<AstTransformer<AstNode, TOpt>>;
 
   abstract newRootNode(): AstNode;
 

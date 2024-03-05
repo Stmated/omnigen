@@ -44,7 +44,7 @@
         }
       ],
       "result": {
-        "name": "pet",
+        "name": "petsResult",
         "description": "pet response",
         "schema": {
           "type": "array",
@@ -67,7 +67,7 @@
         }
       ],
       "result": {
-        "name": "pet",
+        "name": "createdResult",
         "description": "the newly created pet",
         "schema": {
           "$ref": "#/components/schemas/Pet"
@@ -88,7 +88,7 @@
         }
       ],
       "result": {
-        "name": "pet",
+        "name": "petResult",
         "description": "pet response",
         "schema": {
           "$ref": "#/components/schemas/Pet"
@@ -109,7 +109,7 @@
         }
       ],
       "result": {
-        "name": "pet",
+        "name": "petDeleted",
         "description": "pet deleted",
         "schema": {}
       }

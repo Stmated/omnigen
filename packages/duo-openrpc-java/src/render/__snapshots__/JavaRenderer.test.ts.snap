@@ -33,7 +33,6 @@ exports[`Java Rendering > Enum 1`] = `
   "ListThingsResponse.java",
   "Species.java",
   "Tag.java",
-  "TagCopy.java",
   "TagOrSpeciesOrString.java",
   "Thing.java",
   "ThingType.java",
@@ -91,6 +90,13 @@ exports[`Java Rendering > Type compressions 1`] = `
 ]
 `;
 
+exports[`Java Rendering > decorated_types 1`] = `
+[
+  "Order.java",
+  "Shop.java",
+]
+`;
+
 exports[`Java Rendering > primitive-generics 1`] = `
 [
   "ErrorUnknown.java",
@@ -124,4 +130,10 @@ public class GiveNumberGetCharRequestParams extends JsonRpcRequestParams<Double>
   }
 }
 "
+`;
+
+exports[`Java Rendering > x-enum-varnames 1`] = `
+[
+  "SomeEnum.java",
+]
 `;

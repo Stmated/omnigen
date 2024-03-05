@@ -1,43 +1,48 @@
-import {AstNode, AstTransformer, TargetOptions} from '@omnigen/core';
+import {AstNode, AstTransformer} from '@omnigen/core';
 import {AbstractInterpreter} from '@omnigen/core-util';
-import {FieldAccessorMode, JavaOptions} from '../options/index.ts';
+import {FieldAccessorMode} from '../options/index.ts';
 import {
-  AddConstructorJavaAstTransformer,
-  AddGeneratedAnnotationAstTransformer,
-  AddAdditionalPropertiesInterfaceAstTransformer,
-  BaseJavaAstTransformer,
-  InnerTypeCompressionAstTransformer,
-  PackageResolverAstTransformer,
-  AddJakartaValidationAstTransformer,
-  PropertyNameDiscrepancyAstTransformer,
-  AddFieldsAstTransformer,
-  AddAccessorsForFieldsAstTransformer,
-  AddLombokAstTransformer,
-  AddCommentsAstTransformer,
-  ReorderMembersTransformer,
-  AddThrowsForKnownMethodsAstTransformer,
   AddAbstractAccessorsAstTransformer,
-  AddSubTypeHintsAstTransformer, SimplifyGenericsAstTransformer, JavaAndTargetOptions,
-} from '../transform';
+  AddAccessorsForFieldsAstTransformer,
+  AddAdditionalPropertiesInterfaceAstTransformer,
+  AddCommentsAstTransformer,
+  AddCompositionMembersJavaAstTransformer,
+  AddConstructorJavaAstTransformer,
+  AddFieldsAstTransformer,
+  AddGeneratedAnnotationAstTransformer,
+  AddJakartaValidationAstTransformer,
+  AddLombokAstTransformer,
+  AddSubTypeHintsAstTransformer,
+  AddThrowsForKnownMethodsAstTransformer,
+  AddObjectDeclarationsJavaAstTransformer,
+  InnerTypeCompressionAstTransformer,
+  JavaAndTargetOptions,
+  PackageResolverAstTransformer,
+  PropertyNameDiscrepancyAstTransformer,
+  ReorderMembersTransformer,
+  SimplifyGenericsAstTransformer,
+} from '../transform/index.ts';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
+import {AddMissingDeclarationsForTypesAstTransformer} from '../transform/AddMissingDeclarationsForTypesAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
 
-  getTransformers(options: JavaAndTargetOptions): AstTransformer<AstNode, JavaAndTargetOptions>[] {
-    const transformers: AstTransformer<AstNode, JavaAndTargetOptions>[] = [];
+  * getTransformers(options: JavaAndTargetOptions): Generator<AstTransformer<AstNode, JavaAndTargetOptions>> {
 
-    transformers.push(new BaseJavaAstTransformer());
-    transformers.push(new AddFieldsAstTransformer());
-    transformers.push(new PropertyNameDiscrepancyAstTransformer());
+    yield new AddObjectDeclarationsJavaAstTransformer();
+    yield new AddCompositionMembersJavaAstTransformer();
+    yield new AddFieldsAstTransformer();
+    yield new AddMissingDeclarationsForTypesAstTransformer();
+    yield new PropertyNameDiscrepancyAstTransformer();
     switch (options.fieldAccessorMode) {
       case FieldAccessorMode.POJO:
-        transformers.push(new AddAccessorsForFieldsAstTransformer());
+        yield new AddAccessorsForFieldsAstTransformer();
         break;
       case FieldAccessorMode.LOMBOK:
-        transformers.push(new AddLombokAstTransformer());
+        yield new AddLombokAstTransformer();
         break;
       case FieldAccessorMode.NONE:
         logger.info(`Will not generate any getters or setters for fields`);
@@ -47,20 +52,18 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     }
 
     // Is possible abstract accessors might clash with the Lombok accessors, will need future revisions
-    transformers.push(new AddAbstractAccessorsAstTransformer());
-    transformers.push(new AddConstructorJavaAstTransformer());
-    transformers.push(new AddAdditionalPropertiesInterfaceAstTransformer());
-    transformers.push(new AddCommentsAstTransformer());
-    transformers.push(new AddJakartaValidationAstTransformer());
-    transformers.push(new AddGeneratedAnnotationAstTransformer());
-    transformers.push(new AddSubTypeHintsAstTransformer());
-    transformers.push(new InnerTypeCompressionAstTransformer());
-    transformers.push(new AddThrowsForKnownMethodsAstTransformer());
-    transformers.push(new SimplifyGenericsAstTransformer());
-    transformers.push(new PackageResolverAstTransformer());
-    transformers.push(new ReorderMembersTransformer());
-
-    return transformers;
+    yield new AddAbstractAccessorsAstTransformer();
+    yield new AddConstructorJavaAstTransformer();
+    yield new AddAdditionalPropertiesInterfaceAstTransformer();
+    yield new AddCommentsAstTransformer();
+    yield new AddJakartaValidationAstTransformer();
+    yield new AddGeneratedAnnotationAstTransformer();
+    yield new AddSubTypeHintsAstTransformer();
+    yield new InnerTypeCompressionAstTransformer();
+    yield new AddThrowsForKnownMethodsAstTransformer();
+    yield new SimplifyGenericsAstTransformer();
+    yield new PackageResolverAstTransformer();
+    yield new ReorderMembersTransformer();
   }
 
   newRootNode(): AstNode {

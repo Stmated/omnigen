@@ -46,7 +46,13 @@ export class Case {
   }
 
   public static constant(value: string): string {
+
     // NOTE: Replace this with own code instead?
+    // TODO: It is not certain all languages ban numbers as a first character in a constant name... should be target-dependant
+    if (value.length > 0 && value.charAt(0).match(/[0-9]/)) {
+      return `_${ChangeCase.constantCase(value)}`;
+    }
+
     return ChangeCase.constantCase(value);
   }
 }

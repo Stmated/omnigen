@@ -1,5 +1,5 @@
 import {OmniModelTransformerArgs} from './OmniModelTransformerArgs.js';
-import {TargetOptions} from '../../interpret';
+import {TargetOptions} from '../../interpret/index.ts';
 import {ParserOptions} from '../ParserOptions';
 import {OmniModelTransformer2ndPassArgs} from './OmniModelTransformer2ndPassArgs';
 

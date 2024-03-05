@@ -1,0 +1,70 @@
+{
+  "$id": "https://example.com/petstore-simple-jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Shop and orders, for testing primitive types that alter metadata like descriptions but not the underlying type",
+  "$defs": {
+    "Percentage": {
+      "type": "integer",
+      "description": "This is a general percentage",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "Id": {
+      "type": "integer",
+      "description": "Unique ID"
+    },
+    "OrderId": {
+      "oneOf": [
+        {"$ref": "#/$defs/Id"}
+      ],
+      "description": "Unique Order Id"
+    },
+    "ShopId": {
+      "allOf": [
+        {"$ref": "#/$defs/Id"}
+      ],
+      "type": "integer",
+      "description": "Unique Shop Id"
+    },
+    "Order": {
+      "type": "object",
+      "properties": {
+        "id": {"$ref": "#/$defs/OrderId"},
+        "active": {
+          "type": "boolean",
+          "description": "If true, then the order is still active, otherwise it is cancelled",
+          "default": true
+        },
+        "percentage": {
+          "allOf": [
+            {"$ref":  "#/$defs/Percentage"}
+          ],
+          "description": "The percentage of completion for the order"
+        }
+      }
+    },
+    "Orders": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Order"
+      },
+      "description": "Generic list of orders"
+    },
+    "Shop": {
+      "type": "object",
+      "required": ["id", "name"],
+      "description": "Description about the Shop",
+      "properties": {
+        "id": {"$ref": "#/$defs/ShopId"},
+        "orders": {
+          "allOf": [
+            {"$ref": "#/$defs/Orders"}
+          ],
+          "description": "List of orders currently in this shop"
+        },
+        "name": {"type": "string"},
+        "tag": {"type": "string"}
+      }
+    }
+  }
+}

@@ -1,6 +1,5 @@
 import {
   createPlugin,
-  EARLIER_IS_BETTER,
   ZodArgumentsContext,
   ZodBaseContext,
   ZodFileContext,
@@ -8,18 +7,22 @@ import {
   ZodFileWriteOptionsContext,
   ZodModelContext,
   ZodModelLibraryContext,
-  ZodModelTransformOptionsContext, ZodPackageOptionsContext,
+  ZodModelTransformOptionsContext,
+  ZodPackageOptionsContext,
   ZodParserOptionsContext,
   ZodTargetFeaturesContext,
   ZodTargetOptionsContext,
   ZodTypeLibraryContext,
 } from '@omnigen/core-plugin';
 import {z} from 'zod';
-import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse';
+import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse/index.ts';
 import {OmniModel2ndPassTransformer, OmniModelTransformer, RenderedCompilationUnit, ZodModelTransformOptions, ZodPackageOptions, ZodParserOptions, ZodTargetOptions} from '@omnigen/core';
 import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary.ts';
-import {FileWriter} from './write';
+import {FileWriter} from './write/index.ts';
 import {DefaultOmniModelLibrary} from './parse/DefaultOmniModelLibrary.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export const ZodSchemaFileContext = ZodBaseContext.extend({
   schemaFile: z.custom<SchemaFile>(it => it !== undefined && it instanceof SchemaFile),
@@ -46,6 +49,7 @@ const ZodStdOptionsContext = ZodArgumentsContext
 
 const CorePluginOut = ZodSchemaFileContext
   .merge(ZodStdOptionsContext)
+  .merge(ZodFileWriteOptionsContext)
   .merge(TypeLibraryPluginOut);
 
 export const CorePlugin = createPlugin(
@@ -53,6 +57,7 @@ export const CorePlugin = createPlugin(
   async ctx => {
 
     const packageOptions = ZodPackageOptions.parse(ctx.arguments);
+    const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
 
     return {
       ...ctx,
@@ -61,9 +66,10 @@ export const CorePlugin = createPlugin(
       modelTransformOptions: ZodModelTransformOptions.parse(ctx.arguments),
       targetOptions: ZodTargetOptions.parse(ctx.arguments),
       packageOptions: packageOptions,
+      fileWriteOptions: fileWriteOptions,
       types: new DefaultOmniTypeLibrary(),
       models: new DefaultOmniModelLibrary(),
-    } as const;
+    } satisfies z.output<typeof CorePluginOut>;
   },
 );
 
@@ -133,13 +139,18 @@ export const fileWriter = createPlugin(
   async ctx => {
 
     const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
-    const fileWriter = new FileWriter(fileWriteOptions.outputDirBase);
     const filesWritten: string[] = [];
 
-    for (const rcu of ctx.compilationUnits) {
+    if (fileWriteOptions.outputFiles) {
 
-      await fileWriter.write(rcu);
-      filesWritten.push(rcu.fileName);
+      const fileWriter = new FileWriter(fileWriteOptions.outputDirBase);
+
+      for (const rcu of ctx.compilationUnits) {
+
+        logger.debug(`Writing ${rcu.fileName}`);
+        await fileWriter.write(rcu);
+        filesWritten.push(rcu.fileName);
+      }
     }
 
     return {

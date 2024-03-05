@@ -25,15 +25,25 @@ export class VisitResultFlattener {
     }
   }
 
-  public static visitWithResult<T>(visitor: AstVisitor<T>, node: AstNode): T | T[] | undefined {
+  public static flattenToSingle<T>(result: VisitResult<T>): T | Exclude<T, undefined>[] | undefined {
 
     try {
 
-      const flattened = VisitResultFlattener.flatten(node.visit(visitor));
+      const flattened = VisitResultFlattener.flatten(result);
       if (flattened) {
         if (Array.isArray(flattened)) {
           if (flattened.length > 0) {
-            return flattened as T[];
+            const filteredFlattened: Exclude<T, undefined>[] = [];
+            for (const item of flattened) {
+              if (item) {
+
+                // NOTE: This can very likely be wrong. There is a bug waiting here. But that is for another day.
+                //        The structure might be nested with arrays inside arrays
+                filteredFlattened.push(item as any);
+              }
+            }
+
+            return filteredFlattened;
           }
         } else {
           return flattened;
@@ -43,7 +53,19 @@ export class VisitResultFlattener {
       return undefined;
 
     } catch (e) {
-      if (e instanceof AbortVisitingWithResult<T>) {
+      if (e instanceof AbortVisitingWithResult) {
+        return e.result;
+      }
+
+      throw e;
+    }
+  }
+
+  public static visitWithResult<T>(visitor: AstVisitor<T>, node: AstNode): T | T[] | undefined {
+    try {
+      return VisitResultFlattener.flattenToSingle(node.visit(visitor));
+    } catch (e) {
+      if (e instanceof AbortVisitingWithResult) {
         return e.result;
       }
 

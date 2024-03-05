@@ -1,11 +1,16 @@
 #! /usr/bin/env node
 
+import {LoggerFactory} from '@omnigen/core-log';
 import {Command} from '@commander-js/extra-typings';
 import figlet from 'figlet';
-import {BaseContext} from '@omnigen/core-plugin';
+import {BaseContext, FileContext} from '@omnigen/core-plugin';
 import {PluginManager} from '@omnigen/plugin';
 
-console.log(figlet.textSync('Omnigen', 'Chunky'));
+LoggerFactory.enablePrettyPrint();
+
+const logger = LoggerFactory.create(import.meta.url);
+
+logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
 
 (async () => {
 
@@ -48,15 +53,19 @@ console.log(figlet.textSync('Omnigen', 'Chunky'));
   }
 
   if (options.input.length == 1) {
-    args['input'] = options.input[0];
+    args['file'] = options.input[0];
   } else {
-    args['input'] = options.input.join(',');
+    args['file'] = options.input.join(',');
   }
 
-  args['output'] = options.output;
+  args['outputDirBase'] = options.output;
+  if (options.output) {
+    args['outputFiles'] = 'true';
+  }
 
-  const runOptions: BaseContext = {
+  const runOptions: BaseContext & FileContext = {
     arguments: args,
+    file: args['file'],
   };
 
   if (options.plugins) {
@@ -67,11 +76,20 @@ console.log(figlet.textSync('Omnigen', 'Chunky'));
       });
     }
 
-    const statuses = await pluginManager.execute({ctx: runOptions});
-    console.table(statuses);
+    const registered = pluginManager.getPlugins().map(it => it.name).join(', ');
+    logger.info(`Plugins registered: [${registered}]`);
+  } else {
+
+    const registered = pluginManager.getPlugins().map(it => it.name).join(', ');
+    logger.info(`Will not import any plugins, will execute based on those already auto-registered: [${registered}]`);
   }
 
+  const execution = await pluginManager.execute({ctx: runOptions, debug: true});
+  logger.info('Execution finished: %o', Object.keys(execution.result.ctx));
+
+  process.exit(0);
+
   if (options.ls) {
-    console.log(`This is when we should list the inputs and outputs, all registered dynamically`);
+    logger.info(`This is when we should list the inputs and outputs, all registered dynamically`);
   }
 })();

@@ -21,7 +21,7 @@ import {
   JavaOptions,
   JavaRenderer,
   JavaVisitor,
-  ZodJavaOptions,
+  ZodJavaOptions, createJavaVisitor, createJavaRenderer,
 } from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
@@ -60,20 +60,12 @@ export class JavaTestUtils {
     logger.debug(`Loaded OpenRPC: ${OpenRpcPlugin}`);
   }
 
-  public static async getFileContentsFromFile(fileName: string, options?: JavaTestUtilsOptions): Promise<Map<string, string>> {
+  public static async getFileContentsFromFile(fileName: string, options?: JavaTestUtilsOptions, source = 'openrpc'): Promise<Map<string, string>> {
 
-    const result = await JavaTestUtils.getResultFromFile(fileName, options || {}, ZodCompilationUnitsContext);
+    const filePath = `../parser-${source}/examples/${fileName}`;
+    const result = await JavaTestUtils.getResultFromFilePath(filePath, options || {}, ZodCompilationUnitsContext);
+
     return JavaTestUtils.cuToContentMap(result.compilationUnits);
-  }
-
-  public static async getResultFromFile<Z extends ZodObject<any>>(
-    fileName: string,
-    options: JavaTestUtilsOptions,
-    expected: Z,
-  ): Promise<z.output<Z>> {
-
-    const filePath = `../parser-openrpc/examples/${fileName}`;
-    return JavaTestUtils.getResultFromFilePath(filePath, options, expected);
   }
 
   public static async getResultFromFilePath<
@@ -193,14 +185,14 @@ export class JavaTestUtils {
 
   public static async getFileContentsFromRootNode(rootNode: AstNode, options: JavaOptions): Promise<Map<string, string>> {
 
-    const renderer = new JavaRenderer(options);
-    const cus = renderer.executeRender(rootNode);
+    const renderer = createJavaRenderer(options);
+    const cus = renderer.executeRender(rootNode, renderer);
     return JavaTestUtils.cuToContentMap(cus);
   }
 
   public static getMethod(node: AstNode, name: string): Java.MethodDeclaration {
 
-    const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.MethodDeclaration>(), {
+    const visitor = createJavaVisitor({
       visitMethodDeclaration: node => {
         if (node.signature.identifier.value == name) {
           return node;
@@ -209,6 +201,16 @@ export class JavaTestUtils {
         }
       },
     });
+
+    // const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.MethodDeclaration>(), {
+    //   visitMethodDeclaration: node => {
+    //     if (node.signature.identifier.value == name) {
+    //       return node;
+    //     } else {
+    //       return undefined;
+    //     }
+    //   },
+    // });
 
     const result = TestUtils.flatten(node.visit(visitor));
     if (!result) {
@@ -221,11 +223,15 @@ export class JavaTestUtils {
   public static getCompilationUnits(root: AstNode): Java.CompilationUnit[] {
 
     const array: Java.CompilationUnit[] = [];
-    const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
-      visitCompilationUnit: node => {
-        array.push(node);
-      },
+    const visitor = createJavaVisitor({
+      visitCompilationUnit: node => array.push(node),
     });
+
+    // const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
+    //   visitCompilationUnit: node => {
+    //     array.push(node);
+    //   },
+    // });
 
     root.visit(visitor);
 
@@ -234,7 +240,7 @@ export class JavaTestUtils {
 
   public static getCompilationUnit(root: AstNode, name: string): Java.CompilationUnit {
 
-    const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.CompilationUnit>(), {
+    const visitor = createJavaVisitor({
       visitCompilationUnit: node => {
         if (node.object.name.value == name) {
           return node;
@@ -243,6 +249,12 @@ export class JavaTestUtils {
         }
       },
     });
+
+    // const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.CompilationUnit>(), {
+    //   visitCompilationUnit: node => {
+    //
+    //   },
+    // });
 
     const result = TestUtils.flatten(root.visit(visitor));
     if (!result) {

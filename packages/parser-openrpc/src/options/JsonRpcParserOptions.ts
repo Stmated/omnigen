@@ -1,11 +1,9 @@
-import {JSONSchema7} from 'json-schema';
-import {
-  ZodOptions, ZodCoercedBoolean, OmniType,
-} from '@omnigen/core';
+import {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema';
+import {OmniType, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
 import {z} from 'zod';
 
 export const ZodJsonRpcParserOptionsBase = ZodOptions.extend({
-  jsonRpcErrorDataSchema: z.union([z.custom<JSONSchema7>(), z.custom<OmniType>()]).optional()
+  jsonRpcErrorDataSchema: z.union([z.custom<JSONSchema7 | JSONSchema6>(), z.custom<OmniType>()]).optional()
     .transform((v, ctx) => {
 
       if (!v || 'kind' in v) {

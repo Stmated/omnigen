@@ -1,16 +1,15 @@
 import {
   CompositionKind,
-  OmniCompositionType,
   OmniInterfaceType,
   OmniModelTransformer,
+  OmniModelTransformerArgs,
   OmniSubTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   ParserOptions,
-  OmniModelTransformerArgs,
 } from '@omnigen/core';
-import {JavaUtil} from '../../util';
+import {JavaUtil} from '../../util/index.ts';
 import {OmniUtil} from '@omnigen/core-util';
 
 /**
@@ -51,12 +50,6 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
           // We only swap the DIRECT depended types.
           // NOTE: This might be incorrect. Will notice how it feels/looks after a few examples.
           OmniUtil.swapType(implementor, typeAsInterface, interfaceType, 1);
-
-          // TODO: We need to create an interface version of ALL types that inheritableType inherit from
-          //        This is because an interface cannot extend a class, they can only inherit from other interfaces
-
-          // TODO: We should make ALL the inheritableType extend from its interface type.
-          //        This is in a way an endless recursion, but we just have to stay vigilant
         }
       }
     }
@@ -74,52 +67,51 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
 
     const interfaceType: OmniInterfaceType = {
       kind: OmniTypeKind.INTERFACE,
-      // TODO: This is bad; should be able to give an object like {prefix: ..., suffix: ...} and resolve later
       of: type,
+      debug: `Created because '${OmniUtil.describe(type)}' uses the type as an interface`,
     };
 
-    if ('extendedBy' in type) {
-      this.addInterfaceToOriginalType(type, interfaceType);
-    }
+    this.addInterfaceToOriginalType(type, interfaceType);
 
     interfaceMap.set(type, interfaceType);
     return [interfaceType, 'new'];
   }
 
-  private addInterfaceToOriginalType(type: OmniSubTypeCapableType, interfaceType: OmniInterfaceType): void {
+  private addInterfaceToOriginalType(type: OmniType, interfaceType: OmniInterfaceType): void {
 
     // NOTE: Should we actually unwrap here? Should we not want it to stay as the external reference type?
     // type = OmniUtil.getUnwrappedType(type);
     if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
       throw new Error(`Do not know how to handle interface modification of external reference types`);
-    } else if (type.extendedBy) {
+    } else if ('extendedBy' in type || type.kind == OmniTypeKind.OBJECT) {
 
-      // There already exist an extension, so we need to add to it.
-      if (type.extendedBy.kind == OmniTypeKind.COMPOSITION && type.extendedBy.compositionKind == CompositionKind.AND) {
+      if (type.extendedBy) {
 
-        // It is already an AND, that makes it a bit easy.
-        type.extendedBy.types.push(interfaceType);
+        // There already exist an extension, so we need to add to it.
+        if (type.extendedBy.kind == OmniTypeKind.COMPOSITION && type.extendedBy.compositionKind == CompositionKind.AND) {
+
+          // It is already an AND, that makes it a bit easy.
+          type.extendedBy.types.push(interfaceType);
+
+        } else {
+
+          // It is not extended by a composition, or a composition that is not AND, so we will make it one.
+          const originalExtension = type.extendedBy;
+          type.extendedBy = {
+            kind: OmniTypeKind.COMPOSITION,
+            compositionKind: CompositionKind.AND,
+            types: [
+              originalExtension,
+              interfaceType,
+            ],
+          };
+        }
 
       } else {
 
-        // It is not extended by a composition, or a composition that is not AND, so we will make it one.
-        const originalExtension = type.extendedBy;
-        const composition: OmniCompositionType<OmniSuperTypeCapableType, CompositionKind> = {
-          kind: OmniTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.AND,
-          types: [
-            originalExtension,
-            interfaceType,
-          ],
-        };
-
-        type.extendedBy = composition;
+        // There is no other extension, so we just add this.
+        type.extendedBy = interfaceType;
       }
-
-    } else {
-
-      // There is no other extension, so we just add this.
-      type.extendedBy = interfaceType;
     }
   }
 }

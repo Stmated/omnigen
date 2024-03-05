@@ -346,7 +346,7 @@ function assertMap<T extends OmniType>(expected: Map<T, T[]>, given: Map<T, T[]>
   for (const e of expected.entries()) {
     const givenValues = given.get(e[0]);
     if (!givenValues) {
-      fail(`Expected key '${OmniUtil.describe(e[0])}' but not in given`);
+      throw new Error(`Expected key '${OmniUtil.describe(e[0])}' but not in given`);
     }
 
     const keyDescription = OmniUtil.describe(e[0]);
@@ -358,7 +358,7 @@ function assertMap<T extends OmniType>(expected: Map<T, T[]>, given: Map<T, T[]>
 
   for (const e of given.entries()) {
     if (!expected.has(e[0])) {
-      fail(`Given unexpected '${OmniUtil.describe(e[0])}`);
+      throw new Error(`Given unexpected '${OmniUtil.describe(e[0])}`);
     }
   }
 }

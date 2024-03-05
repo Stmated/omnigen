@@ -48,17 +48,17 @@
         },
         "oneOf": [
           {
-            "$ref": "#/components/schemas/c"
+            "$ref": "#/components/schemas/a"
           },
           {
-            "$ref": "#/components/schemas/d"
+            "$ref": "#/components/schemas/b"
           }
         ],
         "discriminator": {
           "propertyName": "kind",
           "mapping": {
-            "x": "#/components/schemas/c",
-            "y": "#/components/schemas/d"
+            "x": "#/components/schemas/a",
+            "y": "#/components/schemas/b"
           }
         }
       },

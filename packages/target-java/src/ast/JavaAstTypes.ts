@@ -105,18 +105,18 @@ export type Type<T extends OmniType> = RegularType<T> | GenericType;
  *
  * TODO: Introduce generics to this? So we can be more restrictive
  */
-export class GenericType extends AbstractJavaNode {
-  baseType: RegularType<OmniGenericTargetType | OmniHardcodedReferenceType>;
+export class GenericType<BT extends OmniGenericTargetType | OmniHardcodedReferenceType = OmniGenericTargetType | OmniHardcodedReferenceType> extends AbstractJavaNode {
+  baseType: RegularType<BT>;
   genericArguments: Type<OmniType>[];
 
   /**
    * A getter of kindness to make it compliant to the reglar Java.Type node.
    */
-  get omniType(): OmniGenericTargetType | OmniHardcodedReferenceType {
+  get omniType(): BT {
     return this.baseType.omniType;
   }
 
-  constructor(baseType: RegularType<OmniGenericTargetType | OmniHardcodedReferenceType>, genericArguments: Type<OmniType>[]) {
+  constructor(baseType: RegularType<BT>, genericArguments: Type<OmniType>[]) {
     super();
     this.baseType = baseType;
     this.genericArguments = genericArguments;
@@ -876,7 +876,7 @@ export class Cast extends AbstractJavaNode {
   }
 }
 
-export class TypeList<T extends OmniType> extends AbstractJavaNode implements AstNodeWithChildren<Type<T>> {
+export class TypeList<T extends OmniType = OmniType> extends AbstractJavaNode implements AstNodeWithChildren<Type<T>> {
   children: Type<T>[];
 
   constructor(types: Type<T>[]) {
@@ -918,7 +918,7 @@ export class ImplementsDeclaration extends AbstractJavaNode {
 /**
  * TODO: Make the Type node generic, and possible to limit which OmniType is allowed: Class, Interface, Enum
  */
-export abstract class AbstractObjectDeclaration<T extends JavaSubTypeCapableType> extends AbstractJavaNode {
+export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> extends AbstractJavaNode {
   name: Identifier;
   /**
    * TODO: Make the "Type" generic if possible, since we for example here can know what type it is.
@@ -948,11 +948,11 @@ export class CompilationUnit extends AbstractJavaNode {
   /**
    * TODO: This type should be a generic, but too many changes spread out
    */
-  object: AbstractObjectDeclaration<JavaSubTypeCapableType>;
+  object: AbstractObjectDeclaration;
   packageDeclaration: PackageDeclaration;
   imports: ImportList;
 
-  constructor(packageDeclaration: PackageDeclaration, imports: ImportList, object: AbstractObjectDeclaration<JavaSubTypeCapableType>) {
+  constructor(packageDeclaration: PackageDeclaration, imports: ImportList, object: AbstractObjectDeclaration) {
     super();
     this.packageDeclaration = packageDeclaration;
     this.imports = imports;
@@ -961,6 +961,10 @@ export class CompilationUnit extends AbstractJavaNode {
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitCompilationUnit(this, visitor);
+  }
+
+  toString() {
+    return `${this.object.name.value}`;
   }
 }
 
@@ -1089,8 +1093,8 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   }
 }
 
-export class ClassDeclaration extends AbstractObjectDeclaration<JavaSubTypeCapableType> {
-  constructor(type: RegularType<JavaSubTypeCapableType>, name: Identifier, body: Block, modifiers?: ModifierList) {
+export class ClassDeclaration extends AbstractObjectDeclaration {
+  constructor(type: RegularType<OmniType>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 
@@ -1118,7 +1122,7 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration<OmniInterfac
 export class GenericClassDeclaration extends ClassDeclaration {
   typeList: GenericTypeDeclarationList;
 
-  constructor(name: Identifier, type: RegularType<JavaSubTypeCapableType>, typeList: GenericTypeDeclarationList, body: Block) {
+  constructor(name: Identifier, type: RegularType<OmniType>, typeList: GenericTypeDeclarationList, body: Block) {
     super(type, name, body);
     this.typeList = typeList;
   }
@@ -1422,7 +1426,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       if (options.unknownType == UnknownKind.MUTABLE_OBJECT) {
         const objectMapperReference = new Identifier('objectMapper');
         const objectMapperDeclaration = new ArgumentDeclaration(
-          new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.ObjectMapper'}),
+          new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.databind.ObjectMapper'}),
           objectMapperReference,
         );
 

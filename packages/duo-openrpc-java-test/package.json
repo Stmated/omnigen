@@ -26,7 +26,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/json-schema": "^7.0.11",
+    "@types/json-schema": "^7.0.15",
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",

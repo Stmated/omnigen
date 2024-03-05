@@ -1,5 +1,6 @@
-import {AstNode, RenderedCompilationUnit} from '../ast';
+import {AstNode, RenderedCompilationUnit} from '../ast/index.ts';
+import {AstVisitor} from '../visit';
 
 export interface Renderer {
-  executeRender(node: AstNode): RenderedCompilationUnit[];
+  executeRender<R>(node: AstNode, visitor: AstVisitor<R>): RenderedCompilationUnit[];
 }

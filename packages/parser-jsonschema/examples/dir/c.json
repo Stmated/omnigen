@@ -3,7 +3,7 @@
     "value": "z"
   },
   "c_b": {
-    "$ref": "#/a/value"
+    "$ref": "#/c_a/value"
   },
   "c_c": {
     "$ref": "../b.json#/b_a/value"

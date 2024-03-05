@@ -93,8 +93,6 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
         node.comments.text = [new Java.FreeTextLine(node.comments.text), comments];
       }
     }
-
-
   }
 
   public static getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.FreeTextType | undefined {
@@ -387,15 +385,15 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     if (property.description && !this.hasComment(property.description, comments)) {
 
       // Sometimes a description can be set both to the property itself and its type.
-      comments.push(new Java.FreeTextLine(property.description));
+      this.addComment(new Java.FreeTextLine(property.description), comments);
     }
 
     if (property.summary && !this.hasComment(property.summary, comments)) {
-      comments.push(new Java.FreeTextLine(property.summary));
+      this.addComment(new Java.FreeTextLine(property.summary), comments);
     }
 
     if (property.deprecated) {
-      comments.push(new Java.FreeTextLine('@deprecated'));
+      this.addComment(new Java.FreeTextLine('@deprecated'), comments);
     }
 
     if (property.type.kind != OmniTypeKind.OBJECT) {
@@ -405,7 +403,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
       const typeComment = AddCommentsAstTransformer.getCommentsForType(property.type, model, options);
 
       if (typeComment) {
-        comments.push(typeComment);
+        this.addComment(typeComment, comments);
       }
 
       if (property.type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
@@ -417,13 +415,39 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
           return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
         });
 
-        comments.push(new Java.FreeTextLine(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`));
+        this.addComment(new Java.FreeTextLine(`Array with parameters in this order:\n${staticArrayStrings.join('\n')}`), comments);
       }
     }
 
-    comments.push(...this.getLinkCommentsForProperty(property, model, options));
+    for (const linkComment of this.getLinkCommentsForProperty(property, model, options)) {
+      this.addComment(linkComment, comments);
+    }
 
     return (comments.length > 0) ? comments : undefined;
+  }
+
+  private addComment(comment: Java.FreeTextType, comments: Java.FreeTextType[]): boolean {
+
+    const commentText = this.getText(comment);
+    if (!commentText || this.hasComment(commentText, comments)) {
+      return false;
+    } else {
+      comments.push(comment);
+      return true;
+    }
+  }
+
+  private getText(text: Java.FreeTextType): string | undefined {
+
+    if (typeof text == 'string') {
+      return text;
+    }
+
+    if (text instanceof Java.FreeText) {
+      return text.text;
+    }
+
+    return undefined;
   }
 
   private hasComment(needle: string, freeTexts: Java.FreeTextType[]): boolean {

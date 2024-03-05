@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "PetId": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000,
+      "$id": "/fake/path/PetId"
+    },
+    "Age": {
+      "$id": "AgeIdToBeKept",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "Animal": {
+      "type": "object",
+      "required": [
+        "kingdom",
+        "family"
+      ],
+      "properties": {
+        "kingdom": {
+          "type": "string",
+          "$id": "/fake/path/AnimalKingdom"
+        },
+        "family": {
+          "type": "string",
+          "$id": "/fake/path/AnimalFamily"
+        }
+      },
+      "$id": "/fake/path/Animal"
+    },
+    "PetBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PetId"
+        },
+        "age": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Age"
+            }
+          ],
+          "description": "Age of the Pet",
+          "$id": "/fake/path/PetBaseAge"
+        },
+        "name": {
+          "type": "string",
+          "$id": "/fake/path/PetBaseName"
+        },
+        "tag": {
+          "type": "string",
+          "$id": "/fake/path/PetBaseTag"
+        }
+      },
+      "$id": "/fake/path/PetBase"
+    },
+    "Pet": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Animal"
+        },
+        {
+          "$ref": "#/$defs/PetBase"
+        }
+      ],
+      "$id": "/fake/path/Pet"
+    },
+    "CatBase": {
+      "type": "object",
+      "properties": {
+        "clawLength": {
+          "$id": "CatClawLength",
+          "type": "number"
+        }
+      },
+      "$id": "/fake/path/CatBase"
+    },
+    "Cat": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Pet"
+        },
+        {
+          "$ref": "#/$defs/CatBase"
+        }
+      ],
+      "$id": "/fake/path/Cat"
+    }
+  },
+  "$id": "/fake/path"
+}

@@ -12,11 +12,6 @@ describe('Test Generic Model Creation', () => {
 
   const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
 
-  // const options: OpenRpcParserOptions = {
-  //   ...DEFAULT_PARSER_OPTIONS,
-  //   ...ZodJsonRpc20ParserOptions.parse({}),
-  // };
-
   test('Test basic loading', async () => {
     const dirPath = '../parser-openrpc/examples/';
     const files = await fs.readdir(dirPath, {withFileTypes: true});
@@ -63,7 +58,7 @@ describe('Test Generic Model Creation', () => {
     const e = model.endpoints[0];
     expect(e.name).toEqual('get_pets');
     expect(e.responses).toHaveLength(2); // 1 result, 1 error
-    expect(e.responses[0].name).toEqual('pet'); // Or should it be something else?
+    expect(e.responses[0].name).toEqual('petsResult');
     expect(JavaUtil.getClassName(e.responses[0].type)).toEqual('GetPetsResponse'); // Should be 'pet'?
 
     const response0 = model.endpoints[0].responses[0];

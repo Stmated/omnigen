@@ -1,16 +1,9 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
-import {
-  AstNode,
-  OmniTypeKind,
-} from '@omnigen/core';
-import {
-  AbortVisitingWithResult,
-  VisitorFactoryManager,
-  VisitResultFlattener,
-} from '@omnigen/core-util';
-import * as Java from '../ast/index.js';
-import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast/index.js';
-import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
+import {AstNode, OmniTypeKind} from '@omnigen/core';
+import {AbortVisitingWithResult, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import * as Java from '../ast/index.ts';
+import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast/index.ts';
+import {JavaUtil} from '../util/index.ts';
 
 export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
 
@@ -23,12 +16,15 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    const owner: { node: Java.AbstractObjectDeclaration<JavaSubTypeCapableType> | undefined } = {node: undefined};
+    const owner: { node: Java.AbstractObjectDeclaration | undefined } = {node: undefined};
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 
-      visitEnumDeclaration: () => {},
-      visitInterfaceDeclaration: () => {},
-      visitMethodDeclaration: () => {},
+      visitEnumDeclaration: () => {
+      },
+      visitInterfaceDeclaration: () => {
+      },
+      visitMethodDeclaration: () => {
+      },
 
       visitClassDeclaration: (node, visitor) => {
 
@@ -100,13 +96,14 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
 
   private findGetterMethodForField(latestBody: AstNode): string | string[] | undefined {
 
+
     const visitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_STRING_VISITOR, {
 
-      visitField: () => {},
-      visitConstructor: () => {},
-      visitExtendsDeclaration: () => {},
-      visitTypeList: () => {},
-      visitFieldBackedSetter: () => {},
+      visitField: () => undefined,
+      visitConstructor: () => undefined,
+      visitExtendsDeclaration: () => undefined,
+      visitTypeList: () => undefined,
+      visitFieldBackedSetter: () => undefined,
 
       visitMethodDeclarationSignature: node => {
         const methodName = node.identifier.value;

@@ -1,0 +1,22 @@
+{
+  "$id": "https://example.com/petstore-simple-jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Root node for the petstore JSON-Schema",
+  "$defs": {
+    "SomeEnum": {
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "x-enum-varnames": [
+        "Zero",
+        "One",
+        "Two",
+        "Three"
+      ]
+    }
+  }
+}

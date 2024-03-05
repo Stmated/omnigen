@@ -22,7 +22,7 @@ export enum OmniAccessLevel {
   PACKAGE,
 }
 
-export enum OmniArrayImplementationType {
+export enum OmniArrayKind {
   PRIMITIVE,
   LIST,
   SET,
@@ -83,27 +83,33 @@ export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType |
 
 export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
 export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
-export type OmniSubTypeCapableType = OmniObjectType
+export type OmniSubTypeCapableType =
+  OmniObjectType
   | OmniEnumType
   | OmniInterfaceType
   | OmniExternalModelReferenceType<OmniSubTypeCapableType>
+  | OmniDecoratingType<OmniSubTypeCapableType>
   ;
 
 /**
  * TODO: Not a good name. Need to make it clearer that an Object can be an Interface in a target language
  *        And that this type represents both possibilities.
  */
-export type OmniInterfaceOrObjectType = OmniInterfaceType | OmniObjectType;
+export type OmniInterfaceOrObjectType = OmniInterfaceType | OmniObjectType | OmniDecoratingType<OmniInterfaceOrObjectType>;
 
 // TODO: This need to be moved to be more language-specific, since it is not true for many languages
-//
-export type OmniSuperTypeCapableType = OmniObjectType
-  | OmniGenericTargetType
-  | OmniCompositionType<OmniSuperTypeCapableType, CompositionKind>
-  | OmniEnumType
+export type OmniSuperTypeCapableType =
+  OmniObjectType
   | OmniInterfaceType
+  | OmniGenericTargetType
+  | OmniEnumType
   | OmniHardcodedReferenceType
+  | OmniCompositionAndType<OmniSuperTypeCapableType>
+  | OmniCompositionOrType<OmniSuperTypeCapableType>
+  | OmniCompositionXorType<OmniSuperTypeCapableType>
+  | OmniCompositionNotType<OmniSuperTypeCapableType>
   | OmniExternalModelReferenceType<OmniSuperTypeCapableType> // Needs to be unwrapped/resolved every time
+  | OmniDecoratingType<OmniSuperTypeCapableType>
   ;
 
 export type OmniSuperGenericTypeCapableType = OmniObjectType
@@ -117,19 +123,25 @@ export type OmniType =
   | OmniUnknownType
   | OmniDictionaryType
   | OmniHardcodedReferenceType
-  | OmniExternalModelReferenceType<OmniType>
+  | OmniExternalModelReferenceType
   | OmniPrimitiveType
-  | OmniCompositionType<OmniType, CompositionKind>
+  | OmniCompositionAndType
+  | OmniCompositionOrType
+  | OmniCompositionXorType
+  | OmniCompositionNotType
   | OmniEnumType
   | OmniGenericType
   | OmniInterfaceType
+  | OmniDecoratingType
   ;
 
-export type SmartUnwrappedType<T> =
+export type UnwrappableTypes<Inner extends OmniType> = (OmniExternalModelReferenceType<Inner> | OmniDecoratingType<Inner>) & OmniTypeWithInnerType<Inner>;
+
+export type SmartUnwrappedType<T extends OmniType | undefined> =
   T extends undefined
     ? undefined
-    : T extends OmniExternalModelReferenceType<infer R>
-      ? Exclude<R, OmniExternalModelReferenceType<any>>
+    : T extends UnwrappableTypes<infer R>
+      ? Exclude<R, UnwrappableTypes<any>>
       : T;
 
 export interface OmniNamedType {
@@ -147,13 +159,17 @@ export interface OmniNamedType {
 
 export type OmniOptionallyNamedType = Partial<OmniNamedType>;
 
+export interface OmniTypeWithInnerType<T extends OmniType | OmniType[] = OmniType> {
+  of: T;
+}
+
 export interface OmniBaseType<T extends OmniTypeKind> {
 
   kind: T;
   /**
    * TODO: Implement! REMOVE the optional and make it required! ALL types MUST have an absolute uri, to make it possible to merge types between schemas/contracts
    */
-  absoluteUri?: string;
+  absoluteUri?: string | undefined;
   accessLevel?: OmniAccessLevel;
   title?: string | undefined;
   description?: string | undefined;
@@ -169,14 +185,28 @@ export enum CompositionKind {
   NOT = 'NOT',
 }
 
-export interface OmniCompositionType<T extends OmniType, K extends CompositionKind> extends OmniBaseType<typeof OmniTypeKind.COMPOSITION>, OmniOptionallyNamedType {
+export interface OmniCompositionTypeBase<T extends OmniType, K extends CompositionKind> extends OmniBaseType<typeof OmniTypeKind.COMPOSITION>, OmniOptionallyNamedType {
   compositionKind: K;
   types: T[];
 }
 
-export interface OmniDictionaryType extends OmniBaseType<'DICTIONARY'> {
-  keyType: OmniType;
-  valueType: OmniType;
+export interface OmniCompositionAndType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.AND> {}
+export interface OmniCompositionOrType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.OR> {}
+export interface OmniCompositionXorType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.XOR> {}
+export interface OmniCompositionNotType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.NOT> {}
+
+export type OmniCompositionType<T extends OmniType = OmniType, CK extends CompositionKind = CompositionKind> = Extract<
+  OmniCompositionAndType<T>
+  | OmniCompositionOrType<T>
+  | OmniCompositionXorType<T>
+  | OmniCompositionNotType<T>
+  , {compositionKind: CK}>
+  ;
+
+
+export interface OmniDictionaryType<K extends OmniType = OmniType, V extends OmniType = OmniType> extends OmniBaseType<'DICTIONARY'> {
+  keyType: K;
+  valueType: V;
 }
 
 
@@ -184,17 +214,18 @@ export interface OmniHardcodedReferenceType extends OmniBaseType<'HARDCODED_REFE
   fqn: string;
 }
 
-export interface OmniExternalModelReferenceType<TType extends OmniType> extends OmniBaseType<typeof OmniTypeKind.EXTERNAL_MODEL_REFERENCE>, OmniNamedType {
+export interface OmniExternalModelReferenceType<TType extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.EXTERNAL_MODEL_REFERENCE>, OmniNamedType, OmniTypeWithInnerType<TType> {
   model: OmniModel;
-  of: TType;
   name: TypeName;
 }
 
-export interface OmniArrayType extends OmniBaseType<'ARRAY'> {
-  of: OmniType;
+interface OmniArrayBase {
+  arrayKind?: OmniArrayKind | undefined;
+}
+
+export interface OmniArrayType<Item extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.ARRAY>, OmniTypeWithInnerType<Item>, OmniArrayBase {
   minLength?: number | undefined;
   maxLength?: number | undefined;
-  implementationType?: OmniArrayImplementationType;
   possiblySingle?: boolean;
 }
 
@@ -204,23 +235,18 @@ export type OmniPropertyOwner = OmniObjectType | OmniArrayPropertiesByPositionTy
  * Similar to GenericArrayType, but this solves issue of having a list of types in a static order.
  * It DOES NOT mean "any of these types" or "one of these types", it means "THESE TYPES IN THIS ORDER IN THIS ARRAY"
  */
-export interface OmniArrayPropertiesByPositionType extends OmniBaseType<'ARRAY_PROPERTIES_BY_POSITION'> {
-
+export interface OmniArrayPropertiesByPositionType extends OmniBaseType<typeof OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION>, OmniArrayBase {
   properties: OmniProperty[];
   commonDenominator?: OmniType | undefined;
-  implementationType?: OmniArrayImplementationType | undefined;
 }
 
-export interface OmniArrayTypesByPositionType extends OmniBaseType<'ARRAY_TYPES_BY_POSITION'> {
-
+export interface OmniArrayTypesByPositionType extends OmniBaseType<typeof OmniTypeKind.ARRAY_TYPES_BY_POSITION>, OmniArrayBase {
   types: OmniType[];
   commonDenominator?: OmniType | undefined;
-  implementationType?: OmniArrayImplementationType | undefined;
 }
 
 
-export interface OmniInterfaceType extends OmniBaseType<'INTERFACE'>, OmniOptionallyNamedType {
-  of: OmniSuperTypeCapableType;
+export interface OmniInterfaceType<T extends OmniSuperTypeCapableType = OmniSuperTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.INTERFACE>, OmniOptionallyNamedType, OmniTypeWithInnerType<T> {
 
   /**
    * This is a replacement of any potential 'extendedBy' inside the original type inside 'of'.
@@ -228,6 +254,15 @@ export interface OmniInterfaceType extends OmniBaseType<'INTERFACE'>, OmniOption
    * We cannot change the 'extendedBy' of the original type.
    */
   extendedBy?: OmniSuperTypeCapableType | undefined;
+}
+
+/**
+ * A type for decorating an already existing type.
+ *
+ * For example if all we want is to update the description of the type for a property but do not want to change the actual type.
+ */
+export interface OmniDecoratingType<T extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.DECORATING>, OmniTypeWithInnerType<T> {
+
 }
 
 export const UnknownKind = {
@@ -249,29 +284,26 @@ export interface OmniSubTypeHint {
   qualifiers: OmniPayloadPathQualifier[];
 }
 
-export interface OmniObjectType extends OmniBaseType<'OBJECT'>, OmniNamedType {
+export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.OBJECT>, OmniNamedType {
 
   /**
-   * This type can only be extended by "one" thing.
-   * But this one thing can be a GenericAndType or GenericOrType or anything else.
-   * This extension property tries to follow the originating specification as much as possible.
+   * An object can only be extended by "one" thing.
+   * But this one thing can be something concrete, something generic, or a composition.
    * It is up to the target language what to do with it/how to transform it to something useful.
-   *
-   * TODO: This should be OmniInheritableType -- but the infrastructure doesn't handle it well right now.
    */
-  extendedBy?: OmniSuperTypeCapableType | undefined;
+  extendedBy?: E | undefined;
 
   /**
    * The composition types that inherit this interface can help with the mapping of the runtime types.
    * If there is a runtime mapping, then we do not need to do it manually in the target language's code.
-   * This is predicated on the language having some other method of doing it, though. Like Java @JsonTypeInfo and @JsonSubTypes
+   * This is predicated on the language having some other method of doing it, though. Like Java `@JsonTypeInfo` and `@JsonSubTypes`
    */
   subTypeHints?: OmniSubTypeHint[];
 
   properties: OmniProperty[];
 
   /**
-   * In difference to JsonSchema, this needs to be specifically `true` to allow enable additional properties
+   * In difference to JsonSchema, this needs to be specifically `true` to enable additional properties
    */
   additionalProperties?: boolean | undefined;
 }
@@ -340,8 +372,9 @@ export type OmniAllowedEnumPrimitiveKinds = typeof OmniPrimitiveKind.STRING
   | typeof OmniPrimitiveKind.DECIMAL
   | typeof OmniPrimitiveKind.NUMBER;
 
-export interface OmniEnumType extends OmniBaseType<'ENUM'>, OmniNamedType {
+export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];
+  enumNames?: string[];
   primitiveKind: OmniAllowedEnumPrimitiveKinds;
 
   /**
@@ -357,41 +390,43 @@ export interface OmniEnumType extends OmniBaseType<'ENUM'>, OmniNamedType {
 }
 
 // TODO: Should this actually be a type, and not just something simpler? Since it can ONLY exist inside a OmniGenericSourceType...
-export interface OmniGenericSourceIdentifierType extends OmniBaseType<'GENERIC_SOURCE_IDENTIFIER'> {
+export interface OmniGenericSourceIdentifierType<Lower extends OmniType = OmniType, Upper extends OmniType = OmniType, Edges extends OmniType[] = OmniType[]> extends OmniBaseType<'GENERIC_SOURCE_IDENTIFIER'> {
 
   placeholderName: string;
-  lowerBound?: OmniType;
-  upperBound?: OmniType;
+  lowerBound?: Lower;
+  upperBound?: Upper;
 
   /**
    * List of distinct known types used as bounds for the generic source.
    * This can be used to quickly know in some places what the implementations of a certain generic identifier is.
    */
-  knownEdgeTypes?: OmniType[];
+  knownEdgeTypes?: Edges;
 }
 
-export interface OmniGenericTargetIdentifierType extends OmniBaseType<'GENERIC_TARGET_IDENTIFIER'> {
+export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> extends OmniBaseType<'GENERIC_TARGET_IDENTIFIER'> {
 
   /**
    * If no placeholder name is set, then it has the same placeholder name as the sourceIdentifier.
    */
   placeholderName?: string;
   sourceIdentifier: OmniGenericSourceIdentifierType;
-  type: OmniType;
+  type: T;
 }
 
 /**
  * TODO: Rename this into a GenericDeclaration?
  */
-export interface OmniGenericSourceType extends OmniBaseType<'GENERIC_SOURCE'> {
-  of: OmniSuperGenericTypeCapableType;
+export interface OmniGenericSourceType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<'GENERIC_SOURCE'>, OmniTypeWithInnerType<T> {
+
   sourceIdentifiers: OmniGenericSourceIdentifierType[];
 }
 
-export type OmniGenericTargetSourcePropertyType = OmniGenericSourceType | OmniExternalModelReferenceType<OmniGenericSourceType>;
+export type OmniGenericTargetSourcePropertyType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> =
+  OmniGenericSourceType<T>
+  | OmniExternalModelReferenceType<OmniGenericSourceType<T>>;
 
-export interface OmniGenericTargetType extends OmniBaseType<'GENERIC_TARGET'> {
-  source: OmniGenericTargetSourcePropertyType;
+export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<'GENERIC_TARGET'> {
+  source: OmniGenericTargetSourcePropertyType<T>;
   targetIdentifiers: OmniGenericTargetIdentifierType[];
 }
 

@@ -18,6 +18,10 @@ export class LoggerFactory {
     LoggerFactory._MODIFIERS.push(modifier);
   }
 
+  public static enablePrettyPrint() {
+    LoggerFactory._pretty = true;
+  }
+
   /**
    * Creates a logger with the specified name.
    * Usually the node constant: import.meta.url
@@ -74,5 +78,52 @@ export class LoggerFactory {
     }
 
     return pino(modifiedOptions);
+  }
+
+  public static formatError(err: unknown): Error {
+
+    try {
+      const errorLog: Error = {
+        name: `Unknown`,
+        message: `${err}`,
+      };
+
+      let pointer: unknown | undefined;
+
+      if (err instanceof Error) {
+        errorLog.name = err.name;
+        errorLog.message = err.message;
+
+        if (err.stack) {
+          errorLog.stack = err.stack;
+        }
+
+        pointer = err.cause;
+      }
+
+      let max = 6;
+      while (pointer && max-- > 0) {
+
+        if (pointer instanceof Error) {
+
+          errorLog.message += `\n${pointer.message}`;
+          if (pointer.stack) {
+            errorLog.stack = `${errorLog.stack ?? ''}\nCaused by ${pointer.name}: ${pointer.message ? pointer.message : '???'}\n${pointer.stack}`;
+          }
+
+          pointer = pointer.cause;
+
+        } else {
+
+          pointer = undefined;
+        }
+      }
+
+      return errorLog;
+    } catch (ex) {
+
+
+      throw ex;
+    }
   }
 }

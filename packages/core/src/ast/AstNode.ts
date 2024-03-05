@@ -1,4 +1,4 @@
-import {AstVisitor, VisitResult} from '../visit';
+import {AstVisitor, VisitResult} from '../visit/index.ts';
 
 /**
  * This is an abstract general ST (Syntax Tree) Node.
@@ -17,6 +17,8 @@ import {AstVisitor, VisitResult} from '../visit';
  * It is then possible to make transformations to the Syntax Tree in two passes, in differing levels of complexity.
  */
 export interface AstNode {
-  visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
-}
 
+  visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
+
+
+}

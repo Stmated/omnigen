@@ -13,5 +13,6 @@ export * as JavaPlugins from './JavaPluginInit.ts';
 export const JAVA_FEATURES: TargetFeatures = {
   literalTypes: false,
   primitiveGenerics: false,
+  primitiveInheritance: false,
 };
 

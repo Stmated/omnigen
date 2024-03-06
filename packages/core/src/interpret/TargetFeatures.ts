@@ -12,6 +12,11 @@ export const ZodTargetFeatures = z.object({
    * If true, then primitives can be used as generics for objects. Such as List<int>
    */
   primitiveGenerics: ZodCoercedBoolean,
+
+  /**
+   * If true, then the language supports inheriting/extending from a primitive, such as having an Integer as a supertype.
+   */
+  primitiveInheritance: ZodCoercedBoolean,
 });
 
 export type TargetFeatures = z.output<typeof ZodTargetFeatures>;
@@ -23,4 +28,5 @@ export type TargetFeatures = z.output<typeof ZodTargetFeatures>;
 export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   literalTypes: true,
   primitiveGenerics: true,
+  primitiveInheritance: true,
 };

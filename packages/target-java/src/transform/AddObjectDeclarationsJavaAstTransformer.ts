@@ -23,6 +23,13 @@ import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
+/**
+ * Supposed to be the first and relatively simple transformer that adds the object (class, interface, enum, et cetera) declarations.
+ *
+ * It is up to later transformers to do things like adding fields, accessors, annotations, and what else.
+ *
+ * The more that is moved out from the class and put into specific transformers, the better.
+ */
 export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private readonly _map = new Map<OmniType, AstNode>();

@@ -1,12 +1,12 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.ts';
 import {
   OmniType,
   OmniTypeKind,
   TargetOptions,
 } from '@omnigen/core';
-import * as Java from '../ast/index.js';
+import * as Java from '../ast/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaUtil} from '../util/index.js';
+import {JavaUtil} from '../util/index.ts';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);

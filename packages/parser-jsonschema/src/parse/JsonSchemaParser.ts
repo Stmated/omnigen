@@ -25,15 +25,11 @@ import {
   ParserOptions,
   TypeName,
 } from '@omnigen/core';
-
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
-// TODO: Move into OpenApiJsonSchemaParser
-import {DiscriminatorAware} from './DiscriminatorAware.js';
+import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
 import {Case, CompositionUtil, Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
-
-import {SimplifyJsonSchemaTransformerFactory} from '../transform/SimplifyJsonSchemaTransformerFactory.ts';
-import {ApplyIdJsonSchemaTransformerFactory} from '../transform/ApplyIdJsonSchemaTransformerFactory.ts';
+import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform/index.ts';
 import {ExternalDocumentsFinder, RefResolver} from '../visit/ExternalDocumentsFinder.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -361,7 +357,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
       const extendableType = OmniUtil.asSuperType(extendedBy);
       if (!extendableType) {
-        throw new Error(`Not allowed to use '${OmniUtil.describe(extendedBy)}' as an extension type`);
+        throw new Error(`Not allowed to use '${OmniUtil.describe(extendedBy)}' as a super-type`);
       }
 
       type.extendedBy = extendableType;

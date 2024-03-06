@@ -3,7 +3,6 @@ import {
   OmniInterfaceType,
   OmniModelTransformer,
   OmniModelTransformerArgs,
-  OmniSubTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,

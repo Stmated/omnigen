@@ -26,7 +26,7 @@
   "devDependencies": {
     "@omnigen/eslint-config-custom": "workspace:*",
     "prettier": "^3.2.5",
-    "turbo": "^1.12.3",
+    "turbo": "^1.12.4",
     "syncpack": "^12.3.0",
     "pino-pretty": "^10.3.1"
   }

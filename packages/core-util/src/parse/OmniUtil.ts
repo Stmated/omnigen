@@ -1,5 +1,8 @@
 import {
-  CompositionKind, OMNI_GENERIC_FEATURES,
+  CommonDenominatorType,
+  CompositionKind,
+  LiteralValue,
+  OMNI_GENERIC_FEATURES,
   OmniArrayPropertiesByPositionType,
   OmniArrayType,
   OmniCompositionType,
@@ -24,16 +27,16 @@ import {
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
+  PropertyDifference,
   SmartUnwrappedType,
+  TargetFeatures,
+  TypeDifference,
   TypeName,
+  TypeOwner,
   UnknownKind,
 } from '@omnigen/core';
-import {LiteralValue} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import {CommonDenominatorType} from '@omnigen/core';
 import {PropertyUtil} from './PropertyUtil.js';
-import {TargetFeatures} from '@omnigen/core';
-import {PropertyDifference, TypeDifference, TypeOwner} from '@omnigen/core';
 import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.js';
 import {Naming} from './Naming.js';
 
@@ -217,6 +220,10 @@ export class OmniUtil {
       return type;
     }
 
+    if (type.kind == OmniTypeKind.PRIMITIVE && !type.nullable && type.primitiveKind != OmniPrimitiveKind.VOID && type.primitiveKind != OmniPrimitiveKind.NULL) {
+      return type;
+    }
+
     if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
       const of = OmniUtil.asSuperType(type.of);
       if (of) {
@@ -231,13 +238,15 @@ export class OmniUtil {
     if (type.kind == OmniTypeKind.COMPOSITION) {
 
       // This seems like an unnecessary operation to do, but cannot figure out a better way yet.
-      const childSuperTypes = type.types.map(it => OmniUtil.asSuperType(it));
-      if (childSuperTypes.includes(undefined)) {
+      for (const child of type.types) {
+        const childSuperType = OmniUtil.asSuperType(child);
+        if (!childSuperType) {
 
-        // This might seem confusing, when you call "asSuperType" on a composition but get back undefined.
-        // This method is supposed to be safe to call with anything though, but we log this occasion.
-        logger.debug(`There is a non-supertype type inside composition ${OmniUtil.describe(type)}`);
-        return undefined;
+          // This might seem confusing, when you call "asSuperType" on a composition but get back undefined.
+          // This method is supposed to be safe to call with anything though, but we log this occasion.
+          logger.debug(`There is a non-supertype type (${OmniUtil.describe(child)}) inside composition '${OmniUtil.describe(type)}'`);
+          return undefined;
+        }
       }
 
       return type as OmniCompositionType<OmniSuperTypeCapableType>;
@@ -661,10 +670,9 @@ export class OmniUtil {
 
     const typeName = OmniUtil.getTypeName(type);
     if (typeName) {
-      return typeName;
+      return Naming.unwrap(typeName);
     }
 
-    // TODO: All types should be able to return a "virtual" type name, which can be used for compositions or whatever!
     throw new Error(`[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`);
   }
 
@@ -1008,6 +1016,8 @@ export class OmniUtil {
         return 8;
       } else if (diffs.includes(TypeDifference.NO_GENERIC_OVERLAP)) {
         return 7;
+      } else if (diffs.includes(TypeDifference.NARROWED_TYPE)) {
+        return 6;
       }
     }
 
@@ -1058,10 +1068,10 @@ export class OmniUtil {
   /**
    * Checks for equality or a common denominator between two types. Will return the type and level of equality.
    *
-   * @param a First type to compare with
-   * @param b Second type to compare to
-   * @param targetFeatures Description ont eh features that the caller supports, so we can know what it can do
-   * @param create True if a new type should be created and returned, if common denominator can be achieved that way
+   * @param a - First type to compare with
+   * @param b - Second type to compare to
+   * @param targetFeatures - Description of the features that the caller supports, so we can know what it supports
+   * @param create - True if a new type should be created and returned, if common denominator can be achieved that way
    */
   public static getCommonDenominatorBetween(
     a: OmniType,
@@ -1075,22 +1085,22 @@ export class OmniUtil {
     }
 
     if (a.kind == OmniTypeKind.PRIMITIVE && b.kind == OmniTypeKind.PRIMITIVE) {
-      return this.getCommonDenominatorBetweenPrimitives(a, b, targetFeatures, create);
+      return OmniUtil.getCommonDenominatorBetweenPrimitives(a, b, targetFeatures, create);
     } else if (a.kind == OmniTypeKind.HARDCODED_REFERENCE && b.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-      return this.getCommonDenominatorBetweenHardcodedReferences(a, b);
+      return OmniUtil.getCommonDenominatorBetweenHardcodedReferences(a, b);
     } else if (a.kind == OmniTypeKind.ENUM && b.kind == OmniTypeKind.ENUM) {
       // TODO: This can probably be VERY much improved -- like taking the entries that are similar between the two
-      return this.getCommonDenominatorBetweenEnums(a, b);
+      return OmniUtil.getCommonDenominatorBetweenEnums(a, b);
     } else if (a.kind == OmniTypeKind.DICTIONARY && b.kind == OmniTypeKind.DICTIONARY) {
-      return this.getCommonDenominatorBetweenDictionaries(a, b, targetFeatures, create);
+      return OmniUtil.getCommonDenominatorBetweenDictionaries(a, b, targetFeatures, create);
     } else if (a.kind == OmniTypeKind.ARRAY && b.kind == OmniTypeKind.ARRAY) {
-      return this.getCommonDenominatorBetweenArrays(a, b, targetFeatures, create);
+      return OmniUtil.getCommonDenominatorBetweenArrays(a, b, targetFeatures, create);
     } else if (a.kind == OmniTypeKind.UNKNOWN && b.kind == OmniTypeKind.UNKNOWN) {
       return {type: a};
     } else if (a.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION && b.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-      return this.getCommonDenominatorBetweenPropertiesByPosition(a, b, targetFeatures, create);
+      return OmniUtil.getCommonDenominatorBetweenPropertiesByPosition(a, b, targetFeatures, create);
     } else if (a.kind == OmniTypeKind.OBJECT && b.kind == OmniTypeKind.OBJECT) {
-      const result = this.getCommonDenominatorBetweenObjects(a, b, targetFeatures, create);
+      const result = OmniUtil.getCommonDenominatorBetweenObjects(a, b, targetFeatures, create);
       if (result) {
         return result;
       }
@@ -1103,8 +1113,25 @@ export class OmniUtil {
       // TODO: Should we then create a new composition type, or just return the first match?
     } else if (a.kind == OmniTypeKind.GENERIC_TARGET) {
       if (b.kind == OmniTypeKind.GENERIC_TARGET) {
-        return this.getCommonDenominatorBetweenGenericTargets(a, b, targetFeatures, create);
+        return OmniUtil.getCommonDenominatorBetweenGenericTargets(a, b, targetFeatures, create);
       }
+    } else if ((a.kind == OmniTypeKind.ENUM || a.kind == OmniTypeKind.PRIMITIVE) && (b.kind == OmniTypeKind.ENUM || b.kind == OmniTypeKind.PRIMITIVE)) {
+
+      const enumOption = (a.kind == OmniTypeKind.ENUM) ? a : (b.kind == OmniTypeKind.ENUM) ? b : undefined;
+      const primitiveOption = (a.kind == OmniTypeKind.PRIMITIVE) ? a : (b.kind == OmniTypeKind.PRIMITIVE) ? b : undefined;
+
+      if (enumOption && primitiveOption) {
+        return OmniUtil.getCommonDenominatorBetweenEnumAndPrimitive(enumOption, primitiveOption);
+      }
+    }
+
+    return undefined;
+  }
+
+  private static getCommonDenominatorBetweenEnumAndPrimitive(a: OmniEnumType, b: OmniPrimitiveType): CommonDenominatorType<OmniType> | undefined {
+
+    if (a.primitiveKind === b.primitiveKind) {
+      return {type: b, diffs: [TypeDifference.NARROWED_TYPE]};
     }
 
     return undefined;
@@ -1152,8 +1179,6 @@ export class OmniUtil {
       for (const diff of (commonIdentifierType.diffs ?? [])) {
         uniqueDiffs.add(diff);
       }
-
-      // lowestEqualityLevel = commonIdentifierType.grades.min(lowestEqualityLevel); // Math.min(lowestEqualityLevel, commonIdentifierType.equalityGrade);
     }
 
     const commonGenericTarget: OmniGenericTargetType = {

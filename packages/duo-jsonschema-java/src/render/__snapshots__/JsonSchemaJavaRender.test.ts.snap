@@ -7,6 +7,13 @@ exports[`jsonschema-java-render > decorated_types 1`] = `
 ]
 `;
 
+exports[`jsonschema-java-render > enum_string_composition 1`] = `
+[
+  "DataEntry.java",
+  "TransferState.java",
+]
+`;
+
 exports[`jsonschema-java-render > string_union 1`] = `
 [
   "DateOfBirthOrOrganization.java",

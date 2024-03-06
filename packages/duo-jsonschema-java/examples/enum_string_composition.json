@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trustly.com/schemas/enum_string_composition",
+  "definitions": {
+    "TransferState": {
+      "type": "string",
+      "enum": [
+        "EXECUTING",
+        "EXECUTED",
+        "PENDING"
+      ]
+    },
+    "DataEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "transferstate": {
+          "title": "DataEntryTransferState",
+          "allOf": [
+            {"$ref": "#/definitions/TransferState"},
+            {"type": "string"}
+          ],
+          "description": "The current state of the withdrawal."
+        }
+      },
+      "required": [
+        "transferstate"
+      ]
+    }
+  }
+}

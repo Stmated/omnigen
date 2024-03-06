@@ -1,10 +1,10 @@
 import {
   CompositionKind,
   OmniCompositionType,
-  OmniModel,
-  OmniModelTransformer, OmniType,
+  OmniModel, OmniModel2ndPassTransformer,
+  OmniModelTransformer, OmniModelTransformer2ndPassArgs, OmniType,
   OmniTypeKind,
-  ParserOptions, TypeOwner,
+  ParserOptions, TargetOptions, TypeOwner,
 } from '@omnigen/core';
 import {OmniModelTransformerArgs} from '@omnigen/core';
 import {OmniUtil} from '../OmniUtil.js';
@@ -13,7 +13,7 @@ import {OmniUtil} from '../OmniUtil.js';
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.
  * It does this by seeing if types have common ancestors and skipping the superfluously stated ones.
  */
-export class SimplifyInheritanceModelTransformer implements OmniModelTransformer {
+export class SimplifyInheritanceModelTransformer implements OmniModelTransformer, OmniModel2ndPassTransformer {
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
@@ -28,6 +28,24 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
         SimplifyInheritanceModelTransformer.simplifyComposition(args.model, ctx.type, ctx.parent);
       }
     });
+  }
+
+  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions, TargetOptions>) {
+
+    if (!args.targetFeatures.primitiveInheritance) {
+
+      OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+        if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && ctx.type.extendedBy.kind == OmniTypeKind.PRIMITIVE) {
+
+          if (ctx.type.additionalProperties || ctx.type.properties.length > 0) {
+            throw new Error(`Cannot make object ${OmniUtil.describe(ctx.type)} which extends primitive ${OmniUtil.describe(ctx.type.extendedBy)} into the primitive since we would lose properties`);
+          }
+
+          // Replace ourself with the extension.
+          ctx.replacement = ctx.type.extendedBy;
+        }
+      });
+    }
   }
 
   private static simplifyComposition(

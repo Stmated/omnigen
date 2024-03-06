@@ -1,4 +1,5 @@
 
-export * from './SimplifyInheritanceModelTransformer.js';
-export * from './ElevatePropertiesModelTransformer.js';
-export * from './GenericsModelTransformer.js';
+export * from './SimplifyInheritanceModelTransformer.ts';
+export * from './ElevatePropertiesModelTransformer.ts';
+export * from './GenericsModelTransformer.ts';
+export * from './ConflictingAndCompositionTargetModelTransformer.ts';

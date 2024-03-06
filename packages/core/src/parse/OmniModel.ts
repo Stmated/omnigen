@@ -110,6 +110,7 @@ export type OmniSuperTypeCapableType =
   | OmniCompositionNotType<OmniSuperTypeCapableType>
   | OmniExternalModelReferenceType<OmniSuperTypeCapableType> // Needs to be unwrapped/resolved every time
   | OmniDecoratingType<OmniSuperTypeCapableType>
+  | OmniPrimitiveNonNullableType
   ;
 
 export type OmniSuperGenericTypeCapableType = OmniObjectType
@@ -377,21 +378,15 @@ export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, Om
   enumConstants?: AllowedEnumTsTypes[];
   enumNames?: string[];
   primitiveKind: OmniAllowedEnumPrimitiveKinds;
-
-  /**
-   * If this is true, then the enum actually also need to support any other value outside of the constants.
-   * This could happen if the JSONSchema is a composition of "String or Enum[A, B, C]".
-   * Then the A, B, C choices need to be there, but we also need to support in case something else is received.
-   *
-   * For Java this would mean we should not render as an Enum, but as a class with static public final fields.
-   */
-  otherValues?: boolean;
-
   extendedBy?: OmniSuperTypeCapableType;
 }
 
 // TODO: Should this actually be a type, and not just something simpler? Since it can ONLY exist inside a OmniGenericSourceType...
-export interface OmniGenericSourceIdentifierType<Lower extends OmniType = OmniType, Upper extends OmniType = OmniType, Edges extends OmniType[] = OmniType[]> extends OmniBaseType<'GENERIC_SOURCE_IDENTIFIER'> {
+export interface OmniGenericSourceIdentifierType<
+  Lower extends OmniType = OmniType,
+  Upper extends OmniType = OmniType,
+  Edges extends OmniType[] = OmniType[]
+> extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE_IDENTIFIER> {
 
   placeholderName: string;
   lowerBound?: Lower;

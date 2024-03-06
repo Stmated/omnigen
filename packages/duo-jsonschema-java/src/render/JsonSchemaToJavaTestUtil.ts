@@ -1,4 +1,4 @@
-import {RenderedCompilationUnit} from '@omnigen/core';
+import {RenderedCompilationUnit, TargetOptions} from '@omnigen/core';
 import {PluginManager} from '@omnigen/plugin';
 import {JavaOptions, JavaPlugins} from '@omnigen/target-java';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -9,28 +9,17 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class JsonSchemaToJavaTestUtil {
 
-  public static async render(inPath: string, options?: JavaOptions): Promise<RenderedCompilationUnit[]> {
+  public static async render(inPath: string, options?: Partial<JavaOptions & TargetOptions>): Promise<RenderedCompilationUnit[]> {
 
     const pm = new PluginManager({includeAuto: true});
 
     logger.info(`Running plugin manager with ${JsonSchemaPlugins.JsonSchemaPlugin.name} and ${JavaPlugins.JavaPluginInit.name}`);
-
-    // pm.addPlugin(new JavaPlugin);
 
     const ctx: FileContext = {
       file: inPath,
       arguments: {
         ...options,
       },
-      // target: 'java', // <-- implicit, because we have no other target plugin in this package
-      // arguments: {
-      //   ...all.modelTransformOptions,
-      //   ...all.parserOptions,
-      //   ...all.targetOptions,
-      //   ...all.packageOptions,
-      //   ...all.javaOptions,
-      //   ...all.arguments,
-      // },
     };
 
     const result = await pm.execute({

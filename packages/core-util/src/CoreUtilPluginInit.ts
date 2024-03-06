@@ -16,11 +16,20 @@ import {
 } from '@omnigen/core-plugin';
 import {z} from 'zod';
 import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse/index.ts';
-import {OmniModel2ndPassTransformer, OmniModelTransformer, RenderedCompilationUnit, ZodModelTransformOptions, ZodPackageOptions, ZodParserOptions, ZodTargetOptions} from '@omnigen/core';
+import {
+  OmniModel2ndPassTransformer,
+  OmniModelTransformer,
+  RenderedCompilationUnit,
+  ZodModelTransformOptions,
+  ZodPackageOptions,
+  ZodParserOptions,
+  ZodTargetOptions,
+} from '@omnigen/core';
 import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary.ts';
 import {FileWriter} from './write/index.ts';
 import {DefaultOmniModelLibrary} from './parse/DefaultOmniModelLibrary.ts';
 import {LoggerFactory} from '@omnigen/core-log';
+import {ConflictingAndCompositionTargetModelTransformer} from './parse/index.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -109,8 +118,10 @@ export const CommonTransform2Plugin = createPlugin(
   {name: 'transform2', in: CommonTransformers2In, out: CommonTransformers2In},
   async ctx => {
 
-    const transformers: OmniModel2ndPassTransformer<typeof ctx.parserOptions, typeof ctx.targetOptions>[] = [
+    const transformers: OmniModel2ndPassTransformer<typeof ctx.parserOptions>[] = [
       new ElevatePropertiesModelTransformer(),
+      new ConflictingAndCompositionTargetModelTransformer(),
+      new SimplifyInheritanceModelTransformer(),
     ];
 
     for (const transformer of transformers) {

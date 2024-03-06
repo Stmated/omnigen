@@ -250,14 +250,15 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     const declaration = this.createSubTypeDeclaration(genericSourceIdentifiers, type, originalType, body, options);
 
-    // JavaAstUtils.addExtendsAndImplements(model, type, declaration);
-
     // TODO: Move to separate transformer, which job it is to add the proper extends / implements
     const [typeExtends, typeImplements] = JavaUtil.getExtendsAndImplements(model, type);
     const lowerBoundImplements: OmniType[] = typeImplements;
 
-    if (typeExtends && lowerBoundImplements.includes(typeExtends)) {
-      throw new Error(`You are both extending and implementing the same type '${OmniUtil.describe(typeExtends)}'. Something is wrong with the AST building.`);
+    const idxOfExtendsInImplements = typeExtends ? lowerBoundImplements.indexOf(typeExtends) : -1;
+    if (idxOfExtendsInImplements != -1) {
+
+      logger.warn(`Both extending and implementing '${OmniUtil.describe(typeExtends)}' for '${OmniUtil.describe(type)}'. Will remove from 'implements' list`);
+      typeImplements.splice(idxOfExtendsInImplements, 1);
     }
 
     if (typeExtends) {

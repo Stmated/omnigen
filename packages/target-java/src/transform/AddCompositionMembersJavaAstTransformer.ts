@@ -1,11 +1,11 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {CompositionKind, OmniCompositionAndType, OmniCompositionType, OmniEnumType, OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind, UnknownKind} from '@omnigen/core';
-import {JavaUtil} from '../util';
-import * as Java from '../ast';
-import {AbstractObjectDeclaration, JavaAstRootNode} from '../ast';
+import {JavaUtil} from '../util/index.ts';
+import * as Java from '../ast/index.ts';
+import {AbstractObjectDeclaration, JavaAstRootNode} from '../ast/index.ts';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
-import {JavaOptions} from '../options';
+import {JavaOptions} from '../options/index.ts';
 
 /**
  * There needs to be more centralized handling of adding fields to a class depending on if it is extending or implementing interfaces.

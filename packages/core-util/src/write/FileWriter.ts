@@ -31,7 +31,6 @@ export class FileWriter implements Writer {
     try {
       logger.info(`Writing '${rcu.name}' to '${targetPath}'`);
       await fs.writeFile(targetPath, rcu.content, {encoding: 'utf8'});
-      logger.debug(`Wrote '${rcu.name}' to '${targetPath}'`);
     } catch (ex) {
       logger.error(ex, `Could not write file ${targetPath}`);
       return Promise.reject(ex);

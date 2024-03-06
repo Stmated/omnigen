@@ -15,8 +15,8 @@ import * as Java from '../ast/index.ts';
 import {JavaAstRootNode} from '../ast/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitResultFlattener} from '@omnigen/core-util';
-import {JavaOptions} from '../options';
-import {createJavaVisitor} from '../visit';
+import {JavaOptions} from '../options/index.ts';
+import {createJavaVisitor} from '../visit/index.ts';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);

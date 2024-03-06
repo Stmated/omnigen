@@ -1,7 +1,6 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +14,6 @@ public class AXOrB {
   }
 
   @JsonValue
-  @JsonProperty("raw")
   private final JsonNode _raw;
   private A _a;
   private B _b;

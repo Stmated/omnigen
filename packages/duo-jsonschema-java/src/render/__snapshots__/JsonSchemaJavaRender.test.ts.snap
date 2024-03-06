@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`jsonschema-java-render > decorated_types 1`] = `
+[
+  "Order.java",
+  "Shop.java",
+]
+`;
+
+exports[`jsonschema-java-render > string_union 1`] = `
+[
+  "DateOfBirthOrOrganization.java",
+]
+`;
+
+exports[`jsonschema-java-render > x-enum-varnames 1`] = `
+[
+  "SomeEnum.java",
+]
+`;

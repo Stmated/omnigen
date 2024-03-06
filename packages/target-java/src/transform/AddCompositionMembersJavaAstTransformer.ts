@@ -116,7 +116,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     } else {
 
       // This means the specification did not have any discriminators.
-      // Instead we need to figure out what it is in runtime. To be improved.
+      // Instead we need to figure out what it is in runtime.
       declaration.body.children.push(
         new Java.RuntimeTypeMapping(type.types, options),
       );

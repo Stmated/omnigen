@@ -40,7 +40,7 @@ describe('Java Rendering', () => {
           try {
             baseDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
           } catch (ex) {
-            throw new Error(`Could not resolve path of ${fileName}`);
+            throw new Error(`Could not resolve path of ${fileName}`, {cause: ex});
           }
 
           for (const cu of result.compilationUnits) {
@@ -59,7 +59,7 @@ describe('Java Rendering', () => {
             try {
               fs.writeFileSync(outPath, cu.content);
             } catch (ex) {
-              throw new Error(`Could not write '${outPath}' of '${fileName}': ${ex}`, {cause: ex instanceof Error ? ex : undefined});
+              throw new Error(`Could not write '${outPath}' of '${fileName}': ${ex}`, {cause: ex});
             }
 
             let cst: JavaParser.CstNode;
@@ -67,10 +67,7 @@ describe('Java Rendering', () => {
               cst = JavaParser.parse(cu.content);
               expect(cst).toBeDefined();
             } catch (ex) {
-              throw new Error(
-                `Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}`,
-                {cause: ex instanceof Error ? ex : undefined},
-              );
+              throw new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}`, {cause: ex});
             }
 
             // Visit the syntax tree, but do nothing with the result.
@@ -79,16 +76,7 @@ describe('Java Rendering', () => {
             visitor.visit(cst);
           }
         } catch (ex) {
-
-          throw LoggerFactory.formatError(ex);
-
-          // logger.error(ex, `Error`);
-          //
-          // if (ex instanceof Error) {
-          //   throw new Error(`Error rendering file ${fileName}: ${ex.stack}`, {cause: ex});
-          // } else {
-          //   throw new Error(`Error rendering file ${fileName}: ${JSON.stringify(ex)}`, {cause: ex});
-          // }
+          throw LoggerFactory.formatError(ex, `File ${fileName}`);
         }
       }
     }
@@ -179,33 +167,5 @@ describe('Java Rendering', () => {
     expect(fileContents.get('GiveNumberGetCharRequestParams.java')).toMatchSnapshot();
 
     // TODO: Add more exact checks for all generic types, making sure they have the correct amount of generics and whatever
-  });
-
-  test('x-enum-varnames', async ({task}) => {
-
-    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
-
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('keep_x_enum_varnames.json', undefined, 'jsonschema');
-
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
-    for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
-    }
-  });
-
-  test('decorated_types', async ({task}) => {
-
-    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
-
-    const fileContents = await JavaTestUtils.getFileContentsFromFile(
-      'decorated_types.json',
-      {javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, commentsOnFields: false, commentsOnGetters: true}},
-      'jsonschema',
-    );
-
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
-    for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
-    }
   });
 });

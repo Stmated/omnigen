@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trustly.com/schemas/string_union",
+
+  "definitions": {
+
+    "DateString": {
+      "type": "string",
+      "description": "Date string in the ISO 8601 format (YYYY-MM-DD)",
+      "pattern": "\\d{4}-\\d{2}-\\d{2}",
+      "examples": [
+        "2014-04-01"
+      ]
+    },
+
+    "OrganizationNumber": {
+      "type": "string"
+    },
+
+    "DateOfBirthOrOrganization": {
+      "oneOf": [
+        {"$ref": "#/definitions/DateString"},
+        {"$ref": "#/definitions/OrganizationNumber"}
+      ],
+      "description": "Date of birth (YYYY-MM-DD, ISO 8601) of the beneficiary, or organisational number for the organisation."
+    }
+  }
+}

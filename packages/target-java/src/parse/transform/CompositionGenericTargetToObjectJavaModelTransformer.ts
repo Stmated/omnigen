@@ -1,4 +1,4 @@
-import {OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
+import {CompositionKind, OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaUtil} from '../../util/index.ts';
 
@@ -11,7 +11,6 @@ import {JavaUtil} from '../../util/index.ts';
 export class CompositionGenericTargetToObjectJavaModelTransformer implements OmniModelTransformer {
 
   private _counter = 0;
-
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
@@ -26,42 +25,55 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
         let newType: OmniType | undefined = map.get(type);
         if (!newType) {
-          const superTypeComposition: OmniCompositionType<OmniSuperTypeCapableType, typeof type.compositionKind> = {
-            ...type,
-            types: [],
-          };
-
-          for (const composed of type.types) {
-
-            const asSuperType = JavaUtil.asSuperType(composed);
-            if (!asSuperType) {
-              throw new Error(`Not allowed to have type ${OmniUtil.describe(composed)}' as a ${type.compositionKind}-composition when it needs to be able to be a super-type`);
-            }
-
-            superTypeComposition.types.push(asSuperType);
-          }
-
-          // Move the name to the new object, and remove the name from the composition, or it will likely clash.
-          const copiedName = superTypeComposition.name;
-          if (!copiedName) {
-            throw new Error(`There was no name available for generic composition replacement on '${OmniUtil.describe(superTypeComposition)}'`);
-          }
-
-          delete superTypeComposition.name;
-
-          newType = {
-            kind: OmniTypeKind.OBJECT,
-            name: copiedName,
-            properties: [],
-            extendedBy: superTypeComposition,
-            debug: `#${this._counter++} Created from CompositionGenericTarget (${copiedName}) -> Object`,
-          } satisfies OmniObjectType;
-
+          newType = this.createNewConcreteObjectFromComposition(parent, type);
           map.set(type, newType);
         }
 
         parent.type = newType;
       }
     }, false);
+  }
+
+  private createNewConcreteObjectFromComposition(parent: OmniType, type: OmniCompositionType): OmniType {
+
+    if (type.compositionKind == CompositionKind.XOR) {
+
+      // If it is an XOR composition, then return it as-is, since it will be its own object in Java.
+      // Someday this whole XOR composition stuff needs to be overhauled, because it is brittle and too hard-coded.
+      return type;
+    }
+
+    const superTypeComposition: OmniCompositionType<OmniSuperTypeCapableType, typeof type.compositionKind> = {
+      ...type,
+      types: [],
+    };
+
+    for (const composed of type.types) {
+
+      const asSuperType = JavaUtil.asSuperType(composed);
+      if (!asSuperType) {
+        throw new Error(
+          `Not allowed '${OmniUtil.describe(composed)}' of '${OmniUtil.describe(parent)}' as a ${type.compositionKind}-composition entry since it must be super-type compatible`,
+        );
+      }
+
+      superTypeComposition.types.push(asSuperType);
+    }
+
+    // Move the name to the new object, and remove the name from the composition, or it will likely clash.
+    const copiedName = superTypeComposition.name;
+    if (!copiedName) {
+      throw new Error(`There was no name available for generic composition replacement on '${OmniUtil.describe(superTypeComposition)}'`);
+    }
+
+    delete superTypeComposition.name;
+
+    return {
+      kind: OmniTypeKind.OBJECT,
+      name: copiedName,
+      properties: [],
+      extendedBy: superTypeComposition,
+      debug: `#${this._counter++} Created from CompositionGenericTarget (${copiedName}) -> Object`,
+    } satisfies OmniObjectType;
   }
 }

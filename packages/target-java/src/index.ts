@@ -8,7 +8,7 @@ export * from './util/index.ts';
 export * from './render/index.ts';
 export * from './parse/index.ts';
 export * as Java from './ast/index.ts';
-export * as JavaBoot from './JavaPluginInit.ts';
+export * as JavaPlugins from './JavaPluginInit.ts';
 
 export const JAVA_FEATURES: TargetFeatures = {
   literalTypes: false,

@@ -80,19 +80,24 @@ export class LoggerFactory {
     return pino(modifiedOptions);
   }
 
-  public static formatError(err: unknown): Error {
+  public static formatError(err: unknown, message?: string): Error {
 
     try {
+
+      if (message) {
+        message = ` - ${message}`;
+      }
+
       const errorLog: Error = {
         name: `Unknown`,
-        message: `${err}`,
+        message: `${err}${message}`,
       };
 
       let pointer: unknown | undefined;
 
       if (err instanceof Error) {
         errorLog.name = err.name;
-        errorLog.message = err.message;
+        errorLog.message = `${err.message}${message}`;
 
         if (err.stack) {
           errorLog.stack = err.stack;
@@ -121,9 +126,7 @@ export class LoggerFactory {
 
       return errorLog;
     } catch (ex) {
-
-
-      throw ex;
+      throw err;
     }
   }
 }

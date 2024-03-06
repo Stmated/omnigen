@@ -13,7 +13,7 @@ import {
 } from '@omnigen/core-plugin';
 import {JavaInterpreter} from './interpret/index.ts';
 import {CompositionGenericTargetToObjectJavaModelTransformer, InterfaceJavaModelTransformer} from './parse/index.ts';
-import {createJavaRenderer, JAVA_FEATURES, JavaRenderer, ZodJavaOptions} from './index.ts';
+import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from './index.ts';
 import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions, ZodTargetFeatures} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';

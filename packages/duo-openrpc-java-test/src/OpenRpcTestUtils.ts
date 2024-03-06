@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import {JavaTestUtils, JavaTestUtilsOptions} from './JavaTestUtils.ts';
 import {OmniModelParserResult, PackageOptions, TargetOptions} from '@omnigen/core';
-import {JavaBoot, JavaOptions} from '@omnigen/target-java';
+import {JavaPlugins, JavaOptions} from '@omnigen/target-java';
 import {ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 
@@ -39,7 +39,7 @@ export class OpenRpcTestUtils {
       `../parser-${type}/examples/${fileName}`,
       options,
       ZodModelContext
-        .merge(JavaBoot.ZodJavaOptionsContext)
+        .merge(JavaPlugins.ZodJavaOptionsContext)
         .merge(ZodPackageOptionsContext)
         .merge(ZodTargetOptionsContext),
       ZodCompilationUnitsContext,

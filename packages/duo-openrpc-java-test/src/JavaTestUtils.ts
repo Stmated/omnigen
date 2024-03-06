@@ -17,15 +17,13 @@ import {
 import {
   JAVA_FEATURES,
   Java,
-  JavaBoot,
+  JavaPlugins,
   JavaOptions,
-  JavaRenderer,
-  JavaVisitor,
   ZodJavaOptions, createJavaVisitor, createJavaRenderer,
 } from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
-import {VisitorFactoryManager, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
 import {z, ZodObject} from 'zod';
@@ -46,7 +44,6 @@ export const DEFAULT_TEST_TARGET_OPTIONS: TargetOptions = {
 
 export interface JavaTestUtilsOptions {
   parserOptions?: ParserOptions,
-  // jsonRpcOptions?: JsonRpcParserOptions,
   modelTransformOptions?: ModelTransformOptions,
   targetOptions?: TargetOptions,
   packageOptions?: PackageOptions,
@@ -151,7 +148,7 @@ export class JavaTestUtils {
     stopAt: Z,
   ): Promise<z.output<Z>> {
 
-    const ctx: z.output<typeof JavaBoot.ZodJavaContextIn> = {
+    const ctx: z.output<typeof JavaPlugins.ZodJavaContextIn> = {
       target: 'java',
       model: parseResult.model,
       modelTransformOptions: DEFAULT_MODEL_TRANSFORM_OPTIONS,

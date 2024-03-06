@@ -415,6 +415,55 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1(@types/node@18.13.0)
 
+  packages/duo-jsonschema-java:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      '@omnigen/utils-test-target-java':
+        specifier: workspace:*
+        version: link:../utils-test-target-java
+      java-parser:
+        specifier: ^2.0.3
+        version: 2.0.3
+      typescript:
+        specifier: ^5.3.3
+        version: 5.3.3
+      vitest:
+        specifier: ^1.3.1
+        version: 1.3.1(@types/node@18.13.0)
+
   packages/duo-openrpc-java:
     dependencies:
       '@omnigen/core':

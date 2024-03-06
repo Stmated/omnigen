@@ -20,11 +20,15 @@ import {
   OmniGenericSourceIdentifierType,
   AstVisitor,
 } from '@omnigen/core';
-import {JavaAstUtils} from '../transform/index.js';
-import {JavaSubTypeCapableType, JavaUtil} from '../util/index.js';
-import {JavaVisitor} from '../visit/index.js';
-import {JavaOptions} from '../options/index.js';
-import {Case} from '@omnigen/core-util';
+import {JavaAstUtils} from '../transform/index.ts';
+import {JavaUtil} from '../util/index.ts';
+import {JavaVisitor} from '../visit/index.ts';
+import {JavaOptions} from '../options/index.ts';
+import {Case, OmniUtil} from '@omnigen/core-util';
+import {JAVA_FEATURES} from '../index.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export enum TokenType {
   ASSIGN,
@@ -192,11 +196,13 @@ export class AnnotationKeyValuePairList extends AbstractJavaNode implements AstN
   }
 }
 
+export type AnnotationAllowedTypes = OmniHardcodedReferenceType;
+
 export class Annotation extends AbstractJavaNode {
-  type: RegularType<OmniType>;
+  type: RegularType<AnnotationAllowedTypes>;
   pairs?: AnnotationKeyValuePairList | undefined;
 
-  constructor(type: RegularType<OmniType>, pairs?: AnnotationKeyValuePairList) {
+  constructor(type: RegularType<AnnotationAllowedTypes>, pairs?: AnnotationKeyValuePairList) {
     super();
     this.type = type;
     this.pairs = pairs;
@@ -1411,7 +1417,18 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
     this.fields.push(untypedField);
     this.getters.push(untypedGetter);
 
+    const handled: OmniType[] = [];
+
     for (const type of types) {
+
+      const otherType = handled.find(it => !OmniUtil.isDifferent(it, type, JAVA_FEATURES));
+      if (otherType) {
+
+        logger.debug(`Skipping runtime-mapped '${OmniUtil.describe(type)}' because '${OmniUtil.describe(otherType)}' already exists`);
+        continue;
+      }
+
+      handled.push(type);
 
       const typedFieldName = this.getFieldName(type);
 

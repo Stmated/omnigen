@@ -5,21 +5,21 @@ import {
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
-  OmniInterfaceOrObjectType, OmniInterfaceType,
+  OmniInterfaceType,
   OmniModel,
   OmniOptionallyNamedType,
   OmniPrimitiveKind,
-  OmniPrimitiveType, OmniSuperTypeCapableType,
+  OmniPrimitiveType,
   OmniType,
-  OmniTypeKind, PackageOptions, TargetOptions,
+  OmniTypeKind,
+  PackageOptions,
 } from '@omnigen/core';
 import * as Java from '../ast/index.ts';
+import {JavaAstRootNode} from '../ast/index.ts';
 import {JavaUtil} from '../util/index.ts';
 import {JavaAstUtils} from './JavaAstUtils.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';
-import {JavaAstRootNode} from '../ast/index.ts';
-import {JavaOptions} from '../options';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -95,7 +95,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       // Is there something we should do here?
 
     } else if (type.kind == OmniTypeKind.ENUM) {
-      return this.transformEnum(type, undefined, root, options);
+      return this.addEnum(type, undefined, root, options);
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
       if (type.compositionKind == CompositionKind.XOR || (type.name && isEdgeType)) {
@@ -107,6 +107,17 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       }
 
     } else if (type.kind == OmniTypeKind.OBJECT) {
+
+      // TODO: Maybe this could be removed and instead simplified elsewhere, where we compress/fix "incorrect" types?
+      // In Java we cannot extend from an enum. So we will try and redirect the output.
+      if (type.extendedBy && type.extendedBy.kind == OmniTypeKind.ENUM) {
+        if (OmniUtil.isEmptyType(type)) {
+          return this.addEnum(type.extendedBy, type, root, options);
+        } else {
+          throw new Error('Do not know how to handle this type, since Java cannot inherit from en Enum');
+        }
+      }
+
       return this.transformSubType(model, type, undefined, options, root);
     } else if (type.kind == OmniTypeKind.INTERFACE) {
       if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -133,12 +144,23 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     return undefined;
   }
 
-  private transformEnum(
+  private addEnum(
     type: OmniEnumType,
     originalType: OmniType | undefined,
     root: Java.JavaAstRootNode,
     options: JavaAndTargetOptions,
   ): AstNode {
+
+    const enumDeclaration = this.createEnum(type, originalType, options);
+    return this.addObjectDeclaration(enumDeclaration, root, options);
+  }
+
+  private createEnum(
+    type: OmniEnumType,
+    originalType: OmniType | undefined,
+    options: JavaAndTargetOptions,
+  ): Java.EnumDeclaration {
+
     const body = new Java.Block();
 
     const enumDeclaration = new Java.EnumDeclaration(
@@ -191,12 +213,17 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       );
     }
 
+    return enumDeclaration;
+  }
+
+  private addObjectDeclaration(dec: Java.AbstractObjectDeclaration, root: Java.JavaAstRootNode, options: PackageOptions): Java.CompilationUnit {
+
     const cu = new Java.CompilationUnit(
-      new Java.PackageDeclaration(JavaUtil.getPackageName(type, enumDeclaration.name.value, options)),
+      new Java.PackageDeclaration(JavaUtil.getPackageName(dec.type.omniType, dec.name.value, options)),
       new Java.ImportList(
         [],
       ),
-      enumDeclaration,
+      dec,
     );
 
     root.children.push(cu);
@@ -234,19 +261,6 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     // TODO: This could be an interface, if it's only extended from, and used in multiple inheritance.
     //        Make use of the DependencyGraph to figure things out...
     const body = new Java.Block();
-
-    if (type.kind == OmniTypeKind.OBJECT) {
-      if (type.extendedBy && type.extendedBy.kind == OmniTypeKind.ENUM) {
-        // TODO: Maybe this could be removed and instead simplified elsewhere, where we compress/fix "incorrect" types?
-        // In Java we cannot extend from an enum. So we will try and redirect the output.
-        if (OmniUtil.isEmptyType(type)) {
-          // TODO: The NAME of the resulting enum should still be the name of the current type, and not the extended class!
-          return this.transformEnum(type.extendedBy, type, root, options);
-        } else {
-          throw new Error('Do not know how to handle this type, since Java cannot inherit from en Enum');
-        }
-      }
-    }
 
     const declaration = this.createSubTypeDeclaration(genericSourceIdentifiers, type, originalType, body, options);
 

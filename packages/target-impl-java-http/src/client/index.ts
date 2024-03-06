@@ -1,5 +1,5 @@
 import {createPlugin, PluginAutoRegistry, ZodModelContext} from '@omnigen/core-plugin';
-import {JavaBoot} from '@omnigen/target-java';
+import {JavaPlugins} from '@omnigen/target-java';
 import {ZodImplementationOptions} from './ImplementationOptions.ts';
 import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/core';
 import {JavaHttpImplementationGenerator} from './JavaHttpImplementationGenerator.ts';
@@ -12,7 +12,7 @@ export const ZodImplementationOptionsContext = z.object({
   implementationOptions: ZodImplementationOptions,
 });
 
-export const ZodJavaHttpPluginIn = JavaBoot.ZodJavaOptionsContext
+export const ZodJavaHttpPluginIn = JavaPlugins.ZodJavaOptionsContext
   .merge(ZodAstNodeContext)
   .merge(ZodImplementationOptionsContext)
   .merge(ZodModelContext);

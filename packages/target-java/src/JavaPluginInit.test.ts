@@ -11,7 +11,7 @@ import {
   ZodBaseContext,
   ZodTargetContext,
 } from '@omnigen/core-plugin';
-import {JAVA_FEATURES, JavaBoot, ZodJavaOptions} from './index';
+import {JAVA_FEATURES, JavaPlugins, ZodJavaOptions} from './index';
 import {PluginManager} from '@omnigen/plugin';
 import {test, expect} from 'vitest';
 import {z} from 'zod';
@@ -59,7 +59,7 @@ const fakePropertiesPlugin = createPlugin(
 test('Java Plugin Hooks', async () => {
 
   const manager = new PluginManager({includeAuto: false});
-  manager.addPlugin(JavaBoot.default);
+  manager.addPlugin(JavaPlugins.default);
   manager.addPlugin([
     fakePropertiesPlugin,
   ]);

@@ -114,6 +114,7 @@ export type OmniSuperTypeCapableType =
 
 export type OmniSuperGenericTypeCapableType = OmniObjectType
   | OmniInterfaceType
+  | OmniDecoratingType<OmniSuperTypeCapableType>
   | OmniExternalModelReferenceType<OmniSuperGenericTypeCapableType> // Needs to be unwrapped/resolved every time
   ;
 
@@ -261,7 +262,7 @@ export interface OmniInterfaceType<T extends OmniSuperTypeCapableType = OmniSupe
  *
  * For example if all we want is to update the description of the type for a property but do not want to change the actual type.
  */
-export interface OmniDecoratingType<T extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.DECORATING>, OmniTypeWithInnerType<T> {
+export interface OmniDecoratingType<T extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.DECORATING>, OmniOptionallyNamedType, OmniTypeWithInnerType<T> {
 
 }
 
@@ -403,7 +404,7 @@ export interface OmniGenericSourceIdentifierType<Lower extends OmniType = OmniTy
   knownEdgeTypes?: Edges;
 }
 
-export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> extends OmniBaseType<'GENERIC_TARGET_IDENTIFIER'> {
+export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_TARGET_IDENTIFIER> {
 
   /**
    * If no placeholder name is set, then it has the same placeholder name as the sourceIdentifier.
@@ -416,7 +417,7 @@ export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> 
 /**
  * TODO: Rename this into a GenericDeclaration?
  */
-export interface OmniGenericSourceType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<'GENERIC_SOURCE'>, OmniTypeWithInnerType<T> {
+export interface OmniGenericSourceType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE>, OmniTypeWithInnerType<T> {
 
   sourceIdentifiers: OmniGenericSourceIdentifierType[];
 }
@@ -425,7 +426,7 @@ export type OmniGenericTargetSourcePropertyType<T extends OmniSuperGenericTypeCa
   OmniGenericSourceType<T>
   | OmniExternalModelReferenceType<OmniGenericSourceType<T>>;
 
-export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<'GENERIC_TARGET'> {
+export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_TARGET> {
   source: OmniGenericTargetSourcePropertyType<T>;
   targetIdentifiers: OmniGenericTargetIdentifierType[];
 }

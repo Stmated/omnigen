@@ -25,7 +25,7 @@ const logger = LoggerFactory.create(import.meta.url);
  * Takes an OmniModel, and tries to modify it to use generics where possible.
  * This will remove the need for a lot of extra types, and make code more readable.
  */
-export class GenericsModelTransformer implements OmniModelTransformer<ParserOptions> {
+export class GenericsModelTransformer implements OmniModelTransformer {
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
@@ -53,9 +53,6 @@ export class GenericsModelTransformer implements OmniModelTransformer<ParserOpti
       }
 
       if (superType.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-
-        // TODO: Add later -- right now we don't know for sure if it is a type that can be made generic
-        //        Need a "asSuperGenericType" in JavaUtil
         continue;
       }
 
@@ -120,7 +117,7 @@ export class GenericsModelTransformer implements OmniModelTransformer<ParserOpti
 
         genericSource.sourceIdentifiers.push(genericSourceIdentifier);
 
-        if (args.options.generificationBoxAllowed == false) {
+        if (!args.options.generificationBoxAllowed) {
           if (info.properties.map(it => it.type).find(it => !OmniUtil.isGenericAllowedType(it))) {
             logger.warn(`Skipping '${propertyName}' since some property types cannot be made generic`);
             continue;

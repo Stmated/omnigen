@@ -190,16 +190,10 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     const existing = this._typeMap.get(id);
-    // let omniType: OmniType;
     if (existing) {
       return {
         type: existing,
       };
-    } else {
-
-      // TODO: We should have a unique kind which signifies a recursion protection! So that we can act correctly in different situations
-      // omniType = {kind: 'OBJECT', debug: 'Unknown until resolved, placed here to hinder endless recursion', properties: [], name: 'RECURSION'};
-      // this._typeMap.set(id, omniType);
     }
 
     // The ref is the much better unique name of the type.
@@ -212,23 +206,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     const extendedBy = this.getExtendedBy(schema, name);
-    // if (extendedBy && subTypeHints && subTypeHints.length > 0) {
-    //
-    //   // We have subTypeHints, and also an extension.
-    //   // Right now we will skip the extension if it is a composition type.
-    //   // NOTE: This is most likely incorrect
-    //   // TODO: Need to figure out a better and more reliable way of handling this
-    //   // TODO: Need a way to "minimize" tbe given composition, by removing the types that are mapped
-    //   //        Then we keep what is left, if anything is left.
-    //   if (extendedBy.kind == OmniTypeKind.COMPOSITION) {
-    //     extendedBy = undefined;
-    //     // return {type: undefined, hints: subTypeHints};
-    //   }
-    // }
-
-    // const createdOmniType = this.jsonSchemaToNonObjectType(schema, name, extendedBy) ?? this.jsonSchemaToObjectType(schema, name, id, extendedBy);
-    // delete omniType.debug;
-    // Object.assign(omniType, createdOmniType);
 
     const omniType = this.jsonSchemaToNonObjectType(schema, name, extendedBy) ?? this.jsonSchemaToObjectType(schema, name, id, extendedBy);
     this._typeMap.set(id, omniType);
@@ -245,22 +222,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       subTypeHints = subTypeHintsResult.hints;
       postDiscriminatorNeeded = subTypeHintsResult.postDiscriminatorNeeded;
     }
-
-    // if (extendedBy && extendedBy.kind == OmniTypeKind.COMPOSITION && extendedBy.compositionKind == CompositionKind.AND) {
-    //
-    //   for (const subType of extendedBy.types) {
-    //
-    //     // TODO: How do we get this info? Move out code to figure out if something should be inlined?
-    //     // canInline = (schema.hash == undefined)
-    //     // const canInline = subType.canInline;
-    //     // if (canInline && omniType) {
-    //     //
-    //     //   // This schema can actually just be consumed by the parent type.
-    //     //   // This happens if the sub-schema is anonymous and never used by anyone else, or if it is a primitive.
-    //     //   OmniUtil.mergeType(subType, omniType);
-    //     // }
-    //   }
-    // }
 
     if (omniType.kind == OmniTypeKind.OBJECT) {
 
@@ -310,14 +271,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     if (typeof schema == 'boolean') {
       throw new Error(`Not allowed`);
     }
-
-    // if (extendedBy && !this.hasDirectContent(schema)) {
-    //   if (this.hasDecoratingProperties(schema)) {
-    //     return this.createDecoratedType(schema, extendedBy);
-    //   } else {
-    //     return extendedBy;
-    //   }
-    // }
 
     const names: TypeName = [name];
 
@@ -462,7 +415,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         }
       }
 
-      if (extendedBy.kind != OmniTypeKind.OBJECT) {
+      if (extendedBy.kind == OmniTypeKind.PRIMITIVE || extendedBy.kind == OmniTypeKind.ARRAY) {
         if (this.hasDirectContent(schema)) {
           return this.createDecoratedType(schema, extendedBy);
         } else {

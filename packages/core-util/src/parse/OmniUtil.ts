@@ -1014,6 +1014,17 @@ export class OmniUtil {
     return 0;
   }
 
+  public static isDifferent(a: OmniType, b: OmniType, features: TargetFeatures): boolean {
+
+    const commonDenominator = OmniUtil.getCommonDenominatorBetween(a, b, features);
+    if (!commonDenominator) {
+      return true;
+    }
+
+    const diffAmount = OmniUtil.getDiffAmount(commonDenominator?.diffs);
+    return diffAmount > 0;
+  }
+
   public static getCommonDenominator(targetFeatures: TargetFeatures, ...types: OmniType[]): CommonDenominatorType<OmniType> | undefined {
 
     if (types.length == 1) {
@@ -1329,11 +1340,6 @@ export class OmniUtil {
       overridingNullability = a.nullable || b.nullable;
     }
 
-    // const resultingType: CommonDenominatorType<OmniPrimitiveType | undefined> = {
-    //   type: common.type,
-    //   diffs: common.diffs,
-    // };
-
     if (overridingNullability !== undefined && common.type) {
       if (overridingNullability) {
         const nullableType = OmniUtil.toReferenceType(common.type);
@@ -1594,7 +1600,6 @@ export class OmniUtil {
       return undefined;
     }
 
-    // let commonSuperType: CommonDenominatorType<OmniType> | undefined = undefined;
     const diffs: TypeDifference[] = [];
     for (let i = 0; i < a.properties.length; i++) {
       // TODO: Move all the common denominator stuff out to a separate class (it's taking too much space here)
@@ -1610,17 +1615,6 @@ export class OmniUtil {
 
       diffs.push(...(equality.typeDiffs ?? []));
     }
-
-    // if (a.extendedBy || b.extendedBy) {
-    //   if (!a.extendedBy || !b.extendedBy) {
-    //     return undefined;
-    //   }
-    //
-    //   commonSuperType = OmniUtil.getCommonDenominatorBetween(a.extendedBy, b.extendedBy, targetFeatures, create);
-    //   if (!commonSuperType) {
-    //     return undefined;
-    //   }
-    // }
 
     // TODO: This needs improvement, since the names should not be resolved here already. Could lead to weird results.
     const aNames: string[] = [];

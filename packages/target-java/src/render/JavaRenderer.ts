@@ -5,11 +5,10 @@ import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index
 import {JavaOptions} from '../options/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '@omnigen/core-util';
-import * as repl from 'node:repl';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-function getModifierString(type: Java.ModifierType): 'public' | 'private' | 'protected' | 'final' | 'static' | '' {
+function getModifierString(type: Java.ModifierType): 'public' | 'private' | 'protected' | 'final' | 'static' | 'abstract' | '' {
   switch (type) {
     case Java.ModifierType.PUBLIC:
       return 'public';
@@ -23,6 +22,8 @@ function getModifierString(type: Java.ModifierType): 'public' | 'private' | 'pro
       return 'final';
     case Java.ModifierType.STATIC:
       return 'static';
+    case Java.ModifierType.ABSTRACT:
+      return 'abstract';
   }
 }
 

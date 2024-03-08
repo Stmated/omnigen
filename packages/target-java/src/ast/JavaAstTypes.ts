@@ -420,6 +420,7 @@ export enum ModifierType {
 
   STATIC,
   FINAL,
+  ABSTRACT
 }
 
 export class Modifier extends AbstractJavaNode {

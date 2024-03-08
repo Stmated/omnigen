@@ -34,6 +34,10 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
     const visitor = VisitorFactoryManager.create(DefaultJavaVisitor, {
 
+      // visitClassDeclaration: (node, visitor) => {
+      //   return DefaultJavaVisitor.visitClassDeclaration(node, visitor);
+      // },
+
       visitObjectDeclaration: (node, visitor) => {
 
         try {
@@ -103,6 +107,13 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       },
 
       visitConstructor: node => {
+
+        const ownerType = node.owner.type.omniType;
+        if (ownerType.kind == OmniTypeKind.OBJECT && ownerType.abstract) {
+
+          // We do not add any annotations to an abstract class constructor, since they will be overridden anyway.
+          return;
+        }
 
         const annotations = node.annotations || new Java.AnnotationList(...[]);
 

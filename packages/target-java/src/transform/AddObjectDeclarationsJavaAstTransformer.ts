@@ -16,7 +16,7 @@ import {
   PackageOptions,
 } from '@omnigen/core';
 import * as Java from '../ast/index.ts';
-import {JavaAstRootNode} from '../ast/index.ts';
+import {JavaAstRootNode, Modifier, ModifierList, ModifierType} from '../ast/index.ts';
 import {JavaUtil} from '../util/index.ts';
 import {JavaAstUtils} from './JavaAstUtils.js';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -377,10 +377,19 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       );
     }
 
+    const modifiers = new ModifierList(new Modifier(ModifierType.PUBLIC));
+
+    if (type.kind == OmniTypeKind.OBJECT) {
+      if (type.abstract) {
+        modifiers.children.push(new Modifier(ModifierType.ABSTRACT));
+      }
+    }
+
     return new Java.ClassDeclaration(
       javaType,
       new Java.Identifier(javaClassName),
       body,
+      modifiers,
     );
   }
 

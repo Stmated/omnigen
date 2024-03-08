@@ -292,7 +292,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       description: schema.description,
       title: schema.title,
       properties: [],
-
       // TODO: This is incorrect. 'additionalProperties' is more advanced than true/false
       additionalProperties: !('additionalProperties' in schema)
         ? this._options.defaultAdditionalProperties
@@ -302,6 +301,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
               ? schema.additionalProperties
               : true
         ),
+      abstract: this.vendorExtensionToBool(schema, 'x-abstract', false),
     };
 
     if (actualRef) {

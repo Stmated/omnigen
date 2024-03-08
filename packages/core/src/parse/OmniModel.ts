@@ -314,6 +314,8 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
    * In difference to JsonSchema, this needs to be specifically `true` to enable additional properties
    */
   additionalProperties?: boolean | undefined;
+
+  abstract?: boolean | undefined;
 }
 
 export type OmniPrimitiveConstantValue = string | boolean | number

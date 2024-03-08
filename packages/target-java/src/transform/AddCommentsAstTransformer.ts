@@ -12,7 +12,7 @@ import {IncludeExampleCommentsMode, JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {JavaUtil} from '../util/index.js';
-import {VisitorFactoryManager} from '@omnigen/core-util';
+import {Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -176,11 +176,13 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     if (options.includeExampleCommentsMode == IncludeExampleCommentsMode.ALWAYS) {
       if (type.examples && type.examples.length > 0) {
 
-        comments.push(new Java.FreeTextHeader(4, new Java.FreeText(`Examples`)));
+        comments.push(new Java.FreeTextHeader(5, new Java.FreeText(`Examples`)));
 
         const lines: Java.FreeText[] = [];
         for (const example of type.examples) {
-          lines.push(new Java.FreeText(JSON.stringify(example.value)));
+
+          const stringValue = Util.trimAny(JSON.stringify(example.value), `"'`);
+          lines.push(new Java.FreeText(stringValue));
         }
 
         comments.push(new Java.FreeTextList(lines, false));

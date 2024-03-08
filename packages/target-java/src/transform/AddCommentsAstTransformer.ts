@@ -8,11 +8,14 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import {JavaOptions} from '../options/index.js';
+import {IncludeExampleCommentsMode, JavaOptions} from '../options/index.js';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
 import * as Java from '../ast/index.js';
 import {JavaUtil} from '../util/index.js';
 import {VisitorFactoryManager} from '@omnigen/core-util';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
@@ -153,6 +156,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     comments.push(...AddCommentsAstTransformer.getLinkCommentsForType(type, model, options));
 
     const hasExtraComments = (comments.length > 0);
+
     if (type.description) {
       if (hasExtraComments) {
         comments.splice(0, 0, new Java.FreeTextLine(type.description));
@@ -160,11 +164,26 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
         comments.push(type.description);
       }
     }
+
     if (type.summary) {
       if (hasExtraComments) {
         comments.splice(0, 0, new Java.FreeTextLine(type.summary));
       } else {
         comments.push(type.summary);
+      }
+    }
+
+    if (options.includeExampleCommentsMode == IncludeExampleCommentsMode.ALWAYS) {
+      if (type.examples && type.examples.length > 0) {
+
+        comments.push(new Java.FreeTextHeader(4, new Java.FreeText(`Examples`)));
+
+        const lines: Java.FreeText[] = [];
+        for (const example of type.examples) {
+          lines.push(new Java.FreeText(JSON.stringify(example.value)));
+        }
+
+        comments.push(new Java.FreeTextList(lines, false));
       }
     }
 

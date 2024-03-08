@@ -21,6 +21,7 @@ ij_json_object_wrapping = off
 ij_json_spaces_within_braces = false
 ij_json_spaces_within_brackets = false
 ij_json_wrap_long_lines = false
+ij_json_keep_blank_lines_in_code = 1
 
 [*.{js,ts}]
 ij_typescript_enforce_trailing_comma = whenmultiline

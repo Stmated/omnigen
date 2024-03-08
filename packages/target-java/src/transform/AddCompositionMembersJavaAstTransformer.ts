@@ -322,7 +322,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     const singletonFactoryParamIdentifier = new Java.Identifier('value');
     const createdIdentifier = new Java.Identifier('created');
 
-    const singletonFactoryDeclaration = new Java.ArgumentDeclaration(
+    const singletonFactoryDeclaration = new Java.Parameter(
       fieldValueType,
       singletonFactoryParamIdentifier,
     );
@@ -343,7 +343,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       new Java.MethodDeclarationSignature(
         singletonFactoryMethodIdentifier,
         declaration.type,
-        new Java.ArgumentDeclarationList(singletonFactoryDeclaration),
+        new Java.ParameterList(singletonFactoryDeclaration),
         new Java.ModifierList(
           new Java.Modifier(Java.ModifierType.PUBLIC),
           new Java.Modifier(Java.ModifierType.STATIC),
@@ -428,17 +428,17 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     // const typeName = JavaUtil.getPrimitiveKindName(primitiveKind, false);
 
     const parameterIdentifier = new Java.Identifier('value');
-    const parameterArgumentDeclaration = new Java.ArgumentDeclaration(fieldValueType, parameterIdentifier);
+    const constructorParameter = new Java.ConstructorParameter(fieldValue, fieldValueType, parameterIdentifier);
 
     declaration.body.children.push(
       new Java.ConstructorDeclaration(
         declaration,
-        new Java.ArgumentDeclarationList(parameterArgumentDeclaration),
+        new Java.ConstructorParameterList(constructorParameter),
         new Java.Block(
           new Java.Statement(
             new Java.AssignExpression(
               new Java.FieldReference(fieldValue),
-              new Java.DeclarationReference(parameterArgumentDeclaration),
+              new Java.DeclarationReference(constructorParameter),
             ),
           ),
         ),

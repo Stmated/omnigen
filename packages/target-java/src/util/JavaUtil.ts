@@ -16,8 +16,8 @@ import {
   PackageOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS} from '../options/index.ts';
-import {createJavaVisitor, JavaVisitor} from '../visit/index.ts';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options/index.ts';
+import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index.ts';
 import * as Java from '../ast/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
@@ -71,7 +71,7 @@ export class JavaUtil {
   /**
    * Re-usable Java Visitor, so we do not create a new one every time.
    */
-  private static readonly _JAVA_VISITOR = createJavaVisitor<void>();
+  private static readonly _JAVA_VISITOR = DefaultJavaVisitor;
 
   private static readonly _PATTERN_STARTS_WITH_ILLEGAL_IDENTIFIER_CHARS = new RegExp(/^[^a-zA-Z$_]/);
   private static readonly _PATTERN_INVALID_CHARS = new RegExp(/[^a-zA-Z0-9$_]/g);
@@ -187,7 +187,7 @@ export class JavaUtil {
       }
       case OmniTypeKind.PRIMITIVE: {
         const isBoxed = args.boxed != undefined ? args.boxed : JavaUtil.isPrimitiveBoxed(args.type);
-        const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.primitiveKind, isBoxed);
+        const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.primitiveKind, isBoxed, args.options || {preferNumberType: OmniPrimitiveKind.NUMBER});
         // TODO: Make a central method that handles the relative names -- especially once multi-namespaces are added
         if (!args.withPackage) {
           return JavaUtil.cleanClassName(primitiveKindName, args.withSuffix);
@@ -352,7 +352,11 @@ export class JavaUtil {
     return type.nullable == true;
   }
 
-  public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean): string {
+  public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean, javaOptions: Pick<JavaOptions, 'preferNumberType'>): string {
+
+    if (kind == OmniPrimitiveKind.NUMBER && javaOptions.preferNumberType != kind) {
+      kind = javaOptions.preferNumberType;
+    }
 
     switch (kind) {
       case OmniPrimitiveKind.BOOL:
@@ -374,7 +378,7 @@ export class JavaUtil {
       case OmniPrimitiveKind.DECIMAL:
       case OmniPrimitiveKind.DOUBLE:
       case OmniPrimitiveKind.NUMBER:
-        return boxed ? 'java.lang.Double' : 'double';
+        return boxed ? 'java.lang.Number' : 'double';
       case OmniPrimitiveKind.NULL:
         return boxed ? 'java.lang.Object' : 'object';
     }
@@ -504,89 +508,6 @@ export class JavaUtil {
     return undefined;
   }
 
-  public static getConstructorRequirements(
-    root: AstNode,
-    node: Java.AbstractObjectDeclaration,
-    followSupertype = false,
-  ): [Java.Field[], Java.ArgumentDeclaration[]] {
-
-    const constructors: Java.ConstructorDeclaration[] = [];
-    const fields: Java.Field[] = [];
-    const setters: Java.FieldBackedSetter[] = [];
-
-    const fieldVisitor: JavaVisitor<void> = {
-      ...JavaUtil._JAVA_VISITOR,
-      visitConstructor: n => {
-        constructors.push(n);
-      },
-      visitObjectDeclaration: () => {
-        // Do not go into any nested objects.
-      },
-      visitField: n => {
-        fields.push(n);
-      },
-      visitFieldBackedSetter: n => {
-        setters.push(n);
-      },
-    };
-
-    node.body.visit(fieldVisitor);
-
-    if (constructors.length > 0) {
-
-      // This class already has a constructor, so we will trust that it is correct.
-      // NOTE: In this future this could be improved into modifying the existing constructor as-needed.
-      return [[], []];
-    }
-
-    const fieldsWithSetters = setters.map(setter => setter.field);
-    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type == Java.ModifierType.FINAL));
-    const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
-    const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer == undefined);
-
-    const immediateRequired = fields.filter(field => {
-
-      if (fieldsWithSetters.includes(field) && fieldsWithoutInitializer.includes(field)) {
-        return true;
-      }
-
-      if (fieldsWithFinal.includes(field) && fieldsWithoutInitializer.includes(field)) {
-        return true;
-      }
-
-      return false;
-    });
-
-    if (followSupertype && node.extends) {
-
-      const supertypeArguments: Java.ArgumentDeclaration[] = [];
-      const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.omniType);
-      if (extendedBy) {
-
-        const constructorVisitor = VisitorFactoryManager.create(JavaUtil._JAVA_VISITOR, {
-          visitConstructor: node => {
-            if (node.parameters) {
-              supertypeArguments.push(...node.parameters.children);
-            }
-          },
-        });
-
-        extendedBy.visit(constructorVisitor);
-      }
-
-      return [
-        immediateRequired,
-        supertypeArguments,
-      ];
-
-    } else {
-      return [
-        immediateRequired,
-        [],
-      ];
-    }
-  }
-
   public static getClassDeclaration(root: AstNode, type: OmniType): Java.ClassDeclaration | undefined {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
@@ -669,7 +590,7 @@ export class JavaUtil {
    *
    * @param name
    */
-  public static getPrettyArgumentName(name: string): string {
+  public static getPrettyParameterName(name: string): string {
 
     const safeName = JavaUtil.getSafeIdentifierName(name);
     return Case.camel(safeName.replaceAll(JavaUtil._PATTERN_WITH_PREFIX, ''));
@@ -886,44 +807,42 @@ export class JavaUtil {
    * TypeGuard version of an otherwise expected 'isInterface' method.
    * Returns undefined if it does not have the potential of being an interface, otherwise the type casted.
    */
-  public static getAsInterface(model: OmniModel, type: OmniType): OmniInterfaceOrObjectType | undefined {
-
-    const unwrapped = OmniUtil.getUnwrappedType(type);
-    if (unwrapped.kind == OmniTypeKind.INTERFACE) {
-      return unwrapped;
-    }
-
-    if (unwrapped.kind != OmniTypeKind.OBJECT) {
-      return undefined;
-    }
-
-    // Now we need to figure out if this type is ever used as an interface in another type.
-
-    const subTypeOfOurType = OmniUtil.visitTypesDepthFirst(model, ctx => {
-      if ('extendedBy' in ctx.type && ctx.type.extendedBy) {
-
-        const flattened = OmniUtil.getFlattenedSuperTypes(ctx.type.extendedBy);
-        const usedAtIndex = flattened.indexOf(unwrapped);
-        if (usedAtIndex > 0) {
-          return ctx.type;
-        }
-      }
-
-      return;
-    });
-
-    if (subTypeOfOurType) {
-
-      const typeName = OmniUtil.describe(unwrapped);
-      const subType = OmniUtil.describe(subTypeOfOurType);
-      logger.debug(`Given type ${typeName} is used as interface in type ${subType}`);
-      return unwrapped;
-    }
-
-    return undefined;
-  }
-
-  // public static* get
+  // public static getAsInterface(model: OmniModel, type: OmniType): OmniInterfaceOrObjectType | undefined {
+  //
+  //   const unwrapped = OmniUtil.getUnwrappedType(type);
+  //   if (unwrapped.kind == OmniTypeKind.INTERFACE) {
+  //     return unwrapped;
+  //   }
+  //
+  //   if (unwrapped.kind != OmniTypeKind.OBJECT) {
+  //     return undefined;
+  //   }
+  //
+  //   // Now we need to figure out if this type is ever used as an interface in another type.
+  //
+  //   const subTypeOfOurType = OmniUtil.visitTypesDepthFirst(model, ctx => {
+  //     if ('extendedBy' in ctx.type && ctx.type.extendedBy) {
+  //
+  //       const flattened = OmniUtil.getFlattenedSuperTypes(ctx.type.extendedBy);
+  //       const usedAtIndex = flattened.indexOf(unwrapped);
+  //       if (usedAtIndex > 0) {
+  //         return ctx.type;
+  //       }
+  //     }
+  //
+  //     return;
+  //   });
+  //
+  //   if (subTypeOfOurType) {
+  //
+  //     const typeName = OmniUtil.describe(unwrapped);
+  //     const subType = OmniUtil.describe(subTypeOfOurType);
+  //     logger.debug(`Given type ${typeName} is used as interface in type ${subType}`);
+  //     return unwrapped;
+  //   }
+  //
+  //   return undefined;
+  // }
 
   public static getAsClass(model: OmniModel, type: OmniType): JavaPotentialClassType | undefined {
 
@@ -964,35 +883,6 @@ export class JavaUtil {
 
       return;
     });
-  }
-
-  public static getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
-
-    const interfaces: OmniInterfaceOrObjectType[] = [];
-
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-      const asInterface = JavaUtil.getAsInterface(model, ctx.type);
-      if (asInterface && !interfaces.includes(asInterface)) {
-        interfaces.push(asInterface);
-
-        // TODO: THIS IS WRONG! MOVE THIS INTO "getAsInterface"! It must be *central* to how it is decided!
-
-        // If this is an interface, then we also need to add *all* supertypes as interfaces.
-        // This is because an interface cannot inherit from a class, so all needs to be interfaces.
-        for (const superClass of JavaUtil.getSuperClassHierarchy(model, asInterface)) {
-
-          // getAsInterface is costly. So do a quicker check here.
-          // The check might desync from the definition of an interface in getAsInterface, so keep heed here.
-          if (superClass.kind == OmniTypeKind.OBJECT || superClass.kind == OmniTypeKind.INTERFACE) {
-            if (!interfaces.includes(superClass)) {
-              interfaces.push(superClass);
-            }
-          }
-        }
-      }
-    });
-
-    return interfaces;
   }
 
   public static getClasses(model: OmniModel): JavaPotentialClassType[] {

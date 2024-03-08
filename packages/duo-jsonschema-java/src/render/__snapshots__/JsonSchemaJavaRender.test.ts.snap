@@ -1,5 +1,16 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`jsonschema-java-render > class_union 1`] = `
+[
+  "AbortData.java",
+  "Data.java",
+  "DefaultData.java",
+  "DefaultDataInlineResult.java",
+  "DescriptiveStringBoolean.java",
+  "StringBoolean.java",
+]
+`;
+
 exports[`jsonschema-java-render > decorated_types 1`] = `
 [
   "Order.java",
@@ -7,10 +18,35 @@ exports[`jsonschema-java-render > decorated_types 1`] = `
 ]
 `;
 
+exports[`jsonschema-java-render > enum_inheritance 1`] = `
+[
+  "InheritingKind1.java",
+  "Kind1.java",
+]
+`;
+
 exports[`jsonschema-java-render > enum_string_composition 1`] = `
 [
   "DataEntry.java",
   "TransferState.java",
+]
+`;
+
+exports[`jsonschema-java-render > inline_boolean 1`] = `
+[
+  "AccountNotificationData.java",
+  "AccountNotificationDataVerified.java",
+  "StringBoolean.java",
+]
+`;
+
+exports[`jsonschema-java-render > interface_order 1`] = `
+[
+  "AbstractRequestData.java",
+  "BalanceRequestData.java",
+  "CancelChargeRequestData.java",
+  "CancelChargeRequestDataBase.java",
+  "ICancelChargeRequestDataBase.java",
 ]
 `;
 

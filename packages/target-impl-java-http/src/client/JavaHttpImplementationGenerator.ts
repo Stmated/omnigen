@@ -5,7 +5,7 @@ import {
   AddCompositionMembersJavaAstTransformer,
   AddConstructorJavaAstTransformer,
   AddFieldsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer,
+  AddThrowsForKnownMethodsAstTransformer, JacksonJavaAstTransformer,
   Java,
   JAVA_FEATURES,
   JavaAndTargetOptions,
@@ -120,6 +120,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new AddAccessorsForFieldsAstTransformer([objectMapperField.identifier]),
       new AddAbstractAccessorsAstTransformer(),
       new AddThrowsForKnownMethodsAstTransformer(),
+      new JacksonJavaAstTransformer(),
       new PackageResolverAstTransformer(),
       new ReorderMembersTransformer(),
     ];
@@ -173,7 +174,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       const requestIdentifier = new Java.Identifier('request');
       const responseIdentifier = new Java.Identifier('response');
 
-      const requestArgumentDeclaration = new Java.ArgumentDeclaration(
+      const requestParameter = new Java.Parameter(
         new Java.RegularType(endpoint.request.type),
         requestIdentifier,
       );
@@ -187,7 +188,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
           new Java.SelfReference(),
           callMethod.signature.identifier,
           new Java.ArgumentList(
-            new Java.DeclarationReference(requestArgumentDeclaration),
+            new Java.DeclarationReference(requestParameter),
           ),
         ),
       );
@@ -249,7 +250,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
         new Java.MethodDeclarationSignature(
           new Java.Identifier(Case.camel(endpoint.name)),
           methodResponseType,
-          new Java.ArgumentDeclarationList(requestArgumentDeclaration),
+          new Java.ParameterList(requestParameter),
           undefined,
           undefined,
           undefined,
@@ -293,7 +294,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       undefined, true,
     );
 
-    const requestArgumentDeclaration = new Java.ArgumentDeclaration(
+    const requestArgumentDeclaration = new Java.Parameter(
       new Java.RegularType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.MUTABLE_OBJECT}, false),
       requestIdentifier,
     );
@@ -397,8 +398,8 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new Java.MethodDeclarationSignature(
         new Java.Identifier('_call'),
         new Java.RegularType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.OBJECT}, false),
-        new Java.ArgumentDeclarationList(
-          new Java.ArgumentDeclaration(
+        new Java.ParameterList(
+          new Java.Parameter(
             new Java.RegularType({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}),
             pathIdentifier,
           ),
@@ -463,7 +464,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
   private addResponseWithQualifiers(
     response: OmniOutput,
-    responseDeclaration: Java.ArgumentDeclaration | Java.VariableDeclaration,
+    responseDeclaration: Java.Parameter | Java.VariableDeclaration,
     qualifierResultBlock: Java.Block,
   ): Java.Block {
 
@@ -536,7 +537,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
   private createExceptionThrowingBlock(
     converterField: Java.Field,
-    fromValueDeclaration: Java.VariableDeclaration | Java.ArgumentDeclaration,
+    fromValueDeclaration: Java.VariableDeclaration | Java.Parameter,
     type: OmniType,
     cuBody: Java.Block,
     throws: Java.TypeList<OmniType>,
@@ -626,7 +627,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
   private createConverterMethodCall(
     converterField: Java.Field,
-    fromValueDeclaration: Java.VariableDeclaration | Java.ArgumentDeclaration,
+    fromValueDeclaration: Java.VariableDeclaration | Java.Parameter,
     type: OmniType,
   ): Java.MethodCall {
 

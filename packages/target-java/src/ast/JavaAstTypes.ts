@@ -257,7 +257,7 @@ export class StaticMemberReference extends AbstractJavaNode {
   }
 }
 
-export class ArgumentDeclaration extends AbstractJavaNode {
+export class Parameter extends AbstractJavaNode {
   type: Type<OmniType>;
   identifier: Identifier;
   annotations?: AnnotationList | undefined;
@@ -270,20 +270,46 @@ export class ArgumentDeclaration extends AbstractJavaNode {
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitArgumentDeclaration(this, visitor);
+    return visitor.visitParameter(this, visitor);
   }
 }
 
-export class ArgumentDeclarationList extends AbstractJavaNode implements AstNodeWithChildren<ArgumentDeclaration> {
-  children: ArgumentDeclaration[];
+export class ParameterList extends AbstractJavaNode implements AstNodeWithChildren<Parameter> {
+  children: Parameter[];
 
-  constructor(...children: ArgumentDeclaration[]) {
+  constructor(...children: Parameter[]) {
     super();
     this.children = children;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitArgumentDeclarationList(this, visitor);
+    return visitor.visitParameterList(this, visitor);
+  }
+}
+
+export class ConstructorParameter extends Parameter {
+  field: Field;
+
+  constructor(field: Field, type: Type<OmniType>, identifier: Identifier, annotations?: AnnotationList) {
+    super(type, identifier, annotations);
+    this.field = field;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitConstructorParameter(this, visitor);
+  }
+}
+
+export class ConstructorParameterList extends AbstractJavaNode implements AstNodeWithChildren<ConstructorParameter> {
+  children: ConstructorParameter[];
+
+  constructor(...children: ConstructorParameter[]) {
+    super();
+    this.children = children;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitConstructorParameterList(this, visitor);
   }
 }
 
@@ -472,17 +498,28 @@ export class FreeTextIndent extends AbstractFreeText {
 export class FreeTextParagraph extends AbstractFreeText {
   readonly child: FreeTextType;
 
-  constructor(text: FreeTextType | string) {
+  constructor(text: FreeTextType) {
     super();
-    if (typeof text == 'string') {
-      this.child = new FreeText(text);
-    } else {
-      this.child = text;
-    }
+    this.child = text;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitFreeTextParagraph(this, visitor);
+  }
+}
+
+export class FreeTextList extends AbstractFreeText {
+  readonly children: FreeTextType[];
+  readonly ordered: boolean;
+
+  constructor(children: FreeTextType[], ordered?: boolean) {
+    super();
+    this.children = children;
+    this.ordered = ordered ?? false;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextList(this, visitor);
   }
 }
 
@@ -559,19 +596,6 @@ export class FreeTextPropertyLink extends AbstractFreeText {
   }
 }
 
-// export class FreeTextList extends AbstractFreeText {
-//   readonly children: FreeTextType[];
-//
-//   constructor(...children: FreeTextType[]) {
-//     super();
-//     this.children = children;
-//   }
-//
-//   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-//     return visitor.visitFreeTextList(this, visitor);
-//   }
-// }
-
 export type FreeTextType =
   | string
   | FreeText
@@ -580,7 +604,7 @@ export type FreeTextType =
   | FreeTextIndent
   | FreeTextHeader
   | FreeTextSection
-  // | FreeTextList
+  | FreeTextList
   | FreeTextPropertyLink
   | FreeTextMethodLink
   | FreeTextTypeLink
@@ -645,13 +669,13 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
   comments?: CommentBlock | undefined;
   annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
-  parameters?: ArgumentDeclarationList | undefined;
+  parameters?: ParameterList | undefined;
   throws?: TypeList<OmniType>;
 
   constructor(
     identifier: Identifier,
     type: Type<OmniType>,
-    parameters?: ArgumentDeclarationList,
+    parameters?: ParameterList,
     modifiers?: ModifierList,
     annotations?: AnnotationList,
     comments?: CommentBlock,
@@ -740,9 +764,9 @@ export class FieldReference extends AbstractExpression {
 }
 
 export class DeclarationReference extends AbstractJavaNode {
-  declaration: VariableDeclaration | ArgumentDeclaration;
+  declaration: VariableDeclaration | Parameter;
 
-  constructor(declaration: VariableDeclaration | ArgumentDeclaration) {
+  constructor(declaration: VariableDeclaration | Parameter) {
     super();
     this.declaration = declaration;
   }
@@ -810,7 +834,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
 
   constructor(field: Field, annotations?: AnnotationList, comments?: CommentBlock) {
-    const argumentDeclaration = new ArgumentDeclaration(
+    const parameter = new Parameter(
       field.type,
       field.identifier,
     );
@@ -824,7 +848,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
           primitiveKind: OmniPrimitiveKind.VOID,
           nullable: true,
         }),
-        new ArgumentDeclarationList(argumentDeclaration),
+        new ParameterList(parameter),
         undefined,
         annotations,
         comments,
@@ -833,7 +857,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
         new Statement(
           new AssignExpression(
             new FieldReference(field),
-            new DeclarationReference(argumentDeclaration),
+            new DeclarationReference(parameter),
           ),
         ),
       ));
@@ -980,13 +1004,12 @@ export class ConstructorDeclaration extends AbstractJavaNode {
 
   owner: ConstructorOwnerDeclaration;
   modifiers: ModifierList;
-  parameters?: ArgumentDeclarationList | undefined;
+  parameters?: ConstructorParameterList | undefined;
   annotations?: AnnotationList | undefined;
   comments?: CommentBlock | undefined;
   body?: Block | undefined;
 
-
-  constructor(owner: ConstructorOwnerDeclaration, parameters?: ArgumentDeclarationList, body?: Block, modifiers?: ModifierList) {
+  constructor(owner: ConstructorOwnerDeclaration, parameters?: ConstructorParameterList, body?: Block, modifiers?: ModifierList) {
     super();
     this.owner = owner;
     this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
@@ -1050,8 +1073,8 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       fieldAnnotations,
     );
 
-    const keyParameterDeclaration = new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.keyType), keyParameterIdentifier);
-    const valueParameterDeclaration = new ArgumentDeclaration(JavaAstUtils.createTypeNode(this.valueType), valueParameterIdentifier);
+    const keyParameterDeclaration = new Parameter(JavaAstUtils.createTypeNode(this.keyType), keyParameterIdentifier);
+    const valueParameterDeclaration = new Parameter(JavaAstUtils.createTypeNode(this.valueType), valueParameterIdentifier);
 
     this.adderMethod = new MethodDeclaration(
       new MethodDeclarationSignature(
@@ -1060,7 +1083,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
         }),
-        new ArgumentDeclarationList(
+        new ParameterList(
           keyParameterDeclaration,
           valueParameterDeclaration,
         ),
@@ -1183,11 +1206,13 @@ export class EnumDeclaration extends AbstractObjectDeclaration<OmniEnumType> {
 export class EnumItem extends AbstractJavaNode {
   identifier: Identifier;
   value: Literal;
+  comment?: Comment | undefined;
 
-  constructor(identifier: Identifier, value: Literal) {
+  constructor(identifier: Identifier, value: Literal, comment?: Comment) {
     super();
     this.identifier = identifier;
     this.value = value;
+    this.comment = comment;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -1438,16 +1463,16 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
       );
       const typedFieldReference = new FieldReference(typedField);
 
-      const argumentDeclarationList = new ArgumentDeclarationList();
+      const parameterList = new ParameterList();
       let conversionExpression: AbstractExpression;
       if (options.unknownType == UnknownKind.MUTABLE_OBJECT) {
         const objectMapperReference = new Identifier('objectMapper');
-        const objectMapperDeclaration = new ArgumentDeclaration(
+        const objectMapperDeclaration = new Parameter(
           new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.databind.ObjectMapper'}),
           objectMapperReference,
         );
 
-        argumentDeclarationList.children.push(objectMapperDeclaration);
+        parameterList.children.push(objectMapperDeclaration);
         conversionExpression = new MethodCall(
           new DeclarationReference(objectMapperDeclaration),
           new Identifier('convertValue'),
@@ -1464,7 +1489,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
         new MethodDeclarationSignature(
           new Identifier(JavaUtil.getGetterName(typedFieldName, typedField.type.omniType)),
           typedField.type,
-          argumentDeclarationList,
+          parameterList,
         ),
         new Block(
           // First check if we have already cached the result.

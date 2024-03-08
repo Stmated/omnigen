@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trustly.com/schemas/class_union",
+  "definitions": {
+
+    "IdString": {
+      "type": "string",
+      "examples": [
+        "9594811343"
+      ]
+    },
+    "StringBoolean": {
+      "enum": [
+        "0",
+        "1"
+      ],
+      "x-enum-varnames": [
+        "Fail",
+        "OK"
+      ],
+      "type": "string"
+    },
+
+    "DescriptiveStringBoolean": {
+      "allOf": [{"$ref": "#/definitions/StringBoolean"}],
+      "description": "Some descriptive description."
+    },
+
+    "DefaultData": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "orderid": {"$ref": "#/definitions/IdString"},
+        "inlineResult": {
+          "allOf": [{"$ref": "#/definitions/StringBoolean"}],
+          "description": "Some inline description"
+        }
+      },
+      "required": [
+        "orderid"
+      ]
+    },
+    "AbortData": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "orderid": {"$ref": "#/definitions/IdString"},
+        "user_initiated": {"$ref": "#/definitions/StringBoolean"},
+        "system_initiated": {"$ref": "#/definitions/DescriptiveStringBoolean"}
+      },
+      "required": [
+        "orderid",
+        "abort"
+      ]
+    },
+
+    "Data": {
+      "oneOf": [
+        {"$ref": "#/definitions/DefaultData"},
+        {"$ref": "#/definitions/AbortData"}
+      ]
+    }
+  }
+}

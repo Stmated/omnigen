@@ -140,7 +140,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
       return this.resolveTargetType(exp.field.type);
     } else if (exp instanceof Java.DeclarationReference) {
       return this.resolveTargetType(exp.declaration);
-    } else if (exp instanceof Java.ArgumentDeclaration) {
+    } else if (exp instanceof Java.Parameter) {
       return this.resolveTargetType(exp.type);
     } else if (exp instanceof Java.VariableDeclaration) {
       return this.resolveTargetType(exp.type);

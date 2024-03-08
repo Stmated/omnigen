@@ -1,4 +1,5 @@
 import {
+  AstNode,
   OmniDictionaryType,
   OmniGenericTargetType,
   OmniInterfaceOrObjectType,
@@ -14,9 +15,9 @@ import {JavaUtil} from '../util/index.ts';
 import * as Java from '../ast/index.ts';
 import {JavaAstRootNode} from '../ast/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Case, OmniUtil, VisitResultFlattener} from '@omnigen/core-util';
+import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaOptions} from '../options/index.ts';
-import {createJavaVisitor} from '../visit/index.ts';
+import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index.ts';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -133,39 +134,12 @@ export class JavaAstUtils {
     }
 
     field.property = property;
-    field.annotations = JavaAstUtils.getGetterAnnotations(property);
 
     if (options.immutableModels || OmniUtil.isNull(property.type)) {
       field.modifiers.children.push(new Java.Modifier(Java.ModifierType.FINAL));
     }
 
     body.children.push(field);
-  }
-
-  private static getGetterAnnotations(property: OmniProperty): Java.AnnotationList | undefined {
-
-    // TODO: Move this to another transformer which checks for differences between field name and original name.
-    const getterAnnotations: Java.Annotation[] = [];
-    if (property.fieldName || property.propertyName) {
-      getterAnnotations.push(
-        new Java.Annotation(
-          new Java.RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonProperty',
-          }),
-          new Java.AnnotationKeyValuePairList(
-            new Java.AnnotationKeyValuePair(
-              undefined,
-              new Java.Literal(property.name),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return (getterAnnotations.length > 0)
-      ? new Java.AnnotationList(...getterAnnotations)
-      : undefined;
   }
 
   public static addInterfaceOf(objectType: OmniObjectType, root: JavaAstRootNode, options: JavaAndTargetOptions): OmniInterfaceType {
@@ -250,5 +224,121 @@ export class JavaAstUtils {
     JavaAstUtils.addInterfaceProperties(type, declaration.body);
 
     return declaration;
+  }
+
+  public static getConstructorRequirements(
+    root: AstNode,
+    node: Java.AbstractObjectDeclaration,
+    followSupertype = false,
+  ): [Java.Field[], Java.ConstructorParameter[]] {
+
+    const constructors: Java.ConstructorDeclaration[] = [];
+    const fields: Java.Field[] = [];
+    const setters: Java.FieldBackedSetter[] = [];
+
+    const fieldVisitor: JavaVisitor<void> = {
+      ...DefaultJavaVisitor,
+      visitConstructor: n => {
+        constructors.push(n);
+      },
+      visitObjectDeclaration: () => {
+        // Do not go into any nested objects.
+      },
+      visitField: n => {
+        fields.push(n);
+      },
+      visitFieldBackedSetter: n => {
+        setters.push(n);
+      },
+    };
+
+    node.body.visit(fieldVisitor);
+
+    if (constructors.length > 0) {
+
+      // This class already has a constructor, so we will trust that it is correct.
+      // NOTE: In this future this could be improved into modifying the existing constructor as-needed.
+      return [[], []];
+    }
+
+    const fieldsWithSetters = setters.map(setter => setter.field);
+    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type == Java.ModifierType.FINAL));
+    const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
+    const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer == undefined);
+
+    const immediateRequired = fields.filter(field => {
+
+      if (fieldsWithSetters.includes(field) && fieldsWithoutInitializer.includes(field)) {
+        return true;
+      }
+
+      if (fieldsWithFinal.includes(field) && fieldsWithoutInitializer.includes(field)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (followSupertype && node.extends) {
+
+      const supertypeArguments: Java.ConstructorParameter[] = [];
+      const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.omniType);
+      if (extendedBy) {
+
+        const constructorVisitor = VisitorFactoryManager.create(DefaultJavaVisitor, {
+          visitConstructor: node => {
+            if (node.parameters) {
+              supertypeArguments.push(...node.parameters.children);
+            }
+          },
+        });
+
+        extendedBy.visit(constructorVisitor);
+      }
+
+      return [
+        immediateRequired,
+        supertypeArguments,
+      ];
+
+    } else {
+      return [
+        immediateRequired,
+        [],
+      ];
+    }
+  }
+
+  public static getGetterField(method: Java.MethodDeclaration): Java.Field | undefined {
+
+    if (method.signature.parameters && method.signature.parameters.children.length > 0) {
+      return undefined;
+    }
+
+    if (!method.body || method.body.children.length != 1) {
+      return undefined;
+    }
+
+    const statement = JavaAstUtils.unwrap(method.body.children[0]);
+    if (!(statement instanceof Java.ReturnStatement)) {
+      return undefined;
+    }
+
+    if (statement.expression instanceof Java.FieldReference) {
+      if (method.signature.type == statement.expression.field.type) {
+        return statement.expression.field;
+      }
+    }
+
+    return undefined;
+  }
+
+  public static unwrap(node: AstNode): AstNode {
+
+    if (node instanceof Java.Statement) {
+      return node.child;
+    }
+
+    return node;
   }
 }

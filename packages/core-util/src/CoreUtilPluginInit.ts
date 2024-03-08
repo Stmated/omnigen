@@ -158,7 +158,6 @@ export const fileWriter = createPlugin(
 
       for (const rcu of ctx.compilationUnits) {
 
-        logger.debug(`Writing ${rcu.fileName}`);
         await fileWriter.write(rcu);
         filesWritten.push(rcu.fileName);
       }

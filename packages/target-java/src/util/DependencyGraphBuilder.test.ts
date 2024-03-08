@@ -2,7 +2,7 @@ import {
   CompositionKind,
   DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS,
   OmniCompositionType,
-  OmniEndpoint,
+  OmniEndpoint, OmniInterfaceOrObjectType,
   OmniModel,
   OmniObjectType,
   OmniPrimitiveKind,
@@ -17,6 +17,9 @@ import {
   SimplifyInheritanceModelTransformer,
 } from '@omnigen/core-util';
 import {describe, test, expect} from 'vitest';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -66,7 +69,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(0);
     // expect(result.abstracts).toHaveLength(0);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
@@ -80,7 +83,7 @@ describe('Test CompositionDependencyUtil', () => {
     }]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(0);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
     expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
@@ -90,7 +93,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([obj('A')]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(1);
     // expect(result.abstracts).toHaveLength(0);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
@@ -101,7 +104,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([obj('A'), obj('B')]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(0);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
@@ -113,7 +116,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([obj('A', b), b]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(0);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
@@ -125,7 +128,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([obj('A', obj('B'))]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(2);
     expect(JavaUtil.getConcreteClasses(model)).toHaveLength(1);
     // expect(result.abstracts).toHaveLength(1);
@@ -142,7 +145,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     // TODO: Should we introduce interfaces since B and D have the same contract?
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(4);
     expect(JavaUtil.getConcreteClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(2);
@@ -155,7 +158,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([obj('C', b), obj('C', b)]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(3);
     expect(JavaUtil.getConcreteClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(1);
@@ -168,7 +171,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([obj('A', b), obj('C', b), b]);
 
     expect(model).toBeDefined();
-    expect(JavaUtil.getInterfaces(model)).toHaveLength(0);
+    expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(3);
     // expect(result.abstracts).toHaveLength(0);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
@@ -185,7 +188,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([a, d, b, c]);
 
-    assertTypes(JavaUtil.getInterfaces(model), [c]);
+    assertTypes(getInterfaces(model), [c]);
     assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
     assertTypes(JavaUtil.getConcreteClasses(model), [a, d, b, c]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
@@ -206,7 +209,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     // B is found before C, because A -> B (and B used as interface for D -> C & B)
     // This would change if the search was done breadth-first vs depth-first.
-    assertTypes(JavaUtil.getInterfaces(model), [b, c]);
+    assertTypes(getInterfaces(model), [b, c]);
     assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
     assertTypes(JavaUtil.getConcreteClasses(model), [a, d, b, c]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
@@ -230,7 +233,7 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([A, B, C, D, E, F]);
 
     // This would change if the search was done breadth-first vs depth-first.
-    assertTypes(JavaUtil.getInterfaces(model), [D, C, dInline]);
+    assertTypes(getInterfaces(model), [D, C, dInline]);
     assertTypes(JavaUtil.getClasses(model), [A, B, C, D, E, F]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [D, [C, dInline]],
@@ -262,7 +265,7 @@ describe('Test CompositionDependencyUtil', () => {
     });
 
     // This would change if the search was done breadth-first vs depth-first.
-    assertTypes(JavaUtil.getInterfaces(model), [D, C, dInline]);
+    assertTypes(getInterfaces(model), [D, C, dInline]);
     assertTypes(JavaUtil.getClasses(model), [A, B, C, D, E, F]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [D, [C, dInline]],
@@ -283,7 +286,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     // Since we do not simplify the model, we will think that B needs to be an interface..
     // And A is also an interface, since if B is an interface and uses A, then A also needs to have an interface.
-    assertTypes(JavaUtil.getInterfaces(model), [B, A]);
+    assertTypes(getInterfaces(model), [B, A]);
 
     // And since B is never actually used other than supertype #2 for C, it will only be an interface and not a class.
     // TODO: Maybe this is wrong? B should also be available as a class? Make it an option "javaAddSuperfluousClass?"
@@ -311,7 +314,7 @@ describe('Test CompositionDependencyUtil', () => {
       options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS},
     });
 
-    expect(JavaUtil.getInterfaces(model)).toEqual([]);
+    expect(getInterfaces(model)).toEqual([]);
     expect(JavaUtil.getClasses(model)).toEqual([A, B, C]);
     expect(JavaUtil.getConcreteClasses(model)).toEqual([A, B, C]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
@@ -378,3 +381,69 @@ const inlineClassWithProp = (name: string): OmniObjectType => {
   ];
   return inline;
 };
+
+function getAsInterface(model: OmniModel, type: OmniType): OmniInterfaceOrObjectType | undefined {
+
+  const unwrapped = OmniUtil.getUnwrappedType(type);
+  if (unwrapped.kind == OmniTypeKind.INTERFACE) {
+    return unwrapped;
+  }
+
+  if (unwrapped.kind != OmniTypeKind.OBJECT) {
+    return undefined;
+  }
+
+  // Now we need to figure out if this type is ever used as an interface in another type.
+
+  const subTypeOfOurType = OmniUtil.visitTypesDepthFirst(model, ctx => {
+    if ('extendedBy' in ctx.type && ctx.type.extendedBy) {
+
+      const flattened = OmniUtil.getFlattenedSuperTypes(ctx.type.extendedBy);
+      const usedAtIndex = flattened.indexOf(unwrapped);
+      if (usedAtIndex > 0) {
+        return ctx.type;
+      }
+    }
+
+    return;
+  });
+
+  if (subTypeOfOurType) {
+
+    const typeName = OmniUtil.describe(unwrapped);
+    const subType = OmniUtil.describe(subTypeOfOurType);
+    logger.debug(`Given type ${typeName} is used as interface in type ${subType}`);
+    return unwrapped;
+  }
+
+  return undefined;
+}
+
+function getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
+
+  const interfaces: OmniInterfaceOrObjectType[] = [];
+
+  OmniUtil.visitTypesDepthFirst(model, ctx => {
+    const asInterface = getAsInterface(model, ctx.type);
+    if (asInterface && !interfaces.includes(asInterface)) {
+      interfaces.push(asInterface);
+
+      // TODO: THIS IS WRONG! MOVE THIS INTO "getAsInterface"! It must be *central* to how it is decided!
+
+      // If this is an interface, then we also need to add *all* supertypes as interfaces.
+      // This is because an interface cannot inherit from a class, so all needs to be interfaces.
+      for (const superClass of JavaUtil.getSuperClassHierarchy(model, asInterface)) {
+
+        // getAsInterface is costly. So do a quicker check here.
+        // The check might desync from the definition of an interface in getAsInterface, so keep heed here.
+        if (superClass.kind == OmniTypeKind.OBJECT || superClass.kind == OmniTypeKind.INTERFACE) {
+          if (!interfaces.includes(superClass)) {
+            interfaces.push(superClass);
+          }
+        }
+      }
+    }
+  });
+
+  return interfaces;
+}

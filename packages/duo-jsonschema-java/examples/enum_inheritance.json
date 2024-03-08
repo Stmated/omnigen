@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trustly.com/schemas/enum_inheritance",
+  "definitions": {
+
+    "Kind1": {
+      "type": "string",
+      "enum": [
+        "1A",
+        "1B"
+      ]
+    },
+
+    "InheritingKind1": {
+      "allOf": [{"$ref": "#/definitions/Kind1"}],
+      "description": "Same thing but with another comment"
+    }
+  }
+}
+
+
+
+
+
+
+

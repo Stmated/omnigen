@@ -51,7 +51,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
   private static simplifyComposition(
     model: OmniModel,
     composition: OmniCompositionType,
-    parent: TypeOwner<OmniType> | undefined,
+    parent: TypeOwner | undefined,
   ): void {
 
     if (composition.compositionKind == CompositionKind.AND) {

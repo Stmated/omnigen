@@ -5,6 +5,7 @@ import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index
 import {JavaOptions} from '../options/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '@omnigen/core-util';
+import * as repl from 'node:repl';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -79,6 +80,28 @@ const render = <N extends AstNode, V extends AstVisitor<string>>(node: N | undef
 
   return join(node.visit(visitor || DefaultJavaVisitor));
 };
+
+function renderListWithWrapping(children: AstNode[], visitor: JavaVisitor<string>): string {
+
+  const listStrings = children.map(it => render(it, visitor));
+  const joinedListString = listStrings.join(', ');
+
+  // TODO: Make 100 an option
+  if (joinedListString.length > 100) {
+
+    const spaces = getIndentation(1);
+
+    return `\n${spaces}${listStrings.join(`,\n${spaces}`)}\n`;
+  }
+
+  return joinedListString;
+}
+
+function replaceWithHtml(text: string): string {
+
+  return text
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
 
 const visitCommonTypeDeclaration = (
   visitor: JavaVisitor<string>,
@@ -162,6 +185,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
       return `${annotations}${modifiers}${render(node.owner.name, visitor)}(${render(node.parameters, visitor)}) {${body}}\n\n`;
     },
+    visitConstructorParameterList: (node, visitor) => renderListWithWrapping(node.children, visitor),
 
     visitBlock: (node, visitor) => {
       blockDepth++;
@@ -208,7 +232,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     visitCommentBlock: (node, visitor) => {
 
-      const text = join(visitor.visitFreeTextGlobal(node.text, visitor, it => it))
+      const text = join(visitor.visitFreeTextGlobal(node.text, visitor, it => replaceWithHtml(it)))
         .trim()
         .replaceAll('\r', '')
         .replaceAll('\n', '\n * ');
@@ -218,12 +242,13 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     visitComment: (node, visitor) => {
 
-      const textString = join(visitor.visitFreeTextGlobal(node.text, visitor, it => it));
-
-      return textString
+      const textString = join(visitor.visitFreeTextGlobal(node.text, visitor, it => replaceWithHtml(it)));
+      const commentContent = textString
         .replaceAll('\r', '')
         .replaceAll('\n', '\n// ')
         .trim();
+
+      return `// ${commentContent}`;
     },
 
     visitCompilationUnit: (node, visitor) => {
@@ -280,9 +305,14 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
     visitImplementsDeclaration: (node, visitor) => render(node.types, visitor),
 
     visitEnumItem: (node, visitor) => {
+
+      const comment = node.comment ? `${render(node.comment, visitor)}\n` : '';
       const key = render(node.identifier, visitor);
       const value = render(node.value, visitor);
-      return `${key}(${value})`;
+      return [
+        comment,
+        `${key}(${value})`,
+      ];
     },
 
     visitEnumItemList: (node, visitor) => `${node.children.map(it => render(it, visitor)).join(',\n')};\n`,
@@ -300,7 +330,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     visitMethodDeclarationSignature: (node, visitor) => {
       const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
-      const annotations = node.annotations ? `${render(node.annotations, visitor)}\n` : '';
+      const annotations = (node.annotations && node.annotations.children.length > 0) ? `${render(node.annotations, visitor)}\n` : '';
       const modifiers = render(node.modifiers, visitor);
       const type = render(node.type, visitor);
       const name = render(node.identifier, visitor);
@@ -341,7 +371,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     // TODO: The "multiline" should be contextual and automatic in my opinion.
     //        There should be different methods:
-    //        visitClassAnnotationList, visitFieldAnnotationList, visitMethodAnnotationList, visitArgumentAnnotationList
+    //        visitClassAnnotationList, visitFieldAnnotationList, visitMethodAnnotationList, visitParameterAnnotationList
     visitAnnotationList: (node, visitor) => (node.children.map(it => render(it, visitor)).join(node.multiline ? '\n' : ' ')),
 
     visitAnnotation: (node, visitor) => {
@@ -350,7 +380,6 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
     },
 
     visitAnnotationKeyValuePairList: (node, visitor) => (node.children.map(it => render(it, visitor)).join(', ')),
-
     visitAnnotationKeyValuePair: (node, visitor) => {
       const key = node.key ? `${render(node.key, visitor)} = ` : '';
       return (`${key}${render(node.value, visitor)}`);
@@ -422,7 +451,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     visitIdentifier: node => node.value,
 
-    visitArgumentDeclaration: (node, visitor) => {
+    visitParameter: (node, visitor) => {
       // TODO: Make this simpler by allowing to "visit" between things,
       //  so we can insert spaces or delimiters without tinkering inside the base visitor
       const annotations = node.annotations ? `${render(node.annotations, visitor)} ` : '';
@@ -432,17 +461,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
       return `${annotations}${type} ${identifier}`;
     },
 
-    visitArgumentDeclarationList: (node, visitor) => {
-
-      const listString = node.children.map(it => render(it, visitor)).join(', ');
-      if (listString.length > 100) {
-        // TODO: Make 100 an option
-        const spaces = getIndentation(1);
-        return `\n${spaces}${listString.replaceAll(/, /g, `,\n${spaces}`)}\n`;
-      }
-
-      return listString;
-    },
+    visitParameterList: (node, visitor) => renderListWithWrapping(node.children, visitor),
 
     visitArgumentList: (node, visitor) => node.children.map(it => render(it, visitor)).join(', '),
     visitTypeList: (node, visitor) => node.children.map(it => render(it, visitor)).join(', '),
@@ -540,14 +559,14 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     visitStaticMemberReference: (node, visitor) => `${render(node.target, visitor)}.${render(node.member, visitor)}`,
     visitCast: (node, visitor) => `((${render(node.toType, visitor)}) ${render(node.expression, visitor)})`,
-    visitFreeText: node => node.text,
-    visitFreeTextHeader: (node, visitor) => `<h${node.level}>${join(visitor.visitFreeTextGlobal(node.child, visitor, it => it))}</h${node.level}>\n`,
-    visitFreeTextParagraph: (node, visitor) => `<p>${join(visitor.visitFreeTextGlobal(node.child, visitor, it => it))}</p>\n`,
+    visitFreeText: node => replaceWithHtml(node.text),
+    visitFreeTextHeader: (node, visitor) => `\n<h${node.level}>${join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)))}</h${node.level}>\n`,
+    visitFreeTextParagraph: (node, visitor) => `<p>${join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)))}</p>\n`,
 
     visitFreeTextSection: (node, visitor) => {
       const indentation = getIndentation(1);
       const header = render(node.header, visitor);
-      const content = join(visitor.visitFreeTextGlobal(node.content, visitor, it => it));
+      const content = join(visitor.visitFreeTextGlobal(node.content, visitor, it => replaceWithHtml(it)));
       const blockContent = `${header}${content.trim()}`;
 
       const indentedBlock = blockContent.replace(patternLineStart, indentation);
@@ -555,10 +574,10 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
       return `<section>\n${indentedBlock}\n</section>\n`;
     },
 
-    visitFreeTextLine: (node, visitor) => `${join(visitor.visitFreeTextGlobal(node.child, visitor, it => it))}\n`,
+    visitFreeTextLine: (node, visitor) => `${join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)))}\n`,
     visitFreeTextIndent: (node, visitor) => {
       const indentation = getIndentation(1);
-      const blockContent = join(visitor.visitFreeTextGlobal(node.child, visitor, it => it));
+      const blockContent = join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)));
       return blockContent.replace(patternLineStart, indentation);
     },
 
@@ -570,6 +589,14 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
       const targetName = node.property.fieldName || node.property.propertyName || node.property.name;
       return `{@link ${render(node.type, visitor)}#${targetName}}`;
+    },
+    visitFreeTextList: (node, visitor) => {
+
+      const tag = node.ordered ? 'ol' : 'ul';
+      const indent = getIndentation(1);
+      const lines = node.children.map(it => join(visitor.visitFreeTextGlobal(it, visitor, it => replaceWithHtml(it)))).join(`</li>\n${indent}<li>`);
+
+      return `<${tag}>\n${indent}<li>${lines}</li>\n</${tag}>`;
     },
   };
 };

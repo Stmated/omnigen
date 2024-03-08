@@ -89,7 +89,8 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
           throw new Error(`There should be at least one level of compilation units before encountering a type`);
         }
 
-        const typeNameInfo = typeNameMap.get(OmniUtil.getUnwrappedType(node.omniType));
+        const unwrapped = OmniUtil.getUnwrappedType(node.omniType);
+        const typeNameInfo = typeNameMap.get(unwrapped);
 
         if (typeNameInfo) {
           this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, args.options);
@@ -208,13 +209,21 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         const omniType = node.type.omniType;
         const className = JavaUtil.getClassName(omniType, external.options);
         const packageName = JavaUtil.getPackageName(omniType, className, external.options);
+        const outerTypeNames = objectStack.map(it => it.object.name.value);
 
         // If the object stack is not empty, then the current object declaration is a nested one.
         // So we need to create the custom fqn to the type, and save it into the fqn map.
+        if (typeNameMap.has(omniType)) {
+          const existing = typeNameMap.get(omniType)!;
+          const newPath = outerTypeNames.join('.');
+          const existingPath = existing.outerTypeNames.join('.');
+          throw new Error(`Has encountered duplicate declaration of '${OmniUtil.describe(omniType)}', new at ${newPath}, existing at ${existingPath}`);
+        }
+
         typeNameMap.set(omniType, {
           packageName: packageName,
           className: className,
-          outerTypeNames: objectStack.map(it => it.object.name.value),
+          outerTypeNames: outerTypeNames,
         });
       },
     }));

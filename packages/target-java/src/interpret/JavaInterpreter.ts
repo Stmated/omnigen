@@ -20,7 +20,7 @@ import {
   PackageResolverAstTransformer,
   PropertyNameDiscrepancyAstTransformer,
   ReorderMembersTransformer,
-  SimplifyGenericsAstTransformer,
+  SimplifyGenericsAstTransformer, JacksonJavaAstTransformer,
 } from '../transform/index.ts';
 import * as Java from '../ast/index.js';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -62,6 +62,7 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new InnerTypeCompressionAstTransformer();
     yield new AddThrowsForKnownMethodsAstTransformer();
     yield new SimplifyGenericsAstTransformer();
+    yield new JacksonJavaAstTransformer();
     yield new PackageResolverAstTransformer();
     yield new ReorderMembersTransformer();
   }

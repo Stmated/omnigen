@@ -1,15 +1,11 @@
-import {
-  CompositionKind,
-  OmniInterfaceType,
-  OmniModelTransformer,
-  OmniModelTransformerArgs,
-  OmniSuperTypeCapableType,
-  OmniType,
-  OmniTypeKind,
-  ParserOptions,
-} from '@omnigen/core';
-import {JavaUtil} from '../../util/index.ts';
+import {CompositionKind, OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
+import {LoggerFactory} from '@omnigen/core-log';
+import {JavaUtil} from '../../util/index.ts';
+
+const logger = LoggerFactory.create(import.meta.url);
+
+type NotInterface = Exclude<OmniSuperTypeCapableType, OmniInterfaceType>;
 
 /**
  * Checks for object types that are used as interfaces, and splits the type into two types.
@@ -24,38 +20,77 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
 
     const interfaceMap = new Map<OmniType, OmniInterfaceType>();
 
+    // First pre-populate our interface map with all known interfaces and their underlying schema type.
     for (const type of exportableTypes.all) {
+      if (type.kind == OmniTypeKind.INTERFACE && type.of.kind != OmniTypeKind.INTERFACE && !interfaceMap.has(type.of)) {
+        interfaceMap.set(type.of, type);
+      }
+    }
 
-      const typeAsInterface = JavaUtil.getAsInterface(args.model, type);
-      if (!typeAsInterface) {
+    const handled: OmniType[] = [];
+
+    // Then we go through all types and find those that have multiple inheritances and convert any 1..N extensions into interfaces.
+    for (let type of exportableTypes.all) {
+
+      if (type.kind == OmniTypeKind.DECORATING) {
+        type = type.of;
+      }
+
+      if (handled.includes(type)) {
         continue;
       }
 
-      const subTypesThatImplementUs = JavaUtil.getSubTypesOfInterface(args.model, typeAsInterface);
-      if (subTypesThatImplementUs.length > 0) {
+      handled.push(type);
 
-        // This type is used as an interface in the model.
-        // For some languages it is supported to have multiple inheritances.
-        // But for Java and other Object Oriented languages, we need to change the type into an interface.
-
-        const [interfaceType, existedOrNew] = this.getOrCreateInterfaceType(typeAsInterface, interfaceMap);
-        if (existedOrNew == 'existed') {
-          continue;
-        }
-
-        // Now let's replace all the types that inherit from this object with the new interface type.
-        for (const implementor of subTypesThatImplementUs) {
-
-          // We only swap the DIRECT depended types.
-          // NOTE: This might be incorrect. Will notice how it feels/looks after a few examples.
-          OmniUtil.swapType(implementor, typeAsInterface, interfaceType, 1);
-        }
+      if (type.kind == OmniTypeKind.INTERFACE) {
+        this.makeExtensionsInterfaces(type, interfaceMap, 0);
+      } else if (type.kind == OmniTypeKind.OBJECT) {
+        this.makeExtensionsInterfaces(type, interfaceMap, 1);
+      } else if ('extendedBy' in type) {
+        logger.warn(`Found '${OmniUtil.describe(type)}' which has extensions but seems not covered by the InterfaceJavaModelTransformer`);
       }
     }
   }
 
+  private makeExtensionsInterfaces(
+    type: OmniType,
+    interfaceMap: Map<OmniType, OmniInterfaceType>,
+    startConvertingAt = 0,
+    depth = 0,
+  ): void {
+
+    if (type.kind == OmniTypeKind.COMPOSITION) {
+
+      if (type.compositionKind == CompositionKind.AND) {
+        for (let i = startConvertingAt; i < type.types.length; i++) {
+          const superType = JavaUtil.asSuperType(type.types[i]);
+          if (superType && superType.kind != OmniTypeKind.INTERFACE) {
+            const superInterface = this.getOrCreateInterfaceType(superType, type, interfaceMap);
+            type.types[i] = superInterface[0];
+          }
+        }
+      } else {
+        logger.warn(`Do something?`);
+      }
+
+    } else if (type.kind == OmniTypeKind.OBJECT || type.kind == OmniTypeKind.INTERFACE || type.kind == OmniTypeKind.ENUM) {
+
+      if (type.extendedBy) {
+        if (type.extendedBy.kind == OmniTypeKind.COMPOSITION) {
+          this.makeExtensionsInterfaces(type.extendedBy, interfaceMap, depth > 0 ? 0 : startConvertingAt, depth + 1);
+        } else {
+          // logger.debug(`Should ${OmniUtil.describe(type.extendedBy)} ever need conversion?`);
+        }
+      }
+
+    } else {
+      logger.warn(`Found '${OmniUtil.describe(type)}' which we do not know how to check and/or translate itself or its extension(s) into interfaces`);
+    }
+  }
+
   private getOrCreateInterfaceType(
-    type: OmniSuperTypeCapableType,
+    type: NotInterface,
+    originator: OmniType,
     interfaceMap: Map<OmniType, OmniInterfaceType>,
   ): [OmniInterfaceType, 'existed' | 'new'] {
 
@@ -67,7 +102,7 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
     const interfaceType: OmniInterfaceType = {
       kind: OmniTypeKind.INTERFACE,
       of: type,
-      debug: `Created because '${OmniUtil.describe(type)}' uses the type as an interface`,
+      debug: `Created because '${OmniUtil.describe(type)}' is needed as interface (originator: ${OmniUtil.describe(originator)})`,
     };
 
     this.addInterfaceToOriginalType(type, interfaceType);
@@ -78,8 +113,6 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
 
   private addInterfaceToOriginalType(type: OmniType, interfaceType: OmniInterfaceType): void {
 
-    // NOTE: Should we actually unwrap here? Should we not want it to stay as the external reference type?
-    // type = OmniUtil.getUnwrappedType(type);
     if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
       throw new Error(`Do not know how to handle interface modification of external reference types`);
     } else if ('extendedBy' in type || type.kind == OmniTypeKind.OBJECT) {

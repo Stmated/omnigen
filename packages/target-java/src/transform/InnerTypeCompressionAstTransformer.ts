@@ -30,7 +30,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
     for (const [type, usedInUnits] of typeUsedInCus.entries()) {
 
-      logger.info(`${OmniUtil.describe(type)} used in ${usedInUnits.map(it => OmniUtil.describe(it.object.type.omniType))}`);
+      logger.silent(`${OmniUtil.describe(type)} used in ${usedInUnits.map(it => OmniUtil.describe(it.object.type.omniType))}`);
 
       if (usedInUnits.length != 1) {
         continue;

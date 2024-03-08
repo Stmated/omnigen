@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trustly.com/schemas/inline_boolean",
+  "definitions": {
+
+    "OrderIdString": {
+      "type": "string",
+      "examples": [
+        "9594811343"
+      ]
+    },
+
+    "StringBoolean": {
+      "enum": [
+        "0",
+        "1"
+      ],
+      "x-enum-varnames": [
+        "Fail",
+        "OK"
+      ],
+      "type": "string"
+    },
+
+    "AccountNotificationData": {
+      "type": "object",
+      "properties": {
+        "orderid": {"$ref": "#/definitions/OrderIdString"},
+        "verified": {
+          "allOf": [{"$ref": "#/definitions/StringBoolean"}],
+          "description": "Whether the account is verified or not. 0 for not verified, 1 for verified."
+        }
+      },
+      "required": [
+        "orderid",
+        "verified"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
+
+
+
+
+
+
+

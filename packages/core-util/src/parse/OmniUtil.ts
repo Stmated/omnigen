@@ -5,7 +5,7 @@ import {
   OMNI_GENERIC_FEATURES,
   OmniArrayPropertiesByPositionType,
   OmniArrayType,
-  OmniCompositionType,
+  OmniCompositionType, OmniDecoratingType,
   OmniDictionaryType,
   OmniEnumType,
   OmniExternalModelReferenceType,
@@ -229,7 +229,16 @@ export class OmniUtil {
       if (of) {
 
         // NOTE: This cast should not exist here, work needs to be done to make this all-the-way generic.
-        return type as OmniExternalModelReferenceType<OmniSubTypeCapableType>;
+        return type as OmniExternalModelReferenceType<typeof of>;
+      } else {
+        return undefined;
+      }
+    }
+
+    if (type.kind == OmniTypeKind.DECORATING) {
+      const of = OmniUtil.asSuperType(type.of);
+      if (of) {
+        return type as OmniDecoratingType<typeof of>;
       } else {
         return undefined;
       }
@@ -647,7 +656,7 @@ export class OmniUtil {
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
       return type.placeholderName;
     } else if (type.kind == OmniTypeKind.DECORATING) {
-      return `Decorated${OmniUtil.getVirtualTypeName(type.of)}`;
+      return `Decorated(${OmniUtil.getVirtualTypeName(type.of)})`;
     } else if (type.kind == OmniTypeKind.DICTIONARY) {
 
       // TODO: Convert this into a generic type instead! Do NOT rely on this UGLY hardcoded string method!
@@ -718,7 +727,7 @@ export class OmniUtil {
    * @param maxDepth How deep into a type structure we will search
    */
   public static swapType<T extends OmniType, R extends OmniType>(
-    parent: TypeOwner<OmniType>,
+    parent: TypeOwner,
     from: T,
     to: R,
     maxDepth = 10,

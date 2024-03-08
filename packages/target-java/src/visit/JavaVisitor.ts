@@ -14,6 +14,7 @@ export interface AstFreeTextVisitor<R> {
   visitFreeTextTypeLink: JavaVisitFn<Java.FreeTextTypeLink, R>;
   visitFreeTextMethodLink: JavaVisitFn<Java.FreeTextMethodLink, R>;
   visitFreeTextPropertyLink: JavaVisitFn<Java.FreeTextPropertyLink, R>;
+  visitFreeTextList: JavaVisitFn<Java.FreeTextList, R>;
 }
 
 export const createJavaFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisitor<R>>, noop?: R | undefined): AstFreeTextVisitor<R> => {
@@ -41,6 +42,7 @@ export const createJavaFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisito
     visitFreeTextTypeLink: (node, visitor) => node.type.visit(visitor),
     visitFreeTextMethodLink: (node, visitor) => [node.type.visit(visitor), node.method.visit(visitor)],
     visitFreeTextPropertyLink: (node, visitor) => node.type.visit(visitor),
+    visitFreeTextList: (node, visitor) => node.children.map(it => visitor.visitFreeTextGlobal(it, visitor, () => noop)),
     ...partial,
   };
 };
@@ -52,8 +54,8 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;
   visitToken: JavaVisitFn<Java.JavaToken, R>;
   visitAnnotationList: JavaVisitFn<Java.AnnotationList, R>;
-  visitArgumentDeclaration: JavaVisitFn<Java.ArgumentDeclaration, R>;
-  visitArgumentDeclarationList: JavaVisitFn<Java.ArgumentDeclarationList, R>;
+  visitParameter: JavaVisitFn<Java.Parameter, R>;
+  visitParameterList: JavaVisitFn<Java.ParameterList, R>;
   visitBinaryExpression: JavaVisitFn<Java.BinaryExpression, R>;
   visitModifier: JavaVisitFn<Java.Modifier, R>;
   visitField: JavaVisitFn<Java.Field, R>;
@@ -103,6 +105,8 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitAssignExpression: JavaVisitFn<Java.AssignExpression, R>;
   visitCompilationUnit: JavaVisitFn<Java.CompilationUnit, R>;
   visitConstructor: JavaVisitFn<Java.ConstructorDeclaration, R>;
+  visitConstructorParameterList: JavaVisitFn<Java.ConstructorParameterList, R>;
+  visitConstructorParameter: JavaVisitFn<Java.ConstructorParameter, R>;
   visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
@@ -137,7 +141,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       node.baseType.visit(visitor),
       node.genericArguments.map(it => it.visit(visitor)),
     ],
-    visitArgumentDeclaration: (node, visitor) => {
+    visitParameter: (node, visitor) => {
       if (node.annotations) {
         return [
           node.annotations.visit(visitor),
@@ -151,7 +155,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
         ];
       }
     },
-    visitArgumentDeclarationList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitParameterList: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitIdentifier: () => noop,
     visitToken: () => noop,
     visitAnnotationList: (node, visitor) => node.children.map(it => it.visit(visitor)),
@@ -322,6 +326,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
     visitInterfaceDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
     visitEnumDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
     visitEnumItem: (node, visitor) => [
+      node.comment?.visit(visitor),
       node.identifier.visit(visitor),
       node.value.visit(visitor),
     ],
@@ -340,6 +345,10 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       node.annotations?.visit(visitor),
       node.body?.visit(visitor),
     ],
+
+    visitConstructorParameterList: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitConstructorParameter: (node, visitor) => visitor.visitParameter(node, visitor),
+
     visitAdditionalPropertiesDeclaration: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitStatement: (node, visitor) => node.child.visit(visitor),
     visitSuperConstructorCall: (node, visitor) => node.parameters.visit(visitor),

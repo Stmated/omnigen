@@ -57,16 +57,10 @@ export class ExternalDocumentsFinder {
       this._documents.set(absoluteUri, document);
     }
 
-    // const rootAbsoluteUri: JsonItemAbsoluteUri = {
-    //   absoluteDocumentUri: this._uri,
-    //   absoluteUri: `${this._uri}`,
-    //   path: [],
-    //   protocol: 'file',
-    // };
-
     return {
       resolve: v => {
 
+        const origin = v;
         while (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
 
           let uri = ExternalDocumentsFinder.toPartialUri(v.$ref);
@@ -83,7 +77,21 @@ export class ExternalDocumentsFinder {
             throw new Error(`Could not find ${v.$ref}, expected in uri '${uri.documentUri}', it must be pre-loaded`);
           }
 
-          const element = pointer.get(schema, uri.path!);
+          let element: any;
+          try {
+            element = pointer.get(schema, uri.path!);
+          } catch (ex) {
+
+            const shallowPayloadString = JSON.stringify(origin, (key, value) => {
+              if (value && typeof value === 'object' && key) {
+                return '[...]';
+              }
+              return value;
+            });
+
+            throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}`, {cause: ex});
+          }
+
           if (!element) {
             throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}`);
           }

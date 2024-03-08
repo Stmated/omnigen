@@ -7,6 +7,7 @@ import {
   OmniGenericSourceType,
   OmniInterfaceType,
   OmniModel,
+  OmniObjectType,
   OmniOptionallyNamedType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
@@ -115,7 +116,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     } else if (type.kind == OmniTypeKind.OBJECT) {
 
-      // TODO: Maybe this could be removed and instead simplified elsewhere, where we compress/fix "incorrect" types?
+      // TODO: This should be removed and instead simplified elsewhere, where we compress/fix "incorrect" types
       // In Java we cannot extend from an enum. So we will try and redirect the output.
       if (type.extendedBy && type.extendedBy.kind == OmniTypeKind.ENUM) {
         if (OmniUtil.isEmptyType(type)) {
@@ -153,7 +154,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
   private addEnum(
     type: OmniEnumType,
-    originalType: OmniType | undefined,
+    originalType: OmniObjectType | undefined,
     root: Java.JavaAstRootNode,
     options: JavaAndTargetOptions,
   ): AstNode {
@@ -164,11 +165,25 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
   private createEnum(
     type: OmniEnumType,
-    originalType: OmniType | undefined,
+    originalType: OmniObjectType | undefined,
     options: JavaAndTargetOptions,
   ): Java.EnumDeclaration {
 
     const body = new Java.Block();
+
+    if (originalType) {
+
+      type = {
+        ...type,
+        name: originalType.name ?? type.name,
+        description: originalType.description ?? type.description,
+        summary: originalType.summary ?? type.summary,
+        accessLevel: originalType.accessLevel ?? type.accessLevel,
+        debug: originalType.debug ?? type.debug,
+        title: originalType.title ?? type.title,
+        absoluteUri: originalType.absoluteUri ?? type.absoluteUri,
+      };
+    }
 
     const enumDeclaration = new Java.EnumDeclaration(
       new Java.RegularType(type),
@@ -176,14 +191,26 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       body,
     );
 
+    if (type.extendedBy) {
+      throw new Error(
+        `Not supported for enums (${OmniUtil.describe(type)}) to extend another (${OmniUtil.describe(type.extendedBy)}), must add java model transformer that translates into something viable`,
+      );
+    }
+
     if (type.enumConstants) {
 
       body.children.push(
         new Java.EnumItemList(
-          ...type.enumConstants.map((item, idx) => new Java.EnumItem(
-            new Java.Identifier(type.enumNames ? type.enumNames[idx] : Case.constant(String(item))),
-            new Java.Literal(item, type.primitiveKind),
-          )),
+          ...type.enumConstants.map((item, idx) => {
+
+            const comment = type.enumDescriptions ? new Java.CommentBlock(new Java.FreeText(type.enumDescriptions[`${item}`])) : undefined;
+
+            return new Java.EnumItem(
+              new Java.Identifier(type.enumNames ? type.enumNames[idx] : Case.constant(String(item))),
+              new Java.Literal(item, type.primitiveKind),
+              comment,
+            );
+          }),
         ),
       );
 
@@ -204,15 +231,15 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
       body.children.push(field);
 
-      const argumentDeclaration = new Java.ArgumentDeclaration(fieldType, fieldIdentifier);
+      const parameter = new Java.ConstructorParameter(field, fieldType, fieldIdentifier);
 
       body.children.push(
         new Java.ConstructorDeclaration(
           enumDeclaration,
-          new Java.ArgumentDeclarationList(argumentDeclaration),
+          new Java.ConstructorParameterList(parameter),
           new Java.Block(
             new Java.Statement(
-              new Java.AssignExpression(new Java.FieldReference(field), new Java.DeclarationReference(argumentDeclaration)),
+              new Java.AssignExpression(new Java.FieldReference(field), new Java.DeclarationReference(parameter)),
             ),
           ),
           new Java.ModifierList(),

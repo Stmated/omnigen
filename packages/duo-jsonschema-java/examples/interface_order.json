@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trustly.com/schemas/interface_order",
+  "definitions": {
+    "Username": {
+      "type": "string"
+    },
+    "Password": {
+      "type": "string"
+    },
+    "OrderId": {
+      "type": "number"
+    },
+
+    "AbstractRequestData": {
+      "type": "object",
+      "properties": {
+        "Username": {"$ref": "#/definitions/Username"},
+        "Password": {"$ref": "#/definitions/Password"}
+      },
+      "required": [
+        "Username",
+        "Password"
+      ],
+      "additionalProperties": false
+    },
+
+    "CancelChargeRequestDataBase": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "OrderID": {
+          "allOf": [{"$ref": "#/definitions/OrderId"}]
+        }
+      },
+      "required": [
+        "OrderID"
+      ]
+    },
+    "CancelChargeRequestData": {
+      "allOf": [
+        {"$ref": "#/definitions/AbstractRequestData"},
+        {"$ref": "#/definitions/CancelChargeRequestDataBase"}
+      ]
+    },
+
+    "BalanceRequestData": {
+      "allOf": [{"$ref": "#/definitions/AbstractRequestData"}],
+      "type": "object"
+    }
+  }
+}

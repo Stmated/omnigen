@@ -165,6 +165,10 @@ export interface OmniTypeWithInnerType<T extends OmniType | OmniType[] = OmniTyp
   of: T;
 }
 
+export interface OmniExample<T> {
+  value: T;
+}
+
 export interface OmniBaseType<T extends OmniTypeKind> {
 
   kind: T;
@@ -172,12 +176,14 @@ export interface OmniBaseType<T extends OmniTypeKind> {
    * TODO: Implement! REMOVE the optional and make it required! ALL types MUST have an absolute uri, to make it possible to merge types between schemas/contracts
    */
   absoluteUri?: string | undefined;
-  accessLevel?: OmniAccessLevel;
+  accessLevel?: OmniAccessLevel | undefined;
   title?: string | undefined;
   description?: string | undefined;
   summary?: string | undefined;
 
-  debug?: string;
+  debug?: string | undefined;
+
+  examples?: OmniExample<unknown>[] | undefined;
 }
 
 export enum CompositionKind {
@@ -377,6 +383,7 @@ export type OmniAllowedEnumPrimitiveKinds = typeof OmniPrimitiveKind.STRING
 export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];
   enumNames?: string[];
+  enumDescriptions?: Record<string, string>;
   primitiveKind: OmniAllowedEnumPrimitiveKinds;
   extendedBy?: OmniSuperTypeCapableType;
 }

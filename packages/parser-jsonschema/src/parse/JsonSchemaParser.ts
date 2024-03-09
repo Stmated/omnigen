@@ -31,7 +31,7 @@ import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into O
 import {Case, CompositionUtil, Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform/index.ts';
 import {ExternalDocumentsFinder, RefResolver} from '../visit/ExternalDocumentsFinder.ts';
-import {Defined} from '../visit';
+import {ToDefined} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -471,7 +471,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
   }
 
-  private toOmniExamples(jsonExamples: Defined<AnyJSONSchema['examples']>): OmniExample<unknown>[] {
+  private toOmniExamples(jsonExamples: ToDefined<AnyJSONSchema['examples']>): OmniExample<unknown>[] {
 
     const examples: OmniExample<unknown>[] = [];
     if (Array.isArray(jsonExamples)) {

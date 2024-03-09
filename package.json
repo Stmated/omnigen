@@ -1,6 +1,6 @@
 {
   "name": "omnigen",
-  "packageManager": "pnpm@8.15.1",
+  "packageManager": "pnpm@8.15.4",
   "private": true,
   "scripts": {
     "build": "turbo run build",

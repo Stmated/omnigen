@@ -883,7 +883,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         try {
           return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._refResolver.resolve(it));
         } catch (ex) {
-          throw new Error(`Could not convert from property '${OmniUtil.describe(requestParamsType)}' to OpenRpc Content Descriptor for Method ${method.name}`, {cause: ex});
+          throw new Error(`Could not convert from property '${OmniUtil.describe(requestParamsType)}' to OpenRpc Content Descriptor for method '${method.name}'`, {cause: ex});
         }
       });
 

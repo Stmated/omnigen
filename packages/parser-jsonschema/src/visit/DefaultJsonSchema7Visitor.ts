@@ -56,7 +56,7 @@ function createUnknownPropertiesHandler<S extends JSONSchema7>(): DocVisitorTran
   };
 }
 
-export const DefaultJsonSchema7Visitor: JsonSchema7Visitor<JSONSchema7> = {
+export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
   visit: (v, visitor) => {
     if (typeof v == 'boolean') {
       return visitor.schema_boolean(v, visitor);

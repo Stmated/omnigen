@@ -1,10 +1,11 @@
-import {Entry} from './JsonSchema7Visitor.ts';
 
 export type ToSingle<T> = T extends Array<infer Item> ? Item : T;
 export type DocVisitorTransformer<T, V> = (v: T, visitor: V) => typeof v | undefined;
 export type DocVisitorUnknownTransformer<T> = { path: [string, ...string[]], value: T };
-export type Defined<T> = Exclude<T, undefined>;
+export type ToDefined<T> = Exclude<T, undefined>;
 export type ToArray<T> = T extends Array<any> ? T : undefined;
+export type ToResolved<T> = T extends {$ref: any} ? Exclude<T, {$ref: any}> : T;
+export type Entry<T> = {key: string, value: T};
 
 export function safeSet<O extends object, OK extends keyof O & string, V extends Pick<Record<PropertyKey, DocVisitorTransformer<O[OK], any>>, OK>>(owner: O, visitor: V, prop: OK, handled: string[]): void {
 

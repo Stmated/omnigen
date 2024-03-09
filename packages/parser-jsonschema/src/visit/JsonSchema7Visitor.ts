@@ -1,10 +1,10 @@
 import {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema';
 import {AnyJSONSchema} from '../parse/index.ts';
-import {Defined, DocVisitorTransformer, DocVisitorUnknownTransformer, ToArray, ToSingle} from './helpers.ts';
+import {ToDefined, DocVisitorTransformer, DocVisitorUnknownTransformer, Entry, ToArray, ToSingle} from './helpers.ts';
 
 export interface JsonSchema7Visitor<S extends JSONSchema7 = JSONSchema7> extends JsonSchema6PlusVisitor<S> {
   $defs: DocVisitorTransformer<S['$defs'], this>;
-  $defs_option: DocVisitorTransformer<Entry<Defined<S['$defs']>[keyof Defined<S['$defs']>]>, this>;
+  $defs_option: DocVisitorTransformer<Entry<ToDefined<S['$defs']>[keyof ToDefined<S['$defs']>]>, this>;
   contentEncoding: DocVisitorTransformer<S['contentEncoding'], this>;
   contentMediaType: DocVisitorTransformer<S['contentMediaType'], this>;
   if: DocVisitorTransformer<S['if'], this>;
@@ -30,28 +30,28 @@ interface JsonSchema4OnlyProperties<S extends JSONSchema4> {
 
 }
 
-type JsonSchemaDefinitionArray<S extends AnyJSONSchema> = Defined<ToArray<Defined<S['default']>>>;
-type JsonSchemaDefinitionObject<S extends AnyJSONSchema> = Exclude<Extract<Defined<S['default']>, object>, Array<any>>;
-type JsonSchemaDefinitionPrimitive<S extends AnyJSONSchema> = Exclude<Defined<S['default']>, JsonSchemaDefinitionObject<S> | JsonSchemaDefinitionArray<S>>;
+type JsonSchemaDefinitionArray<S extends AnyJSONSchema> = ToDefined<ToArray<ToDefined<S['default']>>>;
+type JsonSchemaDefinitionObject<S extends AnyJSONSchema> = Exclude<Extract<ToDefined<S['default']>, object>, Array<any>>;
+type JsonSchemaDefinitionPrimitive<S extends AnyJSONSchema> = Exclude<ToDefined<S['default']>, JsonSchemaDefinitionObject<S> | JsonSchemaDefinitionArray<S>>;
 
-export type Entry<T> = {key: string, value: T};
+
 export type ArrayItem<T> = {idx: number, value: T};
 
 export interface JsonSchemaBaseProperties<S extends AnyJSONSchema> {
-  visit: DocVisitorTransformer<Defined<ToSingle<S['items']>>, this>;
+  visit: DocVisitorTransformer<ToDefined<ToSingle<S['items']>>, this>;
   visit_unknown: DocVisitorTransformer<DocVisitorUnknownTransformer<unknown>, this>;
 
-  schema: DocVisitorTransformer<Exclude<Defined<ToSingle<S['items']>>, boolean>, this>;
-  schema_option: DocVisitorTransformer<ArrayItem<ToSingle<Defined<S['oneOf']>>>, this>;
+  schema: DocVisitorTransformer<Exclude<ToDefined<ToSingle<S['items']>>, boolean>, this>;
+  schema_option: DocVisitorTransformer<ArrayItem<ToSingle<ToDefined<S['oneOf']>>>, this>;
 
   $schema: DocVisitorTransformer<S['$schema'], this>;
-  jsonSchemaType: DocVisitorTransformer<Defined<S['default']>, this>;
+  jsonSchemaType: DocVisitorTransformer<ToDefined<S['default']>, this>;
   jsonSchemaArray: DocVisitorTransformer<JsonSchemaDefinitionArray<S>, this>;
   jsonSchemaObject: DocVisitorTransformer<JsonSchemaDefinitionObject<S>, this>;
   jsonSchemaTypePrimitive: DocVisitorTransformer<JsonSchemaDefinitionPrimitive<S>, this>;
-  jsonSchemaTypeName: DocVisitorTransformer<Defined<ToSingle<S['type']>>, this>;
+  jsonSchemaTypeName: DocVisitorTransformer<ToDefined<ToSingle<S['type']>>, this>;
   definitions: DocVisitorTransformer<S['definitions'], this>;
-  definitions_option: DocVisitorTransformer<Entry<Defined<S['definitions']>[keyof Defined<S['definitions']>]>, this>;
+  definitions_option: DocVisitorTransformer<Entry<ToDefined<S['definitions']>[keyof ToDefined<S['definitions']>]>, this>;
   additionalItems: DocVisitorTransformer<S['additionalItems'], this>;
   additionalProperties: DocVisitorTransformer<S['additionalProperties'], this>;
   allOf: DocVisitorTransformer<S['allOf'], this>;
@@ -63,13 +63,13 @@ export interface JsonSchemaBaseProperties<S extends AnyJSONSchema> {
   dependencies_strings: DocVisitorTransformer<string[], this>;
   description: DocVisitorTransformer<S['description'], this>;
   enum: DocVisitorTransformer<S['enum'], this>;
-  enum_option: DocVisitorTransformer<Defined<S['default']>, this>;
+  enum_option: DocVisitorTransformer<ToDefined<S['default']>, this>;
   exclusiveMinimum: DocVisitorTransformer<S['exclusiveMinimum'], this>;
   exclusiveMaximum: DocVisitorTransformer<S['exclusiveMaximum'], this>;
   minimum: DocVisitorTransformer<S['minimum'], this>;
   maximum: DocVisitorTransformer<S['maximum'], this>;
   items: DocVisitorTransformer<S['items'], this>;
-  items_item: DocVisitorTransformer<ToSingle<Defined<S['items']>>, this>;
+  items_item: DocVisitorTransformer<ToSingle<ToDefined<S['items']>>, this>;
   minItems: DocVisitorTransformer<S['minItems'], this>;
   maxItems: DocVisitorTransformer<S['maxItems'], this>;
   minLength: DocVisitorTransformer<S['minLength'], this>;
@@ -80,14 +80,14 @@ export interface JsonSchemaBaseProperties<S extends AnyJSONSchema> {
   pattern: DocVisitorTransformer<S['pattern'], this>;
   patternProperties: DocVisitorTransformer<S['patternProperties'], this>;
   properties: DocVisitorTransformer<S['properties'], this>;
-  properties_option: DocVisitorTransformer<Entry<Defined<S['properties']>[keyof Defined<S['properties']>]>, this>;
+  properties_option: DocVisitorTransformer<Entry<ToDefined<S['properties']>[keyof ToDefined<S['properties']>]>, this>;
   required: DocVisitorTransformer<S['required'], this>;
   required_option: DocVisitorTransformer<ToSingle<S['required']>, this>;
   title: DocVisitorTransformer<S['title'], this>;
   type: DocVisitorTransformer<S['type'], this>;
   format: DocVisitorTransformer<S['format'], this>;
   type_array: DocVisitorTransformer<Extract<S['type'], Array<any>>, this>;
-  type_option: DocVisitorTransformer<Defined<ToSingle<S['type']>>, this>;
+  type_option: DocVisitorTransformer<ToDefined<ToSingle<S['type']>>, this>;
   uniqueItems: DocVisitorTransformer<S['uniqueItems'], this>;
   $ref: DocVisitorTransformer<S['$ref'], this>;
 }

@@ -5,6 +5,6 @@ export * from './options/index.ts';
 export * from './model/index.ts';
 export * from './parse/index.ts';
 export * from './visit/index.ts';
-export * from './OpenRpcPluginInit';
+export * from './OpenRpcPluginInit.ts';
 
 export default PluginAutoRegistry.register([OpenRpcPlugin]);

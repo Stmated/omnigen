@@ -1,4 +1,4 @@
-import {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema';
+import {JSONSchema6, JSONSchema7} from 'json-schema';
 import {OmniType, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
 import {z} from 'zod';
 

@@ -1,0 +1,30 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`JavaInterpreter > ensureBasicParsingDoesNotCrash 1`] = `
+[
+  "CreatePetRequest",
+  "CreatePetRequestParams",
+  "CreatePetResponse",
+  "DeletePetByIdRequest",
+  "DeletePetByIdRequestParams",
+  "DeletePetByIdResponse",
+  "ErrorUnknown",
+  "ErrorUnknownError",
+  "GetPetByIdRequest",
+  "GetPetByIdRequestParams",
+  "GetPetByIdResponse",
+  "GetPetsRequest",
+  "GetPetsRequestParams",
+  "GetPetsResponse",
+  "IPetWithId",
+  "JsonRpcError",
+  "JsonRpcErrorResponse",
+  "JsonRpcRequest",
+  "JsonRpcRequestParams",
+  "JsonRpcResponse",
+  "NewPet",
+  "Pet",
+  "PetDeleted",
+  "PetWithId",
+]
+`;

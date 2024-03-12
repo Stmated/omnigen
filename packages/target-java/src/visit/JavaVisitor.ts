@@ -50,6 +50,7 @@ export const createJavaFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisito
 export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
 
   visitRegularType: JavaVisitFn<Java.RegularType<OmniType>, R>;
+  visitWildcardType: JavaVisitFn<Java.WildcardType, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;
   visitToken: JavaVisitFn<Java.JavaToken, R>;
@@ -137,6 +138,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
     ...createJavaFreeTextVisitor<R>(undefined, noop),
     visitRootNode: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitRegularType: () => noop,
+    visitWildcardType: (node, visitor) => node.lowerBound?.visit(visitor),
     visitGenericType: (node, visitor) => [
       node.baseType.visit(visitor),
       node.genericArguments.map(it => it.visit(visitor)),

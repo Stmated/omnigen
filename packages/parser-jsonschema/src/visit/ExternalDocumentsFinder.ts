@@ -32,7 +32,6 @@ export class ExternalDocumentsFinder {
   private readonly _uri: string;
   private readonly _jsonSchema: JsonObject;
 
-  private readonly _documentPromises = new Map<string, Promise<JsonObject>>();
   private readonly _documents = new Map<string, JsonObject>();
 
   constructor(uri: string, jsonSchema: JsonObject) {
@@ -47,14 +46,29 @@ export class ExternalDocumentsFinder {
   async create(): Promise<RefResolver> {
 
     const rootUri = ExternalDocumentsFinder.toAbsoluteUriParts(undefined, this._uri);
-    this._documentPromises.set(rootUri.absoluteDocumentUri, Promise.resolve(this._jsonSchema));
+    this._documents.set(rootUri.absoluteDocumentUri, this._jsonSchema);
 
-    await ExternalDocumentsFinder.searchInto(this._jsonSchema, rootUri, this._documentPromises);
+    type QueueItem = { uri: JsonItemAbsoluteUri, schema: JsonObject };
+    const queue: QueueItem[] = [];
+    queue.push({uri: rootUri, schema: this._jsonSchema});
 
-    for (const [absoluteUri, documentPromise] of this._documentPromises.entries()) {
+    for (let i = 0; i < 100; i++) {
 
-      const document = await documentPromise;
-      this._documents.set(absoluteUri, document);
+      const item = queue.pop();
+      if (!item) {
+        break;
+      }
+
+      const newDocuments = ExternalDocumentsFinder.searchInto(item.schema, item.uri, this._documents);
+
+      for (const newDocument of newDocuments) {
+
+        const awaited = await newDocument.promise;
+        const subSchema = awaited as JSONSchema7;
+
+        this._documents.set(newDocument.uri.absoluteDocumentUri, subSchema);
+        queue.push({uri: newDocument.uri, schema: subSchema});
+      }
     }
 
     return {
@@ -82,13 +96,7 @@ export class ExternalDocumentsFinder {
             element = pointer.get(schema, uri.path!);
           } catch (ex) {
 
-            const shallowPayloadString = JSON.stringify(origin, (key, value) => {
-              if (value && typeof value === 'object' && key) {
-                return '[...]';
-              }
-              return value;
-            });
-
+            const shallowPayloadString = ExternalDocumentsFinder.getShallowPayloadString(origin);
             throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}`, {cause: ex});
           }
 
@@ -104,9 +112,21 @@ export class ExternalDocumentsFinder {
     };
   }
 
-  private static async searchInto(schema: JsonObject, parentUri: JsonItemAbsoluteUri, documents: Map<string, Promise<JsonObject>>): Promise<void> {
+  private static getShallowPayloadString<T>(origin: T) {
 
-    const newDocuments = new Map<JsonItemAbsoluteUri, Promise<JsonObject>>();
+    return JSON.stringify(origin, (key, value) => {
+      if (value && typeof value === 'object' && key) {
+        return '[...]';
+      }
+      return value;
+    });
+  }
+
+  private static searchInto(schema: JsonObject, parentUri: JsonItemAbsoluteUri, documents: Map<string, JsonObject>) {
+
+    // const newDocuments = new Map<JsonItemAbsoluteUri, Promise<JsonObject>>();
+    type NewDocument = { uri: JsonItemAbsoluteUri, promise: Promise<JsonObject> };
+    const newDocuments: NewDocument[] = [];
 
     const walker = new SimpleObjectWalker(schema);
     walker.walk((obj, path) => {
@@ -114,9 +134,23 @@ export class ExternalDocumentsFinder {
       if (path.length > 0 && path[path.length - 1] == '$ref' && obj && typeof obj == 'string') {
 
         const absoluteUri = ExternalDocumentsFinder.toAbsoluteUriParts(parentUri, obj);
-        const documentPromise = ExternalDocumentsFinder.fetchDocument(absoluteUri, documents);
-        if (documentPromise) {
-          newDocuments.set(absoluteUri, documentPromise);
+
+        if (!documents.has(absoluteUri.absoluteDocumentUri)) {
+
+          const newDocument = newDocuments.find(it => it.uri.absoluteDocumentUri == absoluteUri.absoluteDocumentUri);
+          if (!newDocument) {
+
+            let promise: Promise<JsonObject>;
+            if (absoluteUri.protocol == 'file') {
+              promise = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
+            } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {
+              promise = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
+            } else {
+              throw new Error(`Unknown protocol ${absoluteUri.protocol}`);
+            }
+
+            newDocuments.push({uri: absoluteUri, promise: promise});
+          }
         }
 
         // Replace with the absolute uri
@@ -126,31 +160,7 @@ export class ExternalDocumentsFinder {
       return obj;
     });
 
-    await Promise.all(newDocuments.values());
-
-    return Promise.all([...newDocuments.entries()]
-      .map(async keyAndDoc => ExternalDocumentsFinder.searchInto((await keyAndDoc[1]) as JSONSchema7, keyAndDoc[0], documents)),
-    ).then();
-  }
-
-  private static fetchDocument(absoluteUri: JsonItemAbsoluteUri, documents: Map<string, Promise<JsonObject>>): Promise<JsonObject> | undefined {
-
-    if (!documents.has(absoluteUri.absoluteDocumentUri)) {
-
-      let promise: Promise<JsonObject>;
-      if (absoluteUri.protocol == 'file') {
-        promise = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
-      } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {
-        promise = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
-      } else {
-        throw new Error(`Unknown protocol ${absoluteUri.protocol}`);
-      }
-
-      documents.set(absoluteUri.absoluteDocumentUri, promise);
-      return promise;
-    }
-
-    return undefined;
+    return newDocuments;
   }
 
   static toPartialUri(uriString: string): Readonly<JsonItemPartialUri> {

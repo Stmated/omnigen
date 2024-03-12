@@ -20,6 +20,7 @@ export * from './ParserBootstrap.js';
 
 export * from './TypeOwner.js';
 export * from './PropertiesInformation.js';
+export * from './PropertyInformation.ts';
 
 // Other sub-directories´
 export * from './transform/index.js';

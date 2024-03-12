@@ -40,12 +40,12 @@ export class OmniTypeVisitor {
   };
 
   public visitTypesBreadthFirst<R>(
-    input: TypeOwner | undefined,
+    inputs: TypeOwner | TypeOwner[] | undefined,
     onDown: BFSTraverseCallback<R>,
-    visitOnce = true,
+    visitOnce = true
   ): R | undefined {
 
-    if (!input) {
+    if (!inputs) {
       return undefined;
     }
 
@@ -53,32 +53,34 @@ export class OmniTypeVisitor {
 
     const q: BFSTraverseContext[] = [];
 
-    if ('endpoints' in input) {
+    for (const input of Array.isArray(inputs) ? inputs : [inputs]) {
+      if ('endpoints' in input) {
 
-      for (const e of input.endpoints) {
-        q.push({owner: e.request, parent: undefined, type: e.request.type, typeDepth: 0, useDepth: 0, skip: false});
-        for (const r of e.responses) {
-          q.push({owner: r, parent: undefined, type: r.type, typeDepth: 0, useDepth: 1, skip: false});
-        }
-      }
-
-      for (const c of input.continuations || []) {
-        for (const m of c.mappings) {
-          for (const p of m.source.propertyPath || []) {
-            q.push({owner: p, parent: undefined, type: p.owner, typeDepth: 0, useDepth: 0, skip: false});
-            q.push({owner: p, parent: undefined, type: p.type, typeDepth: 0, useDepth: 0, skip: false});
-          }
-          for (const p of m.target.propertyPath || []) {
-            q.push({owner: p, parent: undefined, type: p.owner, typeDepth: 0, useDepth: 0, skip: false});
-            q.push({owner: p, parent: undefined, type: p.type, typeDepth: 0, useDepth: 0, skip: false});
+        for (const e of input.endpoints) {
+          q.push({owner: e.request, parent: undefined, type: e.request.type, typeDepth: 0, useDepth: 0, skip: false});
+          for (const r of e.responses) {
+            q.push({owner: r, parent: undefined, type: r.type, typeDepth: 0, useDepth: 1, skip: false});
           }
         }
-      }
 
-    } else if ('type' in input) {
-      q.push({owner: input, parent: undefined, type: input.type, typeDepth: 0, useDepth: 0, skip: false});
-    } else {
-      q.push({owner: undefined, parent: undefined, type: input, typeDepth: 0, useDepth: 0, skip: false});
+        for (const c of input.continuations || []) {
+          for (const m of c.mappings) {
+            for (const p of m.source.propertyPath || []) {
+              q.push({owner: p, parent: undefined, type: p.owner, typeDepth: 0, useDepth: 0, skip: false});
+              q.push({owner: p, parent: undefined, type: p.type, typeDepth: 0, useDepth: 0, skip: false});
+            }
+            for (const p of m.target.propertyPath || []) {
+              q.push({owner: p, parent: undefined, type: p.owner, typeDepth: 0, useDepth: 0, skip: false});
+              q.push({owner: p, parent: undefined, type: p.type, typeDepth: 0, useDepth: 0, skip: false});
+            }
+          }
+        }
+
+      } else if ('type' in input) {
+        q.push({owner: input, parent: undefined, type: input.type, typeDepth: 0, useDepth: 0, skip: false});
+      } else {
+        q.push({owner: undefined, parent: undefined, type: input, typeDepth: 0, useDepth: 0, skip: false});
+      }
     }
 
     const visited: OmniType[] = [];
@@ -172,8 +174,12 @@ export class OmniTypeVisitor {
         case OmniTypeKind.DECORATING:
           q.push({...dq, owner: type, parent: type, type: type.of, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
           break;
-        case OmniTypeKind.PRIMITIVE:
         case OmniTypeKind.UNKNOWN:
+          if (type.lowerBound) {
+            q.push({...dq, owner: type, parent: type, type: type.lowerBound, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
+          }
+          break;
+        case OmniTypeKind.PRIMITIVE:
         case OmniTypeKind.ENUM:
         case OmniTypeKind.HARDCODED_REFERENCE:
           // There are no type children of these
@@ -191,7 +197,7 @@ export class OmniTypeVisitor {
   }
 
   public visitTypesDepthFirst<R>(
-    input: TypeOwner<OmniType> | undefined,
+    input: TypeOwner | undefined,
     onDown?: DFSTraverseCallback<R>,
     onUp?: DFSTraverseCallback<R>,
     onlyOnce = true,
@@ -427,8 +433,15 @@ export class OmniTypeVisitor {
         result = this.visitTypesDepthFirstInternal(input.of, ctx, onDown, onUp, onlyOnce);
         if (result !== undefined) return result;
         break;
-      case OmniTypeKind.PRIMITIVE:
       case OmniTypeKind.UNKNOWN:
+        if (input.lowerBound) {
+          result = this.visitTypesDepthFirstInternal(input.lowerBound, ctx, onDown, onUp, onlyOnce);
+          if (result !== undefined) {
+            return result;
+          }
+        }
+        break;
+      case OmniTypeKind.PRIMITIVE:
       case OmniTypeKind.ENUM:
       case OmniTypeKind.HARDCODED_REFERENCE:
         // There are no type children of these

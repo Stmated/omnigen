@@ -1,0 +1,207 @@
+{
+  "openrpc": "1.2.6",
+  "info": {
+    "version": "1.0.0",
+    "title": "generic_params"
+  },
+  "servers": [
+    {
+      "name": "API Test",
+      "url": "https://localhost/api"
+    }
+  ],
+
+  "methods": [
+    {
+      "name": "Deposit",
+      "params": [
+        {"$ref": "#/components/contentDescriptors/Signature"},
+        {"$ref": "#/components/contentDescriptors/UUID"},
+        {"$ref": "#/components/contentDescriptors/DepositRequestParamsData"}
+      ],
+      "result": {
+        "name": "DepositResponse",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "signature": {"type": "string"},
+            "uuid": {"type": "string"},
+            "method": {"type": "string"},
+            "data": {"$ref": "#/components/schemas/DepositResponseData"}
+          }
+        }
+      }
+    },
+
+    {
+      "name": "Refund",
+      "params": [
+        {"$ref": "#/components/contentDescriptors/Signature"},
+        {"$ref": "#/components/contentDescriptors/UUID"},
+        {"$ref": "#/components/contentDescriptors/RefundRequestParamsData"}
+      ],
+      "result": {
+        "name": "DepositResponse",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "signature": {"type": "string"},
+            "uuid": {"type": "string"},
+            "method": {"type": "string"},
+            "data": {"$ref": "#/components/schemas/RefundResponseData"}
+          }
+        }
+      }
+    }
+  ],
+
+  "components": {
+    "schemas": {
+      "JsonRpcMethod": {
+        "type": "string",
+        "description": "The JsonRpc method which identifies the type of message/payload"
+      },
+
+      "AbstractRequestData": {
+        "type": "object",
+        "properties": {
+          "Username": {"type": "string"},
+          "Password": {"type": "string"}
+        },
+        "required": [
+          "Username",
+          "Password"
+        ],
+        "x-abstract": true
+      },
+
+      "DepositRequestData": {
+        "allOf": [{"$ref": "#/components/schemas/AbstractRequestData"}],
+        "properties": {
+          "MessageID": {"type": "string"},
+          "Attributes": {"$ref": "#/components/schemas/DepositRequestDataAttributes"}
+        },
+        "required": [
+          "MessageID",
+          "Attributes"
+        ],
+        "type": "object"
+      },
+      "DepositRequestDataAttributes": {
+        "type": "object",
+        "properties": {
+          "DepositAttribute1": {"type": "string"}
+        },
+        "required": [
+          "DepositAttribute1"
+        ]
+      },
+      "DepositResponseData": {
+        "properties": {
+          "orderid": {"type": "string"},
+          "url": {"type": "string"}
+        },
+        "type": "object"
+      },
+
+      "RefundRequestData": {
+        "allOf": [{"$ref": "#/components/schemas/AbstractRequestData"}],
+        "properties": {
+          "OrderID": {"type": "string"},
+          "Amount": {"type": "string"},
+          "Currency": {"type": "string"},
+          "Attributes": {"$ref": "#/components/schemas/RefundRequestDataAttributes"}
+        },
+        "required": [
+          "OrderID",
+          "Amount",
+          "Currency",
+          "Attributes"
+        ],
+        "type": "object"
+      },
+      "RefundRequestDataAttributes": {
+        "properties": {
+          "ExternalReference": {"type": "string"}
+        },
+        "type": "object"
+      },
+
+      "RefundResponseData": {
+        "properties": {
+          "orderid": {"type": "string"},
+          "result": {"type": "string"}
+        },
+        "required": [
+          "orderId",
+          "result"
+        ],
+        "type": "object"
+      }
+    },
+
+    "contentDescriptors": {
+      "Signature": {
+        "name": "Signature",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "UUID": {
+        "name": "UUID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Response_Signature": {
+        "name": "signature",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Response_UUID": {
+        "name": "uuid",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+
+      "Response_Method": {
+        "name": "method",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+
+      "Username": {
+        "name": "Username",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Password": {
+        "name": "Password",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DepositRequestParamsData": {
+        "name": "Data",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/DepositRequestData"}
+      },
+      "RefundRequestParamsData": {
+        "name": "Data",
+        "required": true,
+        "schema": {"$ref": "#/components/schemas/RefundRequestData"}
+      }
+    }
+  }
+}

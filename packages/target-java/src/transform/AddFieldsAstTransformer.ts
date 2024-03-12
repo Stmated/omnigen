@@ -27,7 +27,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
           if (type.additionalProperties && !JavaUtil.superMatches(args.model, type, parent => this.hasAdditionalProperties(parent))) {
 
             // No parent implements additional properties, so we should.
-            body.children.push(new Java.AdditionalPropertiesDeclaration());
+            body.children.push(new Java.AdditionalPropertiesDeclaration(args.options));
           }
         }
 

@@ -1,5 +1,8 @@
 package generated.omnigen;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Generated;
 
 /**
@@ -11,7 +14,12 @@ public class JsonRpcRequest<TParams extends JsonRpcRequestParams> {
   private final String jsonrpc;
   private final String method;
   private final TParams params;
-  public JsonRpcRequest(String jsonrpc, String id, TParams params, String method) {
+  public JsonRpcRequest(
+    @JsonProperty(value = "jsonrpc", required = true) String jsonrpc,
+    @JsonProperty(value = "id", required = true) String id,
+    @JsonProperty("params") TParams params,
+    @JsonProperty("method") String method
+  ) {
     if (jsonrpc != null) {
       this.jsonrpc = jsonrpc;
     } else {
@@ -22,10 +30,14 @@ public class JsonRpcRequest<TParams extends JsonRpcRequestParams> {
     this.method = method;
   }
 
+  @JsonProperty(required = true)
+  @JsonInclude(Include.ALWAYS)
   public String getId() {
     return this.id;
   }
 
+  @JsonProperty(required = true)
+  @JsonInclude(Include.ALWAYS)
   public String getJsonrpc() {
     return this.jsonrpc;
   }

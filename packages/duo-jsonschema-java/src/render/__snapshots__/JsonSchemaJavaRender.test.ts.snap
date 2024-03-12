@@ -50,9 +50,15 @@ exports[`jsonschema-java-render > interface_order 1`] = `
 ]
 `;
 
+exports[`jsonschema-java-render > one_of_same_type 1`] = `
+[
+  "RequestData.java",
+]
+`;
+
 exports[`jsonschema-java-render > string_union 1`] = `
 [
-  "DateOfBirthOrOrganization.java",
+  "Container.java",
 ]
 `;
 

@@ -61,9 +61,12 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
       const hierarchies: OmniType[][] = [];
       for (let i = 0; i < composition.types.length; i++) {
 
-        const hierarchy = OmniUtil.getSuperTypeHierarchy(model, OmniUtil.asSubType(composition.types[i]));
-        if (hierarchy.length > 0) {
-          hierarchies.push(hierarchy);
+        const type = composition.types[i];
+        if (OmniUtil.asSubType(type)) {
+          const hierarchy = OmniUtil.getSuperTypeHierarchy(model, type);
+          if (hierarchy.length > 0) {
+            hierarchies.push(hierarchy);
+          }
         }
       }
 

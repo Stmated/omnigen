@@ -4,9 +4,10 @@ import * as JavaParser from 'java-parser';
 import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {describe, expect, test, vi} from 'vitest';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, ModelTransformOptions} from '@omnigen/core';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, ModelTransformOptions, OmniPrimitiveKind} from '@omnigen/core';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
+import {SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -31,6 +32,8 @@ describe('Java Rendering', () => {
       for (const fileName of fileNames) {
 
         try {
+
+          logger.info(`Will render ${fileName}`);
           const result = await JavaTestUtils.getResultFromFilePath(
             `../parser-openrpc/examples/${fileName}`, {}, ZodCompilationUnitsContext,
           );
@@ -88,7 +91,9 @@ describe('Java Rendering', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON},
+    });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
@@ -101,13 +106,15 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     // Check that the property 'common' from A and B are moved into Abs.
-    const optionsWithoutGenerics: ModelTransformOptions = {
-      ...DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      generifyTypes: false,
-    };
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('compressable-types.json', {
-      modelTransformOptions: optionsWithoutGenerics,
+      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false},
+      javaOptions: {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        preferNumberType: OmniPrimitiveKind.DOUBLE,
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+      },
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -118,9 +125,14 @@ describe('Java Rendering', () => {
 
   test('Enum', async ({task}) => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile(
-      'enum.json', {javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, includeGeneratedAnnotation: false}},
-    );
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json', {
+      javaOptions: {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        includeGeneratedAnnotation: false,
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+      }
+    });
     // TODO: Get this to work again -- something is very off with the way things are created -- maybe a miss-mash with the ids and simplification of oneOf -> allOf -> inlined
     //       Might be that we should not inline early, and let it be up to the target language how a type that is only one allOf should be rendered. If it is anonymous it could be inlined always;
 
@@ -134,10 +146,14 @@ describe('Java Rendering', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile(
-      'additional-properties.json',
-      {targetOptions: {...DEFAULT_TEST_TARGET_OPTIONS, additionalPropertiesInterfaceAfterDuplicateCount: 1}},
-    );
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', {
+      targetOptions: {...DEFAULT_TEST_TARGET_OPTIONS, additionalPropertiesInterfaceAfterDuplicateCount: 1},
+      javaOptions: {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+      }
+    });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
@@ -161,11 +177,42 @@ describe('Java Rendering', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('primitive-generics.json');
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('primitive-generics.json', {
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniPrimitiveKind.DOUBLE, serializationLibrary: 'POJO'},
+    });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     expect(fileContents.get('GiveNumberGetCharRequestParams.java')).toMatchSnapshot();
 
     // TODO: Add more exact checks for all generic types, making sure they have the correct amount of generics and whatever
   });
+
+  test('generic_params', async ({task}) => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const result = await JavaTestUtils.getResultFromFilePath(`./examples/generic_params.json`, {
+      parserOptions: {...DEFAULT_PARSER_OPTIONS, defaultAdditionalProperties: false},
+      targetOptions: {
+        ...DEFAULT_TEST_TARGET_OPTIONS,
+        compressSoloReferencedTypes: true,
+        compressUnreferencedSubTypes: true,
+        additionalPropertiesInterfaceAfterDuplicateCount: 100,
+      },
+      javaOptions: {
+        ...DEFAULT_TEST_JAVA_OPTIONS,
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.ALWAYS,
+      },
+    }, ZodCompilationUnitsContext);
+
+    const fileContents = await JavaTestUtils.cuToContentMap(result.compilationUnits);
+
+    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    for (const [fileName, fileContent] of fileContents) {
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+    }
+  });
+
+  // TODO: Create test case that actually needs the expandedGenericSourceIdentifier inside GenericsModelTransformer -- it is a good feature, just needs some fixes
 });

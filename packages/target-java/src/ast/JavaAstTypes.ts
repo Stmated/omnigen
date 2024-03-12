@@ -20,10 +20,10 @@ import {
   OmniGenericSourceIdentifierType,
   AstVisitor,
 } from '@omnigen/core';
-import {JavaAstUtils} from '../transform/index.ts';
+import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER, JACKSON_JSON_VALUE, JavaAstUtils} from '../transform/index.ts';
 import {JavaUtil} from '../util/index.ts';
 import {JavaVisitor} from '../visit/index.ts';
-import {JavaOptions} from '../options/index.ts';
+import {JavaOptions, SerializationLibrary} from '../options/index.ts';
 import {Case, OmniUtil} from '@omnigen/core-util';
 import {JAVA_FEATURES} from '../index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -63,7 +63,14 @@ export abstract class AbstractJavaNode implements AstNode {
   abstract visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
 }
 
-export class RegularType<T extends OmniType> extends AbstractJavaNode {
+export interface LocallyNamedType {
+  getLocalName(): string | undefined;
+  setLocalName(value: string | undefined): void;
+  getImportName(): string | undefined;
+  setImportName(value: string | undefined): void;
+}
+
+export class RegularType<T extends OmniType = OmniType> extends AbstractJavaNode implements LocallyNamedType {
   omniType: T;
   private _localName?: string | undefined;
   private _importName?: string | undefined;
@@ -101,7 +108,46 @@ export class RegularType<T extends OmniType> extends AbstractJavaNode {
   }
 }
 
-export type Type<T extends OmniType> = RegularType<T> | GenericType;
+export type Type<T extends OmniType> = RegularType<T> | GenericType | WildcardType;
+
+export class WildcardType extends AbstractJavaNode implements LocallyNamedType {
+  readonly type: OmniUnknownType;
+  readonly lowerBound?: Type<OmniType> | undefined;
+  private _localName?: string | undefined;
+  private _importName?: string | undefined;
+  readonly implementation?: boolean | undefined;
+
+  get omniType(): OmniType {
+    return this.type;
+  }
+
+  getLocalName(): string | undefined {
+    return this._localName;
+  }
+
+  setLocalName(value: string | undefined): void {
+    this._localName = value;
+  }
+
+  getImportName(): string | undefined {
+    return this._importName;
+  }
+
+  setImportName(value: string | undefined): void {
+    this._importName = value;
+  }
+
+  constructor(type: OmniUnknownType, lowerBound: Type<OmniType> | undefined, implementation: boolean | undefined) {
+    super();
+    this.type = type;
+    this.lowerBound = lowerBound;
+    this.implementation = implementation;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitWildcardType(this, visitor);
+  }
+}
 
 /**
  * TODO: Remove this, and move the functionality of deciding way to render to the renderer itself?
@@ -114,7 +160,7 @@ export class GenericType<BT extends OmniGenericTargetType | OmniHardcodedReferen
   genericArguments: Type<OmniType>[];
 
   /**
-   * A getter of kindness to make it compliant to the reglar Java.Type node.
+   * A getter of kindness to make it compliant to the regular Java Type node.
    */
   get omniType(): BT {
     return this.baseType.omniType;
@@ -1031,7 +1077,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   readonly valueType: OmniUnknownType;
   readonly mapType: OmniDictionaryType;
 
-  constructor() {
+  constructor(options: JavaOptions) {
     super();
 
     // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
@@ -1055,13 +1101,18 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     const keyParameterIdentifier = new Identifier('key');
     const valueParameterIdentifier = new Identifier('value');
 
-    // NOTE: This should NEVER be on a field. But it should be moved by later transformers!
-    const fieldAnnotations = new AnnotationList(new Annotation(
-      new RegularType({
-        kind: OmniTypeKind.HARDCODED_REFERENCE,
-        fqn: 'com.fasterxml.jackson.annotation.JsonAnyGetter',
-      }),
-    ));
+    const fieldAnnotations = new AnnotationList();
+
+    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+
+      // NOTE: This should NEVER be on a field. But it should be moved by later transformers!
+      fieldAnnotations.children.push(new Annotation(
+        new RegularType({
+          kind: OmniTypeKind.HARDCODED_REFERENCE,
+          fqn: JACKSON_JSON_ANY_GETTER,
+        }),
+      ));
+    }
 
     const additionalPropertiesField = new Field(
       JavaAstUtils.createTypeNode(this.mapType, false),
@@ -1103,14 +1154,16 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       ),
     );
 
-    this.adderMethod.signature.annotations = new AnnotationList(
-      new Annotation(
+    this.adderMethod.signature.annotations = new AnnotationList();
+
+    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+      this.adderMethod.signature.annotations.children.push(new Annotation(
         new RegularType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
-          fqn: 'com.fasterxml.jackson.annotation.JsonAnySetter',
+          fqn: JACKSON_JSON_ANY_SETTER,
         }),
-      ),
-    );
+      ));
+    }
 
     this.children = [
       additionalPropertiesField,
@@ -1269,9 +1322,9 @@ export class TernaryExpression extends AbstractJavaNode {
 }
 
 export class ImportStatement extends AbstractJavaNode {
-  type: RegularType<OmniType>;
+  type: RegularType | WildcardType;
 
-  constructor(type: RegularType<OmniType>) {
+  constructor(type: RegularType | WildcardType) {
     super();
     this.type = type;
   }
@@ -1420,6 +1473,13 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
     this.getters = [];
     this.methods = [];
 
+    const fieldAnnotations = new AnnotationList();
+    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+      fieldAnnotations.children.push(new Annotation(
+        new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
+      ));
+    }
+
     const untypedField = new Field(
       new RegularType({
         kind: OmniTypeKind.UNKNOWN,
@@ -1430,11 +1490,7 @@ export class RuntimeTypeMapping extends AbstractJavaNode {
         new Modifier(ModifierType.FINAL),
       ),
       undefined,
-      new AnnotationList(
-        new Annotation(
-          new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.annotation.JsonValue'}),
-        ),
-      ),
+      fieldAnnotations,
     );
     const untypedGetter = new FieldBackedGetter(
       untypedField,

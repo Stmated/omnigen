@@ -1,12 +1,13 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
   OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import * as Java from '../ast/index.js';
-import {AnnotationList, ModifierType} from '../ast/index.js';
+import * as Java from '../ast/index.ts';
+import {AnnotationList, ModifierType} from '../ast/index.ts';
 import {VisitorFactoryManager} from '@omnigen/core-util';
+import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
 
 export interface StackInfo {
   cu: Java.CompilationUnit;
@@ -145,7 +146,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
 
           if (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
             // TODO: This is locked to Jackson, and needs to be abstracted somehow
-            return it.type.omniType.fqn == 'com.fasterxml.jackson.annotation.JsonValue';
+            return it.type.omniType.fqn == JACKSON_JSON_VALUE;
           }
 
           return false;

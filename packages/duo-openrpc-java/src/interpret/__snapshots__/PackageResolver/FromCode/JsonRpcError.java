@@ -1,15 +1,13 @@
 package some.base.pkg.errors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
  * Generic class to describe the JsonRpc error inside an error response
  */
 public class JsonRpcError {
   private final Integer code;
-  private final JsonNode data;
+  private final Object data;
   private final String message;
-  public JsonRpcError(Integer code, String message, JsonNode data) {
+  public JsonRpcError(Integer code, String message, Object data) {
     if (code != null) {
       this.code = code;
     } else {
@@ -27,7 +25,7 @@ public class JsonRpcError {
     return this.code;
   }
 
-  public JsonNode getData() {
+  public Object getData() {
     return this.data;
   }
 

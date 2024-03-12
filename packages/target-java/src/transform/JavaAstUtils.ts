@@ -41,12 +41,18 @@ export class JavaAstUtils {
     }
   }
 
-  public static createTypeNode<T extends OmniType>(type: T, implementation?: boolean): Java.RegularType<T> | Java.GenericType {
+  public static createTypeNode<T extends OmniType>(type: T, implementation?: boolean): Java.RegularType<T> | Java.GenericType | Java.WildcardType {
 
     if (type.kind == OmniTypeKind.DICTIONARY) {
       return this.createMapTypeNode(type, implementation);
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       return this.createGenericTargetTypeNode(type, implementation);
+    } else if (type.kind == OmniTypeKind.UNKNOWN) {
+      if (type.lowerBound) {
+        return new Java.WildcardType(type, JavaAstUtils.createTypeNode(type.lowerBound, implementation), implementation);
+      } else {
+        return new Java.WildcardType(type, undefined, implementation);
+      }
     } else {
       return new Java.RegularType<T>(type, implementation);
     }

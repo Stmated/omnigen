@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
   AstNode,
   CompositionKind,
@@ -18,7 +18,7 @@ import {
 import * as Java from '../ast/index.ts';
 import {JavaAstRootNode, Modifier, ModifierList, ModifierType} from '../ast/index.ts';
 import {JavaUtil} from '../util/index.ts';
-import {JavaAstUtils} from './JavaAstUtils.js';
+import {JavaAstUtils} from './JavaAstUtils.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';
 
@@ -107,11 +107,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
       if (type.compositionKind == CompositionKind.XOR || (type.name && isEdgeType)) {
-
-        const subType = JavaUtil.asSubType(type);
-        if (subType) {
-          return this.transformSubType(model, subType, undefined, options, root);
-        }
+        return this.transformSubType(model, type, undefined, options, root);
       }
 
     } else if (type.kind == OmniTypeKind.OBJECT) {

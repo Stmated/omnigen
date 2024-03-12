@@ -1,8 +1,12 @@
 import {
   AstNode,
   CompositionKind,
-  LiteralValue, OmniCompositionAndType, OmniCompositionNotType, OmniCompositionOrType,
-  OmniCompositionType, OmniCompositionXorType,
+  LiteralValue,
+  OmniCompositionAndType,
+  OmniCompositionNotType,
+  OmniCompositionOrType,
+  OmniCompositionType,
+  OmniCompositionXorType,
   OmniInterfaceOrObjectType,
   OmniModel,
   OmniObjectType,
@@ -16,8 +20,8 @@ import {
   PackageOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options/index.ts';
-import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index.ts';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options/index.ts';
+import {DefaultJavaVisitor} from '../visit/index.ts';
 import * as Java from '../ast/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
@@ -36,12 +40,12 @@ export type JavaSubTypeCapableType =
   OmniSubTypeCapableType
   | OmniCompositionType<OmniSubTypeCapableType>;
 
-  // | JavaSubXOR;
+// | JavaSubXOR;
 
 // FIX: IT MUST ONLY BE POSSIBLE TO HAVE COMPOSITION KIND XOR!
 
 export type JavaSuperTypeCapableType =
-  Exclude<OmniSuperTypeCapableType, {kind: typeof OmniTypeKind.COMPOSITION}>
+  Exclude<OmniSuperTypeCapableType, { kind: typeof OmniTypeKind.COMPOSITION }>
   | OmniCompositionAndType<JavaSuperTypeCapableType>
   | OmniCompositionOrType<JavaSuperTypeCapableType>
   | OmniCompositionXorType<JavaSuperTypeCapableType>
@@ -129,7 +133,7 @@ export class JavaUtil {
 
   /**
    * TODO: This should be delayed until rendering. It is up to the rendering to render a type.
-   *        Prime example being generics, which right now is hard-coded into strings here. Bad. Local type names are not respected.
+   *        Prime example being generics and lower bound generics, which right now is hard-coded into strings here. Bad. Local type names are not respected.
    *
    * @param args
    */
@@ -176,7 +180,7 @@ export class JavaUtil {
           // Return the common denominator instead. That is this static type array's "representation" in the code.
           javaType = JavaUtil.getName({...args, type: args.type.commonDenominator});
         } else {
-          javaType = this.getUnknownType(UnknownKind.OBJECT);
+          javaType = this.getUnknownTypeString(UnknownKind.OBJECT, args.options);
         }
 
         if (args.withSuffix === false) {
@@ -197,7 +201,7 @@ export class JavaUtil {
       }
       case OmniTypeKind.UNKNOWN: {
         const unknownType = args.type.unknownKind ?? args.options?.unknownType;
-        const unknownName = JavaUtil.getUnknownType(unknownType);
+        const unknownName = JavaUtil.getUnknownTypeString(unknownType, args.options);
         if (!args.withPackage) {
           return JavaUtil.cleanClassName(unknownName, args.withSuffix);
         } else {
@@ -377,6 +381,7 @@ export class JavaUtil {
         return boxed ? 'java.lang.Long' : 'long';
       case OmniPrimitiveKind.DECIMAL:
       case OmniPrimitiveKind.DOUBLE:
+        return boxed ? 'java.lang.Double' : 'double';
       case OmniPrimitiveKind.NUMBER:
         return boxed ? 'java.lang.Number' : 'double';
       case OmniPrimitiveKind.NULL:
@@ -447,10 +452,18 @@ export class JavaUtil {
     }
   }
 
-  private static getUnknownType(unknownType: UnknownKind = DEFAULT_JAVA_OPTIONS.unknownType): string {
-    switch (unknownType) {
+  /**
+   * TODO: REMOVE! Should be handled by the later JavaRenderer, specific nodes for specific type
+   */
+  public static getUnknownTypeString(unknownKind: UnknownKind = DEFAULT_JAVA_OPTIONS.unknownType, options: JavaOptions | undefined): string {
+    switch (unknownKind) {
       case UnknownKind.MUTABLE_OBJECT:
-        return 'com.fasterxml.jackson.databind.JsonNode';
+        if (!options || options.serializationLibrary == SerializationLibrary.JACKSON) {
+          return 'com.fasterxml.jackson.databind.JsonNode';
+        } else {
+          // NOTE: Should probably be a map instead. But additionalProperties becomes `Map<String, Map<String, Object>>` which is a bit weird.
+          return 'java.lang.Object';
+        }
       case UnknownKind.MAP:
         return 'java.util.Map<String, Object>';
       case UnknownKind.OBJECT:
@@ -620,66 +633,22 @@ export class JavaUtil {
         return true;
       }
 
-      const asSubType = JavaUtil.asSubType(superType);
-      if (asSubType) {
+      if (JavaUtil.asSubType(superType)) {
 
         // The supertype is also a subtype which we can keep searching upwards in
-        return JavaUtil.superMatches(model, asSubType, predicate);
+        return JavaUtil.superMatches(model, superType, predicate);
       }
     }
 
     return false;
   }
 
-  public static asSubType(type: OmniType): JavaSubTypeCapableType | undefined {
-
-    if (type.kind == OmniTypeKind.COMPOSITION) {
-
-      // NOTE: This conversion is not necessarily true, the generics need to be improved to be trusted
-      const isSubTypes = type.types.map(it => it.kind == OmniTypeKind.PRIMITIVE || !!JavaUtil.asSubType(it));
-      if (isSubTypes.includes(false)) {
-
-        // This might seem confusing, when you call "asSuperType" on a composition but get back undefined.
-        // This method is supposed to be safe to call with anything though, but we log this occasion.
-        logger.debug(`There is a non-subtype type inside composition ${OmniUtil.describe(type)}`);
-        return undefined;
-      }
-
-      return type as any; // as OmniCompositionType<JavaSubTypeCapableType>;
-    }
-
+  public static asSubType(type: OmniType): type is JavaSubTypeCapableType {
     return OmniUtil.asSubType(type);
   }
 
-  public static asSuperType(type: OmniType | undefined): JavaSuperTypeCapableType | undefined {
-
-    if (!type) {
-      return undefined;
-    }
-
-    if (type.kind == OmniTypeKind.COMPOSITION) {
-
-      const anyNotSuper = type.types.find(it => JavaUtil.asSuperType(it) === undefined);
-      if (anyNotSuper) {
-        throw new Error(`There was a non-supertype inside the composition ${OmniUtil.describe(type)}`);
-      }
-
-      return type as JavaSuperTypeCapableType;
-    }
-
-    // NOTE: Would be good to get rid of this cast? Why is it not recognized?
-    const omniSuperType = OmniUtil.asSuperType(type);
-    if (omniSuperType) {
-      if (omniSuperType.kind == OmniTypeKind.COMPOSITION) {
-        if (omniSuperType.compositionKind == CompositionKind.XOR) {
-          return omniSuperType;
-        }
-
-        return undefined;
-      }
-    }
-
-    return omniSuperType;
+  public static asSuperType(type: OmniType | undefined, silent = true): type is JavaSuperTypeCapableType {
+    return OmniUtil.asSuperType(type, silent);
   }
 
   public static getFlattenedSuperTypes(type: JavaSuperTypeCapableType): JavaSuperTypeCapableType[] {
@@ -688,9 +657,8 @@ export class JavaUtil {
 
       const superTypes: JavaSuperTypeCapableType[] = [];
       for (const t of type.types) {
-        const asSuperType = JavaUtil.asSuperType(t);
-        if (asSuperType) {
-          superTypes.push(...JavaUtil.getFlattenedSuperTypes(asSuperType));
+        if (JavaUtil.asSuperType(t)) {
+          superTypes.push(...JavaUtil.getFlattenedSuperTypes(t));
         }
       }
 
@@ -737,9 +705,9 @@ export class JavaUtil {
 
     if (returnUnwrapped) {
       // This is a single type, and if it's an object, then it's something we inherit from.
-      return JavaUtil.asSuperType(extendedUnwrapped);
+      return JavaUtil.asSuperType(extendedUnwrapped) ? extendedUnwrapped : undefined;
     } else {
-      return JavaUtil.asSuperType(subType.extendedBy);
+      return JavaUtil.asSuperType(subType.extendedBy) ? subType.extendedBy : undefined;
     }
   }
 
@@ -969,7 +937,7 @@ export class JavaUtil {
       const superClass = JavaUtil.getSuperClassOfSubType(model, pointer);
       if (superClass) {
         path.push(superClass);
-        pointer = JavaUtil.asSubType(superClass);
+        pointer = JavaUtil.asSubType(superClass) ? superClass : undefined;
       } else {
         break;
       }

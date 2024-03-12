@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trustly.com/schemas/enum_inheritance",
+  "$id": "https://omnigen.com/schemas/enum_inheritance",
   "definitions": {
 
     "Kind1": {

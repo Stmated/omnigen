@@ -1,6 +1,7 @@
 import {JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
 import {expect, test, describe, vi} from 'vitest';
+import {DEFAULT_JAVA_OPTIONS, SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
 
 describe('Error-Schema', () => {
 
@@ -47,7 +48,9 @@ describe('Error-Schema', () => {
 
   test('ErrorStructure-1.1', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', {});
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', {
+      javaOptions: {...DEFAULT_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
+    });
 
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
     expect(errorResponse.foundFields).toEqual(['error', 'id']);

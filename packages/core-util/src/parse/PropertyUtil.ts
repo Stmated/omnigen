@@ -134,6 +134,7 @@ export class PropertyUtil {
         );
 
         information.byPropertyName[propertyName] = {
+          propertyName: propertyName,
           properties: commonPropertiesWithSameName,
           propertyDiffs: propertyEquality.propertyDiffs,
           typeDiffs: propertyEquality.typeDiffs,

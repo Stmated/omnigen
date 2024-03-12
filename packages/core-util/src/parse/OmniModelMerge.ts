@@ -14,13 +14,13 @@ import {TypeOwner} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export interface Replacement<T extends TypeOwner<OmniType>> {
+export interface Replacement<T extends TypeOwner> {
   root: T;
   from: OmniType;
   to: OmniType;
 }
 
-interface ReplacementOption<T extends TypeOwner<OmniType>> {
+interface ReplacementOption<T extends TypeOwner> {
   root: T;
   from: OmniType;
 }
@@ -36,7 +36,7 @@ interface ReplacementOption<T extends TypeOwner<OmniType>> {
  */
 export class OmniModelMerge {
 
-  public static getReplacements<T extends TypeOwner<OmniType>>(...roots: T[]): Replacement<T>[] {
+  public static getReplacements<T extends TypeOwner>(...roots: T[]): Replacement<T>[] {
 
     const replacements: Replacement<T>[] = [];
     const collections = new Map<T, BFSTraverseContext[]>();
@@ -62,8 +62,8 @@ export class OmniModelMerge {
       parent: undefined,
     };
 
-    const previousContexts = new Map<TypeOwner<OmniType>, BFSTraverseContext>();
-    const hashMaps = new Map<TypeOwner<OmniType>, Map<OmniType, string>>();
+    const previousContexts = new Map<TypeOwner, BFSTraverseContext>();
+    const hashMaps = new Map<TypeOwner, Map<OmniType, string>>();
     const optionsMap = new Map<string, ReplacementOption<T>[]>();
 
     // Keep going while there are multiple models with types left.

@@ -1,10 +1,11 @@
-import {AstNode, AstVisitor, OmniPrimitiveKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/core';
+import {AstNode, AstVisitor, OmniPrimitiveKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
 import * as Java from '../ast/index.ts';
 import {GenericTypeDeclarationList, TokenType} from '../ast/index.ts';
 import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index.ts';
 import {JavaOptions} from '../options/index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '@omnigen/core-util';
+import {JavaUtil} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -470,10 +471,30 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
     visitRegularType: node => {
       const localName = node.getLocalName();
       if (localName) {
-        // return `${localName} /*${OmniUtil.describe(node.omniType)}*/`;
         return localName;
       } else {
         throw new Error(`Local name must be set. Package name transformer not ran for ${OmniUtil.describe(node.omniType)}`);
+      }
+    },
+
+    visitWildcardType: (node, visitor) => {
+
+      const unknownKind = (node.omniType.kind == OmniTypeKind.UNKNOWN) ? node.omniType.unknownKind : undefined;
+
+      let baseString: string;
+      if (node.omniType.kind == OmniTypeKind.UNKNOWN && node.omniType.unknownKind == UnknownKind.WILDCARD) {
+        baseString = JavaUtil.getUnknownTypeString(unknownKind, options);
+      } else {
+
+        // The wildcard might be a generic type like ObjectNode, or a Map. Then `localName` is populated.
+        baseString = node.getLocalName() ?? JavaUtil.getUnknownTypeString(unknownKind, options);
+      }
+
+      if (node.lowerBound) {
+        const lowerBoundString = render(node.lowerBound, visitor);
+        return `${baseString} extends ${lowerBoundString}`;
+      } else {
+        return `${baseString}`;
       }
     },
 

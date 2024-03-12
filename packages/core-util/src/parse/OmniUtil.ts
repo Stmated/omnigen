@@ -3,9 +3,9 @@ import {
   CompositionKind,
   LiteralValue,
   OMNI_GENERIC_FEATURES,
+  OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniArrayType,
-  OmniCompositionType, OmniDecoratingType,
   OmniDictionaryType,
   OmniEnumType,
   OmniExternalModelReferenceType,
@@ -19,6 +19,7 @@ import {
   OmniOutput,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
+  OmniPrimitiveNullableType,
   OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
@@ -59,7 +60,7 @@ export class OmniUtil {
    * TODO: Remove in favor of OmniModel visitor (make types into classes)
    */
   public static visitTypesDepthFirst<R>(
-    input: TypeOwner<OmniType> | undefined,
+    input: TypeOwner | undefined,
     onDown?: DFSTraverseCallback<R>,
     onUp?: DFSTraverseCallback<R>,
     onlyOnce = true,
@@ -71,9 +72,9 @@ export class OmniUtil {
    * TODO: Remove in favor of OmniModel visitor (make types into classes)
    */
   public static visitTypesBreadthFirst<R>(
-    input: TypeOwner<OmniType> | undefined,
+    input: TypeOwner | TypeOwner[] | undefined,
     onDown: BFSTraverseCallback<R>,
-    visitOnce = true,
+    visitOnce = true
   ): R | undefined {
     return new OmniTypeVisitor().visitTypesBreadthFirst(input, onDown, visitOnce);
   }
@@ -167,18 +168,37 @@ export class OmniUtil {
     return type as SmartUnwrappedType<T>;
   }
 
-  public static asSubType(type: OmniType | undefined): OmniSubTypeCapableType | undefined {
+  public static asSubType(type: OmniType | undefined): type is OmniSubTypeCapableType {
 
     if (!type) {
-      return undefined;
+      return false;
     }
 
     if (type.kind == OmniTypeKind.OBJECT || type.kind == OmniTypeKind.ENUM || type.kind == OmniTypeKind.INTERFACE) {
-      return type;
+      return true;
     }
 
-    return undefined;
+    if (type.kind == OmniTypeKind.COMPOSITION) {
 
+      for (const child of type.types) {
+
+        if (!OmniUtil.asSubType(child)) {
+
+          logger.debug(`There is a non-supertype type (${OmniUtil.describe(child)}) inside composition '${OmniUtil.describe(type)}'`);
+          return false;
+        }
+      }
+
+      // NOTE: This conversion is not necessarily true, the generics need to be improved to be trusted
+      if (type.types.some(it => !OmniUtil.asSubType(it))) { // it.kind == OmniTypeKind.PRIMITIVE || !!JavaUtil.asSubType(it))
+        logger.debug(`There is a non-subtype type inside composition ${OmniUtil.describe(type)}`);
+        return false;
+      } else {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public static asGenericSuperType(type: OmniType | undefined): OmniSuperGenericTypeCapableType | undefined {
@@ -206,10 +226,10 @@ export class OmniUtil {
     return undefined;
   }
 
-  public static asSuperType(type: OmniType | undefined): OmniSuperTypeCapableType | undefined {
+  public static asSuperType(type: OmniType | undefined, silent = true): type is OmniSuperTypeCapableType {
 
     if (!type) {
-      return undefined;
+      return false;
     }
 
     if (type.kind == OmniTypeKind.OBJECT
@@ -217,31 +237,19 @@ export class OmniUtil {
       || type.kind == OmniTypeKind.ENUM
       || type.kind == OmniTypeKind.INTERFACE
       || type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-      return type;
+      return true;
     }
 
     if (type.kind == OmniTypeKind.PRIMITIVE && !type.nullable && type.primitiveKind != OmniPrimitiveKind.VOID && type.primitiveKind != OmniPrimitiveKind.NULL) {
-      return type;
+      return true;
     }
 
     if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      const of = OmniUtil.asSuperType(type.of);
-      if (of) {
-
-        // NOTE: This cast should not exist here, work needs to be done to make this all-the-way generic.
-        return type as OmniExternalModelReferenceType<typeof of>;
-      } else {
-        return undefined;
-      }
+      return OmniUtil.asSuperType(type.of);
     }
 
     if (type.kind == OmniTypeKind.DECORATING) {
-      const of = OmniUtil.asSuperType(type.of);
-      if (of) {
-        return type as OmniDecoratingType<typeof of>;
-      } else {
-        return undefined;
-      }
+      return OmniUtil.asSuperType(type.of);
     }
 
     if (type.kind == OmniTypeKind.COMPOSITION) {
@@ -253,15 +261,38 @@ export class OmniUtil {
 
           // This might seem confusing, when you call "asSuperType" on a composition but get back undefined.
           // This method is supposed to be safe to call with anything though, but we log this occasion.
-          logger.debug(`There is a non-supertype type (${OmniUtil.describe(child)}) inside composition '${OmniUtil.describe(type)}'`);
-          return undefined;
+          const message = `There is a non-supertype type (${OmniUtil.describe(child)}) inside composition '${OmniUtil.describe(type)}'`;
+          if (silent) {
+            logger.debug(message);
+            return false;
+          } else {
+            throw new Error(message);
+          }
         }
       }
 
-      return type as OmniCompositionType<OmniSuperTypeCapableType>;
+      return true;
     }
 
-    return undefined;
+    return false;
+  }
+
+  public static isGenericSuperType(type: OmniSuperTypeCapableType): type is OmniSuperGenericTypeCapableType {
+
+    if (type.kind == OmniTypeKind.GENERIC_TARGET
+      || type.kind == OmniTypeKind.COMPOSITION
+      || type.kind == OmniTypeKind.ENUM
+      || type.kind == OmniTypeKind.HARDCODED_REFERENCE
+      || type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE
+      || type.kind == OmniTypeKind.PRIMITIVE
+    ) {
+
+      // These cannot be made generic.
+      // (maybe external model reference could in the future -- or it will be removed in favor of normalizing all referenced documents, and remove the type kind)
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -329,6 +360,14 @@ export class OmniUtil {
 
     if (type) {
       const unwrapped = OmniUtil.getUnwrappedType(type);
+      if (unwrapped.kind == OmniTypeKind.COMPOSITION) {
+        if (unwrapped.compositionKind == CompositionKind.AND) {
+          unwrapped.types;
+        }
+
+        return [unwrapped];
+      }
+
       if (unwrapped.extendedBy) {
         if (unwrapped.extendedBy.kind == OmniTypeKind.COMPOSITION) {
           if (unwrapped.extendedBy.compositionKind == CompositionKind.AND) {
@@ -350,8 +389,16 @@ export class OmniUtil {
 
     const map = new Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]>();
     OmniUtil.visitTypesDepthFirst(model, ctx => {
-      const subType = OmniUtil.getUnwrappedType(OmniUtil.asSubType(ctx.type));
+      if (!OmniUtil.asSubType(ctx.type)) {
+        return;
+      }
+
+      const subType = OmniUtil.getUnwrappedType(ctx.type);
       if (!subType) {
+        return;
+      }
+
+      if (subType.kind == OmniTypeKind.COMPOSITION) {
         return;
       }
 
@@ -418,9 +465,8 @@ export class OmniUtil {
       if (superTypes) {
         path.push(...superTypes);
         for (const superType of superTypes) {
-          const superAsSub = OmniUtil.asSubType(superType);
-          if (superAsSub) {
-            queue.push(superAsSub);
+          if (OmniUtil.asSubType(superType)) {
+            queue.push(superType);
           }
         }
       }
@@ -593,7 +639,7 @@ export class OmniUtil {
     return undefined;
   }
 
-  public static isNullableType(type: OmniType): boolean {
+  public static isNullableType(type: OmniType): type is OmniPrimitiveNullableType | Exclude<typeof type, OmniPrimitiveType> {
 
     if (type.kind == OmniTypeKind.PRIMITIVE) {
       if (type.primitiveKind == OmniPrimitiveKind.NULL || type.primitiveKind == OmniPrimitiveKind.VOID) {
@@ -775,9 +821,8 @@ export class OmniUtil {
           const decrementDepthBy = (parent.extendedBy.kind == OmniTypeKind.COMPOSITION) ? 0 : 1;
           const found = OmniUtil.swapType(parent.extendedBy, from, to, maxDepth - decrementDepthBy);
           if (found) {
-            const inheritableReplacement = OmniUtil.asSuperType(to);
-            if (inheritableReplacement) {
-              parent.extendedBy = inheritableReplacement;
+            if (OmniUtil.asSuperType(to)) {
+              parent.extendedBy = to;
             } else {
 
               // If the replacement is not a potential supertype, then we will not swap it.
@@ -799,9 +844,8 @@ export class OmniUtil {
       case OmniTypeKind.INTERFACE: {
         const found = OmniUtil.swapType(parent.of, from, to, maxDepth - 1);
         if (found) {
-          const inheritableReplacement = OmniUtil.asSuperType(to);
-          if (inheritableReplacement) {
-            parent.of = inheritableReplacement;
+          if (OmniUtil.asSuperType(to)) {
+            parent.of = to;
           } else {
             throw new Error(`Cannot replace, since the interface requires a replacement that is inheritable`);
           }
@@ -1694,7 +1738,7 @@ export class OmniUtil {
     return Naming.unwrap(a.name) == Naming.unwrap(b.name) ? {type: a} : undefined;
   }
 
-  public static mergeType<T extends OmniType>(from: T, to: T, lossless = true): T {
+  public static mergeType<T extends OmniType>(from: T, to: T, lossless = true, aggregate = false): T {
 
     if (from.kind == OmniTypeKind.OBJECT && to.kind == OmniTypeKind.OBJECT) {
 
@@ -1711,6 +1755,55 @@ export class OmniUtil {
             OmniUtil.mergeTwoPropertiesAndAddToClassType(fromProperty, toProperty, to);
           }
         }
+      }
+    } else if (from.kind == OmniTypeKind.PRIMITIVE && to.kind == OmniTypeKind.PRIMITIVE) {
+
+      const newNullable = (from.nullable || to.nullable) ?? false;
+      if (newNullable != to.nullable) {
+        if (newNullable && OmniUtil.isNullableType(to)) {
+          to.nullable = newNullable;
+        } else {
+          if (lossless) {
+            throw new Error(`Could not merge from ${OmniUtil.describe(from)} to ${OmniUtil.describe(to)} since one is nullable and the other is not`);
+          }
+        }
+      }
+
+      return OmniUtil.mergeTypeMeta(from, to, lossless, aggregate);
+    }
+
+    return to;
+  }
+
+  public static mergeTypeMeta<T extends OmniType>(from: T, to: typeof from, lossless = true, aggregate = false): typeof to {
+
+    to.title = to.title || from.title;
+
+    if (aggregate && to.description && from.description) {
+      to.description = `${to.description}, ${from.description}`;
+    } else {
+      to.description = to.description || from.description;
+    }
+
+    if (aggregate && to.summary && from.summary) {
+      to.summary = `${to.summary}, ${from.summary}`;
+    } else {
+      to.summary = to.summary || from.summary;
+    }
+
+    to.examples = (to.examples ?? []).concat(from.examples || []);
+
+    if (aggregate && to.debug && from.debug) {
+      to.debug = `${to.debug}, ${from.debug}`;
+    } else {
+      to.debug = to.debug || from.debug;
+    }
+
+    if (from.accessLevel !== to.accessLevel) {
+      if (lossless) {
+        throw new Error(`Could not merge from ${OmniUtil.describe(from)} to ${OmniUtil.describe(to)} since access levels are different`);
+      } else {
+        to.accessLevel = Math.max(to.accessLevel ?? OmniAccessLevel.PRIVATE, from.accessLevel ?? OmniAccessLevel.PRIVATE);
       }
     }
 

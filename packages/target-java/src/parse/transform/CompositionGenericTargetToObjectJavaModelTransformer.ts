@@ -7,6 +7,9 @@ import {JavaUtil} from '../../util/index.ts';
  *
  * Examples are:
  * * When a generic target is a composition, which would mean that we do not have any concrete implementation that can handle things like deserialization.
+ *
+ * NOTE:
+ * * This could likely be moved to be a 2nd pass transformer and add a flag to TargetFeature
  */
 export class CompositionGenericTargetToObjectJavaModelTransformer implements OmniModelTransformer {
 
@@ -50,14 +53,13 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
     for (const composed of type.types) {
 
-      const asSuperType = JavaUtil.asSuperType(composed);
-      if (!asSuperType) {
+      if (!JavaUtil.asSuperType(composed)) {
         throw new Error(
           `Not allowed '${OmniUtil.describe(composed)}' of '${OmniUtil.describe(parent)}' as a ${type.compositionKind}-composition entry since it must be super-type compatible`,
         );
       }
 
-      superTypeComposition.types.push(asSuperType);
+      superTypeComposition.types.push(composed);
     }
 
     // Move the name to the new object, and remove the name from the composition, or it will likely clash.

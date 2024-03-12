@@ -10,7 +10,7 @@ const logger = LoggerFactory.create(import.meta.url);
 interface CompilationUnitInfo {
   cu: Java.CompilationUnit;
   packageName: string;
-  addedTypeNodes: Java.RegularType<OmniType>[];
+  addedTypeNodes: (Java.RegularType | Java.WildcardType)[];
   importNameMap: Map<OmniType, string>;
 }
 
@@ -31,13 +31,9 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       node: args.root,
       options: args.options,
     }];
-    for (const external of all) {
 
-      // Get and move all type infos to the global one.
-      this.getTypeNameInfos(external, objectStack)
-        .forEach((v, k) => {
-          typeNameMap.set(k, v);
-        });
+    for (const external of all) {
+      this.getTypeNameInfos(external, objectStack).forEach((v, k) => typeNameMap.set(k, v));
     }
 
     if (objectStack.length > 0 || cuInfoStack.length > 0) {
@@ -75,36 +71,48 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclaration(node, visitor);
       },
 
+      visitWildcardType: (node, visitor) => {
+
+        AbstractJavaAstTransformer.JAVA_VISITOR.visitWildcardType(node, visitor);
+        this.setLocalNameAndImport(node, node.implementation, cuInfoStack, typeNameMap, args.options);
+      },
+
       visitRegularType: node => {
-
-        const cuInfo = cuInfoStack[cuInfoStack.length - 1];
-
-        if (cuInfo.addedTypeNodes.includes(node)) {
-          // This type node has already been handled.
-          // It has probably been added to multiple locations in the tree.
-          return;
-        }
-
-        if (cuInfoStack.length == 0) {
-          throw new Error(`There should be at least one level of compilation units before encountering a type`);
-        }
-
-        const unwrapped = OmniUtil.getUnwrappedType(node.omniType);
-        const typeNameInfo = typeNameMap.get(unwrapped);
-
-        if (typeNameInfo) {
-          this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, args.options);
-        } else {
-          this.setLocalNameAndImportForUnknownTypeName(node, cuInfo, typeNameMap, args.options);
-        }
-
-        cuInfo.addedTypeNodes.push(node);
+        this.setLocalNameAndImport(node, node.implementation, cuInfoStack, typeNameMap, args.options);
       },
     }));
   }
 
+  private setLocalNameAndImport(
+    node: Java.RegularType | Java.WildcardType,
+    implementation: boolean | undefined,
+    cuInfoStack: CompilationUnitInfo[],
+    typeNameMap: Map<OmniType, TypeNameInfo>,
+    options: JavaAndTargetOptions,
+  ): void {
+
+    const cuInfo = cuInfoStack[cuInfoStack.length - 1];
+    if (cuInfo.addedTypeNodes.includes(node)) {
+      // This type node has already been handled.
+      // It has probably been added to multiple locations in the tree.
+      return;
+    }
+
+    const unwrapped = OmniUtil.getUnwrappedType(node.omniType);
+    const typeNameInfo = typeNameMap.get(unwrapped);
+
+    if (typeNameInfo) {
+      this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, options);
+    } else {
+      this.setLocalNameAndImportForUnknownTypeName(node, implementation, cuInfo, typeNameMap, options);
+    }
+
+    cuInfo.addedTypeNodes.push(node);
+  }
+
   private setLocalNameAndImportForUnknownTypeName(
-    node: Java.RegularType<OmniType>,
+    node: Java.RegularType | Java.WildcardType,
+    implementation: boolean | undefined,
     cuInfo: CompilationUnitInfo,
     typeNameMap: Map<OmniType, TypeNameInfo>,
     options: JavaAndTargetOptions,
@@ -114,10 +122,10 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       type: node.omniType,
       options: options,
       withPackage: false,
-      implementation: node.implementation,
+      implementation: implementation,
       localNames: typeNameMap,
     });
-    const nodeImportName = JavaUtil.getClassNameForImport(node.omniType, options, node.implementation);
+    const nodeImportName = JavaUtil.getClassNameForImport(node.omniType, options, implementation);
 
     node.setLocalName(relativeLocalName);
 
@@ -133,7 +141,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
   private setLocalNameAndAddImportForKnownTypeName(
     typeNameInfo: TypeNameInfo,
-    node: Java.RegularType<OmniType>,
+    node: Java.RegularType | Java.WildcardType,
     cuInfo: CompilationUnitInfo,
     options: JavaAndTargetOptions,
   ): void {
@@ -167,7 +175,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     cuInfo: CompilationUnitInfo,
     options: JavaAndTargetOptions,
     nodeImportName: string,
-    node: Java.RegularType<OmniType>,
+    node: Java.RegularType | Java.WildcardType,
   ): void {
 
     const existing = cuInfo.cu.imports.children.find(it => {

@@ -9,7 +9,7 @@ import {
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 /**
- * If all target identifiers to a source have the same type, then replace the source identifiers with inline type.
+ * If all target identifiers to a source have the same type, then replace that source identifier with inline type.
  *
  * This could happen if the model had type literals as generics, but the target language does not support it.
  * Then the rendered type will be the common denominator primitive of the literal, and be the same everywhere.

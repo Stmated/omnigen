@@ -1,23 +1,31 @@
 import {
+  ModelTransformOptions,
+  OMNI_GENERIC_FEATURES,
+  OmniExternalModelReferenceType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
+  OmniModel,
   OmniModelTransformer,
+  OmniModelTransformerArgs,
   OmniPropertyOwner,
+  OmniSubTypeCapableType,
+  OmniSuperGenericTypeCapableType,
+  OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   ParserOptions,
+  PropertiesInformation,
+  PropertyDifference,
+  PropertyInformation,
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
-import {PropertyUtil} from '../PropertyUtil.js';
-import {OmniModelTransformerArgs} from '@omnigen/core';
-import {PropertyDifference} from '@omnigen/core';
-import {OmniUtil} from '../OmniUtil.js';
-import {EqualityFinder} from '../../equality/index.js';
-import {Naming} from '../Naming.js';
-import {Case, Sorters} from '../../util/index.js';
+import {PropertyUtil} from '../PropertyUtil.ts';
+import {OmniUtil} from '../OmniUtil.ts';
+import {EqualityFinder} from '../../equality/index.ts';
+import {Naming} from '../Naming.ts';
+import {Case, Sorters} from '../../util/index.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -43,16 +51,17 @@ export class GenericsModelTransformer implements OmniModelTransformer {
       return dependencySorter(aSubType, bSubType);
     });
 
+    const sourceToTargets = new Map<OmniGenericSourceType, OmniGenericTargetType[]>();
+
     for (const superType of superTypes) {
 
-      if (superType.kind == OmniTypeKind.GENERIC_TARGET
-        || superType.kind == OmniTypeKind.COMPOSITION
-        || superType.kind == OmniTypeKind.ENUM
-        || superType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
+      if (!OmniUtil.isGenericSuperType(superType)) {
         continue;
       }
 
       if (superType.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+
+        // Maybe external model reference could in the future -- or it will be removed in favor of normalizing all referenced documents, and remove the type kind
         continue;
       }
 
@@ -61,143 +70,239 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         continue;
       }
 
-      const commonProperties = PropertyUtil.getCommonProperties(
-        // We do not care *at all* if they have nothing in-common. Just nice if get one.
-        () => false,
-        pdiff => EqualityFinder.matchesPropDiff(pdiff, PropertyDifference.META),
+      this.attemptHoistToSuperType(superType, subTypes, sourceToTargets, args.model, args.options);
+    }
+  }
 
-        OMNI_GENERIC_FEATURES,
-        ...subTypes,
+  private attemptHoistToSuperType(
+    superType: Exclude<OmniSuperGenericTypeCapableType, OmniExternalModelReferenceType>,
+    subTypes: OmniSubTypeCapableType[],
+    sourceToTargets: Map<OmniGenericSourceType, OmniGenericTargetType[]>,
+    model: OmniModel,
+    options: ModelTransformOptions,
+  ) {
+
+    const commonProperties = PropertyUtil.getCommonProperties(
+      // We do not care *at all* if they have nothing in-common. Just nice if get one.
+      () => false,
+      pdiff => EqualityFinder.matchesPropDiff(pdiff, PropertyDifference.META),
+
+      OMNI_GENERIC_FEATURES,
+      ...subTypes,
+    );
+
+    const genericSource: OmniGenericSourceType<typeof superType> = {
+      kind: OmniTypeKind.GENERIC_SOURCE,
+      of: superType,
+      sourceIdentifiers: [],
+    };
+
+    const ownerToGenericTargetMap = new Map<OmniPropertyOwner, OmniGenericTargetType>();
+    const propertyNameExpansions = new Map<string, OmniGenericSourceIdentifierType[]>();
+    for (const propertyName in commonProperties.byPropertyName) {
+      if (!(propertyName in commonProperties.byPropertyName)) {
+        continue;
+      }
+
+      const info = commonProperties.byPropertyName[propertyName];
+
+      if (info.distinctTypes.length <= 1) {
+
+        // There are 1 or less distinct types, so we will not replace it with generics.
+        continue;
+      }
+
+      this.attemptHoistPropertyToGeneric(
+        superType,
+        genericSource,
+        commonProperties,
+        info,
+        ownerToGenericTargetMap,
+        propertyNameExpansions,
+        sourceToTargets,
+        model,
+        options,
       );
+    }
+  }
 
-      const genericSource: OmniGenericSourceType = {
-        kind: OmniTypeKind.GENERIC_SOURCE,
-        of: superType,
-        sourceIdentifiers: [],
-      };
+  private attemptHoistPropertyToGeneric(
+    superType: OmniSuperTypeCapableType,
+    genericSource: OmniGenericSourceType,
+    commonProperties: PropertiesInformation,
+    info: PropertyInformation,
+    ownerToGenericTargetMap: Map<OmniPropertyOwner, OmniGenericTargetType>,
+    propertyNameExpansions: Map<string, OmniGenericSourceIdentifierType[]>,
+    sourceToTargets: Map<OmniGenericSourceType, OmniGenericTargetType[]>,
+    model: OmniModel,
+    options: ModelTransformOptions,
+  ): void {
 
-      const ownerToGenericTargetMap = new Map<OmniPropertyOwner, OmniGenericTargetType>();
-      const propertyNameExpansions = new Map<string, OmniGenericSourceIdentifierType[]>();
-      for (const propertyName in commonProperties.byPropertyName) {
-        if (!(propertyName in commonProperties.byPropertyName)) {
+    const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(info.propertyName)}`;
+
+    const lowerBound = this.toGenericBoundType(info.commonType);
+    // if (lowerBound) {
+    //   if (expandedGenericSourceIdentifier) {
+    //     propertyNameExpansions.set(info.propertyName, [expandedGenericSourceIdentifier]);
+    //   }
+    // }
+
+    const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
+      kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
+      placeholderName: genericName,
+    };
+
+    if (lowerBound && lowerBound.kind == OmniTypeKind.GENERIC_TARGET) {
+
+      for (let i = 0; i < lowerBound.targetIdentifiers.length; i++) {
+        const lowerTarget = lowerBound.targetIdentifiers[i];
+        if (!OmniUtil.asSuperType(lowerTarget.type)) { // lowerTarget.type.kind == OmniTypeKind.UNKNOWN) {
+          continue;
+        }
+        if (lowerTarget.type.kind == OmniTypeKind.PRIMITIVE) {
+
+          // Creating generics like `? extends String` does not make much sense, though legal.
           continue;
         }
 
-        const info = commonProperties.byPropertyName[propertyName];
-        if (info.distinctTypes.length <= 1) {
-
-          // There are 1 or less distinct types, so we will not replace it with generics.
-          continue;
-        }
-
-        const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(propertyName)}`;
-
-        const lowerBound = this.toGenericBoundType(info.commonType, args, OMNI_GENERIC_FEATURES);
-        if (lowerBound) {
-          const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfPossible(
-            lowerBound,
-            genericSource,
-            args,
-            OMNI_GENERIC_FEATURES,
-          );
-          if (expandedGenericSourceIdentifier) {
-            propertyNameExpansions.set(propertyName, [expandedGenericSourceIdentifier]);
-          }
-        }
-
-        const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
-          kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-          placeholderName: genericName,
-          // knownEdgeTypes: info.distinctTypes,
+        lowerBound.targetIdentifiers[i] = {
+          ...lowerTarget,
+          type: {
+            kind: OmniTypeKind.UNKNOWN,
+            lowerBound: {...lowerTarget.type}, // This should maybe clone instead
+          },
         };
-
-        if (lowerBound) {
-          genericSourceIdentifier.lowerBound = lowerBound;
-        }
-
-        genericSource.sourceIdentifiers.push(genericSourceIdentifier);
-
-        if (!args.options.generificationBoxAllowed) {
-          if (info.properties.map(it => it.type).find(it => !OmniUtil.isGenericAllowedType(it))) {
-            logger.warn(`Skipping '${propertyName}' since some property types cannot be made generic`);
-            continue;
-          }
-        }
-
-        for (const property of info.properties) {
-
-          // Get or create the GenericTarget, which we found based on the property owner.
-          let genericTarget = ownerToGenericTargetMap.get(property.owner);
-          if (!genericTarget) {
-            genericTarget = {
-              kind: OmniTypeKind.GENERIC_TARGET,
-              source: genericSource,
-              targetIdentifiers: [],
-            };
-
-            if (ownerToGenericTargetMap.size == 0) {
-
-              // Swap all places that uses the superType with the new GenericSource.
-              // We do this for the first time we alter the GenericTarget, to do it as late as possible.
-              OmniUtil.swapType(args.model, superType, genericSource);
-            }
-
-            ownerToGenericTargetMap.set(property.owner, genericTarget);
-
-            if ('extendedBy' in property.owner) {
-
-              // Replace the extended by from the original type to the generic target type.
-              property.owner.extendedBy = genericTarget;
-            }
-          }
-
-          // TODO: Improve the readability and flexibility of this whole expansion thing.
-          //        Right now very hard-coded. Can only handle one expansion, and takes no heed to "UNKNOWN" types.
-          const expansions = propertyNameExpansions.get(propertyName);
-          if (expansions && expansions.length > 0) {
-
-            if (property.type.kind == OmniTypeKind.OBJECT) {
-              if (property.type.extendedBy && property.type.extendedBy.kind == OmniTypeKind.GENERIC_TARGET) {
-
-                // Let's expand the property's generic target identifiers into this current generic type.
-                // TODO: This should probably be done recursively somehow, so any depth is handled.
-                const targets = property.type.extendedBy.targetIdentifiers;
-                genericTarget.targetIdentifiers.push(...targets);
-              }
-            }
-          }
-
-          const targetIdentifier: OmniGenericTargetIdentifierType = {
-            kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-            // It will always find something in the map, but we do this to make the compiler happy.
-            type: property.type,
-            sourceIdentifier: genericSourceIdentifier,
-          };
-          genericTarget.targetIdentifiers.push(targetIdentifier);
-
-          // Remove the now generic property from the original property owner.
-          const idx = property.owner.properties.indexOf(property);
-          property.owner.properties.splice(idx, 1);
-        }
-
-        if ('properties' in genericSource.of) {
-          genericSource.of.properties.push({
-            name: propertyName,
-            type: genericSourceIdentifier,
-            owner: genericSource.of,
-          });
-        }
       }
     }
 
-    return;
+    if (lowerBound) {
+      genericSourceIdentifier.lowerBound = lowerBound;
+    }
+
+    // let targetIdentifierType: OmniType | undefined; // property.type
+    // if (genericSource.of.kind == OmniTypeKind.GENERIC_TARGET) {
+    //
+    //   let i = 0;
+    //   logger.info(`Hello`);
+    //   let newTargetIdentifier: OmniGenericTargetType | undefined = undefined;
+    //   // for (const nestedTarget of property.type.targetIdentifiers) {
+    //   //
+    //   //   if (ownerToGenericTargetMap.has(nestedTarget.type) || (nestedTarget.type.kind == OmniTypeKind.OBJECT && nestedTarget.type.abstract)) {
+    //   //
+    //   //     if (newTargetIdentifier === undefined) {
+    //   //
+    //   //       // Copy the target identifier so it is a new instance and not related to the previous.
+    //   //       // property.type
+    //   //       newTargetIdentifier = {
+    //   //         ...property.type,
+    //   //       };
+    //   //     }
+    //   //
+    //   //     // Now we can work with our specialized target type.
+    //   //     newTargetIdentifier.targetIdentifiers
+    //   //   }
+    //   // }
+    //
+    //   targetIdentifierType = newTargetIdentifier ?? property.type;
+    // } else {
+    //   targetIdentifierType = property.type;
+    // }
+
+    genericSource.sourceIdentifiers.push(genericSourceIdentifier);
+
+    if (!options.generificationBoxAllowed) {
+      if (info.properties.map(it => it.type).find(it => !OmniUtil.isGenericAllowedType(it))) {
+        logger.warn(`Skipping '${info.propertyName}' since some property types cannot be made generic`);
+        return;
+      }
+    }
+
+    for (const property of info.properties) {
+
+      // Get or create the GenericTarget, which we found based on the property owner.
+      let genericTarget = ownerToGenericTargetMap.get(property.owner);
+      if (!genericTarget) {
+        genericTarget = {
+          kind: OmniTypeKind.GENERIC_TARGET,
+          source: genericSource,
+          targetIdentifiers: [],
+        };
+
+        let targets = sourceToTargets.get(genericSource);
+        if (!targets) {
+          targets = [];
+          sourceToTargets.set(genericSource, targets);
+        }
+        targets.push(genericTarget);
+
+        if (ownerToGenericTargetMap.size == 0) {
+
+          // Swap all places that uses the superType with the new GenericSource.
+          // We do this for the first time we alter the GenericTarget, to do it as late as possible.
+          OmniUtil.swapType(model, superType, genericSource);
+        }
+
+        ownerToGenericTargetMap.set(property.owner, genericTarget);
+
+        if ('extendedBy' in property.owner) {
+
+          // Replace the extended by from the original type to the generic target type.
+          property.owner.extendedBy = genericTarget;
+        }
+      }
+
+      // TODO: Improve the readability and flexibility of this whole expansion thing.
+      //        Right now very hard-coded. Can only handle one expansion, and takes no heed to "UNKNOWN" types.
+      // const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfRequired(
+      //   property.type,
+      //   genericSource,
+      // );
+
+      // if (expandedGenericSourceIdentifier) {
+      //   let i = 0;
+      // }
+
+      // const expansions = propertyNameExpansions.get(info.propertyName);
+      // if (expansions && expansions.length > 0 && property.type.kind == OmniTypeKind.OBJECT && property.type.extendedBy && property.type.extendedBy.kind == OmniTypeKind.GENERIC_TARGET) {
+      //
+      //   // Let's expand the property's generic target identifiers into this current generic type.
+      //   // TODO: This should probably be done recursively somehow, so any depth is handled.
+      //   const targets = property.type.extendedBy.targetIdentifiers;
+      //   genericTarget.targetIdentifiers.push(...targets);
+      // }
+
+      const targetIdentifier: OmniGenericTargetIdentifierType = {
+        kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
+        type: property.type,
+        sourceIdentifier: genericSourceIdentifier,
+      };
+      genericTarget.targetIdentifiers.push(targetIdentifier);
+
+      // Remove the now generic property from the original property owner.
+      const idx = property.owner.properties.indexOf(property);
+      if (idx == -1) {
+        throw new Error(`Could not find property '${property.name}' in owner ${OmniUtil.describe(property.owner)}, something is wrong with the generic hoisting`);
+      }
+
+      property.owner.properties.splice(idx, 1);
+    }
+
+    if (genericSource.of.kind == OmniTypeKind.OBJECT) {
+      genericSource.of.properties.push({
+        name: info.propertyName,
+        type: genericSourceIdentifier,
+        owner: genericSource.of,
+      });
+    } else {
+
+      // Go back to info logging? Feels like this should have been filtered away earlier!
+      throw new Error(`Encountered ${OmniUtil.describe(genericSource.of)} as generic source, which cannot represent properties, so cannot move ${info.propertyName} there`);
+    }
   }
 
-  private expandLowerBoundGenericIfPossible(
+  private expandLowerBoundGenericIfRequired(
     lowerBound: OmniType,
     genericSource: OmniGenericSourceType,
-    args: OmniModelTransformerArgs<ParserOptions>,
-    targetFeatures: TargetFeatures,
   ): OmniGenericSourceIdentifierType | undefined {
 
     if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
@@ -225,7 +330,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     // To make it better and more exact to work with, we should replace with this:
     // <TData extends AbstractRequestParams, T extends JsonRpcRequest<TData>>
     const targetIdentifier = lowerBound.targetIdentifiers[0];
-    const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type, args, targetFeatures);
+    const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type); // , args, targetFeatures);
 
     const sourceDesc = OmniUtil.describe(targetIdentifier.sourceIdentifier);
     const targetDesc = OmniUtil.describe(targetIdentifier);
@@ -251,11 +356,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     return sourceIdentifier;
   }
 
-  private toGenericBoundType(
-    targetIdentifierType: OmniType | undefined,
-    args: OmniModelTransformerArgs<ParserOptions>,
-    targetFeatures: TargetFeatures,
-  ): OmniType | undefined {
+  private toGenericBoundType(targetIdentifierType: OmniType | undefined): OmniType | undefined {
 
     if (!targetIdentifierType || targetIdentifierType.kind == OmniTypeKind.UNKNOWN) {
       return undefined;

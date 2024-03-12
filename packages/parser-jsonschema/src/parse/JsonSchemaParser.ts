@@ -348,12 +348,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // This is not allowed in some languages. But it is up to the target language to decide how to handle it.
     if (extendedBy) {
 
-      const extendableType = OmniUtil.asSuperType(extendedBy);
-      if (!extendableType) {
+      if (!OmniUtil.asSuperType(extendedBy)) {
         throw new Error(`Not allowed to use '${OmniUtil.describe(extendedBy)}' as a super-type`);
       }
 
-      type.extendedBy = extendableType;
+      type.extendedBy = extendedBy;
     }
 
     return type;
@@ -368,11 +367,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       };
     } else if (schema.type == undefined && extendedBy) {
 
-      logger.debug(`No schema type found for ${schema.$id}, will check if can be deduced by: ${OmniUtil.describe(extendedBy)}`);
+      logger.silent(`No schema type found for ${schema.$id}, will check if can be deduced by: ${OmniUtil.describe(extendedBy)}`);
 
       extendedBy = OmniUtil.getUnwrappedType(extendedBy);
       if (extendedBy.kind == OmniTypeKind.COMPOSITION && extendedBy.compositionKind == CompositionKind.AND) {
-
+        // TODO: Allow XOR here? Since if all are primitive, that means they are the same
         const primitiveTypes: OmniPrimitiveType[] = [];
         const uniquePrimitiveKinds = new Set<OmniPrimitiveKind>();
         const otherTypes: OmniType[] = [];

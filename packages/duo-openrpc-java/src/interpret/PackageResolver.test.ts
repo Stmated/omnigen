@@ -1,10 +1,10 @@
 import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
-  DEFAULT_PACKAGE_OPTIONS,
+  DEFAULT_PACKAGE_OPTIONS, OmniPrimitiveKind,
   PackageOptions, TargetOptions,
 } from '@omnigen/core';
-import {DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '@omnigen/target-java';
+import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '@omnigen/target-java';
 import {describe, expect, test, vi} from 'vitest';
 
 describe('PackageResolver', () => {
@@ -15,6 +15,7 @@ describe('PackageResolver', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json', {
       modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false},
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniPrimitiveKind.DOUBLE},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -33,6 +34,7 @@ describe('PackageResolver', () => {
     const javaOptions: JavaOptions = {
       ...DEFAULT_JAVA_OPTIONS,
       includeGeneratedAnnotation: false,
+      serializationLibrary: SerializationLibrary.POJO,
     };
 
     const targetOptions: TargetOptions = {

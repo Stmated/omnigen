@@ -16,10 +16,13 @@ export interface OmniAnnotation {
   parameters: OmniParameter[];
 }
 
+/**
+ * Important that these levels are in the order of least visible to most visible.
+ */
 export enum OmniAccessLevel {
   PRIVATE,
-  PUBLIC,
   PACKAGE,
+  PUBLIC,
 }
 
 export enum OmniArrayKind {
@@ -89,6 +92,10 @@ export type OmniSubTypeCapableType =
   | OmniInterfaceType
   | OmniExternalModelReferenceType<OmniSubTypeCapableType>
   | OmniDecoratingType<OmniSubTypeCapableType>
+  | OmniCompositionAndType<OmniSubTypeCapableType>
+  | OmniCompositionOrType<OmniSubTypeCapableType>
+  | OmniCompositionXorType<OmniSubTypeCapableType>
+  | OmniCompositionNotType<OmniSubTypeCapableType>
   ;
 
 /**
@@ -113,7 +120,8 @@ export type OmniSuperTypeCapableType =
   | OmniPrimitiveNonNullableType
   ;
 
-export type OmniSuperGenericTypeCapableType = OmniObjectType
+export type OmniSuperGenericTypeCapableType =
+  OmniObjectType
   | OmniInterfaceType
   | OmniDecoratingType<OmniSuperTypeCapableType>
   | OmniExternalModelReferenceType<OmniSuperGenericTypeCapableType> // Needs to be unwrapped/resolved every time
@@ -212,13 +220,13 @@ export type OmniCompositionType<T extends OmniType = OmniType, CK extends Compos
   ;
 
 
-export interface OmniDictionaryType<K extends OmniType = OmniType, V extends OmniType = OmniType> extends OmniBaseType<'DICTIONARY'> {
+export interface OmniDictionaryType<K extends OmniType = OmniType, V extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.DICTIONARY> {
   keyType: K;
   valueType: V;
 }
 
 
-export interface OmniHardcodedReferenceType extends OmniBaseType<'HARDCODED_REFERENCE'> {
+export interface OmniHardcodedReferenceType extends OmniBaseType<typeof OmniTypeKind.HARDCODED_REFERENCE> {
   fqn: string;
 }
 
@@ -281,9 +289,10 @@ export const UnknownKind = {
 } as const;
 export type UnknownKind = (typeof UnknownKind)[keyof typeof UnknownKind];
 
-export interface OmniUnknownType extends OmniBaseType<'UNKNOWN'> {
+export interface OmniUnknownType extends OmniBaseType<typeof OmniTypeKind.UNKNOWN> {
   valueDefault?: OmniPrimitiveConstantValue | null;
-  unknownKind?: UnknownKind,
+  unknownKind?: UnknownKind;
+  lowerBound?: OmniType;
 }
 
 export interface OmniSubTypeHint {

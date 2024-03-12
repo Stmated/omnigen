@@ -91,6 +91,23 @@ exports[`Java Rendering > Type compressions 1`] = `
 ]
 `;
 
+exports[`Java Rendering > generic_params 1`] = `
+[
+  "AbstractRequestData.java",
+  "DepositRequest.java",
+  "DepositResponse.java",
+  "ErrorUnknown.java",
+  "ErrorUnknownError.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+  "RefundRequest.java",
+  "RefundResponse.java",
+]
+`;
+
 exports[`Java Rendering > primitive-generics 1`] = `
 [
   "ErrorUnknown.java",

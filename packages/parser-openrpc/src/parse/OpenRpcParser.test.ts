@@ -2,9 +2,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
 import {OmniTypeKind} from '@omnigen/core';
-import {JavaUtil} from '@omnigen/target-java';
-import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.js';
-import {OmniUtil, SchemaFile} from '@omnigen/core-util';
+import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.ts';
+import {Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
 import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options/index.ts';
 import {describe, test, expect} from 'vitest';
 
@@ -59,7 +58,7 @@ describe('Test Generic Model Creation', () => {
     expect(e.name).toEqual('get_pets');
     expect(e.responses).toHaveLength(2); // 1 result, 1 error
     expect(e.responses[0].name).toEqual('petsResult');
-    expect(JavaUtil.getClassName(e.responses[0].type)).toEqual('GetPetsResponse'); // Should be 'pet'?
+    expect(Naming.unwrap(OmniUtil.getTypeName(e.responses[0].type) ?? 'N/A')).toEqual('GetPetsResponse'); // Should be 'pet'?
 
     const response0 = model.endpoints[0].responses[0];
     expect(response0.type.kind).toEqual(OmniTypeKind.OBJECT);
@@ -76,8 +75,14 @@ describe('Test Generic Model Creation', () => {
     ]); // The others are in abstract supertype
 
     const allTypes = OmniUtil.getAllExportableTypes(model, model.types);
-    expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('DeletePetByIdResponse');
-    expect(allTypes.all.map(it => JavaUtil.getClassName(it))).toContain('ErrorUnknownError');
+    expect(allTypes.all.map(it => {
+      const typeName = OmniUtil.getTypeName(it);
+      return typeName ? Naming.unwrap(typeName) : undefined;
+    })).toContain('DeletePetByIdResponse');
+    expect(allTypes.all.map(it => {
+      const typeName = OmniUtil.getTypeName(it);
+      return typeName ? Naming.unwrap(typeName) : undefined;
+    })).toContain('ErrorUnknownError');
   });
 });
 

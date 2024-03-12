@@ -9,9 +9,11 @@ import {LoggerFactory} from '@omnigen/core-log';
 const logger = LoggerFactory.create(import.meta.url);
 
 const JACKSON_JSON_PROPERTY = 'com.fasterxml.jackson.annotation.JsonProperty';
-const JACKSON_JSON_VALUE = 'com.fasterxml.jackson.annotation.JsonValue';
-const JACKSON_JSON_CREATOR = 'com.fasterxml.jackson.annotation.JsonCreator';
+export const JACKSON_JSON_VALUE = 'com.fasterxml.jackson.annotation.JsonValue';
+export const JACKSON_JSON_CREATOR = 'com.fasterxml.jackson.annotation.JsonCreator';
 const JACKSON_JSON_INCLUDE = 'com.fasterxml.jackson.annotation.JsonInclude';
+export const JACKSON_JSON_ANY_GETTER = 'com.fasterxml.jackson.annotation.JsonAnyGetter';
+export const JACKSON_JSON_ANY_SETTER = 'com.fasterxml.jackson.annotation.JsonAnySetter';
 
 enum Direction {
   IN,
@@ -30,29 +32,27 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     logger.info(`Will be adding Jackson annotations to nodes`);
 
     const hasAnnotatedConstructor: boolean[] = [];
-    const fieldsStack: Java.Field[][] = [];
+
+    type FieldStackEntry = {annotate: Java.Field[], skip: Java.Field[]};
+    const fieldsStack: FieldStackEntry[] = [];
 
     const visitor = VisitorFactoryManager.create(DefaultJavaVisitor, {
-
-      // visitClassDeclaration: (node, visitor) => {
-      //   return DefaultJavaVisitor.visitClassDeclaration(node, visitor);
-      // },
 
       visitObjectDeclaration: (node, visitor) => {
 
         try {
           hasAnnotatedConstructor.push(false);
-          fieldsStack.push([]);
+          fieldsStack.push({annotate: [], skip: []});
           return DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
         } finally {
 
           // Need to do this *after* the object declaration has been visited.
           // Otherwise we will not have had time to find the constructor, or other influencing members.
-          const fields = fieldsStack.pop();
-          if (fields && !hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1]) {
+          const entry = fieldsStack.pop();
+          if (entry && !hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1]) {
 
-            for (const field of fields) {
-              if (!field.property) {
+            for (const field of entry.annotate) {
+              if (!field.property || entry.skip.includes(field)) {
                 continue;
               }
 
@@ -74,16 +74,13 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
       visitField: node => {
 
-        if (node.annotations && node.property) {
+        // A JsonValue field should not have any JsonProperty added to it.
+        const jsonValueAnnotation = node.annotations?.children.find(
+          it => (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) && (it.type.omniType.fqn == JACKSON_JSON_VALUE),
+        );
 
-          // A JsonValue field should not have any JsonProperty added to it.
-          const jsonValueAnnotation = node.annotations.children.find(
-            it => (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) && (it.type.omniType.fqn == JACKSON_JSON_VALUE),
-          );
-
-          if (!jsonValueAnnotation && this.shouldAddJsonPropertyAnnotation(node.property.fieldName, node.property.name, args.options)) {
-            fieldsStack[fieldsStack.length - 1].push(node);
-          }
+        if (!jsonValueAnnotation && this.shouldAddJsonPropertyAnnotation(node.identifier.value, node.identifier.original, args.options)) {
+          fieldsStack[fieldsStack.length - 1].annotate.push(node);
         }
       },
 
@@ -98,6 +95,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
           if (this.shouldAddJsonPropertyAnnotation(getterField.identifier.value, getterField.property.name, args.options)) {
             annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(getterField.identifier.value, getterField.property, Direction.OUT, args.options));
+            fieldsStack[fieldsStack.length - 1].skip.push(getterField);
           }
 
           if (!node.signature.annotations) {
@@ -107,71 +105,83 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       },
 
       visitConstructor: node => {
-
-        const ownerType = node.owner.type.omniType;
-        if (ownerType.kind == OmniTypeKind.OBJECT && ownerType.abstract) {
-
-          // We do not add any annotations to an abstract class constructor, since they will be overridden anyway.
-          return;
-        }
-
-        const annotations = node.annotations || new Java.AnnotationList(...[]);
-
-        const constructorAnnotationMode = args.options.serializationConstructorAnnotationMode;
-        if (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS) {
-          annotations.children.push(new Java.Annotation(new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_CREATOR})));
-        } else if (constructorAnnotationMode == SerializationConstructorAnnotationMode.IF_REQUIRED) {
-
-          // TODO: IF_REQUIRED might be needed if there are multiple constructors. But right now there are only ever one constructor.
-
-          if (!node.parameters || node.parameters.children.length <= 1) {
-
-            const jsonValueVisitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_BOOLEAN_VISITOR, {
-              visitAnnotation: node => {
-                if (node.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-                  if (node.type.omniType.fqn.indexOf(JACKSON_JSON_VALUE) >= 0) {
-                    throw new AbortVisitingWithResult(true);
-                  }
-                }
-              },
-            });
-
-            const hasJsonValue = VisitResultFlattener.visitWithSingularResult(jsonValueVisitor, node.owner.body, false);
-            if (hasJsonValue) {
-              annotations.children.push(new Java.Annotation(new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_CREATOR})));
-            }
-          }
-        }
-
-        if (node.parameters && (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS || constructorAnnotationMode == SerializationConstructorAnnotationMode.IF_REQUIRED)) {
-
-          for (const parameter of node.parameters.children) {
-
-            const property = parameter.field.property;
-            if (!property) {
-              continue;
-            }
-
-            const parameterAnnotations = parameter.annotations || new Java.AnnotationList();
-
-            if (this.shouldAddJsonPropertyAnnotation(parameter.identifier.value, property.name, args.options)) {
-              hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1] = true;
-              parameterAnnotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(parameter.field.identifier.value, property, Direction.IN, args.options));
-            }
-
-            if (!parameter.annotations && parameterAnnotations.children.length > 0) {
-              parameter.annotations = parameterAnnotations;
-            }
-          }
-        }
-
-        if (!node.annotations && annotations.children.length > 0) {
-          node.annotations = annotations;
-        }
+        this.addAnnotationsToConstructor(node, args, hasAnnotatedConstructor);
       },
     });
 
     visitor.visitRootNode(args.root, visitor);
+  }
+
+  private addAnnotationsToConstructor(node: Java.ConstructorDeclaration, args: JavaAstTransformerArgs, hasAnnotatedConstructor: boolean[]) {
+    const ownerType = node.owner.type.omniType;
+    if (ownerType.kind == OmniTypeKind.OBJECT && ownerType.abstract) {
+
+      // We do not add any annotations to an abstract class constructor, since they will be overridden anyway.
+      return;
+    }
+
+    const annotations = node.annotations || new Java.AnnotationList(...[]);
+
+    let hasJsonValue = false;
+
+    const jsonValueVisitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_BOOLEAN_VISITOR, {
+      visitAnnotation: node => {
+        if (node.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
+          if (node.type.omniType.fqn.indexOf(JACKSON_JSON_VALUE) >= 0) {
+            hasJsonValue = true;
+          } else if (node.type.omniType.fqn.indexOf(JACKSON_JSON_CREATOR) >= 0) {
+            throw new AbortVisitingWithResult(true); // Abort right away
+          }
+        }
+      },
+      visitObjectDeclaration: () => {
+      },
+      visitClassDeclaration: () => {
+      },
+      visitInterfaceDeclaration: () => {
+      },
+    });
+
+    const constructorAnnotationMode = args.options.serializationConstructorAnnotationMode;
+    const hasJsonCreator = VisitResultFlattener.visitWithSingularResult(jsonValueVisitor, node.owner.body, false);
+    if (!hasJsonCreator) {
+      if (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS) {
+        annotations.children.push(new Java.Annotation(new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_CREATOR})));
+      } else if (constructorAnnotationMode == SerializationConstructorAnnotationMode.IF_REQUIRED) {
+
+        // TODO: IF_REQUIRED might be needed if there are multiple constructors. But right now there are only ever one constructor.
+
+        if ((!node.parameters || node.parameters.children.length <= 1) && hasJsonValue) {
+          annotations.children.push(new Java.Annotation(new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_CREATOR})));
+        }
+      }
+    }
+
+    if (node.parameters && (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS || constructorAnnotationMode == SerializationConstructorAnnotationMode.IF_REQUIRED)) {
+
+      for (const parameter of node.parameters.children) {
+
+        const property = parameter.field.property;
+        if (!property) {
+          continue;
+        }
+
+        const parameterAnnotations = parameter.annotations || new Java.AnnotationList();
+
+        if (this.shouldAddJsonPropertyAnnotation(parameter.identifier.value, property.name, args.options)) {
+          hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1] = true;
+          parameterAnnotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(parameter.field.identifier.value, property, Direction.IN, args.options));
+        }
+
+        if (!parameter.annotations && parameterAnnotations.children.length > 0) {
+          parameter.annotations = parameterAnnotations;
+        }
+      }
+    }
+
+    if (!node.annotations && annotations.children.length > 0) {
+      node.annotations = annotations;
+    }
   }
 
   private static createJacksonAnnotations(fieldName: string, property: OmniProperty, direction: Direction, javaOptions: JavaOptions): Java.Annotation[] {

@@ -63,8 +63,8 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
 
       if (type.compositionKind == CompositionKind.AND) {
         for (let i = startConvertingAt; i < type.types.length; i++) {
-          const superType = JavaUtil.asSuperType(type.types[i]);
-          if (superType && superType.kind != OmniTypeKind.INTERFACE) {
+          const superType = type.types[i];
+          if (JavaUtil.asSuperType(superType) && superType.kind != OmniTypeKind.INTERFACE) {
             const superInterface = this.getOrCreateInterfaceType(superType, type, interfaceMap);
             type.types[i] = superInterface[0];
           }

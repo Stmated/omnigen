@@ -136,8 +136,8 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     } else if (a.extends && b.extends) {
 
       // TODO: This is probably wrong? We should build an actual tree, and sort based on it?
-      const aHierarchy = JavaUtil.getSuperClassHierarchy(model, JavaUtil.asSubType(a.type.omniType));
-      const bHierarchy = JavaUtil.getSuperClassHierarchy(model, JavaUtil.asSubType(a.type.omniType));
+      const aHierarchy = JavaUtil.getSuperClassHierarchy(model, JavaUtil.asSubType(a.type.omniType) ? a.type.omniType : undefined);
+      const bHierarchy = JavaUtil.getSuperClassHierarchy(model, JavaUtil.asSubType(b.type.omniType) ? b.type.omniType : undefined);
       return aHierarchy.length - bHierarchy.length;
     }
 

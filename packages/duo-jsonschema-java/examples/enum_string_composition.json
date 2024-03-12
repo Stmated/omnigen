@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trustly.com/schemas/enum_string_composition",
+  "$id": "https://omnigen.com/schemas/enum_string_composition",
   "definitions": {
     "TransferState": {
       "type": "string",

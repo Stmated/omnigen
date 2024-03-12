@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trustly.com/schemas/string_union",
+  "$id": "https://omnigen.com/schemas/string_union",
 
   "definitions": {
 
@@ -23,6 +23,13 @@
         {"$ref": "#/definitions/OrganizationNumber"}
       ],
       "description": "Date of birth (YYYY-MM-DD, ISO 8601) of the beneficiary, or organisational number for the organisation."
+    },
+
+    "Container": {
+      "type": "object",
+      "properties": {
+        "dateOfBirth": {"$ref": "#/definitions/DateOfBirthOrOrganization"}
+      }
     }
   }
 }

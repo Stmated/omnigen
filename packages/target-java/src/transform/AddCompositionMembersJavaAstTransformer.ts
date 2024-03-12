@@ -5,7 +5,8 @@ import * as Java from '../ast/index.ts';
 import {AbstractObjectDeclaration, JavaAstRootNode} from '../ast/index.ts';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
-import {JavaOptions} from '../options/index.ts';
+import {JavaOptions, SerializationLibrary} from '../options/index.ts';
+import {JACKSON_JSON_CREATOR, JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
 
 /**
  * There needs to be more centralized handling of adding fields to a class depending on if it is extending or implementing interfaces.
@@ -51,24 +52,23 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         // We can continue deeper, and add fields for this composition as well.
 
       } else {
-        const asSuperType = JavaUtil.asSuperType(type);
 
-        if (asSuperType) {
+        if (JavaUtil.asSuperType(type)) {
 
           if (!classDec.extends) {
             classDec.extends = new Java.ExtendsDeclaration(
-              JavaAstUtils.createTypeNode(asSuperType),
+              JavaAstUtils.createTypeNode(type),
             );
           } else {
 
-            if (asSuperType.kind == OmniTypeKind.OBJECT) {
-              const interfaceType = JavaAstUtils.addInterfaceOf(asSuperType, root, options);
+            if (type.kind == OmniTypeKind.OBJECT) {
+              const interfaceType = JavaAstUtils.addInterfaceOf(type, root, options);
               implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(interfaceType));
-            } else if (asSuperType.kind == OmniTypeKind.INTERFACE) {
-              implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(asSuperType));
+            } else if (type.kind == OmniTypeKind.INTERFACE) {
+              implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(type));
             }
 
-            for (const property of OmniUtil.getPropertiesOf(asSuperType)) {
+            for (const property of OmniUtil.getPropertiesOf(type)) {
               JavaAstUtils.addOmniPropertyToBlockAsField(classDec.body, property, options);
             }
           }
@@ -112,7 +112,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     }
 
     if (enumTypes.length > 0 && primitiveTypes.length > 0 && otherTypeCount == 0) {
-      this.addEnumAndPrimitivesAsObjectEnum(enumTypes, primitiveTypes, declaration);
+      this.addEnumAndPrimitivesAsObjectEnum(enumTypes, primitiveTypes, declaration, options);
     } else {
 
       // This means the specification did not have any discriminators.
@@ -127,6 +127,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     enumTypes: OmniEnumType[],
     primitiveTypes: OmniPrimitiveType[],
     declaration: Java.AbstractObjectDeclaration,
+    options: JavaOptions,
   ): void {
 
     // Java does not support advanced enums. We need to handle it some other way.
@@ -146,6 +147,18 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       kind: OmniTypeKind.UNKNOWN,
       unknownKind: UnknownKind.MUTABLE_OBJECT,
     });
+
+    const fieldAnnotations = new Java.AnnotationList();
+    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+      fieldAnnotations.children.push(new Java.Annotation(
+        // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
+        new Java.RegularType({
+          kind: OmniTypeKind.HARDCODED_REFERENCE,
+          fqn: JACKSON_JSON_VALUE,
+        }),
+      ));
+    }
+
     const fieldValue = new Java.Field(
       fieldValueType,
       fieldValueIdentifier,
@@ -154,15 +167,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         new Java.Modifier(Java.ModifierType.FINAL),
       ),
       undefined,
-      new Java.AnnotationList(
-        new Java.Annotation(
-          // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
-          new Java.RegularType({
-            kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'com.fasterxml.jackson.annotation.JsonValue',
-          }),
-        ),
-      ),
+      fieldAnnotations,
     );
 
     for (const enumType of enumTypes) {
@@ -339,6 +344,18 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       true,
     );
 
+    const singletonMethodAnnotations = new Java.AnnotationList();
+    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+
+      singletonMethodAnnotations.children.push(new Java.Annotation(
+        // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
+        new Java.RegularType({
+          kind: OmniTypeKind.HARDCODED_REFERENCE,
+          fqn: JACKSON_JSON_CREATOR,
+        }),
+      ));
+    }
+
     const singletonFactory = new Java.MethodDeclaration(
       new Java.MethodDeclarationSignature(
         singletonFactoryMethodIdentifier,
@@ -348,15 +365,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
           new Java.Modifier(Java.ModifierType.PUBLIC),
           new Java.Modifier(Java.ModifierType.STATIC),
         ),
-        new Java.AnnotationList(
-          new Java.Annotation(
-            // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
-            new Java.RegularType({
-              kind: OmniTypeKind.HARDCODED_REFERENCE,
-              fqn: 'com.fasterxml.jackson.annotation.JsonCreator',
-            }),
-          ),
-        ),
+        singletonMethodAnnotations,
       ),
       new Java.Block(
         new Java.IfElseStatement(

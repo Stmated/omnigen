@@ -39,12 +39,12 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       const singleUseInUnit = usedInUnits[0];
 
       // Check for supertype interference. Don't want a superclass to be inside a subclass.
-      const superType = JavaUtil.asSuperType(type);
       let typeUsedInSuperType = false;
-      if (superType) {
-        const singleUseInType = JavaUtil.asSubType(singleUseInUnit.object.type.omniType);
-        const singleUseHierarchy = JavaUtil.getSuperClassHierarchy(args.model, singleUseInType);
-        typeUsedInSuperType = singleUseHierarchy.includes(superType);
+      if (JavaUtil.asSuperType(type)) {
+        const singleUseType = singleUseInUnit.object.type.omniType;
+        const singleUseIsSubType = JavaUtil.asSubType(singleUseType);
+        const singleUseHierarchy = JavaUtil.getSuperClassHierarchy(args.model, singleUseIsSubType ? singleUseType : undefined);
+        typeUsedInSuperType = singleUseHierarchy.includes(type);
       }
 
       if (typeUsedInSuperType) {

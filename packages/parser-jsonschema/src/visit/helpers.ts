@@ -46,11 +46,14 @@ export function visitUniformObject<T extends object>(obj: T, mapper: { (child: T
       resValue = res;
     }
 
-    if (resValue && resValue != value) {
-      changeCount++;
+    if (resValue !== undefined) {
+      if (resValue != value) {
+        changeCount++;
+      }
+
       // @ts-ignore
       newObj[resKey] = resValue;
-    } else if (!resValue) {
+    } else {
       changeCount++;
     }
   }

@@ -1,6 +1,5 @@
 package com.company;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import javax.annotation.Generated;
 
 /**
@@ -9,9 +8,9 @@ import javax.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcError {
   private final Integer code;
-  private final JsonNode data;
+  private final Object data;
   private final String message;
-  public JsonRpcError(Integer code, String message, JsonNode data) {
+  public JsonRpcError(Integer code, String message, Object data) {
     if (code != null) {
       this.code = code;
     } else {
@@ -29,7 +28,7 @@ public class JsonRpcError {
     return this.code;
   }
 
-  public JsonNode getData() {
+  public Object getData() {
     return this.data;
   }
 

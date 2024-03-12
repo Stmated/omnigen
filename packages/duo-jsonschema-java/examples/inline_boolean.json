@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://trustly.com/schemas/inline_boolean",
+  "$id": "https://omnigen.com/schemas/inline_boolean",
   "definitions": {
 
     "OrderIdString": {

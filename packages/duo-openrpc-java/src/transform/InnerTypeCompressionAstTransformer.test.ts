@@ -1,6 +1,7 @@
-import {DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
 import {describe, expect, test, vi} from 'vitest';
+import {SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
 
 describe('InnerTypeCompression', () => {
 
@@ -15,6 +16,7 @@ describe('InnerTypeCompression', () => {
         compressSoloReferencedTypes: false,
         compressUnreferencedSubTypes: false,
       },
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -34,6 +36,7 @@ describe('InnerTypeCompression', () => {
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
       },
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -72,6 +75,7 @@ describe('InnerTypeCompression', () => {
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
       },
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();

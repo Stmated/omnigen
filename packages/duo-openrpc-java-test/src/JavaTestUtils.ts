@@ -19,7 +19,7 @@ import {
   Java,
   JavaPlugins,
   JavaOptions,
-  ZodJavaOptions, createJavaVisitor, createJavaRenderer,
+  ZodJavaOptions, createJavaVisitor, createJavaRenderer, SerializationLibrary,
 } from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
@@ -34,6 +34,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export const DEFAULT_TEST_JAVA_OPTIONS: JavaOptions = {
   ...ZodJavaOptions.parse({}),
+  serializationLibrary: SerializationLibrary.POJO,
 };
 
 export const DEFAULT_TEST_TARGET_OPTIONS: TargetOptions = {

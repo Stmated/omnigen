@@ -106,6 +106,10 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
 
     for (const doc of documentFinder.documents) {
 
+      // TODO: lol, completely wrong. Needs to be replaced eventually.
+      transform(doc as JSONSchema7);
+
+      // TODO: This whole thing needs to be done much easier and faster. It's a mess.
       const walker = new SimpleObjectWalker(doc);
       walker.walk((v, path, registerOnPop) => {
 
@@ -117,6 +121,10 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
         // And we need to add information about the current path if we encounter:
         // methods -> [index]
         // params -> [index]
+
+        // And also the more uncommon
+        // components -> methods -> [key] -> result
+        // components -> methods -> [key] -> params -> [key]
 
         if (path.length > 0) {
 
@@ -151,6 +159,32 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
               const result = v as MethodObjectResult;
               if ('name' in result) {
                 applyIdTransformer.pushPath(result.name);
+                registerOnPop(() => applyIdTransformer.popPath());
+              }
+            }
+
+            if (path[path.length - 3] == 'components' && path[path.length - 2] == 'methods') {
+
+              applyIdTransformer.pushPath(String(path[path.length - 1]));
+              registerOnPop(() => applyIdTransformer.popPath());
+            }
+
+            if (path[path.length - 3] == 'methods' && typeof path[path.length - 2] == 'string' && path[path.length - 1] == 'result') {
+
+              const result = v as MethodObjectResult;
+              if ('name' in result) {
+                applyIdTransformer.pushPath(result.name);
+                registerOnPop(() => applyIdTransformer.popPath());
+              }
+            }
+
+            if (path[path.length - 2] == 'contentDescriptors' && typeof path[path.length - 1] == 'string') {
+
+              const result = v as ContentDescriptorObject;
+              if ('name' in result) {
+                applyIdTransformer.pushPath(String(path[path.length - 1]));
+                applyIdTransformer.pushPath(result.name);
+                registerOnPop(() => applyIdTransformer.popPath());
                 registerOnPop(() => applyIdTransformer.popPath());
               }
             }
@@ -334,6 +368,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   async toOmniEndpointFromMethod(method: MethodObject): Promise<OmniEndpoint> {
+
+    if (!method.name) {
+      throw new Error(`Encountered Method without a 'name'-property, one must be set to:\n${JSON.stringify(method, undefined, 2)}`);
+    }
 
     const typeAndProperties = this.toTypeAndPropertiesFromMethod(method);
 

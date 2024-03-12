@@ -1,12 +1,12 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class GiveInGetOut2Request extends JsonRpcRequest<GiveInGetOut2RequestParams> {
   public GiveInGetOut2Request(
-    @JsonProperty(value = "jsonrpc", required = true) String jsonrpc,
+    @JsonProperty("jsonrpc") String jsonrpc,
     @JsonProperty(value = "id", required = true) String id,
     @JsonProperty("params") GiveInGetOut2RequestParams params
   ) {

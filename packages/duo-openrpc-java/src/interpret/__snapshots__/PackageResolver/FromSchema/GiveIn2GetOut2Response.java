@@ -1,7 +1,7 @@
 package com.company;
 
 import com.company.out.directory2.B;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class GiveIn2GetOut2Response extends JsonRpcResponse {

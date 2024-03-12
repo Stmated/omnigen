@@ -3,6 +3,7 @@ import {OpenRpcModelConverter} from './OpenRpcModelConverter.ts';
 import * as fs from 'fs';
 import {OpenrpcDocument} from '@open-rpc/meta-schema';
 import {DefaultOmnigenOpenRpcVisitor} from './OmnigenOpenRpcVisitor.ts';
+import {Util} from '@omnigen/core-util';
 
 describe('OpenRpcModelConverter', () => {
 
@@ -10,7 +11,7 @@ describe('OpenRpcModelConverter', () => {
 
     const converter = new OpenRpcModelConverter();
 
-    const fileContent = fs.readFileSync('./examples/enum.json', {encoding: 'utf-8'}).toString();
+    const fileContent = fs.readFileSync(Util.getPathFromRoot('./packages/parser-openrpc/examples/enum.json'), {encoding: 'utf-8'}).toString();
     const openRpcDocument = JSON.parse(fileContent) as OpenrpcDocument;
 
     const converted = converter.transform(openRpcDocument);

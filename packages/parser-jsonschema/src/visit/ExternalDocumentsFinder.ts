@@ -1,6 +1,6 @@
 import nodePath from 'path';
 import pointer, {JsonObject} from 'json-pointer';
-import {ProtocolHandler} from '@omnigen/core-util';
+import {ProtocolHandler, Util} from '@omnigen/core-util';
 import {JSONSchema7} from 'json-schema';
 import {SimpleObjectWalker} from './helpers.ts';
 
@@ -96,7 +96,7 @@ export class ExternalDocumentsFinder {
             element = pointer.get(schema, uri.path!);
           } catch (ex) {
 
-            const shallowPayloadString = ExternalDocumentsFinder.getShallowPayloadString(origin);
+            const shallowPayloadString = Util.getShallowPayloadString(origin);
             throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}`, {cause: ex});
           }
 
@@ -110,16 +110,6 @@ export class ExternalDocumentsFinder {
         return v as WithoutRef<typeof v>;
       },
     };
-  }
-
-  private static getShallowPayloadString<T>(origin: T) {
-
-    return JSON.stringify(origin, (key, value) => {
-      if (value && typeof value === 'object' && key) {
-        return '[...]';
-      }
-      return value;
-    });
   }
 
   private static searchInto(schema: JsonObject, parentUri: JsonItemAbsoluteUri, documents: Map<string, JsonObject>) {

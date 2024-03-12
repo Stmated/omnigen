@@ -3,7 +3,7 @@ import * as path from 'path';
 import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
 import {OmniTypeKind} from '@omnigen/core';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.ts';
-import {Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
+import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
 import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options/index.ts';
 import {describe, test, expect} from 'vitest';
 
@@ -12,7 +12,7 @@ describe('Test Generic Model Creation', () => {
   const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
 
   test('Test basic loading', async () => {
-    const dirPath = '../parser-openrpc/examples/';
+    const dirPath = Util.getPathFromRoot('./packages/parser-openrpc/examples/');
     const files = await fs.readdir(dirPath, {withFileTypes: true});
     for (const file of files) {
       if (!file.isFile()) {
@@ -35,7 +35,7 @@ describe('Test Generic Model Creation', () => {
   test('PetStore should create expected model', async () => {
 
     const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
-      new SchemaFile('../parser-openrpc/examples/petstore-expanded.json'),
+      new SchemaFile(Util.getPathFromRoot('./packages/parser-openrpc/examples/petstore-expanded.json')),
     );
 
     // const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);

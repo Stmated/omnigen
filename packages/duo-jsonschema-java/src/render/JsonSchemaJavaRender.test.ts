@@ -1,6 +1,7 @@
 import {describe, expect, test, vi} from 'vitest';
 import {JsonSchemaToJavaTestUtil} from './JsonSchemaToJavaTestUtil.ts';
 import {ZodJavaOptions} from '@omnigen/target-java';
+import {Util} from '@omnigen/core-util';
 
 describe('jsonschema-java-render', () => {
 
@@ -8,7 +9,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('./examples/string_union.json');
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/string_union.json'));
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -22,7 +23,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('../parser-jsonschema/examples/keep_x_enum_varnames.json');
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json'));
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -36,7 +37,7 @@ describe('jsonschema-java-render', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const rendered = await JsonSchemaToJavaTestUtil.render(
-      '../parser-jsonschema/examples/decorated_types.json',
+      Util.getPathFromRoot('./packages/parser-jsonschema/examples/decorated_types.json'),
       {...ZodJavaOptions.parse({}), commentsOnFields: false, commentsOnGetters: true, serializationLibrary: 'POJO'},
     );
     const fileContents = Map.groupBy(rendered, it => it.fileName);
@@ -51,7 +52,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('./examples/enum_string_composition.json', {
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/enum_string_composition.json'), {
       compressSoloReferencedTypes: false,
       serializationLibrary: 'POJO',
     });
@@ -67,7 +68,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('./examples/interface_order.json', {
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/interface_order.json'), {
       compressSoloReferencedTypes: false,
       // serializationLibrary: 'POJO',
     });
@@ -86,7 +87,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('./examples/inline_boolean.json', {
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/inline_boolean.json'), {
       serializationLibrary: 'POJO',
       includeExampleCommentsMode: 'SKIP',
     });
@@ -102,7 +103,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('./examples/class_union.json', {
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/class_union.json'), {
       compressSoloReferencedTypes: false,
       compressUnreferencedSubTypes: false,
       serializationLibrary: 'JACKSON',
@@ -120,7 +121,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('./examples/enum_inheritance.json');
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/enum_inheritance.json'));
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -136,7 +137,7 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render('./examples/one_of_same_type.json');
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/one_of_same_type.json'));
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();

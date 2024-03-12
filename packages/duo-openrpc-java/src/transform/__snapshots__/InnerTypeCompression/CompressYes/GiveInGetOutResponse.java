@@ -1,12 +1,12 @@
 package generated.omnigen;
 
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class GiveInGetOutResponse extends JsonRpcResponse {
   private final String id;
-  private final GiveInGetOutResponse.Out result;
-  public GiveInGetOutResponse(String id, GiveInGetOutResponse.Out result) {
+  private final Out result;
+  public GiveInGetOutResponse(String id, Out result) {
     this.id = id;
     this.result = result;
   }
@@ -19,7 +19,7 @@ public class GiveInGetOutResponse extends JsonRpcResponse {
     return "2.0";
   }
 
-  public GiveInGetOutResponse.Out getResult() {
+  public Out getResult() {
     return this.result;
   }
 

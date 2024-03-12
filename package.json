@@ -5,7 +5,9 @@
   "scripts": {
     "build": "turbo run build",
     "clean": "turbo run clean",
-    "test": "FORCE_COLOR=1 turbo run test --continue",
+    "test": "FORCE_COLOR=1 turbo run test --output-logs errors-only",
+    "test-all": "FORCE_COLOR=1 turbo run test --output-logs errors-only --force",
+    "profile": "FORCE_COLOR=1 turbo run test --output-logs errors-only --force --profile .profiling/.performance-profile.json",
     "test:watch": "FORCE_COLOR=1 turbo run test:watch",
     "lint": "turbo run lint",
     "dev": "turbo run dev --parallel",

@@ -1,6 +1,6 @@
 import {JavaPlugins, JavaOptions} from '@omnigen/target-java';
 import {ModelTransformOptions, OmniModelParserResult, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Naming, OmniModelMerge, OmniUtil} from '@omnigen/core-util';
+import {Naming, OmniModelMerge, OmniUtil, Util} from '@omnigen/core-util';
 import {describe, expect, test, vi} from 'vitest';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
@@ -26,7 +26,7 @@ describe('merge-documents', () => {
 
     const exec = await pm.execute({
       ctx: {
-        file: `./src/parse/__examples__/petstore-simple-jsonschema.json`,
+        file: Util.getPathFromRoot('./packages/duo-openrpc-java/examples/petstore-simple-jsonschema.json'),
         arguments: {},
       } satisfies BaseContext & FileContext,
       debug: true,
@@ -75,7 +75,7 @@ describe('merge-models', () => {
 
     const exec10 = await pm.execute({
       ctx: {
-        file: `../parser-openrpc/examples/error-structure.json`,
+        file: Util.getPathFromRoot('./packages/parser-openrpc/examples/error-structure.json'),
         target: 'java',
         arguments: toArguments({
           generifyTypes: false,
@@ -90,7 +90,7 @@ describe('merge-models', () => {
 
     const exec11 = await pm.execute({
       ctx: {
-        file: `../parser-openrpc/examples/error-structure-1.1.json`,
+        file: Util.getPathFromRoot('./packages/parser-openrpc/examples/error-structure-1.1.json'),
         target: 'java',
         arguments: toArguments({
           generifyTypes: false,

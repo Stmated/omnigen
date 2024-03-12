@@ -3,20 +3,17 @@ package generated.omnigen;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDepositResponseObject> {
-  public RefundResponse(
-    @JsonProperty("id") String id,
-    @JsonProperty("result") RefundResponse.RefundDepositResponseObject result
-  ) {
+  public RefundResponse(@JsonProperty("id") String id, @JsonProperty("result") RefundDepositResponseObject result) {
     super(id, result);
   }
 
   @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class RefundDepositResponseObject {
-    private final RefundResponse.RefundDepositResponseObject.RefundResponseData data;
+    private final Data data;
     private final String method;
     private final String signature;
     private final String uuid;
@@ -24,7 +21,7 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
       @JsonProperty("signature") String signature,
       @JsonProperty("uuid") String uuid,
       @JsonProperty("method") String method,
-      @JsonProperty("data") RefundResponse.RefundDepositResponseObject.RefundResponseData data
+      @JsonProperty("data") Data data
     ) {
       this.signature = signature;
       this.uuid = uuid;
@@ -32,7 +29,7 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
       this.data = data;
     }
 
-    public RefundResponse.RefundDepositResponseObject.RefundResponseData getData() {
+    public Data getData() {
       return this.data;
     }
 
@@ -49,10 +46,10 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
     }
 
     @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-    public static class RefundResponseData {
+    public static class Data {
       private final String orderid;
       private final String result;
-      public RefundResponseData(
+      public Data(
         @JsonProperty("orderid") String orderid,
         @JsonProperty(value = "result", required = true) String result
       ) {
@@ -64,7 +61,6 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
         return this.orderid;
       }
 
-      @JsonProperty(required = true)
       @JsonInclude(Include.ALWAYS)
       public String getResult() {
         return this.result;

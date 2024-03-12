@@ -1,6 +1,6 @@
 package generated.omnigen;
 
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * Whether the account is verified or not. 0 for not verified, 1 for verified.

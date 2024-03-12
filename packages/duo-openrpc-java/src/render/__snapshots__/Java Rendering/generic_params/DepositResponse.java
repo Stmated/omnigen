@@ -1,17 +1,17 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResponseObject> {
-  public DepositResponse(@JsonProperty("id") String id, @JsonProperty("result") DepositResponse.DepositResponseObject result) {
+  public DepositResponse(@JsonProperty("id") String id, @JsonProperty("result") DepositResponseObject result) {
     super(id, result);
   }
 
   @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class DepositResponseObject {
-    private final DepositResponse.DepositResponseObject.DepositResponseData data;
+    private final Data data;
     private final String method;
     private final String signature;
     private final String uuid;
@@ -19,7 +19,7 @@ public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResp
       @JsonProperty("signature") String signature,
       @JsonProperty("uuid") String uuid,
       @JsonProperty("method") String method,
-      @JsonProperty("data") DepositResponse.DepositResponseObject.DepositResponseData data
+      @JsonProperty("data") Data data
     ) {
       this.signature = signature;
       this.uuid = uuid;
@@ -27,7 +27,7 @@ public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResp
       this.data = data;
     }
 
-    public DepositResponse.DepositResponseObject.DepositResponseData getData() {
+    public Data getData() {
       return this.data;
     }
 
@@ -44,10 +44,10 @@ public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResp
     }
 
     @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-    public static class DepositResponseData {
+    public static class Data {
       private final String orderid;
       private final String url;
-      public DepositResponseData(@JsonProperty("orderid") String orderid, @JsonProperty("url") String url) {
+      public Data(@JsonProperty("orderid") String orderid, @JsonProperty("url") String url) {
         this.orderid = orderid;
         this.url = url;
       }

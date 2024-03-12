@@ -1,13 +1,13 @@
 package generated.omnigen;
 
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class GiveInGetOutRequest extends JsonRpcRequest {
   private final String id;
   private final String jsonrpc;
-  private final GiveInGetOutRequest.GiveInGetOutRequestParams params;
-  public GiveInGetOutRequest(GiveInGetOutRequest.GiveInGetOutRequestParams params, String jsonrpc, String id) {
+  private final Params params;
+  public GiveInGetOutRequest(Params params, String jsonrpc, String id) {
     this.params = params;
     if (jsonrpc != null) {
       this.jsonrpc = jsonrpc;
@@ -29,14 +29,14 @@ public class GiveInGetOutRequest extends JsonRpcRequest {
     return "give_in_get_out";
   }
 
-  public GiveInGetOutRequest.GiveInGetOutRequestParams getParams() {
+  public Params getParams() {
     return this.params;
   }
 
   @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-  public static class GiveInGetOutRequestParams extends JsonRpcRequestParams {
+  public static class Params extends JsonRpcRequestParams {
     private final In param;
-    public GiveInGetOutRequestParams(In param) {
+    public Params(In param) {
       this.param = param;
     }
 

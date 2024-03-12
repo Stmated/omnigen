@@ -39,7 +39,8 @@ import {Case, OmniUtil} from '@omnigen/core-util';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
-  ContentDescriptorObject, ContentDescriptorOrReference,
+  ContentDescriptorObject,
+  ContentDescriptorOrReference,
   ErrorObject,
   ExampleObject,
   ExamplePairingObject,
@@ -47,7 +48,9 @@ import {
   LicenseObject,
   LinkObject,
   MethodObject,
-  MethodObjectErrors, MethodObjectResult, MethodOrReference,
+  MethodObjectErrors,
+  MethodObjectResult,
+  MethodOrReference,
   OpenrpcDocument,
   ServerObject,
 } from '@open-rpc/meta-schema';
@@ -55,7 +58,7 @@ import {JSONSchema6, JSONSchema7} from 'json-schema';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options/index.ts';
+import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
 import {AnyJSONSchema, ApplyIdJsonSchemaTransformerFactory, ExternalDocumentsFinder, JsonSchemaParser, RefResolver, SchemaToTypeResult, SimpleObjectWalker} from '@omnigen/parser-jsonschema';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
@@ -302,11 +305,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     this._jsonSchemaParser = new JsonSchemaParser(refResolver, this._options);
   }
 
-  async parse(): Promise<OmniModelParserResult<JsonRpcParserOptions & ParserOptions>> {
+  parse(): OmniModelParserResult<JsonRpcParserOptions & ParserOptions> {
 
-    const endpoints = await Promise.all(
-      this.doc.methods.map(async it => await this.toOmniEndpointFromMethod(this._refResolver.resolve(it))),
-    );
+    const endpoints = this.doc.methods.map(it => this.toOmniEndpointFromMethod(this._refResolver.resolve(it)));
     const contact = this.doc.info.contact ? this.toOmniContactFromContact(this.doc.info.contact) : undefined;
     const license = this.doc.info.license ? this.toOmniLicenseFromLicense(this.doc.info.license) : undefined;
     const servers = (this.doc.servers || []).map(server => this.toOmniServerFromServerObject(server));
@@ -367,7 +368,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  async toOmniEndpointFromMethod(method: MethodObject): Promise<OmniEndpoint> {
+  toOmniEndpointFromMethod(method: MethodObject): OmniEndpoint {
 
     if (!method.name) {
       throw new Error(`Encountered Method without a 'name'-property, one must be set to:\n${JSON.stringify(method, undefined, 2)}`);
@@ -394,10 +395,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       message: 'Unknown Error',
     });
 
-    const errorOutputs = await Promise.all(errorsOrReferences.map(async it => {
+    const errorOutputs = errorsOrReferences.map(it => {
       const deref = this._refResolver.resolve(it);
-      return await this.errorToGenericOutput(Case.pascal(method.name), deref);
-    }));
+      return this.errorToGenericOutput(Case.pascal(method.name), deref);
+    });
 
     responses.push(...errorOutputs);
 
@@ -534,13 +535,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private async errorToGenericOutput(parentName: string, error: ErrorObject): Promise<OmniOutput> {
+  private errorToGenericOutput(parentName: string, error: ErrorObject): OmniOutput {
 
     const isUnknownCode = (error.code === -1234567890);
     if (isUnknownCode && this._unknownError) {
       return this._unknownError;
     } else {
-      const errorOutput = await this.errorToGenericOutputReal(parentName, error, isUnknownCode);
+      const errorOutput = this.errorToGenericOutputReal(parentName, error, isUnknownCode);
       if (isUnknownCode) {
         if (!this._unknownError) {
           this._unknownError = errorOutput;
@@ -553,7 +554,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
   }
 
-  private async errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): Promise<OmniOutput> {
+  private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): OmniOutput {
     const typeName = isUnknownCode
       ? `ErrorUnknown`
       : `${parentName}Error${error.code}`;
@@ -599,7 +600,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       debug: `Created by ${this.doc.info.title}`,
     };
 
-    await this.addJsonRpcErrorProperties(
+    this.addJsonRpcErrorProperties(
       errorType, error, isUnknownCode, this._jsonRpcErrorInstanceClass, this.doc, this._options,
     );
 
@@ -627,14 +628,14 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private async addJsonRpcErrorProperties(
+  private addJsonRpcErrorProperties(
     target: OmniObjectType,
     error: ErrorObject,
     isUnknownCode: boolean,
     errorPropertySuperType: OmniObjectType,
     doc: OpenrpcDocument,
     options: JsonRpcParserOptions & ParserOptions,
-  ): Promise<void> {
+  ): void {
 
     if (options.jsonRpcPropertyName) {
 
@@ -710,7 +711,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       // TODO: Check if "data" is a schema object and then create a type, instead of making it an unknown constant?
       errorPropertyType.properties.push({
         name: options.jsonRpcErrorPropertyName,
-        type: await OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver) || {
+        type: OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver) || {
           kind: OmniTypeKind.UNKNOWN,
           valueDefault: error.data,
         },
@@ -720,7 +721,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       errorPropertyType.properties.push({
         name: options.jsonRpcErrorPropertyName,
-        type: await OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver) || {kind: OmniTypeKind.UNKNOWN},
+        type: OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver) || {kind: OmniTypeKind.UNKNOWN},
         owner: errorPropertyType,
       });
     }
@@ -792,11 +793,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private static async toOmniType(
+  private static toOmniType(
     source: OmniType | JsonRpcParserOptions['jsonRpcErrorDataSchema'],
     openrpcParserOptions: JsonRpcParserOptions & ParserOptions,
     refResolver: RefResolver,
-  ): Promise<OmniType | undefined> {
+  ): OmniType | undefined {
 
     if (!source) {
       return source;

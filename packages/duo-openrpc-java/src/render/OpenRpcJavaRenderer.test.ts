@@ -4,10 +4,10 @@ import * as JavaParser from 'java-parser';
 import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {describe, expect, test, vi} from 'vitest';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, ModelTransformOptions, OmniPrimitiveKind} from '@omnigen/core';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, OmniPrimitiveKind} from '@omnigen/core';
+import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
-import {SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
+import {SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -35,7 +35,7 @@ describe('Java Rendering', () => {
 
           logger.info(`Will render ${fileName}`);
           const result = await JavaTestUtils.getResultFromFilePath(
-            `../parser-openrpc/examples/${fileName}`, {}, ZodCompilationUnitsContext,
+            Util.getPathFromRoot(`./packages/parser-openrpc/examples/${fileName}`), {}, ZodCompilationUnitsContext,
           );
 
           let baseDir: string;
@@ -191,7 +191,7 @@ describe('Java Rendering', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const result = await JavaTestUtils.getResultFromFilePath(`./examples/generic_params.json`, {
+    const result = await JavaTestUtils.getResultFromFilePath(Util.getPathFromRoot(`./packages/duo-openrpc-java/examples/generic_params.json`), {
       parserOptions: {...DEFAULT_PARSER_OPTIONS, defaultAdditionalProperties: false},
       targetOptions: {
         ...DEFAULT_TEST_TARGET_OPTIONS,

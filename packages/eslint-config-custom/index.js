@@ -43,15 +43,6 @@ module.exports = {
             'selector': 'typeParameter',
             'leadingUnderscore': 'forbid',
             'trailingUnderscore': 'forbid',
-            // T = Type
-            // R = Return
-            // N = Node
-            // V = Value / Visitor
-            // C = Concrete Syntax Tree Node
-            // P = Parent
-            // I = Input
-            // K = Key
-            // 'prefix': ['T', 'R', 'N', 'V', 'C', 'P', 'I', 'K', 'U', 'Y', 'G'],
             'format': ['PascalCase'],
           },
           {
@@ -76,7 +67,7 @@ module.exports = {
             'filter': {
               'regex': 'logger',
               'match': false,
-            }
+            },
           },
           {
             'selector': 'property',
@@ -165,7 +156,7 @@ module.exports = {
 
     'tsdoc/syntax': 'warn',
 
-    'require-jsdoc': 0,
+    'require-jsdoc': 1,
     'valid-jsdoc': 0,
 
     '@typescript-eslint/explicit-function-return-type': 'off',
@@ -186,6 +177,7 @@ module.exports = {
       'error', 'always',
       {'exceptAfterSingleLine': true},
     ],
+    'space-infix-ops': ['error', {'int32Hint': false}],
     'padding-line-between-statements': [
       'error',
       {

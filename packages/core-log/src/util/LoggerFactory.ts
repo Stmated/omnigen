@@ -1,4 +1,5 @@
 import pino, {BaseLogger, LoggerOptions, DestinationStream} from 'pino';
+// import punycode from "punycode/";
 
 export type ModifierCallback = (options: LoggerOptions | DestinationStream) => LoggerOptions | DestinationStream;
 
@@ -9,8 +10,8 @@ export type ModifierCallback = (options: LoggerOptions | DestinationStream) => L
  * Both of these must be done before any logger is created.
  */
 export class LoggerFactory {
-
   private static _pretty: boolean | undefined = undefined;
+  private static _transport: LoggerOptions['transport'] | undefined = undefined;
 
   private static readonly _MODIFIERS: ModifierCallback[] = [];
 
@@ -30,7 +31,6 @@ export class LoggerFactory {
    * @returns A new logger
    */
   public static create(name: string): BaseLogger {
-
     const startIndex = name.lastIndexOf('/');
     if (startIndex != -1) {
       name = name.substring(startIndex + 1);
@@ -56,12 +56,17 @@ export class LoggerFactory {
     }
 
     if (LoggerFactory._pretty) {
-      options.transport = {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-        },
-      };
+      if (!LoggerFactory._transport) {
+        LoggerFactory._transport = {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+          },
+        };
+      }
+
+      options.transport = LoggerFactory._transport;
     }
 
     let modifiedOptions: LoggerOptions | DestinationStream = options;
@@ -81,9 +86,7 @@ export class LoggerFactory {
   }
 
   public static formatError(err: unknown, message?: string): Error {
-
     try {
-
       if (message) {
         message = ` - ${message}`;
       }
@@ -108,18 +111,14 @@ export class LoggerFactory {
 
       let max = 6;
       while (pointer && max-- > 0) {
-
         if (pointer instanceof Error) {
-
           errorLog.message += `\n${pointer.message}`;
           if (pointer.stack) {
             errorLog.stack = `${errorLog.stack ?? ''}\nCaused by ${pointer.name}: ${pointer.message ? pointer.message : '???'}\n${pointer.stack}`;
           }
 
           pointer = pointer.cause;
-
         } else {
-
           pointer = undefined;
         }
       }

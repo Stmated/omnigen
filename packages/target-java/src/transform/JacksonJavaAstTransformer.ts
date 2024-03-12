@@ -1,5 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform/index.ts';
-import {AbortVisitingWithResult, assertUnreachable, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {AbortVisitingWithResult, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {DefaultJavaVisitor} from '../visit/index.ts';
 import * as Java from '../ast/index.ts';
 import {OmniProperty, OmniTypeKind} from '@omnigen/core';
@@ -61,7 +61,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
               }
 
               const annotations = field.annotations || new Java.AnnotationList(...[]);
-              annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(field.identifier.value, field.property, Direction.BOTH, args.options));
+              annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(field.identifier.value, field.property, Direction.BOTH, args.options, false));
               if (!field.annotations && annotations.children.length > 0) {
                 field.annotations = annotations;
               }
@@ -94,7 +94,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
           const annotations = node.signature.annotations || new Java.AnnotationList(...[]);
 
           if (this.shouldAddJsonPropertyAnnotation(getterField.identifier.value, getterField.property.name, args.options)) {
-            annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(getterField.identifier.value, getterField.property, Direction.OUT, args.options));
+            annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(getterField.identifier.value, getterField.property, Direction.OUT, args.options, true));
             fieldsStack[fieldsStack.length - 1].skip.push(getterField);
           }
 
@@ -170,7 +170,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
         if (this.shouldAddJsonPropertyAnnotation(parameter.identifier.value, property.name, args.options)) {
           hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1] = true;
-          parameterAnnotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(parameter.field.identifier.value, property, Direction.IN, args.options));
+          parameterAnnotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(parameter.field.identifier.value, property, Direction.IN, args.options, false));
         }
 
         if (!parameter.annotations && parameterAnnotations.children.length > 0) {
@@ -184,11 +184,11 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     }
   }
 
-  private static createJacksonAnnotations(fieldName: string, property: OmniProperty, direction: Direction, javaOptions: JavaOptions): Java.Annotation[] {
+  private static createJacksonAnnotations(fieldName: string, property: OmniProperty, direction: Direction, javaOptions: JavaOptions, requiresName: boolean): Java.Annotation[] {
 
     const annotations: Java.Annotation[] = [];
 
-    const jsonProperty = JacksonJavaAstTransformer.createJsonPropertyAnnotation(fieldName, property, direction);
+    const jsonProperty = JacksonJavaAstTransformer.createJsonPropertyAnnotation(fieldName, property, direction, requiresName);
     if (jsonProperty) {
       annotations.push(jsonProperty);
     }
@@ -205,15 +205,17 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     return annotations;
   }
 
-  private static createJsonPropertyAnnotation(fieldName: string, property: OmniProperty, direction: Direction): Java.Annotation | undefined {
+  private static createJsonPropertyAnnotation(fieldName: string, property: OmniProperty, direction: Direction, requiresName: boolean): Java.Annotation | undefined {
 
     const annotationArguments = new Java.AnnotationKeyValuePairList();
 
     if (direction != Direction.OUT || (direction == Direction.OUT && fieldName != property.name)) {
       annotationArguments.children.push(new Java.AnnotationKeyValuePair(undefined, new Java.Literal(property.name)));
+    } else if (requiresName) {
+      return undefined;
     }
 
-    if (property.required) {
+    if (property.required && !OmniUtil.isDefaultValueType(property.type)) {
       annotationArguments.children.push(new Java.AnnotationKeyValuePair(new Java.Identifier('required'), new Java.Literal(true)));
     }
 

@@ -3,7 +3,7 @@ import {JavaTestUtils, JavaTestUtilsOptions} from './JavaTestUtils.ts';
 import {OmniModelParserResult, PackageOptions, TargetOptions} from '@omnigen/core';
 import {JavaPlugins, JavaOptions} from '@omnigen/target-java';
 import {ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
 
 export type KnownSchemaNames = 'openrpc';
 
@@ -18,7 +18,7 @@ export class OpenRpcTestUtils {
   }
 
   static async listExampleFileNames(type: KnownSchemaNames): Promise<string[]> {
-    const dirPath = `../parser-${type}/examples/`;
+    const dirPath = Util.getPathFromRoot(`./packages/parser-${type}/examples/`);
     return fs.readdir(dirPath, {withFileTypes: true})
       .then(paths => {
         return paths.filter(it => it.isFile()).map(it => it.name);
@@ -36,7 +36,7 @@ export class OpenRpcTestUtils {
   ): Promise<OmniModelParserResult<JavaOptions & PackageOptions & TargetOptions>> {
 
     const result = await JavaTestUtils.getResultFromFilePath(
-      `../parser-${type}/examples/${fileName}`,
+      Util.getPathFromRoot(`./packages/parser-${type}/examples/${fileName}`),
       options,
       ZodModelContext
         .merge(JavaPlugins.ZodJavaOptionsContext)

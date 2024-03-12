@@ -3,7 +3,7 @@ package generated.omnigen;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * Generic class to describe the JsonRpc error response package
@@ -20,7 +20,6 @@ public class JsonRpcErrorResponse {
     this.id = id;
   }
 
-  @JsonProperty(required = true)
   @JsonInclude(Include.ALWAYS)
   public ErrorUnknownError getError() {
     return this.error;

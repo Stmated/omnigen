@@ -25,6 +25,8 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/plugin/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/.profiling" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

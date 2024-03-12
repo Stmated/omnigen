@@ -43,6 +43,8 @@ export const ZodTargetOptions = ZodOptions.extend({
    */
   additionalPropertiesInterfaceAfterDuplicateCount: ZodCoercedNumber.default(2),
   allowCompressInterfaceToInner: ZodCoercedBoolean.default('true'),
+
+  shortenNestedTypeNames: ZodCoercedBoolean.default('true'),
 });
 
 export type IncomingTargetOptions = z.input<typeof ZodTargetOptions>;

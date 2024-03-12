@@ -24,9 +24,6 @@ describe('PackageResolver', () => {
     }
   });
 
-  // TODO: There should be a way to give overriding options programmatically, more important than from schema
-  //       Then add a test that checks that the one given from code actually takes precedence
-
   test('FromCode', async ({task}) => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});

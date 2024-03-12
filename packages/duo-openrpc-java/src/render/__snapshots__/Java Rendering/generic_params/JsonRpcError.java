@@ -2,7 +2,7 @@ package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * Generic class to describe the JsonRpc error inside an error response

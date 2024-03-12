@@ -23,7 +23,7 @@ import {
 } from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
 import {z, ZodObject} from 'zod';
@@ -60,7 +60,7 @@ export class JavaTestUtils {
 
   public static async getFileContentsFromFile(fileName: string, options?: JavaTestUtilsOptions, source = 'openrpc'): Promise<Map<string, string>> {
 
-    const filePath = `../parser-${source}/examples/${fileName}`;
+    const filePath = Util.getPathFromRoot(`./packages/parser-${source}/examples/${fileName}`);
     const result = await JavaTestUtils.getResultFromFilePath(filePath, options || {}, ZodCompilationUnitsContext);
 
     return JavaTestUtils.cuToContentMap(result.compilationUnits);

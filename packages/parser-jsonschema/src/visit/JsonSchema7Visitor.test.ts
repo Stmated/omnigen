@@ -1,4 +1,4 @@
-import {describe, test, expect, vi} from 'vitest';
+import {describe, expect, test} from 'vitest';
 import {DefaultJsonSchema7Visitor} from './DefaultJsonSchema7Visitor.ts';
 import * as fs from 'fs';
 import {JsonSchema7Visitor} from './JsonSchema7Visitor.ts';
@@ -6,22 +6,19 @@ import {NormalizeDefsJsonSchemaTransformerFactory} from '../transform/NormalizeD
 import {SimplifyJsonSchemaTransformerFactory} from '../transform/SimplifyJsonSchemaTransformerFactory.ts';
 import {z} from 'zod';
 import {ApplyIdJsonSchemaTransformerFactory} from '../transform/ApplyIdJsonSchemaTransformerFactory.ts';
-import {SchemaFile} from '@omnigen/core-util';
+import {SchemaFile, Util} from '@omnigen/core-util';
 import {JSONSchema7Definition} from 'json-schema';
 
 describe('jsonschema-7-visit', () => {
-
   test('unchanged', async () => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/pet.json').toString('utf-8'));
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visited = DefaultJsonSchema7Visitor.visit(content, DefaultJsonSchema7Visitor);
 
     expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
   });
 
   test('count', async () => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/pet.json').toString('utf-8'));
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
 
     let callCount = 0;
     const visitor: JsonSchema7Visitor = {
@@ -39,11 +36,10 @@ describe('jsonschema-7-visit', () => {
   });
 
   test('alter_maximum', async ({task}) => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/pet.json').toString('utf-8'));
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visitor: JsonSchema7Visitor = {
       ...DefaultJsonSchema7Visitor,
-      maximum: v => v ? v * 2 : v,
+      maximum: v => (v ? v * 2 : v),
     };
 
     const visited = visitor.visit(content, visitor);
@@ -52,8 +48,7 @@ describe('jsonschema-7-visit', () => {
   });
 
   test('remove_descriptions', async ({task}) => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/pet.json').toString('utf-8'));
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visitor: JsonSchema7Visitor = {
       ...DefaultJsonSchema7Visitor,
       description: () => undefined,
@@ -65,8 +60,7 @@ describe('jsonschema-7-visit', () => {
   });
 
   test('normalize_defs', async ({task}) => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/pet_defs_and_definitions.json').toString('utf-8'));
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet_defs_and_definitions.json')).toString('utf-8'));
     const visitor = new NormalizeDefsJsonSchemaTransformerFactory().create();
     const visited = visitor.visit(content, visitor);
 
@@ -74,12 +68,8 @@ describe('jsonschema-7-visit', () => {
   });
 
   test('keep_enum_var_names', async ({task}) => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/keep_x_enum_varnames.json').toString('utf-8'));
-    const visitors = [
-      new NormalizeDefsJsonSchemaTransformerFactory().create(),
-      new SimplifyJsonSchemaTransformerFactory().create(),
-    ];
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json')).toString('utf-8'));
+    const visitors = [new NormalizeDefsJsonSchemaTransformerFactory().create(), new SimplifyJsonSchemaTransformerFactory().create()];
 
     let visited = content;
     for (const visitor of visitors) {
@@ -90,11 +80,10 @@ describe('jsonschema-7-visit', () => {
   });
 
   test('visit_into_unknown_without_redirect', async ({task}) => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/visit_unknown_properties.json').toString('utf-8'));
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/visit_unknown_properties.json')).toString('utf-8'));
     const visitor: JsonSchema7Visitor = {
       ...DefaultJsonSchema7Visitor,
-      $ref: v => v ? v.replace(`$defs/B`, '$defs/C') : v,
+      $ref: v => (v ? v.replace(`$defs/B`, '$defs/C') : v),
     };
 
     const visited = visitor.visit(content, visitor);
@@ -103,14 +92,12 @@ describe('jsonschema-7-visit', () => {
   });
 
   test('visit_into_unknown_with_redirect', async ({task}) => {
-
-    const content = JSON.parse(fs.readFileSync('./examples/visit_unknown_properties.json').toString('utf-8'));
+    const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/visit_unknown_properties.json')).toString('utf-8'));
     const visitor: JsonSchema7Visitor = {
       ...DefaultJsonSchema7Visitor,
-      $ref: v => v ? v.replace(`$defs/B`, '$defs/C') : v,
-      format: v => (v == 'double') ? 'triple' : v,
+      $ref: v => (v ? v.replace(`$defs/B`, '$defs/C') : v),
+      format: v => (v == 'double' ? 'triple' : v),
       visit_unknown: (v, visitor) => {
-
         if (v.path[v.path.length - 1] == 'x-format') {
           const transformed = visitor.format(z.coerce.string().parse(v.value), visitor);
           if (transformed === undefined) {
@@ -129,8 +116,7 @@ describe('jsonschema-7-visit', () => {
   });
 
   test('normalize_ids', async ({task}) => {
-
-    const schemaFile = new SchemaFile('./examples/needs_absolute_ids.json');
+    const schemaFile = new SchemaFile(Util.getPathFromRoot('./packages/parser-jsonschema/examples/needs_absolute_ids.json'));
     const schemaContent = await schemaFile.asObject<JSONSchema7Definition>();
 
     // Set custom path resolver, otherwise we will get absolute path inside our snapshot

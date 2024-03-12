@@ -1,16 +1,16 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class RequestData {
-  private final RequestData.SenderInformation senderInformation;
-  public RequestData(@JsonProperty("senderInformation") RequestData.SenderInformation senderInformation) {
+  private final SenderInformation senderInformation;
+  public RequestData(@JsonProperty("senderInformation") SenderInformation senderInformation) {
     this.senderInformation = senderInformation;
   }
 
-  public RequestData.SenderInformation getSenderInformation() {
+  public SenderInformation getSenderInformation() {
     return this.senderInformation;
   }
 

@@ -1,4 +1,4 @@
-import {ExternalSyntaxTree, OmniType} from '@omnigen/core';
+import {ExternalSyntaxTree, OmniType, TargetOptions} from '@omnigen/core';
 import {JavaUtil, TypeNameInfo} from '../util/index.ts';
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from '../transform/index.ts';
 import * as Java from '../ast/index.ts';
@@ -14,17 +14,16 @@ interface CompilationUnitInfo {
   importNameMap: Map<OmniType, string>;
 }
 
-interface ObjectInfo {
-  object: Java.AbstractObjectDeclaration;
-}
-
+/**
+ * Resolves local names for types; is especially useful for nested types.
+ */
 export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
     const typeNameMap = new Map<OmniType, TypeNameInfo>();
     const cuInfoStack: CompilationUnitInfo[] = [];
-    const objectStack: ObjectInfo[] = [];
+    const objectStack: Java.AbstractObjectDeclaration[] = [];
 
     // First we go through all the types and find their true Fully-Qualified Name.
     const all: ExternalSyntaxTree<Java.JavaAstRootNode, JavaAndTargetOptions>[] = [...args.externals, {
@@ -33,7 +32,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     }];
 
     for (const external of all) {
-      this.getTypeNameInfos(external, objectStack).forEach((v, k) => typeNameMap.set(k, v));
+      this.getTypeNameInfos(external, objectStack, args.options).forEach((v, k) => typeNameMap.set(k, v));
     }
 
     if (objectStack.length > 0 || cuInfoStack.length > 0) {
@@ -67,18 +66,23 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         });
       },
 
-      visitObjectDeclaration: (node, visitor) => {
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclaration(node, visitor);
+      visitObjectDeclarationBody: (node, visitor) => {
+        try {
+          objectStack.push(node);
+          AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclarationBody(node, visitor);
+        } finally {
+          objectStack.pop();
+        }
       },
 
       visitWildcardType: (node, visitor) => {
 
         AbstractJavaAstTransformer.JAVA_VISITOR.visitWildcardType(node, visitor);
-        this.setLocalNameAndImport(node, node.implementation, cuInfoStack, typeNameMap, args.options);
+        this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options);
       },
 
       visitRegularType: node => {
-        this.setLocalNameAndImport(node, node.implementation, cuInfoStack, typeNameMap, args.options);
+        this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options);
       },
     }));
   }
@@ -86,6 +90,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
   private setLocalNameAndImport(
     node: Java.RegularType | Java.WildcardType,
     implementation: boolean | undefined,
+    objectStack: Java.AbstractObjectDeclaration[],
     cuInfoStack: CompilationUnitInfo[],
     typeNameMap: Map<OmniType, TypeNameInfo>,
     options: JavaAndTargetOptions,
@@ -102,7 +107,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     const typeNameInfo = typeNameMap.get(unwrapped);
 
     if (typeNameInfo) {
-      this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, cuInfo, options);
+      this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, objectStack, cuInfo, options);
     } else {
       this.setLocalNameAndImportForUnknownTypeName(node, implementation, cuInfo, typeNameMap, options);
     }
@@ -142,6 +147,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
   private setLocalNameAndAddImportForKnownTypeName(
     typeNameInfo: TypeNameInfo,
     node: Java.RegularType | Java.WildcardType,
+    objectStack: Java.AbstractObjectDeclaration[],
     cuInfo: CompilationUnitInfo,
     options: JavaAndTargetOptions,
   ): void {
@@ -151,7 +157,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
       const nodeImportName = JavaUtil.buildFullyQualifiedName(
         typeNameInfo.packageName || '', // Should never be undefined
-        typeNameInfo.outerTypeNames,
+        typeNameInfo.outerTypes.map(it => it.name.value),
         typeNameInfo.className,
       );
 
@@ -160,11 +166,21 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
     } else {
 
-      if (typeNameInfo.outerTypeNames.length > 0) {
+      let typePathDivergesAt = 0;
+      for (; typePathDivergesAt < objectStack.length && typePathDivergesAt < typeNameInfo.outerTypes.length; typePathDivergesAt++) {
+        if (objectStack[typePathDivergesAt] != typeNameInfo.outerTypes[typePathDivergesAt]) {
+          break;
+        }
+      }
 
-        // TODO: Make this prettier. Right now we always qualify the whole path.
-        //        Not needed if is upper type, sibling or direct child.
-        node.setLocalName(`${typeNameInfo.outerTypeNames.join('.')}.${typeNameInfo.className}`);
+      if (typeNameInfo.outerTypes.length > 0) {
+        const localOuterTypes = typeNameInfo.outerTypes.slice(typePathDivergesAt);
+        if (localOuterTypes.length > 0) {
+          const parentPath = localOuterTypes.map(it => it.name.value).join('.');
+          node.setLocalName(`${parentPath}.${typeNameInfo.className}`);
+        } else {
+          node.setLocalName(typeNameInfo.className);
+        }
       } else {
         node.setLocalName(typeNameInfo.className);
       }
@@ -199,7 +215,8 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
   private getTypeNameInfos(
     external: ExternalSyntaxTree<Java.JavaAstRootNode, JavaAndTargetOptions>,
-    objectStack: ObjectInfo[],
+    objectStack: Java.AbstractObjectDeclaration[],
+    targetOptions: TargetOptions,
   ): Map<OmniType, TypeNameInfo> {
 
     const typeNameMap = new Map<OmniType, TypeNameInfo>();
@@ -208,30 +225,49 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
       visitObjectDeclaration: (node, visitor) => {
 
-        objectStack.push({
-          object: node,
-        });
+        objectStack.push(node);
         AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclaration(node, visitor);
         objectStack.pop();
 
         const omniType = node.type.omniType;
-        const className = JavaUtil.getClassName(omniType, external.options);
+        let className = JavaUtil.getClassName(omniType, external.options);
         const packageName = JavaUtil.getPackageName(omniType, className, external.options);
-        const outerTypeNames = objectStack.map(it => it.object.name.value);
+        const outerTypes = [...objectStack];
 
         // If the object stack is not empty, then the current object declaration is a nested one.
         // So we need to create the custom fqn to the type, and save it into the fqn map.
         if (typeNameMap.has(omniType)) {
           const existing = typeNameMap.get(omniType)!;
-          const newPath = outerTypeNames.join('.');
-          const existingPath = existing.outerTypeNames.join('.');
+          const newPath = outerTypes.map(it => it.name.value).join('.');
+          const existingPath = existing.outerTypes.map(it => it.name.value).join('.');
           throw new Error(`Has encountered duplicate declaration of '${OmniUtil.describe(omniType)}', new at ${newPath}, existing at ${existingPath}`);
+        }
+
+        if (targetOptions.shortenNestedTypeNames && objectStack.length > 0) {
+
+          for (let i = objectStack.length - 1; i >= 0; i--) {
+            const closestOtherTypeName = objectStack[i].name.value;
+            if (className.length > closestOtherTypeName.length) {
+              const subClassName = className.substring(0, closestOtherTypeName.length);
+              if (subClassName == closestOtherTypeName) {
+                const newClassName = className.substring(closestOtherTypeName.length);
+                if (JavaUtil.isReservedWord(newClassName)) {
+                  continue;
+                }
+
+                className = newClassName;
+                node.name.original = node.name.original || node.name.value;
+                node.name.value = className;
+                break;
+              }
+            }
+          }
         }
 
         typeNameMap.set(omniType, {
           packageName: packageName,
           className: className,
-          outerTypeNames: outerTypeNames,
+          outerTypes: outerTypes,
         });
       },
     }));

@@ -40,6 +40,12 @@ export const IncludeExampleCommentsMode = {
 } as const;
 export type IncludeExampleCommentMode = ToEnum<typeof IncludeExampleCommentsMode>;
 
+export const JavaAnnotationLibrary = {
+  JAKARTA: 'JAKARTA',
+  JAVAX: 'JAVAX',
+} as const;
+export type JavaAnnotationLibrary = ToEnum<typeof JavaAnnotationLibrary>;
+
 export const ZodJavaOptions = ZodOptions.extend({
   immutableModels: ZodCoercedBoolean.default('true'),
   includeAlwaysNullProperties: ZodCoercedBoolean.default('false'),
@@ -58,6 +64,7 @@ export const ZodJavaOptions = ZodOptions.extend({
   includeGeneratedAnnotation: ZodCoercedBoolean.default('true'),
   preferNumberType: z.enum(getEnumValues(OmniPrimitiveKind)).default(OmniPrimitiveKind.INTEGER),
   serializationLibrary: z.enum(getEnumValues(SerializationLibrary)).default(SerializationLibrary.JACKSON),
+  javaAnnotationLibrary: z.enum(getEnumValues(JavaAnnotationLibrary)).default(JavaAnnotationLibrary.JAKARTA),
   serializationPropertyNameMode: z.enum(getEnumValues(SerializationPropertyNameMode)).default(SerializationPropertyNameMode.ALWAYS)
     .describe(`Useful to change to 'IF_REQUIRED' if you have enabled compiler flag '-parameters' and registered 'jackson-module-parameter-names'`),
   serializationConstructorAnnotationMode: z.enum(getEnumValues(SerializationConstructorAnnotationMode)).default(SerializationConstructorAnnotationMode.IF_REQUIRED),

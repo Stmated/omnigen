@@ -3,7 +3,7 @@ package generated.omnigen;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * Generic class to describe the JsonRpc request package
@@ -15,7 +15,7 @@ public class JsonRpcRequest<TParams extends JsonRpcRequestParams<? extends Abstr
   private final String method;
   private final TParams params;
   public JsonRpcRequest(
-    @JsonProperty(value = "jsonrpc", required = true) String jsonrpc,
+    @JsonProperty("jsonrpc") String jsonrpc,
     @JsonProperty(value = "id", required = true) String id,
     @JsonProperty("params") TParams params,
     @JsonProperty("method") String method
@@ -30,13 +30,11 @@ public class JsonRpcRequest<TParams extends JsonRpcRequestParams<? extends Abstr
     this.method = method;
   }
 
-  @JsonProperty(required = true)
   @JsonInclude(Include.ALWAYS)
   public String getId() {
     return this.id;
   }
 
-  @JsonProperty(required = true)
   @JsonInclude(Include.ALWAYS)
   public String getJsonrpc() {
     return this.jsonrpc;

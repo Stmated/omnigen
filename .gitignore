@@ -16,3 +16,6 @@ lib
 .target_test
 *.log
 target
+.performance-profile.json
+.profiling
+coverage/

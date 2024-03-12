@@ -94,6 +94,7 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitFieldGetterSetter: JavaVisitFn<Java.FieldGetterSetter, R>;
   visitCast: JavaVisitFn<Java.Cast, R>;
   visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
+  visitObjectDeclarationBody: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
   visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
   visitGenericClassDeclaration: JavaVisitFn<Java.GenericClassDeclaration, R>;
   visitGenericTypeDeclarationList: JavaVisitFn<Java.GenericTypeDeclarationList, R>;
@@ -310,10 +311,11 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       if (node.implements) {
         result.push(node.implements.visit(visitor));
       }
-      result.push(node.body.visit(visitor));
+      result.push(visitor.visitObjectDeclarationBody(node, visitor));
 
       return result;
     },
+    visitObjectDeclarationBody: (node, visitor) => node.body.visit(visitor),
     visitClassDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
     visitGenericClassDeclaration: (node, visitor) => [
       visitor.visitClassDeclaration(node, visitor),

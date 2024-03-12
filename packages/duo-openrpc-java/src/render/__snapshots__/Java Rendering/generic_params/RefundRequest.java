@@ -3,37 +3,37 @@ package generated.omnigen;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class RefundRequest extends JsonRpcRequest<RefundRequest.RefundRequestParams> {
+public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
   public RefundRequest(
-    @JsonProperty(value = "jsonrpc", required = true) String jsonrpc,
+    @JsonProperty("jsonrpc") String jsonrpc,
     @JsonProperty(value = "id", required = true) String id,
-    @JsonProperty("params") RefundRequest.RefundRequestParams params
+    @JsonProperty("params") Params params
   ) {
     super(((jsonrpc == null) ? "2.0" : jsonrpc), id, params, "Refund");
   }
 
   @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-  public static class RefundRequestParams extends JsonRpcRequestParams<RefundRequest.RefundRequestParams.RefundRequestData> {
-    public RefundRequestParams(
+  public static class Params extends JsonRpcRequestParams<Params.Data> {
+    public Params(
       @JsonProperty(value = "Signature", required = true) String signature,
       @JsonProperty(value = "UUID", required = true) String uuid,
-      @JsonProperty("Data") RefundRequest.RefundRequestParams.RefundRequestData data
+      @JsonProperty("Data") Data data
     ) {
       super(signature, uuid, data);
     }
 
     @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-    public static class RefundRequestData extends AbstractRequestData<RefundRequest.RefundRequestParams.RefundRequestData.RefundRequestDataAttributes> {
+    public static class Data extends AbstractRequestData<Data.Attributes> {
       private final String amount;
       private final String currency;
       private final String orderId;
-      public RefundRequestData(
+      public Data(
         @JsonProperty(value = "Username", required = true) String username,
         @JsonProperty(value = "Password", required = true) String password,
-        @JsonProperty("Attributes") RefundRequest.RefundRequestParams.RefundRequestData.RefundRequestDataAttributes attributes,
+        @JsonProperty("Attributes") Attributes attributes,
         @JsonProperty(value = "OrderID", required = true) String orderId,
         @JsonProperty(value = "Amount", required = true) String amount,
         @JsonProperty(value = "Currency", required = true) String currency
@@ -63,9 +63,9 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.RefundRequestPar
       }
 
       @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-      public static class RefundRequestDataAttributes {
+      public static class Attributes {
         private final String externalReference;
-        public RefundRequestDataAttributes(@JsonProperty("ExternalReference") String externalReference) {
+        public Attributes(@JsonProperty("ExternalReference") String externalReference) {
           this.externalReference = externalReference;
         }
 

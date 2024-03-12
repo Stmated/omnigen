@@ -1,12 +1,12 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class ErrorUnknown extends JsonRpcErrorResponse<ErrorUnknown.ErrorUnknownError> {
+public class ErrorUnknown extends JsonRpcErrorResponse<ErrorUnknown.Error> {
   private final String id;
-  public ErrorUnknown(ErrorUnknown.ErrorUnknownError error, String id) {
+  public ErrorUnknown(Error error, String id) {
     super(error);
     this.id = id;
   }
@@ -20,9 +20,9 @@ public class ErrorUnknown extends JsonRpcErrorResponse<ErrorUnknown.ErrorUnknown
   }
 
   @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-  public static class ErrorUnknownError extends JsonRpcError {
+  public static class Error extends JsonRpcError {
     private final JsonNode data;
-    public ErrorUnknownError(Integer code, String message, JsonNode data) {
+    public Error(Integer code, String message, JsonNode data) {
       super(((code == null) ? -1 : code), ((message == null) ? "Unknown Error" : message));
       this.data = data;
     }

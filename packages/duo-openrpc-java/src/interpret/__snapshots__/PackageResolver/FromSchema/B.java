@@ -1,7 +1,7 @@
 package com.company.out.directory2;
 
 import com.company.out.Abs;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class B extends Abs {

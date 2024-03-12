@@ -1,12 +1,12 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class ListThingsError100 extends JsonRpcErrorResponse<ListThingsError100.ListThingsError100Error> {
+public class ListThingsError100 extends JsonRpcErrorResponse<ListThingsError100.Error> {
   private final String id;
-  public ListThingsError100(ListThingsError100.ListThingsError100Error error, String id) {
+  public ListThingsError100(Error error, String id) {
     super(error);
     this.id = id;
   }
@@ -20,9 +20,9 @@ public class ListThingsError100 extends JsonRpcErrorResponse<ListThingsError100.
   }
 
   @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-  public static class ListThingsError100Error extends JsonRpcError {
+  public static class Error extends JsonRpcError {
     private final JsonNode data;
-    public ListThingsError100Error(String message, JsonNode data) {
+    public Error(String message, JsonNode data) {
       super(100, ((message == null) ? "Server is busy" : message));
       this.data = data;
     }

@@ -71,9 +71,15 @@ export class PluginManager {
 
     try {
 
-      // Try to load the plugin
+      // Try to load the plugin. This is all *very* ugly, but temporary until core functionality is stable.
       logger.info(`Importing ${qualifier.packageName}`);
-      const packageContents = await import(qualifier.packageName);
+      const packageContents = await import(qualifier.packageName)
+        .catch(() => import(`../../${qualifier.packageName}/src/index.ts`))
+        .catch(() => import(`../../parser-${qualifier.packageName}/src/index.ts`))
+        .catch(() => import(`../../target-${qualifier.packageName}/src/index.ts`))
+        .catch(() => import(`./plugins/${qualifier.packageName}/src/index.ts`))
+        .catch(() => import(`./plugins/parser-${qualifier.packageName}/src/index.ts`))
+        .catch(() => import(`./plugins/target-${qualifier.packageName}/src/index.ts`));
 
       // TODO: Check if "default" exists and if it is an init function -- then use that.
       if ('init' in packageContents) {
@@ -104,7 +110,7 @@ export class PluginManager {
           return Promise.reject(new Error(`Imported 'init' member must be a function`));
         }
       } else {
-        logger.info(`No 'init' inside imported plugin, instead: %o`, packageContents);
+        logger.info(`No 'init' inside imported plugin ${qualifier.packageName}, likely the plugin auto-registered itself`);
         return true;
       }
 

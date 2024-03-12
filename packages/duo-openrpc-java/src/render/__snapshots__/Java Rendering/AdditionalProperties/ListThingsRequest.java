@@ -1,6 +1,6 @@
 package generated.omnigen;
 
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * List all things

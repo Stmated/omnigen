@@ -1,7 +1,7 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * Generic class to describe the JsonRpc request params

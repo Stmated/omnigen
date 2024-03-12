@@ -54,7 +54,7 @@ export type JavaSuperTypeCapableType =
 export interface TypeNameInfo {
   packageName: string | undefined;
   className: string;
-  outerTypeNames: string[];
+  outerTypes: Java.AbstractObjectDeclaration[];
 }
 
 interface FqnOptions {
@@ -69,6 +69,23 @@ interface FqnOptions {
 }
 
 export type FqnArgs = OmniType | FqnOptions;
+
+const JAVA_RESERVED_WORDS = [
+  'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class',
+  'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally',
+  'float', 'for', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long',
+  'native', 'new', 'null', 'package', 'private', 'protected', 'public', 'return', 'short',
+  'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient',
+  'try', 'void', 'volatile', 'while', 'const', 'goto', 'true', 'false', 'null',
+];
+
+const JAVA_LANG_CLASSES = [
+  'Appendable', 'AutoCloseable', 'CharSequence', 'Cloneable', 'Comparable', 'Iterable', 'Readable', 'Runnable', 'Boolean',
+  'Byte', 'Character', 'Class', 'ClassLoader', 'ClassValue', 'Compiler', 'Double', 'Enum', 'Float', 'InheritableThreadLocal',
+  'Integer', 'Long', 'Math', 'Number', 'Object', 'Package', 'Process', 'ProcessBuilder', 'Runtime', 'RuntimePermission',
+  'SecurityManager', 'Short', 'StackTraceElement', 'StrictMath', 'String', 'StringBuffer', 'StringBuilder', 'System', 'Thread',
+  'ThreadGroup', 'ThreadLocal', 'Throwable', 'Void',
+];
 
 export class JavaUtil {
 
@@ -144,8 +161,8 @@ export class JavaUtil {
       // TODO: Ugly, this code is replicated elsewhere. Should look into making it generalized/centralized
       const localName = args.localNames.get(args.type);
       if (localName) {
-        if (localName.outerTypeNames.length > 0) {
-          return `${localName.outerTypeNames.join('.')}.${localName.className}`;
+        if (localName.outerTypes.length > 0) {
+          return `${localName.outerTypes.map(it => it.name.value).join('.')}.${localName.className}`;
         } else {
           return localName.className;
         }
@@ -685,7 +702,6 @@ export class JavaUtil {
       return undefined;
     }
 
-    // subType.kind != 'OBJECT'
     if (!('extendedBy' in subType)) {
       return undefined;
     }
@@ -948,6 +964,10 @@ export class JavaUtil {
 
   private static getCommon<T>(a: T[], b: T[]): T[] {
     return a.filter(value => b.includes(value));
+  }
+
+  public static isReservedWord(word: string): boolean {
+    return JAVA_RESERVED_WORDS.includes(word) || JAVA_LANG_CLASSES.includes(word);
   }
 
   public static getExtendsAndImplements(

@@ -1,6 +1,6 @@
 package com.company;
 
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * Generic class to describe the JsonRpc error inside an error response

@@ -653,6 +653,16 @@ export class OmniUtil {
     return true;
   }
 
+  public static isDefaultValueType(type: OmniType): boolean {
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+      if (type.value !== undefined) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /**
    * IMPORTANT to remember that this is NOT an actual type name, it is a VIRTUAL type name for identification.
    *

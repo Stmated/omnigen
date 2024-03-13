@@ -1,12 +1,13 @@
-import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {CompositionKind, OmniCompositionAndType, OmniCompositionType, OmniEnumType, OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind, UnknownKind} from '@omnigen/core';
-import {JavaUtil} from '../util/index.ts';
-import * as Java from '../ast/index.ts';
-import {AbstractObjectDeclaration, JavaAstRootNode} from '../ast/index.ts';
+import {JavaUtil} from '../util';
+import * as Java from '../ast';
+import {AbstractObjectDeclaration, JavaAstRootNode} from '../ast';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {JavaAstUtils} from './JavaAstUtils.ts';
-import {JavaOptions, SerializationLibrary} from '../options/index.ts';
-import {JACKSON_JSON_CREATOR, JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
+import {JavaAstUtils} from './JavaAstUtils';
+import {JavaOptions, SerializationLibrary} from '../options';
+import {JACKSON_JSON_CREATOR, JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer';
+import {RuntimeTypeMapping} from '../ast';
 
 /**
  * There needs to be more centralized handling of adding fields to a class depending on if it is extending or implementing interfaces.
@@ -87,7 +88,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
   private addXOrMappingToBody(
     type: OmniCompositionType<OmniType | OmniPrimitiveType>,
     declaration: AbstractObjectDeclaration,
-    options: JavaOptions,
+    options: JavaAndTargetOptions,
   ): void {
 
     // The composition type is XOR, it can only be one of them.
@@ -118,7 +119,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       // This means the specification did not have any discriminators.
       // Instead we need to figure out what it is in runtime.
       declaration.body.children.push(
-        new Java.RuntimeTypeMapping(type.types, options),
+        new RuntimeTypeMapping(type.types, options),
       );
     }
   }

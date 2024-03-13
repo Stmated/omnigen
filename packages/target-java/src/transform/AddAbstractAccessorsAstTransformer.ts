@@ -3,9 +3,9 @@ import {
   OmniUtil,
   VisitorFactoryManager,
 } from '@omnigen/core-util';
-import * as Java from '../ast/index.ts';
-import {Identifier} from '../ast/index.ts';
-import {JavaUtil} from '../util/index.ts';
+import * as Java from '../ast';
+import {Identifier} from '../ast';
+import {JavaUtil} from '../util';
 
 /**
  * TODO: Should this add the method declarations for interfaces as well?

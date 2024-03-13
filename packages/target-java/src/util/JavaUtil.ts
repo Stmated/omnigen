@@ -20,12 +20,12 @@ import {
   PackageOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options/index.ts';
-import {DefaultJavaVisitor} from '../visit/index.ts';
-import * as Java from '../ast/index.ts';
+import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options';
+import {DefaultJavaVisitor} from '../visit';
+import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {JavaAndTargetOptions} from '../transform/index.ts';
+import {JavaAndTargetOptions} from '../transform';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -613,6 +613,10 @@ export class JavaUtil {
     }
 
     return name.replaceAll(JavaUtil._PATTERN_INVALID_CHARS, '_');
+  }
+
+  public static getGenericCompatibleType(type: OmniType): OmniType {
+    return OmniUtil.toReferenceType(type);
   }
 
   /**

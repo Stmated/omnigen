@@ -1,6 +1,6 @@
 import {OmniTypeKind} from '@omnigen/core';
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
-import * as Java from '../ast/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
+import * as Java from '../ast';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAnnotationLibrary} from '../options';
 

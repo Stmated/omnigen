@@ -11,13 +11,13 @@ import {
   OmniTypeKind,
   UnknownKind,
 } from '@omnigen/core';
-import {JavaUtil} from '../util/index.ts';
-import * as Java from '../ast/index.ts';
-import {JavaAstRootNode} from '../ast/index.ts';
+import {JavaUtil} from '../util';
+import * as Java from '../ast';
+import {JavaAstRootNode} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
-import {JavaOptions} from '../options/index.ts';
-import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index.ts';
+import {JavaOptions} from '../options';
+import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);

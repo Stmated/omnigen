@@ -1,8 +1,8 @@
 import {AstNode, AstVisitor, OmniPrimitiveKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
-import * as Java from '../ast/index.ts';
-import {GenericTypeDeclarationList, TokenType} from '../ast/index.ts';
-import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit/index.ts';
-import {JavaOptions} from '../options/index.ts';
+import * as Java from '../ast';
+import {GenericTypeDeclarationList, TokenType} from '../ast';
+import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
+import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaUtil} from '../util';

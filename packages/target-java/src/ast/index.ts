@@ -1,3 +1,4 @@
 
-export * from './JavaAstTypes.js';
-export * from './JavaAstRootNode.js';
+export * from './JavaAstTypes.ts';
+export * from './JavaAstRootNode.ts';
+export * from './RuntimeTypeMapping.ts';

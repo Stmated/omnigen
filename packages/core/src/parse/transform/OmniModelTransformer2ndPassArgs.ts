@@ -1,5 +1,5 @@
 import {ParserOptions} from '../ParserOptions';
-import {TargetFeatures, TargetOptions} from '../../interpret/index.ts';
+import {TargetFeatures, TargetOptions} from '../../interpret';
 import {ModelTransformOptions} from '../ModelTransformOptions';
 import {OmniModelTransformerArgs} from './OmniModelTransformerArgs';
 

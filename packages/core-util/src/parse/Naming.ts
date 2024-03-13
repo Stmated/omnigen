@@ -3,7 +3,7 @@ import {TypeName} from '@omnigen/core';
 import {NamePair} from './NamePair';
 import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
-import {Case} from '../util/index.js';
+import {Case} from '../util';
 
 const DEF_UNWRAP_CALLBACK: NameCallback = (name, parts, keepPunctuation) => {
   if (keepPunctuation) {

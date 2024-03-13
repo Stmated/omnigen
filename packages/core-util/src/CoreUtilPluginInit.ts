@@ -15,21 +15,12 @@ import {
   ZodTypeLibraryContext,
 } from '@omnigen/core-plugin';
 import {z} from 'zod';
-import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse/index.ts';
-import {
-  OmniModel2ndPassTransformer,
-  OmniModelTransformer,
-  RenderedCompilationUnit,
-  ZodModelTransformOptions,
-  ZodPackageOptions,
-  ZodParserOptions,
-  ZodTargetOptions,
-} from '@omnigen/core';
+import {ConflictingAndCompositionTargetModelTransformer, ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse';
+import {OmniModel2ndPassTransformer, OmniModelTransformer, RenderedCompilationUnit, ZodModelTransformOptions, ZodPackageOptions, ZodParserOptions, ZodTargetOptions} from '@omnigen/core';
 import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary.ts';
-import {FileWriter} from './write/index.ts';
+import {FileWriter} from './write';
 import {DefaultOmniModelLibrary} from './parse/DefaultOmniModelLibrary.ts';
 import {LoggerFactory} from '@omnigen/core-log';
-import {ConflictingAndCompositionTargetModelTransformer} from './parse/index.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 

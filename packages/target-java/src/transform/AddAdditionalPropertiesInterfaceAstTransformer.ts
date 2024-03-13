@@ -1,9 +1,9 @@
 import {
   OmniInterfaceType, OmniObjectType, OmniTypeKind,
 } from '@omnigen/core';
-import {JavaUtil} from '../util/index.ts';
-import {JavaAstUtils, AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
-import * as Java from '../ast/index.js';
+import {JavaUtil} from '../util';
+import {JavaAstUtils, AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
+import * as Java from '../ast';
 import {Naming, VisitorFactoryManager} from '@omnigen/core-util';
 
 export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {

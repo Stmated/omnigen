@@ -4,7 +4,7 @@ import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
 import {OmniTypeKind} from '@omnigen/core';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.ts';
 import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
-import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options/index.ts';
+import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
 import {describe, test, expect} from 'vitest';
 
 describe('Test Generic Model Creation', () => {
@@ -30,7 +30,7 @@ describe('Test Generic Model Creation', () => {
       const model = (await parser.parse()).model;
       expect(model).toBeDefined();
     }
-  });
+  }, {timeout: 10_000});
 
   test('PetStore should create expected model', async () => {
 

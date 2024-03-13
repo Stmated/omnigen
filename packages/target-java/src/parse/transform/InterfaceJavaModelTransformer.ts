@@ -1,7 +1,7 @@
 import {CompositionKind, OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaUtil} from '../../util/index.ts';
+import {JavaUtil} from '../../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 

@@ -3,7 +3,7 @@
   "display": "base",
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "preserve",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "composite": false,
@@ -32,6 +32,7 @@
     "exactOptionalPropertyTypes": true,
 
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "resolvePackageJsonExports": true,
     "verbatimModuleSyntax": false,
 

@@ -29,9 +29,8 @@ import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
 import {Case, CompositionUtil, Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
-import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform/index.ts';
-import {ExternalDocumentsFinder, RefResolver} from '../visit/ExternalDocumentsFinder.ts';
-import {ToDefined} from '../visit';
+import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
+import {ExternalDocumentsFinder, RefResolver, ToDefined} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 

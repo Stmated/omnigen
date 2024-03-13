@@ -4,8 +4,8 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import * as Java from '../ast/index.ts';
-import {AnnotationList, ModifierType} from '../ast/index.ts';
+import * as Java from '../ast';
+import {AnnotationList, ModifierType} from '../ast';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
 

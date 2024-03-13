@@ -1,6 +1,6 @@
 import {CompositionKind, OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
-import {JavaUtil} from '../../util/index.ts';
+import {JavaUtil} from '../../util';
 
 /**
  * Checks if there are composition types inside the model which must be elevated to become enveloped in an object to be legal in Java.

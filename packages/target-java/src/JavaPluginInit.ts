@@ -11,9 +11,9 @@ import {
   ZodTargetContext,
   ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
-import {JavaInterpreter} from './interpret/index.ts';
-import {CompositionGenericTargetToObjectJavaModelTransformer, InterfaceJavaModelTransformer} from './parse/index.ts';
-import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from './index.ts';
+import {JavaInterpreter} from './interpret';
+import {CompositionGenericTargetToObjectJavaModelTransformer, InterfaceJavaModelTransformer} from './parse';
+import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from '.';
 import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions, ZodTargetFeatures} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';

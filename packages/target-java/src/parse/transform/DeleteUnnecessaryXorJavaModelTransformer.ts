@@ -1,6 +1,6 @@
 import {CompositionKind, OmniModelTransformer, OmniModelTransformerArgs, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
-import {JAVA_FEATURES} from '../../index.ts';
+import {JAVA_FEATURES} from '../..';
 
 /**
  * Java cannot represent XOR/union types without wrapping inside an object to handle those situations.

@@ -1,9 +1,9 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform/index.ts';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
-import {DefaultJavaVisitor} from '../visit/index.ts';
-import * as Java from '../ast/index.ts';
+import {DefaultJavaVisitor} from '../visit';
+import * as Java from '../ast';
 import {OmniProperty, OmniTypeKind} from '@omnigen/core';
-import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '../options/index.ts';
+import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -14,6 +14,8 @@ export const JACKSON_JSON_CREATOR = 'com.fasterxml.jackson.annotation.JsonCreato
 const JACKSON_JSON_INCLUDE = 'com.fasterxml.jackson.annotation.JsonInclude';
 export const JACKSON_JSON_ANY_GETTER = 'com.fasterxml.jackson.annotation.JsonAnyGetter';
 export const JACKSON_JSON_ANY_SETTER = 'com.fasterxml.jackson.annotation.JsonAnySetter';
+
+export const JACKSON_OBJECT_MAPPER = 'com.fasterxml.jackson.databind.ObjectMapper';
 
 enum Direction {
   IN,

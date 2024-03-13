@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="All Monorepo Tests" type="JavaScriptTestRunnerVitest">
     <node-interpreter value="project" />
-    <vitest-package value="$PROJECT_DIR$/packages/core/node_modules/vitest" />
+    <vitest-package value="$PROJECT_DIR$/node_modules/vitest" />
     <working-dir value="$PROJECT_DIR$" />
     <vitest-options value="--run" />
     <envs />

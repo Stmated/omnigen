@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {AstNode} from '../ast/index.ts';
+import {AstNode} from '../ast';
 
 export * from './Options.ts';
 export * from './IPackageResolver.ts';

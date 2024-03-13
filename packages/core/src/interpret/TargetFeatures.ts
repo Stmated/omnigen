@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {ZodCoercedBoolean} from '../options/index.ts';
+import {ZodCoercedBoolean} from '../options';
 
 export const ZodTargetFeatures = z.object({
   /**

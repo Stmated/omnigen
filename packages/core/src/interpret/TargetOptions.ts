@@ -1,5 +1,5 @@
-import {getEnumValues, ZodCoercedBoolean, ZodCoercedNumber, ZodOptions} from '../options/index.ts';
-import {CompressTypeLevel, OmniTypeKind} from '../parse/index.ts';
+import {getEnumValues, ZodCoercedBoolean, ZodCoercedNumber, ZodOptions} from '../options';
+import {CompressTypeLevel, OmniTypeKind} from '../parse';
 import {ZodOmniTypeNameReducer} from './OmniTypeNameReducer.ts';
 import {CompressTypeNaming} from './CompressTypeNaming.ts';
 import {z} from 'zod';

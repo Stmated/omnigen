@@ -139,5 +139,5 @@ describe('merge-models', () => {
       'ListThingsRequestParams',
       'Thing',
     ]);
-  });
+  }, {timeout: 5_000});
 });

@@ -1,4 +1,4 @@
-import {ToEnum} from '../options/index.ts';
+import {ToEnum} from '../options';
 
 export const OmniPrimitiveKind = {
   NUMBER: 'NUMBER',

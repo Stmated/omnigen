@@ -1,2 +1,2 @@
 
-export * from './render/index.ts';
+export * from './render';

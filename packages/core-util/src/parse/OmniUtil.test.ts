@@ -29,14 +29,14 @@ describe('OmniUtil', () => {
     expect(expectCommon(
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
-      {primitiveGenerics: false, literalTypes: true},
+      {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: true},
     ).diffs).toEqual([TypeDifference.FUNDAMENTAL_TYPE]);
 
     // With Java, the literal types become the same type in the signature
     const literalString = expectCommon(
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
       {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
-      {primitiveGenerics: false, literalTypes: false},
+      {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: false},
     );
 
     expect(literalString.diffs).toEqual([TypeDifference.NARROWED_LITERAL_TYPE]);

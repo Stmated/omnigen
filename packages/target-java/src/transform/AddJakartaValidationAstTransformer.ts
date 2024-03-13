@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 
 export class AddJakartaValidationAstTransformer extends AbstractJavaAstTransformer {
 

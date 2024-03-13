@@ -1,6 +1,6 @@
-import {OmniType} from '../parse/index.js';
-import {PropertyDifference} from './PropertyDifference.js';
-import {TypeDifference} from './TypeDifference.js';
+import {OmniType} from '../parse';
+import {PropertyDifference} from './PropertyDifference.ts';
+import {TypeDifference} from './TypeDifference.ts';
 
 export interface PropertyEquality {
   propertyDiffs?: PropertyDifference[] | undefined,

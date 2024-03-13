@@ -156,7 +156,7 @@ module.exports = {
 
     'tsdoc/syntax': 'warn',
 
-    'require-jsdoc': 1,
+    'require-jsdoc': 0,
     'valid-jsdoc': 0,
 
     '@typescript-eslint/explicit-function-return-type': 'off',

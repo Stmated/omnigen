@@ -1,9 +1,9 @@
 import {PluginAutoRegistry} from '@omnigen/core-plugin';
 import {JsonSchemaPlugin} from './JsonSchemaPluginInit.ts';
 
-export * from './parse/index.ts';
-export * from './transform/index.ts';
-export * from './visit/index.ts';
+export * from './parse';
+export * from './transform';
+export * from './visit';
 
 export * as JsonSchemaPlugins from './JsonSchemaPluginInit.ts';
 

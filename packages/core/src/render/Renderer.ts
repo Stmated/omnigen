@@ -1,4 +1,4 @@
-import {AstNode, RenderedCompilationUnit} from '../ast/index.ts';
+import {AstNode, RenderedCompilationUnit} from '../ast';
 import {AstVisitor} from '../visit';
 
 export interface Renderer {

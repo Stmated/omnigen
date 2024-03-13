@@ -1,2 +1,2 @@
 
-export * from './parse/index.ts';
+export * from './parse';

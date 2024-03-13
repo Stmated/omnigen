@@ -1,4 +1,4 @@
-import {Options} from '../options/index.ts';
+import {Options} from '../options';
 import {OmniModel} from './OmniModel';
 
 export interface OmniModelParserResult<TOpt extends Options> {

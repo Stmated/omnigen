@@ -1,4 +1,4 @@
-import {AstNode} from '../ast/index.js';
+import {AstNode} from '../ast';
 import {AstVisitor} from './AstVisitor';
 import {VisitResult} from './VisitResult';
 

@@ -23,9 +23,9 @@ import {
 import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniUtil} from '../OmniUtil.ts';
-import {EqualityFinder} from '../../equality/index.ts';
+import {EqualityFinder} from '../../equality';
 import {Naming} from '../Naming.ts';
-import {Case, Sorters} from '../../util/index.ts';
+import {Case, Sorters} from '../../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 

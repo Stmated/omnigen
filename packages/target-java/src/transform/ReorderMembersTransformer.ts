@@ -1,7 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {AstNode} from '@omnigen/core';
-import * as Java from '../ast/index.js';
-import {ModifierType} from '../ast/index.js';
+import * as Java from '../ast';
+import {ModifierType} from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 

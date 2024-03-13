@@ -1,34 +1,34 @@
 
 // Basic types
-export * from './LiteralValue.js';
-export * from './CompressTypeLevel.js';
+export * from './LiteralValue';
+export * from './CompressTypeLevel';
 
 // Basic classes
-export * from './SchemaSource.js';
+export * from './SchemaSource';
 
-export * from './ParserOptions.js';
-export * from './Parser.js';
+export * from './ParserOptions';
+export * from './Parser';
 
-export * from './OmniModel.js';
-export * from './OmniModelParserResult.js';
+export * from './OmniModel';
+export * from './OmniModelParserResult';
 
-export * from './ModelTransformOptions.js';
+export * from './ModelTransformOptions';
 
-export * from './CommonDenominatorType.js';
-export * from './ParserBootstrapFactory.js';
-export * from './ParserBootstrap.js';
+export * from './CommonDenominatorType';
+export * from './ParserBootstrapFactory';
+export * from './ParserBootstrap';
 
-export * from './TypeOwner.js';
-export * from './PropertiesInformation.js';
-export * from './PropertyInformation.ts';
+export * from './TypeOwner';
+export * from './PropertiesInformation';
+export * from './PropertyInformation';
 
 // Other sub-directories´
-export * from './transform/index.js';
-export * from './TypeName.js';
-export * from './TypeNameModifier.js';
-export * from './OmniTypeKind.ts';
+export * from './transform/index';
+export * from './TypeName';
+export * from './TypeNameModifier';
+export * from './OmniTypeKind';
 
-export * from './OmniTypeLibrary.ts';
-export * from './OmniModelLibrary.ts';
-export * from './OmniPrimitiveKind.ts';
+export * from './OmniTypeLibrary';
+export * from './OmniModelLibrary';
+export * from './OmniPrimitiveKind';
 

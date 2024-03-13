@@ -1,2 +1,2 @@
 
-export * from './transform/index.js';
+export * from './transform';

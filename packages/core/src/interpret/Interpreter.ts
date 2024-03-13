@@ -1,7 +1,7 @@
-import {OmniModel} from '../parse/index.ts';
-import {AstNode} from '../ast/index.ts';
-import {TargetOptions} from '../interpret/index.ts';
-import {ExternalSyntaxTree} from '../transform/index.ts';
+import {OmniModel} from '../parse';
+import {AstNode} from '../ast';
+import {TargetOptions} from '../interpret';
+import {ExternalSyntaxTree} from '../transform';
 
 export interface Interpreter<TOpt extends TargetOptions = TargetOptions> {
 

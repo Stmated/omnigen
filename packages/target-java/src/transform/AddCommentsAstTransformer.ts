@@ -8,10 +8,10 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import {IncludeExampleCommentsMode, JavaOptions} from '../options/index.js';
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform/index.js';
-import * as Java from '../ast/index.js';
-import {JavaUtil} from '../util/index.js';
+import {IncludeExampleCommentsMode, JavaOptions} from '../options';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
+import * as Java from '../ast';
+import {JavaUtil} from '../util';
 import {Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 

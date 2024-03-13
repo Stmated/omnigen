@@ -1,4 +1,4 @@
-import {AstVisitor, VisitResult} from '../visit/index.js';
+import {AstVisitor, VisitResult} from '../visit';
 
 export interface AstToken {
   visit<R>(visitor: AstVisitor<R>): VisitResult<R>;

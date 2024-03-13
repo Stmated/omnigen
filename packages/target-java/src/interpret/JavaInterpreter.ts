@@ -1,6 +1,6 @@
 import {AstNode, AstTransformer} from '@omnigen/core';
 import {AbstractInterpreter} from '@omnigen/core-util';
-import {FieldAccessorMode} from '../options/index.ts';
+import {FieldAccessorMode} from '../options';
 import {
   AddAbstractAccessorsAstTransformer,
   AddAccessorsForFieldsAstTransformer,
@@ -21,8 +21,8 @@ import {
   PropertyNameDiscrepancyAstTransformer,
   ReorderMembersTransformer,
   SimplifyGenericsAstTransformer, JacksonJavaAstTransformer,
-} from '../transform/index.ts';
-import * as Java from '../ast/index.js';
+} from '../transform';
+import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AddMissingDeclarationsForTypesAstTransformer} from '../transform/AddMissingDeclarationsForTypesAstTransformer.ts';
 

@@ -40,6 +40,8 @@ describe('Java Rendering', () => {
 
           let baseDir: string;
 
+          const target_test_dir = path.resolve('./.target_test');
+
           try {
             baseDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
           } catch (ex) {
@@ -78,6 +80,10 @@ describe('Java Rendering', () => {
             const visitor = new ParsedJavaTestVisitor();
             visitor.visit(cst);
           }
+
+          // Everything went fine. So we delete the test output directory. If things went badly it will stay around.
+          fs.rmSync(target_test_dir, {recursive: true, force: true});
+
         } catch (ex) {
           throw LoggerFactory.formatError(ex, `File ${fileName}`);
         }
@@ -131,7 +137,7 @@ describe('Java Rendering', () => {
         includeGeneratedAnnotation: false,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
-      }
+      },
     });
     // TODO: Get this to work again -- something is very off with the way things are created -- maybe a miss-mash with the ids and simplification of oneOf -> allOf -> inlined
     //       Might be that we should not inline early, and let it be up to the target language how a type that is only one allOf should be rendered. If it is anonymous it could be inlined always;
@@ -152,7 +158,7 @@ describe('Java Rendering', () => {
         ...DEFAULT_TEST_JAVA_OPTIONS,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
-      }
+      },
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();

@@ -1,4 +1,4 @@
-import {AstVisitor, VisitResult} from '../visit/index.ts';
+import {AstVisitor, VisitResult} from '../visit';
 
 /**
  * This is an abstract general ST (Syntax Tree) Node.

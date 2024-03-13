@@ -1,7 +1,7 @@
 import {ExternalSyntaxTree, OmniType, TargetOptions} from '@omnigen/core';
-import {JavaUtil, TypeNameInfo} from '../util/index.ts';
-import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from '../transform/index.ts';
-import * as Java from '../ast/index.ts';
+import {JavaUtil, TypeNameInfo} from '../util';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from '../transform';
+import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 

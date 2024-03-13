@@ -1,5 +1,5 @@
 import {JSONSchema4, JSONSchema6, JSONSchema7} from 'json-schema';
-import {AnyJSONSchema} from '../parse/index.ts';
+import {AnyJSONSchema} from '../parse';
 import {ToDefined, DocVisitorTransformer, DocVisitorUnknownTransformer, Entry, ToArray, ToSingle} from './helpers.ts';
 
 export interface JsonSchema7Visitor<S extends JSONSchema7 = JSONSchema7> extends JsonSchema6PlusVisitor<S> {

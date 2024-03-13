@@ -15,9 +15,9 @@ import {
   OmniTypeKind,
   PackageOptions,
 } from '@omnigen/core';
-import * as Java from '../ast/index.ts';
-import {JavaAstRootNode, Modifier, ModifierList, ModifierType} from '../ast/index.ts';
-import {JavaUtil} from '../util/index.ts';
+import * as Java from '../ast';
+import {JavaAstRootNode, Modifier, ModifierList, ModifierType} from '../ast';
+import {JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';

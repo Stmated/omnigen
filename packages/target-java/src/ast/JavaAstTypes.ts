@@ -1,31 +1,28 @@
 import {
   AstNode,
+  AstNodeWithChildren,
   AstToken,
-  VisitResult,
+  AstVisitor,
+  LiteralValue,
   OmniDictionaryType,
+  OmniEnumType,
+  OmniGenericSourceIdentifierType,
+  OmniGenericTargetType,
+  OmniHardcodedReferenceType,
+  OmniInterfaceOrObjectType,
   OmniPrimitiveKind,
   OmniPrimitiveType,
+  OmniProperty,
+  OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
-  LiteralValue,
-  AstNodeWithChildren,
-  OmniProperty,
-  UnknownKind,
-  OmniGenericTargetType,
-  OmniSuperTypeCapableType,
-  OmniInterfaceOrObjectType,
-  OmniEnumType,
-  OmniHardcodedReferenceType,
-  OmniGenericSourceIdentifierType,
-  AstVisitor,
+  VisitResult,
 } from '@omnigen/core';
-import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER, JACKSON_JSON_VALUE, JavaAstUtils} from '../transform/index.ts';
-import {JavaUtil} from '../util/index.ts';
-import {JavaVisitor} from '../visit/index.ts';
-import {JavaOptions, SerializationLibrary} from '../options/index.ts';
-import {Case, OmniUtil} from '@omnigen/core-util';
-import {JAVA_FEATURES} from '../index.ts';
+import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER, JavaAstUtils} from '../transform';
+import {JavaUtil} from '../util';
+import {JavaVisitor} from '../visit';
+import {JavaOptions, SerializationLibrary} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -466,7 +463,7 @@ export enum ModifierType {
 
   STATIC,
   FINAL,
-  ABSTRACT
+  ABSTRACT,
 }
 
 export class Modifier extends AbstractJavaNode {
@@ -1458,149 +1455,5 @@ export class ClassReference extends AbstractExpression {
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitClassReference(this, visitor);
-  }
-}
-
-export class RuntimeTypeMapping extends AbstractJavaNode {
-  fields: Field[];
-  getters: FieldBackedGetter[];
-  methods: MethodDeclaration[];
-
-  constructor(types: OmniType[], options: JavaOptions) {
-    super();
-
-    this.fields = [];
-    this.getters = [];
-    this.methods = [];
-
-    const fieldAnnotations = new AnnotationList();
-    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
-      fieldAnnotations.children.push(new Annotation(
-        new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
-      ));
-    }
-
-    const untypedField = new Field(
-      new RegularType({
-        kind: OmniTypeKind.UNKNOWN,
-      }),
-      new Identifier('_raw', 'raw'),
-      new ModifierList(
-        new Modifier(ModifierType.PRIVATE),
-        new Modifier(ModifierType.FINAL),
-      ),
-      undefined,
-      fieldAnnotations,
-    );
-    const untypedGetter = new FieldBackedGetter(
-      untypedField,
-    );
-
-    this.fields.push(untypedField);
-    this.getters.push(untypedGetter);
-
-    const handled: OmniType[] = [];
-
-    for (const type of types) {
-
-      const otherType = handled.find(it => !OmniUtil.isDifferent(it, type, JAVA_FEATURES));
-      if (otherType) {
-
-        logger.debug(`Skipping runtime-mapped '${OmniUtil.describe(type)}' because '${OmniUtil.describe(otherType)}' already exists`);
-        continue;
-      }
-
-      handled.push(type);
-
-      const typedFieldName = this.getFieldName(type);
-
-      const typedField = new Field(
-        JavaAstUtils.createTypeNode(type),
-        new Identifier(`_${typedFieldName}`),
-      );
-      const typedFieldReference = new FieldReference(typedField);
-
-      const parameterList = new ParameterList();
-      let conversionExpression: AbstractExpression;
-      if (options.unknownType == UnknownKind.MUTABLE_OBJECT) {
-        const objectMapperReference = new Identifier('objectMapper');
-        const objectMapperDeclaration = new Parameter(
-          new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'com.fasterxml.jackson.databind.ObjectMapper'}),
-          objectMapperReference,
-        );
-
-        parameterList.children.push(objectMapperDeclaration);
-        conversionExpression = new MethodCall(
-          new DeclarationReference(objectMapperDeclaration),
-          new Identifier('convertValue'),
-          new ArgumentList(
-            new FieldReference(untypedField),
-            new ClassReference(typedField.type),
-          ),
-        );
-      } else {
-        conversionExpression = new Literal('Conversion path unknown');
-      }
-
-      const typedGetter = new MethodDeclaration(
-        new MethodDeclarationSignature(
-          new Identifier(JavaUtil.getGetterName(typedFieldName, typedField.type.omniType)),
-          typedField.type,
-          parameterList,
-        ),
-        new Block(
-          // First check if we have already cached the result.
-          new IfStatement(
-            new Predicate(
-              typedFieldReference,
-              TokenType.NOT_EQUALS,
-              new Literal(null),
-            ),
-            new Block(
-              new Statement(
-                new ReturnStatement(
-                  typedFieldReference,
-                ),
-              ),
-            ),
-          ),
-          // If not, then try to convert the raw value into the target type and cache it.
-          new Statement(
-            new ReturnStatement(
-              new BinaryExpression(
-                typedFieldReference,
-                new JavaToken(TokenType.ASSIGN),
-                conversionExpression,
-              ),
-            ),
-          ),
-        ),
-      );
-
-      this.fields.push(typedField);
-      this.methods.push(typedGetter);
-    }
-  }
-
-  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitRuntimeTypeMapping(this, visitor);
-  }
-
-  private getFieldName(type: OmniType): string {
-
-    // if (type.kind == OmniTypeKind.PRIMITIVE) {
-    //
-    //   // If it is a primitive, we do not care about the 'name' of the type.
-    //   // We only care about what it actually is.
-    //   // This is a preference, but might be wrong. Maybe make it an option?
-    //   return camelCase(JavaUtil.getPrimitiveKindName(type.primitiveKind, true));
-    // }
-
-    // TODO: This is most likely wrong, will give name with package and whatnot.
-    const javaName = JavaUtil.getName({
-      type: type,
-    });
-
-    return Case.camel(javaName);
   }
 }

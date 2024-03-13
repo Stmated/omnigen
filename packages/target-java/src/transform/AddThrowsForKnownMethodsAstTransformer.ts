@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/core';
-import * as Java from '../ast/index.js';
+import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 

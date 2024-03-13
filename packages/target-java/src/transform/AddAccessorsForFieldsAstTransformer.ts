@@ -1,9 +1,9 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {AstNode, OmniTypeKind} from '@omnigen/core';
 import {AbortVisitingWithResult, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
-import * as Java from '../ast/index.ts';
-import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast/index.ts';
-import {JavaUtil} from '../util/index.ts';
+import * as Java from '../ast';
+import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
+import {JavaUtil} from '../util';
 
 export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
 

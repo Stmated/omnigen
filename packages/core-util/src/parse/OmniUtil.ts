@@ -74,7 +74,7 @@ export class OmniUtil {
   public static visitTypesBreadthFirst<R>(
     input: TypeOwner | TypeOwner[] | undefined,
     onDown: BFSTraverseCallback<R>,
-    visitOnce = true
+    visitOnce = true,
   ): R | undefined {
     return new OmniTypeVisitor().visitTypesBreadthFirst(input, onDown, visitOnce);
   }

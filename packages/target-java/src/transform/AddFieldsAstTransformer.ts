@@ -1,7 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {OmniType, OmniTypeKind} from '@omnigen/core';
-import * as Java from '../ast/index.ts';
-import {JavaUtil} from '../util/index.ts';
+import * as Java from '../ast';
+import {JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 

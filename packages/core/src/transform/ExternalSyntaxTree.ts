@@ -1,5 +1,5 @@
-import {AstNode} from '../ast/index.ts';
-import {Options} from '../options/index.ts';
+import {AstNode} from '../ast';
+import {Options} from '../options';
 
 export interface ExternalSyntaxTree<TRoot extends AstNode, TOpt extends Options> {
   node: TRoot;

@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform/index.ts';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import {
   LiteralValue,
   OmniModel, OmniType,
@@ -9,10 +9,10 @@ import {
   VisitorFactoryManager,
   VisitResultFlattener,
 } from '@omnigen/core-util';
-import {FieldAccessorMode} from '../options/index.ts';
-import {JavaUtil} from '../util/index.ts';
-import * as Java from '../ast/index.ts';
-import {TokenType} from '../ast/index.ts';
+import {FieldAccessorMode} from '../options';
+import {JavaUtil} from '../util';
+import * as Java from '../ast';
+import {TokenType} from '../ast';
 
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 

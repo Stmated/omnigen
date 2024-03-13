@@ -1,8 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "dev",
-  "extends": "./base.json",
-  "compilerOptions": {
-    "rootDir": "./src"
-  }
+  "extends": "./base.json"
 }

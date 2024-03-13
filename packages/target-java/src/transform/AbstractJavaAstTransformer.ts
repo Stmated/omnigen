@@ -1,8 +1,8 @@
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
-import {JavaOptions} from '../options/index.ts';
-import {createJavaVisitor, JavaVisitor} from '../visit/index.ts';
-import * as Java from '../ast/index.ts';
-import {JavaAstRootNode} from '../ast/index.ts';
+import {JavaOptions} from '../options';
+import {createJavaVisitor, JavaVisitor} from '../visit';
+import * as Java from '../ast';
+import {JavaAstRootNode} from '../ast';
 
 export type JavaAndTargetOptions = JavaOptions & TargetOptions & PackageOptions;
 export type JavaAstTransformerArgs = AstTransformerArguments<JavaAstRootNode, JavaAndTargetOptions>;

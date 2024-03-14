@@ -1,19 +1,14 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {
-  LiteralValue,
-  OmniModel, OmniType,
-  OmniTypeKind,
-} from '@omnigen/core';
-import {
-  AbortVisitingWithResult, OmniUtil,
-  VisitorFactoryManager,
-  VisitResultFlattener,
-} from '@omnigen/core-util';
+import {LiteralValue, OmniModel, OmniType, OmniTypeKind, TargetOptions} from '@omnigen/core';
+import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {FieldAccessorMode} from '../options';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 import {TokenType} from '../ast';
 
+/**
+ * Adds a constructor to a class, based on what fields are required (final) and what fields are required from any potential supertype.
+ */
 export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
@@ -32,24 +27,17 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       },
     }));
 
-    // TODO: Re-order the nodes, so that those that have no superclasses are first
-    //        Or if they do, that it's in the correct order
-    //  (this way we can better add constructors on subtypes, instead of working with required fields)
     classDeclarations.sort((a, b) => AddConstructorJavaAstTransformer.compareSuperClassHierarchy(args.model, a, b));
-
-    // TODO: Skip the re-order and instead do it on a "need-to" basis, where we dive deeper here,
-    //        and check if it has already been handled or already has constructor(s)
 
     for (const classDeclaration of classDeclarations) {
 
-      const superTypeRequirements = JavaAstUtils.getConstructorRequirements(args.root, classDeclaration, true);
+      const requirements = JavaAstUtils.getConstructorRequirements(args.root, classDeclaration, true);
 
-      if (superTypeRequirements[0].length > 0 || superTypeRequirements[1].length > 0) {
+      if (requirements.fields.length > 0 || requirements.parameters.length > 0) {
 
-        const finalFields = superTypeRequirements[0];
-        const superParameters = superTypeRequirements[1];
-
-        const constructorDeclaration = this.createConstructorDeclaration(classDeclaration, finalFields, superParameters);
+        const constructorDeclaration = this.createConstructorDeclaration(
+          classDeclaration, requirements.fields, requirements.parameters, args.options,
+        );
 
         classDeclaration.body.children.push(constructorDeclaration);
       }
@@ -59,22 +47,26 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   private createConstructorDeclaration(
     node: Java.ClassDeclaration,
     fields: Java.Field[],
-    superArguments: Java.ConstructorParameter[],
+    superParameters: Java.ConstructorParameter[],
+    options: TargetOptions,
   ): Java.ConstructorDeclaration {
 
     const blockExpressions: Java.AbstractJavaNode[] = [];
 
-    const ourArguments = this.addSuperConstructorCall(superArguments, node, blockExpressions);
+    const requiredSuperParameters = this.addSuperConstructorCall(superParameters, node, blockExpressions);
+    const parameters: Java.ConstructorParameter[] = [];
 
-    const typeArguments = fields.map(it => {
-      return this.createParameter(it, it.type, it.identifier);
-    });
+      // = fields
+      // .filter(it => it.type.omniType.kind != OmniTypeKind.PRIMITIVE)
+      // .map(it => );
 
     for (let i = 0; i < fields.length; i++) {
-      const constructorField = fields[i];
-      const parameter = typeArguments[i];
 
-      const defaultValue = JavaUtil.getSpecifiedDefaultValue(constructorField.type.omniType);
+      const constructorField = fields[i];
+      const parameter = this.createParameter(constructorField, constructorField.type, constructorField.identifier);
+      parameters.push(parameter);
+
+      const defaultValue = OmniUtil.getSpecifiedDefaultValue(constructorField.type.omniType);
       if (defaultValue !== undefined) {
         blockExpressions.push(this.createAssignmentWithFallback(parameter, constructorField, defaultValue));
       } else {
@@ -85,7 +77,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       }
     }
 
-    const allConstructorParameters = ourArguments.concat(typeArguments);
+    const allConstructorParameters = requiredSuperParameters.concat(parameters);
 
     return new Java.ConstructorDeclaration(
       node,

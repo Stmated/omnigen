@@ -1,7 +1,6 @@
 import {
   AstNode,
   CompositionKind,
-  LiteralValue,
   OmniCompositionAndType,
   OmniCompositionNotType,
   OmniCompositionOrType,
@@ -564,13 +563,6 @@ export class JavaUtil {
     return holder.ref;
   }
 
-  public static getSpecifiedDefaultValue(type: OmniType): LiteralValue | undefined {
-    if (type.kind == OmniTypeKind.PRIMITIVE && !type.literal) {
-      return type.value;
-    } else {
-      return undefined;
-    }
-  }
 
   public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
 

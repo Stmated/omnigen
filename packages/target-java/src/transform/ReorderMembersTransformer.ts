@@ -3,6 +3,7 @@ import {AstNode} from '@omnigen/core';
 import * as Java from '../ast';
 import {ModifierType} from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
 
 
 export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
@@ -93,7 +94,7 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
     }
 
     // TODO: Should be removed. Should have been replaced with a CST
-    if (node instanceof Java.AdditionalPropertiesDeclaration) {
+    if (node instanceof AdditionalPropertiesDeclaration) {
 
       weight += 100;
       weight -= this.getModifierWeight(node.adderMethod.signature.modifiers);

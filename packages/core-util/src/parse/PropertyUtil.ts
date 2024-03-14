@@ -8,7 +8,7 @@ import {
 } from '@omnigen/core';
 import {OmniUtil} from './OmniUtil.js';
 import {TargetFeatures} from '@omnigen/core';
-import {PropertyDifference, PropertyEquality, TypeDifference} from '@omnigen/core';
+import {PropertyDifference, PropertyEquality, TypeDiffKind} from '@omnigen/core';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
 
@@ -85,7 +85,7 @@ export class PropertyUtil {
   }
 
   public static getCommonProperties(
-    bannedTypeDiff: (diff: TypeDifference) => boolean,
+    bannedTypeDiff: (diff: TypeDiffKind) => boolean,
     bannedPropDiff: (diff: PropertyDifference) => boolean,
     targetFeatures: TargetFeatures,
     ...types: OmniType[]
@@ -149,7 +149,7 @@ export class PropertyUtil {
 
   private static getLowestAllowedPropertyEquality(
     properties: OmniProperty[],
-    bannedTypeDiff: (diff: TypeDifference) => boolean,
+    bannedTypeDiff: (diff: TypeDiffKind) => boolean,
     bannedPropDiff: (diff: PropertyDifference) => boolean,
     targetFeatures: TargetFeatures,
   ): PropertyEquality | undefined {
@@ -236,7 +236,7 @@ export class PropertyUtil {
 
       // If no common type was found, we will set the type to UNKNOWN, and level to NOT_EQUAL.
       // The caller might still want to know how good a match the property is, and actually use the type as unknown.
-      commonType = {type: {kind: OmniTypeKind.UNKNOWN}, diffs: [TypeDifference.FUNDAMENTAL_TYPE]};
+      commonType = {type: {kind: OmniTypeKind.UNKNOWN}, diffs: [TypeDiffKind.FUNDAMENTAL_TYPE]};
     }
 
     if (a.required != b.required) {

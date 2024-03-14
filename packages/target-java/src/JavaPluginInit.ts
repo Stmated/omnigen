@@ -139,4 +139,3 @@ export const JavaRendererPlugin = createPlugin(
 );
 
 export default PluginAutoRegistry.register([JavaPluginInit, JavaPlugin, JavaRendererPlugin]);
-

@@ -200,9 +200,10 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
           ...type.enumConstants.map((item, idx) => {
 
             const comment = type.enumDescriptions ? new Java.CommentBlock(new Java.FreeText(type.enumDescriptions[`${item}`])) : undefined;
+            const name = type.enumNames ? type.enumNames[idx] : Case.constant(String(item));
 
             return new Java.EnumItem(
-              new Java.Identifier(type.enumNames ? type.enumNames[idx] : Case.constant(String(item))),
+              new Java.Identifier(name),
               new Java.Literal(item, type.primitiveKind),
               comment,
             );
@@ -210,8 +211,6 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
         ),
       );
 
-      // NOTE: It would be better if we did not need to create this. Leaking responsibilities.
-      //        Should the GenericEnumType contain a "valueType" that is created by parser? Probably.
       const itemType: OmniPrimitiveType = {
         kind: OmniTypeKind.PRIMITIVE,
         primitiveKind: type.primitiveKind,

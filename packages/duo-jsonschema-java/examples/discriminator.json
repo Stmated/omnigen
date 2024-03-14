@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnigen.com/schemas/discriminator",
+  "definitions": {
+
+    "ResponseData": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/ResponseDataWithReject"
+        },
+        {
+          "$ref": "#/definitions/ResponseDataWithResult"
+        }
+      ],
+      "discriminator": {
+        "propertyName": "result",
+        "mapping": {
+          "0": "#/definitions/ResponseDataWithReject",
+          "1": "#/definitions/ResponseDataWithResult"
+        }
+      }
+    },
+
+    "ResponseDataWithReject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "const": "0",
+          "type": "string"
+        },
+        "rejected": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "result",
+        "rejected"
+      ]
+    },
+
+    "ResponseDataWithResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "const": "1",
+          "type": "string"
+        },
+        "rejected": {
+          "type": "null",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "result"
+      ]
+    }
+  }
+}

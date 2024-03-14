@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {AstNode, OmniTypeKind} from '@omnigen/core';
-import {AbortVisitingWithResult, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast';
 import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
@@ -68,7 +68,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
           ? new Java.Identifier(JavaUtil.getGetterName(node.property?.propertyName, type))
           : undefined;
 
-        if (type.kind == OmniTypeKind.PRIMITIVE && type.literal) {
+        if (OmniUtil.hasSpecifiedConstantValue(type)) {
 
           const literalMethod = new Java.MethodDeclaration(
             new Java.MethodDeclarationSignature(

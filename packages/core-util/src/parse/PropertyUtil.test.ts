@@ -8,7 +8,7 @@ import {
 } from '@omnigen/core';
 import {PropertyUtil} from './PropertyUtil';
 import {OMNI_GENERIC_FEATURES} from '@omnigen/core';
-import {PropertyDifference, TypeDifference} from '@omnigen/core';
+import {PropertyDifference, TypeDiffKind} from '@omnigen/core';
 import {describe, test, expect} from 'vitest';
 
 describe('Test PropertyUtil', () => {
@@ -50,10 +50,10 @@ describe('Test PropertyUtil', () => {
     expect(PropertyUtil.getPropertyEquality(ax, ay, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
     expect(PropertyUtil.getPropertyEquality(az, by, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
 
-    expect(PropertyUtil.getPropertyEquality(by, cy, f).typeDiffs).toEqual([TypeDifference.ISOMORPHIC_TYPE]);
+    expect(PropertyUtil.getPropertyEquality(by, cy, f).typeDiffs).toEqual([TypeDiffKind.SIZE, TypeDiffKind.PRECISION]);
     expect(PropertyUtil.getPropertyEquality(by, cy, f).propertyDiffs).toEqual([PropertyDifference.META]);
 
-    expect(PropertyUtil.getPropertyEquality(ay, cy, f).typeDiffs).toEqual([TypeDifference.ISOMORPHIC_TYPE]);
+    expect(PropertyUtil.getPropertyEquality(ay, cy, f).typeDiffs).toEqual([TypeDiffKind.ISOMORPHIC_TYPE]);
     expect(PropertyUtil.getPropertyEquality(ay, cy, f).propertyDiffs).toEqual([]);
 
     expect(PropertyUtil.getPropertyEquality(ax, bx, f).propertyDiffs).toEqual([PropertyDifference.META]);

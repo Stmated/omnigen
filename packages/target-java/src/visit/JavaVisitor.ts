@@ -1,6 +1,7 @@
 import {AstNode, AstVisitor, OmniType, VisitFn, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
 import {RuntimeTypeMapping} from '../ast/RuntimeTypeMapping.ts';
+import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
 
 export type JavaVisitFn<N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
@@ -110,7 +111,7 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitConstructor: JavaVisitFn<Java.ConstructorDeclaration, R>;
   visitConstructorParameterList: JavaVisitFn<Java.ConstructorParameterList, R>;
   visitConstructorParameter: JavaVisitFn<Java.ConstructorParameter, R>;
-  visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
+  visitAdditionalPropertiesDeclaration: JavaVisitFn<AdditionalPropertiesDeclaration, R>;
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
   visitRuntimeTypeMapping: JavaVisitFn<RuntimeTypeMapping, R>;

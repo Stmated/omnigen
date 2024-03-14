@@ -11,20 +11,13 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcRequest<TParams extends JsonRpcRequestParams> {
   private final String id;
-  private final String jsonrpc;
   private final String method;
   private final TParams params;
   public JsonRpcRequest(
-    @JsonProperty("jsonrpc") String jsonrpc,
     @JsonProperty(value = "id", required = true) String id,
     @JsonProperty("params") TParams params,
     @JsonProperty("method") String method
   ) {
-    if (jsonrpc != null) {
-      this.jsonrpc = jsonrpc;
-    } else {
-      this.jsonrpc = "2.0";
-    }
     this.id = id;
     this.params = params;
     this.method = method;
@@ -35,9 +28,8 @@ public class JsonRpcRequest<TParams extends JsonRpcRequestParams> {
     return this.id;
   }
 
-  @JsonInclude(Include.ALWAYS)
   public String getJsonrpc() {
-    return this.jsonrpc;
+    return "2.0";
   }
 
   public String getMethod() {

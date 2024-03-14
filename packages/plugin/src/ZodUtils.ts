@@ -112,8 +112,8 @@ export class ZodUtils {
       if (actual instanceof ZodString) {
         return {v: Compat.NEEDS_EVALUATION};
       } else if (actual instanceof ZodLiteral) {
-        const actualAsEnum = z.enum([actual.value]);
-        return ZodUtils.isEnumCompatible(expected, actualAsEnum, path);
+        const actualAsEnum = z.enum([String(actual.value)]);
+        return ZodUtils.isEnumCompatible(expected, actualAsEnum, path, false);
       }
 
       if (!silent) {
@@ -252,24 +252,6 @@ export class ZodUtils {
       const newPath = [...(path ?? []), key];
       const expectedProp = ZodUtils.getBaseType(expectedShape[key]);
 
-      // if (!(key in actualShape)) {
-      //
-      //
-      //   if (expectedProp instanceof ZodUndefined) {
-      //     // If the key is missing, then Undefined is okay.
-      //     // TODO: This might not be correct; ZodUndefined should probably mean it must not exist
-      //     continue;
-      //   } else if (expectedProp instanceof ZodOptional) {
-      //     const optionalCompat = this.createError(Compat.NEEDS_EVALUATION, `Evaluation needed on ${newPath.join(' -> ')}`, newPath);
-      //     if (optionalCompat.v > worstCompat.v) {
-      //       worstCompat = optionalCompat;
-      //     }
-      //     continue;
-      //   } else {
-      //     return ZodUtils.createError(Compat.DIFF, `Missing path '${newPath.join('.')}'`, newPath);
-      //   }
-      // }
-
       const actualProp = actualShape[key] ?? new ZodCustomNotSet(); // z.undefined();
 
       const propCompat = ZodUtils.isCompatibleWith(expectedProp, actualProp, newPath);
@@ -294,12 +276,13 @@ export class ZodUtils {
     expected: ZodEnum<[string, ...string[]]>,
     actual: ZodEnum<[string, ...string[]]>,
     path: string[],
+    strict = true,
   ): CompatResult {
 
     const expectedEntries = Object.entries(expected.enum);
     const actualEntries = Object.entries(actual.enum);
 
-    if (expectedEntries.length != actualEntries.length) {
+    if (expectedEntries.length < actualEntries.length) {
       return {
         v: Compat.DIFF,
         error: new z.ZodError([{
@@ -312,6 +295,14 @@ export class ZodUtils {
 
     // eslint-disable-next-line guard-for-in
     for (const [expectedKey, expectedValue] of expectedEntries) {
+
+      if (!strict) {
+        if (!(expectedKey in actual.enum)) {
+          continue;
+        } else {
+          const i = 0;
+        }
+      }
 
       const actualValue = actual.enum[expectedKey];
 

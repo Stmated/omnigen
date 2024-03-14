@@ -24,7 +24,7 @@ const visitor: JsonSchema7Visitor = {
         throw new Error(`Cannot have a one-item enum and const set at the same time unless they are equal`);
       } else {
         v.const = v.enum[0];
-        v.enum = undefined;
+        delete v.enum;
       }
     }
 

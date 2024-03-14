@@ -7,7 +7,7 @@ import {
 import {OMNI_GENERIC_FEATURES, TargetFeatures, TargetOptions} from '@omnigen/core';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniModelTransformerArgs} from '@omnigen/core';
-import {PropertyDifference, TypeDifference} from '@omnigen/core';
+import {PropertyDifference, TypeDiffKind} from '@omnigen/core';
 import {OmniModelTransformer2ndPassArgs} from '@omnigen/core';
 import {OmniUtil} from '../OmniUtil.ts';
 import {Sorters} from '../../util';
@@ -54,9 +54,9 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
       return dependencySorter(aSubType, bSubType);
     });
 
-    const bannedTypeDifferences: TypeDifference[] = [
-      TypeDifference.FUNDAMENTAL_TYPE,
-      TypeDifference.ISOMORPHIC_TYPE,
+    const bannedTypeDifferences: TypeDiffKind[] = [
+      TypeDiffKind.FUNDAMENTAL_TYPE,
+      TypeDiffKind.ISOMORPHIC_TYPE,
     ];
     const bannedPropDifferences: PropertyDifference[] = [
       PropertyDifference.NAME,
@@ -69,7 +69,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
 
       // If the target allows literal types, then we need to care about the visible signature type,
       // and not just about the underlying fundamental type and/or isomorphic type differences.
-      bannedTypeDifferences.push(TypeDifference.NARROWED_LITERAL_TYPE);
+      bannedTypeDifferences.push(TypeDiffKind.NARROWED_LITERAL_TYPE);
     }
 
     for (const superType of superTypes) {
@@ -106,7 +106,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
 
         const uniqueDiffs = [...new Set(info.typeDiffs ?? [])];
 
-        if (uniqueDiffs.length == 1 && uniqueDiffs[0] == TypeDifference.NARROWED_LITERAL_TYPE) {
+        if (uniqueDiffs.length == 1 && uniqueDiffs[0] == TypeDiffKind.NARROWED_LITERAL_TYPE) {
 
           const abstractProperty: OmniProperty = {
             ...propertyToElevate,

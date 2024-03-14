@@ -1,4 +1,5 @@
 import {
+  Direction,
   OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
@@ -59,7 +60,16 @@ import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
-import {AnyJSONSchema, ApplyIdJsonSchemaTransformerFactory, ExternalDocumentsFinder, JsonSchemaParser, RefResolver, SchemaToTypeResult, SimpleObjectWalker} from '@omnigen/parser-jsonschema';
+import {
+  AnyJSONSchema,
+  ApplyIdJsonSchemaTransformerFactory,
+  ExternalDocumentsFinder,
+  JsonSchemaParser,
+  RefResolver,
+  SchemaToTypeResult,
+  SimpleObjectWalker,
+  SimplifyJsonSchemaTransformerFactory,
+} from '@omnigen/parser-jsonschema';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
 
@@ -84,9 +94,12 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
       throw new Error(`The schema file must have a path, to able to dereference documents`);
     }
 
+    // TODO: Completely wrong. Needs to be redone so that we have full control over the OpenRPC and its JsonSchema parts, and they can coexist naturally.
+    //        Need to make it so that we can share functionality between the two formats, and visit the whole document properly between borders
     const applyIdTransformer = new ApplyIdJsonSchemaTransformerFactory(schemaSource.getAbsolutePath());
     const transformers = [
       applyIdTransformer.create(),
+      new SimplifyJsonSchemaTransformerFactory().create(),
     ];
 
     // TODO: Make the visitor able to handle OpenRpc documents as well, rethink how we build the transforms -- we should give a visitor to decorate with overriding things
@@ -316,12 +329,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     // Now find all the types that were not referenced by a method, but is in the contract.
     // We most likely still want those types to be included.
-    // const extraTypes: OmniType[] = [];
     if (this.doc.components?.schemas) {
       for (const key of Object.keys(this.doc.components.schemas)) {
         const schema = this.doc.components.schemas[key] as JSONSchema7;
         const deref = this._refResolver.resolve(this._jsonSchemaParser.unwrapJsonSchema(schema));
-        // const unwrapped = deref);
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
@@ -992,10 +1003,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     options: JsonRpcParserOptions & ParserOptions,
   ): void {
 
-    // TODO: This should be moved to the abstract parent class somehow, then sent down through constructor
-    //        Maybe this can be done automatically through GenericOmniModelTransformer?
-    //        Or can we do this in some other way? Maybe have valueConstant be string OR callback
-    //        Then if callback, it takes the method object, and is put inside the constructor without a given parameter?
     const requestMethodType: OmniPrimitiveType = {
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING,
@@ -1015,7 +1022,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       if (hasConstantVersion) {
         requestJsonRpcType.value = options.jsonRpcVersion;
-        requestJsonRpcType.literal = false;
+
+        // If the direction is 'OUT', then we can make it a literal and inline it.
+        requestJsonRpcType.literal = (options.direction == Direction.OUT);
       }
 
       targetObject.properties.push({

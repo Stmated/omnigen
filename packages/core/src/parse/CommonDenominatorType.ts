@@ -1,7 +1,7 @@
-import {TypeDifference} from '../equality';
+import {TypeDiffKind} from '../equality';
 
 export interface CommonDenominatorType<T> {
 
   type: T;
-  diffs?: TypeDifference[] | undefined;
+  diffs?: TypeDiffKind[] | undefined;
 }

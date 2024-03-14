@@ -13,8 +13,6 @@ import {
   OmniObjectType,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
-  OmniPrimitiveNonNullableType,
-  OmniPrimitiveTangibleKind,
   OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
@@ -360,9 +358,10 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private jsonSchemaToNonObjectType(schema: AnyJsonDefinition, ownerSchema: AnyJSONSchema | undefined, name: TypeName, extendedBy?: OmniType): OmniType | undefined {
 
     if (typeof schema == 'boolean') {
+
       return {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.BOOL,
+        kind: OmniTypeKind.UNKNOWN,
+        unknownKind: 'WILDCARD',
       };
     } else if (schema.type == undefined && extendedBy) {
 
@@ -432,41 +431,44 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private toPrimitive(schema: AnyJSONSchema, name: TypeName, ownerSchema: AnyJSONSchema | undefined): OmniType {
 
     if (typeof schema.type !== 'string') {
-      throw new Error(`We only handle the string type`);
+      throw new Error(`We only handle the type when it is of type string`);
     }
 
-    // TODO: This is not lossless if the primitive has comments/summary/etc
-    const enumValues = schema.const ? [schema.const] : schema.enum;
+    const enumValues = schema.enum; // schema.const ? [schema.const] : schema.enum;
 
-    // TODO: Need to take heed to 'schema.format' for some primitive and/or known types!
     const lcType = schema.type.toLowerCase();
+    let primitiveKind: OmniPrimitiveKind;
     if (lcType == 'null') {
-      return {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.NULL,
-        nullable: true,
-        value: null,
-        description: schema.description,
-      };
+      primitiveKind = OmniPrimitiveKind.NULL;
+    } else {
+      primitiveKind = this.typeAndFormatToPrimitiveKind(lcType, schema.format?.toLowerCase() ?? '');
     }
-
-    const primitiveType = this.typeAndFormatToPrimitiveKind(lcType, schema.format?.toLowerCase() ?? '');
 
     if (enumValues && enumValues.length > 0) {
-      return this.toOmniEnum(name, schema.type, primitiveType, enumValues, schema, schema.description);
-    } else {
-      return {
-        name: name,
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: primitiveType,
-        nullable: this.vendorExtensionToBool(schema, 'x-nullable', () => {
-          const possiblePropertyName = Naming.unwrap(name);
-          return this.isRequiredProperty(ownerSchema, possiblePropertyName);
-        }),
-        description: schema.description,
-        examples: schema.examples ? this.toOmniExamples(schema.examples) : undefined,
-      };
+      return this.toOmniEnum(name, schema.type, primitiveKind, enumValues, schema, schema.description);
     }
+
+    const isLiteral = ('const' in schema) || primitiveKind == OmniPrimitiveKind.NULL || primitiveKind == OmniPrimitiveKind.VOID;
+    const isNullable = this.vendorExtensionToBool(schema, 'x-nullable', () => {
+      const possiblePropertyName = Naming.unwrap(name);
+      return this.isRequiredProperty(ownerSchema, possiblePropertyName);
+    });
+
+    const primitiveType: OmniPrimitiveType = {
+      name: name,
+      kind: OmniTypeKind.PRIMITIVE,
+      primitiveKind: primitiveKind,
+      literal: isLiteral,
+      nullable: isNullable,
+      description: schema.description,
+      examples: schema.examples ? this.toOmniExamples(schema.examples) : undefined,
+    };
+
+    if ('const' in schema) {
+      primitiveType.value = schema.const;
+    }
+
+    return primitiveType;
   }
 
   private toOmniExamples(jsonExamples: ToDefined<AnyJSONSchema['examples']>): OmniExample<unknown>[] {
@@ -688,7 +690,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
   }
 
-  private typeAndFormatToPrimitiveKind(lcType: string, lcFormat: string): OmniPrimitiveTangibleKind {
+  private typeAndFormatToPrimitiveKind(lcType: string, lcFormat: string): OmniPrimitiveKind {
 
     switch (lcType) {
       case 'number':
@@ -727,32 +729,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private toOmniEnum(
     name: TypeName,
     schemaType: Extract<AnyJSONSchema['type'], string>,
-    primitiveType: OmniPrimitiveTangibleKind,
+    primitiveType: OmniPrimitiveKind,
     enumValues: JSONSchema7Type[],
     enumOwner?: AnyJSONSchema,
     description?: string,
   ) {
-
-    if (enumValues.length == 1) {
-
-      // En ENUM with just one value is the same as a regular constant
-      const primitive: OmniPrimitiveNonNullableType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        // boxMode: this._options.preferredBoxMode,
-        primitiveKind: primitiveType,
-        nullable: false,
-        // NOTE: This is probably incorrect, since if boxing not allowed for generics, we should fail
-        // boxMode: this._options.preferredWrapMode ? OmniPrimitiveBoxMode.WRAP : OmniPrimitiveBoxMode.BOX,
-        description: description,
-      };
-
-      const valueDefault = this.getLiteralValueOfSchema(enumValues[0]);
-      if (valueDefault != undefined) {
-        primitive.value = valueDefault;
-      }
-
-      return primitive;
-    }
 
     let allowedValues: AllowedEnumTsTypes[];
     if (primitiveType == OmniPrimitiveKind.STRING) {
@@ -858,7 +839,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private getIntegerPrimitiveFromFormat(
     format: string,
     fallback: typeof OmniPrimitiveKind.INTEGER | typeof OmniPrimitiveKind.NUMBER,
-  ): OmniPrimitiveTangibleKind {
+  ): OmniPrimitiveKind {
 
     switch (format) {
       case 'integer':
@@ -922,7 +903,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       compositionsNot,
     );
 
-    if (composition && composition.kind == 'COMPOSITION' && !composition.name && schema.$id) {
+    if (composition && composition.kind == OmniTypeKind.COMPOSITION && !composition.name && schema.$id) {
 
       // This is a name that might not be the best suitable one. Might need to be more restrictive, or send more information along with the type.
       // For the name to be decided later by the target.

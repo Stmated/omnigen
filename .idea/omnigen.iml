@@ -28,6 +28,7 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/.profiling" />
       <excludeFolder url="file://$MODULE_DIR$/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.test" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

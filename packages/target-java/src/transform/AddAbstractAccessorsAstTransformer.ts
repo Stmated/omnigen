@@ -1,10 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {
-  OmniUtil,
-  VisitorFactoryManager,
-} from '@omnigen/core-util';
+import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import * as Java from '../ast';
-import {Identifier} from '../ast';
+import {Identifier, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
 
 /**
@@ -34,10 +31,18 @@ export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransform
             new Java.MethodDeclarationSignature(
               new Identifier(JavaUtil.getGetterName(name, type)),
               new Java.RegularType(type),
+              undefined,
+              new Java.ModifierList(new Java.Modifier(ModifierType.PUBLIC), new Java.Modifier(ModifierType.ABSTRACT)),
             ),
           );
 
           node.body.children.push(literalMethod);
+
+          if (!node.modifiers.children.some(it => it.type == ModifierType.ABSTRACT)) {
+
+            // If we add an abstract method to a class, then we must make the class abstract as well.
+            node.modifiers.children.push(new Java.Modifier(ModifierType.ABSTRACT));
+          }
         }
       },
     }));

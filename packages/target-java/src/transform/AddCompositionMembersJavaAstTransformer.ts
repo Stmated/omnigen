@@ -146,7 +146,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     const fieldValueIdentifier = new Java.Identifier(`_value`);
     const fieldValueType = new Java.RegularType({
       kind: OmniTypeKind.UNKNOWN,
-      unknownKind: UnknownKind.MUTABLE_OBJECT,
+      unknownKind: UnknownKind.OBJECT,
     });
 
     const fieldAnnotations = new Java.AnnotationList();
@@ -183,12 +183,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       for (const enumValue of enumType.enumConstants) {
 
         // TODO: Instead use a constructor and each field should be a singleton instance
-        let fieldIdentifier: Java.Identifier;
-        if (typeof enumValue == 'string') {
-          fieldIdentifier = new Java.Identifier(Case.constant(enumValue));
-        } else {
-          fieldIdentifier = new Java.Identifier(Case.constant(`_${String(enumValue)}`));
-        }
+        const fieldIdentifier = new Java.Identifier(Case.constant(String(enumValue)));
 
         const field = new Java.Field(
           declaration.type,
@@ -302,21 +297,21 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     }
 
     const dictionaryIdentifier = new Java.Identifier(`_values`);
-    const fieldValuesType = JavaAstUtils.createTypeNode({
+    const fieldValuesType: OmniType = {
       kind: OmniTypeKind.DICTIONARY,
       keyType: fieldValueType.omniType,
       valueType: declaration.type.omniType,
-    });
+    };
 
     const fieldValues = new Java.Field(
-      fieldValuesType,
+      JavaAstUtils.createTypeNode(fieldValuesType, false),
       dictionaryIdentifier,
       new Java.ModifierList(
         new Java.Modifier(Java.ModifierType.PRIVATE),
         new Java.Modifier(Java.ModifierType.STATIC),
         new Java.Modifier(Java.ModifierType.FINAL),
       ),
-      new Java.NewStatement(fieldValuesType),
+      new Java.NewStatement(JavaAstUtils.createTypeNode(fieldValuesType, true)),
     );
     declaration.body.children.push(fieldValues);
 

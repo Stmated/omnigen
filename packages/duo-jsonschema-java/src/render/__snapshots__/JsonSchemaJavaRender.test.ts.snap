@@ -18,6 +18,12 @@ exports[`jsonschema-java-render > decorated_types 1`] = `
 ]
 `;
 
+exports[`jsonschema-java-render > discriminator 1`] = `
+[
+  "ResponseData.java",
+]
+`;
+
 exports[`jsonschema-java-render > enum_inheritance 1`] = `
 [
   "InheritingKind1.java",

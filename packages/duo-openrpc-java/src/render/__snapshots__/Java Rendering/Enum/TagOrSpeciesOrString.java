@@ -2,11 +2,11 @@ package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.HashMap;
+import java.util.Map;
 
 public class TagOrSpeciesOrString {
-  private static final HashMap<JsonNode, TagOrSpeciesOrString> _values = new HashMap<JsonNode, TagOrSpeciesOrString>();
+  private static final Map<Object, TagOrSpeciesOrString> _values = new HashMap<Object, TagOrSpeciesOrString>();
   public static final TagOrSpeciesOrString _1337 = TagOrSpeciesOrString.get(1337d);
   public static final TagOrSpeciesOrString FOO = TagOrSpeciesOrString.get("foo");
   public static final TagOrSpeciesOrString SPECIES_A = TagOrSpeciesOrString.get("SpeciesA");
@@ -15,8 +15,8 @@ public class TagOrSpeciesOrString {
   public static final TagOrSpeciesOrString TAG_B = TagOrSpeciesOrString.get("TagB");
   public static final TagOrSpeciesOrString TAG_C = TagOrSpeciesOrString.get("TagC");
   @JsonValue
-  private final JsonNode _value;
-  private TagOrSpeciesOrString(JsonNode value) {
+  private final Object _value;
+  private TagOrSpeciesOrString(Object value) {
     this._value = value;
   }
 
@@ -28,7 +28,7 @@ public class TagOrSpeciesOrString {
     return Tag.valueOf(((String) this._value));
   }
 
-  public JsonNode getValue() {
+  public Object getValue() {
     return this._value;
   }
 
@@ -45,7 +45,7 @@ public class TagOrSpeciesOrString {
   }
 
   @JsonCreator
-  public static TagOrSpeciesOrString get(JsonNode value) {
+  public static TagOrSpeciesOrString get(Object value) {
     if (TagOrSpeciesOrString._values.containsKey(value) == true) {
       return TagOrSpeciesOrString._values.get(value);
     } else {

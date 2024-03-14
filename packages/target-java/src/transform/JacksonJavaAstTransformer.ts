@@ -1,4 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
+import {Direction} from '@omnigen/core';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {DefaultJavaVisitor} from '../visit';
 import * as Java from '../ast';
@@ -17,11 +18,6 @@ export const JACKSON_JSON_ANY_SETTER = 'com.fasterxml.jackson.annotation.JsonAny
 
 export const JACKSON_OBJECT_MAPPER = 'com.fasterxml.jackson.databind.ObjectMapper';
 
-enum Direction {
-  IN,
-  OUT,
-  BOTH,
-}
 
 export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
@@ -217,7 +213,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       return undefined;
     }
 
-    if (property.required && !OmniUtil.isDefaultValueType(property.type)) {
+    if (property.required && !OmniUtil.hasSpecifiedConstantValue(property.type)) {
       annotationArguments.children.push(new Java.AnnotationKeyValuePair(new Java.Identifier('required'), new Java.Literal(true)));
     }
 

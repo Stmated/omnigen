@@ -117,7 +117,8 @@ export type OmniSuperTypeCapableType =
   | OmniCompositionNotType<OmniSuperTypeCapableType>
   | OmniExternalModelReferenceType<OmniSuperTypeCapableType> // Needs to be unwrapped/resolved every time
   | OmniDecoratingType<OmniSuperTypeCapableType>
-  | OmniPrimitiveNonNullableType
+  | OmniPrimitiveType
+  // | OmniPrimitiveTangibleNonNullableType
   ;
 
 export type OmniSuperGenericTypeCapableType =
@@ -329,73 +330,82 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
 
 export type OmniPrimitiveConstantValue = string | boolean | number
 
-export interface OmniPrimitiveBaseType extends OmniBaseType<'PRIMITIVE'>, OmniOptionallyNamedType {
+export interface OmniPrimitiveType extends OmniBaseType<typeof OmniTypeKind.PRIMITIVE>, OmniOptionallyNamedType {
 
   name?: TypeName;
   primitiveKind: OmniPrimitiveKind;
   nullable?: boolean;
+
+  /**
+   * Means "default" if `literal` is false, means "constant value" if `literal` is true.
+   */
   value?: OmniPrimitiveConstantValue | null | undefined;
   /**
-   * Undefined = OmniPrimitiveValueMode.DEFAULT
+   * aka 'const' / 'constant' -- cannot be set, it is a static, literal value that can be inlined without any issues.
    */
   literal?: boolean;
 }
 
-export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
-  primitiveKind: typeof OmniPrimitiveKind.NULL;
-  nullable?: true;
-  value?: null;
-  literal?: true;
-}
+export type OmniPrimitiveNullableType =
+  (OmniPrimitiveType & {nullable: true})
+  | (OmniPrimitiveType & {primitiveKind: typeof OmniPrimitiveKind.NULL});
 
-export interface OmniPrimitiveVoidType extends OmniPrimitiveBaseType {
-  primitiveKind: typeof OmniPrimitiveKind.VOID;
-  nullable?: true;
-  value?: undefined;
-  literal?: true;
-}
+// export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
+//   primitiveKind: typeof OmniPrimitiveKind.NULL;
+//   nullable?: true;
+//   value: null;
+//   literal: true;
+// }
+//
+// export interface OmniPrimitiveVoidType extends OmniPrimitiveBaseType {
+//   primitiveKind: typeof OmniPrimitiveKind.VOID;
+//   nullable?: true;
+//   value?: never;
+//   literal: true;
+// }
 
 export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKind, typeof OmniPrimitiveKind.NULL | typeof OmniPrimitiveKind.VOID>;
 
-export interface OmniPrimitiveTangibleNullableType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveTangibleKind;
-  nullable: true;
-  value?: OmniPrimitiveConstantValue | null;
-  literal?: boolean;
-}
+// export interface OmniPrimitiveTangibleNullableType extends OmniPrimitiveBaseType {
+//   primitiveKind: OmniPrimitiveTangibleKind;
+//   nullable: true;
+//   value?: OmniPrimitiveConstantValue | null;
+//   literal?: boolean;
+// }
 
-export interface OmniPrimitiveNonNullableType extends OmniPrimitiveBaseType {
-  primitiveKind: OmniPrimitiveTangibleKind;
-  nullable?: false,
-  value?: OmniPrimitiveConstantValue;
-  literal?: boolean;
-}
+// export interface OmniPrimitiveTangibleNonNullableType extends OmniPrimitiveBaseType {
+//   primitiveKind: OmniPrimitiveTangibleKind;
+//   nullable?: false,
+//   value?: OmniPrimitiveConstantValue;
+//   literal?: boolean;
+// }
 
-export type OmniPrimitiveNullableType =
-  OmniPrimitiveTangibleNullableType
-  | OmniPrimitiveNullType
-  | OmniPrimitiveVoidType;
+// export type OmniPrimitiveNullableType =
+//   OmniPrimitiveTangibleNullableType
+//   | OmniPrimitiveNullType
+//   | OmniPrimitiveVoidType;
 
-export type OmniPrimitiveType =
-  OmniPrimitiveVoidType
-  | OmniPrimitiveNullType
-  | OmniPrimitiveNullableType
-  | OmniPrimitiveNonNullableType;
 
-export type AllowedEnumTsTypes = number | string;
-export type OmniAllowedEnumPrimitiveKinds = typeof OmniPrimitiveKind.STRING
-  | typeof OmniPrimitiveKind.INTEGER
-  | typeof OmniPrimitiveKind.INTEGER_SMALL
-  | typeof OmniPrimitiveKind.DOUBLE
-  | typeof OmniPrimitiveKind.FLOAT
-  | typeof OmniPrimitiveKind.DECIMAL
-  | typeof OmniPrimitiveKind.NUMBER;
+// export type OmniPrimitiveType =
+//   OmniPrimitiveVoidType
+//   | OmniPrimitiveNullType
+//   | OmniPrimitiveNullableType
+//   | OmniPrimitiveTangibleNonNullableType;
+
+export type AllowedEnumTsTypes = number | string; // | null | void;
+// export type OmniAllowedEnumPrimitiveKinds = typeof OmniPrimitiveKind.STRING
+//   | typeof OmniPrimitiveKind.INTEGER
+//   | typeof OmniPrimitiveKind.INTEGER_SMALL
+//   | typeof OmniPrimitiveKind.DOUBLE
+//   | typeof OmniPrimitiveKind.FLOAT
+//   | typeof OmniPrimitiveKind.DECIMAL
+//   | typeof OmniPrimitiveKind.NUMBER;
 
 export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];
   enumNames?: string[];
   enumDescriptions?: Record<string, string>;
-  primitiveKind: OmniAllowedEnumPrimitiveKinds;
+  primitiveKind: OmniPrimitiveKind; // OmniAllowedEnumPrimitiveKinds;
   extendedBy?: OmniSuperTypeCapableType;
 }
 

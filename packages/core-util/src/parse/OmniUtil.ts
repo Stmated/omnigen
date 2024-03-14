@@ -31,7 +31,7 @@ import {
   PropertyDifference,
   SmartUnwrappedType,
   TargetFeatures,
-  TypeDifference,
+  TypeDiffKind,
   TypeName,
   TypeOwner,
   UnknownKind,
@@ -296,7 +296,7 @@ export class OmniUtil {
   }
 
   /**
-   * Not recursive
+   * Not recursive. WARNING: Returns actual properties array reference, so do not modify it (unless that is what you want).
    *
    * @param type
    */
@@ -653,10 +653,29 @@ export class OmniUtil {
     return true;
   }
 
-  public static isDefaultValueType(type: OmniType): boolean {
+  public static getSpecifiedDefaultValue(type: OmniType): LiteralValue | undefined {
+    if (type.kind == OmniTypeKind.PRIMITIVE && !type.literal) {
+      return type.value;
+    } else {
+      return undefined;
+    }
+  }
+
+  public static hasSpecifiedConstantValue(type: OmniType): type is OmniPrimitiveType & { literal: true } {
+
     if (type.kind == OmniTypeKind.PRIMITIVE) {
-      if (type.value !== undefined) {
+      if (type.literal === true) {
         return true;
+      }
+    }
+
+    return false;
+  }
+
+  public static getSpecifiedConstantValue(type: OmniType): OmniPrimitiveConstantValue | null | undefined {
+    if (type.kind == OmniTypeKind.PRIMITIVE) {
+      if (type.literal === true) {
+        return type.value;
       }
     }
 
@@ -1057,30 +1076,32 @@ export class OmniUtil {
     });
   }
 
-  public static isDisqualifyingDiffForCommonType(diffs?: TypeDifference[]): boolean {
+  public static isDisqualifyingDiffForCommonType(diffs?: TypeDiffKind[]): boolean {
 
     if (diffs) {
-      if (diffs.includes(TypeDifference.FUNDAMENTAL_TYPE)) {
-        return true;
-      }
+      return diffs.some(it => it == TypeDiffKind.FUNDAMENTAL_TYPE || it == TypeDiffKind.NARROWED_LITERAL_TYPE);
     }
 
     return false;
   }
 
-  public static getDiffAmount(diffs?: TypeDifference[]): number {
+  public static getDiffAmount(diffs?: TypeDiffKind[]): number {
 
     if (diffs) {
-      if (diffs.includes(TypeDifference.FUNDAMENTAL_TYPE)) {
+      if (diffs.includes(TypeDiffKind.FUNDAMENTAL_TYPE)) {
         return 10;
-      } else if (diffs.includes(TypeDifference.ISOMORPHIC_TYPE)) {
+      } else if (diffs.includes(TypeDiffKind.ISOMORPHIC_TYPE)) {
         return 9;
-      } else if (diffs.includes(TypeDifference.NARROWED_LITERAL_TYPE)) {
+      } else if (diffs.includes(TypeDiffKind.NARROWED_LITERAL_TYPE)) {
         return 8;
-      } else if (diffs.includes(TypeDifference.NO_GENERIC_OVERLAP)) {
+      } else if (diffs.includes(TypeDiffKind.NO_GENERIC_OVERLAP)) {
         return 7;
-      } else if (diffs.includes(TypeDifference.NARROWED_TYPE)) {
+      } else if (diffs.includes(TypeDiffKind.NARROWED_TYPE)) {
         return 6;
+      } else if (diffs.includes(TypeDiffKind.SIZE)) {
+        return 5;
+      } else if (diffs.includes(TypeDiffKind.PRECISION)) {
+        return 4;
       }
     }
 
@@ -1114,7 +1135,7 @@ export class OmniUtil {
     for (let i = 1; i < types.length; i++) {
 
       const denominator = OmniUtil.getCommonDenominatorBetween(common.type, types[i], targetFeatures);
-      if (!denominator || OmniUtil.isDisqualifyingDiffForCommonType(denominator.diffs)) {
+      if (!denominator || (denominator.diffs && denominator.diffs.includes(TypeDiffKind.FUNDAMENTAL_TYPE))) {
         return undefined;
       }
 
@@ -1194,7 +1215,7 @@ export class OmniUtil {
   private static getCommonDenominatorBetweenEnumAndPrimitive(a: OmniEnumType, b: OmniPrimitiveType): CommonDenominatorType<OmniType> | undefined {
 
     if (a.primitiveKind === b.primitiveKind) {
-      return {type: b, diffs: [TypeDifference.NARROWED_TYPE]};
+      return {type: b, diffs: [TypeDiffKind.NARROWED_TYPE]};
     }
 
     return undefined;
@@ -1218,7 +1239,7 @@ export class OmniUtil {
       return undefined;
     }
 
-    const uniqueDiffs = new Set<TypeDifference>();
+    const uniqueDiffs = new Set<TypeDiffKind>();
     for (const match of matching) {
 
       let commonIdentifierType = OmniUtil.getCommonDenominatorBetween(match.a.type, match.b.type, targetFeatures, create);
@@ -1229,7 +1250,7 @@ export class OmniUtil {
         // We might want to change this depending on language, but that's a later problem.
         commonIdentifierType = {
           type: {kind: OmniTypeKind.UNKNOWN},
-          diffs: [TypeDifference.NO_GENERIC_OVERLAP],
+          diffs: [TypeDiffKind.NO_GENERIC_OVERLAP],
         };
       }
 
@@ -1301,7 +1322,7 @@ export class OmniUtil {
 
         return {
           type: common.type,
-          diffs: [...(common.diffs ?? []), TypeDifference.IS_SUPERTYPE],
+          diffs: [...(common.diffs ?? []), TypeDiffKind.IS_SUPERTYPE],
         };
       }
     }
@@ -1312,7 +1333,7 @@ export class OmniUtil {
 
         return {
           type: common.type,
-          diffs: [...(common.diffs ?? []), TypeDifference.IS_SUPERTYPE],
+          diffs: [...(common.diffs ?? []), TypeDiffKind.IS_SUPERTYPE],
         };
       }
     }
@@ -1326,7 +1347,7 @@ export class OmniUtil {
       type: {
         kind: OmniTypeKind.UNKNOWN,
       },
-      diffs: [TypeDifference.FUNDAMENTAL_TYPE],
+      diffs: [TypeDiffKind.FUNDAMENTAL_TYPE],
     };
   }
 
@@ -1339,7 +1360,7 @@ export class OmniUtil {
 
     if (a.properties.length === b.properties.length) {
 
-      const diffs: TypeDifference[] = [];
+      const diffs: TypeDiffKind[] = [];
       for (let i = 0; i < a.properties.length; i++) {
         if (a.properties[i].name !== b.properties[i].name) {
           return undefined;
@@ -1433,7 +1454,7 @@ export class OmniUtil {
         const nullableType = OmniUtil.toReferenceType(common.type);
         if (nullableType.kind == OmniTypeKind.PRIMITIVE) {
           common.type = nullableType;
-          common.diffs = [...(common.diffs ?? []), TypeDifference.NULLABILITY];
+          common.diffs = [...(common.diffs ?? []), TypeDiffKind.NULLABILITY];
         } else {
           throw new Error(`Reference type '${OmniUtil.describe(nullableType)}' given back was not a primitive type`);
         }
@@ -1461,15 +1482,15 @@ export class OmniUtil {
 
     // Then check if one of them is literal, but if the literal is the common type, then they are not covariant.
     if (a.literal && b.literal) {
-      const newTypeDifference = (targetFeatures.literalTypes) ? TypeDifference.FUNDAMENTAL_TYPE : TypeDifference.NARROWED_LITERAL_TYPE;
+      const newTypeDifference = (targetFeatures.literalTypes) ? TypeDiffKind.FUNDAMENTAL_TYPE : TypeDiffKind.NARROWED_LITERAL_TYPE;
       return {type: OmniUtil.getGeneralizedType(common.type ?? a), diffs: [...(common.diffs ?? []), newTypeDifference]};
     } else if (a.literal && !b.literal && common.type == a) {
-      return {type: b, diffs: [...(common.diffs ?? []), TypeDifference.NARROWED_LITERAL_TYPE]};
+      return {type: b, diffs: [...(common.diffs ?? []), TypeDiffKind.NARROWED_LITERAL_TYPE]};
     } else if (!a.literal && b.literal && common.type == b) {
-      return {type: a, diffs: [...(common.diffs ?? []), TypeDifference.NARROWED_LITERAL_TYPE]};
+      return {type: a, diffs: [...(common.diffs ?? []), TypeDiffKind.NARROWED_LITERAL_TYPE]};
     }
 
-    return {type: OmniUtil.getGeneralizedType(common.type ?? a), diffs: [...(common.diffs ?? []), TypeDifference.NARROWED_LITERAL_TYPE]};
+    return {type: OmniUtil.getGeneralizedType(common.type ?? a), diffs: [...(common.diffs ?? []), TypeDiffKind.NARROWED_LITERAL_TYPE]};
   }
 
   private static getCommonDenominatorBetweenPrimitiveKinds(
@@ -1483,47 +1504,60 @@ export class OmniUtil {
     }
 
     switch (a.primitiveKind) {
-      case OmniPrimitiveKind.INTEGER:
       case OmniPrimitiveKind.INTEGER_SMALL:
         switch (b.primitiveKind) {
+          case OmniPrimitiveKind.INTEGER:
           case OmniPrimitiveKind.LONG:
-          case OmniPrimitiveKind.DOUBLE:
+            return {type: b, diffs: [TypeDiffKind.SIZE]};
           case OmniPrimitiveKind.FLOAT:
+          case OmniPrimitiveKind.DOUBLE:
           case OmniPrimitiveKind.DECIMAL:
-            return {
-              type: b,
-              diffs: [TypeDifference.ISOMORPHIC_TYPE],
-            };
+            return {type: b, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
+        }
+        break;
+
+      case OmniPrimitiveKind.INTEGER:
+        switch (b.primitiveKind) {
+          case OmniPrimitiveKind.INTEGER_SMALL:
+            return {type: a, diffs: [TypeDiffKind.SIZE]};
+          case OmniPrimitiveKind.LONG:
+            return {type: b, diffs: [TypeDiffKind.SIZE]};
+          case OmniPrimitiveKind.FLOAT:
+            return {type: b, diffs: [TypeDiffKind.PRECISION]};
+          case OmniPrimitiveKind.DOUBLE:
+          case OmniPrimitiveKind.DECIMAL:
+            return {type: b, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
         }
         break;
       case OmniPrimitiveKind.LONG:
         switch (b.primitiveKind) {
-          case OmniPrimitiveKind.DOUBLE:
+          case OmniPrimitiveKind.INTEGER_SMALL:
+          case OmniPrimitiveKind.INTEGER:
+            return {type: a, diffs: [TypeDiffKind.SIZE]};
           case OmniPrimitiveKind.FLOAT:
+            return {type: a, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
+          case OmniPrimitiveKind.DOUBLE:
           case OmniPrimitiveKind.DECIMAL:
-            return {
-              type: b,
-              diffs: [TypeDifference.ISOMORPHIC_TYPE],
-            };
+            return {type: b, diffs: [TypeDiffKind.PRECISION]};
         }
         break;
       case OmniPrimitiveKind.FLOAT:
         switch (b.primitiveKind) {
+          case OmniPrimitiveKind.INTEGER_SMALL:
+          case OmniPrimitiveKind.INTEGER:
+            return {type: a, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
           case OmniPrimitiveKind.DOUBLE:
           case OmniPrimitiveKind.DECIMAL:
-            return {
-              type: b,
-              diffs: [TypeDifference.ISOMORPHIC_TYPE],
-            };
+            return {type: b, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
         }
         break;
       case OmniPrimitiveKind.DECIMAL:
         switch (b.primitiveKind) {
+          case OmniPrimitiveKind.INTEGER_SMALL:
+          case OmniPrimitiveKind.INTEGER:
+          case OmniPrimitiveKind.FLOAT:
           case OmniPrimitiveKind.DOUBLE:
-            return {
-              type: b,
-              diffs: [TypeDifference.ISOMORPHIC_TYPE],
-            };
+            return {type: a, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
         }
         break;
       case OmniPrimitiveKind.NUMBER:
@@ -1534,19 +1568,14 @@ export class OmniUtil {
           case OmniPrimitiveKind.DOUBLE:
           case OmniPrimitiveKind.FLOAT:
           case OmniPrimitiveKind.DECIMAL:
-            return {
-              type: a,
-              diffs: [TypeDifference.ISOMORPHIC_TYPE],
-            };
+            // "number" is isomorphic to all other number types?
+            return {type: a, diffs: [TypeDiffKind.ISOMORPHIC_TYPE]};
         }
         break;
       case OmniPrimitiveKind.CHAR:
         switch (b.primitiveKind) {
           case OmniPrimitiveKind.STRING:
-            return {
-              type: b,
-              diffs: [TypeDifference.ISOMORPHIC_TYPE],
-            };
+            return {type: b, diffs: [TypeDiffKind.SIZE]};
         }
         break;
     }
@@ -1598,7 +1627,7 @@ export class OmniUtil {
   public static getDistinctTypes(
     types: OmniType[],
     targetFeatures: TargetFeatures,
-    allowedDiffPredicate: (diff: TypeDifference) => boolean = () => false,
+    allowedDiffPredicate: (diff: TypeDiffKind) => boolean = () => false,
   ) {
 
     const distinctTypes: OmniType[] = [];
@@ -1649,7 +1678,7 @@ export class OmniUtil {
     return type;
   }
 
-  public static isDiffMatch(diffs: TypeDifference[] | undefined, ...matches: TypeDifference[]): boolean {
+  public static isDiffMatch(diffs: TypeDiffKind[] | undefined, ...matches: TypeDiffKind[]): boolean {
 
     if (diffs) {
 
@@ -1658,8 +1687,8 @@ export class OmniUtil {
           return true;
         }
 
-        if (needle == TypeDifference.NARROWED_LITERAL_TYPE) {
-          if (diffs.includes(TypeDifference.FUNDAMENTAL_TYPE) || diffs.includes(TypeDifference.ISOMORPHIC_TYPE)) {
+        if (needle == TypeDiffKind.NARROWED_LITERAL_TYPE) {
+          if (diffs.includes(TypeDiffKind.FUNDAMENTAL_TYPE) || diffs.includes(TypeDiffKind.ISOMORPHIC_TYPE)) {
             return true;
           }
         }
@@ -1688,12 +1717,12 @@ export class OmniUtil {
       return undefined;
     }
 
-    const diffs: TypeDifference[] = [];
+    const diffs: TypeDiffKind[] = [];
     for (let i = 0; i < a.properties.length; i++) {
       // TODO: Move all the common denominator stuff out to a separate class (it's taking too much space here)
       const equality = PropertyUtil.getPropertyEquality(a.properties[i], b.properties[i], targetFeatures);
 
-      if (OmniUtil.isDiffMatch(equality.typeDiffs, TypeDifference.NARROWED_LITERAL_TYPE)) {
+      if (OmniUtil.isDiffMatch(equality.typeDiffs, TypeDiffKind.NARROWED_LITERAL_TYPE)) {
         return undefined;
       }
 
@@ -1716,14 +1745,7 @@ export class OmniUtil {
     });
 
     if (!aNames.find(aName => bNames.includes(aName))) {
-
-      // The names need to be the same for now.
-      // TODO: Should make this an option, to allow differing names if the semantic similarity is high enough.
-      // if (commonSuperType) {
-      //   return {type: commonSuperType.type, diffs: [TypeDifference.NAME, ...(commonSuperType.diffs ?? [])]};
-      // } else {
       return undefined;
-      // }
     }
 
     return {
@@ -1783,6 +1805,140 @@ export class OmniUtil {
     }
 
     return to;
+  }
+
+  public static getDiff(baseline: OmniType, other: OmniType, features: TargetFeatures): Diff[] {
+
+    if (baseline == other) {
+      return [];
+    }
+
+    if (baseline.kind != other.kind) {
+      return [{kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.FUNDAMENTAL_TYPE]}];
+    } else if (baseline.kind == OmniTypeKind.OBJECT && other.kind == OmniTypeKind.OBJECT) {
+      return this.getDiffOfObjects(baseline, other, features);
+    } else {
+
+      const common = OmniUtil.getCommonDenominatorBetween(baseline, other, features, false);
+      if (common === undefined) {
+        return [{kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.FUNDAMENTAL_TYPE]}];
+      } else if (common.diffs && common.diffs.length > 0) {
+        return [{kind: DiffKind.TYPE, typeDiffs: common.diffs}];
+      } else if (common.type == baseline) {
+        return [];
+      } else {
+        return [{kind: DiffKind.TYPE, typeDiffs: common.diffs ?? [TypeDiffKind.FUNDAMENTAL_TYPE]}];
+      }
+    }
+  }
+
+  public static getDiffOfObjects(baseline: OmniObjectType, other: OmniObjectType, features: TargetFeatures): Diff[] {
+
+    const diffs: Diff[] = [];
+
+    const baseProperties = OmniUtil.getPropertiesOf(baseline);
+    const otherProperties = OmniUtil.getPropertiesOf(other);
+
+    for (const baseProperty of baseProperties) {
+
+      const withSameName = otherProperties.find(it => (it.name == baseProperty.name));
+      if (withSameName) {
+
+        const propertyCommon = OmniUtil.getCommonDenominatorBetween(baseProperty.type, withSameName.type, features, false);
+        if (propertyCommon === undefined) {
+          diffs.push({kind: DiffKind.PROPERTY_TYPE, propertyName: baseProperty.name}); // , other: withSameName, propertyTypeDiff: [TypeDiffKind.FUNDAMENTAL_TYPE]});
+        } else if (propertyCommon?.diffs && propertyCommon.diffs.length > 0) {
+          diffs.push({kind: DiffKind.PROPERTY_TYPE, propertyName: baseProperty.name}); // , other: withSameName, propertyTypeDiff: propertyCommon.diffs});
+        }
+
+      } else {
+
+        // This property does not exist in the other object, so it is different by virtue of existing.
+        diffs.push({kind: DiffKind.MISSING_PROPERTY, propertyName: baseProperty.name});
+      }
+    }
+
+    for (const otherProperty of otherProperties) {
+
+      const existsInBase = baseProperties.find(it => it.name == otherProperty.name);
+      if (!existsInBase) {
+        diffs.push({kind: DiffKind.EXTRA_PROPERTY, propertyName: otherProperty.name});
+      }
+    }
+
+    return diffs;
+  }
+
+  /**
+   * Takes a list of diffs and returns those that can be used to uniquely identify the baseline type from the other types that generated the diffs.
+   *
+   * A diff needs to be present in each set of diffs to be trusted as a diff that covers all known cases.
+   */
+  public static getAllEncompassingDiffs(baseline: OmniType, others: OmniType[], features: TargetFeatures): Diff[] {
+
+    const unique: Diff[] = [];
+
+    const missingProperty = new Map<string, number>();
+    const extraProperty = new Map<string, number>();
+    let otherType = 0;
+    const otherDifferences = new Set<TypeDiffKind>();
+    const otherPropertyType = new Map<string, number>();
+
+    for (const other of others) {
+      const diffs = OmniUtil.getDiff(baseline, other, features);
+      for (const diff of diffs) {
+        if (diff.kind == DiffKind.MISSING_PROPERTY) {
+          missingProperty.set(diff.propertyName, (missingProperty.get(diff.propertyName) ?? 0) + 1);
+          otherPropertyType.set(diff.propertyName, (otherPropertyType.get(diff.propertyName) ?? 0) + 1);
+        } else if (diff.kind == DiffKind.EXTRA_PROPERTY) {
+          extraProperty.set(diff.propertyName, (extraProperty.get(diff.propertyName) ?? 0) + 1);
+          otherPropertyType.set(diff.propertyName, (otherPropertyType.get(diff.propertyName) ?? 0) + 1);
+        } else if (diff.kind == DiffKind.TYPE) {
+          otherType++;
+          diff.typeDiffs.forEach(it => otherDifferences.add(it));
+          if (baseline.kind == OmniTypeKind.OBJECT) {
+            for (const property of baseline.properties) {
+              missingProperty.set(property.name, (missingProperty.get(property.name) ?? 0) + 1);
+            }
+          } else if (other.kind == OmniTypeKind.OBJECT) {
+            for (const property of other.properties) {
+              missingProperty.set(property.name, (missingProperty.get(property.name) ?? 0) + 1);
+            }
+          }
+        } else if (diff.kind == DiffKind.PROPERTY_TYPE) {
+          otherPropertyType.set(diff.propertyName, (otherPropertyType.get(diff.propertyName) ?? 0) + 1);
+        }
+      }
+    }
+
+    for (const [propertyName, count] of missingProperty.entries()) {
+      if (count == others.length) {
+        // Flip the "requirement", and delete any property type difference, since existence is enough.
+        unique.push({kind: DiffKind.EXTRA_PROPERTY, propertyName: propertyName});
+        otherPropertyType.delete(propertyName);
+      }
+    }
+
+    for (const [propertyName, count] of extraProperty.entries()) {
+      if (count == others.length) {
+        // Flip the "requirement", and delete any property type difference, since non-existence is enough.
+        unique.push({kind: DiffKind.MISSING_PROPERTY, propertyName: propertyName});
+        otherPropertyType.delete(propertyName);
+      }
+    }
+
+    for (const [propertyName, count] of otherPropertyType.entries()) {
+      if (count == others.length) {
+        unique.push({kind: DiffKind.PROPERTY_TYPE, propertyName: propertyName});
+      }
+    }
+
+    if (otherType == others.length) {
+      // TODO: Does not need to have been a fundamental type diff, but do we need to care?
+      unique.push({kind: DiffKind.TYPE, typeDiffs: [...otherDifferences]});
+    }
+
+    return unique;
   }
 
   public static mergeTypeMeta<T extends OmniType>(from: T, to: typeof from, lossless = true, aggregate = false): typeof to {
@@ -1851,4 +2007,39 @@ export class OmniUtil {
       type: as || property.type,
     });
   }
+}
+
+export type Diff =
+  PropertyDiff
+  | PropertyTypeDiff
+  | TypeDiff;
+
+export interface BaseDiff<K extends DiffKind> {
+  kind: K;
+}
+
+export enum DiffKind {
+  TYPE = 'TYPE',
+  // MISSING_PROPERTY_NAME = 'MISSING_PROPERTY_NAME',
+  MISSING_PROPERTY = 'MISSING_PROPERTY',
+  EXTRA_PROPERTY = 'EXTRA_PROPERTY',
+  PROPERTY_TYPE = 'PROPERTY_TYPE',
+}
+
+export interface TypeDiff extends BaseDiff<DiffKind.TYPE> {
+  typeDiffs: TypeDiffKind[];
+}
+
+export interface PropertyDiff extends BaseDiff<DiffKind.MISSING_PROPERTY | DiffKind.EXTRA_PROPERTY> {
+  propertyName: string;
+}
+
+// export interface PropertyNameDiff extends BaseDiff<DiffKind.MISSING_PROPERTY_NAME> {
+//   propertyName: string;
+// }
+
+export interface PropertyTypeDiff extends BaseDiff<DiffKind.PROPERTY_TYPE> {
+  propertyName: string;
+  // other: OmniProperty;
+  // propertyTypeDiff: TypeDiffKind[];
 }

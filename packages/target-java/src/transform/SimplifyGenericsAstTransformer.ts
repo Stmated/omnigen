@@ -4,7 +4,7 @@ import {
   OmniGenericTargetSourcePropertyType,
   OmniType,
   OmniTypeKind,
-  TypeDifference,
+  TypeDiffKind,
 } from '@omnigen/core';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
@@ -51,12 +51,12 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
         replacement = [...targetTypes.values()][0];
       } else {
 
-        const allowedDiffs: TypeDifference[] = [];
+        const allowedDiffs: TypeDiffKind[] = [];
         if (!args.features.primitiveGenerics) {
-          allowedDiffs.push(TypeDifference.NULLABILITY);
+          allowedDiffs.push(TypeDiffKind.NULLABILITY);
         }
         if (!args.features.literalTypes) {
-          allowedDiffs.push(TypeDifference.NARROWED_LITERAL_TYPE);
+          allowedDiffs.push(TypeDiffKind.NARROWED_LITERAL_TYPE);
         }
 
         const distinctTypes = OmniUtil.getDistinctTypes(

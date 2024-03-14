@@ -58,11 +58,12 @@ export const CorePlugin = createPlugin(
 
     const packageOptions = ZodPackageOptions.parse(ctx.arguments);
     const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
+    const parserOptions = ZodParserOptions.parse(ctx.arguments);
 
     return {
       ...ctx,
       schemaFile: new SchemaFile(ctx.file, ctx.file),
-      parserOptions: ZodParserOptions.parse(ctx.arguments),
+      parserOptions: parserOptions,
       modelTransformOptions: ZodModelTransformOptions.parse(ctx.arguments),
       targetOptions: ZodTargetOptions.parse(ctx.arguments),
       packageOptions: packageOptions,

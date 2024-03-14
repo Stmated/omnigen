@@ -236,7 +236,7 @@ export class PluginManager {
         const compat = ZodUtils.isCompatibleWith(pathItem.plugin.input, zodRuntimeSchema);
         if (compat.v == Compat.DIFF) {
 
-          logger.debug(`Skipping '${pathItem.plugin.name}' since current context did not match expected input validation schema`);
+          logger.debug(`Skipping '${pathItem.plugin.name}' since current context did not match expected input validation schema: ${compat.error?.message}`);
           return {results: []};
         }
       }

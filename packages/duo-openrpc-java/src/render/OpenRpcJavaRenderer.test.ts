@@ -139,8 +139,6 @@ describe('Java Rendering', () => {
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
       },
     });
-    // TODO: Get this to work again -- something is very off with the way things are created -- maybe a miss-mash with the ids and simplification of oneOf -> allOf -> inlined
-    //       Might be that we should not inline early, and let it be up to the target language how a type that is only one allOf should be rendered. If it is anonymous it could be inlined always;
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {

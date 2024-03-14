@@ -24,13 +24,11 @@ describe('Test Generic Model Creation', () => {
         new SchemaFile(filePath),
       );
 
-      // const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
-
       const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS});
       const model = (await parser.parse()).model;
       expect(model).toBeDefined();
     }
-  }, {timeout: 10_000});
+  }, {timeout: 5_000});
 
   test('PetStore should create expected model', async () => {
 
@@ -38,7 +36,6 @@ describe('Test Generic Model Creation', () => {
       new SchemaFile(Util.getPathFromRoot('./packages/parser-openrpc/examples/petstore-expanded.json')),
     );
 
-    // const realOptions = OptionsUtil.resolve(options, undefined, OPENRPC_OPTIONS_RESOLVERS);
     const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS});
     const model = (await parser.parse()).model;
 

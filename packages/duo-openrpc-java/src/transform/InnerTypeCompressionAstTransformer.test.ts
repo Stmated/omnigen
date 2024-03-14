@@ -1,5 +1,5 @@
 import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, Direction} from '@omnigen/core';
 import {describe, expect, test, vi} from 'vitest';
 import {SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
 
@@ -30,6 +30,7 @@ describe('InnerTypeCompression', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
+      parserOptions: {...DEFAULT_PARSER_OPTIONS, direction: Direction.OUT},
       modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false, elevateProperties: false},
       targetOptions: {
         ...DEFAULT_TEST_TARGET_OPTIONS,

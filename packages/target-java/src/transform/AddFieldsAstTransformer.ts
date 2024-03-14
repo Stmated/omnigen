@@ -1,9 +1,9 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {OmniType, OmniTypeKind} from '@omnigen/core';
-import * as Java from '../ast';
 import {JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): void {
@@ -20,14 +20,15 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
 
         if (type.kind == OmniTypeKind.OBJECT) {
 
-          for (const property of OmniUtil.getPropertiesOf(type)) {
+          const properties = OmniUtil.getPropertiesOf(type);
+          for (const property of properties) {
             JavaAstUtils.addOmniPropertyToBlockAsField(body, property, args.options);
           }
 
           if (type.additionalProperties && !JavaUtil.superMatches(args.model, type, parent => this.hasAdditionalProperties(parent))) {
 
             // No parent implements additional properties, so we should.
-            body.children.push(new Java.AdditionalPropertiesDeclaration(args.options));
+            body.children.push(new AdditionalPropertiesDeclaration(args.options));
           }
         }
 

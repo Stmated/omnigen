@@ -236,7 +236,7 @@ export class JavaAstUtils {
     root: AstNode,
     node: Java.AbstractObjectDeclaration,
     followSupertype = false,
-  ): [Java.Field[], Java.ConstructorParameter[]] {
+  ): {fields: Java.Field[], parameters: Java.ConstructorParameter[]} { // [Java.Field[], Java.ConstructorParameter[]] {
 
     const constructors: Java.ConstructorDeclaration[] = [];
     const fields: Java.Field[] = [];
@@ -264,7 +264,7 @@ export class JavaAstUtils {
 
       // This class already has a constructor, so we will trust that it is correct.
       // NOTE: In this future this could be improved into modifying the existing constructor as-needed.
-      return [[], []];
+      return {fields: [], parameters: []};
     }
 
     const fieldsWithSetters = setters.map(setter => setter.field);
@@ -302,16 +302,16 @@ export class JavaAstUtils {
         extendedBy.visit(constructorVisitor);
       }
 
-      return [
-        immediateRequired,
-        supertypeArguments,
-      ];
+      return {
+        fields: immediateRequired,
+        parameters: supertypeArguments,
+      };
 
     } else {
-      return [
-        immediateRequired,
-        [],
-      ];
+      return {
+        fields: immediateRequired,
+        parameters: [],
+      };
     }
   }
 

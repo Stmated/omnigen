@@ -1,17 +1,17 @@
 
 // TODO: Move OmniUtil equality code into here instead, split out the responsibilities
-import {PropertyDifference, TypeDifference} from '@omnigen/core';
+import {PropertyDifference, TypeDiffKind} from '@omnigen/core';
 
 export class EqualityFinder {
 
-  public static matchesTypeDiff(needle: TypeDifference, ...any: TypeDifference[]) {
+  public static matchesTypeDiff(needle: TypeDiffKind, ...any: TypeDiffKind[]) {
 
     for (const diff of any) {
       if (needle == diff) {
         return true;
       }
 
-      if (needle == TypeDifference.ISOMORPHIC_TYPE && diff == TypeDifference.FUNDAMENTAL_TYPE) {
+      if (needle == TypeDiffKind.ISOMORPHIC_TYPE && diff == TypeDiffKind.FUNDAMENTAL_TYPE) {
         return true;
       }
     }

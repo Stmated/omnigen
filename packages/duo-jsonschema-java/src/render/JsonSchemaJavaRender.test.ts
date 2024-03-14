@@ -145,4 +145,17 @@ describe('jsonschema-java-render', () => {
       expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
     }
   });
+
+  test('discriminator', async ({task}) => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/discriminator.json'));
+    const fileContents = Map.groupBy(rendered, it => it.fileName);
+
+    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    for (const [fileName, cu] of fileContents) {
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+    }
+  });
 });

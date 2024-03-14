@@ -1,17 +1,16 @@
-import {
-  OmniInterfaceType, OmniObjectType, OmniTypeKind,
-} from '@omnigen/core';
+import {OmniInterfaceType, OmniObjectType, OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '../util';
-import {JavaAstUtils, AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import * as Java from '../ast';
 import {Naming, VisitorFactoryManager} from '@omnigen/core-util';
+import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
 
 export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
     const currentClassDeclaration: { obj?: Java.ClassDeclaration | undefined } = {};
-    type AddType = {classDeclaration: Java.ClassDeclaration, node: Java.AdditionalPropertiesDeclaration};
+    type AddType = {classDeclaration: Java.ClassDeclaration, node: AdditionalPropertiesDeclaration};
     const additions: AddType[] = [];
     args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
 

@@ -432,10 +432,10 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
                   new Java.Identifier('body'),
                   new Java.ArgumentList(),
                 ),
-                new Java.ClassReference(new Java.RegularType({
+                new Java.ClassReference(new Java.ClassName(new Java.RegularType({
                   kind: OmniTypeKind.HARDCODED_REFERENCE,
                   fqn: 'com.fasterxml.jackson.databind.JsonNode',
-                })),
+                }))),
               ),
             ),
           ),
@@ -636,7 +636,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new Java.Identifier('convertValue'),
       new Java.ArgumentList(
         new Java.DeclarationReference(fromValueDeclaration),
-        new Java.ClassReference(JavaAstUtils.createTypeNode(type, false)),
+        new Java.ClassReference(new Java.ClassName(JavaAstUtils.createTypeNode(type, false))),
       ),
     );
   }
@@ -645,7 +645,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     args: JavaHttpArgs,
     regularResponses: OmniOutput[],
     errorResponses: OmniOutput[],
-  ): Java.Type<OmniType> {
+  ): Java.TypeNode {
 
     if (regularResponses.length == 1) {
 

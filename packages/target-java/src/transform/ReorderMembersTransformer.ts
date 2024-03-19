@@ -4,13 +4,14 @@ import * as Java from '../ast';
 import {ModifierType} from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
+import {DefaultJavaVisitor} from '../visit';
 
 
 export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
 
@@ -45,7 +46,7 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
         });
 
         // Go deeper, in case there nested types
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclaration(node, visitor);
+        DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
       },
 
       visitField: () => {},
@@ -96,9 +97,12 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
     // TODO: Should be removed. Should have been replaced with a CST
     if (node instanceof AdditionalPropertiesDeclaration) {
 
-      weight += 100;
-      weight -= this.getModifierWeight(node.adderMethod.signature.modifiers);
-      return [weight, node.adderMethod.signature.identifier.value];
+      const adderMethod = node.children.find(it => it instanceof Java.MethodDeclaration);
+      if (adderMethod && adderMethod instanceof Java.MethodDeclaration) {
+        weight += 100;
+        weight -= this.getModifierWeight(adderMethod.signature.modifiers);
+        return [weight, adderMethod.signature.identifier.value];
+      }
     }
 
     if (node instanceof Java.AbstractObjectDeclaration) {

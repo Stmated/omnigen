@@ -1,10 +1,11 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {LiteralValue, OmniModel, OmniType, OmniTypeKind, TargetOptions} from '@omnigen/core';
+import {LiteralValue, OmniModel, OmniType, OmniTypeKind} from '@omnigen/core';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {FieldAccessorMode} from '../options';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 import {TokenType} from '../ast';
+import {DefaultJavaVisitor} from '../visit';
 
 /**
  * Adds a constructor to a class, based on what fields are required (final) and what fields are required from any potential supertype.
@@ -20,9 +21,9 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     }
 
     const classDeclarations: Java.ClassDeclaration[] = [];
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
       visitClassDeclaration: (node, visitor) => {
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
+        DefaultJavaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
         classDeclarations.push(node);
       },
     }));
@@ -36,7 +37,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       if (requirements.fields.length > 0 || requirements.parameters.length > 0) {
 
         const constructorDeclaration = this.createConstructorDeclaration(
-          classDeclaration, requirements.fields, requirements.parameters, args.options,
+          classDeclaration, requirements.fields, requirements.parameters,
         );
 
         classDeclaration.body.children.push(constructorDeclaration);
@@ -48,17 +49,12 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     node: Java.ClassDeclaration,
     fields: Java.Field[],
     superParameters: Java.ConstructorParameter[],
-    options: TargetOptions,
   ): Java.ConstructorDeclaration {
 
     const blockExpressions: Java.AbstractJavaNode[] = [];
 
     const requiredSuperParameters = this.addSuperConstructorCall(superParameters, node, blockExpressions);
     const parameters: Java.ConstructorParameter[] = [];
-
-      // = fields
-      // .filter(it => it.type.omniType.kind != OmniTypeKind.PRIMITIVE)
-      // .map(it => );
 
     for (let i = 0; i < fields.length; i++) {
 
@@ -80,7 +76,6 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     const allConstructorParameters = requiredSuperParameters.concat(parameters);
 
     return new Java.ConstructorDeclaration(
-      node,
       new Java.ConstructorParameterList(
         // TODO: Can this be handled in a better way?
         //  To intrinsically link the argument to the field? A "FieldBackedArgumentDeclaration"? Too silly?
@@ -187,7 +182,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     return requiredSuperArguments;
   }
 
-  private createParameter(field: Java.Field, type: Java.Type<OmniType>, identifier: Java.Identifier): Java.ConstructorParameter {
+  private createParameter(field: Java.Field, type: Java.TypeNode<OmniType>, identifier: Java.Identifier): Java.ConstructorParameter {
 
     const schemaIdentifier = identifier.original || identifier.value;
     const safeName = JavaUtil.getPrettyParameterName(schemaIdentifier);
@@ -204,7 +199,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     );
   }
 
-  private getResolvedGenericArgumentType(requiredArgument: Java.Parameter, node: Java.ClassDeclaration): Java.Type<OmniType> {
+  private getResolvedGenericArgumentType(requiredArgument: Java.Parameter, node: Java.ClassDeclaration): Java.TypeNode<OmniType> {
 
     if (requiredArgument.type.omniType.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
       // The type is 'T' or something. Need to get the actual type from our current parent class.

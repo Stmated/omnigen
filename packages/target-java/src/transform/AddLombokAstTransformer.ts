@@ -8,9 +8,10 @@ import * as Java from '../ast';
 import {AnnotationList, ModifierType} from '../ast';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
+import {DefaultJavaVisitor, JavaVisitor} from '../visit';
 
 export interface StackInfo {
-  cu: Java.CompilationUnit;
+  cu: Java.AbstractObjectDeclaration;
   finalFields: number;
   normalFields: number;
   skippingFactors: number;
@@ -25,118 +26,22 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): void {
 
     const cuStack: StackInfo[] = [];
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitMethodDeclaration: () => {},
 
-      visitCompilationUnit: (node, visitor) => {
+      // visitCompilationUnit: (node, visitor) => {
+      //
+      //   for (const child of node.children) {
+      //     if (child instanceof Java.AbstractObjectDeclaration) {
+      //       this.visitCompilationUnit(node, child, cuStack, visitor);
+      //     }
+      //   }
+      // },
 
-        if (node.object instanceof Java.EnumDeclaration) {
+      visitObjectDeclaration: (node, visitor) => {
 
-          // We do not add getters/setters for enums.
-          return;
-        }
-
-        let annotations: AnnotationList;
-        if (node.object.annotations) {
-          annotations = node.object.annotations;
-        } else {
-          annotations = new AnnotationList(...[]);
-          node.object.annotations = annotations;
-        }
-
-        cuStack.push({
-          cu: node,
-          finalFields: 0,
-          normalFields: 0,
-          skippingFactors: 0,
-          fieldsToPrivatize: [],
-        });
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitCompilationUnit(node, visitor);
-        const info = cuStack.pop();
-
-        if (info) {
-
-          if (info.skippingFactors > 0) {
-            return;
-          }
-
-          for (const field of info.fieldsToPrivatize) {
-            // Filter away PRIVATE and FINAL
-            field.modifiers.children = field.modifiers.children.filter(it => {
-              return !(it.type == ModifierType.PRIVATE || it.type == ModifierType.FINAL);
-            });
-          }
-
-          if (info.finalFields > 0 && info.normalFields == 0) {
-            annotations.children.push(new Java.Annotation(
-              new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Value'}),
-            ));
-            annotations.children.push(new Java.Annotation(
-              new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.With'}),
-            ));
-          } else {
-            annotations.children.push(new Java.Annotation(
-              new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Data'}),
-            ));
-          }
-
-          annotations.children.push(new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.AllArgsConstructor'}),
-            new Java.AnnotationKeyValuePairList(
-              new Java.AnnotationKeyValuePair(
-                new Java.Identifier('access'),
-                new Java.Literal(true),
-              ),
-            ),
-          ));
-
-          annotations.children.push(new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.RequiredArgsConstructor'}),
-            new Java.AnnotationKeyValuePairList(
-              new Java.AnnotationKeyValuePair(
-                new Java.Identifier('access'),
-                new Java.Literal(true),
-              ),
-            ),
-          ));
-
-          annotations.children.push(new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.NoArgsConstructor'}),
-          ));
-
-          annotations.children.push(new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.NonFinal'}),
-          ));
-
-          annotations.children.push(new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.SuperBuilder'}),
-            new Java.AnnotationKeyValuePairList(
-              new Java.AnnotationKeyValuePair(
-                new Java.Identifier('toBuilder'),
-                new Java.Literal(true),
-              ),
-            ),
-          ));
-
-          annotations.children.push(new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.extern.jackson.Jacksonized'}),
-          ));
-
-          if (node.object.extends) {
-
-            // If we extend from something, then we add to callSuper for Equald and HashCode.
-            annotations.children.push(new Java.Annotation(
-              new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.EqualsAndHashCode'}),
-              new Java.AnnotationKeyValuePairList(
-                new Java.AnnotationKeyValuePair(
-                  new Java.Identifier('callSuper'),
-                  new Java.Literal(true),
-                ),
-              ),
-            ));
-          }
-        }
+        this.visitObjectDec(node, cuStack, visitor);
       },
 
       visitField: node => {
@@ -197,6 +102,117 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
         node.annotations = annotations;
       },
     }));
+  }
+
+  private visitObjectDec(
+    // cu: Java.CompilationUnit,
+    dec: Java.AbstractObjectDeclaration,
+    stack: StackInfo[],
+    visitor: JavaVisitor<void>,
+  ): void {
+
+    if (dec instanceof Java.EnumDeclaration) {
+
+      // We do not add getters/setters for enums.
+      return;
+    }
+
+    let annotations: AnnotationList;
+    if (dec.annotations) {
+      annotations = dec.annotations;
+    } else {
+      annotations = new AnnotationList(...[]);
+      dec.annotations = annotations;
+    }
+
+    stack.push({
+      cu: dec,
+      finalFields: 0,
+      normalFields: 0,
+      skippingFactors: 0,
+      fieldsToPrivatize: [],
+    });
+    DefaultJavaVisitor.visitObjectDeclaration(dec, visitor);
+    const info = stack.pop();
+
+    if (!info) {
+      return;
+    }
+
+    if (info.skippingFactors > 0) {
+      return;
+    }
+
+    for (const field of info.fieldsToPrivatize) {
+      // Filter away PRIVATE and FINAL
+      field.modifiers.children = field.modifiers.children.filter(it => {
+        return !(it.type == ModifierType.PRIVATE || it.type == ModifierType.FINAL);
+      });
+    }
+
+    if (info.finalFields > 0 && info.normalFields == 0) {
+      annotations.children.push(new Java.Annotation(
+        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Value'}),
+      ));
+      annotations.children.push(new Java.Annotation(
+        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.With'}),
+      ));
+    } else {
+      annotations.children.push(new Java.Annotation(
+        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Data'}),
+      ));
+    }
+
+    annotations.children.push(new Java.Annotation(
+      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.AllArgsConstructor'}),
+      new Java.AnnotationKeyValuePairList(
+        new Java.AnnotationKeyValuePair(
+          new Java.Identifier('access'),
+          new Java.Literal(true),
+        ),
+      ),
+    ));
+    annotations.children.push(new Java.Annotation(
+      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.RequiredArgsConstructor'}),
+      new Java.AnnotationKeyValuePairList(
+        new Java.AnnotationKeyValuePair(
+          new Java.Identifier('access'),
+          new Java.Literal(true),
+        ),
+      ),
+    ));
+    annotations.children.push(new Java.Annotation(
+      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.NoArgsConstructor'}),
+    ));
+    annotations.children.push(new Java.Annotation(
+      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.NonFinal'}),
+    ));
+    annotations.children.push(new Java.Annotation(
+      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.SuperBuilder'}),
+      new Java.AnnotationKeyValuePairList(
+        new Java.AnnotationKeyValuePair(
+          new Java.Identifier('toBuilder'),
+          new Java.Literal(true),
+        ),
+      ),
+    ));
+    annotations.children.push(new Java.Annotation(
+      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.extern.jackson.Jacksonized'}),
+    ));
+
+    if (dec.extends) {
+
+      // If we extend from something, then we add to callSuper for Equald and HashCode.
+      annotations.children.push(new Java.Annotation(
+        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.EqualsAndHashCode'}),
+        new Java.AnnotationKeyValuePairList(
+          new Java.AnnotationKeyValuePair(
+            new Java.Identifier('callSuper'),
+            new Java.Literal(true),
+          ),
+        ),
+      ));
+    }
   }
 
   private getDefaultValue(type: OmniType): Java.Literal {

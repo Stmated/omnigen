@@ -8,6 +8,7 @@ import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaUtil} from '../util';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {DefaultJavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -15,33 +16,34 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    if (!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes) {
+    if (!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes || !args.features.nestedDeclarations) {
 
       // The option for compressing types is disabled.
       return;
     }
 
-    const cuUsedInTypes = new Map<Java.CompilationUnit, OmniType[]>();
-    const typeToCu = new Map<OmniType, Java.CompilationUnit>();
-    this.gatherTypeMappings(cuUsedInTypes, typeToCu, args.root, args.options);
+    const objectDecUsedInTypes = new Map<Java.AbstractObjectDeclaration, OmniType[]>();
+    const typeToUnit = new Map<OmniType, Java.CompilationUnit>();
+    const typeToObjectDec = new Map<OmniType, Java.AbstractObjectDeclaration>();
+    this.gatherTypeMappings(objectDecUsedInTypes, typeToUnit, typeToObjectDec, args.root, args.options);
 
-    const typeUsedInCus = this.flipMultiMap(cuUsedInTypes);
+    const typeUsedInCus = this.flipMultiMap(objectDecUsedInTypes);
     logger.info(typeUsedInCus);
 
-    for (const [type, usedInUnits] of typeUsedInCus.entries()) {
+    for (const [type, usedIn] of typeUsedInCus.entries()) {
 
-      logger.silent(`${OmniUtil.describe(type)} used in ${usedInUnits.map(it => OmniUtil.describe(it.object.type.omniType))}`);
+      logger.silent(`${OmniUtil.describe(type)} used in ${usedIn.map(it => OmniUtil.describe(it.type.omniType))}`);
 
-      if (usedInUnits.length != 1) {
+      if (usedIn.length != 1) {
         continue;
       }
 
-      const singleUseInUnit = usedInUnits[0];
+      const singleUseInUnit = usedIn[0];
 
       // Check for supertype interference. Don't want a superclass to be inside a subclass.
       let typeUsedInSuperType = false;
       if (JavaUtil.asSuperType(type)) {
-        const singleUseType = singleUseInUnit.object.type.omniType;
+        const singleUseType = singleUseInUnit.type.omniType; // .children.type.omniType;
         const singleUseIsSubType = JavaUtil.asSubType(singleUseType);
         const singleUseHierarchy = JavaUtil.getSuperClassHierarchy(args.model, singleUseIsSubType ? singleUseType : undefined);
         typeUsedInSuperType = singleUseHierarchy.includes(type);
@@ -60,13 +62,17 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
           // This type is only ever used in one single unit.
           // To decrease the number of files, we can compress the types and make this an inner type.
-          const definedInCu = typeToCu.get(type);
-          if (!definedInCu) {
-            logger.warn(`Could not find the CompilationUnit source where '${OmniUtil.describe(type)}' is defined`);
-            continue;
+          const definedInObjectDec = typeToObjectDec.get(type);
+          if (!definedInObjectDec) {
+            throw new Error(`Could not find the object source where '${OmniUtil.describe(type)}' is defined`);
           }
 
-          this.moveCompilationUnit(definedInCu, singleUseInUnit, type, args.root);
+          const definedInUnit = typeToUnit.get(type);
+          if (!definedInUnit) {
+            throw new Error(`Could not find the CompilationUnit source where '${OmniUtil.describe(type)}' is defined`);
+          }
+
+          this.moveCompilationUnit(definedInUnit, definedInObjectDec, singleUseInUnit, type, args.root);
         }
       }
     }
@@ -91,27 +97,42 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
   }
 
   private gatherTypeMappings(
-    typeMapping: Map<Java.CompilationUnit, OmniType[]>,
-    typeToCu: Map<OmniType, Java.CompilationUnit>,
+    objectDecUsedInType: Map<Java.AbstractObjectDeclaration, OmniType[]>,
+    typeToUnit: Map<OmniType, Java.CompilationUnit>,
+    typeToObjectDec: Map<OmniType, Java.AbstractObjectDeclaration>,
     root: Java.JavaAstRootNode,
     options: TargetOptions,
   ) {
 
     const cuInfoStack: Java.CompilationUnit[] = [];
-    const visitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    const objectDecStack: Java.AbstractObjectDeclaration[] = [];
+    const visitor = VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
-        const mapping = typeMapping.get(node);
+        try {
+          cuInfoStack.push(node);
+        } finally {
+          DefaultJavaVisitor.visitCompilationUnit(node, visitor);
+          cuInfoStack.pop();
+        }
+      },
+      visitObjectDeclaration: (node, visitor) => {
+
+        const mapping = objectDecUsedInType.get(node);
         if (!mapping) {
-          typeMapping.set(node, []);
+          objectDecUsedInType.set(node, []);
         }
 
-        typeToCu.set(node.object.type.omniType, node);
+        typeToObjectDec.set(node.type.omniType, node);
+        typeToUnit.set(node.type.omniType, cuInfoStack[cuInfoStack.length - 1]);
 
-        cuInfoStack.push(node);
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitCompilationUnit(node, visitor);
-        cuInfoStack.pop();
+        try {
+          objectDecStack.push(node);
+          DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
+        } finally {
+          objectDecStack.pop();
+        }
       },
 
       // We do not want texts with links to count as "references"
@@ -130,15 +151,16 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
             || usedType.kind == OmniTypeKind.ENUM
             || (usedType.kind == OmniTypeKind.INTERFACE && options.allowCompressInterfaceToInner)) {
 
-            const cu = cuInfoStack[cuInfoStack.length - 1];
-            if (usedType != cu.object.type.omniType) {
-              const mapping = typeMapping.get(cu);
+            // const cu = cuInfoStack[cuInfoStack.length - 1];
+            const objectDec = objectDecStack[objectDecStack.length - 1];
+            if (usedType != objectDec.type.omniType) { // cu.children.type.omniType) {
+              const mapping = objectDecUsedInType.get(objectDec);
               if (mapping) {
                 if (!mapping.includes(usedType)) {
                   mapping.push(usedType);
                 }
               } else {
-                typeMapping.set(cu, [usedType]);
+                objectDecUsedInType.set(objectDec, [usedType]);
               }
             }
           }
@@ -197,34 +219,47 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
   private moveCompilationUnit(
     sourceUnit: Java.CompilationUnit,
-    targetUnit: Java.CompilationUnit | undefined,
+    sourceObject: Java.AbstractObjectDeclaration,
+    targetChild: Java.Identifiable | undefined,
     type: OmniType,
     root: Java.JavaAstRootNode,
   ): void {
 
-    if (!targetUnit) {
+    if (!targetChild) {
       throw new Error(`Could not find the CompilationUnit target where '${OmniUtil.describe(type)}' is defined`);
     }
 
-    if (!sourceUnit.object.modifiers.children.find(it => it.type == Java.ModifierType.STATIC)) {
+    if (!(targetChild instanceof Java.AbstractObjectDeclaration)) {
+      return;
+    }
+
+    if (!sourceObject.modifiers.children.find(it => it.type == Java.ModifierType.STATIC)) {
 
       // Add the static modifier if it is not already added.
       // TODO: This does not need to be done for enums?
-      sourceUnit.object.modifiers.children.push(
+      sourceObject.modifiers.children.push(
         new Java.Modifier(Java.ModifierType.STATIC),
       );
     }
 
-    targetUnit.object.body.children.push(
-      sourceUnit.object,
+    targetChild.body.children.push(
+      sourceObject,
     );
 
-    const rootCuIndex = root.children.indexOf(sourceUnit);
+    const rootCuIndex = sourceUnit.children.indexOf(sourceObject);
     if (rootCuIndex != -1) {
-      root.children.splice(rootCuIndex, 1);
+      sourceUnit.children.splice(rootCuIndex, 1);
     } else {
-      // throw new Error(`The CompilationUnit for '${sourceUnit.object.name.value}' was not found in root node`);
-      logger.error(`The CompilationUnit for '${sourceUnit.object.name.value}' was not found in root node`);
+      throw new Error(`The CompilationUnit for '${sourceObject.name.value}' was not found in source unit '${sourceUnit}'`);
+    }
+
+    if (sourceUnit.children.length == 0) {
+      const unitIndex = root.children.indexOf(sourceUnit);
+      if (unitIndex != -1) {
+        root.children.splice(unitIndex, 1);
+      } else {
+        throw new Error(`Could not find unit '${sourceUnit}' inside root node`);
+      }
     }
   }
 }

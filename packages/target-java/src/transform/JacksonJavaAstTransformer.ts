@@ -1,11 +1,12 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import {Direction} from '@omnigen/core';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
-import {DefaultJavaVisitor} from '../visit';
+import {DefaultBoolJavaVisitor, DefaultJavaVisitor} from '../visit';
 import * as Java from '../ast';
 import {OmniProperty, OmniTypeKind} from '@omnigen/core';
 import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
+import {AbstractObjectDeclaration} from '../ast';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -33,16 +34,20 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
     type FieldStackEntry = {annotate: Java.Field[], skip: Java.Field[]};
     const fieldsStack: FieldStackEntry[] = [];
+    const objectDecStack: Java.AbstractObjectDeclaration[] = [];
 
     const visitor = VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
 
         try {
+          objectDecStack.push(node);
           hasAnnotatedConstructor.push(false);
           fieldsStack.push({annotate: [], skip: []});
           return DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
         } finally {
+
+          objectDecStack.pop();
 
           // Need to do this *after* the object declaration has been visited.
           // Otherwise we will not have had time to find the constructor, or other influencing members.
@@ -103,15 +108,19 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       },
 
       visitConstructor: node => {
-        this.addAnnotationsToConstructor(node, args, hasAnnotatedConstructor);
+
+        const owner = objectDecStack[objectDecStack.length - 1];
+        this.addAnnotationsToConstructor(node, owner, args, hasAnnotatedConstructor);
       },
     });
 
-    visitor.visitRootNode(args.root, visitor);
+    args.root.visit(visitor);
+    // visitor.visitRootNode(args.root, visitor);
   }
 
-  private addAnnotationsToConstructor(node: Java.ConstructorDeclaration, args: JavaAstTransformerArgs, hasAnnotatedConstructor: boolean[]) {
-    const ownerType = node.owner.type.omniType;
+  private addAnnotationsToConstructor(node: Java.ConstructorDeclaration, owner: AbstractObjectDeclaration, args: JavaAstTransformerArgs, hasAnnotatedConstructor: boolean[]) {
+
+    const ownerType = owner.type.omniType;
     if (ownerType.kind == OmniTypeKind.OBJECT && ownerType.abstract) {
 
       // We do not add any annotations to an abstract class constructor, since they will be overridden anyway.
@@ -122,7 +131,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
     let hasJsonValue = false;
 
-    const jsonValueVisitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_BOOLEAN_VISITOR, {
+    const jsonValueVisitor = VisitorFactoryManager.create(DefaultBoolJavaVisitor, {
       visitAnnotation: node => {
         if (node.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
           if (node.type.omniType.fqn.indexOf(JACKSON_JSON_VALUE) >= 0) {
@@ -141,7 +150,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     });
 
     const constructorAnnotationMode = args.options.serializationConstructorAnnotationMode;
-    const hasJsonCreator = VisitResultFlattener.visitWithSingularResult(jsonValueVisitor, node.owner.body, false);
+    const hasJsonCreator = VisitResultFlattener.visitWithSingularResult(jsonValueVisitor, owner.body, false);
     if (!hasJsonCreator) {
       if (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS) {
         annotations.children.push(new Java.Annotation(new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_CREATOR})));

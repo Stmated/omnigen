@@ -91,7 +91,7 @@ export class ZodUtils {
       return {v: Compat.SAME};
     } else if (expected instanceof ZodNumber && actual instanceof ZodNumber) {
       return {v: Compat.SAME};
-    } else if (expected instanceof ZodUndefined && (actual instanceof ZodUndefined || actual instanceof ZodCustomNotSet)) {
+    } else if ((expected === undefined || expected instanceof ZodUndefined) && (actual instanceof ZodUndefined || actual instanceof ZodCustomNotSet)) {
       return {v: Compat.SAME};
     } else if (expected instanceof ZodBoolean && actual instanceof ZodBoolean) {
       return {v: Compat.SAME};
@@ -125,7 +125,7 @@ export class ZodUtils {
     } else if (actual instanceof ZodLiteral) {
       return ZodUtils.isZodCompatibleWithJavaValue(expected, actual.value, actual._def.typeName, path);
     } else {
-      logger.silent(`Unknown zod type combo ${expected._def.typeName} - ${actual._def.typeName}`);
+      logger.silent(`Unknown zod type combo ${expected?._def?.typeName} - ${actual?._def?.typeName}`);
     }
 
     return {v: Compat.DIFF};

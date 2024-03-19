@@ -1,57 +1,47 @@
-import {AstNode, AstVisitor, OmniType, VisitFn, VisitResult} from '@omnigen/core';
+import {AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
-import {RuntimeTypeMapping} from '../ast/RuntimeTypeMapping.ts';
-import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
 
 export type JavaVisitFn<N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
-export interface AstFreeTextVisitor<R> {
-  visitFreeTextGlobal: { (freeText: Java.FreeTextType, visitor: JavaVisitor<R>, translator: { (v: string): R | undefined }): VisitResult<R> };
-  visitFreeText: JavaVisitFn<Java.FreeText, R>;
-  visitFreeTextParagraph: JavaVisitFn<Java.FreeTextParagraph, R>;
-  visitFreeTextSection: JavaVisitFn<Java.FreeTextSection, R>;
-  visitFreeTextLine: JavaVisitFn<Java.FreeTextLine, R>;
-  visitFreeTextIndent: JavaVisitFn<Java.FreeTextIndent, R>;
-  visitFreeTextHeader: JavaVisitFn<Java.FreeTextHeader, R>;
-  visitFreeTextTypeLink: JavaVisitFn<Java.FreeTextTypeLink, R>;
-  visitFreeTextMethodLink: JavaVisitFn<Java.FreeTextMethodLink, R>;
-  visitFreeTextPropertyLink: JavaVisitFn<Java.FreeTextPropertyLink, R>;
-  visitFreeTextList: JavaVisitFn<Java.FreeTextList, R>;
+export interface AstFreeTextVisitor<R> extends AstVisitor<R> {
+  visitFreeText: VisitFn<Java.FreeText, R, AstFreeTextVisitor<R>>;
+  visitFreeTextParagraph: VisitFn<Java.FreeTextParagraph, R, AstFreeTextVisitor<R>>;
+  visitFreeTextSection: VisitFn<Java.FreeTextSection, R, AstFreeTextVisitor<R>>;
+  visitFreeTextLine: VisitFn<Java.FreeTextLine, R, AstFreeTextVisitor<R>>;
+  visitFreeTextIndent: VisitFn<Java.FreeTextIndent, R, AstFreeTextVisitor<R>>;
+  visitFreeTextHeader: VisitFn<Java.FreeTextHeader, R, AstFreeTextVisitor<R>>;
+  visitFreeTextTypeLink: VisitFn<Java.FreeTextTypeLink, R, AstFreeTextVisitor<R>>;
+  visitFreeTextMethodLink: VisitFn<Java.FreeTextMethodLink, R, AstFreeTextVisitor<R>>;
+  visitFreeTextPropertyLink: VisitFn<Java.FreeTextPropertyLink, R, AstFreeTextVisitor<R>>;
+  visitFreeTextList: VisitFn<Java.FreeTextList, R, AstFreeTextVisitor<R>>;
+  visitFreeTexts: VisitFn<Java.FreeTexts, R, AstFreeTextVisitor<R>>;
 }
 
-export const createJavaFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisitor<R>>, noop?: R | undefined): AstFreeTextVisitor<R> => {
+export const createJavaFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisitor<R>>, noop?: R): AstFreeTextVisitor<R> => {
+
   return {
-    visitFreeTextGlobal: (freeText, visitor, translator) => {
-      if (typeof freeText == 'string') {
-        return translator(freeText);
-      } else {
-        if (Array.isArray(freeText)) {
-          return freeText.map(it => visitor.visitFreeTextGlobal(it, visitor, translator));
-        } else {
-          return freeText.visit(visitor);
-        }
-      }
-    },
-    visitFreeText: () => [],
-    visitFreeTextParagraph: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
+    visit: (node, visitor) => node.visit(visitor),
+    visitFreeTexts: (node, visitor) => node.children.map(it => it.visit(visitor)),
+    visitFreeText: () => noop,
+    visitFreeTextParagraph: (node, visitor) => node.child.visit(visitor),
     visitFreeTextSection: (node, visitor) => [
       node.header.visit(visitor),
-      visitor.visitFreeTextGlobal(node.content, visitor, () => noop),
+      node.content.visit(visitor),
     ],
-    visitFreeTextLine: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
-    visitFreeTextIndent: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
-    visitFreeTextHeader: (node, visitor) => visitor.visitFreeTextGlobal(node.child, visitor, () => noop),
+    visitFreeTextLine: (node, visitor) => node.child.visit(visitor),
+    visitFreeTextIndent: (node, visitor) => node.child.visit(visitor),
+    visitFreeTextHeader: (node, visitor) => node.child.visit(visitor),
     visitFreeTextTypeLink: (node, visitor) => node.type.visit(visitor),
     visitFreeTextMethodLink: (node, visitor) => [node.type.visit(visitor), node.method.visit(visitor)],
     visitFreeTextPropertyLink: (node, visitor) => node.type.visit(visitor),
-    visitFreeTextList: (node, visitor) => node.children.map(it => visitor.visitFreeTextGlobal(it, visitor, () => noop)),
+    visitFreeTextList: (node, visitor) => node.children.map(it => it.visit(visitor)),
     ...partial,
   };
 };
 
 export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
 
-  visitRegularType: JavaVisitFn<Java.RegularType<OmniType>, R>;
+  visitRegularType: JavaVisitFn<Java.RegularType, R>;
   visitWildcardType: JavaVisitFn<Java.WildcardType, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;
@@ -98,7 +88,6 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitObjectDeclaration: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
   visitObjectDeclarationBody: JavaVisitFn<Java.AbstractObjectDeclaration, R>;
   visitClassDeclaration: JavaVisitFn<Java.ClassDeclaration, R>;
-  visitGenericClassDeclaration: JavaVisitFn<Java.GenericClassDeclaration, R>;
   visitGenericTypeDeclarationList: JavaVisitFn<Java.GenericTypeDeclarationList, R>;
   visitGenericTypeDeclaration: JavaVisitFn<Java.GenericTypeDeclaration, R>;
   visitInterfaceDeclaration: JavaVisitFn<Java.InterfaceDeclaration, R>;
@@ -111,10 +100,10 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitConstructor: JavaVisitFn<Java.ConstructorDeclaration, R>;
   visitConstructorParameterList: JavaVisitFn<Java.ConstructorParameterList, R>;
   visitConstructorParameter: JavaVisitFn<Java.ConstructorParameter, R>;
-  visitAdditionalPropertiesDeclaration: JavaVisitFn<AdditionalPropertiesDeclaration, R>;
+  visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
-  visitRuntimeTypeMapping: JavaVisitFn<RuntimeTypeMapping, R>;
+  // visitRuntimeTypeMapping: JavaVisitFn<RuntimeTypeMapping, R>;
   visitClassName: JavaVisitFn<Java.ClassName, R>;
   visitClassReference: JavaVisitFn<Java.ClassReference, R>;
   visitArrayInitializer: JavaVisitFn<Java.ArrayInitializer<Java.AbstractJavaNode>, R>;
@@ -139,7 +128,6 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
 
   return {
     ...createJavaFreeTextVisitor<R>(undefined, noop),
-    visitRootNode: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitRegularType: () => noop,
     visitWildcardType: (node, visitor) => node.lowerBound?.visit(visitor),
     visitGenericType: (node, visitor) => [
@@ -189,21 +177,14 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
 
       return results;
     },
-    visitCommentBlock: (node, visitor) => visitor.visitFreeTextGlobal(node.text, visitor, () => noop),
-    visitComment: (node, visitor) => visitor.visitFreeTextGlobal(node.text, visitor, () => noop),
+    visitCommentBlock: (node, visitor) => node.text.visit(visitor), // visitor.visitFreeTextGlobal(node.text, visitor, () => noop),
+    visitComment: (node, visitor) => node.text.visit(visitor), // visitor.visitFreeTextGlobal(node.text, visitor, () => noop),
 
     visitFieldBackedGetter: (node, visitor) => visitor.visitMethodDeclaration(node, visitor),
     visitFieldBackedSetter: (node, visitor) => visitor.visitMethodDeclaration(node, visitor),
-    visitMethodDeclaration: (node, visitor) => {
-      if (node.body) {
-        return [
-          node.signature.visit(visitor),
-          node.body.visit(visitor),
-        ];
-      } else {
-        return node.signature.visit(visitor);
-      }
-    },
+    visitMethodDeclaration: (node, visitor) => node.body
+      ? [node.signature.visit(visitor), node.body.visit(visitor)]
+      : node.signature.visit(visitor),
     visitMethodDeclarationSignature: (node, visitor) => {
       const results: VisitResult<R>[] = [];
       if (node.comments) {
@@ -262,30 +243,16 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       node.initializer?.visit(visitor),
     ],
     visitDeclarationReference: (node, visitor) => node.declaration.identifier.visit(visitor),
-    visitAnnotation: (node, visitor) => {
-      if (node.pairs) {
-        return [
-          node.type.visit(visitor),
-          node.pairs.visit(visitor),
-        ];
-      } else {
-        return node.type.visit(visitor);
-      }
-    },
+    visitAnnotation: (node, visitor) => node.pairs
+      ? [node.type.visit(visitor), node.pairs.visit(visitor)]
+      : node.type.visit(visitor),
     visitAnnotationKeyValuePairList: (node, visitor) => node.children.map(it => it.visit(visitor)),
-    visitAnnotationKeyValuePair: (node, visitor) => {
-      if (node.key) {
-        return [
-          node.key.visit(visitor),
-          node.value.visit(visitor),
-        ];
-      } else {
-        return node.value.visit(visitor);
-      }
-    },
-    visitHardCoded: (node, visitor) => noop,
+    visitAnnotationKeyValuePair: (node, visitor) => node.key
+      ? [node.key.visit(visitor), node.value.visit(visitor)]
+      : node.value.visit(visitor),
+    visitHardCoded: () => noop,
     visitBlock: (node, visitor) => node.children.map(it => it.visit(visitor)),
-    visitPackage: (node, visitor) => noop,
+    visitPackage: () => noop,
     visitPredicate: (node, visitor) => visitor.visitBinaryExpression(node, visitor),
     visitModifierList: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitFieldGetterSetter: (node, visitor) => [
@@ -307,22 +274,24 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       }
       result.push(node.modifiers.visit(visitor));
       result.push(node.name.visit(visitor));
+
+      if (node instanceof Java.ClassDeclaration && node.genericParameterList) {
+        result.push(visitor.visitGenericTypeDeclarationList(node.genericParameterList, visitor));
+      }
+
       if (node.extends) {
         result.push(node.extends.visit(visitor));
       }
       if (node.implements) {
         result.push(node.implements.visit(visitor));
       }
+
       result.push(visitor.visitObjectDeclarationBody(node, visitor));
 
       return result;
     },
     visitObjectDeclarationBody: (node, visitor) => node.body.visit(visitor),
     visitClassDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
-    visitGenericClassDeclaration: (node, visitor) => [
-      visitor.visitClassDeclaration(node, visitor),
-      visitor.visitGenericTypeDeclarationList(node.typeList, visitor),
-    ],
     visitGenericTypeDeclarationList: (node, visitor) => node.types.map(it => it.visit(visitor)),
     visitGenericTypeDeclaration: (node, visitor) => [
       node.name.visit(visitor),
@@ -337,12 +306,12 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       node.value.visit(visitor),
     ],
     visitEnumItemList: (node, visitor) => node.children.map(it => it.visit(visitor)),
-    visitFieldReference: (node, visitor) => noop,
+    visitFieldReference: () => noop,
     visitAssignExpression: (node, visitor) => visitor.visitBinaryExpression(node, visitor),
     visitCompilationUnit: (node, visitor) => [
       node.packageDeclaration.visit(visitor),
       node.imports.visit(visitor),
-      node.object.visit(visitor),
+      node.children.map(it => it.visit(visitor)),
     ],
     visitConstructor: (node, visitor) => [
       node.modifiers.visit(visitor),
@@ -358,11 +327,6 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
     visitAdditionalPropertiesDeclaration: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitStatement: (node, visitor) => node.child.visit(visitor),
     visitSuperConstructorCall: (node, visitor) => node.parameters.visit(visitor),
-    visitRuntimeTypeMapping: (node, visitor) => [
-      ...node.fields.flatMap(it => it.visit(visitor)),
-      ...node.getters.flatMap(it => it.visit(visitor)),
-      ...node.methods.flatMap(it => it.visit(visitor)),
-    ],
     visitClassName: (node, visitor) => node.type.visit(visitor),
     visitClassReference: (node, visitor) => node.className.visit(visitor),
     visitArrayInitializer: (node, visitor) => node.children.map(it => it.visit(visitor)),
@@ -373,3 +337,5 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
 };
 
 export const DefaultJavaVisitor = createJavaVisitorInternal<void>();
+export const DefaultStringJavaVisitor = createJavaVisitor<string>();
+export const DefaultBoolJavaVisitor = createJavaVisitor<boolean>();

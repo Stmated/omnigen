@@ -4,6 +4,7 @@ import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFla
 import * as Java from '../ast';
 import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
+import {DefaultJavaVisitor, DefaultStringJavaVisitor} from '../visit';
 
 export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
 
@@ -17,7 +18,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
   transformAst(args: JavaAstTransformerArgs): void {
 
     const owner: { node: Java.AbstractObjectDeclaration | undefined } = {node: undefined};
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitEnumDeclaration: () => {
       },
@@ -36,7 +37,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
         }
 
         owner.node = node;
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
+        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
       },
 
       visitField: node => {
@@ -97,7 +98,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
   private findGetterMethodForField(latestBody: AstNode): string | string[] | undefined {
 
 
-    const visitor = VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_STRING_VISITOR, {
+    const visitor = VisitorFactoryManager.create(DefaultStringJavaVisitor, {
 
       visitField: () => undefined,
       visitConstructor: () => undefined,

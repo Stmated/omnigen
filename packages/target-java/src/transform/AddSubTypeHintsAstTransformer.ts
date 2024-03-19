@@ -4,6 +4,7 @@ import {
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import * as Java from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {DefaultJavaVisitor} from '../visit';
 
 export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
 
@@ -13,7 +14,7 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
       return;
     }
 
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitObjectDeclaration: node => {
 
@@ -77,7 +78,7 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
                 ),
                 new Java.AnnotationKeyValuePair(
                   new Java.Identifier('value'),
-                  new Java.ClassReference(JavaAstUtils.createTypeNode(subTypeHint.type)),
+                  new Java.ClassReference(new Java.ClassName(JavaAstUtils.createTypeNode(subTypeHint.type))),
                 ),
               ),
             ));

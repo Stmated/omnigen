@@ -1,4 +1,4 @@
-import {OmniDictionaryType, OmniPrimitiveKind, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, VisitResult} from '@omnigen/core';
+import {OmniDictionaryType, OmniPrimitiveKind, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, Reducer, ReducerResult, VisitResult} from '@omnigen/core';
 import {JavaOptions, SerializationLibrary} from '../options';
 import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER, JavaAstUtils} from '../transform';
 import {JavaVisitor} from '../visit';
@@ -28,29 +28,35 @@ import {
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
 
-  readonly adderMethod: MethodDeclaration;
-  readonly keyType: OmniPrimitiveType;
-  readonly valueType: OmniUnknownType;
-  readonly mapType: OmniDictionaryType;
+  // readonly adderMethod: MethodDeclaration;
+  // readonly keyType: OmniPrimitiveType;
+  // readonly valueType: OmniUnknownType;
+  // readonly mapType: OmniDictionaryType;
 
-  constructor(options: JavaOptions) {
+  constructor(options: JavaOptions | AbstractJavaNode[]) {
     super();
 
+    if (Array.isArray(options)) {
+
+      this.children = options;
+      return;
+    }
+
     // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
-    this.keyType = {
+    const keyType: OmniPrimitiveType = {
       kind: OmniTypeKind.PRIMITIVE,
       primitiveKind: OmniPrimitiveKind.STRING,
     };
 
     // TODO: Should this be "Unknown" or another type that is "Any"?
     //  Difference between rendering as JsonNode and Object in some cases.
-    this.valueType = {
+    const valueType: OmniUnknownType = {
       kind: OmniTypeKind.UNKNOWN,
     };
-    this.mapType = {
+    const mapType: OmniDictionaryType = {
       kind: OmniTypeKind.DICTIONARY,
-      keyType: this.keyType,
-      valueType: this.valueType,
+      keyType: keyType,
+      valueType: valueType,
     };
 
     const additionalPropertiesFieldIdentifier = new Identifier('_additionalProperties');
@@ -71,20 +77,20 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
     }
 
     const additionalPropertiesField = new Field(
-      JavaAstUtils.createTypeNode(this.mapType, false),
+      JavaAstUtils.createTypeNode(mapType, false),
       additionalPropertiesFieldIdentifier,
       new ModifierList(
         new Modifier(ModifierType.PRIVATE),
         new Modifier(ModifierType.FINAL),
       ),
-      new NewStatement(JavaAstUtils.createTypeNode(this.mapType, true)),
+      new NewStatement(JavaAstUtils.createTypeNode(mapType, true)),
       fieldAnnotations,
     );
 
-    const keyParameterDeclaration = new Parameter(JavaAstUtils.createTypeNode(this.keyType), keyParameterIdentifier);
-    const valueParameterDeclaration = new Parameter(JavaAstUtils.createTypeNode(this.valueType), valueParameterIdentifier);
+    const keyParameterDeclaration = new Parameter(JavaAstUtils.createTypeNode(keyType), keyParameterIdentifier);
+    const valueParameterDeclaration = new Parameter(JavaAstUtils.createTypeNode(valueType), valueParameterIdentifier);
 
-    this.adderMethod = new MethodDeclaration(
+    const adderMethod = new MethodDeclaration(
       new MethodDeclarationSignature(
         new Identifier('addAdditionalProperty'),
         JavaAstUtils.createTypeNode(<OmniPrimitiveType>{
@@ -110,10 +116,10 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
       ),
     );
 
-    this.adderMethod.signature.annotations = new AnnotationList();
+    adderMethod.signature.annotations = new AnnotationList();
 
     if (options.serializationLibrary == SerializationLibrary.JACKSON) {
-      this.adderMethod.signature.annotations.children.push(new Annotation(
+      adderMethod.signature.annotations.children.push(new Annotation(
         new RegularType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: JACKSON_JSON_ANY_SETTER,
@@ -123,11 +129,15 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     this.children = [
       additionalPropertiesField,
-      this.adderMethod,
+      adderMethod,
     ];
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitAdditionalPropertiesDeclaration(this, visitor);
+  }
+
+  reduce(visitor: Reducer<JavaVisitor<unknown>>): ReducerResult<AdditionalPropertiesDeclaration> {
+    return visitor.reduceAdditionalPropertiesDeclaration(this, visitor);
   }
 }

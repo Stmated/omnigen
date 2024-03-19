@@ -4,7 +4,7 @@ import {
   JavaTestUtils,
   OpenRpcTestUtils,
 } from '@omnigen/duo-openrpc-java-test';
-import {JAVA_FEATURES, JavaInterpreter, JavaUtil} from '@omnigen/target-java';
+import {Java, JAVA_FEATURES, JavaInterpreter, JavaUtil} from '@omnigen/target-java';
 import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
   DEFAULT_PACKAGE_OPTIONS,
@@ -28,7 +28,7 @@ describe('JavaInterpreter', () => {
     expect(interpretation).toBeDefined();
 
     const compilationUnits = JavaTestUtils.getCompilationUnits(interpretation);
-    const classNames = compilationUnits.map(cu => cu.object.name.value);
+    const classNames = compilationUnits.map(cu => cu.children[0].name.value);
 
     expect(classNames.sort()).toMatchSnapshot();
   });
@@ -45,7 +45,7 @@ describe('JavaInterpreter', () => {
     expect(root).toBeDefined();
 
     const compilationUnits = JavaTestUtils.getCompilationUnits(root);
-    const fileNames = compilationUnits.map(it => it.object.name.value).sort();
+    const fileNames = compilationUnits.map(it => it.children[0].name.value).sort();
 
     expect(fileNames)
       .toEqual([
@@ -71,11 +71,11 @@ describe('JavaInterpreter', () => {
     const giveNumberGetCharacterRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveNumberGetCharRequestParams');
     const giveStringGetStringRequestParams = JavaTestUtils.getCompilationUnit(root, 'GiveStringGetStringRequestParams');
 
-    expect(giveIntGetDoubleRequestParams.object.extends).toBeDefined();
-    expect(giveNumberGetCharacterRequestParams.object.extends).toBeDefined();
-    expect(giveStringGetStringRequestParams.object.extends).toBeDefined();
+    expect(asObject(giveIntGetDoubleRequestParams.children[0]).extends).toBeDefined();
+    expect(asObject(giveNumberGetCharacterRequestParams.children[0]).extends).toBeDefined();
+    expect(asObject(giveStringGetStringRequestParams.children[0]).extends).toBeDefined();
 
-    const type = giveIntGetDoubleRequestParams.object.extends?.type.omniType;
+    const type = asObject(giveIntGetDoubleRequestParams.children[0]).extends?.type.omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind: ${OmniUtil.describe(type)}`);
 
     expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
@@ -97,7 +97,7 @@ describe('JavaInterpreter', () => {
     expect(root).toBeDefined();
 
     const compilationUnits = JavaTestUtils.getCompilationUnits(root);
-    const classNames = compilationUnits.map(it => it.object.name.value).sort();
+    const classNames = compilationUnits.map(it => it.children[0].name.value).sort();
 
     expect(classNames)
       .toEqual([
@@ -120,7 +120,16 @@ describe('JavaInterpreter', () => {
       ]);
 
     const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
-    expect(giveNumberGetCharResponse.object.extends).toBeDefined();
-    expect(giveNumberGetCharResponse.object.extends?.type.omniType?.kind).toEqual(OmniTypeKind.OBJECT);
+    expect(asObject(giveNumberGetCharResponse.children[0]).extends).toBeDefined();
+    expect(asObject(giveNumberGetCharResponse.children[0]).extends?.type.omniType?.kind).toEqual(OmniTypeKind.OBJECT);
   });
 });
+
+function asObject(identifiable: Java.Identifiable): Java.AbstractObjectDeclaration {
+
+  if (identifiable instanceof Java.AbstractObjectDeclaration) {
+    return identifiable;
+  } else {
+    throw new Error(`Should have been an object`);
+  }
+}

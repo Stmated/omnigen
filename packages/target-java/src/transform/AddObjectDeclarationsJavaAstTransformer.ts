@@ -230,7 +230,6 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
       body.children.push(
         new Java.ConstructorDeclaration(
-          enumDeclaration,
           new Java.ConstructorParameterList(parameter),
           new Java.Block(
             new Java.Statement(
@@ -332,8 +331,9 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       }
     }
 
+    const packageName = JavaUtil.getPackageName(type, declaration.name.value, options);
     const cu = new Java.CompilationUnit(
-      new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
+      new Java.PackageDeclaration(packageName),
       new Java.ImportList(
         [],
       ),
@@ -364,11 +364,12 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
         it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
       ));
 
-      return new Java.GenericClassDeclaration(
-        new Java.Identifier(javaClassName),
+      return new Java.ClassDeclaration(
         javaType,
-        new Java.GenericTypeDeclarationList(genericSourceArgExpressions),
+        new Java.Identifier(javaClassName),
         body,
+        undefined,
+        new Java.GenericTypeDeclarationList(genericSourceArgExpressions),
       );
     }
 

@@ -1,4 +1,5 @@
 import {AstVisitor, VisitResult} from '../visit';
+import {Reducer, ReducerResult} from '../reduce';
 
 /**
  * This is an abstract general ST (Syntax Tree) Node.
@@ -19,6 +20,5 @@ import {AstVisitor, VisitResult} from '../visit';
 export interface AstNode {
 
   visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
-
-
+  reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode>;
 }

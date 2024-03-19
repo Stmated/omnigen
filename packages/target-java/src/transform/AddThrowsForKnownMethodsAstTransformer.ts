@@ -4,6 +4,7 @@ import {OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/core'
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {VisitorFactoryManager} from '@omnigen/core-util';
+import {DefaultJavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -36,13 +37,13 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
   transformAst(args: JavaAstTransformerArgs): void {
 
     const methodStack: MethodInfo[] = [];
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitMethodDeclaration: (node, visitor) => {
 
         // NOTE: Does not check if entering anonymous/inner/local types
         methodStack.push({declaration: node, exceptions: []});
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitMethodDeclaration(node, visitor);
+        DefaultJavaVisitor.visitMethodDeclaration(node, visitor);
         const info = methodStack.pop();
         if (!info || info.exceptions.length == 0) {
           return;
@@ -53,12 +54,6 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
         }
 
         const filtered = info.exceptions.filter(it => {
-
-          // const superExceptions = AddThrowsForKnownMethodsAstTransformer._inheritances[it];
-          // if (superExceptions && info.exceptions.filter(e => superExceptions.includes(e)).length > 0) {
-          //   // This type has a super-exception, and the super-exception is already in the array. Skip.
-          //   return false;
-          // }
 
           if (this.hasSuperException(it, info.exceptions)) {
             return false;
@@ -96,7 +91,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
           }
         }
 
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitMethodCall(node, visitor);
+        DefaultJavaVisitor.visitMethodCall(node, visitor);
       },
     }));
   }

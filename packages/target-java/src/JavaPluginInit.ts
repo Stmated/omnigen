@@ -8,13 +8,13 @@ import {
   ZodModelTransformOptionsContext,
   ZodPackageOptionsContext,
   ZodRenderersContext,
-  ZodTargetContext,
+  ZodTargetFeaturesContext,
   ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
 import {JavaInterpreter} from './interpret';
 import {CompositionGenericTargetToObjectJavaModelTransformer, InterfaceJavaModelTransformer} from './parse';
 import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from '.';
-import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions, ZodTargetFeatures} from '@omnigen/core';
+import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {DeleteUnnecessaryXorJavaModelTransformer} from './parse/transform/DeleteUnnecessaryXorJavaModelTransformer.ts';
@@ -28,12 +28,13 @@ export const ZodJavaOptionsContext = z.object({
 });
 
 export const ZodJavaTargetContext = z.object({
-  target: z.literal('java'),
-  targetFeatures: ZodTargetFeatures,
-});
+    target: z.literal('java'),
+  })
+  .merge(ZodTargetFeaturesContext);
 
-export const ZodJavaInitContextIn = ZodModelContext
-  .merge(ZodTargetContext);
+export const ZodJavaInitContextIn = ZodModelContext.extend({
+  target: z.literal('java').or(z.undefined()),
+});
 
 export const ZodJavaInitContextOut = ZodModelContext
   .merge(ZodJavaOptionsContext)
@@ -55,7 +56,7 @@ export type JavaOptionsContext = z.output<typeof ZodJavaOptionsContext>;
 export const JavaPluginInit = createPlugin(
   {
     name: 'java-init', in: ZodJavaInitContextIn, out: ZodJavaInitContextOut,
-    action: ActionKind.SPLITS,
+    action: ActionKind.RUNTIME_REFINES,
     scoreModifier: LATER_IS_BETTER,
   },
   async ctx => {

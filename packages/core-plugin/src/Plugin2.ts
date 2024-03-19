@@ -3,13 +3,12 @@ import {
   OmniModel,
   OmniModelLibrary,
   OmniTypeLibrary,
-  Renderer,
+  Renderer, TargetFeatures,
   ZodCoercedBoolean,
   ZodModelTransformOptions,
   ZodOptions,
   ZodPackageOptions,
   ZodParserOptions,
-  ZodTargetFeatures,
   ZodTargetOptions,
 } from '@omnigen/core';
 
@@ -83,7 +82,7 @@ export const ZodFileWriteOptionsContext = z.object({
 });
 
 export const ZodTargetFeaturesContext = z.object({
-  targetFeatures: ZodTargetFeatures,
+  targetFeatures: z.custom<TargetFeatures>(),
 });
 
 export const ZodTypeLibraryContext = z.object({
@@ -131,7 +130,7 @@ export interface Plugin2<
   output: CR;
   score: PluginScoreKind;
   scoreModifier?: ScoreModifier | undefined;
-  action?: ActionKind;
+  action?: ActionKind | undefined;
 
   execute(ctx: z.output<CT>): Res;
 }
@@ -159,6 +158,7 @@ export function createPlugin<In extends ZodType, Out extends ZodType, Res extend
     output: options.out,
     score: options.score ?? PluginScoreKind.SUITABLE,
     scoreModifier: options.scoreModifier,
+    action: options.action,
     execute: execute,
   };
 }

@@ -1,7 +1,11 @@
-import {AstNode, AstNodeWithChildren} from '../ast';
-import {VisitFn} from './VisitFn';
+import {AstNode} from '../ast';
+
+export type VisitResult<R> = void | R | Array<R> | Array<VisitResult<R>>; // TODO: Remove "void"
+
+export type VisitFn<N extends AstNode, R, V extends AstVisitor<R>> =
+  (node: N, visitor: V) => VisitResult<R>;
 
 export interface AstVisitor<R> {
-  visitRootNode: VisitFn<AstNodeWithChildren<AstNode>, R, AstVisitor<R>>;
-}
 
+  visit: VisitFn<AstNode, R, AstVisitor<R>>;
+}

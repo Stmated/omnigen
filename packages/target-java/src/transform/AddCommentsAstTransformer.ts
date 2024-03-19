@@ -14,6 +14,7 @@ import * as Java from '../ast';
 import {JavaUtil} from '../util';
 import {Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
+import {DefaultJavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -21,7 +22,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    const baseVisitor = AbstractJavaAstTransformer.JAVA_VISITOR;
+    const baseVisitor = DefaultJavaVisitor;
     args.root.visit(VisitorFactoryManager.create(baseVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
@@ -32,7 +33,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
             if (!node.comments) {
               node.comments = new Java.CommentBlock(comments);
             } else {
-              node.comments.text = [new Java.FreeTextLine(node.comments.text), comments];
+              node.comments.text = new Java.FreeTexts(new Java.FreeTextLine(node.comments.text), comments);
             }
           }
         }
@@ -53,7 +54,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
               if (!node.comments) {
                 node.comments = new Java.CommentBlock(comments);
               } else {
-                node.comments.text = [new Java.FreeTextLine(node.comments.text), comments];
+                node.comments.text = new Java.FreeTexts(new Java.FreeTextLine(node.comments.text), comments);
               }
             }
           }
@@ -75,14 +76,6 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
       visitConstructor: (node, visitor) => {
 
       },
-
-      visitRuntimeTypeMapping: (node, visitor) => {
-
-        // t => BaseJavaAstTransformer.getCommentsForType(t, model, options),
-
-        // const comment = commentSupplier(typedGetter.signature.type.omniType);
-        // typedGetter.signature.comments = (comment) ? new CommentBlock(comment) : undefined;
-      },
     }));
   }
 
@@ -93,14 +86,14 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
       if (!node.comments) {
         node.comments = new Java.CommentBlock(comments);
       } else {
-        node.comments.text = [new Java.FreeTextLine(node.comments.text), comments];
+        node.comments.text = new Java.FreeTexts(new Java.FreeTextLine(node.comments.text), comments);
       }
     }
   }
 
-  public static getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.FreeTextType | undefined {
+  public static getCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.FriendlyFreeTextIn | undefined {
 
-    const comments: Java.FreeTextType[] = [];
+    const comments: Java.FriendlyFreeTextIn[] = [];
 
     let exampleIndex = 0;
     const handledResponse: OmniOutput[] = [];
@@ -196,9 +189,9 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     return comments;
   }
 
-  public static getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.FreeTextType[] {
+  public static getLinkCommentsForType(type: OmniType, model: OmniModel, options: JavaOptions): Java.AnyFreeText[] {
 
-    const comments: Java.FreeTextType[] = [];
+    const comments: Java.AnyFreeText[] = [];
 
     if (!options.includeLinksOnType) {
       return comments;
@@ -231,7 +224,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
           // There are links between different servers/methods
           comments.push(new Java.FreeTextSection(
-            2, 'Links',
+            new Java.FreeTextHeader(2, 'Links'),
             continuation.mappings.map(mapping => {
               return AddCommentsAstTransformer.getMappingSourceTargetComment(mapping, options);
             }),
@@ -251,9 +244,9 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     );
   }
 
-  public static getExampleComments(example: OmniExamplePairing, index: number): Java.FreeTextType {
+  public static getExampleComments(example: OmniExamplePairing, index: number): Java.FriendlyFreeTextIn {
 
-    const commentLines: Java.FreeTextType[] = [];
+    const commentLines: Java.AnyFreeText[] = [];
 
     // if (example.description) {
     //   commentLines.push(new Java.FreeTextParagraph(example.description));
@@ -350,10 +343,10 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     mapping: OmniLinkMapping,
     options: JavaOptions,
     only: 'source' | 'target' | undefined = undefined,
-  ): Java.FreeTextType {
+  ): Java.FriendlyFreeTextIn {
 
-    const sourceLinks: Java.FreeTextType[] = [];
-    const targetLinks: Java.FreeTextType[] = [];
+    const sourceLinks: Java.FriendlyFreeTextIn[] = [];
+    const targetLinks: Java.FriendlyFreeTextIn[] = [];
 
     if (!only || only == 'source') {
       if (mapping.source.propertyPath) {
@@ -399,9 +392,9 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     }
   }
 
-  private getCommentsList(property: OmniProperty, model: OmniModel, options: JavaOptions): Java.FreeTextType | undefined {
+  private getCommentsList(property: OmniProperty, model: OmniModel, options: JavaOptions): Java.FriendlyFreeTextIn | undefined {
 
-    const comments: Java.FreeTextType[] = [];
+    const comments: Java.AnyFreeText[] = [];
 
     if (property.description && !this.hasComment(property.description, comments)) {
 
@@ -447,7 +440,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     return (comments.length > 0) ? comments : undefined;
   }
 
-  private addComment(comment: Java.FreeTextType, comments: Java.FreeTextType[]): boolean {
+  private addComment(comment: Java.FriendlyFreeTextIn, comments: Java.FriendlyFreeTextIn[]): boolean {
 
     const commentText = this.getText(comment);
     if (!commentText || this.hasComment(commentText, comments)) {
@@ -458,7 +451,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     }
   }
 
-  private getText(text: Java.FreeTextType): string | undefined {
+  private getText(text: Java.FriendlyFreeTextIn): string | undefined {
 
     if (typeof text == 'string') {
       return text;
@@ -471,7 +464,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     return undefined;
   }
 
-  private hasComment(needle: string, freeTexts: Java.FreeTextType[]): boolean {
+  private hasComment(needle: string, freeTexts: Java.FriendlyFreeTextIn[]): boolean {
 
     for (const freeText of freeTexts) {
 
@@ -502,15 +495,15 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     return false;
   }
 
-  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): Java.FreeTextType[] {
+  private getLinkCommentsForProperty(property: OmniProperty, model: OmniModel, options: JavaOptions): Java.FriendlyFreeTextIn[] {
 
-    const comments: Java.FreeTextType[] = [];
+    const comments: Java.FriendlyFreeTextIn[] = [];
 
     if (!options.includeLinksOnProperty) {
       return comments;
     }
 
-    const linkComments: Java.FreeTextType[] = [];
+    const linkComments: Java.FriendlyFreeTextIn[] = [];
     for (const continuation of (model.continuations || [])) {
       for (const mapping of continuation.mappings) {
         if (mapping.source.propertyPath?.length) {

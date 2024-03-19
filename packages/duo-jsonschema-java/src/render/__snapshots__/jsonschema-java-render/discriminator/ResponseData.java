@@ -11,9 +11,31 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ResponseData {
+  @JsonValue
+  private final JsonNode _raw;
+  private WithReject _responseDataWithReject;
+  private WithResult _responseDataWithResult;
   @JsonCreator
   public ResponseData(JsonNode raw) {
     this._raw = raw;
+  }
+
+  public JsonNode getRaw() {
+    return this._raw;
+  }
+
+  public WithReject getResponseDataWithReject(ObjectMapper objectMapper) {
+    if (this._responseDataWithReject != null) {
+      return this._responseDataWithReject;
+    }
+    return this._responseDataWithReject = objectMapper.convertValue(this._raw, WithReject.class);
+  }
+
+  public WithResult getResponseDataWithResult(ObjectMapper objectMapper) {
+    if (this._responseDataWithResult != null) {
+      return this._responseDataWithResult;
+    }
+    return this._responseDataWithResult = objectMapper.convertValue(this._raw, WithResult.class);
   }
 
   @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
@@ -37,26 +59,5 @@ public class ResponseData {
     public String getResult() {
       return "1";
     }
-  }
-  @JsonValue
-  private final JsonNode _raw;
-  private WithReject _responseDataWithReject;
-  private WithResult _responseDataWithResult;
-  public JsonNode getRaw() {
-    return this._raw;
-  }
-
-  public WithReject getResponseDataWithReject(ObjectMapper objectMapper) {
-    if (this._responseDataWithReject != null) {
-      return this._responseDataWithReject;
-    }
-    return this._responseDataWithReject = objectMapper.convertValue(this._raw, WithReject.class);
-  }
-
-  public WithResult getResponseDataWithResult(ObjectMapper objectMapper) {
-    if (this._responseDataWithResult != null) {
-      return this._responseDataWithResult;
-    }
-    return this._responseDataWithResult = objectMapper.convertValue(this._raw, WithResult.class);
   }
 }

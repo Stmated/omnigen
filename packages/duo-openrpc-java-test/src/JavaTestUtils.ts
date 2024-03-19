@@ -4,23 +4,14 @@ import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_PARSER_OPTIONS,
-  ExternalSyntaxTree,
   ModelTransformOptions,
-  OmniModelParserResult,
   PackageOptions,
   ParserOptions,
   RenderedCompilationUnit,
   TargetOptions,
-  ZodAstNodeContext,
   ZodTargetOptions,
 } from '@omnigen/core';
-import {
-  JAVA_FEATURES,
-  Java,
-  JavaPlugins,
-  JavaOptions,
-  ZodJavaOptions, createJavaVisitor, createJavaRenderer, SerializationLibrary,
-} from '@omnigen/target-java';
+import {createJavaVisitor, Java, JavaOptions, SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {TestUtils} from '@omnigen/utils-test';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
@@ -125,111 +116,12 @@ export class JavaTestUtils {
     return visitor;
   }
 
-  public static async getRootNodeFromParseResult(
-    parseResult: OmniModelParserResult<JavaOptions & PackageOptions & TargetOptions>,
-    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
-  ): Promise<AstNode> {
-
-    const typed = await JavaTestUtils.getResultFromParseResult(parseResult, externals, ZodAstNodeContext);
-    return typed.astNode;
-  }
-
-  public static async getFileContentsFromParseResult(
-    parseResult: OmniModelParserResult<JavaOptions & PackageOptions & TargetOptions>,
-    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
-  ): Promise<Map<string, string>> {
-
-    const typed = await JavaTestUtils.getResultFromParseResult(parseResult, externals, ZodCompilationUnitsContext);
-    return JavaTestUtils.cuToContentMap(typed.compilationUnits);
-  }
-
-  public static async getResultFromParseResult<Z extends ZodObject<any>>(
-    parseResult: OmniModelParserResult<JavaOptions & PackageOptions & TargetOptions>,
-    externals: ExternalSyntaxTree<AstNode, JavaOptions>[] = [],
-    stopAt: Z,
-  ): Promise<z.output<Z>> {
-
-    const ctx: z.output<typeof JavaPlugins.ZodJavaContextIn> = {
-      target: 'java',
-      model: parseResult.model,
-      modelTransformOptions: DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      parserOptions: DEFAULT_PARSER_OPTIONS,
-      packageOptions: parseResult.options,
-      targetOptions: parseResult.options,
-      javaOptions: parseResult.options,
-      targetFeatures: JAVA_FEATURES,
-      arguments: {},
-    };
-
-    // TODO: Need to be able to send along the externals!
-    //  Then later remake the system so can register types between different schemas!
-    // TODO: Need to be able to send along a "startAt" to skip any early plugins! So we can send our model without going through any of the earlier stuff!!!
-
-    const pm = new PluginManager({includeAuto: true});
-    const result = await pm.execute({
-      ctx: ctx,
-      debug: true,
-      stopAt: stopAt,
-    });
-    const last = result.results[result.results.length - 1];
-
-    const typed = stopAt.safeParse(last.ctx);
-    if (!typed.success) {
-      throw new Error(typed.error.message);
-    }
-
-    return typed.data;
-  }
-
-  public static async getFileContentsFromRootNode(rootNode: AstNode, options: JavaOptions): Promise<Map<string, string>> {
-
-    const renderer = createJavaRenderer(options);
-    const cus = renderer.executeRender(rootNode, renderer);
-    return JavaTestUtils.cuToContentMap(cus);
-  }
-
-  public static getMethod(node: AstNode, name: string): Java.MethodDeclaration {
-
-    const visitor = createJavaVisitor({
-      visitMethodDeclaration: node => {
-        if (node.signature.identifier.value == name) {
-          return node;
-        } else {
-          return undefined;
-        }
-      },
-    });
-
-    // const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.MethodDeclaration>(), {
-    //   visitMethodDeclaration: node => {
-    //     if (node.signature.identifier.value == name) {
-    //       return node;
-    //     } else {
-    //       return undefined;
-    //     }
-    //   },
-    // });
-
-    const result = TestUtils.flatten(node.visit(visitor));
-    if (!result) {
-      throw new Error(`Could not find '${name}'`);
-    }
-
-    return result;
-  }
-
   public static getCompilationUnits(root: AstNode): Java.CompilationUnit[] {
 
     const array: Java.CompilationUnit[] = [];
     const visitor = createJavaVisitor({
       visitCompilationUnit: node => array.push(node),
     });
-
-    // const visitor = VisitorFactoryManager.create(new JavaVisitor(), {
-    //   visitCompilationUnit: node => {
-    //     array.push(node);
-    //   },
-    // });
 
     root.visit(visitor);
 
@@ -240,7 +132,7 @@ export class JavaTestUtils {
 
     const visitor = createJavaVisitor({
       visitCompilationUnit: node => {
-        if (node.object.name.value == name) {
+        if (node.children[0].name.value == name) {
           return node;
         } else {
           return undefined;
@@ -248,13 +140,7 @@ export class JavaTestUtils {
       },
     });
 
-    // const visitor = VisitorFactoryManager.create(new JavaVisitor<Java.CompilationUnit>(), {
-    //   visitCompilationUnit: node => {
-    //
-    //   },
-    // });
-
-    const result = TestUtils.flatten(root.visit(visitor));
+    const result = TestUtils.flatten(visitor.visit(root, visitor));
     if (!result) {
       throw new Error(`Could not find '${name}'`);
     }

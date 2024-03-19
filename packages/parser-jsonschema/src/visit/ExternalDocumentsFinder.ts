@@ -1,6 +1,6 @@
 import nodePath from 'path';
 import pointer, {JsonObject} from 'json-pointer';
-import {ProtocolHandler, Util} from '@omnigen/core-util';
+import {isDefined, ProtocolHandler, Util} from '@omnigen/core-util';
 import {JSONSchema7} from 'json-schema';
 import {SimpleObjectWalker} from './helpers.ts';
 
@@ -184,7 +184,7 @@ export class ExternalDocumentsFinder {
 
     const uri = ExternalDocumentsFinder.toPartialUri(uriString);
 
-    const hashPath = uri.path ? uri.path.split('/').filter(it => !!it) : [];
+    const hashPath = uri.path ? uri.path.split('/').filter(isDefined) : [];
     const hashSuffix = hashPath.length > 0 ? `#${uri.path}` : '';
 
     if (uri.protocol == 'http' || uri.protocol == 'https') {

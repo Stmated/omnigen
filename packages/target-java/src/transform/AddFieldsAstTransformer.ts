@@ -4,11 +4,12 @@ import {JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
+import {DefaultJavaVisitor} from '../visit';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): void {
 
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
 
@@ -37,7 +38,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
         }
 
         // Then keep searching deeper, into nested types
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
+        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
       },
     }));
   }

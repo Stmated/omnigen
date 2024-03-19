@@ -7,6 +7,7 @@ import {
   TypeDiffKind,
 } from '@omnigen/core';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {DefaultJavaVisitor} from '../visit';
 
 /**
  * If all target identifiers to a source have the same type, then replace that source identifier with inline type.
@@ -23,7 +24,7 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
     type TargetInfo = { source: OmniGenericTargetSourcePropertyType, targetTypes: Set<OmniType> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
       visitGenericType: node => {
         const type = node.baseType.omniType;
         if (type.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -82,7 +83,7 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
       }
     }
 
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
       visitGenericType: (node, visitor) => {
         const type = node.baseType.omniType;
         if (type.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -100,7 +101,7 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
             }
           }
         } else {
-          AbstractJavaAstTransformer.JAVA_VISITOR.visitGenericType(node, visitor);
+          DefaultJavaVisitor.visitGenericType(node, visitor);
         }
       },
 
@@ -114,17 +115,19 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
         }
       },
 
-      visitGenericClassDeclaration: (node, visitor) => {
+      visitClassDeclaration: (node, visitor) => {
 
-        node.typeList.types = node.typeList.types.filter(it => {
-          if (it.sourceIdentifier && sourceIdentifierReplacements.has(it.sourceIdentifier)) {
-            return false;
-          }
+        if (node.genericParameterList) {
+          node.genericParameterList.types = node.genericParameterList.types.filter(it => {
+            if (it.sourceIdentifier && sourceIdentifierReplacements.has(it.sourceIdentifier)) {
+              return false;
+            }
 
-          return true;
-        });
+            return true;
+          });
+        }
 
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitGenericClassDeclaration(node, visitor);
+        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
       },
     }));
   }

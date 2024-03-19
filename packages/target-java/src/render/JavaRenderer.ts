@@ -80,7 +80,7 @@ const render = <N extends AstNode, V extends AstVisitor<string>>(node: N | undef
     return '';
   }
 
-  return join(node.visit(visitor || DefaultJavaVisitor));
+  return join(node.visit(visitor));
 };
 
 function renderListWithWrapping(children: AstNode[], visitor: JavaVisitor<string>): string {
@@ -109,36 +109,73 @@ const visitCommonTypeDeclaration = (
   visitor: JavaVisitor<string>,
   node: Java.AbstractObjectDeclaration,
   typeString: string,
-  generics?: GenericTypeDeclarationList,
+  objectDecStack: Java.AbstractObjectDeclaration[],
+  // generics?: GenericTypeDeclarationList,
 ): VisitResult<string> => {
 
-  const modifiers = render(node.modifiers, visitor);
-  const name = render(node.name, visitor);
-  const genericsString = generics ? render(generics, visitor) : '';
-  const classExtension = node.extends ? ` extends ${render(node.extends, visitor)}` : '';
-  const classImplementations = node.implements ? ` implements ${render(node.implements, visitor)}` : '';
+  try {
 
-  let typeDeclarationContent = '';
-  typeDeclarationContent += (node.comments ? `${render(node.comments, visitor)}\n` : '');
-  typeDeclarationContent += (node.annotations ? `${render(node.annotations, visitor)}\n` : '');
-  typeDeclarationContent += (`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
-  typeDeclarationContent += (render(node.body, visitor));
-  typeDeclarationContent += ('}\n');
+    objectDecStack.push(node);
 
-  return typeDeclarationContent;
+    let generics: GenericTypeDeclarationList | undefined;
+    if (node instanceof Java.ClassDeclaration) {
+      generics = node.genericParameterList;
+    }
+    // const filtered = node.typeList.types.length > 0 ? node.typeList : undefined;
+    // return visitCommonTypeDeclaration(visitor, node, 'class', filtered);
+
+    const modifiers = render(node.modifiers, visitor);
+    const name = render(node.name, visitor);
+    const genericsString = generics ? render(generics, visitor) : '';
+    const classExtension = node.extends ? ` extends ${render(node.extends, visitor)}` : '';
+    const classImplementations = node.implements ? ` implements ${render(node.implements, visitor)}` : '';
+
+    const typeDeclarationContent: VisitResult<string>[] = [];
+    if (node.comments) {
+      typeDeclarationContent.push(node.comments.visit(visitor));
+      typeDeclarationContent.push('\n');
+    }
+    if (node.annotations) {
+      typeDeclarationContent.push(node.annotations.visit(visitor));
+      typeDeclarationContent.push('\n');
+    }
+
+    typeDeclarationContent.push(`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
+    typeDeclarationContent.push(visitor.visitObjectDeclarationBody(node, visitor));
+    typeDeclarationContent.push(('}\n'));
+
+    // typeDeclarationContent += (node.comments ? `${render(node.comments, visitor)}\n` : '');
+    // typeDeclarationContent += (node.annotations ? `${render(node.annotations, visitor)}\n` : '');
+    // typeDeclarationContent += (`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
+    // typeDeclarationContent += (render(node.body, visitor));
+    // typeDeclarationContent += ('}\n');
+
+    return typeDeclarationContent;
+  } finally {
+    objectDecStack.pop();
+  }
 };
 
 const getIndentation = (d: number): string => {
   return '  '.repeat(d);
 };
 
-export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
+export interface JavaRendererOptions {
+  fileExtension: string;
+}
+
+export const DefaultJavaRendererOptions: JavaRendererOptions = {
+  fileExtension: 'java',
+};
+
+export const createJavaRenderer = (options: JavaOptions, renderOptions = DefaultJavaRendererOptions): JavaRenderer => {
 
   let blockDepth = 0;
   let insideDeclaration = false;
   const patternLineStart = new RegExp(/(?<!$)^/mg);
   const tokenPrefix = ' ';
   const tokenSuffix = ' ';
+  const objectDecStack: Java.AbstractObjectDeclaration[] = [];
 
   /**
    * TODO: Maybe change so that renderer either returns string OR the compilation unit.
@@ -185,7 +222,9 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
       const body = node.body ? `\n${render(node.body, visitor)}` : '';
       const modifiers = node.modifiers.children.length > 0 ? `${render(node.modifiers, visitor)} ` : '';
 
-      return `${annotations}${modifiers}${render(node.owner.name, visitor)}(${render(node.parameters, visitor)}) {${body}}\n\n`;
+      const owner = objectDecStack[objectDecStack.length - 1];
+
+      return `${annotations}${modifiers}${render(owner.name, visitor)}(${render(node.parameters, visitor)}) {${body}}\n\n`;
     },
     visitConstructorParameterList: (node, visitor) => renderListWithWrapping(node.children, visitor),
 
@@ -198,15 +237,9 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
       return blockContent.replace(patternLineStart, indentation) + '\n';
     },
 
-    visitClassDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'class'),
-
-    visitGenericClassDeclaration: (node, visitor) => {
-      const filtered = node.typeList.types.length > 0 ? node.typeList : undefined;
-      return visitCommonTypeDeclaration(visitor, node, 'class', filtered);
-    },
-
-    visitInterfaceDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'interface'),
-    visitEnumDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'enum'),
+    visitClassDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'class', objectDecStack),
+    visitInterfaceDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'interface', objectDecStack),
+    visitEnumDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'enum', objectDecStack),
 
     visitGenericTypeDeclaration(node, visitor) {
 
@@ -234,7 +267,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     visitCommentBlock: (node, visitor) => {
 
-      const text = join(visitor.visitFreeTextGlobal(node.text, visitor, it => replaceWithHtml(it)))
+      const text = join(node.text.visit(visitor))
         .trim()
         .replaceAll('\r', '')
         .replaceAll('\n', '\n * ');
@@ -244,8 +277,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
     visitComment: (node, visitor) => {
 
-      const textString = join(visitor.visitFreeTextGlobal(node.text, visitor, it => replaceWithHtml(it)));
-      const commentContent = textString
+      const commentContent = join(node.text.visit(visitor))
         .replaceAll('\r', '')
         .replaceAll('\n', '\n// ')
         .trim();
@@ -258,14 +290,14 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
       const content = join([
         node.packageDeclaration.visit(visitor),
         node.imports.visit(visitor),
-        node.object.visit(visitor),
+        node.children.map(it => it.visit(visitor)),
       ]);
 
       // This was a top-level class/interface, so we will output it as a compilation unit.
       units.push({
         content: content,
-        name: node.object.name.value,
-        fileName: `${node.object.name.value}.java`,
+        name: node.children[0].name.value,
+        fileName: `${node.children[0].name.value}.${renderOptions.fileExtension}`,
         directories: node.packageDeclaration.fqn.split('.'),
         node: node,
       });
@@ -454,8 +486,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
     visitIdentifier: node => node.value,
 
     visitParameter: (node, visitor) => {
-      // TODO: Make this simpler by allowing to "visit" between things,
-      //  so we can insert spaces or delimiters without tinkering inside the base visitor
+
       const annotations = node.annotations ? `${render(node.annotations, visitor)} ` : '';
       const type = render(node.type, visitor);
       const identifier = render(node.identifier, visitor);
@@ -563,11 +594,6 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
       return `((${condition}) ? ${passing} : ${failing})`;
     },
 
-    visitRuntimeTypeMapping: (node, visitor) => [
-      ...node.fields.map(it => render(it, visitor)),
-      ...node.getters.map(it => render(it, visitor)),
-      ...node.methods.map(it => render(it, visitor)),
-    ],
     visitClassName: (node, visitor) => `${render(node.type, visitor)}`,
     visitClassReference: (node, visitor) => `${render(node.className, visitor)}.class`,
 
@@ -582,13 +608,13 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
     visitStaticMemberReference: (node, visitor) => `${render(node.target, visitor)}.${render(node.member, visitor)}`,
     visitCast: (node, visitor) => `((${render(node.toType, visitor)}) ${render(node.expression, visitor)})`,
     visitFreeText: node => replaceWithHtml(node.text),
-    visitFreeTextHeader: (node, visitor) => `\n<h${node.level}>${join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)))}</h${node.level}>\n`,
-    visitFreeTextParagraph: (node, visitor) => `<p>${join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)))}</p>\n`,
+    visitFreeTextHeader: (node, visitor) => `\n<h${node.level}>${join(node.child.visit(visitor))}</h${node.level}>\n`,
+    visitFreeTextParagraph: (node, visitor) => `<p>${join(node.child.visit(visitor))}</p>\n`,
 
     visitFreeTextSection: (node, visitor) => {
       const indentation = getIndentation(1);
       const header = render(node.header, visitor);
-      const content = join(visitor.visitFreeTextGlobal(node.content, visitor, it => replaceWithHtml(it)));
+      const content = join(node.content.visit(visitor));
       const blockContent = `${header}${content.trim()}`;
 
       const indentedBlock = blockContent.replace(patternLineStart, indentation);
@@ -596,17 +622,24 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
       return `<section>\n${indentedBlock}\n</section>\n`;
     },
 
-    visitFreeTextLine: (node, visitor) => `${join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)))}\n`,
+    visitFreeTextLine: (node, visitor) => `${join(node.child.visit(visitor))}\n`,
     visitFreeTextIndent: (node, visitor) => {
       const indentation = getIndentation(1);
-      const blockContent = join(visitor.visitFreeTextGlobal(node.child, visitor, it => replaceWithHtml(it)));
+      const blockContent = join(node.child.visit(visitor));
       return blockContent.replace(patternLineStart, indentation);
     },
 
     // TODO: Do we not need a way to say here that "we want the type without the generics"?
     //  Or do we need to specify on creation?
     visitFreeTextTypeLink: (node, visitor) => `{@link ${render(node.type, visitor)}}`,
-    visitFreeTextMethodLink: (node, visitor) => `{@link ${render(node.type, visitor)}#${render(node.method.identifier, visitor)}}`,
+    visitFreeTextMethodLink: (node, visitor) => {
+
+      if ('identifier' in node.method && node.method.identifier instanceof Java.Identifier) {
+        return `{@link ${render(node.type, visitor)}#${render(node.method.identifier, visitor)}}`;
+      } else {
+        return `{@link ${render(node.type, visitor)}#???`;
+      }
+    },
     visitFreeTextPropertyLink: (node, visitor) => {
 
       const targetName = node.property.fieldName || node.property.propertyName || node.property.name;
@@ -616,7 +649,7 @@ export const createJavaRenderer = (options: JavaOptions): JavaRenderer => {
 
       const tag = node.ordered ? 'ol' : 'ul';
       const indent = getIndentation(1);
-      const lines = node.children.map(it => join(visitor.visitFreeTextGlobal(it, visitor, it => replaceWithHtml(it)))).join(`</li>\n${indent}<li>`);
+      const lines = node.children.map(it => join(it.visit(visitor))).join(`</li>\n${indent}<li>`);
 
       return `<${tag}>\n${indent}<li>${lines}</li>\n</${tag}>`;
     },

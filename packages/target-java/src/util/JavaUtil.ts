@@ -88,11 +88,6 @@ const JAVA_LANG_CLASSES = [
 
 export class JavaUtil {
 
-  /**
-   * Re-usable Java Visitor, so we do not create a new one every time.
-   */
-  private static readonly _JAVA_VISITOR = DefaultJavaVisitor;
-
   private static readonly _PATTERN_STARTS_WITH_ILLEGAL_IDENTIFIER_CHARS = new RegExp(/^[^a-zA-Z$_]/);
   private static readonly _PATTERN_INVALID_CHARS = new RegExp(/[^a-zA-Z0-9$_]/g);
   private static readonly _PATTERN_WITH_PREFIX = new RegExp(/^[_$]+/g);
@@ -304,9 +299,18 @@ export class JavaUtil {
 
   public static getPackageName(type: OmniType, typeName: string, options: PackageOptions): string {
 
-    return options.packageResolver
-      ? options.packageResolver(type, typeName, options)
-      : options.package;
+    let packageName: string;
+    if (options.packageResolver) {
+      packageName = options.packageResolver(type, typeName, options);
+    } else {
+      packageName = options.package;
+    }
+
+    if (!packageName) {
+      throw new Error(`Not allowed to have an empty package name for ${OmniUtil.describe(type)}`);
+    }
+
+    return packageName;
   }
 
   public static buildFullyQualifiedName(packageName: string, outerTypeNames: string[], className: string): string {
@@ -541,13 +545,8 @@ export class JavaUtil {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
     const holder: { ref?: Java.ClassDeclaration } = {};
-    root.visit(VisitorFactoryManager.create(JavaUtil._JAVA_VISITOR, {
+    root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
       visitClassDeclaration: node => {
-        if (node.type.omniType == type) {
-          holder.ref = node;
-        }
-      },
-      visitGenericClassDeclaration: node => {
         if (node.type.omniType == type) {
           holder.ref = node;
         } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {

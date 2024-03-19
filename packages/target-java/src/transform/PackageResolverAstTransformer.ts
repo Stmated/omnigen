@@ -4,6 +4,7 @@ import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {DefaultJavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -40,12 +41,17 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     }
 
     // Then we will go through the currently compiling root node and set all type nodes' local names.
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
-        const cuClassName = JavaUtil.getClassName(node.object.type.omniType, args.options);
-        const cuPackage = JavaUtil.getPackageName(node.object.type.omniType, cuClassName, args.options);
+        const firstObjectChild = node.children.find(it => it instanceof Java.AbstractObjectDeclaration);
+        if (!firstObjectChild || !(firstObjectChild instanceof Java.AbstractObjectDeclaration)) {
+          throw new Error(`No named object declaration found inside ${node.toString()}`);
+        }
+
+        const cuClassName = JavaUtil.getClassName(firstObjectChild.type.omniType, args.options);
+        const cuPackage = JavaUtil.getPackageName(firstObjectChild.type.omniType, cuClassName, args.options);
 
         const cuInfo: CompilationUnitInfo = {
           cu: node,
@@ -55,7 +61,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         };
 
         cuInfoStack.push(cuInfo);
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitCompilationUnit(node, visitor);
+        DefaultJavaVisitor.visitCompilationUnit(node, visitor);
         cuInfoStack.pop();
 
         // After the visitation is done, all imports should have been found
@@ -69,7 +75,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       visitObjectDeclarationBody: (node, visitor) => {
         try {
           objectStack.push(node);
-          AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclarationBody(node, visitor);
+          DefaultJavaVisitor.visitObjectDeclarationBody(node, visitor);
         } finally {
           objectStack.pop();
         }
@@ -77,7 +83,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
       visitWildcardType: (node, visitor) => {
 
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitWildcardType(node, visitor);
+        DefaultJavaVisitor.visitWildcardType(node, visitor);
         this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options);
       },
 
@@ -221,13 +227,16 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
     const typeNameMap = new Map<OmniType, TypeNameInfo>();
 
-    external.node.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    external.node.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
 
-        objectStack.push(node);
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitObjectDeclaration(node, visitor);
-        objectStack.pop();
+        try {
+          objectStack.push(node);
+          DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
+        } finally {
+          objectStack.pop();
+        }
 
         const omniType = node.type.omniType;
         let className = JavaUtil.getClassName(omniType, external.options);
@@ -240,7 +249,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
           const existing = typeNameMap.get(omniType)!;
           const newPath = outerTypes.map(it => it.name.value).join('.');
           const existingPath = existing.outerTypes.map(it => it.name.value).join('.');
-          throw new Error(`Has encountered duplicate declaration of '${OmniUtil.describe(omniType)}', new at ${newPath}, existing at ${existingPath}`);
+          throw new Error(`Has encountered duplicate declaration of '${OmniUtil.describe(omniType)}', new at '${newPath}', existing at ${existingPath}`);
         }
 
         if (targetOptions.shortenNestedTypeNames && objectStack.length > 0) {

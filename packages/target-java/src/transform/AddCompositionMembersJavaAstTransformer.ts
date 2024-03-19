@@ -1,13 +1,44 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
-import {CompositionKind, OmniCompositionAndType, OmniCompositionType, OmniEnumType, OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind, UnknownKind} from '@omnigen/core';
+import {
+  AstNodeWithChildren,
+  CompositionKind,
+  OmniCompositionAndType,
+  OmniCompositionType,
+  OmniEnumType,
+  OmniHardcodedReferenceType,
+  OmniModel,
+  OmniPrimitiveKind,
+  OmniPrimitiveType,
+  OmniType,
+  OmniTypeKind,
+  UnknownKind,
+} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {AbstractObjectDeclaration, JavaAstRootNode} from '../ast';
+import {
+  AbstractExpression,
+  AbstractObjectDeclaration, Annotation, AnnotationList, ArgumentList, BinaryExpression,
+  Block, ClassName, ClassReference, DeclarationReference,
+  Field, FieldBackedGetter,
+  FieldReference, GenericType,
+  Identifier,
+  IfStatement,
+  JavaAstRootNode, JavaToken,
+  Literal, MethodCall,
+  MethodDeclaration,
+  MethodDeclarationSignature, Modifier, ModifierList, ModifierType, Parameter,
+  ParameterList, Predicate, RegularType, ReturnStatement, Statement, TokenType,
+} from '../ast';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAstUtils} from './JavaAstUtils';
 import {JavaOptions, SerializationLibrary} from '../options';
-import {JACKSON_JSON_CREATOR, JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer';
-import {RuntimeTypeMapping} from '../ast';
+import {JACKSON_JSON_CREATOR, JACKSON_JSON_VALUE, JACKSON_OBJECT_MAPPER} from './JacksonJavaAstTransformer';
+import {DefaultJavaVisitor, JAVA_FEATURES} from '../index.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
+
+type TypedPair = { field: Field, method: MethodDeclaration };
 
 /**
  * There needs to be more centralized handling of adding fields to a class depending on if it is extending or implementing interfaces.
@@ -16,7 +47,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    args.root.visit(VisitorFactoryManager.create(AbstractJavaAstTransformer.JAVA_VISITOR, {
+    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
 
@@ -31,7 +62,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         }
 
         // Then keep searching deeper, into nested types
-        AbstractJavaAstTransformer.JAVA_VISITOR.visitClassDeclaration(node, visitor);
+        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
       },
     }));
   }
@@ -57,9 +88,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         if (JavaUtil.asSuperType(type)) {
 
           if (!classDec.extends) {
-            classDec.extends = new Java.ExtendsDeclaration(
-              JavaAstUtils.createTypeNode(type),
-            );
+            classDec.extends = new Java.ExtendsDeclaration(JavaAstUtils.createTypeNode(type));
           } else {
 
             if (type.kind == OmniTypeKind.OBJECT) {
@@ -118,10 +147,96 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
       // This means the specification did not have any discriminators.
       // Instead we need to figure out what it is in runtime.
-      declaration.body.children.push(
-        new RuntimeTypeMapping(type.types, options),
-      );
+      this.addRuntimeMapping(declaration.body, type.types, options);
+
+      // declaration.body.children.push(
+      //   new RuntimeTypeMapping(type.types, options),
+      // );
     }
+  }
+
+  private addRuntimeMapping(target: AstNodeWithChildren, types: OmniType[], options: JavaAndTargetOptions) {
+
+    // this.fields = [];
+    // this.getters = [];
+    // this.methods = [];
+
+    const fieldAnnotations = new AnnotationList();
+    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+      fieldAnnotations.children.push(new Annotation(
+        new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
+      ));
+    }
+
+    const untypedFieldType = {
+      kind: OmniTypeKind.UNKNOWN,
+    };
+
+    const untypedField = new Field(
+      new RegularType(untypedFieldType),
+      new Identifier('_raw', 'raw'),
+      new ModifierList(new Modifier(ModifierType.PRIVATE), new Modifier(ModifierType.FINAL)),
+      undefined,
+      fieldAnnotations,
+    );
+    const untypedGetter = new FieldBackedGetter(
+      untypedField,
+    );
+
+    target.children.push(untypedField);
+    target.children.push(untypedGetter);
+
+    const handled: OmniType[] = [];
+    const typedPairs: TypedPair[] = [];
+
+    for (const type of types) {
+
+      const otherType = handled.find(it => !OmniUtil.isDifferent(it, type, JAVA_FEATURES));
+      if (otherType) {
+
+        logger.debug(`Skipping runtime-mapped '${OmniUtil.describe(type)}' because '${OmniUtil.describe(otherType)}' already exists`);
+        continue;
+      }
+
+      handled.push(type);
+
+      const pair = this.createdTypedPair(untypedField, type, options);
+      typedPairs.push(pair);
+
+      target.children.push(pair.field);
+      target.children.push(pair.method);
+    }
+
+    const common = OmniUtil.getCommonDenominator(JAVA_FEATURES, ...types);
+    const commonType: OmniType = !common || OmniUtil.isDisqualifyingDiffForCommonType(common?.diffs) ? {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.OBJECT} : common.type;
+
+    // for (const pair of typedPairs) {
+    //
+    //   const diffs: Diff[][] = [];
+    //
+    //   for (const other of typedPairs) {
+    //     if (other === pair) {
+    //       continue;
+    //     }
+    //
+    //     const pairDiff = OmniUtil.getDiff(pair.field.type.omniType, other.field.type.omniType, JAVA_FEATURES);
+    //     diffs.push(pairDiff);
+    //   }
+    //
+    //   // TODO: Find the unique parts of "pair" that can be used to identify it.
+    //   //        Should we only do the first and best, or should we do multiple checks just to be safe?
+    //   const i = 0;
+    // }
+
+    // this.methods.push(new MethodDeclaration(
+    //   new MethodDeclarationSignature(
+    //     new Identifier('asGuessedType'),
+    //     JavaAstUtils.createTypeNode(commonType),
+    //   ),
+    //   new Block(
+    //     new Statement(new ReturnStatement(new FieldReference(untypedField))),
+    //   ),
+    // ));
   }
 
   private addEnumAndPrimitivesAsObjectEnum(
@@ -437,7 +552,6 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
     declaration.body.children.push(
       new Java.ConstructorDeclaration(
-        declaration,
         new Java.ConstructorParameterList(constructorParameter),
         new Java.Block(
           new Java.Statement(
@@ -484,7 +598,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
   private createSelfIfOneOfStaticFieldsBinary(
     knownValueFields: Java.Field[],
-    selfType: Java.Type<OmniType>,
+    selfType: Java.TypeNode<OmniType>,
   ): Java.BinaryExpression | undefined {
 
     let knownBinary: Java.BinaryExpression | undefined = undefined;
@@ -507,5 +621,114 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     }
 
     return knownBinary;
+  }
+
+  private getFieldName(type: OmniType): string {
+
+    // if (type.kind == OmniTypeKind.PRIMITIVE) {
+    //
+    //   // If it is a primitive, we do not care about the 'name' of the type.
+    //   // We only care about what it actually is.
+    //   // This is a preference, but might be wrong. Maybe make it an option?
+    //   return camelCase(JavaUtil.getPrimitiveKindName(type.primitiveKind, true));
+    // }
+
+    // TODO: This is most likely wrong, will give name with package and whatnot.
+    const javaName = JavaUtil.getName({
+      type: type,
+    });
+
+    return Case.camel(javaName);
+  }
+
+  private createdTypedPair(untypedField: Field, type: OmniType, options: JavaAndTargetOptions): TypedPair {
+
+    const typedFieldName = this.getFieldName(type);
+
+    const typedField = new Field(JavaAstUtils.createTypeNode(type), new Identifier(`_${typedFieldName}`));
+    const typedFieldReference = new FieldReference(typedField);
+
+    const parameterList = new ParameterList();
+    let conversionExpression: AbstractExpression;
+    if (options.unknownType == UnknownKind.MUTABLE_OBJECT) {
+
+      if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+        conversionExpression = this.modifyGetterForJackson(untypedField, typedField, parameterList);
+      } else {
+        conversionExpression = this.modifyGetterForPojo(untypedField, typedField, parameterList);
+      }
+
+    } else {
+      conversionExpression = new Literal('Conversion path unknown');
+    }
+
+    const typedGetter = new MethodDeclaration(
+      new MethodDeclarationSignature(
+        new Identifier(`get${Case.pascal(typedField.identifier.value)}`),
+        typedField.type,
+        parameterList,
+      ),
+      new Block(
+        // First check if we have already cached the result.
+        new IfStatement(
+          new Predicate(typedFieldReference, TokenType.NOT_EQUALS, new Literal(null)),
+          new Block(new Statement(new ReturnStatement(typedFieldReference))),
+        ),
+        // If not, then try to convert the raw value into the target type and cache it.
+        new Statement(new ReturnStatement(
+          new BinaryExpression(typedFieldReference, new JavaToken(TokenType.ASSIGN), conversionExpression),
+        )),
+      ),
+    );
+
+    return {
+      field: typedField,
+      method: typedGetter,
+    };
+  }
+
+  private modifyGetterForJackson(untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractExpression {
+
+    const objectMapperReference = new Identifier('objectMapper');
+    const objectMapperDeclaration = new Parameter(
+      new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_OBJECT_MAPPER}),
+      objectMapperReference,
+    );
+
+    parameterList.children.push(objectMapperDeclaration);
+    return new MethodCall(
+      new DeclarationReference(objectMapperDeclaration),
+      new Identifier('convertValue'),
+      new ArgumentList(
+        new FieldReference(untypedField),
+        new ClassReference(new ClassName(typedField.type)),
+      ),
+    );
+  }
+
+  private modifyGetterForPojo(untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractExpression {
+
+    const transformerIdentifier = new Identifier('transformer');
+    const type: OmniHardcodedReferenceType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.Function'};
+
+    const targetClass = new GenericType(
+      type,
+      new RegularType(type),
+      [
+        JavaAstUtils.createTypeNode(JavaUtil.getGenericCompatibleType(untypedField.type.omniType)),
+        JavaAstUtils.createTypeNode(JavaUtil.getGenericCompatibleType(typedField.type.omniType)),
+      ],
+    );
+
+    const transformerParameter = new Parameter(targetClass, transformerIdentifier);
+
+    parameterList.children.push(transformerParameter);
+    return new MethodCall(
+      new DeclarationReference(transformerParameter),
+      new Identifier('apply'),
+      new ArgumentList(
+        new FieldReference(untypedField),
+      ),
+    );
   }
 }

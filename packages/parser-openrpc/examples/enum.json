@@ -25,9 +25,7 @@
       "result": {
         "name": "things",
         "description": "An array of things",
-        "schema": {
-          "$ref": "#/components/schemas/Things"
-        }
+        "schema": {"$ref": "#/components/schemas/Things"}
       },
       "errors": [
         {
@@ -57,16 +55,12 @@
               "TypeC"
             ]
           },
-          "tag": {
-            "$ref": "#/components/schemas/Tag"
-          }
+          "tag": {"$ref": "#/components/schemas/Tag"}
         }
       },
       "Things": {
         "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/Thing"
-        }
+        "items": {"$ref": "#/components/schemas/Thing"}
       },
       "Tag": {
         "type": "string",
@@ -85,19 +79,13 @@
       },
       "TagCopy": {
         "oneOf": [
-          {
-            "$ref": "#/components/schemas/Tag"
-          }
+          {"$ref": "#/components/schemas/Tag"}
         ]
       },
       "TagOrSpeciesOrString": {
         "oneOf": [
-          {
-            "$ref": "#/components/schemas/Tag"
-          },
-          {
-            "$ref": "#/components/schemas/Species"
-          },
+          {"$ref": "#/components/schemas/Tag"},
+          {"$ref": "#/components/schemas/Species"},
           {
             "type": "string",
             "const": "foo"

@@ -17,6 +17,7 @@ export const createTypeScriptAstReducer = (partial?: Partial<Reducer<JavaVisitor
     reduceTypeAliasDeclaration: (node, reducer) => new Ts.TypeAliasDeclaration(
       assertDefined(node.name.reduce(reducer)),
       assertDefined(node.of.reduce(reducer)),
+      node.modifiers?.reduce(reducer),
     ),
   };
 };

@@ -1,17 +1,16 @@
-import {ExternalSyntaxTree, OmniType, TargetOptions} from '@omnigen/core';
+import {ExternalSyntaxTree, OmniType, TargetFeatures, TargetOptions} from '@omnigen/core';
 import {JavaUtil, TypeNameInfo} from '../util';
-import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from '../transform';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {DefaultJavaVisitor} from '../visit';
+import {isDefined, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 interface CompilationUnitInfo {
   cu: Java.CompilationUnit;
   packageName: string;
-  addedTypeNodes: (Java.RegularType | Java.WildcardType)[];
+  addedTypeNodes: (Java.EdgeType | Java.WildcardType)[];
   importNameMap: Map<OmniType, string>;
 }
 
@@ -41,17 +40,18 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     }
 
     // Then we will go through the currently compiling root node and set all type nodes' local names.
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
-        const firstObjectChild = node.children.find(it => it instanceof Java.AbstractObjectDeclaration);
-        if (!firstObjectChild || !(firstObjectChild instanceof Java.AbstractObjectDeclaration)) {
+        const firstTypedChild = node.children.map(it => JavaAstUtils.getOmniType(it)).filter(isDefined).find(it => !!it);
+        if (!firstTypedChild) {
           throw new Error(`No named object declaration found inside ${node.toString()}`);
         }
 
-        const cuClassName = JavaUtil.getClassName(firstObjectChild.type.omniType, args.options);
-        const cuPackage = JavaUtil.getPackageName(firstObjectChild.type.omniType, cuClassName, args.options);
+        const cuClassName = JavaUtil.getClassName(firstTypedChild, args.options);
+        const cuPackage = JavaUtil.getPackageName(firstTypedChild, cuClassName, args.options);
 
         const cuInfo: CompilationUnitInfo = {
           cu: node,
@@ -61,7 +61,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         };
 
         cuInfoStack.push(cuInfo);
-        DefaultJavaVisitor.visitCompilationUnit(node, visitor);
+        defaultVisitor.visitCompilationUnit(node, visitor);
         cuInfoStack.pop();
 
         // After the visitation is done, all imports should have been found
@@ -75,31 +75,36 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       visitObjectDeclarationBody: (node, visitor) => {
         try {
           objectStack.push(node);
-          DefaultJavaVisitor.visitObjectDeclarationBody(node, visitor);
+          defaultVisitor.visitObjectDeclarationBody(node, visitor);
         } finally {
           objectStack.pop();
         }
       },
 
-      visitWildcardType: (node, visitor) => {
+      // visitWildcardType: (node, visitor) => {
+      //
+      //   defaultVisitor.visitWildcardType(node, visitor);
+      //   this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options, args.features);
+      // },
 
-        DefaultJavaVisitor.visitWildcardType(node, visitor);
-        this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options);
+      visitBoundedType: (n, v) => {
+        return defaultVisitor.visitBoundedType(n, v);
       },
 
-      visitRegularType: node => {
-        this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options);
+      visitEdgeType: node => {
+        this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options, args.features);
       },
     }));
   }
 
   private setLocalNameAndImport(
-    node: Java.RegularType | Java.WildcardType,
+    node: Java.EdgeType,
     implementation: boolean | undefined,
     objectStack: Java.AbstractObjectDeclaration[],
     cuInfoStack: CompilationUnitInfo[],
     typeNameMap: Map<OmniType, TypeNameInfo>,
     options: JavaAndTargetOptions,
+    features: TargetFeatures,
   ): void {
 
     const cuInfo = cuInfoStack[cuInfoStack.length - 1];
@@ -113,17 +118,18 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     const typeNameInfo = typeNameMap.get(unwrapped);
 
     if (typeNameInfo) {
-      this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, objectStack, cuInfo, options);
+      this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, objectStack, cuInfo, options, features);
     } else {
-      this.setLocalNameAndImportForUnknownTypeName(node, implementation, cuInfo, typeNameMap, options);
+      this.setLocalNameAndImportForUnknownTypeName(node, implementation, objectStack, cuInfo, typeNameMap, options);
     }
 
     cuInfo.addedTypeNodes.push(node);
   }
 
   private setLocalNameAndImportForUnknownTypeName(
-    node: Java.RegularType | Java.WildcardType,
+    node: Java.EdgeType,
     implementation: boolean | undefined,
+    objectStack: Java.AbstractObjectDeclaration[],
     cuInfo: CompilationUnitInfo,
     typeNameMap: Map<OmniType, TypeNameInfo>,
     options: JavaAndTargetOptions,
@@ -145,29 +151,39 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       const nodePackage = JavaUtil.getPackageNameFromFqn(nodeImportName);
 
       if (nodePackage != cuInfo.packageName) {
-        this.addImportIfUnique(cuInfo, options, nodeImportName, node);
+        this.addImportIfUnique(cuInfo, options, objectStack, nodeImportName, node);
       }
     }
   }
 
   private setLocalNameAndAddImportForKnownTypeName(
     typeNameInfo: TypeNameInfo,
-    node: Java.RegularType | Java.WildcardType,
+    node: Java.EdgeType,
     objectStack: Java.AbstractObjectDeclaration[],
     cuInfo: CompilationUnitInfo,
     options: JavaAndTargetOptions,
+    features: TargetFeatures,
   ): void {
 
     // We already have this type's name resolved. Perhaps as a regular type, or as a nested type.
-    if (typeNameInfo.packageName != cuInfo.packageName) {
+    if (typeNameInfo.packageName != cuInfo.packageName || features.forcedImports) {
+
+      let typePackageName = typeNameInfo.packageName ?? ''; // Should never be undefined
+      if (features.relativeImports && typePackageName.length >= cuInfo.packageName.length) {
+
+        const prefix = typePackageName.substring(0, cuInfo.packageName.length);
+        if (cuInfo.packageName.startsWith(prefix)) {
+          typePackageName = typePackageName.substring(cuInfo.packageName.length + 1);
+        }
+      }
 
       const nodeImportName = JavaUtil.buildFullyQualifiedName(
-        typeNameInfo.packageName || '', // Should never be undefined
+        typePackageName,
         typeNameInfo.outerTypes.map(it => it.name.value),
         typeNameInfo.className,
       );
 
-      this.addImportIfUnique(cuInfo, options, nodeImportName, node);
+      this.addImportIfUnique(cuInfo, options, objectStack, nodeImportName, node);
       node.setLocalName(typeNameInfo.className);
 
     } else {
@@ -196,13 +212,24 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
   private addImportIfUnique(
     cuInfo: CompilationUnitInfo,
     options: JavaAndTargetOptions,
+    objectStack: Java.AbstractObjectDeclaration[],
     nodeImportName: string,
-    node: Java.RegularType | Java.WildcardType,
+    node: Java.EdgeType,
   ): void {
 
+    if (objectStack.length > 0 && objectStack[objectStack.length - 1].omniType == node.omniType) {
+
+      // We are referring to ourselves in our own unit. No need to add an import.
+      return;
+    }
+
     const existing = cuInfo.cu.imports.children.find(it => {
-      const otherImportName = it.type.getImportName() ?? JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
-      return otherImportName == nodeImportName;
+      if (it.type instanceof Java.EdgeType) {
+        const otherImportName = it.type.getImportName() ?? JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
+        return otherImportName == nodeImportName;
+      } else {
+        return false;
+      }
     });
 
     if (!existing) {
@@ -227,13 +254,14 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
     const typeNameMap = new Map<OmniType, TypeNameInfo>();
 
-    external.node.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const originalVisitor = external.node.createVisitor();
+    external.node.visit(VisitorFactoryManager.create(originalVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
 
         try {
           objectStack.push(node);
-          DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
+          originalVisitor.visitObjectDeclaration(node, visitor);
         } finally {
           objectStack.pop();
         }

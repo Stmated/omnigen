@@ -17,9 +17,21 @@ export interface TargetFeatures {
   primitiveInheritance: boolean;
 
   /**
-   * If enabled, it is legal to for example have class declarations inside other class declarations.
+   * If true, it is legal to for example have class declarations inside other class declarations.
    */
   nestedDeclarations: boolean;
+
+  /**
+   * If true, imports can be shortened to be relative to the package of another compilation unit.
+   */
+  relativeImports: boolean;
+
+  /**
+   * If true, then all externally used types must be imported.
+   * For example in `Java` there is no need for import if classes are in the same package.
+   * But in `TypeScript` any type outside of the current file must be imported.
+   */
+  forcedImports: boolean;
 }
 
 /**
@@ -31,4 +43,6 @@ export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   primitiveGenerics: true,
   primitiveInheritance: true,
   nestedDeclarations: true,
+  relativeImports: true,
+  forcedImports: false,
 };

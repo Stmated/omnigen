@@ -4,7 +4,6 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '
 import * as Java from '../ast';
 import {Naming, VisitorFactoryManager} from '@omnigen/core-util';
 import {AdditionalPropertiesDeclaration} from '../ast';
-import {DefaultJavaVisitor} from '../visit';
 
 export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJavaAstTransformer {
 
@@ -13,12 +12,14 @@ export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJava
     const classDecStack: Java.ClassDeclaration[] = [];
     type AddType = {classDeclaration: Java.ClassDeclaration, node: AdditionalPropertiesDeclaration};
     const additions: AddType[] = [];
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
         try {
           classDecStack.push(node);
-          DefaultJavaVisitor.visitClassDeclaration(node, visitor);
+          defaultVisitor.visitClassDeclaration(node, visitor);
         } finally {
           classDecStack.pop();
         }

@@ -8,7 +8,7 @@ import * as Java from '../ast';
 import {AnnotationList, ModifierType} from '../ast';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
-import {DefaultJavaVisitor, JavaVisitor} from '../visit';
+import {JavaVisitor} from '../visit';
 
 export interface StackInfo {
   cu: Java.AbstractObjectDeclaration;
@@ -26,22 +26,14 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): void {
 
     const cuStack: StackInfo[] = [];
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitMethodDeclaration: () => {},
 
-      // visitCompilationUnit: (node, visitor) => {
-      //
-      //   for (const child of node.children) {
-      //     if (child instanceof Java.AbstractObjectDeclaration) {
-      //       this.visitCompilationUnit(node, child, cuStack, visitor);
-      //     }
-      //   }
-      // },
-
       visitObjectDeclaration: (node, visitor) => {
-
-        this.visitObjectDec(node, cuStack, visitor);
+        this.visitObjectDec(node, cuStack, defaultVisitor, visitor);
       },
 
       visitField: node => {
@@ -85,7 +77,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
         if (!hasSingularJsonValue) {
 
           annotations.children.push(new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Default'}),
+            new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Default'}),
           ));
 
           if (!node.initializer) {
@@ -108,7 +100,8 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
     // cu: Java.CompilationUnit,
     dec: Java.AbstractObjectDeclaration,
     stack: StackInfo[],
-    visitor: JavaVisitor<void>,
+    defaultVisitor: JavaVisitor<unknown>,
+    visitor: JavaVisitor<unknown>,
   ): void {
 
     if (dec instanceof Java.EnumDeclaration) {
@@ -132,7 +125,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       skippingFactors: 0,
       fieldsToPrivatize: [],
     });
-    DefaultJavaVisitor.visitObjectDeclaration(dec, visitor);
+    defaultVisitor.visitObjectDeclaration(dec, visitor);
     const info = stack.pop();
 
     if (!info) {
@@ -152,19 +145,19 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
 
     if (info.finalFields > 0 && info.normalFields == 0) {
       annotations.children.push(new Java.Annotation(
-        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Value'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Value'}),
       ));
       annotations.children.push(new Java.Annotation(
-        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.With'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.With'}),
       ));
     } else {
       annotations.children.push(new Java.Annotation(
-        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Data'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Data'}),
       ));
     }
 
     annotations.children.push(new Java.Annotation(
-      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.AllArgsConstructor'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.AllArgsConstructor'}),
       new Java.AnnotationKeyValuePairList(
         new Java.AnnotationKeyValuePair(
           new Java.Identifier('access'),
@@ -173,7 +166,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       ),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.RequiredArgsConstructor'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.RequiredArgsConstructor'}),
       new Java.AnnotationKeyValuePairList(
         new Java.AnnotationKeyValuePair(
           new Java.Identifier('access'),
@@ -182,13 +175,13 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       ),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.NoArgsConstructor'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.NoArgsConstructor'}),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.NonFinal'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.NonFinal'}),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.SuperBuilder'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.SuperBuilder'}),
       new Java.AnnotationKeyValuePairList(
         new Java.AnnotationKeyValuePair(
           new Java.Identifier('toBuilder'),
@@ -197,14 +190,14 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       ),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.extern.jackson.Jacksonized'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.extern.jackson.Jacksonized'}),
     ));
 
     if (dec.extends) {
 
       // If we extend from something, then we add to callSuper for Equald and HashCode.
       annotations.children.push(new Java.Annotation(
-        new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.EqualsAndHashCode'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.EqualsAndHashCode'}),
         new Java.AnnotationKeyValuePairList(
           new Java.AnnotationKeyValuePair(
             new Java.Identifier('callSuper'),

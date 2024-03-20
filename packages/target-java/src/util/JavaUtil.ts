@@ -20,11 +20,11 @@ import {
   UnknownKind,
 } from '@omnigen/core';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options';
-import {DefaultJavaVisitor} from '../visit';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAndTargetOptions} from '../transform';
+import {JavaAstRootNode} from '../ast';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -147,6 +147,7 @@ export class JavaUtil {
    *        Prime example being generics and lower bound generics, which right now is hard-coded into strings here. Bad. Local type names are not respected.
    *
    * @param args
+   * @deprecated Do not use. Delay name until rendering.
    */
   public static getName(args: FqnOptions): string {
 
@@ -315,10 +316,12 @@ export class JavaUtil {
 
   public static buildFullyQualifiedName(packageName: string, outerTypeNames: string[], className: string): string {
 
+    const delimitedPackageName = packageName ? `${packageName}.` : packageName;
+
     if (outerTypeNames.length > 0) {
-      return `${packageName}.${outerTypeNames.join('.')}.${className}`;
+      return `${delimitedPackageName}${outerTypeNames.join('.')}.${className}`;
     } else {
-      return `${packageName}.${className}`;
+      return `${delimitedPackageName}${className}`;
     }
   }
 
@@ -541,11 +544,13 @@ export class JavaUtil {
     return undefined;
   }
 
-  public static getClassDeclaration(root: AstNode, type: OmniType): Java.ClassDeclaration | undefined {
+  public static getClassDeclaration(root: JavaAstRootNode, type: OmniType): Java.ClassDeclaration | undefined {
 
     // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
     const holder: { ref?: Java.ClassDeclaration } = {};
-    root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+
+    const defaultVisitor = root.createVisitor();
+    root.visit(VisitorFactoryManager.create(defaultVisitor, {
       visitClassDeclaration: node => {
         if (node.type.omniType == type) {
           holder.ref = node;

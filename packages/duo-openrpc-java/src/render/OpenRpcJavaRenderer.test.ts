@@ -134,7 +134,7 @@ describe('Java Rendering', () => {
     const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json', {
       javaOptions: {
         ...DEFAULT_TEST_JAVA_OPTIONS,
-        includeGeneratedAnnotation: false,
+        includeGenerated: false,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
       },

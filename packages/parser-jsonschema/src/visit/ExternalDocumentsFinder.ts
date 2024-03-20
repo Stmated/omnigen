@@ -93,11 +93,11 @@ export class ExternalDocumentsFinder {
 
           let element: any;
           try {
-            element = pointer.get(schema, uri.path!);
+            element = uri.path ? pointer.get(schema, uri.path) : schema;
           } catch (ex) {
 
             const shallowPayloadString = Util.getShallowPayloadString(origin);
-            throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}`, {cause: ex});
+            throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}: ${ex}`, {cause: ex});
           }
 
           if (!element) {
@@ -173,10 +173,12 @@ export class ExternalDocumentsFinder {
       throw new Error(`Unknown protocol ${protocol}`);
     }
 
+    const path = (hashIndex != -1) ? uriString.substring(hashIndex + 1) : undefined;
+
     return {
       protocol: protocol,
       documentUri: documentUri.length > 0 ? documentUri : undefined,
-      path: (hashIndex != -1) ? uriString.substring(hashIndex + 1) : undefined,
+      path: path,
     };
   }
 

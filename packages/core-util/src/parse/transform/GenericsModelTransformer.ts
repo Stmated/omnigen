@@ -140,7 +140,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
 
     const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(info.propertyName)}`;
 
-    const lowerBound = this.toGenericBoundType(info.commonType);
+    const upperBound = this.toGenericBoundType(info.commonType);
     // if (lowerBound) {
     //   if (expandedGenericSourceIdentifier) {
     //     propertyNameExpansions.set(info.propertyName, [expandedGenericSourceIdentifier]);
@@ -152,10 +152,10 @@ export class GenericsModelTransformer implements OmniModelTransformer {
       placeholderName: genericName,
     };
 
-    if (lowerBound && lowerBound.kind == OmniTypeKind.GENERIC_TARGET) {
+    if (upperBound && upperBound.kind == OmniTypeKind.GENERIC_TARGET) {
 
-      for (let i = 0; i < lowerBound.targetIdentifiers.length; i++) {
-        const lowerTarget = lowerBound.targetIdentifiers[i];
+      for (let i = 0; i < upperBound.targetIdentifiers.length; i++) {
+        const lowerTarget = upperBound.targetIdentifiers[i];
         if (!OmniUtil.asSuperType(lowerTarget.type)) { // lowerTarget.type.kind == OmniTypeKind.UNKNOWN) {
           continue;
         }
@@ -165,18 +165,18 @@ export class GenericsModelTransformer implements OmniModelTransformer {
           continue;
         }
 
-        lowerBound.targetIdentifiers[i] = {
+        upperBound.targetIdentifiers[i] = {
           ...lowerTarget,
           type: {
             kind: OmniTypeKind.UNKNOWN,
-            lowerBound: {...lowerTarget.type}, // This should maybe clone instead
+            upperBound: {...lowerTarget.type}, // This should maybe clone instead
           },
         };
       }
     }
 
-    if (lowerBound) {
-      genericSourceIdentifier.lowerBound = lowerBound;
+    if (upperBound) {
+      genericSourceIdentifier.upperBound = upperBound;
     }
 
     // let targetIdentifierType: OmniType | undefined; // property.type
@@ -300,25 +300,25 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     }
   }
 
-  private expandLowerBoundGenericIfRequired(
-    lowerBound: OmniType,
+  private expandUpperBoundGenericIfRequired(
+    upperBound: OmniType,
     genericSource: OmniGenericSourceType,
   ): OmniGenericSourceIdentifierType | undefined {
 
-    if (lowerBound.kind != OmniTypeKind.GENERIC_TARGET) {
+    if (upperBound.kind != OmniTypeKind.GENERIC_TARGET) {
 
       // We only expand the bound if it is a generic target
       return undefined;
     }
 
-    if (lowerBound.targetIdentifiers.length != 1) {
+    if (upperBound.targetIdentifiers.length != 1) {
 
       // For now we only support if there is one, for simplicity. Needs improvement in the future.
       return undefined;
     }
 
-    const lowerBoundLowerBound = lowerBound.targetIdentifiers[0].sourceIdentifier.lowerBound;
-    if (!lowerBoundLowerBound || lowerBoundLowerBound.kind == OmniTypeKind.UNKNOWN) {
+    const upperBoundUpperBound = upperBound.targetIdentifiers[0].sourceIdentifier.upperBound;
+    if (!upperBoundUpperBound || upperBoundUpperBound.kind == OmniTypeKind.UNKNOWN) {
 
       // If the lower bound of the identifier is unknown, then it makes no sense exploding it.
       // It should just be rendered as "Class" or "Class<?>" or "Class<>" depending on context.
@@ -329,12 +329,12 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     // This can for example be: <T extends JsonRpcRequest<AbstractRequestParams>>
     // To make it better and more exact to work with, we should replace with this:
     // <TData extends AbstractRequestParams, T extends JsonRpcRequest<TData>>
-    const targetIdentifier = lowerBound.targetIdentifiers[0];
-    const sourceIdentifierLowerBound = this.toGenericBoundType(targetIdentifier.type); // , args, targetFeatures);
+    const targetIdentifier = upperBound.targetIdentifiers[0];
+    const sourceIdentifierUpperBound = this.toGenericBoundType(targetIdentifier.type); // , args, targetFeatures);
 
     const sourceDesc = OmniUtil.describe(targetIdentifier.sourceIdentifier);
     const targetDesc = OmniUtil.describe(targetIdentifier);
-    const lowerDesc = OmniUtil.describe(lowerBound);
+    const lowerDesc = OmniUtil.describe(upperBound);
 
     const sourceIdentifier: OmniGenericSourceIdentifierType = {
       placeholderName: this.getExplodedSourceIdentifierName(targetIdentifier.sourceIdentifier),
@@ -342,12 +342,12 @@ export class GenericsModelTransformer implements OmniModelTransformer {
       debug: `Exploded from '${sourceDesc}' of '${targetDesc}' of '${lowerDesc}'`,
     };
 
-    if (sourceIdentifierLowerBound) {
-      sourceIdentifier.lowerBound = sourceIdentifierLowerBound;
+    if (sourceIdentifierUpperBound) {
+      sourceIdentifier.upperBound = sourceIdentifierUpperBound;
     }
 
     genericSource.sourceIdentifiers.push(sourceIdentifier);
-    lowerBound.targetIdentifiers[0] = {
+    upperBound.targetIdentifiers[0] = {
       kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
       type: sourceIdentifier,
       sourceIdentifier: sourceIdentifier,

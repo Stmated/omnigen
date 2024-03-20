@@ -27,11 +27,15 @@ export class JsonSchemaToTypeScriptTestUtil {
       },
     };
 
-    const result = await pm.execute({
-      ctx: ctx,
-      stopAt: TypeScriptPlugins.TypeScriptRendererCtxOut,
-    });
+    try {
+      const result = await pm.execute({
+        ctx: ctx,
+        stopAt: TypeScriptPlugins.TypeScriptRendererCtxOut,
+      });
 
-    return result.result.ctx.compilationUnits;
+      return result.result.ctx.compilationUnits;
+    } catch (ex) {
+      throw LoggerFactory.formatError(ex);
+    }
   }
 }

@@ -4,17 +4,17 @@ import {
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import * as Java from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {DefaultJavaVisitor} from '../visit';
 
 export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    if (!args.options.includeGeneratedAnnotation) {
+    if (!args.options.includeGenerated) {
       return;
     }
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitObjectDeclaration: node => {
 
@@ -35,7 +35,7 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
 
           node.annotations?.children.push(
             new Java.Annotation(
-              new Java.RegularType({
+              new Java.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
                 fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
               }),
@@ -44,7 +44,7 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
                   new Java.Identifier('use'),
                   new Java.StaticMemberReference(
                     new Java.ClassName(
-                      new Java.RegularType({
+                      new Java.EdgeType({
                         kind: OmniTypeKind.HARDCODED_REFERENCE,
                         fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
                       }),
@@ -67,7 +67,7 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
 
             const qualifier = subTypeHint.qualifiers[0];
             subTypes.push(new Java.Annotation(
-              new Java.RegularType({
+              new Java.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
                 fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
               }),
@@ -86,7 +86,7 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
 
           node.annotations?.children.push(
             new Java.Annotation(
-              new Java.RegularType({
+              new Java.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
                 fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
               }),

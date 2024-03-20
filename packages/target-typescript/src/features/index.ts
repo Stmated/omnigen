@@ -5,4 +5,6 @@ export const TYPESCRIPT_FEATURES: TargetFeatures = {
   primitiveGenerics: true,
   primitiveInheritance: false,
   nestedDeclarations: false,
+  relativeImports: true,
+  forcedImports: true,
 };

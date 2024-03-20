@@ -30,7 +30,7 @@ describe('PackageResolver', () => {
 
     const javaOptions: JavaOptions = {
       ...DEFAULT_JAVA_OPTIONS,
-      includeGeneratedAnnotation: false,
+      includeGenerated: false,
       serializationLibrary: SerializationLibrary.POJO,
     };
 

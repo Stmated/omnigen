@@ -195,6 +195,9 @@ export interface OmniBaseType<T extends OmniTypeKind> {
   examples?: OmniExample<unknown>[] | undefined;
 }
 
+/**
+ * TODO: Rename and move into being regular OmniTypeKind entries instead, and call them Union, Intersection, et cetera
+ */
 export enum CompositionKind {
   AND = 'AND',
   OR = 'OR',
@@ -293,7 +296,7 @@ export type UnknownKind = (typeof UnknownKind)[keyof typeof UnknownKind];
 export interface OmniUnknownType extends OmniBaseType<typeof OmniTypeKind.UNKNOWN> {
   valueDefault?: OmniPrimitiveConstantValue | null;
   unknownKind?: UnknownKind;
-  lowerBound?: OmniType;
+  upperBound?: OmniType;
 }
 
 export interface OmniSubTypeHint {
@@ -350,56 +353,17 @@ export type OmniPrimitiveNullableType =
   (OmniPrimitiveType & {nullable: true})
   | (OmniPrimitiveType & {primitiveKind: typeof OmniPrimitiveKind.NULL});
 
-// export interface OmniPrimitiveNullType extends OmniPrimitiveBaseType {
-//   primitiveKind: typeof OmniPrimitiveKind.NULL;
-//   nullable?: true;
-//   value: null;
-//   literal: true;
-// }
-//
-// export interface OmniPrimitiveVoidType extends OmniPrimitiveBaseType {
-//   primitiveKind: typeof OmniPrimitiveKind.VOID;
-//   nullable?: true;
-//   value?: never;
-//   literal: true;
-// }
-
 export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKind, typeof OmniPrimitiveKind.NULL | typeof OmniPrimitiveKind.VOID>;
 
-// export interface OmniPrimitiveTangibleNullableType extends OmniPrimitiveBaseType {
-//   primitiveKind: OmniPrimitiveTangibleKind;
-//   nullable: true;
-//   value?: OmniPrimitiveConstantValue | null;
-//   literal?: boolean;
-// }
-
-// export interface OmniPrimitiveTangibleNonNullableType extends OmniPrimitiveBaseType {
-//   primitiveKind: OmniPrimitiveTangibleKind;
-//   nullable?: false,
-//   value?: OmniPrimitiveConstantValue;
-//   literal?: boolean;
-// }
-
-// export type OmniPrimitiveNullableType =
-//   OmniPrimitiveTangibleNullableType
-//   | OmniPrimitiveNullType
-//   | OmniPrimitiveVoidType;
-
-
-// export type OmniPrimitiveType =
-//   OmniPrimitiveVoidType
-//   | OmniPrimitiveNullType
-//   | OmniPrimitiveNullableType
-//   | OmniPrimitiveTangibleNonNullableType;
-
 export type AllowedEnumTsTypes = number | string; // | null | void;
-// export type OmniAllowedEnumPrimitiveKinds = typeof OmniPrimitiveKind.STRING
-//   | typeof OmniPrimitiveKind.INTEGER
-//   | typeof OmniPrimitiveKind.INTEGER_SMALL
-//   | typeof OmniPrimitiveKind.DOUBLE
-//   | typeof OmniPrimitiveKind.FLOAT
-//   | typeof OmniPrimitiveKind.DECIMAL
-//   | typeof OmniPrimitiveKind.NUMBER;
+
+export type OmniNumericPrimitiveKinds =
+  | typeof OmniPrimitiveKind.INTEGER
+  | typeof OmniPrimitiveKind.INTEGER_SMALL
+  | typeof OmniPrimitiveKind.DOUBLE
+  | typeof OmniPrimitiveKind.FLOAT
+  | typeof OmniPrimitiveKind.DECIMAL
+  | typeof OmniPrimitiveKind.NUMBER;
 
 export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];

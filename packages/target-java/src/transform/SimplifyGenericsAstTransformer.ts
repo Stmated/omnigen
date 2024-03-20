@@ -7,7 +7,6 @@ import {
   TypeDiffKind,
 } from '@omnigen/core';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {DefaultJavaVisitor} from '../visit';
 
 /**
  * If all target identifiers to a source have the same type, then replace that source identifier with inline type.
@@ -24,7 +23,8 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
     type TargetInfo = { source: OmniGenericTargetSourcePropertyType, targetTypes: Set<OmniType> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
       visitGenericType: node => {
         const type = node.baseType.omniType;
         if (type.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -83,7 +83,7 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
       }
     }
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
       visitGenericType: (node, visitor) => {
         const type = node.baseType.omniType;
         if (type.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -101,11 +101,11 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
             }
           }
         } else {
-          DefaultJavaVisitor.visitGenericType(node, visitor);
+          defaultVisitor.visitGenericType(node, visitor);
         }
       },
 
-      visitRegularType: node => {
+      visitEdgeType: node => {
 
         if (node.omniType.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
           const replacement = sourceIdentifierReplacements.get(node.omniType);
@@ -127,7 +127,7 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
           });
         }
 
-        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
+        defaultVisitor.visitClassDeclaration(node, visitor);
       },
     }));
   }

@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`jsonschema-typescript-render > discriminator 1`] = `
+[
+  "ResponseData.ts",
+  "ResponseDataWithReject.ts",
+  "ResponseDataWithResult.ts",
+]
+`;
+
+exports[`jsonschema-typescript-render > jsonschema7 1`] = `
+[
+  "IAdditionalProperties.ts",
+  "NonNegativeIntegerDefault0.ts",
+  "Schema.ts",
+  "SchemaDefinitions.ts",
+  "SchemaDependencies.ts",
+  "SchemaItems.ts",
+  "SchemaNonNegativeIntegerDefault0.ts",
+  "SchemaPatternProperties.ts",
+  "SchemaProperties.ts",
+  "SchemaType.ts",
+  "SimpleTypes.ts",
+]
+`;

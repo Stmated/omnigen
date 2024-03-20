@@ -61,7 +61,7 @@ export const ZodJavaOptions = ZodOptions.extend({
   commentsOnConstructors: ZodCoercedBoolean.default('true'),
   includeExampleCommentsMode: z.enum(getEnumValues(IncludeExampleCommentsMode)).default(IncludeExampleCommentsMode.ALWAYS),
   preferVar: ZodCoercedBoolean.default('true'),
-  includeGeneratedAnnotation: ZodCoercedBoolean.default('true'),
+  includeGenerated: ZodCoercedBoolean.default('true'),
   preferNumberType: z.enum(getEnumValues(OmniPrimitiveKind)).default(OmniPrimitiveKind.INTEGER),
   serializationLibrary: z.enum(getEnumValues(SerializationLibrary)).default(SerializationLibrary.JACKSON),
   javaAnnotationLibrary: z.enum(getEnumValues(JavaAnnotationLibrary)).default(JavaAnnotationLibrary.JAKARTA),

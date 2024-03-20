@@ -7,11 +7,11 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class DefaultData {
-  private final DefaultDataInlineResult inlineResult;
+  private final StringBoolean inlineResult;
   private final String orderid;
   public DefaultData(
     @JsonProperty(value = "orderid", required = true) String orderid,
-    @JsonProperty("inlineResult") DefaultDataInlineResult inlineResult
+    @JsonProperty("inlineResult") StringBoolean inlineResult
   ) {
     this.orderid = orderid;
     this.inlineResult = inlineResult;
@@ -20,7 +20,7 @@ public class DefaultData {
   /**
    * Some inline description
    */
-  public DefaultDataInlineResult getInlineResult() {
+  public StringBoolean getInlineResult() {
     return this.inlineResult;
   }
 

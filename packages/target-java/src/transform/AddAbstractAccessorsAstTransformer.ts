@@ -3,7 +3,6 @@ import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import * as Java from '../ast';
 import {Identifier, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
-import {DefaultJavaVisitor} from '../visit';
 
 /**
  * TODO: Should this add the method declarations for interfaces as well?
@@ -12,7 +11,7 @@ export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransform
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    args.root.visit(VisitorFactoryManager.create(args.root.createVisitor(), {
 
       visitEnumDeclaration: () => {},
       visitInterfaceDeclaration: () => {},
@@ -31,7 +30,7 @@ export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransform
           const literalMethod = new Java.AbstractMethodDeclaration(
             new Java.MethodDeclarationSignature(
               new Identifier(JavaUtil.getGetterName(name, type)),
-              new Java.RegularType(type),
+              new Java.EdgeType(type),
               undefined,
               new Java.ModifierList(new Java.Modifier(ModifierType.PUBLIC), new Java.Modifier(ModifierType.ABSTRACT)),
             ),

@@ -26,7 +26,7 @@ import {
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
-import {Case, CompositionUtil, Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
+import {Case, CompositionUtil, Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {ExternalDocumentsFinder, RefResolver, ToDefined} from '../visit';
 
@@ -97,8 +97,7 @@ export class NewJsonSchemaParser implements Parser {
     for (const schema of this.getAllSchemas(root)) {
 
       const s = schema[1];
-      const unwrapped = jsonSchemaParser.unwrapJsonSchema(s);
-      const resolved = refResolver.resolve(unwrapped);
+      const resolved = refResolver.resolve(s);
       const omniTypeRes = jsonSchemaParser.jsonSchemaToType(schema[0], resolved);
 
       model.types.push(omniTypeRes.type);
@@ -172,16 +171,16 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   public jsonSchemaToType(
     name: TypeName,
-    schema: AnyJSONSchema,
+    schema: AnyJsonDefinition,
     ownerSchema?: AnyJSONSchema | undefined,
   ): SchemaToTypeResult {
 
     // If contentDescriptor contains an anonymous schema,
     // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
     // That way we will not get duplicates of the schema when called from different locations.
-    const id: string | undefined = schema.$id ?? ('id' in schema ? schema.id : undefined);
+    const id: string | undefined = (typeof schema == 'object') ? (schema.$id ?? ('id' in schema ? schema.id : undefined)) : (`_${JsonSchemaParser._uniqueCounter++}`);
     if (!id) {
-      throw new Error(`Encountered schema without ID: ${schema.title || Naming.unwrap(name)}; should have been assigned by schema transformers`);
+      throw new Error(`Encountered schema without ID: ${Util.getShallowPayloadString(schema)} (${Naming.unwrap(name)}); should have been assigned by schema transformers`);
     }
 
     const existing = this._typeMap.get(id);
@@ -312,10 +311,10 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const properties: OmniProperty[] = [];
     if (schema.properties) {
       for (const key of Object.keys(schema.properties)) {
-        const propertyValue = schema.properties[key];
-        const propertySchemaOrRef = this._refResolver.resolve(this.unwrapJsonSchema(propertyValue));
+        const propertySchema = schema.properties[key];
+        const resolvedPropertySchema = this._refResolver.resolve(propertySchema);
 
-        properties.push(this.toOmniPropertyFromJsonSchema(type, key, propertySchemaOrRef, schema));
+        properties.push(this.toOmniPropertyFromJsonSchema(type, key, resolvedPropertySchema, schema));
       }
     }
 
@@ -368,53 +367,60 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       logger.silent(`No schema type found for ${schema.$id}, will check if can be deduced by: ${OmniUtil.describe(extendedBy)}`);
 
       extendedBy = OmniUtil.getUnwrappedType(extendedBy);
-      if (extendedBy.kind == OmniTypeKind.COMPOSITION && extendedBy.compositionKind == CompositionKind.AND) {
-        // TODO: Allow XOR here? Since if all are primitive, that means they are the same
-        const primitiveTypes: OmniPrimitiveType[] = [];
-        const uniquePrimitiveKinds = new Set<OmniPrimitiveKind>();
-        const otherTypes: OmniType[] = [];
-        const objectTypes: OmniObjectType[] = [];
+      if (extendedBy.kind == OmniTypeKind.COMPOSITION) {
+        if (extendedBy.compositionKind == CompositionKind.AND) {
+          // TODO: Allow XOR here? Since if all are primitive, that means they are the same
+          const primitiveTypes: OmniPrimitiveType[] = [];
+          const uniquePrimitiveKinds = new Set<OmniPrimitiveKind>();
+          const otherTypes: OmniType[] = [];
+          const objectTypes: OmniObjectType[] = [];
 
-        for (const superType of extendedBy.types) {
+          for (const superType of extendedBy.types) {
 
-          if (superType.kind == OmniTypeKind.PRIMITIVE) {
-            primitiveTypes.push(superType);
-            uniquePrimitiveKinds.add(superType.primitiveKind);
-          } else {
-            otherTypes.push(superType);
-            if (superType.kind == OmniTypeKind.OBJECT) {
-              objectTypes.push(superType);
+            if (superType.kind == OmniTypeKind.PRIMITIVE) {
+              primitiveTypes.push(superType);
+              uniquePrimitiveKinds.add(superType.primitiveKind);
+            } else {
+              otherTypes.push(superType);
+              if (superType.kind == OmniTypeKind.OBJECT) {
+                objectTypes.push(superType);
+              }
             }
           }
-        }
 
-        logger.silent(`Found ${primitiveTypes.length} - ${uniquePrimitiveKinds.size} - ${otherTypes.length} - ${objectTypes.length}`);
+          logger.silent(`Found ${primitiveTypes.length} - ${uniquePrimitiveKinds.size} - ${otherTypes.length} - ${objectTypes.length}`);
 
-        if (otherTypes.length == 0 && primitiveTypes.length > 0 && uniquePrimitiveKinds.size == 1) {
+          if (otherTypes.length == 0 && primitiveTypes.length > 0 && uniquePrimitiveKinds.size == 1) {
 
-          let merged = {...primitiveTypes[0]};
-          for (let i = 1; i < primitiveTypes.length; i++) {
-            logger.info(`Merging ${OmniUtil.describe(primitiveTypes[i])} into ${OmniUtil.describe(merged)}`);
-            merged = OmniUtil.mergeType(primitiveTypes[i], merged);
+            let merged = {...primitiveTypes[0]};
+            for (let i = 1; i < primitiveTypes.length; i++) {
+              logger.info(`Merging ${OmniUtil.describe(primitiveTypes[i])} into ${OmniUtil.describe(merged)}`);
+              merged = OmniUtil.mergeType(primitiveTypes[i], merged);
+            }
+
+            merged.description = schema.description || merged.description || `Hmmm`;
+            merged.title = schema.title || merged.title;
+
+            logger.info(`Figured out that 'type'-less ${schema.$id} is a ${OmniUtil.describe(merged)} based on super-type(s)`);
+
+            return merged;
+          } else if (objectTypes.length > 0) {
+
+            // The schema does not have a 'type' -- but at least one of the AND types is an object, so then the whole thing is an object.
+            // So we will not return it as a non-object and let it be handled by the object code.
+            return undefined;
           }
+        } else if (extendedBy.compositionKind == CompositionKind.OR) {
 
-          merged.description = schema.description || merged.description || `Hmmm`;
-          merged.title = schema.title || merged.title;
-
-          logger.info(`Figured out that 'type'-less ${schema.$id} is a ${OmniUtil.describe(merged)} based on super-type(s)`);
-
-          return merged;
-        } else if (objectTypes.length > 0) {
-
-          // The schema does not have a 'type' -- but at least one of the AND types is an object, so then the whole thing is an object.
-          // So we will not return it as a non-object and let it be handled by the object code.
-          return undefined;
+          if (!this.hasDirectContent(schema)) {
+            return extendedBy;
+          }
         }
       }
 
-      if (extendedBy.kind == OmniTypeKind.PRIMITIVE || extendedBy.kind == OmniTypeKind.ARRAY) {
+      if (extendedBy.kind == OmniTypeKind.PRIMITIVE || extendedBy.kind == OmniTypeKind.ARRAY || extendedBy.kind == OmniTypeKind.ENUM) {
         if (this.hasDirectContent(schema)) {
-          return this.createDecoratedType(schema, extendedBy);
+          return this.createDecoratedType(schema, extendedBy, name);
         } else {
           return extendedBy;
         }
@@ -515,7 +521,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   private hasDirectContent(schema: AnyJSONSchema, ignoreIf?: Record<string, unknown>): boolean {
 
-    const disregardedProperties: string[] = ['allOf', 'oneOf', 'anyOf', 'oneOf', 'not', '$id', 'type'] satisfies (keyof AnyJSONSchema)[];
+    const disregardedProperties: string[] = ['allOf', 'oneOf', 'anyOf', 'oneOf', 'not', '$id', 'type', 'default'] satisfies (keyof AnyJSONSchema)[];
     const propertiesCount = Object.keys(schema).filter(schemaKey => {
       if (disregardedProperties.includes(schemaKey)) {
         return false;
@@ -536,13 +542,14 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return propertiesCount.length > 0;
   }
 
-  private createDecoratedType(schema: AnyJSONSchema, inner: OmniType): OmniDecoratingType {
+  private createDecoratedType(schema: AnyJSONSchema, inner: OmniType, name: TypeName): OmniDecoratingType {
 
     return {
       kind: OmniTypeKind.DECORATING,
       of: inner,
       description: schema.description,
       title: schema.title,
+      name: name,
     };
   }
 
@@ -554,8 +561,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   ): OmniProperty {
 
     // The type name will be replaced if the schema is a $ref to another type.
-    const schema = this.unwrapJsonSchema(schemaOrRef);
-    const resolvedSchema = this._refResolver.resolve(schema);
+    // const schema = this.unwrapJsonSchema(schemaOrRef);
+    const resolvedSchema = this._refResolver.resolve(schemaOrRef);
 
     const preferredName = this.getPreferredName(
       resolvedSchema,
@@ -568,26 +575,33 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       },
     );
 
-    const propertyType = this.jsonSchemaToType(preferredName, resolvedSchema, schemaOwner);
+    let propertyType: SchemaToTypeResult;
+    try {
+      propertyType = this.jsonSchemaToType(preferredName, resolvedSchema, schemaOwner);
+    } catch (ex) {
+      throw new Error(`Could not convert json schema of property '${propertyName}' from ${schemaOwner.$id} to omni type: ${ex}`, {cause: ex});
+    }
 
     const property: OmniProperty = {
       name: propertyName,
-      fieldName: this.getVendorExtension(schema, 'field-name'),
-      propertyName: this.getVendorExtension(schema, 'property-name'),
+      fieldName: this.getVendorExtension(resolvedSchema, 'field-name'),
+      propertyName: this.getVendorExtension(resolvedSchema, 'property-name'),
       type: propertyType.type,
       owner: owner,
-      description: schema.description,
+      description: this.getSchemaProperty(resolvedSchema, obj => obj.description),
     };
 
-    if ('readOnly' in schema && schema.readOnly !== undefined && typeof schema.readOnly == 'boolean' && schema.readOnly) {
-      property.readOnly = true;
+    if (typeof resolvedSchema == 'object') {
+      if ('readOnly' in resolvedSchema && resolvedSchema.readOnly !== undefined && resolvedSchema.readOnly) {
+        property.readOnly = true;
+      }
+
+      if ('writeOnly' in resolvedSchema && resolvedSchema.writeOnly !== undefined && resolvedSchema.writeOnly) {
+        property.writeOnly = true;
+      }
     }
 
-    if ('writeOnly' in schema && schema.writeOnly !== undefined && typeof schema.writeOnly == 'boolean' && schema.writeOnly) {
-      property.writeOnly = true;
-    }
-
-    if (this.vendorExtensionToBool(schema, 'x-abstract', false)) {
+    if (this.vendorExtensionToBool(resolvedSchema, 'x-abstract', false)) {
       property.abstract = true;
     }
 
@@ -598,8 +612,17 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return property;
   }
 
+  private getSchemaProperty<R>(def: AnyJsonDefinition, mapper: (obj: AnyJSONSchema) => R): R | undefined {
+
+    if (typeof def == 'boolean') {
+      return undefined;
+    }
+
+    return mapper(def);
+  }
+
   private getPreferredName(
-    schema: AnyJSONSchema,
+    schema: AnyJsonDefinition,
     dereferenced?: unknown,
     fallback?: TypeName | undefined,
   ): TypeName {
@@ -616,10 +639,10 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return names;
   }
 
-  public getFallbackNamesOfJsonSchemaType(schema: AnyJSONSchema): TypeName[] {
+  public getFallbackNamesOfJsonSchemaType(schema: AnyJsonDefinition): TypeName[] {
 
     const names: TypeName[] = [];
-    if (schema.type) {
+    if (typeof schema == 'object' && schema.type) {
       if (Array.isArray(schema.type)) {
         names.push(Case.pascal(schema.type.join('_')));
       } else {
@@ -632,18 +655,19 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return names;
   }
 
-  public getMostPreferredNames(dereferenced: unknown, schema: AnyJSONSchema): TypeName[] {
+  public getMostPreferredNames(dereferenced: unknown, schema: AnyJsonDefinition): TypeName[] {
     const names: TypeName[] = [];
     // if (dereferenced.hash) {
     //   names.push(dereferenced.hash);
     // }
+    if (typeof schema == 'object') {
+      if (schema.$id) {
+        names.push(schema.$id);
+      }
 
-    if (schema.$id) {
-      names.push(schema.$id);
-    }
-
-    if (schema.title) {
-      names.push(schema.title);
+      if (schema.title) {
+        names.push(schema.title);
+      }
     }
 
     return names;
@@ -660,7 +684,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return false;
   }
 
-  private getVendorExtension<R>(obj: AnyJSONSchema, key: string): R | undefined {
+  private getVendorExtension<R>(obj: AnyJsonDefinition, key: string): R | undefined {
+
+    if (typeof obj !== 'object') {
+      return undefined;
+    }
 
     if ('obj' in obj && 'root' in obj) {
       throw new Error(`You seem to have given a dereference object, when you should give the inner object.`);
@@ -675,20 +703,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return value as R;
   }
 
-  public unwrapJsonSchema(schema: AnyJsonDefinition): Exclude<typeof schema, boolean> {
-
-    if (typeof schema == 'boolean') {
-      if (schema) {
-        return {};
-        // return {obj: {}, root: schema.root, hash: schema.hash, mix: schema.mix};
-      } else {
-        return {not: {}};
-        // return {obj: {not: {}}, root: schema.root, hash: schema.hash, mix: schema.mix};
-      }
-    } else {
-      return schema;
-    }
-  }
+  private static _uniqueCounter = 0;
 
   private typeAndFormatToPrimitiveKind(lcType: string, lcFormat: string): OmniPrimitiveKind {
 
@@ -859,7 +874,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   ): OmniType | undefined {
 
     if (typeof schema == 'boolean') {
-      throw new Error(`Not allowed to be a boolean`);
+      return undefined;
     }
 
     const compositionsOneOfOr: OmniType[] = [];
@@ -869,7 +884,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     if (schema.oneOf) {
       for (const entry of schema.oneOf) {
-        const resolved = this.unwrapJsonSchema(this._refResolver.resolve(entry));
+        const resolved = this._refResolver.resolve(entry);
         const oneOfTitle = this.getPreferredName(resolved, resolved, undefined);
         compositionsOneOfOr.push(this.jsonSchemaToType(oneOfTitle, resolved).type);
       }
@@ -877,14 +892,14 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     if (schema.allOf) {
       for (const entry of schema.allOf) {
-        const subType = this.jsonSchemaToType(name, this._refResolver.resolve(this.unwrapJsonSchema(entry)));
+        const subType = this.jsonSchemaToType(name, this._refResolver.resolve(entry));
         compositionsAllOfAnd.push(subType.type);
       }
     }
 
     if (schema.anyOf) {
       for (const entry of schema.anyOf) {
-        const subType = this.jsonSchemaToType(name, this._refResolver.resolve(this.unwrapJsonSchema(entry)));
+        const subType = this.jsonSchemaToType(name, this._refResolver.resolve(entry));
         compositionsAnyOfOr.push(subType.type);
       }
     }
@@ -892,7 +907,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // TODO: This is wrong -- it needs to be done in order
     if (schema.not && typeof schema.not !== 'boolean') {
 
-      const resolvedNot = this._refResolver.resolve(this.unwrapJsonSchema(schema.not));
+      const resolvedNot = this._refResolver.resolve(schema.not);
       compositionsNot = (this.jsonSchemaToType(name, resolvedNot)).type;
     }
 
@@ -994,7 +1009,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       // TODO: If if is "oneOf" and no other, then those should become SUB-TYPES! Make sure it is so!
       for (const subSchema of subSchemas) {
 
-        const deref = this._refResolver.resolve(this.unwrapJsonSchema(subSchema));
+        const deref = this._refResolver.resolve(subSchema);
         const id = this.getId(deref);
         if (!id) {
           continue;
@@ -1057,7 +1072,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       throw new Error(`The schema object should not be able to be a boolean`);
     }
 
-    if (!items) {
+    if (!items || typeof items == 'boolean') {
       // No items, so the schema for the array items is undefined.
       return {
         kind: OmniTypeKind.ARRAY,
@@ -1069,8 +1084,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         },
       };
 
-    } else if (typeof items == 'boolean') {
-      throw new Error(`Do not know how to handle a boolean items '${name ? Naming.unwrap(name) : ''}'`);
     } else if (Array.isArray(items)) {
 
       // TODO: We should be introducing interfaces that describe the common denominators between the different items?
@@ -1078,7 +1091,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       // TODO: What do we do here if the type can be inlined? Just ignore I guess?
 
       const staticArrayTypes = items.map(it => {
-        const derefArrayItem = this._refResolver.resolve(this.unwrapJsonSchema(it));
+        const derefArrayItem = this._refResolver.resolve(it);
         // NOTE: The name below is probably extremely wrong. Fix once we notice a problem.
         return this.jsonSchemaToType(this.getId(derefArrayItem) || 'UnknownArrayItem', derefArrayItem);
       });
@@ -1126,7 +1139,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     // The type is a JSONSchema7, though the type system seems unsure of that fact.
-    const derefJsonSchema = this._refResolver.resolve(this.unwrapJsonSchema(schema));
+    const derefJsonSchema = this._refResolver.resolve(schema);
     if (!derefJsonSchema.$id) {
       derefJsonSchema.$id = name;
     }

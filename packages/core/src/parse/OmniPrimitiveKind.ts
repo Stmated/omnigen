@@ -1,5 +1,8 @@
 import {ToEnum} from '../options';
 
+/**
+ * TODO: Remove this and just move it into the regular OmniTypeKind -- it is not a necessary distinction to move these out
+ */
 export const OmniPrimitiveKind = {
   NUMBER: 'NUMBER',
   INTEGER: 'INTEGER',

@@ -22,3 +22,9 @@ export interface AstNode {
   visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode>;
 }
+
+export interface RootAstNode extends AstNode {
+
+  createVisitor<R>(): AstVisitor<R>;
+  createReducer(): Reducer<AstVisitor<unknown>>;
+}

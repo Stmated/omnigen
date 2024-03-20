@@ -4,7 +4,6 @@ import {OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/core'
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {VisitorFactoryManager} from '@omnigen/core-util';
-import {DefaultJavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -37,13 +36,15 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
   transformAst(args: JavaAstTransformerArgs): void {
 
     const methodStack: MethodInfo[] = [];
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitMethodDeclaration: (node, visitor) => {
 
         // NOTE: Does not check if entering anonymous/inner/local types
         methodStack.push({declaration: node, exceptions: []});
-        DefaultJavaVisitor.visitMethodDeclaration(node, visitor);
+        defaultVisitor.visitMethodDeclaration(node, visitor);
         const info = methodStack.pop();
         if (!info || info.exceptions.length == 0) {
           return;
@@ -69,7 +70,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
 
           if (!hasException) {
 
-            node.signature.throws.children.push(new Java.RegularType(
+            node.signature.throws.children.push(new Java.EdgeType(
               {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: exception},
             ));
           }
@@ -91,7 +92,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
           }
         }
 
-        DefaultJavaVisitor.visitMethodCall(node, visitor);
+        defaultVisitor.visitMethodCall(node, visitor);
       },
     }));
   }
@@ -127,7 +128,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
 
   private resolveTargetType(exp: Java.AbstractExpression | undefined): OmniType | undefined {
 
-    if (exp instanceof Java.RegularType) {
+    if (exp instanceof Java.EdgeType) {
       return exp.omniType;
     } else if (exp instanceof Java.GenericType) {
       return exp.omniType;

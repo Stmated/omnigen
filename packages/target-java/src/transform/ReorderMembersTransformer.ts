@@ -3,15 +3,14 @@ import {AstNode} from '@omnigen/core';
 import * as Java from '../ast';
 import {ModifierType} from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
-import {DefaultJavaVisitor} from '../visit';
-
+import {AdditionalPropertiesDeclaration} from '../ast';
 
 export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
 
@@ -46,7 +45,7 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
         });
 
         // Go deeper, in case there nested types
-        DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
+        defaultVisitor.visitObjectDeclaration(node, visitor);
       },
 
       visitField: () => {},

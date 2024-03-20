@@ -37,15 +37,21 @@ export class CompositionType<T extends OmniCompositionType = OmniCompositionType
   }
 }
 
-export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Java.Identifiable {
+export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Java.Identifiable, Java.Typed {
 
   readonly name: Java.Identifier;
   readonly of: Java.TypeNode;
+  readonly modifiers?: Java.ModifierList | undefined;
 
-  constructor(identifier: Java.Identifier, of: Java.TypeNode) {
+  get omniType() {
+    return this.of.omniType;
+  }
+
+  constructor(identifier: Java.Identifier, of: Java.TypeNode, modifiers?: Java.ModifierList) {
     super();
     this.name = identifier;
     this.of = of;
+    this.modifiers = modifiers;
   }
 
   visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {

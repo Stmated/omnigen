@@ -1,7 +1,7 @@
-import {CompositionKind, OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
+import {CompositionKind, OmniPrimitiveKind, OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
-import {createJavaRenderer, Java, JavaOptions, JavaRendererOptions, JavaUtil} from '@omnigen/target-java';
+import {createJavaRenderer, Java, JavaOptions, JavaRendererOptions, JavaUtil, render} from '@omnigen/target-java';
 import {OmniUtil} from '@omnigen/core-util';
 
 export type TypeScriptRenderer = TypeScriptVisitor<string> & Renderer;
@@ -60,43 +60,60 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
       return `${annotations}${identifier}: ${type}`;
     },
 
-    visitMethodDeclarationSignature: (node, visitor) => {
-      const comments = node.comments ? `${node.comments.visit(visitor)}\n` : '';
-      const annotations = (node.annotations && node.annotations.children.length > 0) ? `${node.annotations.visit(visitor)}\n` : '';
+    visitMethodDeclarationSignature: (n, v) => {
+      const comments = n.comments ? `${n.comments.visit(v)}\n` : '';
+      const annotations = (n.annotations && n.annotations.children.length > 0) ? `${n.annotations.visit(v)}\n` : '';
 
-      const actualModifiers = node.modifiers.children
-        .map(it => it.type);
-
-      const modifiers = node.modifiers.visit(visitor);
-      const type = node.type.visit(visitor);
-      const name = node.identifier.visit(visitor);
-      const parameters = node.parameters ? node.parameters.visit(visitor) : '';
-
-      // TODO: Add "throws" as comment? How do we make this more genralized?
-      const throws = node.throws ? ` throws ${node.throws.visit(visitor)}` : '';
-
-      // ${throws}
+      const modifiers = n.modifiers.visit(v);
+      const type = options.explicitReturns || options.preferInterfaces ? `: ${render(n.type, v)}` : '';
+      const name = n.identifier.visit(v);
+      const parameters = n.parameters ? n.parameters.visit(v) : '';
 
       return [
         comments,
         annotations,
-        `${modifiers} ${name}(${parameters}): ${type}`,
+        `${modifiers} ${name}(${parameters})${type}`,
       ];
     },
 
+    visitFieldBackedGetter: (n, v) => {
+
+      const body = n.body ? render(n.body, v) : '';
+      return `${render(n.signature.modifiers, v)} get ${n.field.identifier.value}() {\n${body}}\n`;
+    },
+
+    visitFieldBackedSetter: (n, v) => {
+
+      const body = n.body ? render(n.body, v) : '';
+      const parameters = n.signature.parameters ? render(n.signature.parameters, v) : '/*ERROR: No setter parameters found/*';
+      return `${n.signature.modifiers.visit(v)} set ${n.field.identifier.value}(${parameters}) {\n${body}}\n`;
+    },
+
     visitPackage: () => undefined,
-    visitImportStatement: (node, visitor) => {
+    visitImportStatement: n => {
 
-      // TODO: This is all wrong, but just done this way as a starter
-      const importName = node.type.getImportName();
-      if (!importName) {
-        throw new Error(`Import name is not set for '${OmniUtil.describe(node.type.omniType)}'`);
+      // TODO: This is all wrong, but just done this way as a starter.
+      //        There needs to specific Java and TypeScript import AST Nodes -- which only inherit from a common `ImportStatement` interface, which then handle the specifics
+      //        So the `visitImportStatement` here and in `JavaRenderer` will be different implementation types.
+      //        So there is also a need for separate `PackageResolverAstTransformer` -- but likely a lot of that code can be reused.
+
+      if (n.type instanceof Java.EdgeType) {
+        const importName = n.type.getImportName();
+        if (!importName) {
+          throw new Error(`Import name is not set for '${OmniUtil.describe(n.type.omniType)}'`);
+        }
+
+        const parts = importName.split('.');
+        const packageName = parts.slice(0, -1).join('/');
+        const objectName = parts[parts.length - 1];
+        const fileExt = options.importWithExtension ? `.${options.importWithExtension}` : '';
+        const fileName = packageName ? `/${objectName}` : `${objectName}`;
+
+        return `import { ${objectName} } from './${packageName}${fileName}${fileExt}';`;
+      } else {
+
+        return `// ERROR: How should ${OmniUtil.describe(n.type.omniType)} be imported?`;
       }
-
-      const parts = importName.split('.');
-      const packageName = parts.slice(0, -1).join('/');
-
-      return `import {${parts[parts.length - 1]}} from '${packageName}';`;
     },
 
     visitModifier: (node, visitor) => {
@@ -114,24 +131,33 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
       return parentRenderer.visitModifier(node, visitor);
     },
 
-    visitRegularType: (node, visitor) => {
+    visitEdgeType: (n, v) => {
 
-      if (node.omniType.kind == OmniTypeKind.UNKNOWN) {
-        if (node.omniType.unknownKind == UnknownKind.WILDCARD) {
-          return 'unknown';
-        }
-        if (node.omniType.unknownKind == UnknownKind.MUTABLE_OBJECT) {
-          return `Record<string, any>`;
-        }
-        if (node.omniType.unknownKind == UnknownKind.OBJECT) {
-          return 'object';
-        }
+      if (n.omniType.kind == OmniTypeKind.PRIMITIVE) {
+        if (n.omniType.literal) {
 
-        return 'any';
+          if (n.omniType.value === undefined) {
+            if ('value' in n.omniType) {
+              return 'undefined';
+            } else {
+              return 'void';
+            }
+          } else {
+            return new Java.Literal(n.omniType.value, n.omniType.primitiveKind).visit(v);
+          }
+        }
       }
 
-      if (node.omniType.kind == OmniTypeKind.COMPOSITION) {
-        if (node.omniType.compositionKind == CompositionKind.XOR) {
+      if (n.omniType.kind == OmniTypeKind.PRIMITIVE) {
+        if (n.omniType.primitiveKind == OmniPrimitiveKind.STRING) {
+          return 'string';
+        } else if (OmniUtil.isNumericType(n.omniType)) {
+          return 'number';
+        }
+      }
+
+      if (n.omniType.kind == OmniTypeKind.COMPOSITION) {
+        if (n.omniType.compositionKind == CompositionKind.XOR) {
 
           // TODO: This is wrong. We do not know if these are the actual names for the types. Must find the AST nodes for the types and get the local name from there!
           //        To be able to get those names as local, maybe we must add a new AST node that are for these composition types, so they can be properly represented!
@@ -139,11 +165,38 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
           //        An option for "max length" or "max entries" of a composition before an alias node is created for a type? Then the alias is used.
           //        But same thing here, we must find that node so we can use it here instead.
 
-          return node.omniType.types.map(it => JavaUtil.getName({type: it, options: options})).join(' | ');
+          return n.omniType.types.map(it => JavaUtil.getName({type: it, options: options})).join(' | ');
         }
       }
 
-      return parentRenderer.visitRegularType(node, visitor);
+      return parentRenderer.visitEdgeType(n, v);
+    },
+
+    visitArrayType: (n, v) => {
+      return `Array<${render(n.of, v)}>`;
+    },
+
+    visitWildcardType: (n, v) => {
+
+      if (n.omniType.kind == OmniTypeKind.UNKNOWN) {
+        if (n.omniType.unknownKind == UnknownKind.WILDCARD) {
+          return 'unknown';
+        }
+        if (n.omniType.unknownKind == UnknownKind.MUTABLE_OBJECT) {
+          return `Record<string, any>`;
+        }
+        if (n.omniType.unknownKind == UnknownKind.OBJECT) {
+          return 'object';
+        }
+
+        return 'any';
+      }
+
+      return parentRenderer.visitWildcardType(n, v);
+    },
+
+    visitBoundedType: (n, v) => {
+      return parentRenderer.visitBoundedType(n, v);
     },
 
     visitCompositionType: (n, v) => {
@@ -157,14 +210,26 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
           separator = '|';
           break;
         default:
-          throw new Error(`Unsupported composition kind '${n.omniType.compositionKind} for TS composition node`);
+          throw new Error(`Unsupported composition kind '${n.omniType.compositionKind}' for TS composition node`);
       }
 
       return n.typeNodes.map(it => it.visit(v)).join(` ${separator} `);
     },
 
     visitTypeAliasDeclaration: (n, v) => {
-      return `const type ${n.name.visit(v)} = ${n.of.visit(v)};\n`;
+
+      const modifiers = n.modifiers ? n.modifiers.visit(v) : `let`;
+
+      return `${modifiers} type ${n.name.visit(v)} = ${n.of.visit(v)};\n`;
+    },
+
+    visitLiteral: (n, v) => {
+
+      if (n.primitiveKind == OmniPrimitiveKind.STRING && options.preferSingleQuoteStrings) {
+        return `'${n.value}'`;
+      } else {
+        return parentRenderer.visitLiteral(n, v);
+      }
     },
   };
 };

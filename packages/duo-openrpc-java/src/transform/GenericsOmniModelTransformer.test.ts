@@ -87,22 +87,10 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    // const realJavaOptions = await OptionsUtil.updateOptions(
-    //   DEFAULT_TEST_JAVA_OPTIONS,
-    //   undefined,
-    //   JAVA_OPTIONS_RESOLVER,
-    // );
-
-    const realParserOpt = DEFAULT_PARSER_OPTIONS;
-    const realTransformOpt = DEFAULT_MODEL_TRANSFORM_OPTIONS;
-
-    // const realParserOpt = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    // const realTransformOpt = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
-
     // TODO: Will not work -- will need to call the 2nd pass
     transformer.transformModel({
       model: model,
-      options: {...realParserOpt, ...realTransformOpt},
+      options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS},
     });
 
     expect(model.types).toHaveLength(3);
@@ -134,9 +122,9 @@ describe('Test CompositionDependencyUtil', () => {
     expect(model.types[1].extendedBy.targetIdentifiers[0].type.primitiveKind).toEqual(OmniPrimitiveKind.INTEGER);
     expect(model.types[2].extendedBy.targetIdentifiers[0].type.primitiveKind).toEqual(OmniPrimitiveKind.DOUBLE);
 
-    if (!model.types[0].sourceIdentifiers[0].lowerBound) throw new Error(`No lower bound`);
-    if (model.types[0].sourceIdentifiers[0].lowerBound.kind != OmniTypeKind.PRIMITIVE) throw new Error(`Wrong kind`);
+    if (!model.types[0].sourceIdentifiers[0].upperBound) throw new Error(`No upper bound`);
+    if (model.types[0].sourceIdentifiers[0].upperBound.kind != OmniTypeKind.PRIMITIVE) throw new Error(`Wrong kind`);
 
-    expect(model.types[0].sourceIdentifiers[0].lowerBound.primitiveKind).toEqual(OmniPrimitiveKind.DOUBLE);
+    expect(model.types[0].sourceIdentifiers[0].upperBound.primitiveKind).toEqual(OmniPrimitiveKind.DOUBLE);
   });
 });

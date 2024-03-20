@@ -16,13 +16,13 @@ export class Util {
       --end;
     }
 
-    return (start > 0 || end < str.length) ? str.substring(start, end): str;
+    return (start > 0 || end < str.length) ? str.substring(start, end) : str;
   }
 
   public static getShallowPayloadString<T>(origin: T) {
 
     return JSON.stringify(origin, (key, value) => {
-      if (value && typeof value==='object' && key) {
+      if (value && typeof value === 'object' && key) {
         return '[...]';
       }
       return value;
@@ -36,7 +36,7 @@ export class Util {
 
     let path: string | undefined = __dirname;
     path = findUp.findUpSync('turbo.json', {cwd: path});
-    path = path ? nodePath.dirname(path): undefined;
+    path = path ? nodePath.dirname(path) : undefined;
 
     if (!path) {
       return relative;

@@ -8,12 +8,12 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class AbortData {
   private final String orderid;
-  private final DescriptiveStringBoolean systemInitiated;
+  private final StringBoolean systemInitiated;
   private final StringBoolean userInitiated;
   public AbortData(
     @JsonProperty(value = "orderid", required = true) String orderid,
     @JsonProperty("user_initiated") StringBoolean userInitiated,
-    @JsonProperty("system_initiated") DescriptiveStringBoolean systemInitiated
+    @JsonProperty("system_initiated") StringBoolean systemInitiated
   ) {
     this.orderid = orderid;
     this.userInitiated = userInitiated;
@@ -29,7 +29,7 @@ public class AbortData {
    * Some descriptive description.
    */
   @JsonProperty("system_initiated")
-  public DescriptiveStringBoolean getSystemInitiated() {
+  public StringBoolean getSystemInitiated() {
     return this.systemInitiated;
   }
 

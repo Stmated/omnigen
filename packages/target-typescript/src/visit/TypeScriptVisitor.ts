@@ -18,7 +18,10 @@ export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R
       return node.typeNodes.map(it => it.visit(visitor));
     },
     visitTypeAliasDeclaration: (node, visitor) => {
-      return node.of.visit(visitor);
+      return [
+        node.modifiers?.visit(visitor),
+        node.of.visit(visitor),
+      ];
     },
   };
 };

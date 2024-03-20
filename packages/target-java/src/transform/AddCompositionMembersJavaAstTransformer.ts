@@ -27,13 +27,13 @@ import {
   Literal, MethodCall,
   MethodDeclaration,
   MethodDeclarationSignature, Modifier, ModifierList, ModifierType, Parameter,
-  ParameterList, Predicate, RegularType, ReturnStatement, Statement, TokenType,
+  ParameterList, Predicate, EdgeType, ReturnStatement, Statement, TokenKind,
 } from '../ast';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAstUtils} from './JavaAstUtils';
 import {JavaOptions, SerializationLibrary} from '../options';
 import {JACKSON_JSON_CREATOR, JACKSON_JSON_VALUE, JACKSON_OBJECT_MAPPER} from './JacksonJavaAstTransformer';
-import {DefaultJavaVisitor, JAVA_FEATURES} from '../index.ts';
+import {JAVA_FEATURES} from '../index.ts';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -47,7 +47,8 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
 
@@ -62,7 +63,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         }
 
         // Then keep searching deeper, into nested types
-        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
+        defaultVisitor.visitClassDeclaration(node, visitor);
       },
     }));
   }
@@ -164,7 +165,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     const fieldAnnotations = new AnnotationList();
     if (options.serializationLibrary == SerializationLibrary.JACKSON) {
       fieldAnnotations.children.push(new Annotation(
-        new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
+        new EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
       ));
     }
 
@@ -173,7 +174,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     };
 
     const untypedField = new Field(
-      new RegularType(untypedFieldType),
+      new EdgeType(untypedFieldType),
       new Identifier('_raw', 'raw'),
       new ModifierList(new Modifier(ModifierType.PRIVATE), new Modifier(ModifierType.FINAL)),
       undefined,
@@ -259,7 +260,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     const checkMethods: Java.MethodDeclaration[] = [];
 
     const fieldValueIdentifier = new Java.Identifier(`_value`);
-    const fieldValueType = new Java.RegularType({
+    const fieldValueType = new Java.EdgeType({
       kind: OmniTypeKind.UNKNOWN,
       unknownKind: UnknownKind.OBJECT,
     });
@@ -268,7 +269,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     if (options.serializationLibrary == SerializationLibrary.JACKSON) {
       fieldAnnotations.children.push(new Java.Annotation(
         // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
-        new Java.RegularType({
+        new Java.EdgeType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: JACKSON_JSON_VALUE,
         }),
@@ -460,7 +461,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
       singletonMethodAnnotations.children.push(new Java.Annotation(
         // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type
-        new Java.RegularType({
+        new Java.EdgeType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: JACKSON_JSON_CREATOR,
         }),
@@ -490,7 +491,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
                     new Java.DeclarationReference(singletonFactoryDeclaration),
                   ),
                 ),
-                new Java.JavaToken(Java.TokenType.EQUALS),
+                new Java.JavaToken(Java.TokenKind.EQUALS),
                 new Java.Literal(true),
               ),
               new Java.Block(
@@ -606,7 +607,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
       const binaryExpression = new Java.BinaryExpression(
         new Java.SelfReference(),
-        new Java.JavaToken(Java.TokenType.EQUALS),
+        new Java.JavaToken(Java.TokenKind.EQUALS),
         new Java.StaticMemberReference(
           new Java.ClassName(selfType),
           element.identifier,
@@ -614,7 +615,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       );
 
       if (knownBinary) {
-        knownBinary = new Java.BinaryExpression(knownBinary, new Java.JavaToken(Java.TokenType.OR), binaryExpression);
+        knownBinary = new Java.BinaryExpression(knownBinary, new Java.JavaToken(Java.TokenKind.OR), binaryExpression);
       } else {
         knownBinary = binaryExpression;
       }
@@ -671,12 +672,12 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       new Block(
         // First check if we have already cached the result.
         new IfStatement(
-          new Predicate(typedFieldReference, TokenType.NOT_EQUALS, new Literal(null)),
+          new Predicate(typedFieldReference, TokenKind.NOT_EQUALS, new Literal(null)),
           new Block(new Statement(new ReturnStatement(typedFieldReference))),
         ),
         // If not, then try to convert the raw value into the target type and cache it.
         new Statement(new ReturnStatement(
-          new BinaryExpression(typedFieldReference, new JavaToken(TokenType.ASSIGN), conversionExpression),
+          new BinaryExpression(typedFieldReference, new JavaToken(TokenKind.ASSIGN), conversionExpression),
         )),
       ),
     );
@@ -691,7 +692,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
     const objectMapperReference = new Identifier('objectMapper');
     const objectMapperDeclaration = new Parameter(
-      new RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_OBJECT_MAPPER}),
+      new EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_OBJECT_MAPPER}),
       objectMapperReference,
     );
 
@@ -713,7 +714,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
     const targetClass = new GenericType(
       type,
-      new RegularType(type),
+      new EdgeType(type),
       [
         JavaAstUtils.createTypeNode(JavaUtil.getGenericCompatibleType(untypedField.type.omniType)),
         JavaAstUtils.createTypeNode(JavaUtil.getGenericCompatibleType(typedField.type.omniType)),

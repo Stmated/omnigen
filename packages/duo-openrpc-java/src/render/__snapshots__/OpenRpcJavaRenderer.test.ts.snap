@@ -33,7 +33,6 @@ exports[`Java Rendering > Enum 1`] = `
   "ListThingsResponse.java",
   "Species.java",
   "Tag.java",
-  "TagCopy.java",
   "TagOrSpeciesOrString.java",
   "Thing.java",
   "ThingType.java",

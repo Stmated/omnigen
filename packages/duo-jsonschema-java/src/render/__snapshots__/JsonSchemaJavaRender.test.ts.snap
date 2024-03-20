@@ -5,8 +5,6 @@ exports[`jsonschema-java-render > class_union 1`] = `
   "AbortData.java",
   "Data.java",
   "DefaultData.java",
-  "DefaultDataInlineResult.java",
-  "DescriptiveStringBoolean.java",
   "StringBoolean.java",
 ]
 `;
@@ -26,7 +24,6 @@ exports[`jsonschema-java-render > discriminator 1`] = `
 
 exports[`jsonschema-java-render > enum_inheritance 1`] = `
 [
-  "InheritingKind1.java",
   "Kind1.java",
 ]
 `;
@@ -41,7 +38,6 @@ exports[`jsonschema-java-render > enum_string_composition 1`] = `
 exports[`jsonschema-java-render > inline_boolean 1`] = `
 [
   "AccountNotificationData.java",
-  "AccountNotificationDataVerified.java",
   "StringBoolean.java",
 ]
 `;

@@ -3,13 +3,13 @@ import {OmniType, OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {AdditionalPropertiesDeclaration} from '../ast/AdditionalPropertiesDeclaration.ts';
-import {DefaultJavaVisitor} from '../visit';
+import {AdditionalPropertiesDeclaration} from '../ast';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): void {
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
 
@@ -38,7 +38,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
         }
 
         // Then keep searching deeper, into nested types
-        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
+        defaultVisitor.visitClassDeclaration(node, visitor);
       },
     }));
   }

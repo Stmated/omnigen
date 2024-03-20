@@ -1,7 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
   AstNode,
-  CompositionKind,
+  CompositionKind, OmniDecoratingType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
@@ -48,20 +48,20 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       }
 
       // NOTE: Check if wrapped type has a name and resolve/change it too?
-      const unwrappedType = OmniUtil.getUnwrappedType(type);
-      if ('name' in unwrappedType) {
+      // const unwrappedType = OmniUtil.getUnwrappedType(type);
+      if ('name' in type) {
         namePairs.push({
-          owner: unwrappedType,
-          name: unwrappedType.name,
+          owner: type,
+          name: type.name,
         });
       }
     }
 
     // TODO: This sorting should probably be more general and prefer Object > Interface > Composition
     namePairs.sort((a, b) => {
-      if (a.owner.kind == 'COMPOSITION' && b.owner.kind != 'COMPOSITION') {
+      if (a.owner.kind == OmniTypeKind.COMPOSITION && b.owner.kind != OmniTypeKind.COMPOSITION) {
         return 1;
-      } else if (a.owner.kind != 'COMPOSITION' && b.owner.kind == 'COMPOSITION') {
+      } else if (a.owner.kind != OmniTypeKind.COMPOSITION && b.owner.kind == OmniTypeKind.COMPOSITION) {
         return -1;
       } else {
         return 0;
@@ -98,11 +98,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
   private transform(model: OmniModel, root: JavaAstRootNode, options: JavaAndTargetOptions, type: OmniType, isEdgeType: boolean): AstNode | undefined {
 
-    if (type.kind == OmniTypeKind.ARRAY) {
-
-      // Is there something we should do here?
-
-    } else if (type.kind == OmniTypeKind.ENUM) {
+    if (type.kind == OmniTypeKind.ENUM) {
       return this.addEnum(type, undefined, root, options);
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
@@ -132,10 +128,6 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
       return this.transformSubType(model, type.of, type, options, root, type.sourceIdentifiers);
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-
-      // TODO: Not generic enough -- does not cover situation where generics are disabled! Need to find that this composition should become a type!
-      //       Should we just always add composition types
-
       for (const targetIdentifier of type.targetIdentifiers) {
         if (targetIdentifier.type.kind == OmniTypeKind.COMPOSITION && targetIdentifier.type.compositionKind != CompositionKind.XOR) {
 
@@ -182,7 +174,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     }
 
     const enumDeclaration = new Java.EnumDeclaration(
-      new Java.RegularType(type),
+      new Java.EdgeType(type),
       new Java.Identifier(JavaUtil.getClassName(originalType || type, options)),
       body,
     );
@@ -216,7 +208,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
         primitiveKind: type.primitiveKind,
       };
 
-      const fieldType = new Java.RegularType(itemType);
+      const fieldType = new Java.EdgeType(itemType);
       const fieldIdentifier = new Java.Identifier('value');
       const field = new Java.Field(
         fieldType,
@@ -353,15 +345,15 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
   ): Java.AbstractObjectDeclaration {
 
     const javaClassName = JavaUtil.getClassName(originalType || type, options);
-    const javaType = new Java.RegularType(type);
+    const javaType = new Java.EdgeType(type);
 
     if (genericSourceIdentifiers) {
 
       const genericSourceArgExpressions = genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
         new Java.Identifier(it.placeholderName),
         it,
-        it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
         it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
+        it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
       ));
 
       return new Java.ClassDeclaration(
@@ -381,12 +373,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       }
     }
 
-    return new Java.ClassDeclaration(
-      javaType,
-      new Java.Identifier(javaClassName),
-      body,
-      modifiers,
-    );
+    return new Java.ClassDeclaration(javaType, new Java.Identifier(javaClassName), body, modifiers);
   }
 
   /**

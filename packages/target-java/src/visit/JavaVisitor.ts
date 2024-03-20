@@ -41,8 +41,10 @@ export const createJavaFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisito
 
 export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
 
-  visitRegularType: JavaVisitFn<Java.RegularType, R>;
+  visitEdgeType: JavaVisitFn<Java.EdgeType, R>;
   visitWildcardType: JavaVisitFn<Java.WildcardType, R>;
+  visitBoundedType: JavaVisitFn<Java.BoundedType, R>;
+  visitArrayType: JavaVisitFn<Java.ArrayType, R>;
   visitGenericType: JavaVisitFn<Java.GenericType, R>;
   visitIdentifier: JavaVisitFn<Java.Identifier, R>;
   visitToken: JavaVisitFn<Java.JavaToken, R>;
@@ -103,7 +105,6 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitAdditionalPropertiesDeclaration: JavaVisitFn<Java.AdditionalPropertiesDeclaration, R>;
   visitStatement: JavaVisitFn<Java.Statement, R>;
   visitSuperConstructorCall: JavaVisitFn<Java.SuperConstructorCall, R>;
-  // visitRuntimeTypeMapping: JavaVisitFn<RuntimeTypeMapping, R>;
   visitClassName: JavaVisitFn<Java.ClassName, R>;
   visitClassReference: JavaVisitFn<Java.ClassReference, R>;
   visitArrayInitializer: JavaVisitFn<Java.ArrayInitializer<Java.AbstractJavaNode>, R>;
@@ -128,8 +129,10 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
 
   return {
     ...createJavaFreeTextVisitor<R>(undefined, noop),
-    visitRegularType: () => noop,
-    visitWildcardType: (node, visitor) => node.lowerBound?.visit(visitor),
+    visitEdgeType: () => noop,
+    visitWildcardType: () => noop,
+    visitBoundedType: (node, visitor) => [node.type.visit(visitor), node.lowerBound?.visit(visitor), node.upperBound?.visit(visitor)],
+    visitArrayType: (node, visitor) => node.of.visit(visitor),
     visitGenericType: (node, visitor) => [
       node.baseType.visit(visitor),
       node.genericArguments.map(it => it.visit(visitor)),

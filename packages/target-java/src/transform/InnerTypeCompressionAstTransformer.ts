@@ -8,7 +8,6 @@ import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaUtil} from '../util';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {DefaultJavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -16,7 +15,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    if (!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes || !args.features.nestedDeclarations) {
+    if ((!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes) || !args.features.nestedDeclarations) {
 
       // The option for compressing types is disabled.
       return;
@@ -28,7 +27,6 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     this.gatherTypeMappings(objectDecUsedInTypes, typeToUnit, typeToObjectDec, args.root, args.options);
 
     const typeUsedInCus = this.flipMultiMap(objectDecUsedInTypes);
-    logger.info(typeUsedInCus);
 
     for (const [type, usedIn] of typeUsedInCus.entries()) {
 
@@ -106,14 +104,16 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
     const cuInfoStack: Java.CompilationUnit[] = [];
     const objectDecStack: Java.AbstractObjectDeclaration[] = [];
-    const visitor = VisitorFactoryManager.create(DefaultJavaVisitor, {
+
+    const defaultVisitor = root.createVisitor();
+    const visitor = VisitorFactoryManager.create(defaultVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
         try {
           cuInfoStack.push(node);
         } finally {
-          DefaultJavaVisitor.visitCompilationUnit(node, visitor);
+          defaultVisitor.visitCompilationUnit(node, visitor);
           cuInfoStack.pop();
         }
       },
@@ -129,7 +129,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
         try {
           objectDecStack.push(node);
-          DefaultJavaVisitor.visitObjectDeclaration(node, visitor);
+          defaultVisitor.visitObjectDeclaration(node, visitor);
         } finally {
           objectDecStack.pop();
         }
@@ -141,7 +141,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       visitFreeTextMethodLink: () => {},
       visitFreeTextPropertyLink: () => {},
 
-      visitRegularType: node => {
+      visitEdgeType: node => {
 
         for (const usedType of InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(node.omniType)) {
 

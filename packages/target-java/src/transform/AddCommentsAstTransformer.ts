@@ -14,7 +14,6 @@ import * as Java from '../ast';
 import {JavaUtil} from '../util';
 import {Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
-import {DefaultJavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -22,7 +21,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    const baseVisitor = DefaultJavaVisitor;
+    const baseVisitor = args.root.createVisitor();
     args.root.visit(VisitorFactoryManager.create(baseVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
@@ -239,7 +238,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
   public static getLink(propertyOwner: OmniType, property: OmniProperty): Java.FreeTextPropertyLink {
 
     return new Java.FreeTextPropertyLink(
-      new Java.RegularType(propertyOwner, false),
+      new Java.EdgeType(propertyOwner, false),
       property,
     );
   }

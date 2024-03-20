@@ -1,6 +1,6 @@
-import {AstNode, AstVisitor, OmniPrimitiveKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
+import {AstNode, AstVisitor, OmniArrayKind, OmniPrimitiveKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
-import {GenericTypeDeclarationList, TokenType} from '../ast';
+import {GenericTypeDeclarationList, TokenKind} from '../ast';
 import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
 import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -28,33 +28,33 @@ function getModifierString(type: Java.ModifierType): 'public' | 'private' | 'pro
   }
 }
 
-function getTokenTypeString(type: Java.TokenType): string {
+function getTokenTypeString(type: Java.TokenKind): string {
   switch (type) {
-    case Java.TokenType.ASSIGN:
+    case Java.TokenKind.ASSIGN:
       return '=';
-    case Java.TokenType.EQUALS:
+    case Java.TokenKind.EQUALS:
       return '==';
-    case Java.TokenType.NOT_EQUALS:
+    case Java.TokenKind.NOT_EQUALS:
       return '!=';
-    case Java.TokenType.GT:
+    case Java.TokenKind.GT:
       return '>';
-    case Java.TokenType.LT:
+    case Java.TokenKind.LT:
       return '<';
-    case Java.TokenType.GTE:
+    case Java.TokenKind.GTE:
       return '>=';
-    case Java.TokenType.LTE:
+    case Java.TokenKind.LTE:
       return '<=';
-    case Java.TokenType.ADD:
+    case Java.TokenKind.ADD:
       return '+';
-    case Java.TokenType.SUBTRACT:
+    case Java.TokenKind.SUBTRACT:
       return '-';
-    case Java.TokenType.MULTIPLY:
+    case Java.TokenKind.MULTIPLY:
       return '*';
-    case Java.TokenType.COMMA:
+    case Java.TokenKind.COMMA:
       return ',';
-    case Java.TokenType.OR:
+    case Java.TokenKind.OR:
       return '||';
-    case Java.TokenType.AND:
+    case Java.TokenKind.AND:
       return '&&';
     default:
       throw new Error('Unknown token type');
@@ -75,7 +75,7 @@ const join = (result: VisitResult<string>): string => {
   }
 };
 
-const render = <N extends AstNode, V extends AstVisitor<string>>(node: N | undefined, visitor: V): string => {
+export const render = <N extends AstNode, V extends AstVisitor<string>>(node: N | undefined, visitor: V): string => {
   if (node === undefined) {
     return '';
   }
@@ -244,11 +244,12 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
     visitGenericTypeDeclaration(node, visitor) {
 
       let str = render(node.name, visitor);
-      if (node.lowerBounds) {
-        str += ` extends ${render(node.lowerBounds, visitor)}`;
-      }
       if (node.upperBounds) {
-        str += ` super ${render(node.upperBounds, visitor)}`;
+        str += ` extends ${render(node.upperBounds, visitor)}`;
+      }
+
+      if (node.lowerBounds) {
+        str += ` super ${render(node.lowerBounds, visitor)}`;
       }
 
       return str;
@@ -320,20 +321,18 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
     visitImportStatement: node => {
       // We always render the Fully Qualified Name here, and not the relative nor local name.
       // But we remove any generics that the import might have.
-      // const fqn = JavaUtil.getName({
-      //   type: node.type.omniType,
-      //   withSuffix: false,
-      //   withPackage: true,
-      //   implementation: node.type.implementation,
-      //   options: this.options
-      // });
 
-      const importName = node.type.getImportName();
-      if (!importName) {
-        throw new Error(`Import name is not set for '${OmniUtil.describe(node.type.omniType)}'`);
+      if (node.type instanceof Java.EdgeType) {
+
+        const importName = node.type.getImportName();
+        if (!importName) {
+          throw new Error(`Import name is not set for '${OmniUtil.describe(node.type.omniType)}'`);
+        }
+
+        return `import ${importName};`;
       }
 
-      return `import ${importName};`;
+      return undefined;
     },
 
     visitImplementsDeclaration: (node, visitor) => render(node.types, visitor),
@@ -499,34 +498,46 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
     visitArgumentList: (node, visitor) => node.children.map(it => render(it, visitor)).join(', '),
     visitTypeList: (node, visitor) => node.children.map(it => render(it, visitor)).join(', '),
 
-    visitRegularType: node => {
+    visitEdgeType: node => {
       const localName = node.getLocalName();
       if (localName) {
         return localName;
       } else {
-        throw new Error(`Local name must be set. Package name transformer not ran for ${OmniUtil.describe(node.omniType)}`);
+        const path = objectDecStack.map(it => it.name.value).join(' -> ');
+        throw new Error(`Local name must be set. Package name transformer not ran for ${OmniUtil.describe(node.omniType)} inside ${path}`);
       }
     },
 
-    visitWildcardType: (node, visitor) => {
+    visitWildcardType: n => {
 
-      const unknownKind = (node.omniType.kind == OmniTypeKind.UNKNOWN) ? node.omniType.unknownKind : undefined;
+      const unknownKind = n.omniType.unknownKind ?? options.unknownType;
+      return JavaUtil.getUnknownTypeString(unknownKind, options);
+    },
 
-      let baseString: string;
-      if (node.omniType.kind == OmniTypeKind.UNKNOWN && node.omniType.unknownKind == UnknownKind.WILDCARD) {
-        baseString = JavaUtil.getUnknownTypeString(unknownKind, options);
-      } else {
+    visitBoundedType: (n, v) => {
 
-        // The wildcard might be a generic type like ObjectNode, or a Map. Then `localName` is populated.
-        baseString = node.getLocalName() ?? JavaUtil.getUnknownTypeString(unknownKind, options);
-      }
+      const baseString = render(n.type, v);
 
-      if (node.lowerBound) {
-        const lowerBoundString = render(node.lowerBound, visitor);
-        return `${baseString} extends ${lowerBoundString}`;
+      if (n.upperBound) {
+        return `${baseString} extends ${render(n.upperBound, v)}`;
+      } else if (n.lowerBound) {
+        return `${baseString} super ${render(n.lowerBound, v)}`;
       } else {
         return `${baseString}`;
       }
+    },
+
+    visitArrayType: (node, visitor) => {
+
+      const baseTypeString = render(node.of, visitor);
+
+      if (node.omniType.arrayKind == OmniArrayKind.SET) {
+        return node.implementation ? `HashSet<${baseTypeString}>` : `Set<${baseTypeString}>`;
+      } else if (node.omniType.arrayKind == OmniArrayKind.LIST) {
+        return node.implementation ? `ArrayList<${baseTypeString}>` : `List<${baseTypeString}>`;
+      }
+
+      return `${baseTypeString}[]`;
     },
 
     visitGenericType: (node, visitor) => {
@@ -563,13 +574,13 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
     visitPredicate(node, visitor) {
 
       if (node.right instanceof Java.Literal) {
-        if (node.token.type == TokenType.EQUALS && node.right.value == true) {
+        if (node.token.type == TokenKind.EQUALS && node.right.value == true) {
           return render(node.left, visitor);
-        } else if (node.token.type == TokenType.NOT_EQUALS && node.right.value == false) {
+        } else if (node.token.type == TokenKind.NOT_EQUALS && node.right.value == false) {
           return render(node.left, visitor);
-        } else if (node.token.type == TokenType.EQUALS && node.right.value == false) {
+        } else if (node.token.type == TokenKind.EQUALS && node.right.value == false) {
           return `!${render(node.left, visitor)}`;
-        } else if (node.token.type == TokenType.NOT_EQUALS && node.right.value == true) {
+        } else if (node.token.type == TokenKind.NOT_EQUALS && node.right.value == true) {
           return `!${render(node.left, visitor)}`;
         }
       }

@@ -3,17 +3,17 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 import * as Java from '../ast';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAnnotationLibrary} from '../options';
-import {DefaultJavaVisitor} from '../visit';
 
-export class AddGeneratedAnnotationAstTransformer extends AbstractJavaAstTransformer {
+export class AddGeneratedAnnotationJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    if (!args.options.includeGeneratedAnnotation) {
+    if (!args.options.includeGenerated) {
       return;
     }
 
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitObjectDeclaration: node => {
 
@@ -34,7 +34,7 @@ export class AddGeneratedAnnotationAstTransformer extends AbstractJavaAstTransfo
         // TODO: This should not be hardcoded as 'javax', it needs to be abe to be jakarta as well -- maybe convert this into an abstract node, converted in a later stage?
         node.annotations.children.push(
           new Java.Annotation(
-            new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: annotationFqn}),
+            new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: annotationFqn}),
             new Java.AnnotationKeyValuePairList(
               new Java.AnnotationKeyValuePair(
                 new Java.Identifier('value'),

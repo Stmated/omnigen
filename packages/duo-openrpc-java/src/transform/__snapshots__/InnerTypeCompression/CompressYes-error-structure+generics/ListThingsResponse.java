@@ -9,8 +9,8 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ListThingsResponse extends JsonRpcResponse {
   private final String id;
-  private final ListThingsResponse.Thing[] result;
-  public ListThingsResponse(String id, ListThingsResponse.Thing[] result) {
+  private final Thing[] result;
+  public ListThingsResponse(String id, Thing[] result) {
     this.id = id;
     this.result = result;
   }
@@ -23,7 +23,7 @@ public class ListThingsResponse extends JsonRpcResponse {
     return "2.0";
   }
 
-  public ListThingsResponse.Thing[] getResult() {
+  public Thing[] getResult() {
     return this.result;
   }
 

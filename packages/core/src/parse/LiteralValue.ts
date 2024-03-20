@@ -1,3 +1,3 @@
-import {OmniPrimitiveConstantValue} from './OmniModel.js';
+import {OmniPrimitiveConstantValue} from './OmniModel.ts';
 
 export type LiteralValue = OmniPrimitiveConstantValue | null;

@@ -1,5 +1,5 @@
 import {AstFreeTextVisitor, JavaVisitor} from '../visit';
-import {OmniTypeKind, reduce, Reducer} from '@omnigen/core';
+import {OmniTypeKind, reduce, Reducer, ReducerFn} from '@omnigen/core';
 import * as Java from '../ast';
 import {assertDefined, isDefined, OmniUtil} from '@omnigen/core-util';
 
@@ -9,7 +9,7 @@ export const createFreeTextReducer = (partial?: Partial<FreeTextReducer>): FreeT
   return {
     reduce: (node, reducer) => node.reduce(reducer),
     reduceFreeTexts: (node, reducer) => {
-      const children = node.children.map(it => it.reduce(reducer)).filter(it => !!it) as Java.FriendlyFreeTextIn[];
+      const children = node.children.map(it => it.reduce(reducer)).filter(isDefined);
       if (children.length == 0) {
         return undefined;
       }
@@ -56,20 +56,33 @@ export const createFreeTextReducer = (partial?: Partial<FreeTextReducer>): FreeT
   };
 };
 
-export const createJavaReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>>>): Readonly<Reducer<JavaVisitor<unknown>>> => {
+// TODO: This part should be done some other way, and not hard-coded like this.
+//        Maybe the better way is to have no magic, and instead only enforce that the keys exist, and let it be up to each reduce method what its return type should be?
+type JavaReducerBase = Reducer<JavaVisitor<unknown>>;
+
+export type JavaReducer = JavaReducerBase;
+
+export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<JavaReducer> => {
 
   return {
     ...createFreeTextReducer(partial),
-    reduceRegularType: node => node,
-    reduceWildcardType: (node, reducer) => new Java.WildcardType(node.omniType, node.lowerBound?.reduce(reducer), node.implementation),
-    reduceGenericType: (node, reducer) => {
-      const type = node.baseType.reduce(reducer);
-      const genericArguments = node.genericArguments.map(it => it.reduce(reducer)).filter(isDefined);
-      if (type && type instanceof Java.RegularType) {
-        return new Java.GenericType(type.omniType, type, genericArguments);
+    reduceEdgeType: n => n,
+    reduceWildcardType: (n, r) => new Java.WildcardType(n.omniType, n.implementation),
+    reduceBoundedType: (n, r) => new Java.BoundedType(
+      n.omniType,
+      assertDefined(n.type.reduce(r)),
+      n.upperBound?.reduce(r),
+      n.lowerBound?.reduce(r),
+    ),
+    reduceArrayType: (node, reducer) => new Java.ArrayType(node.omniType, assertDefined(node.of.reduce(reducer)), node.implementation),
+    reduceGenericType: (n, r) => {
+      const baseType = n.baseType.reduce(r);
+      const genericArguments = n.genericArguments.map(it => it.reduce(r)).filter(isDefined);
+      if (baseType && baseType instanceof Java.EdgeType && genericArguments.length > 0) {
+        return new Java.GenericType(baseType.omniType, baseType, genericArguments);
       }
 
-      return undefined;
+      return baseType;
     },
     reduceParameter: (node, reducer) => {
 
@@ -189,7 +202,7 @@ export const createJavaReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>
       }
 
       return new Java.Annotation(
-        type as Java.RegularType<typeof type.omniType>,
+        type as Java.EdgeType<typeof type.omniType>,
         node.pairs?.reduce(reducer),
       );
     },
@@ -208,25 +221,25 @@ export const createJavaReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>
       assertDefined(node.toType.reduce(reducer)),
       assertDefined(node.expression.reduce(reducer)),
     ),
-    reduceObjectDeclaration: (node, reducer) => {
+    reduceObjectDeclaration: () => {
       throw new Error(`Should not be called when reducing`);
     },
-    reduceObjectDeclarationBody: (node, reducer) => {
+    reduceObjectDeclarationBody: () => {
       throw new Error(`Should not be called when reducing`);
     },
-    reduceClassDeclaration: (node, reducer) => {
+    reduceClassDeclaration: (n, r) => {
       const dec = new Java.ClassDeclaration(
-        assertDefined(node.type.reduce(reducer)),
-        assertDefined(node.name.reduce(reducer)),
-        assertDefined(node.body.reduce(reducer)),
-        node.modifiers?.reduce(reducer),
+        assertDefined(n.type.reduce(r)),
+        assertDefined(n.name.reduce(r)),
+        assertDefined(n.body.reduce(r)),
+        n.modifiers?.reduce(r),
       );
 
-      dec.comments = node.comments?.reduce(reducer);
-      dec.annotations = node.annotations?.reduce(reducer);
-      dec.extends = node.extends?.reduce(reducer);
-      dec.implements = node.implements?.reduce(reducer);
-      dec.genericParameterList = node.genericParameterList?.reduce(reducer);
+      dec.comments = n.comments?.reduce(r);
+      dec.annotations = n.annotations?.reduce(r);
+      dec.extends = n.extends?.reduce(r);
+      dec.implements = n.implements?.reduce(r);
+      dec.genericParameterList = n.genericParameterList?.reduce(r);
 
       return dec;
     },
@@ -234,8 +247,8 @@ export const createJavaReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>
     reduceGenericTypeDeclaration: (node, reducer) => new Java.GenericTypeDeclaration(
       assertDefined(node.name.reduce(reducer)),
       node.sourceIdentifier,
-      node.lowerBounds?.reduce(reducer),
       node.upperBounds?.reduce(reducer),
+      node.lowerBounds?.reduce(reducer),
     ),
     reduceInterfaceDeclaration: (node, reducer) => {
       const dec = new Java.InterfaceDeclaration(
@@ -255,7 +268,7 @@ export const createJavaReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>
     reduceEnumDeclaration: (node, reducer) => {
 
       const type = assertDefined(node.type.reduce(reducer));
-      if (!(type instanceof Java.RegularType)) {
+      if (!(type instanceof Java.EdgeType)) {
         throw new Error(`The enum declaration java type must be a regular type`);
       }
       if (type.omniType.kind != OmniTypeKind.ENUM) {
@@ -263,7 +276,7 @@ export const createJavaReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>
       }
 
       const dec = new Java.EnumDeclaration(
-        type as Java.RegularType<typeof type.omniType>,
+        type as Java.EdgeType<typeof type.omniType>,
         assertDefined(node.name.reduce(reducer)),
         assertDefined(node.body.reduce(reducer)),
         node.modifiers?.reduce(reducer),

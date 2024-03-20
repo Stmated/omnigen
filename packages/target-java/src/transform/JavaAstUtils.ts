@@ -1,5 +1,5 @@
 import {
-  AstNode, AstNodeWithChildren,
+  AstNode, OmniArrayType,
   OmniDictionaryType,
   OmniGenericTargetType,
   OmniInterfaceOrObjectType,
@@ -13,11 +13,11 @@ import {
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {AnnotationList, Block, CommentBlock, Field, FieldReference, Identifier, JavaAstRootNode, MethodDeclaration, MethodDeclarationSignature, ReturnStatement, Statement} from '../ast';
+import {JavaAstRootNode} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaOptions} from '../options';
-import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
+import {createJavaVisitor} from '../visit';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -41,21 +41,30 @@ export class JavaAstUtils {
     }
   }
 
-  public static createTypeNode<const T extends OmniType>(type: T, implementation?: boolean): Java.TypeNode<T> {
+  public static createTypeNode<const T extends OmniType>(type: T, implementation?: boolean): Java.TypeNode {
 
-    if (type.kind == OmniTypeKind.DICTIONARY) {
-      return this.createMapTypeNode(type, implementation) as unknown as Java.TypeNode<T>;
-    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      return this.createGenericTargetTypeNode(type, implementation) as unknown as Java.TypeNode<T>;
+    if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+      return this.createGenericTargetTypeNode(type, implementation);
+    } else if (type.kind == OmniTypeKind.ARRAY) {
+      return this.createArrayTypeNode(type, implementation);
     } else if (type.kind == OmniTypeKind.UNKNOWN) {
-      if (type.lowerBound) {
-        return new Java.WildcardType(type, JavaAstUtils.createTypeNode(type.lowerBound, implementation), implementation) as unknown as Java.TypeNode<T>;
+      if (type.upperBound) {
+        return new Java.BoundedType(type, new Java.WildcardType(type, implementation), JavaAstUtils.createTypeNode(type.upperBound, implementation));
       } else {
-        return new Java.WildcardType(type, undefined, implementation) as unknown as Java.TypeNode<T>;
+        return new Java.WildcardType(type, implementation);
       }
     } else {
-      return new Java.RegularType(type, implementation);
+      return new Java.EdgeType(type, implementation);
     }
+  }
+
+  private static createArrayTypeNode<const T extends OmniArrayType>(
+    type: T,
+    implementation: boolean | undefined,
+  ): Java.TypeNode<T> {
+
+    const itemNode = JavaAstUtils.createTypeNode(type.of);
+    return new Java.ArrayType(type, itemNode, implementation);
   }
 
   private static createGenericTargetTypeNode<const T extends OmniGenericTargetType>(
@@ -63,7 +72,7 @@ export class JavaAstUtils {
     implementation: boolean | undefined,
   ): Java.TypeNode<T> {
 
-    const baseType = new Java.RegularType(type, implementation);
+    const baseType = new Java.EdgeType(type, implementation);
 
     // NOTE: In future versions of Java it might be possible to have primitive generic arguments.
     //        But for now we change all the primitive types into a reference type.
@@ -83,20 +92,6 @@ export class JavaAstUtils {
     });
 
     return new Java.GenericType(type, baseType, mappedGenericTargetArguments);
-  }
-
-  private static createMapTypeNode<const T extends OmniDictionaryType>(
-    type: T,
-    implementation: boolean | undefined,
-  ): Java.TypeNode<T> {
-
-    const mapClassOrInterface = implementation == false ? 'Map' : 'HashMap';
-    const mapClass = `java.util.${mapClassOrInterface}`;
-    const mapType = new Java.RegularType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
-    const keyType = JavaAstUtils.createTypeNode(type.keyType, true);
-    const valueType = JavaAstUtils.createTypeNode(type.valueType, true);
-
-    return new Java.GenericType(type, mapType, [keyType, valueType]);
   }
 
   public static addOmniPropertyToBlockAsField(body: Java.Block, property: OmniProperty, options: JavaOptions): void {
@@ -233,17 +228,18 @@ export class JavaAstUtils {
   }
 
   public static getConstructorRequirements(
-    root: AstNode,
+    root: JavaAstRootNode,
     node: Java.AbstractObjectDeclaration,
     followSupertype = false,
-  ): {fields: Java.Field[], parameters: Java.ConstructorParameter[]} { // [Java.Field[], Java.ConstructorParameter[]] {
+  ): { fields: Java.Field[], parameters: Java.ConstructorParameter[] } { // [Java.Field[], Java.ConstructorParameter[]] {
 
     const constructors: Java.ConstructorDeclaration[] = [];
     const fields: Java.Field[] = [];
     const setters: Java.FieldBackedSetter[] = [];
 
-    const fieldVisitor: JavaVisitor<void> = {
-      ...DefaultJavaVisitor,
+    const voidVisitor = root.createVisitor<void>();
+    const fieldVisitor: typeof voidVisitor = {
+      ...voidVisitor,
       visitConstructor: n => {
         constructors.push(n);
       },
@@ -291,7 +287,7 @@ export class JavaAstUtils {
       const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.omniType);
       if (extendedBy) {
 
-        const constructorVisitor = VisitorFactoryManager.create(DefaultJavaVisitor, {
+        const constructorVisitor = VisitorFactoryManager.create(root.createVisitor(), {
           visitConstructor: node => {
             if (node.parameters) {
               supertypeArguments.push(...node.parameters.children);
@@ -315,7 +311,7 @@ export class JavaAstUtils {
     }
   }
 
-  public static getGetterField(method: Java.MethodDeclaration): Java.Field | undefined {
+  public static getSoloReturn(method: Java.MethodDeclaration): AstNode | undefined {
 
     if (method.signature.parameters && method.signature.parameters.children.length > 0) {
       return undefined;
@@ -330,13 +326,30 @@ export class JavaAstUtils {
       return undefined;
     }
 
-    if (statement.expression instanceof Java.FieldReference) {
-      if (method.signature.type == statement.expression.field.type) {
-        return statement.expression.field;
-      }
+    return statement.expression;
+  }
+
+  public static getGetterField(method: Java.MethodDeclaration): Java.Field | undefined {
+
+    const expression = JavaAstUtils.getSoloReturn(method);
+    if (!(expression instanceof Java.FieldReference)) {
+      return undefined;
     }
 
-    return undefined;
+    return expression.field;
+  }
+
+  public static getOmniType(node: AstNode): OmniType | undefined {
+
+    if (node instanceof Java.AbstractObjectDeclaration) {
+      return node.omniType;
+    } else if ('omniType' in node && typeof node.omniType == 'object' && node.omniType && 'kind' in node.omniType) {
+
+      // NOTE: This is quite ugly
+      return node.omniType as OmniType;
+    } else {
+      return undefined;
+    }
   }
 
   // public static addFieldGetter(target: AstNodeWithChildren, field: Field, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {

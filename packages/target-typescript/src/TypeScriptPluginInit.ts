@@ -33,22 +33,25 @@ import {
   AddCommentsAstTransformer,
   AddConstructorJavaAstTransformer,
   AddFieldsAstTransformer,
-  AddGeneratedAnnotationAstTransformer,
+  AddGeneratedCommentAstTransformer,
   AddJakartaValidationAstTransformer,
   AddObjectDeclarationsJavaAstTransformer,
   AddSubTypeHintsAstTransformer,
   AddThrowsForKnownMethodsAstTransformer,
   DEFAULT_JAVA_OPTIONS,
   InnerTypeCompressionAstTransformer,
-  JacksonJavaAstTransformer, JavaAstTransformerArgs,
   JavaOptions,
   PackageResolverAstTransformer,
   ReorderMembersTransformer,
   SimplifyGenericsAstTransformer,
 } from '@omnigen/target-java';
-import {ZodTypeScriptOptions} from './options';
+import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
 import {TYPESCRIPT_FEATURES} from './features';
 import {CompositionTypeScriptAstTransformer} from './ast/CompositionTypeScriptAstTransformer.ts';
+import {TypeScriptAstTransformerArgs} from './ast/TypeScriptAstVisitor.ts';
+import {MethodToGetterTypeScriptAstTransformer} from './ast/MethodToGetterTypeScriptAstTransformer.ts';
+import {ClassToInterfaceTypeScriptAstTransformer} from './ast/ClassToInterfaceTypeScriptAstTransformer.ts';
+import {ToHardCodedTypeTypeScriptAstTransformer} from './ast/ToHardCodedTypeTypeScriptAstTransformer.ts';
 
 export const ZodParserOptionsContext = z.object({
   parserOptions: ZodParserOptions,
@@ -133,7 +136,6 @@ export const TypeScriptPlugin = createPlugin(
 
     const astTransformers = [
       new AddObjectDeclarationsJavaAstTransformer(),
-      // new AddCompositionMembersJavaAstTransformer(),
       new AddFieldsAstTransformer(),
       new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
@@ -141,24 +143,28 @@ export const TypeScriptPlugin = createPlugin(
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
       new AddJakartaValidationAstTransformer(),
-      new AddGeneratedAnnotationAstTransformer(),
+      new AddGeneratedCommentAstTransformer(),
       new AddSubTypeHintsAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
       new AddThrowsForKnownMethodsAstTransformer(),
       new SimplifyGenericsAstTransformer(),
-      new JacksonJavaAstTransformer(),
+      // new JacksonJavaAstTransformer(),
       new CompositionTypeScriptAstTransformer(),
+      new MethodToGetterTypeScriptAstTransformer(),
+      new ClassToInterfaceTypeScriptAstTransformer(),
+      new ToHardCodedTypeTypeScriptAstTransformer(),
       new PackageResolverAstTransformer(),
       new ReorderMembersTransformer(),
     ] as const;
 
-    const options: JavaOptions & TargetOptions & PackageOptions = {
+    const options: TypeScriptOptions & JavaOptions & TargetOptions & PackageOptions = {
       ...DEFAULT_JAVA_OPTIONS,
+      ...ctx.tsOptions,
       ...ctx.targetOptions,
       ...ctx.packageOptions,
     };
 
-    const astTransformerArgs: JavaAstTransformerArgs = {
+    const astTransformerArgs: TypeScriptAstTransformerArgs = {
       model: ctx.model,
       externals: [],
       features: TYPESCRIPT_FEATURES,
@@ -172,7 +178,7 @@ export const TypeScriptPlugin = createPlugin(
 
     return {
       ...ctx,
-      astNode: astNode,
+      astNode: astTransformerArgs.root,
     };
   },
 );

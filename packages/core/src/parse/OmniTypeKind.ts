@@ -1,7 +1,7 @@
 import {ToEnum} from '../options';
 
 /**
- * TODO: Change this into the values being strings instead. Maybe a bit more memory, but easier to read
+ * TODO: Move other kinds into here, then rename it to OmniKind
  */
 export const OmniTypeKind = {
   PRIMITIVE: 'PRIMITIVE',

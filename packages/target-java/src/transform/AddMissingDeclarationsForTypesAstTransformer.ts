@@ -1,5 +1,4 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
-import {VisitorFactoryManager} from '@omnigen/core-util';
 
 /**
  * Used for adding in declarations for any types that exist among the AST, but does not have a related declaration.
@@ -19,7 +18,6 @@ export class AddMissingDeclarationsForTypesAstTransformer extends AbstractJavaAs
     //
     //   },
     // }));
-
 
   }
 }

@@ -36,7 +36,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
             args.root.children.push(new Java.CompilationUnit(
               new Java.PackageDeclaration(JavaUtil.getPackageName(n.type.omniType, n.name.value, args.options)),
               new Java.ImportList([]),
-              new Ts.TypeAliasDeclaration(n.name, ct),
+              new Ts.TypeAliasDeclaration(n.name, ct, new Java.ModifierList(new Java.Modifier(Java.ModifierType.PUBLIC))),
             ));
 
             // return undefined;
@@ -46,11 +46,6 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
         return DefaultTypeScriptVisitor.visitClassDeclaration(n, v);
       },
     });
-
-    // TODO: Replace all mentions of the old type with this TypeScript composition type
-    //        Need to implement a standardized way of doing tree-folding where we can replace nodes easily (like inside visitType)
-
-    const i = 0;
 
     const reducer: TypeScriptAstReducer = {
       ...DefaultTypeScriptAstReducer,
@@ -71,7 +66,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
 
         return result;
       },
-      reduceRegularType: node => {
+      reduceEdgeType: node => {
 
         const replacementNode = typesToReplace.get(node);
         if (replacementNode) {

@@ -3,7 +3,7 @@ import {
   AstNodeWithChildren,
   AstToken,
   AstVisitor,
-  LiteralValue,
+  LiteralValue, OmniArrayType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniHardcodedReferenceType,
@@ -20,7 +20,7 @@ import {JavaUtil} from '../util';
 import {AstFreeTextVisitor, JavaVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core-util';
 
-export enum TokenType {
+export enum TokenKind {
   ASSIGN,
   ADD,
   COMMA,
@@ -38,9 +38,9 @@ export enum TokenType {
 }
 
 export class JavaToken implements AstToken {
-  type: TokenType;
+  type: TokenKind;
 
-  constructor(type: TokenType) {
+  constructor(type: TokenKind) {
     this.type = type;
   }
 
@@ -59,23 +59,14 @@ export abstract class AbstractJavaNode implements AstNode {
   abstract reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AbstractJavaNode>;
 }
 
-export interface LocallyNamedType {
-  getLocalName(): string | undefined;
-  setLocalName(value: string | undefined): void;
-  getImportName(): string | undefined;
-  setImportName(value: string | undefined): void;
-}
-
 export interface TypeNode<T extends OmniType = OmniType> extends AstNode {
   omniType: T;
   implementation?: boolean | undefined;
-  getLocalName(): string | undefined;
-  getImportName(): string | undefined;
 
   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<TypeNode>;
 }
 
-export class RegularType<T extends OmniType = OmniType> extends AbstractJavaNode implements LocallyNamedType, TypeNode<T> {
+export class EdgeType<T extends OmniType = OmniType> extends AbstractJavaNode implements TypeNode<T> {
   omniType: T;
   private _localName?: string | undefined;
   private _importName?: string | undefined;
@@ -101,7 +92,6 @@ export class RegularType<T extends OmniType = OmniType> extends AbstractJavaNode
     this._importName = value;
   }
 
-  // TODO: Remove the restriction. It's not going to work. Need another way of doing it
   constructor(omniType: T, implementation?: boolean) {
     super();
     this.omniType = omniType;
@@ -109,41 +99,42 @@ export class RegularType<T extends OmniType = OmniType> extends AbstractJavaNode
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitRegularType(this, visitor);
+    return visitor.visitEdgeType(this, visitor);
   }
 
   reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<TypeNode> {
-    return reducer.reduceRegularType(this, reducer);
+    return reducer.reduceEdgeType(this, reducer);
   }
 }
 
-export class WildcardType<T extends OmniUnknownType = OmniUnknownType> extends AbstractJavaNode implements LocallyNamedType, TypeNode<T> {
+export class ArrayType<T extends OmniArrayType = OmniArrayType> extends AbstractJavaNode implements TypeNode<T> {
   readonly omniType: T;
-  readonly lowerBound?: TypeNode | undefined;
-  private _localName?: string | undefined;
-  private _importName?: string | undefined;
+  readonly of: TypeNode;
   readonly implementation?: boolean | undefined;
 
-  getLocalName(): string | undefined {
-    return this._localName;
-  }
-
-  setLocalName(value: string | undefined): void {
-    this._localName = value;
-  }
-
-  getImportName(): string | undefined {
-    return this._importName;
-  }
-
-  setImportName(value: string | undefined): void {
-    this._importName = value;
-  }
-
-  constructor(omniType: T, lowerBound?: TypeNode | undefined, implementation?: boolean | undefined) {
+  constructor(omniType: T, of: TypeNode, implementation?: boolean | undefined) {
     super();
     this.omniType = omniType;
-    this.lowerBound = lowerBound;
+    this.of = of;
+    this.implementation = implementation;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitArrayType(this, visitor);
+  }
+
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<ArrayType> {
+    return reducer.reduceArrayType(this, reducer);
+  }
+}
+
+export class WildcardType<T extends OmniUnknownType = OmniUnknownType> extends AbstractJavaNode implements TypeNode<T> {
+  readonly omniType: T;
+  readonly implementation?: boolean | undefined;
+
+  constructor(omniType: T, implementation?: boolean | undefined) {
+    super();
+    this.omniType = omniType;
     this.implementation = implementation;
   }
 
@@ -151,12 +142,41 @@ export class WildcardType<T extends OmniUnknownType = OmniUnknownType> extends A
     return visitor.visitWildcardType(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<WildcardType> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<TypeNode> {
     return reducer.reduceWildcardType(this, reducer);
   }
 }
 
-// export type GenericTypeBaseType = OmniGenericTargetType | OmniHardcodedReferenceType;
+export class BoundedType extends AbstractJavaNode implements TypeNode {
+  readonly omniType: OmniType;
+  readonly type: TypeNode;
+
+  /**
+   * In the context of `A extends B`, A is a bounded Type Parameter with an upper bound B. This means A can be any type that is a subclass of B or B itself. Thus, B represents an upper bound.
+   */
+  readonly upperBound?: TypeNode | undefined;
+
+  /**
+   * In the context of `A super B`, A is a bounded Type Parameter with a lower bound B. This means A can be any type that is a super class of B or B itself.
+   */
+  readonly lowerBound?: TypeNode | undefined;
+
+  constructor(omniType: OmniType, type: TypeNode, upperBound?: TypeNode | undefined, lowerBound?: TypeNode | undefined) {
+    super();
+    this.omniType = omniType;
+    this.type = type;
+    this.upperBound = upperBound;
+    this.lowerBound = lowerBound;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitBoundedType(this, visitor);
+  }
+
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<TypeNode> {
+    return reducer.reduceBoundedType(this, reducer);
+  }
+}
 
 /**
  * TODO: Remove this, and move the functionality of deciding way to render to the renderer itself?
@@ -170,18 +190,10 @@ export class GenericType<
 > extends AbstractJavaNode implements TypeNode<T> {
 
   readonly omniType: T;
-  readonly baseType: RegularType<BT>;
+  readonly baseType: EdgeType<BT>;
   readonly genericArguments: TypeNode[];
 
-  getLocalName(): string | undefined {
-    throw new Error(`Cannot get the local name of generic type '${OmniUtil.describe(this.baseType.omniType)}', it needs to be built by the renderer`);
-  }
-
-  getImportName(): string | undefined {
-    return this.baseType.getImportName();
-  }
-
-  constructor(omniType: T, baseType: RegularType<BT>, genericArguments: TypeNode[]) {
+  constructor(omniType: T, baseType: EdgeType<BT>, genericArguments: TypeNode[]) {
     super();
     this.omniType = omniType;
     this.baseType = baseType;
@@ -220,13 +232,13 @@ export abstract class AbstractExpression extends AbstractJavaNode {
 }
 
 export class Literal extends AbstractExpression {
-  value: LiteralValue;
-  primitiveKind?: OmniPrimitiveKind | undefined;
+  readonly value: LiteralValue;
+  readonly primitiveKind: OmniPrimitiveKind;
 
   constructor(value: LiteralValue, primitiveKind?: OmniPrimitiveKind) {
     super();
     this.value = value;
-    this.primitiveKind = primitiveKind;
+    this.primitiveKind = primitiveKind ?? OmniUtil.nativeLiteralToPrimitivekind(value);
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -237,8 +249,6 @@ export class Literal extends AbstractExpression {
     return reducer.reduceLiteral(this, reducer);
   }
 }
-
-// type AnnotationValue = Literal | Annotation | ArrayInitializer<Annotation> | ClassReference | StaticMemberReference;
 
 export class AnnotationKeyValuePair extends AbstractJavaNode {
   key: Identifier | undefined;
@@ -277,10 +287,10 @@ export class AnnotationKeyValuePairList extends AbstractJavaNode implements AstN
 }
 
 export class Annotation extends AbstractJavaNode {
-  readonly type: RegularType<OmniHardcodedReferenceType>;
+  readonly type: EdgeType<OmniHardcodedReferenceType>;
   readonly pairs?: AnnotationKeyValuePairList | undefined;
 
-  constructor(type: RegularType<OmniHardcodedReferenceType>, pairs?: AnnotationKeyValuePairList) {
+  constructor(type: EdgeType<OmniHardcodedReferenceType>, pairs?: AnnotationKeyValuePairList) {
     super();
     this.type = type;
     this.pairs = pairs;
@@ -447,7 +457,7 @@ export class BinaryExpression extends AbstractJavaNode {
 
 export class AssignExpression extends BinaryExpression {
   constructor(left: AbstractExpression, right: AbstractExpression) {
-    super(left, new JavaToken(TokenType.ASSIGN), right);
+    super(left, new JavaToken(TokenKind.ASSIGN), right);
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -477,12 +487,12 @@ export class PackageDeclaration extends AbstractJavaNode {
 }
 
 export type TokenTypePredicate =
-  TokenType.EQUALS
-  | TokenType.NOT_EQUALS
-  | TokenType.GT
-  | TokenType.LT
-  | TokenType.LTE
-  | TokenType.GTE;
+  TokenKind.EQUALS
+  | TokenKind.NOT_EQUALS
+  | TokenKind.GT
+  | TokenKind.LT
+  | TokenKind.LTE
+  | TokenKind.GTE;
 
 export class Predicate extends BinaryExpression {
 
@@ -580,7 +590,7 @@ export class Modifier extends AbstractJavaNode {
 }
 
 export class ModifierList extends AbstractJavaNode implements AstNodeWithChildren<Modifier> {
-  children: Modifier[];
+  children: Array<Modifier>;
 
   constructor(...modifiers: Modifier[]) {
     super();
@@ -959,7 +969,7 @@ export class MethodDeclaration extends AbstractJavaNode {
     return visitor.visitMethodDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<MethodDeclaration> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<MethodDeclaration | MethodDeclarationSignature | Statement> {
     return reducer.reduceMethodDeclaration(this, reducer);
   }
 }
@@ -1058,14 +1068,21 @@ export class VariableDeclaration extends AbstractJavaNode {
 }
 
 export abstract class AbstractFieldBackedMethodDeclaration extends MethodDeclaration {
+
+  /**
+   * TODO: Should we really have a really have a reference to the field here?
+   */
   readonly field: Field;
 
-  protected constructor(pField: Field, signature: MethodDeclarationSignature, body?: Block) {
+  protected constructor(field: Field, signature: MethodDeclarationSignature, body?: Block) {
     super(signature, body);
-    this.field = pField;
+    this.field = field;
   }
 }
 
+/**
+ * TODO: Redo so that it only refers to an expression to return, and has its own properties for annotations, comments, et cetera.
+ */
 export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
 
   constructor(field: Field, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
@@ -1088,7 +1105,7 @@ export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
     return visitor.visitFieldBackedGetter(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldBackedGetter> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldBackedGetter | MethodDeclarationSignature | Statement> {
     return reducer.reduceFieldBackedGetter(this, reducer);
   }
 }
@@ -1105,7 +1122,7 @@ export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
       field,
       new MethodDeclarationSignature(
         new Identifier(JavaUtil.getSetterName(field.identifier.value)),
-        new RegularType({
+        new EdgeType({
           kind: OmniTypeKind.PRIMITIVE,
           primitiveKind: OmniPrimitiveKind.VOID,
           nullable: true,
@@ -1234,7 +1251,7 @@ export class ImplementsDeclaration extends AbstractJavaNode {
 /**
  * TODO: Make the Type node generic, and possible to limit which OmniType is allowed: Class, Interface, Enum
  */
-export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> extends AbstractJavaNode implements Identifiable {
+export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> extends AbstractJavaNode implements Identifiable, Typed {
   name: Identifier;
   /**
    * TODO: Make the "Type" generic if possible, since we for example here can know what type it is.
@@ -1246,6 +1263,10 @@ export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> e
   extends?: ExtendsDeclaration | undefined;
   implements?: ImplementsDeclaration | undefined;
   body: Block;
+
+  get omniType() {
+    return this.type.omniType;
+  }
 
   protected constructor(type: TypeNode<T>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super();
@@ -1262,6 +1283,10 @@ export interface Identifiable extends AstNode {
   name: Identifier;
 
   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<Identifiable>;
+}
+
+export interface Typed<T extends OmniType = OmniType> extends AstNode {
+  omniType: T;
 }
 
 export class CompilationUnit extends AbstractJavaNode implements AstNodeWithChildren<Identifiable> {
@@ -1283,17 +1308,7 @@ export class CompilationUnit extends AbstractJavaNode implements AstNodeWithChil
   reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<CompilationUnit> {
     return reducer.reduceCompilationUnit(this, reducer);
   }
-
-  toString() {
-    if (this.children.length > 0) {
-      return this.children[0].name.value;
-    }
-
-    return 'N/A';
-  }
 }
-
-// export type ConstructorOwnerDeclaration = ClassDeclaration | EnumDeclaration;
 
 export class ConstructorDeclaration extends AbstractJavaNode {
 
@@ -1357,14 +1372,20 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration {
 export class GenericTypeDeclaration implements AstNode {
   sourceIdentifier?: OmniGenericSourceIdentifierType | undefined;
   name: Identifier;
+  /**
+   * TODO: Check if can remove and use BoundedType instead
+   */
   lowerBounds?: TypeNode | undefined;
+  /**
+   * TODO: Check if can remove and use BoundedType instead
+   */
   upperBounds?: TypeNode | undefined;
 
-  constructor(name: Identifier, sourceIdentifier?: OmniGenericSourceIdentifierType, lowerBounds?: TypeNode, upperBounds?: TypeNode) {
+  constructor(name: Identifier, sourceIdentifier?: OmniGenericSourceIdentifierType, upperBounds?: TypeNode, lowerBounds?: TypeNode) {
     this.name = name;
     this.sourceIdentifier = sourceIdentifier;
-    this.lowerBounds = lowerBounds;
     this.upperBounds = upperBounds;
+    this.lowerBounds = lowerBounds;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -1395,7 +1416,7 @@ export class GenericTypeDeclarationList extends AbstractJavaNode {
 
 // Simplify so we don't give block, but enum entries?
 export class EnumDeclaration extends AbstractObjectDeclaration<OmniEnumType> {
-  constructor(type: RegularType<OmniEnumType>, name: Identifier, body: Block, modifiers?: ModifierList) {
+  constructor(type: EdgeType<OmniEnumType>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
 
@@ -1595,7 +1616,7 @@ export class NewStatement extends AbstractJavaNode {
     return visitor.visitNewStatement(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<NewStatement> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceNewStatement(this, reducer);
   }
 }

@@ -16,5 +16,7 @@ export const JAVA_FEATURES: TargetFeatures = {
   primitiveGenerics: false,
   primitiveInheritance: false,
   nestedDeclarations: true,
+  relativeImports: false,
+  forcedImports: false,
 };
 

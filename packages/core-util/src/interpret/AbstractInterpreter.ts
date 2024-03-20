@@ -38,6 +38,6 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
       transformer.transformAst(args);
     }
 
-    return rootNode;
+    return args.root;
   }
 }

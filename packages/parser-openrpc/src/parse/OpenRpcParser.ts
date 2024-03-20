@@ -61,6 +61,7 @@ import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
 import {
+  AnyJsonDefinition,
   AnyJSONSchema,
   ApplyIdJsonSchemaTransformerFactory,
   ExternalDocumentsFinder,
@@ -332,7 +333,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     if (this.doc.components?.schemas) {
       for (const key of Object.keys(this.doc.components.schemas)) {
         const schema = this.doc.components.schemas[key] as JSONSchema7;
-        const deref = this._refResolver.resolve(this._jsonSchemaParser.unwrapJsonSchema(schema));
+        const deref = this._refResolver.resolve(schema);
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
@@ -454,15 +455,14 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     fallbackName?: TypeName,
   ): SchemaToTypeResult {
 
-    const unwrapped = this._jsonSchemaParser.unwrapJsonSchema(contentDescriptor.schema);
-    const resolved = this._refResolver.resolve(unwrapped);
+    const resolved = this._refResolver.resolve(contentDescriptor.schema);
 
     const preferredName = this.getPreferredContentDescriptorName(resolved, contentDescriptor, fallbackName);
     return this._jsonSchemaParser.jsonSchemaToType(preferredName, resolved);
   }
 
   private getPreferredContentDescriptorName(
-    schema: AnyJSONSchema,
+    schema: AnyJsonDefinition,
     contentDescriptor: ContentDescriptorObject,
     fallbackName?: TypeName,
   ): TypeName {

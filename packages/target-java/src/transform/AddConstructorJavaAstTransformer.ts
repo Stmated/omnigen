@@ -4,8 +4,7 @@ import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {FieldAccessorMode} from '../options';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {TokenType} from '../ast';
-import {DefaultJavaVisitor} from '../visit';
+import {TokenKind} from '../ast';
 
 /**
  * Adds a constructor to a class, based on what fields are required (final) and what fields are required from any potential supertype.
@@ -21,9 +20,11 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     }
 
     const classDeclarations: Java.ClassDeclaration[] = [];
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
       visitClassDeclaration: (node, visitor) => {
-        DefaultJavaVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
+        defaultVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
         classDeclarations.push(node);
       },
     }));
@@ -96,7 +97,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
         new Java.IfStatement(
           new Java.Predicate(
             new Java.DeclarationReference(argumentDeclaration),
-            TokenType.NOT_EQUALS,
+            TokenKind.NOT_EQUALS,
             new Java.Literal(null),
           ),
           new Java.Block(new Java.Statement(new Java.AssignExpression(
@@ -157,7 +158,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
         superConstructorArguments.push(new Java.TernaryExpression(
           new Java.Predicate(
             new Java.DeclarationReference(parameter),
-            TokenType.EQUALS,
+            TokenKind.EQUALS,
             new Java.Literal(null),
           ),
           new Java.Literal(literalValue),

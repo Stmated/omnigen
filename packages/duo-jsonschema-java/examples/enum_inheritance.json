@@ -8,7 +8,8 @@
       "enum": [
         "1A",
         "1B"
-      ]
+      ],
+      "description": "A comment"
     },
 
     "InheritingKind1": {
@@ -17,10 +18,3 @@
     }
   }
 }
-
-
-
-
-
-
-

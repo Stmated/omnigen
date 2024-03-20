@@ -21,17 +21,12 @@ import {
   NewStatement,
   Parameter,
   ParameterList,
-  RegularType,
+  EdgeType,
   Statement,
 } from './JavaAstTypes.ts';
 
 export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
   children: AbstractJavaNode[];
-
-  // readonly adderMethod: MethodDeclaration;
-  // readonly keyType: OmniPrimitiveType;
-  // readonly valueType: OmniUnknownType;
-  // readonly mapType: OmniDictionaryType;
 
   constructor(options: JavaOptions | AbstractJavaNode[]) {
     super();
@@ -69,7 +64,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
       // NOTE: This should NEVER be on a field. But it should be moved by later transformers!
       fieldAnnotations.children.push(new Annotation(
-        new RegularType({
+        new EdgeType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: JACKSON_JSON_ANY_GETTER,
         }),
@@ -120,7 +115,7 @@ export class AdditionalPropertiesDeclaration extends AbstractJavaNode {
 
     if (options.serializationLibrary == SerializationLibrary.JACKSON) {
       adderMethod.signature.annotations.children.push(new Annotation(
-        new RegularType({
+        new EdgeType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: JACKSON_JSON_ANY_SETTER,
         }),

@@ -2,6 +2,9 @@ package generated.omnigen;
 
 import jakarta.annotation.Generated;
 
+/**
+ * A comment
+ */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public enum Kind1 {
   _1_A("1A"),

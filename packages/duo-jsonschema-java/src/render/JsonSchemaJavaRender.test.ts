@@ -1,6 +1,6 @@
 import {describe, expect, test, vi} from 'vitest';
 import {JsonSchemaToJavaTestUtil} from './JsonSchemaToJavaTestUtil.ts';
-import {ZodJavaOptions} from '@omnigen/target-java';
+import {IncludeExampleCommentsMode, SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
 import {Util} from '@omnigen/core-util';
 
 describe('jsonschema-java-render', () => {
@@ -88,8 +88,8 @@ describe('jsonschema-java-render', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/inline_boolean.json'), {
-      serializationLibrary: 'POJO',
-      includeExampleCommentsMode: 'SKIP',
+      serializationLibrary: SerializationLibrary.POJO,
+      includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -106,8 +106,8 @@ describe('jsonschema-java-render', () => {
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/class_union.json'), {
       compressSoloReferencedTypes: false,
       compressUnreferencedSubTypes: false,
-      serializationLibrary: 'JACKSON',
-      includeExampleCommentsMode: 'SKIP',
+      serializationLibrary: SerializationLibrary.JACKSON,
+      includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 

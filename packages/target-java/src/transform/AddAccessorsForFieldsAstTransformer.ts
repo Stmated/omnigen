@@ -4,7 +4,7 @@ import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFla
 import * as Java from '../ast';
 import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
-import {DefaultJavaVisitor, DefaultStringJavaVisitor} from '../visit';
+import {DefaultStringJavaVisitor} from '../visit';
 
 export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
 
@@ -18,7 +18,8 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
   transformAst(args: JavaAstTransformerArgs): void {
 
     const owner: { node: Java.AbstractObjectDeclaration | undefined } = {node: undefined};
-    args.root.visit(VisitorFactoryManager.create(DefaultJavaVisitor, {
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitEnumDeclaration: () => {
       },
@@ -37,7 +38,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
         }
 
         owner.node = node;
-        DefaultJavaVisitor.visitClassDeclaration(node, visitor);
+        defaultVisitor.visitClassDeclaration(node, visitor);
       },
 
       visitField: node => {
@@ -74,7 +75,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
           const literalMethod = new Java.MethodDeclaration(
             new Java.MethodDeclarationSignature(
               getterIdentifier ?? new Identifier(JavaUtil.getGetterName(node.identifier.value, type)),
-              new Java.RegularType(type), undefined, undefined, annotationList, commentList,
+              new Java.EdgeType(type), undefined, undefined, annotationList, commentList,
             ),
             new Java.Block(
               new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.value ?? null))),

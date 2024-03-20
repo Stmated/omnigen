@@ -14,8 +14,8 @@ import {
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
   OmniInput,
-  OmniModel,
-  OmniObjectType,
+  OmniModel, OmniNumericPrimitiveKinds,
+  OmniObjectType, OmniOptionallyNamedType,
   OmniOutput,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
@@ -40,6 +40,8 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from './PropertyUtil.js';
 import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.js';
 import {Naming} from './Naming.js';
+import {util} from 'zod';
+import assertNever = util.assertNever;
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -123,11 +125,11 @@ export class OmniUtil {
       }
     }
 
-    if (ctx.type.kind == OmniTypeKind.DECORATING) {
-
-      // We do not add the decorating type itself
-      return;
-    }
+    // if (ctx.type.kind == OmniTypeKind.DECORATING) {
+    //
+    //   // We do not add the decorating type itself
+    //   return;
+    // }
 
     set.add(ctx.type);
     if (ctx.typeDepth == 0) {
@@ -488,6 +490,20 @@ export class OmniUtil {
     }
   }
 
+  public static nativeLiteralToPrimitivekind(value: LiteralValue): OmniPrimitiveKind {
+    if (typeof value == 'string') {
+      return OmniPrimitiveKind.STRING;
+    } else if (typeof value == 'number') {
+      return OmniPrimitiveKind.NUMBER;
+    } else if (typeof value == 'boolean') {
+      return OmniPrimitiveKind.BOOL;
+    } else if (value === null) {
+      return OmniPrimitiveKind.NULL;
+    }
+
+    assertNever(value);
+  }
+
   public static hasAdditionalProperties(type: OmniObjectType): boolean {
     return (type.additionalProperties != undefined && type.additionalProperties);
   }
@@ -502,7 +518,7 @@ export class OmniUtil {
   public static isEmptyType(type: OmniType): boolean {
 
     if (type.kind == OmniTypeKind.OBJECT) {
-      if (type.properties.length == 0 && !OmniUtil.hasAdditionalProperties(type)) { // (type.additionalProperties == undefined || !type.additionalProperties)) {
+      if (type.properties.length == 0 && !OmniUtil.hasAdditionalProperties(type)) {
         return true;
       }
     }
@@ -1660,6 +1676,20 @@ export class OmniUtil {
     return distinctTypes;
   }
 
+  public static isNumericType(type: OmniType): boolean {
+
+    if (type.kind != OmniTypeKind.PRIMITIVE) {
+      return false;
+    }
+
+    return type.primitiveKind == OmniPrimitiveKind.NUMBER
+      || type.primitiveKind == OmniPrimitiveKind.DOUBLE
+      || type.primitiveKind == OmniPrimitiveKind.INTEGER
+      || type.primitiveKind == OmniPrimitiveKind.INTEGER_SMALL
+      || type.primitiveKind == OmniPrimitiveKind.FLOAT
+      || type.primitiveKind == OmniPrimitiveKind.DECIMAL;
+  }
+
   public static getGeneralizedType<T extends OmniType>(type: T): T {
 
     if (type.kind == OmniTypeKind.PRIMITIVE) {
@@ -1805,6 +1835,26 @@ export class OmniUtil {
     }
 
     return to;
+  }
+
+  public static cloneAndCopyTypeMeta(source: OmniType & OmniOptionallyNamedType, other: OmniType): typeof source {
+
+    const newType: typeof source = {
+      ...source,
+      description: other.description ?? source.description,
+      summary: other.summary ?? source.summary,
+      accessLevel: other.accessLevel ?? source.accessLevel,
+      debug: other.debug ?? source.debug,
+      title: other.title ?? source.title,
+      absoluteUri: other.absoluteUri ?? source.absoluteUri,
+    };
+
+    const newName = ('name' in other ? other.name : undefined) ?? source.name;
+    if (newName) {
+      newType.name = newName;
+    }
+
+    return newType;
   }
 
   public static getDiff(baseline: OmniType, other: OmniType, features: TargetFeatures): Diff[] {

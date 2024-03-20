@@ -1,6 +1,6 @@
 import {AstNode} from '../ast';
 
-export type VisitResult<R> = void | R | Array<R> | Array<VisitResult<R>>; // TODO: Remove "void"
+export type VisitResult<R> = void | R | Array<R> | Array<VisitResult<R>>;
 
 export type VisitFn<N extends AstNode, R, V extends AstVisitor<R>> =
   (node: N, visitor: V) => VisitResult<R>;

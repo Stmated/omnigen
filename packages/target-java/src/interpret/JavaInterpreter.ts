@@ -9,7 +9,7 @@ import {
   AddCompositionMembersJavaAstTransformer,
   AddConstructorJavaAstTransformer,
   AddFieldsAstTransformer,
-  AddGeneratedAnnotationAstTransformer,
+  AddGeneratedAnnotationJavaAstTransformer,
   AddJakartaValidationAstTransformer,
   AddLombokAstTransformer,
   AddSubTypeHintsAstTransformer,
@@ -18,13 +18,13 @@ import {
   InnerTypeCompressionAstTransformer,
   JavaAndTargetOptions,
   PackageResolverAstTransformer,
-  PropertyNameDiscrepancyAstTransformer,
+  ToHardCodedTypeJavaAstTransformer,
   ReorderMembersTransformer,
   SimplifyGenericsAstTransformer, JacksonJavaAstTransformer,
 } from '../transform';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
-import {AddMissingDeclarationsForTypesAstTransformer} from '../transform/AddMissingDeclarationsForTypesAstTransformer.ts';
+import {AddMissingDeclarationsForTypesAstTransformer} from '../transform';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -36,7 +36,6 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new AddCompositionMembersJavaAstTransformer();
     yield new AddFieldsAstTransformer();
     yield new AddMissingDeclarationsForTypesAstTransformer();
-    yield new PropertyNameDiscrepancyAstTransformer();
     switch (options.fieldAccessorMode) {
       case FieldAccessorMode.POJO:
         yield new AddAccessorsForFieldsAstTransformer();
@@ -57,12 +56,13 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new AddAdditionalPropertiesInterfaceAstTransformer();
     yield new AddCommentsAstTransformer();
     yield new AddJakartaValidationAstTransformer();
-    yield new AddGeneratedAnnotationAstTransformer();
+    yield new AddGeneratedAnnotationJavaAstTransformer();
     yield new AddSubTypeHintsAstTransformer();
     yield new InnerTypeCompressionAstTransformer();
     yield new AddThrowsForKnownMethodsAstTransformer();
     yield new SimplifyGenericsAstTransformer();
     yield new JacksonJavaAstTransformer();
+    yield new ToHardCodedTypeJavaAstTransformer();
     yield new PackageResolverAstTransformer();
     yield new ReorderMembersTransformer();
   }

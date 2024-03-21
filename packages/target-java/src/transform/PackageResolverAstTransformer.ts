@@ -1,17 +1,25 @@
 import {ExternalSyntaxTree, OmniType, TargetFeatures, TargetOptions} from '@omnigen/core';
-import {JavaUtil, TypeNameInfo} from '../util';
+import {JavaUtil} from '../util';
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {isDefined, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {AbstractObjectDeclaration, EdgeType} from '../ast';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 interface CompilationUnitInfo {
-  cu: Java.CompilationUnit;
+  unit: Java.CompilationUnit;
   packageName: string;
-  addedTypeNodes: (Java.EdgeType | Java.WildcardType)[];
+  handledTypeNodes: Java.EdgeType[];
   importNameMap: Map<OmniType, string>;
+}
+
+export interface TypeInfo {
+  packageName: string | undefined;
+  className: string;
+  outerTypes: Java.AbstractObjectDeclaration[];
+  unit: Java.CompilationUnit;
 }
 
 /**
@@ -21,9 +29,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    const typeNameMap = new Map<OmniType, TypeNameInfo>();
-    const cuInfoStack: CompilationUnitInfo[] = [];
-    const objectStack: Java.AbstractObjectDeclaration[] = [];
+    const typeNameMap = new Map<OmniType, TypeInfo>();
 
     // First we go through all the types and find their true Fully-Qualified Name.
     const all: ExternalSyntaxTree<Java.JavaAstRootNode, JavaAndTargetOptions>[] = [...args.externals, {
@@ -32,12 +38,11 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     }];
 
     for (const external of all) {
-      this.getTypeNameInfos(external, objectStack, args.options).forEach((v, k) => typeNameMap.set(k, v));
+      this.getTypeNameInfos(external, args.options).forEach((v, k) => typeNameMap.set(k, v));
     }
 
-    if (objectStack.length > 0 || cuInfoStack.length > 0) {
-      throw new Error(`There is a mismatch in the opening and closing of some syntax tree visiting`);
-    }
+    const unitStack: CompilationUnitInfo[] = [];
+    const objectStack: Java.AbstractObjectDeclaration[] = [];
 
     // Then we will go through the currently compiling root node and set all type nodes' local names.
     const defaultVisitor = args.root.createVisitor();
@@ -54,15 +59,18 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         const cuPackage = JavaUtil.getPackageName(firstTypedChild, cuClassName, args.options);
 
         const cuInfo: CompilationUnitInfo = {
-          cu: node,
+          unit: node,
           packageName: cuPackage,
-          addedTypeNodes: [],
+          handledTypeNodes: [],
           importNameMap: new Map<OmniType, string>(),
         };
 
-        cuInfoStack.push(cuInfo);
-        defaultVisitor.visitCompilationUnit(node, visitor);
-        cuInfoStack.pop();
+        try {
+          unitStack.push(cuInfo);
+          defaultVisitor.visitCompilationUnit(node, visitor);
+        } finally {
+          unitStack.pop();
+        }
 
         // After the visitation is done, all imports should have been found
         node.imports.children.sort((a, b) => {
@@ -81,34 +89,28 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
         }
       },
 
-      // visitWildcardType: (node, visitor) => {
-      //
-      //   defaultVisitor.visitWildcardType(node, visitor);
-      //   this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options, args.features);
-      // },
-
       visitBoundedType: (n, v) => {
         return defaultVisitor.visitBoundedType(n, v);
       },
 
       visitEdgeType: node => {
-        this.setLocalNameAndImport(node, node.implementation, objectStack, cuInfoStack, typeNameMap, args.options, args.features);
+        this.setLocalNameAndAddImport(node, node.implementation, objectStack, unitStack, typeNameMap, args.options, args.features);
       },
     }));
   }
 
-  private setLocalNameAndImport(
+  private setLocalNameAndAddImport(
     node: Java.EdgeType,
     implementation: boolean | undefined,
     objectStack: Java.AbstractObjectDeclaration[],
-    cuInfoStack: CompilationUnitInfo[],
-    typeNameMap: Map<OmniType, TypeNameInfo>,
+    unitStack: CompilationUnitInfo[],
+    typeNameMap: Map<OmniType, TypeInfo>,
     options: JavaAndTargetOptions,
     features: TargetFeatures,
   ): void {
 
-    const cuInfo = cuInfoStack[cuInfoStack.length - 1];
-    if (cuInfo.addedTypeNodes.includes(node)) {
+    const insideUnit = unitStack[unitStack.length - 1];
+    if (insideUnit.handledTypeNodes.includes(node)) {
       // This type node has already been handled.
       // It has probably been added to multiple locations in the tree.
       return;
@@ -118,20 +120,20 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
     const typeNameInfo = typeNameMap.get(unwrapped);
 
     if (typeNameInfo) {
-      this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, objectStack, cuInfo, options, features);
+      this.setLocalNameAndAddImportForKnownTypeName(typeNameInfo, node, objectStack, insideUnit, options, features);
     } else {
-      this.setLocalNameAndImportForUnknownTypeName(node, implementation, objectStack, cuInfo, typeNameMap, options);
+      this.setLocalNameAndAddImportForUnknownTypeName(node, implementation, objectStack, insideUnit, typeNameMap, options);
     }
 
-    cuInfo.addedTypeNodes.push(node);
+    insideUnit.handledTypeNodes.push(node);
   }
 
-  private setLocalNameAndImportForUnknownTypeName(
+  private setLocalNameAndAddImportForUnknownTypeName(
     node: Java.EdgeType,
     implementation: boolean | undefined,
     objectStack: Java.AbstractObjectDeclaration[],
-    cuInfo: CompilationUnitInfo,
-    typeNameMap: Map<OmniType, TypeNameInfo>,
+    insideUnit: CompilationUnitInfo,
+    typeNameMap: Map<OmniType, TypeInfo>,
     options: JavaAndTargetOptions,
   ): void {
 
@@ -150,71 +152,83 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
       const nodePackage = JavaUtil.getPackageNameFromFqn(nodeImportName);
 
-      if (nodePackage != cuInfo.packageName) {
-        this.addImportIfUnique(cuInfo, options, objectStack, nodeImportName, node);
+      if (nodePackage != insideUnit.packageName) {
+        this.addImportIfUnique(objectStack, insideUnit, options, nodeImportName, node);
       }
     }
   }
 
   private setLocalNameAndAddImportForKnownTypeName(
-    typeNameInfo: TypeNameInfo,
-    node: Java.EdgeType,
+    typeNameToResolve: TypeInfo,
+    typeNodeToResolve: Java.EdgeType,
     objectStack: Java.AbstractObjectDeclaration[],
-    cuInfo: CompilationUnitInfo,
+    insideUnit: CompilationUnitInfo,
     options: JavaAndTargetOptions,
     features: TargetFeatures,
   ): void {
 
     // We already have this type's name resolved. Perhaps as a regular type, or as a nested type.
-    if (typeNameInfo.packageName != cuInfo.packageName || features.forcedImports) {
+    const inDifferentPackage = (typeNameToResolve.packageName != insideUnit.packageName);
+    const inDifferentUnit = insideUnit.unit != typeNameToResolve.unit;
 
-      let typePackageName = typeNameInfo.packageName ?? ''; // Should never be undefined
-      if (features.relativeImports && typePackageName.length >= cuInfo.packageName.length) {
+    if (inDifferentPackage || features.forcedImports) {
 
-        const prefix = typePackageName.substring(0, cuInfo.packageName.length);
-        if (cuInfo.packageName.startsWith(prefix)) {
-          typePackageName = typePackageName.substring(cuInfo.packageName.length + 1);
-        }
-      }
+      const typePackageName = PackageResolverAstTransformer.getMaybeRelativePackageName(typeNameToResolve, insideUnit, features);
 
       const nodeImportName = JavaUtil.buildFullyQualifiedName(
         typePackageName,
-        typeNameInfo.outerTypes.map(it => it.name.value),
-        typeNameInfo.className,
+        typeNameToResolve.outerTypes.map(it => it.name.value),
+        typeNameToResolve.className,
       );
 
-      this.addImportIfUnique(cuInfo, options, objectStack, nodeImportName, node);
-      node.setLocalName(typeNameInfo.className);
+      if (inDifferentUnit) {
+        this.addImportIfUnique(objectStack, insideUnit, options, nodeImportName, typeNodeToResolve);
+      }
+
+      typeNodeToResolve.setLocalName(typeNameToResolve.className);
 
     } else {
 
       let typePathDivergesAt = 0;
-      for (; typePathDivergesAt < objectStack.length && typePathDivergesAt < typeNameInfo.outerTypes.length; typePathDivergesAt++) {
-        if (objectStack[typePathDivergesAt] != typeNameInfo.outerTypes[typePathDivergesAt]) {
+      for (; typePathDivergesAt < objectStack.length && typePathDivergesAt < typeNameToResolve.outerTypes.length; typePathDivergesAt++) {
+        if (objectStack[typePathDivergesAt] != typeNameToResolve.outerTypes[typePathDivergesAt]) {
           break;
         }
       }
 
-      if (typeNameInfo.outerTypes.length > 0) {
-        const localOuterTypes = typeNameInfo.outerTypes.slice(typePathDivergesAt);
+      if (typeNameToResolve.outerTypes.length > 0) {
+        const localOuterTypes = typeNameToResolve.outerTypes.slice(typePathDivergesAt);
         if (localOuterTypes.length > 0) {
           const parentPath = localOuterTypes.map(it => it.name.value).join('.');
-          node.setLocalName(`${parentPath}.${typeNameInfo.className}`);
+          typeNodeToResolve.setLocalName(`${parentPath}.${typeNameToResolve.className}`);
         } else {
-          node.setLocalName(typeNameInfo.className);
+          typeNodeToResolve.setLocalName(typeNameToResolve.className);
         }
       } else {
-        node.setLocalName(typeNameInfo.className);
+        typeNodeToResolve.setLocalName(typeNameToResolve.className);
       }
     }
   }
 
+  private static getMaybeRelativePackageName(typeNameToResolve: TypeInfo, targetUnit: CompilationUnitInfo, features: TargetFeatures) {
+
+    let typePackageName = typeNameToResolve.packageName ?? ''; // Should never be undefined
+    if (features.relativeImports && typePackageName.length >= targetUnit.packageName.length) {
+
+      const prefix = typePackageName.substring(0, targetUnit.packageName.length);
+      if (targetUnit.packageName.startsWith(prefix)) {
+        typePackageName = typePackageName.substring(targetUnit.packageName.length + 1);
+      }
+    }
+    return typePackageName;
+  }
+
   private addImportIfUnique(
-    cuInfo: CompilationUnitInfo,
+    objectStack: AbstractObjectDeclaration[],
+    insideUnit: CompilationUnitInfo,
     options: JavaAndTargetOptions,
-    objectStack: Java.AbstractObjectDeclaration[],
     nodeImportName: string,
-    node: Java.EdgeType,
+    node: EdgeType,
   ): void {
 
     if (objectStack.length > 0 && objectStack[objectStack.length - 1].omniType == node.omniType) {
@@ -223,9 +237,14 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
       return;
     }
 
-    const existing = cuInfo.cu.imports.children.find(it => {
+    const existing = insideUnit.unit.imports.children.find(it => {
       if (it.type instanceof Java.EdgeType) {
-        const otherImportName = it.type.getImportName() ?? JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
+        let otherImportName = it.type.getImportName();
+        if (!otherImportName) {
+          otherImportName = JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
+          it.type.setImportName(otherImportName);
+        }
+
         return otherImportName == nodeImportName;
       } else {
         return false;
@@ -236,26 +255,37 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
       // This is an import that has not already been added.
       node.setImportName(nodeImportName);
-      cuInfo.importNameMap.set(node.omniType, nodeImportName);
+      insideUnit.importNameMap.set(node.omniType, nodeImportName);
 
       if (/java\.lang\.[a-zA-Z0-9]+/.test(nodeImportName)) {
         // Ignored, since java.lang.* is always automatically imported.
       } else {
-        cuInfo.cu.imports.children.push(new Java.ImportStatement(node));
+        insideUnit.unit.imports.children.push(new Java.ImportStatement(node));
       }
     }
   }
 
   private getTypeNameInfos(
     external: ExternalSyntaxTree<Java.JavaAstRootNode, JavaAndTargetOptions>,
-    objectStack: Java.AbstractObjectDeclaration[],
     targetOptions: TargetOptions,
-  ): Map<OmniType, TypeNameInfo> {
+  ): Map<OmniType, TypeInfo> {
 
-    const typeNameMap = new Map<OmniType, TypeNameInfo>();
+    const unitStack: Java.CompilationUnit[] = [];
+    const objectStack: Java.AbstractObjectDeclaration[] = [];
+    const typeNameMap = new Map<OmniType, TypeInfo>();
 
     const originalVisitor = external.node.createVisitor();
     external.node.visit(VisitorFactoryManager.create(originalVisitor, {
+
+      visitCompilationUnit: (node, visitor) => {
+
+        try {
+          unitStack.push(node);
+          originalVisitor.visitCompilationUnit(node, visitor);
+        } finally {
+          unitStack.pop();
+        }
+      },
 
       visitObjectDeclaration: (node, visitor) => {
 
@@ -305,6 +335,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
           packageName: packageName,
           className: className,
           outerTypes: outerTypes,
+          unit: unitStack[unitStack.length - 1],
         });
       },
     }));

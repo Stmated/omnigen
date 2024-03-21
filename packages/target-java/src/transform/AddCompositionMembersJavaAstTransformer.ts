@@ -100,7 +100,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
             }
 
             for (const property of OmniUtil.getPropertiesOf(type)) {
-              JavaAstUtils.addOmniPropertyToBlockAsField(classDec.body, property, options);
+              JavaAstUtils.addOmniPropertyToBlockAsField(property, classDec.body, options);
             }
           }
 

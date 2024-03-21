@@ -35,6 +35,18 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
       }
     },
 
+    visitEnumItemList: (n, v) => `${n.children.map(it => render(it, v)).join(',\n')},\n`,
+    visitEnumItem: (n, v) => {
+
+      const comment = n.comment ? `${render(n.comment, v)}\n` : '';
+      const key = render(n.identifier, v);
+      const value = render(n.value, v);
+      return [
+        comment,
+        `${key} = ${value}`,
+      ];
+    },
+
     visitField: (node, visitor) => {
 
       const comments = node.comments ? `${node.comments.visit(visitor)}\n` : '';
@@ -207,6 +219,8 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
           separator = '&';
           break;
         case CompositionKind.XOR:
+        case CompositionKind.OR:
+          // TODO: Maybe one day we can do magical exclusive or, as in: https://stackoverflow.com/questions/52836812/how-do-json-schemas-anyof-type-translate-to-typescript
           separator = '|';
           break;
         default:

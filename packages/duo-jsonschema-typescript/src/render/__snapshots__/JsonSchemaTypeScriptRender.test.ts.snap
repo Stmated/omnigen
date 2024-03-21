@@ -10,16 +10,6 @@ exports[`jsonschema-typescript-render > discriminator 1`] = `
 
 exports[`jsonschema-typescript-render > jsonschema7 1`] = `
 [
-  "IAdditionalProperties.ts",
-  "NonNegativeIntegerDefault0.ts",
   "Schema.ts",
-  "SchemaDefinitions.ts",
-  "SchemaDependencies.ts",
-  "SchemaItems.ts",
-  "SchemaNonNegativeIntegerDefault0.ts",
-  "SchemaPatternProperties.ts",
-  "SchemaProperties.ts",
-  "SchemaType.ts",
-  "SimpleTypes.ts",
 ]
 `;

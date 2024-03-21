@@ -324,7 +324,9 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
   properties: OmniProperty[];
 
   /**
-   * In difference to JsonSchema, this needs to be specifically `true` to enable additional properties
+   * In difference to JsonSchema, this needs to be specifically `true` to enable additional properties.
+   *
+   * TODO: This should be something more advanced! We must be able to tell format of key and type(s) of values for the additional properties!
    */
   additionalProperties?: boolean | undefined;
 

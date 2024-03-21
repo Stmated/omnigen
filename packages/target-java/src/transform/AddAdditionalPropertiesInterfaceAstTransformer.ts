@@ -49,7 +49,7 @@ export class AddAdditionalPropertiesInterfaceAstTransformer extends AbstractJava
 
       additionalPropertiesObjectType.properties.push({
         // TODO: Wrong! Should have one interface per map type, or use common denominator. Right now there might be additional properties that collide
-        type: additionalPropertiesField.type.omniType, // additions[0].node.mapType,
+        type: additionalPropertiesField.type.omniType,
         name: 'additionalProperties',
         owner: additionalPropertiesObjectType,
       });

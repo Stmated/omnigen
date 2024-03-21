@@ -28,7 +28,17 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
         try {
           fieldNamesStack.push([]);
           const body = n.body.reduce(r) ?? new Java.Block();
-          return new Java.InterfaceDeclaration(n.type, n.name, body, n.modifiers);
+
+          const newInterface = new Java.InterfaceDeclaration(n.type, n.name, body, n.modifiers);
+          if (n.implements) {
+            if (n.implements.types.children.length == 1) {
+              newInterface.extends = new Java.ExtendsDeclaration(n.implements.types.children[0]);
+            } else if (n.implements.types.children.length > 1) {
+              throw new Error(`No support at the moment to extend multiple. Report it if needed.`);
+            }
+          }
+
+          return newInterface;
         } finally {
           fieldNamesStack.pop();
         }

@@ -3,11 +3,13 @@ import {
   AllowedEnumTsTypes,
   CompositionKind,
   OMNI_GENERIC_FEATURES,
+  OmniArrayKind,
   OmniArrayTypes,
   OmniArrayTypesByPositionType,
   OmniComparisonOperator,
   OmniDecoratingType,
-  OmniEnumType, OmniExample,
+  OmniEnumType,
+  OmniExample,
   OmniModel,
   OmniModelParserResult,
   OmniObjectType,
@@ -26,7 +28,7 @@ import {
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
-import {Case, CompositionUtil, Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
+import {Case, CompositionUtil, isDefined, Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {ExternalDocumentsFinder, RefResolver, ToDefined} from '../visit';
 
@@ -200,8 +202,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     const extendedBy = this.getExtendedBy(schema, name);
+    const defaultType = this.getDefaultFromSchema(schema, name);
 
-    const omniType = this.jsonSchemaToNonObjectType(schema, ownerSchema, name, extendedBy) ?? this.jsonSchemaToObjectType(schema, name, id, extendedBy);
+    const omniType = this.jsonSchemaToNonObjectType(schema, ownerSchema, name, id, extendedBy, defaultType) ?? this.jsonSchemaToObjectType(schema, name, id, extendedBy);
     this._typeMap.set(id, omniType);
 
     let subTypeHints: OmniSubTypeHint[] | undefined = undefined;
@@ -275,12 +278,12 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       });
     }
 
-    if (schema.type) {
-      names.push({
-        name: name,
-        suffix: Case.pascal(String(schema.type)),
-      });
-    }
+
+    names.push({
+      name: name,
+      suffix: 'object',
+    });
+
 
     const type: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
@@ -354,7 +357,14 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return type;
   }
 
-  private jsonSchemaToNonObjectType(schema: AnyJsonDefinition, ownerSchema: AnyJSONSchema | undefined, name: TypeName, extendedBy?: OmniType): OmniType | undefined {
+  private jsonSchemaToNonObjectType(
+    schema: AnyJsonDefinition,
+    ownerSchema: AnyJSONSchema | undefined,
+    name: TypeName,
+    id: string,
+    extendedBy?: OmniType,
+    defaultType?: OmniType,
+  ): OmniType | undefined {
 
     if (typeof schema == 'boolean') {
 
@@ -427,22 +437,61 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       }
     } else if (schema.type === 'array') {
       return this.toArrayType(schema, schema.items, name);
-    } else if (typeof schema.type == 'string' && schema.type !== 'object') {
-      return this.toPrimitive(schema, name, ownerSchema);
+    } else if (schema.type !== 'object') {
+      return this.toPrimitive(schema, name, id, ownerSchema, extendedBy, defaultType);
     }
 
     return undefined;
   }
 
-  private toPrimitive(schema: AnyJSONSchema, name: TypeName, ownerSchema: AnyJSONSchema | undefined): OmniType {
+  private toPrimitive(schema: AnyJSONSchema, name: TypeName, id: string, ownerSchema: AnyJSONSchema | undefined, extendedBy: OmniType | undefined, defaultType: OmniType | undefined): OmniType {
 
-    if (typeof schema.type !== 'string') {
-      throw new Error(`We only handle the type when it is of type string`);
+    let schemaType: AnyJSONSchema['type'] = schema.type
+      ?? JsonSchemaParser.omniTypeToJsonSchemaType(schema, extendedBy)
+      ?? JsonSchemaParser.omniTypeToJsonSchemaType(schema, defaultType)
+      ?? (schema.enum ? ([...new Set(schema.enum.map(it => {
+        const javaType = typeof it;
+        if (javaType == 'bigint') {
+          return 'number';
+        } else if (javaType == 'symbol' || javaType == 'function') {
+          return 'any';
+        } else if (javaType == 'undefined') {
+          return 'null';
+        }
+
+        return javaType;
+      }))]) : undefined);
+
+    if (schemaType === undefined) {
+      throw new Error(`Must be given a type for ${Naming.unwrap(name)} to be able to create a primitive, since it has no extensions`);
     }
 
-    const enumValues = schema.enum; // schema.const ? [schema.const] : schema.enum;
+    if (Array.isArray(schemaType)) {
 
-    const lcType = schema.type.toLowerCase();
+      if (schemaType.length == 1) {
+        schemaType = schemaType[0];
+      } else {
+
+        // TODO: This will require more work, it is not correct. The properties of the owning schema is not propagated to the sub-types (like required, et cetera)
+        const primitiveTypes: OmniType[] = schemaType.map(it => {
+          if (it === 'object') {
+            return this.jsonSchemaToObjectType(schema, name, id, extendedBy);
+          } else {
+            return this.toPrimitive({type: it}, {name: name, suffix: it}, id, ownerSchema, extendedBy, defaultType);
+          }
+        });
+
+        return {
+          kind: OmniTypeKind.COMPOSITION,
+          compositionKind: CompositionKind.XOR,
+          types: primitiveTypes,
+        };
+      }
+    }
+
+    const enumValues = schema.enum;
+
+    const lcType = schemaType.toLowerCase();
     let primitiveKind: OmniPrimitiveKind;
     if (lcType == 'null') {
       primitiveKind = OmniPrimitiveKind.NULL;
@@ -451,7 +500,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     if (enumValues && enumValues.length > 0) {
-      return this.toOmniEnum(name, schema.type, primitiveKind, enumValues, schema, schema.description);
+      return this.toOmniEnum(name, schemaType, primitiveKind, enumValues, schema, schema.description);
     }
 
     const isLiteral = ('const' in schema) || primitiveKind == OmniPrimitiveKind.NULL || primitiveKind == OmniPrimitiveKind.VOID;
@@ -475,6 +524,38 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     return primitiveType;
+  }
+
+  private static omniTypeToJsonSchemaType(schema: AnyJSONSchema, extendedBy: OmniType | undefined): AnyJSONSchema['type'] {
+
+    if (extendedBy) {
+      switch (extendedBy.kind) {
+        case OmniTypeKind.PRIMITIVE:
+          switch (extendedBy.primitiveKind) {
+            case OmniPrimitiveKind.CHAR:
+            case OmniPrimitiveKind.STRING:
+              return 'string';
+            case OmniPrimitiveKind.LONG:
+            case OmniPrimitiveKind.INTEGER:
+            case OmniPrimitiveKind.INTEGER_SMALL:
+              return 'integer';
+            case OmniPrimitiveKind.NUMBER:
+            case OmniPrimitiveKind.DECIMAL:
+            case OmniPrimitiveKind.FLOAT:
+            case OmniPrimitiveKind.DOUBLE:
+              return 'number';
+            case OmniPrimitiveKind.BOOL:
+              return 'boolean';
+            case OmniPrimitiveKind.NULL:
+              return 'null';
+          }
+          break;
+        case OmniTypeKind.UNKNOWN:
+          return 'any';
+      }
+    }
+
+    return undefined;
   }
 
   private toOmniExamples(jsonExamples: ToDefined<AnyJSONSchema['examples']>): OmniExample<unknown>[] {
@@ -1196,6 +1277,57 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
           postDiscriminator.type.subTypeHints = subTypeHints;
         }
       }
+    }
+  }
+
+  private getDefaultFromSchema(schema: AnyJsonDefinition, path: TypeName): OmniType | undefined {
+
+    if (typeof schema !== 'boolean' && schema.default !== undefined) {
+      return this.getDefault(schema.default, path);
+    }
+
+    return undefined;
+  }
+
+  private getDefault(def: AnyJSONSchema['default'], path: TypeName): OmniType | undefined {
+
+    if (def === undefined) {
+      return undefined;
+    } else if (def === null) {
+      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NULL, literal: true, value: null};
+    } else if (typeof def === 'string') {
+      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: def};
+    } else if (typeof def === 'number') {
+      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER, literal: true, value: def};
+    } else if (typeof def === 'boolean') {
+      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL, literal: true, value: def};
+    } else if (Array.isArray(def)) {
+      return {
+        kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
+        arrayKind: OmniArrayKind.PRIMITIVE,
+        types: def.map(it => this.getDefault(it, path)).filter(isDefined),
+      };
+    } else {
+
+      const objectType: OmniObjectType = {kind: OmniTypeKind.OBJECT, name: {name: path, suffix: 'default'}, properties: []};
+      for (const [key, value] of Object.entries(def)) {
+
+        const propertyName: TypeName = {name: objectType.name, suffix: key};
+        const propertyType = this.getDefault(value, propertyName);
+        if (!propertyType) {
+
+          logger.warn(`Could not get an omni type from default object ${value} in ${Naming.unwrap(propertyName)}`);
+          continue;
+        }
+
+        objectType.properties.push({
+          name: key,
+          type: propertyType,
+          owner: objectType,
+        });
+      }
+
+      return objectType;
     }
   }
 }

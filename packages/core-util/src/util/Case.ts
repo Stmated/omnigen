@@ -9,13 +9,11 @@ const UPPERCASE = /[\p{Lu}]/u;
 const LOWERCASE = /[\p{Ll}]/u;
 const LEADING_CAPITAL = /^[\p{Lu}](?![\p{Lu}])/gu;
 const IDENTIFIER = /([\p{Alpha}\p{N}_]|$)/u;
-const SEPARATORS = /[_.\-/[\]()\s#+*$~`]+/;
+const SEPARATORS = /[.\-/[\]()\s#+*~`]+/;
 
-const LEADING_SEPARATORS = new RegExp('^' + SEPARATORS.source);
+const LEADING_SEPARATORS = /^[.\-/[\]()\s#+*~`]+/; // Allows to start with '_' and '$'
 const SEPARATORS_AND_IDENTIFIER = new RegExp(SEPARATORS.source + IDENTIFIER.source, 'gu');
 const NUMBERS_AND_IDENTIFIER = new RegExp('\\d+' + IDENTIFIER.source, 'gu');
-
-const PUNCTUATION = /[^\p{L}\p{N}]+/ug;
 
 type CharTransformer = { (c: string): string };
 
@@ -161,7 +159,7 @@ class CamelCase {
       return safeOptions.pascalCase ? toUpperCase(input) : toLowerCase(input);
     }
 
-    const hasUpperCase = input !== toLowerCase(input);
+    const hasUpperCase = (input !== toLowerCase(input));
 
     if (hasUpperCase) {
       input = CamelCase.preserveCamelCase(input, toLowerCase, toUpperCase);

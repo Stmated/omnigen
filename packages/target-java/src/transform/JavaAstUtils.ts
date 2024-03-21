@@ -13,7 +13,7 @@ import {
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {JavaAstRootNode} from '../ast';
+import {Block, JavaAstRootNode} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaOptions} from '../options';
@@ -94,7 +94,7 @@ export class JavaAstUtils {
     return new Java.GenericType(type, baseType, mappedGenericTargetArguments);
   }
 
-  public static addOmniPropertyToBlockAsField(body: Java.Block, property: OmniProperty, options: JavaOptions): void {
+  public static addOmniPropertyToBlockAsField(property: OmniProperty, body: Block, options: JavaOptions): void {
 
     if (OmniUtil.isNull(property.type) && !options.includeAlwaysNullProperties) {
       return;

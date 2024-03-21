@@ -16,12 +16,12 @@ export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<J
           if (n.omniType.kind == OmniTypeKind.DICTIONARY) {
 
             const type = n.omniType;
-            const mapClass = 'Map';
-            const mapType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
+            // const dictionaryClass = ;
+            const dictionaryType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'Record'});
             const keyType = TsAstUtils.createTypeNode(type.keyType, true);
             const valueType = TsAstUtils.createTypeNode(type.valueType, true);
 
-            return new Java.GenericType(type, mapType, [keyType, valueType]);
+            return new Java.GenericType(type, dictionaryType, [keyType, valueType]);
 
           } else {
             return defaultReducer.reduceEdgeType(n, r);

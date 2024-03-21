@@ -23,7 +23,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
 
           const properties = OmniUtil.getPropertiesOf(type);
           for (const property of properties) {
-            JavaAstUtils.addOmniPropertyToBlockAsField(body, property, args.options);
+            JavaAstUtils.addOmniPropertyToBlockAsField(property, body, args.options);
           }
 
           if (type.additionalProperties && !JavaUtil.superMatches(args.model, type, parent => this.hasAdditionalProperties(parent))) {
@@ -34,7 +34,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
         }
 
         for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
-          JavaAstUtils.addOmniPropertyToBlockAsField(body, property, args.options);
+          JavaAstUtils.addOmniPropertyToBlockAsField(property, body, args.options);
         }
 
         // Then keep searching deeper, into nested types

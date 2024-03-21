@@ -30,6 +30,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-typescript/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/coverage" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

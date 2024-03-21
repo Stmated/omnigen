@@ -52,6 +52,8 @@ import {TypeScriptAstTransformerArgs} from './ast/TypeScriptAstVisitor.ts';
 import {MethodToGetterTypeScriptAstTransformer} from './ast/MethodToGetterTypeScriptAstTransformer.ts';
 import {ClassToInterfaceTypeScriptAstTransformer} from './ast/ClassToInterfaceTypeScriptAstTransformer.ts';
 import {ToHardCodedTypeTypeScriptAstTransformer} from './ast/ToHardCodedTypeTypeScriptAstTransformer.ts';
+import {SingleFileTypeScriptAstTransformer} from './ast/SingleFileTypeScriptAstTransformer.ts';
+import {RemoveEnumFieldsTypeScriptAstTransformer} from './ast/RemoveEnumFieldsTypeScriptAstTransformer.ts';
 
 export const ZodParserOptionsContext = z.object({
   parserOptions: ZodParserOptions,
@@ -143,16 +145,17 @@ export const TypeScriptPlugin = createPlugin(
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
       new AddJakartaValidationAstTransformer(),
-      new AddGeneratedCommentAstTransformer(),
       new AddSubTypeHintsAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
       new AddThrowsForKnownMethodsAstTransformer(),
       new SimplifyGenericsAstTransformer(),
-      // new JacksonJavaAstTransformer(),
       new CompositionTypeScriptAstTransformer(),
       new MethodToGetterTypeScriptAstTransformer(),
       new ClassToInterfaceTypeScriptAstTransformer(),
       new ToHardCodedTypeTypeScriptAstTransformer(),
+      new SingleFileTypeScriptAstTransformer(),
+      new RemoveEnumFieldsTypeScriptAstTransformer(),
+      new AddGeneratedCommentAstTransformer(),
       new PackageResolverAstTransformer(),
       new ReorderMembersTransformer(),
     ] as const;

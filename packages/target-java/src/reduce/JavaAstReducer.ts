@@ -2,6 +2,7 @@ import {AstFreeTextVisitor, JavaVisitor} from '../visit';
 import {OmniTypeKind, reduce, Reducer} from '@omnigen/core';
 import * as Java from '../ast';
 import {assertDefined, isDefined, OmniUtil} from '@omnigen/core-util';
+import {DecoratingTypeNode} from '../ast';
 
 export type FreeTextReducer = Reducer<AstFreeTextVisitor<unknown>>;
 
@@ -392,7 +393,10 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       const children = n.children.map(it => it.reduce(r)).filter(isDefined);
       return (children.length > 0) ? new Java.Nodes(...children).setId(n.id) : undefined;
     },
-    reduceIdentifierOf: n => n,
+    reduceDecoratingTypeNode: (n, r) => {
+      const of = n.of.reduce(r);
+      return of ? new Java.DecoratingTypeNode(of, n.omniType).setId(n.id) : undefined;
+    },
   };
 };
 

@@ -38,7 +38,7 @@ describe('jsonschema-java-render', () => {
 
     const rendered = await JsonSchemaToJavaTestUtil.render(
       Util.getPathFromRoot('./packages/parser-jsonschema/examples/decorated_types.json'),
-      {...ZodJavaOptions.parse({}), commentsOnFields: false, commentsOnGetters: true, serializationLibrary: 'POJO'},
+      {...ZodJavaOptions.parse({}), commentsOnFields: false, commentsOnGetters: true, serializationLibrary: SerializationLibrary.POJO, compressSoloReferencedTypes: false},
     );
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -80,9 +80,6 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  /**
-   * Current result is not the best, since it creates an unused `StringBoolean` when inheriting `AccountNotificationDataVerified` is used instead.
-   */
   test('inline_boolean', async ({task}) => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
@@ -90,6 +87,8 @@ describe('jsonschema-java-render', () => {
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/inline_boolean.json'), {
       serializationLibrary: SerializationLibrary.POJO,
       includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
+      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: true,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 

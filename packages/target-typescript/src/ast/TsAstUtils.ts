@@ -18,11 +18,16 @@ export class TsAstUtils {
       } else {
         return new Java.WildcardType(type, implementation);
       }
-    } else if (type.kind == OmniTypeKind.COMPOSITION && (type.compositionKind == CompositionKind.XOR || type.compositionKind == CompositionKind.OR || type.compositionKind == CompositionKind.AND)) {
-      return new Ts.CompositionType(type, type.types.map(it => TsAstUtils.createTypeNode(it, implementation)));
-    } else {
-      return new Java.EdgeType<T>(type, implementation);
+    } else if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind != CompositionKind.NOT) {
+      if (type.inline) {
+        return new Ts.CompositionType(type, type.types.map(it => TsAstUtils.createTypeNode(it, implementation)));
+      }
+    } else if (type.kind == OmniTypeKind.DECORATING) {
+      const of = TsAstUtils.createTypeNode(type.of, implementation);
+      return new Java.DecoratingTypeNode(of, type);
     }
+
+    return new Java.EdgeType<T>(type, implementation);
   }
 
   private static createGenericTargetTypeNode<T extends OmniGenericTargetType>(

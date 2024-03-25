@@ -1,6 +1,6 @@
 import {AstNode, AstVisitor, OmniArrayKind, OmniPrimitiveKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
-import {GenericTypeDeclarationList, JavaAstRootNode, TokenKind} from '../ast';
+import {DecoratingTypeNode, GenericTypeDeclarationList, JavaAstRootNode, TokenKind} from '../ast';
 import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
 import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -601,18 +601,10 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     visitClassName: (node, visitor) => `${render(node.type, visitor)}`,
     visitClassReference: (node, visitor) => `${render(node.className, visitor)}.class`,
 
-    visitIdentifierOf: (n, v) => {
+    visitDecoratingTypeNode: (n, v) => {
 
-      const target = root.getNodeWithId(n.id);
-      const identifier = ('identifier' in target) ? target.identifier : undefined;
-      const name = ('name' in target) ? target.name : undefined;
-      const preferred = identifier ?? name;
-
-      if (preferred instanceof Java.Identifier) {
-        return render(preferred, v);
-      } else {
-        throw new Error(`Do not know how to get an identifier out of '${n}'`);
-      }
+      // All we do is delegate the rendering to our inner type node.
+      return render(n.of, v);
     },
 
     visitArrayInitializer: (node, visitor) => {

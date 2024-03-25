@@ -1,7 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
   AstNode,
-  CompositionKind, OmniDecoratingType,
+  CompositionKind,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
@@ -45,6 +45,13 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
         // These should keep their names, which are generally just 'T'.
         continue;
+      }
+
+      if (type.kind == OmniTypeKind.COMPOSITION && !type.name && !type.inline) {
+        const stringName = JavaUtil.getClassName(type, args.options);
+        type.name = {
+          name: stringName,
+        };
       }
 
       // NOTE: Check if wrapped type has a name and resolve/change it too?

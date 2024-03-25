@@ -2,7 +2,7 @@ import {
   AstNode,
   AstNodeWithChildren,
   AstVisitor,
-  LiteralValue, OmniArrayType,
+  LiteralValue, OmniArrayType, OmniDecoratingType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniHardcodedReferenceType,
@@ -1684,19 +1684,21 @@ export class ClassReference extends AbstractJavaExpression {
   }
 }
 
-export class IdentifierOf extends AbstractJavaNode {
-  targetId: number;
+export class DecoratingTypeNode extends AbstractJavaNode implements TypeNode {
+  of: TypeNode;
+  omniType: OmniDecoratingType;
 
-  constructor(targetId: number) {
+  constructor(of: TypeNode, omniType: OmniDecoratingType) {
     super();
-    this.targetId = targetId;
+    this.of = of;
+    this.omniType = omniType;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitIdentifierOf(this, visitor);
+    return visitor.visitDecoratingTypeNode(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<IdentifierOf> {
-    return reducer.reduceIdentifierOf(this, reducer);
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<DecoratingTypeNode> {
+    return reducer.reduceDecoratingTypeNode(this, reducer);
   }
 }

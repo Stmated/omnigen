@@ -38,7 +38,6 @@ exports[`jsonschema-java-render > enum_string_composition 1`] = `
 exports[`jsonschema-java-render > inline_boolean 1`] = `
 [
   "AccountNotificationData.java",
-  "StringBoolean.java",
 ]
 `;
 

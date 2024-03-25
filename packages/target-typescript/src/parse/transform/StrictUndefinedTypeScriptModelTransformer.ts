@@ -4,10 +4,10 @@ import {
   OmniCompositionType,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniPrimitiveKind,
+  OmniPrimitiveKind, OmniPrimitiveType,
   OmniPrimitiveUndefined,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, OmniUnknownType,
   ParserOptions,
   TargetOptions,
 } from '@omnigen/core';
@@ -20,6 +20,11 @@ const logger = LoggerFactory.create(import.meta.url);
  * Will make the type of properties that are not required into a union type of `T | undefined`
  */
 export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPassTransformer<ParserOptions & TargetOptions & TypeScriptOptions> {
+
+  private static readonly _UNDEFINED_TYPE: OmniPrimitiveType = {
+    kind: OmniTypeKind.PRIMITIVE,
+    primitiveKind: OmniPrimitiveKind.UNDEFINED,
+  };
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions>): void {
 
@@ -51,36 +56,39 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
           }
 
           if (property.type.compositionKind == CompositionKind.OR || property.type.compositionKind == CompositionKind.XOR) {
-            property.type.types.push(this.createUndefinedType());
-
-          } else {
-            throw new Error(`Do not yet know how to add 'undefined' to composition type ${OmniUtil.describe(property.type)}`);
+            // property.type.types.push(StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE);
+            const i = 0;
           }
-        } else {
-
-          if (OmniUtil.isUndefined(property.type)) {
-            continue;
-          }
-
-          const compositionType: OmniCompositionType = {
-            kind: OmniTypeKind.COMPOSITION,
-            compositionKind: CompositionKind.XOR,
-            types: [property.type, this.createUndefinedType()],
-          };
-
-          typeToUndefinedMap.set(property.type, compositionType);
-
-          property.type = compositionType;
+          // else {
+          //   throw new Error(`Do not yet know how to add 'undefined' to composition type ${OmniUtil.describe(property.type)}`);
+          // }
         }
+        // else {
+
+        if (OmniUtil.isUndefined(property.type)) {
+          continue;
+        }
+
+        const compositionType: OmniCompositionType = {
+          kind: OmniTypeKind.COMPOSITION,
+          compositionKind: CompositionKind.XOR,
+          types: [property.type, StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE],
+          inline: true,
+        };
+
+        typeToUndefinedMap.set(property.type, compositionType);
+
+        property.type = compositionType;
+        // }
       }
     });
   }
 
-  private createUndefinedType(): OmniPrimitiveUndefined {
-
-    return {
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.UNDEFINED,
-    };
-  }
+  // private createUndefinedType(): OmniPrimitiveUndefined {
+  //
+  //   return {
+  //     kind: OmniTypeKind.PRIMITIVE,
+  //     primitiveKind: OmniPrimitiveKind.UNDEFINED,
+  //   };
+  // }
 }

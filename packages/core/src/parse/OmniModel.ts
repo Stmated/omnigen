@@ -193,6 +193,10 @@ export interface OmniBaseType<T extends OmniTypeKind> {
    */
   implicit?: boolean;
   /**
+   * True if the type SHOULD be preferred to be inlined.
+   */
+  inline?: boolean;
+  /**
    * TODO: Implement! REMOVE the optional and make it required! ALL types MUST have an absolute uri, to make it possible to merge types between schemas/contracts
    */
   absoluteUri?: string | undefined;

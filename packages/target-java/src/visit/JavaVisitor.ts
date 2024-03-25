@@ -1,5 +1,6 @@
 import {AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
+import {DecoratingTypeNode} from '../ast';
 
 export type JavaVisitFn<N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
@@ -109,7 +110,7 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitStaticMemberReference: JavaVisitFn<Java.StaticMemberReference, R>;
   visitSelfReference: JavaVisitFn<Java.SelfReference, R>;
   visitNodes: JavaVisitFn<Java.Nodes, R>;
-  visitIdentifierOf: JavaVisitFn<Java.IdentifierOf, R>;
+  visitDecoratingTypeNode: JavaVisitFn<Java.DecoratingTypeNode, R>;
 }
 
 export const createJavaVisitor = <R>(partial?: Partial<JavaVisitor<R>>, noop?: R | undefined): Readonly<JavaVisitor<R>> => {
@@ -330,7 +331,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
     visitStaticMemberReference: (node, visitor) => [node.target.visit(visitor), node.member.visit(visitor)],
     visitSelfReference: () => noop,
     visitNodes: (node, visitor) => node.children.map(it => it.visit(visitor)),
-    visitIdentifierOf: () => noop,
+    visitDecoratingTypeNode: (n, v) => n.of.visit(v),
     ...partial,
   };
 };

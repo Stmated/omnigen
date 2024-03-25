@@ -59,9 +59,12 @@ export class JavaAstUtils {
       } else {
         return new Java.WildcardType(type, implementation);
       }
-    } else {
-      return new Java.EdgeType(type, implementation);
+    } else if (type.kind == OmniTypeKind.DECORATING) {
+      const of = JavaAstUtils.createTypeNode(type.of, implementation);
+      return new Java.DecoratingTypeNode(of, type);
     }
+
+    return new Java.EdgeType(type, implementation);
   }
 
   private static createArrayTypeNode<const T extends OmniArrayType>(

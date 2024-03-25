@@ -21,4 +21,13 @@ public class AccountNotificationData {
   public StringBoolean getVerified() {
     return this.verified;
   }
+
+  public static enum StringBoolean {
+    Fail("0"),
+    OK("1");
+    private String value;
+    StringBoolean(String value) {
+      this.value = value;
+    }
+  }
 }

@@ -1,11 +1,10 @@
 import {
   CommonDenominatorType,
-  CompositionKind,
   LiteralValue,
   OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
-  OmniArrayType,
+  OmniArrayType, OmniCompositionType,
   OmniDictionaryType,
   OmniEnumType,
   OmniExternalModelReferenceType,
@@ -14,7 +13,7 @@ import {
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
   OmniInput,
-  OmniModel, OmniNamedType,
+  OmniModel,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniOutput,
@@ -28,8 +27,8 @@ import {
   OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
   OmniSuperTypeCapableType,
-  OmniType,
-  OmniTypeKind,
+  OmniType, OmniTypeComposition,
+  OmniTypeKind, OmniTypeKindComposition, OmniTypeOf,
   PropertyDifference,
   SmartUnwrappedType,
   TargetFeatures,
@@ -183,7 +182,7 @@ export class OmniUtil {
       return true;
     }
 
-    if (type.kind == OmniTypeKind.COMPOSITION) {
+    if (OmniUtil.isComposition(type)) {
 
       for (const child of type.types) {
 
@@ -194,13 +193,7 @@ export class OmniUtil {
         }
       }
 
-      // NOTE: This conversion is not necessarily true, the generics need to be improved to be trusted
-      if (type.types.some(it => !OmniUtil.asSubType(it))) { // it.kind == OmniTypeKind.PRIMITIVE || !!JavaUtil.asSubType(it))
-        logger.debug(`There is a non-subtype type inside composition ${OmniUtil.describe(type)}`);
-        return false;
-      } else {
-        return true;
-      }
+      return true;
     }
 
     return false;
@@ -257,7 +250,7 @@ export class OmniUtil {
       return OmniUtil.asSuperType(type.of);
     }
 
-    if (type.kind == OmniTypeKind.COMPOSITION) {
+    if (OmniUtil.isComposition(type)) {
 
       // This seems like an unnecessary operation to do, but cannot figure out a better way yet.
       for (const child of type.types) {
@@ -285,7 +278,7 @@ export class OmniUtil {
   public static isGenericSuperType(type: OmniSuperTypeCapableType): type is OmniSuperGenericTypeCapableType {
 
     if (type.kind == OmniTypeKind.GENERIC_TARGET
-      || type.kind == OmniTypeKind.COMPOSITION
+      || OmniUtil.isComposition(type)
       || type.kind == OmniTypeKind.ENUM
       || type.kind == OmniTypeKind.HARDCODED_REFERENCE
       || type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE
@@ -344,9 +337,9 @@ export class OmniUtil {
 
   public static getFlattenedSuperTypes(type: OmniSuperTypeCapableType): OmniSuperTypeCapableType[] {
 
-    if (type.kind == OmniTypeKind.COMPOSITION) {
+    if (OmniUtil.isComposition(type)) {
 
-      if (type.compositionKind == CompositionKind.INTERSECTION) {
+      if (type.kind == OmniTypeKind.INTERSECTION) {
         return type.types.flatMap(it => {
           return OmniUtil.getFlattenedSuperTypes(it);
         });
@@ -365,22 +358,20 @@ export class OmniUtil {
 
     if (type) {
       const unwrapped = OmniUtil.getUnwrappedType(type);
-      if (unwrapped.kind == OmniTypeKind.COMPOSITION) {
-        if (unwrapped.compositionKind == CompositionKind.INTERSECTION) {
+      if (OmniUtil.isComposition(unwrapped)) {
+        if (unwrapped.kind == OmniTypeKind.INTERSECTION) {
           unwrapped.types;
         }
 
         return [unwrapped];
       }
 
-      if (unwrapped.extendedBy) {
-        if (unwrapped.extendedBy.kind == OmniTypeKind.COMPOSITION) {
-          if (unwrapped.extendedBy.compositionKind == CompositionKind.INTERSECTION) {
-            return unwrapped.extendedBy.types;
-          }
-        } else {
-          return [unwrapped.extendedBy];
+      if (OmniUtil.isComposition(unwrapped.extendedBy)) {
+        if (unwrapped.extendedBy.kind == OmniTypeKind.INTERSECTION) {
+          return unwrapped.extendedBy.types;
         }
+      } else if (unwrapped.extendedBy) {
+        return [unwrapped.extendedBy];
       }
     }
 
@@ -403,7 +394,7 @@ export class OmniUtil {
         return;
       }
 
-      if (subType.kind == OmniTypeKind.COMPOSITION) {
+      if (OmniUtil.isComposition(subType)) {
         return;
       }
 
@@ -463,16 +454,19 @@ export class OmniUtil {
     }
 
     const queue: OmniSubTypeCapableType[] = [type];
+    let maxDepth = 1000;
     while (queue.length > 0) {
+
+      if (maxDepth-- <= 0) {
+        throw new Error(`Found endlessly recursive super-type hierarchy from ${OmniUtil.describe(type)}`);
+      }
 
       const dequeued = queue.pop();
       const superTypes = OmniUtil.getSuperTypes(model, dequeued);
-      if (superTypes) {
-        path.push(...superTypes);
-        for (const superType of superTypes) {
-          if (OmniUtil.asSubType(superType)) {
-            queue.push(superType);
-          }
+      path.push(...superTypes);
+      for (const superType of superTypes) {
+        if (OmniUtil.asSubType(superType)) {
+          queue.push(superType);
         }
       }
     }
@@ -779,16 +773,16 @@ export class OmniUtil {
       };
     } else if (type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
       return type.fqn;
-    } else if (type.kind == OmniTypeKind.COMPOSITION) {
+    } else if (OmniUtil.isComposition(type)) {
 
       let prefix: TypeName;
-      if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
+      if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
         prefix = ['UnionOf', 'ExclusiveUnionOf'];
-      } else if (type.compositionKind == CompositionKind.UNION) {
+      } else if (type.kind == OmniTypeKind.UNION) {
         prefix = 'UnionOf';
-      } else if (type.compositionKind == CompositionKind.INTERSECTION) {
+      } else if (type.kind == OmniTypeKind.INTERSECTION) {
         prefix = 'IntersectionOf';
-      } else if (type.compositionKind == CompositionKind.NEGATION) {
+      } else if (type.kind == OmniTypeKind.NEGATION) {
         prefix = 'NegationOf';
       } else {
         assertUnreachable(type);
@@ -887,7 +881,10 @@ export class OmniUtil {
   private static swapTypeInsideType<T extends OmniType, R extends OmniType>(parent: OmniType, from: T, to: R, maxDepth: number): void {
 
     switch (parent.kind) {
-      case OmniTypeKind.COMPOSITION: {
+      case OmniTypeKind.UNION:
+      case OmniTypeKind.EXCLUSIVE_UNION:
+      case OmniTypeKind.INTERSECTION:
+      case OmniTypeKind.NEGATION: {
         for (let i = 0; i < parent.types.length; i++) {
           const found = OmniUtil.swapType(parent.types[i], from, to, maxDepth - 1);
           if (found) {
@@ -899,7 +896,7 @@ export class OmniUtil {
       case OmniTypeKind.OBJECT: {
         if (parent.extendedBy) {
           // We do not decrease the max depth if it's a composition, since it is an invisible wrapper
-          const decrementDepthBy = (parent.extendedBy.kind == OmniTypeKind.COMPOSITION) ? 0 : 1;
+          const decrementDepthBy = (OmniUtil.isComposition(parent.extendedBy)) ? 0 : 1;
           const found = OmniUtil.swapType(parent.extendedBy, from, to, maxDepth - decrementDepthBy);
           if (found) {
             if (OmniUtil.asSuperType(to)) {
@@ -1247,7 +1244,7 @@ export class OmniUtil {
 
     if (a.kind == OmniTypeKind.OBJECT || b.kind == OmniTypeKind.OBJECT) {
       return this.getCommonDenominatorBetweenObjectAndOther(a, b, targetFeatures, create);
-    } else if (a.kind == OmniTypeKind.COMPOSITION) {
+    } else if (OmniUtil.isComposition(a)) {
       // TODO: Do something here. There might be parts of 'a' and 'b' that are similar.
       // TODO: Should we then create a new composition type, or just return the first match?
     } else if (a.kind == OmniTypeKind.GENERIC_TARGET) {
@@ -2245,13 +2242,30 @@ export class OmniUtil {
     return undefined;
   }
 
-  static isIdentifiable(type: OmniType): type is typeof type & OmniOptionallyNamedType {
+  public static isIdentifiable(type: OmniType): type is typeof type & OmniOptionallyNamedType {
 
     if ('name' in type) {
       return true;
     }
 
-    return (type.kind == OmniTypeKind.COMPOSITION || type.kind == OmniTypeKind.DECORATING || type.kind == OmniTypeKind.INTERFACE);
+    return (OmniUtil.isComposition(type) || type.kind == OmniTypeKind.DECORATING || type.kind == OmniTypeKind.INTERFACE);
+  }
+
+  public static isComposition<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, OmniTypeKindComposition> {
+
+    if (!type) {
+      return false;
+    }
+
+    switch (type.kind) {
+      case OmniTypeKind.UNION:
+      case OmniTypeKind.EXCLUSIVE_UNION:
+      case OmniTypeKind.INTERSECTION:
+      case OmniTypeKind.NEGATION:
+        return true;
+      default:
+        return false;
+    }
   }
 }
 

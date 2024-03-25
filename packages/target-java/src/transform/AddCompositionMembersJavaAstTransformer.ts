@@ -1,7 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {
   AstNodeWithChildren,
-  CompositionKind,
   OmniIntersectionType,
   OmniCompositionType,
   OmniEnumType,
@@ -54,12 +53,10 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
         const omniType = node.type.omniType;
 
-        if (omniType.kind == OmniTypeKind.COMPOSITION) {
-          if (omniType.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
-            this.addXOrMappingToBody(omniType, node, args.options);
-          } else if (omniType.compositionKind == CompositionKind.INTERSECTION) {
-            this.addAndCompositionToClassDeclaration(args.model, args.root, omniType, node, args.options);
-          }
+        if (omniType.kind == OmniTypeKind.EXCLUSIVE_UNION) {
+          this.addXOrMappingToBody(omniType, node, args.options);
+        } else if (omniType.kind == OmniTypeKind.INTERSECTION) {
+          this.addAndCompositionToClassDeclaration(args.model, args.root, omniType, node, args.options);
         }
 
         // Then keep searching deeper, into nested types
@@ -80,7 +77,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
     for (const type of andType.types) {
 
-      if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.INTERSECTION) {
+      if (type.kind === OmniTypeKind.INTERSECTION) {
 
         // We can continue deeper, and add fields for this composition as well.
 
@@ -92,10 +89,10 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
             classDec.extends = new Java.ExtendsDeclaration(JavaAstUtils.createTypeNode(type));
           } else {
 
-            if (type.kind == OmniTypeKind.OBJECT) {
+            if (type.kind === OmniTypeKind.OBJECT) {
               const interfaceType = JavaAstUtils.addInterfaceOf(type, root, options);
               implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(interfaceType));
-            } else if (type.kind == OmniTypeKind.INTERFACE) {
+            } else if (type.kind === OmniTypeKind.INTERFACE) {
               implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(type));
             }
 

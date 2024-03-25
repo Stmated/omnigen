@@ -1,5 +1,4 @@
 import {
-  CompositionKind,
   DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS,
   OmniCompositionType,
   OmniEndpoint, OmniInterfaceOrObjectType,
@@ -256,9 +255,6 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([A, B, C, D, E, F]);
 
-    // const parserOptions = OptionsUtil.resolve(DEFAULT_PARSER_OPTIONS, {}, PARSER_OPTIONS_RESOLVERS);
-    // const transformOptions = OptionsUtil.resolve(DEFAULT_MODEL_TRANSFORM_OPTIONS, {}, TRANSFORM_OPTIONS_RESOLVER);
-
     new SimplifyInheritanceModelTransformer().transformModel({
       model: model,
       options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS},
@@ -332,7 +328,7 @@ function obj(name: string, extendedBy?: OmniSuperTypeCapableType): OmniObjectTyp
   return TestUtils.obj(name, extendedBy);
 }
 
-function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.INTERSECTION> {
+function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, typeof OmniTypeKind.INTERSECTION> {
   return TestUtils.and(...types);
 }
 

@@ -1,7 +1,6 @@
 import {JSONSchema4, JSONSchema6, JSONSchema6Definition, JSONSchema7, JSONSchema7Definition, JSONSchema7Type} from 'json-schema';
 import {
   AllowedEnumTsTypes,
-  CompositionKind,
   OMNI_GENERIC_FEATURES,
   OmniArrayKind,
   OmniArrayTypes,
@@ -379,7 +378,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       };
 
       // TODO: A bit ugly? Is there a better way, or just a matter of introducing a helper method that does it for us?
-      if ('name' in newType || newType.kind == OmniTypeKind.COMPOSITION || newType.kind == OmniTypeKind.INTERFACE) {
+      if ('name' in newType || OmniUtil.isComposition(newType) || newType.kind == OmniTypeKind.INTERFACE) {
 
         // The name should be kept the same, since it is likely much more specific.
         newType.name = type.name;
@@ -420,8 +419,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         // Should be like a "not any" -- but unsure how well it will work.
         // Maybe there is a need for a "never" kind
         return {
-          kind: OmniTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.NEGATION,
+          kind: OmniTypeKind.NEGATION,
           types: [
             {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY},
           ],
@@ -432,8 +430,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       logger.silent(`No schema type found for ${schema.$id}, will check if can be deduced by: ${OmniUtil.describe(extendedBy)}`);
 
       extendedBy = OmniUtil.getUnwrappedType(extendedBy);
-      if (extendedBy.kind == OmniTypeKind.COMPOSITION) {
-        if (extendedBy.compositionKind == CompositionKind.INTERSECTION) {
+      if (OmniUtil.isComposition(extendedBy)) {
+        if (extendedBy.kind == OmniTypeKind.INTERSECTION) {
 
           // TODO: Allow XOR here? Since if all are primitive, that means they are the same
           const primitiveTypes: OmniPrimitiveType[] = [];
@@ -507,7 +505,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
             // So we will not return it as a non-object and let it be handled by the object code.
             return undefined;
           }
-        } else if (extendedBy.compositionKind == CompositionKind.UNION) {
+        } else if (extendedBy.kind == OmniTypeKind.UNION) {
 
           if (!this.hasDirectContent(schema)) {
             return extendedBy;
@@ -628,8 +626,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         });
 
         return {
-          kind: OmniTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.EXCLUSIVE_UNION,
+          kind: OmniTypeKind.EXCLUSIVE_UNION,
           types: primitiveTypes,
         };
       }
@@ -906,7 +903,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private canBeReplacedBy(type: OmniObjectType, extension: OmniType): boolean {
 
     if (OmniUtil.isEmptyType(type)) {
-      if (extension.kind == OmniTypeKind.COMPOSITION && extension.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
+      if (extension.kind == OmniTypeKind.EXCLUSIVE_UNION || extension.kind == OmniTypeKind.UNION) {
         return true;
       }
     }
@@ -1148,7 +1145,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       compositionsNot,
     );
 
-    if (composition && composition.kind == OmniTypeKind.COMPOSITION && !composition.name && schema.$id) {
+    if (composition && OmniUtil.isComposition(composition) && !composition.name && schema.$id) {
 
       // This is a name that might not be the best suitable one. Might need to be more restrictive, or send more information along with the type.
       // For the name to be decided later by the target.

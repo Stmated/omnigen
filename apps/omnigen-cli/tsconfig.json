@@ -6,7 +6,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "sourceMap": false,
+    "sourceMap": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
 
@@ -29,15 +29,8 @@
 
     "allowImportingTsExtensions": true,
     "resolvePackageJsonExports": true,
-    "verbatimModuleSyntax": false
-  },
-  "ts-node": {
-    "esm": true,
-    "experimentalResolverFeatures": true,
-    "preferTsExts": true,
-    "swc": true,
-    "transpileOnly": true,
-    "pretty": true
+    "verbatimModuleSyntax": false,
+    "noEmit": true
   },
   "include": ["./src/**/*.ts"]
 }

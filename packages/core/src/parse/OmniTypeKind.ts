@@ -17,7 +17,6 @@ export const OmniTypeKind = {
   ARRAY: 'ARRAY',
   ARRAY_PROPERTIES_BY_POSITION: 'ARRAY_PROPERTIES_BY_POSITION',
   ARRAY_TYPES_BY_POSITION: 'ARRAY_TYPES_BY_POSITION',
-  COMPOSITION: 'COMPOSITION',
   GENERIC_SOURCE: 'GENERIC_SOURCE',
   GENERIC_TARGET: 'GENERIC_TARGET',
   GENERIC_SOURCE_IDENTIFIER: 'GENERIC_SOURCE_IDENTIFIER',
@@ -33,6 +32,23 @@ export const OmniTypeKind = {
    * It is a way of saying "it is an object, but it can be anything"
    */
   UNKNOWN: 'UNKNOWN',
+
+  /**
+   * Composition: AND
+   */
+  INTERSECTION: 'INTERSECTION',
+  /**
+   * Composition: OR
+   */
+  UNION: 'UNION',
+  /**
+   * Composition: XOR
+   */
+  EXCLUSIVE_UNION: 'EXCLUSIVE_UNION',
+  /**
+   * Composition: NOT
+   */
+  NEGATION: 'NEGATION',
 } as const;
 
 export type OmniTypeKind = ToEnum<typeof OmniTypeKind>;

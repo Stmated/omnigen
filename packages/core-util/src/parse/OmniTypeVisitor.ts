@@ -132,7 +132,10 @@ export class OmniTypeVisitor {
 
           if (type.commonDenominator) q.push({...dq, owner: type, parent: undefined, type: type.commonDenominator, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
           break;
-        case OmniTypeKind.COMPOSITION:
+        case OmniTypeKind.UNION:
+        case OmniTypeKind.EXCLUSIVE_UNION:
+        case OmniTypeKind.INTERSECTION:
+        case OmniTypeKind.NEGATION:
           q.push(...type.types.map(it => {
             return {...dq, owner: type, parent: undefined, type: it, useDepth: dq.useDepth + 1};
           }));
@@ -388,7 +391,10 @@ export class OmniTypeVisitor {
           result = this.visitTypesDepthFirstInternal(input.commonDenominator, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
           break;
-        case OmniTypeKind.COMPOSITION:
+        case OmniTypeKind.UNION:
+        case OmniTypeKind.EXCLUSIVE_UNION:
+        case OmniTypeKind.INTERSECTION:
+        case OmniTypeKind.NEGATION:
           result = this.visitTypesDepthFirstInternal(input.types, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
           break;

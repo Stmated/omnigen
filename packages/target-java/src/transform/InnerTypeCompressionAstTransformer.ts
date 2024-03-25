@@ -147,7 +147,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
           // We will only compress certain kind of types.
           if (usedType.kind == OmniTypeKind.OBJECT
-            || usedType.kind == OmniTypeKind.COMPOSITION
+            || OmniUtil.isComposition(usedType)
             || usedType.kind == OmniTypeKind.ENUM
             || (usedType.kind == OmniTypeKind.INTERFACE && options.allowCompressInterfaceToInner)) {
 

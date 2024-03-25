@@ -210,44 +210,26 @@ export interface OmniBaseType<T extends OmniTypeKind> {
   examples?: OmniExample<unknown>[] | undefined;
 }
 
-/**
- * TODO: Rename and move into being regular OmniTypeKind entries instead, and call them Union, Intersection, et cetera
- */
-export enum CompositionKind {
-  /**
-   * AND
-   */
-  INTERSECTION = 'INTERSECTION',
-  /**
-   * OR
-   */
-  UNION = 'UNION',
-  /**
-   * XOR
-   */
-  EXCLUSIVE_UNION = 'EXCLUSIVE_UNION',
-  /**
-   * NOT
-   */
-  NEGATION = 'NEGATION',
-}
+export type OmniTypeOf<T extends OmniType, K extends OmniTypeKind> = Extract<T, { kind: K }>;
 
-export interface OmniCompositionTypeBase<T extends OmniType, K extends CompositionKind> extends OmniBaseType<typeof OmniTypeKind.COMPOSITION>, OmniOptionallyNamedType {
-  compositionKind: K;
+export type OmniTypeKindComposition = typeof OmniTypeKind.INTERSECTION | typeof OmniTypeKind.UNION | typeof OmniTypeKind.EXCLUSIVE_UNION | typeof OmniTypeKind.NEGATION;
+export type OmniTypeComposition = OmniTypeOf<OmniType, OmniTypeKindComposition>;
+
+export interface OmniCompositionTypeBase<T extends OmniType, K extends OmniTypeKindComposition> extends OmniBaseType<K>, OmniOptionallyNamedType {
   types: T[];
 }
 
-export interface OmniIntersectionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.INTERSECTION> {}
-export interface OmniUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.UNION> {}
-export interface OmniExclusiveUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.EXCLUSIVE_UNION> {}
-export interface OmniNegationType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.NEGATION> {}
+export interface OmniIntersectionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.INTERSECTION> {}
+export interface OmniUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.UNION> {}
+export interface OmniExclusiveUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.EXCLUSIVE_UNION> {}
+export interface OmniNegationType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.NEGATION> {}
 
-export type OmniCompositionType<T extends OmniType = OmniType, CK extends CompositionKind = CompositionKind> = Extract<
+export type OmniCompositionType<T extends OmniType = OmniType, CK extends OmniTypeKindComposition = OmniTypeKindComposition> = Extract<
   OmniIntersectionType<T>
   | OmniUnionType<T>
   | OmniExclusiveUnionType<T>
   | OmniNegationType<T>
-  , {compositionKind: CK}>
+  , {kind: CK}>
   ;
 
 

@@ -1,13 +1,10 @@
 import {
-  CompositionKind,
   OmniIntersectionType,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
   OmniType,
   OmniTypeKind,
-  ParserOptions,
   TargetFeatures,
-  TargetOptions,
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil.ts';
@@ -27,7 +24,7 @@ export class ConflictingAndCompositionTargetModelTransformer implements OmniMode
 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
 
-      if (ctx.type.kind == OmniTypeKind.COMPOSITION && ctx.type.compositionKind == CompositionKind.INTERSECTION) {
+      if (ctx.type.kind == OmniTypeKind.INTERSECTION) {
 
         const replacement = this.replaceIntersection(ctx.type, args.targetFeatures);
         if (replacement) {

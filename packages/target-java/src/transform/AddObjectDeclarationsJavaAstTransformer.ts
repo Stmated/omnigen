@@ -1,7 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
   AstNode,
-  CompositionKind,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
@@ -47,7 +46,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
         continue;
       }
 
-      if (type.kind == OmniTypeKind.COMPOSITION && !type.name && !type.inline) {
+      if (OmniUtil.isComposition(type) && !type.name && !type.inline) {
         const stringName = JavaUtil.getClassName(type, args.options);
         type.name = {
           name: stringName,
@@ -65,9 +64,9 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     // TODO: This sorting should probably be more general and prefer Object > Interface > Composition
     namePairs.sort((a, b) => {
-      if (a.owner.kind == OmniTypeKind.COMPOSITION && b.owner.kind != OmniTypeKind.COMPOSITION) {
+      if (OmniUtil.isComposition(a.owner) && !OmniUtil.isComposition(b.owner)) {
         return 1;
-      } else if (a.owner.kind != OmniTypeKind.COMPOSITION && b.owner.kind == OmniTypeKind.COMPOSITION) {
+      } else if (!OmniUtil.isComposition(a.owner) && OmniUtil.isComposition(b.owner)) {
         return -1;
       } else {
         return 0;
@@ -106,9 +105,9 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     if (type.kind == OmniTypeKind.ENUM) {
       return this.addEnum(type, undefined, root, options);
-    } else if (type.kind == OmniTypeKind.COMPOSITION) {
+    } else if (OmniUtil.isComposition(type)) {
 
-      if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION || (type.name && isEdgeType)) {
+      if (type.kind == OmniTypeKind.EXCLUSIVE_UNION || (type.name && isEdgeType)) {
         return this.transformSubType(model, type, undefined, options, root);
       }
 
@@ -135,7 +134,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       return this.transformSubType(model, type.of, type, options, root, type.sourceIdentifiers);
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       for (const targetIdentifier of type.targetIdentifiers) {
-        if (targetIdentifier.type.kind == OmniTypeKind.COMPOSITION && targetIdentifier.type.compositionKind != CompositionKind.EXCLUSIVE_UNION) {
+        if (OmniUtil.isComposition(targetIdentifier.type) && targetIdentifier.type.kind != OmniTypeKind.EXCLUSIVE_UNION) {
 
           // If a composition is used as a generic argument, then we will be required to create a class for it.
           return this.transformSubType(model, targetIdentifier.type, undefined, options, root);
@@ -395,30 +394,27 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
    */
   private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
 
-    if (type.kind == OmniTypeKind.COMPOSITION) {
-      if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
-        if (type.types.length == 2) {
-          const nullType = type.types.find(it => it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL);
-          if (nullType) {
-            const otherType = type.types.find(it => !(it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL));
-            if (otherType && otherType.kind == OmniTypeKind.PRIMITIVE) {
+    if (type.kind == OmniTypeKind.EXCLUSIVE_UNION && type.types.length == 2) {
 
-              // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
-              this.clearProperties(type);
-              Object.assign(type, {
-                ...otherType,
-                nullable: true,
-              });
-              return [otherType];
-            } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
+      const nullType = type.types.find(it => it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL);
+      if (nullType) {
+        const otherType = type.types.find(it => !(it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL));
+        if (otherType && otherType.kind == OmniTypeKind.PRIMITIVE) {
 
-              // For Java, any object can always be null.
-              // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
-              this.clearProperties(type);
-              Object.assign(type, otherType);
-              return [otherType];
-            }
-          }
+          // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
+          this.clearProperties(type);
+          Object.assign(type, {
+            ...otherType,
+            nullable: true,
+          });
+          return [otherType];
+        } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
+
+          // For Java, any object can always be null.
+          // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
+          this.clearProperties(type);
+          Object.assign(type, otherType);
+          return [otherType];
         }
       }
     }

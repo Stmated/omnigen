@@ -1,4 +1,4 @@
-import {CompositionKind, OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
+import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaUtil} from '../../util';
@@ -59,9 +59,9 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
     depth = 0,
   ): void {
 
-    if (type.kind == OmniTypeKind.COMPOSITION) {
+    if (OmniUtil.isComposition(type)) {
 
-      if (type.compositionKind == CompositionKind.INTERSECTION) {
+      if (type.kind == OmniTypeKind.INTERSECTION) {
         for (let i = startConvertingAt; i < type.types.length; i++) {
           const superType = type.types[i];
           if (JavaUtil.asSuperType(superType) && superType.kind != OmniTypeKind.INTERFACE) {
@@ -75,12 +75,10 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
 
     } else if (type.kind == OmniTypeKind.OBJECT || type.kind == OmniTypeKind.INTERFACE || type.kind == OmniTypeKind.ENUM) {
 
-      if (type.extendedBy) {
-        if (type.extendedBy.kind == OmniTypeKind.COMPOSITION) {
-          this.makeExtensionsInterfaces(type.extendedBy, interfaceMap, depth > 0 ? 0 : startConvertingAt, depth + 1);
-        } else {
-          // logger.debug(`Should ${OmniUtil.describe(type.extendedBy)} ever need conversion?`);
-        }
+      if (OmniUtil.isComposition(type.extendedBy)) {
+        this.makeExtensionsInterfaces(type.extendedBy, interfaceMap, depth > 0 ? 0 : startConvertingAt, depth + 1);
+      } else {
+        // logger.debug(`Should ${OmniUtil.describe(type.extendedBy)} ever need conversion?`);
       }
 
     } else {
@@ -120,7 +118,7 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
       if (type.extendedBy) {
 
         // There already exist an extension, so we need to add to it.
-        if (type.extendedBy.kind == OmniTypeKind.COMPOSITION && type.extendedBy.compositionKind == CompositionKind.INTERSECTION) {
+        if (type.extendedBy.kind == OmniTypeKind.INTERSECTION) {
 
           // It is already an AND, that makes it a bit easy.
           type.extendedBy.types.push(interfaceType);
@@ -130,8 +128,7 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
           // It is not extended by a composition, or a composition that is not AND, so we will make it one.
           const originalExtension = type.extendedBy;
           type.extendedBy = {
-            kind: OmniTypeKind.COMPOSITION,
-            compositionKind: CompositionKind.INTERSECTION,
+            kind: OmniTypeKind.INTERSECTION,
             types: [
               originalExtension,
               interfaceType,

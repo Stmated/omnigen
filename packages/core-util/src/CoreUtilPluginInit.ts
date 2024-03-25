@@ -110,7 +110,7 @@ export const CommonTransform2Plugin = createPlugin(
   {name: 'transform2', in: CommonTransformers2In, out: CommonTransformers2In},
   async ctx => {
 
-    const transformers: OmniModel2ndPassTransformer<typeof ctx.parserOptions>[] = [
+    const transformers: OmniModel2ndPassTransformer<typeof ctx.parserOptions & typeof ctx.targetOptions>[] = [
       new ElevatePropertiesModelTransformer(),
       new ConflictingAndCompositionTargetModelTransformer(),
       new SimplifyInheritanceModelTransformer(),

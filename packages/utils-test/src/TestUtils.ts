@@ -1,5 +1,4 @@
 import {
-  CompositionKind,
   OmniCompositionType,
   OmniSuperTypeCapableType,
   OmniObjectType,
@@ -38,10 +37,9 @@ export class TestUtils {
     return omniClass;
   }
 
-  public static and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.INTERSECTION> {
+  public static and<T extends OmniType>(...types: T[]): OmniCompositionType<T, typeof OmniTypeKind.INTERSECTION> {
     return {
-      kind: OmniTypeKind.COMPOSITION,
-      compositionKind: CompositionKind.INTERSECTION,
+      kind: OmniTypeKind.INTERSECTION,
       types: types,
     };
   }

@@ -1,5 +1,4 @@
 import {
-  CompositionKind,
   OmniCompositionType,
   OmniModel,
   OmniModel2ndPassTransformer,
@@ -28,7 +27,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
     }
 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-      if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
+      if (OmniUtil.isComposition(ctx.type)) {
         SimplifyInheritanceModelTransformer.simplifyComposition(args.model, ctx.type, ctx.parent);
       }
     });
@@ -58,7 +57,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
     parent: TypeOwner | undefined,
   ): void {
 
-    if (composition.compositionKind == CompositionKind.INTERSECTION) {
+    if (composition.kind == OmniTypeKind.INTERSECTION) {
 
       // If the composition is an AND, there might be paths that have overlapping supertypes.
       // We should try to resolve and simplify if any of the types are superfluous.

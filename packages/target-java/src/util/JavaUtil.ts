@@ -1,5 +1,4 @@
 import {
-  CompositionKind,
   OmniIntersectionType,
   OmniNegationType,
   OmniUnionType,
@@ -17,7 +16,7 @@ import {
   OmniTypeKind,
   PackageOptions,
   TypeName,
-  UnknownKind,
+  UnknownKind, OmniTypeKindComposition,
 } from '@omnigen/core';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options';
 import * as Java from '../ast';
@@ -37,7 +36,7 @@ export type JavaSubTypeCapableType =
   | OmniCompositionType<OmniSubTypeCapableType>;
 
 export type JavaSuperTypeCapableType =
-  Exclude<OmniSuperTypeCapableType, { kind: typeof OmniTypeKind.COMPOSITION }>
+  Exclude<OmniSuperTypeCapableType, { kind: OmniTypeKindComposition }>
   | OmniIntersectionType<JavaSuperTypeCapableType>
   | OmniUnionType<JavaSuperTypeCapableType>
   | OmniExclusiveUnionType<JavaSuperTypeCapableType>
@@ -238,7 +237,10 @@ export class JavaUtil {
         const name = Naming.unwrap(args.type.name);
         return JavaUtil.getClassNameWithPackageName(args.type, name, args.options, args.withPackage);
       }
-      case OmniTypeKind.COMPOSITION: {
+      case OmniTypeKind.UNION:
+      case OmniTypeKind.EXCLUSIVE_UNION:
+      case OmniTypeKind.INTERSECTION:
+      case OmniTypeKind.NEGATION: {
 
         // TODO: This is bad. The name should be set as a TypeName and evaluated once needed.
         const compositionName = JavaUtil.getCompositionClassName(args.type, args);
@@ -326,13 +328,13 @@ export class JavaUtil {
     }
 
     let prefix: TypeName;
-    if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
+    if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
       prefix = ['UnionOf', 'ExclusiveUnionOf'];
-    } else if (type.compositionKind == CompositionKind.UNION) {
+    } else if (type.kind == OmniTypeKind.UNION) {
       prefix = 'UnionOf';
-    } else if (type.compositionKind == CompositionKind.INTERSECTION) {
+    } else if (type.kind == OmniTypeKind.INTERSECTION) {
       prefix = 'IntersectionOf';
-    } else if (type.compositionKind == CompositionKind.NEGATION) {
+    } else if (type.kind == OmniTypeKind.NEGATION) {
       prefix = 'NegationOf';
     } else {
       assertUnreachable(type);
@@ -580,7 +582,7 @@ export class JavaUtil {
   public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
 
     const properties: OmniProperty[] = [];
-    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
+    if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
 
       // Collecting properties from an XOR composition makes no sense, since we cannot know which needs implementing.
       return properties;
@@ -598,11 +600,9 @@ export class JavaUtil {
         if (ctx.type.of != type) {
           properties.push(...OmniUtil.getPropertiesOf(ctx.type.of));
         }
-      } else if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
-        if (ctx.type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
-          ctx.skip = true;
-          return;
-        }
+      } else if (ctx.type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
+        ctx.skip = true;
+        return;
       }
 
       return undefined;
@@ -679,7 +679,7 @@ export class JavaUtil {
 
   public static getFlattenedSuperTypes(type: JavaSuperTypeCapableType): JavaSuperTypeCapableType[] {
 
-    if (type.kind == OmniTypeKind.COMPOSITION) {
+    if (OmniUtil.isComposition(type)) {
 
       const superTypes: JavaSuperTypeCapableType[] = [];
       for (const t of type.types) {
@@ -704,7 +704,7 @@ export class JavaUtil {
   ): JavaSuperTypeCapableType | undefined {
 
     subType = OmniUtil.getUnwrappedType(subType);
-    if (!subType || subType.kind == OmniTypeKind.COMPOSITION) {
+    if (!subType || OmniUtil.isComposition(subType)) {
       return undefined;
     }
 
@@ -718,7 +718,7 @@ export class JavaUtil {
 
     const extendedUnwrapped = OmniUtil.getUnwrappedType(subType.extendedBy);
 
-    if (extendedUnwrapped.kind == OmniTypeKind.COMPOSITION && extendedUnwrapped.compositionKind == CompositionKind.INTERSECTION) {
+    if (extendedUnwrapped.kind == OmniTypeKind.INTERSECTION) {
       const possible = JavaUtil.getSuperClassOfIntersection(extendedUnwrapped);
       if (possible) {
         return possible;
@@ -735,7 +735,7 @@ export class JavaUtil {
 
   public static getSuperClassOfIntersection(composition: OmniCompositionType<OmniSuperTypeCapableType>) {
 
-    if (composition.compositionKind != CompositionKind.INTERSECTION) {
+    if (composition.kind != OmniTypeKind.INTERSECTION) {
       throw new Error(`Only allowed to be called for 'AND' composition kind`);
     }
 
@@ -765,7 +765,7 @@ export class JavaUtil {
   public static getSuperInterfacesOfSubType(_model: OmniModel, subType: OmniType): OmniInterfaceOrObjectType[] {
 
     const interfaces: OmniInterfaceOrObjectType[] = [];
-    if (subType.kind == OmniTypeKind.COMPOSITION && subType.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
+    if (subType.kind == OmniTypeKind.EXCLUSIVE_UNION) {
       // The XOR composition class does in Java not actually implement anything.
       // Instead it solves things by becoming a manual mapping class with different getters.
       return interfaces;
@@ -793,51 +793,10 @@ export class JavaUtil {
     return interfaces;
   }
 
-  /**
-   * TypeGuard version of an otherwise expected 'isInterface' method.
-   * Returns undefined if it does not have the potential of being an interface, otherwise the type casted.
-   */
-  // public static getAsInterface(model: OmniModel, type: OmniType): OmniInterfaceOrObjectType | undefined {
-  //
-  //   const unwrapped = OmniUtil.getUnwrappedType(type);
-  //   if (unwrapped.kind == OmniTypeKind.INTERFACE) {
-  //     return unwrapped;
-  //   }
-  //
-  //   if (unwrapped.kind != OmniTypeKind.OBJECT) {
-  //     return undefined;
-  //   }
-  //
-  //   // Now we need to figure out if this type is ever used as an interface in another type.
-  //
-  //   const subTypeOfOurType = OmniUtil.visitTypesDepthFirst(model, ctx => {
-  //     if ('extendedBy' in ctx.type && ctx.type.extendedBy) {
-  //
-  //       const flattened = OmniUtil.getFlattenedSuperTypes(ctx.type.extendedBy);
-  //       const usedAtIndex = flattened.indexOf(unwrapped);
-  //       if (usedAtIndex > 0) {
-  //         return ctx.type;
-  //       }
-  //     }
-  //
-  //     return;
-  //   });
-  //
-  //   if (subTypeOfOurType) {
-  //
-  //     const typeName = OmniUtil.describe(unwrapped);
-  //     const subType = OmniUtil.describe(subTypeOfOurType);
-  //     logger.debug(`Given type ${typeName} is used as interface in type ${subType}`);
-  //     return unwrapped;
-  //   }
-  //
-  //   return undefined;
-  // }
-
   public static getAsClass(model: OmniModel, type: OmniType): JavaPotentialClassType | undefined {
 
     const unwrapped = OmniUtil.getUnwrappedType(type);
-    if (unwrapped.kind != OmniTypeKind.OBJECT) { // && unwrapped.kind != OmniTypeKind.COMPOSITION) {
+    if (unwrapped.kind != OmniTypeKind.OBJECT) {
 
       return undefined;
     }
@@ -862,12 +821,8 @@ export class JavaUtil {
           return unwrapped;
         }
 
-        if (uw.extendedBy.kind == OmniTypeKind.COMPOSITION && uw.extendedBy.compositionKind == CompositionKind.INTERSECTION) {
-          if (uw.extendedBy.types.length > 0) {
-            if (uw.extendedBy.types[0] == unwrapped) {
-              return unwrapped;
-            }
-          }
+        if (uw.extendedBy.kind == OmniTypeKind.INTERSECTION && uw.extendedBy.types.length > 0 && uw.extendedBy.types[0] === unwrapped) {
+          return unwrapped;
         }
       }
 
@@ -983,7 +938,7 @@ export class JavaUtil {
 
     const typeExtends = JavaUtil.getSuperClassOfSubType(model, type, false);
 
-    if (type.kind != OmniTypeKind.COMPOSITION) {
+    if (!OmniUtil.isComposition(type)) {
       return [typeExtends, JavaUtil.getSuperInterfacesOfSubType(model, type)];
     } else {
       return [typeExtends, []];

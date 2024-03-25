@@ -1,7 +1,7 @@
-import {CompositionKind, OmniPrimitiveKind, OmniType, OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
+import {OmniPrimitiveKind, OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
-import {createJavaRenderer, Java, JavaOptions, JavaRendererOptions, JavaUtil, render} from '@omnigen/target-java';
+import {createJavaRenderer, Java, JavaOptions, JavaRendererOptions, render} from '@omnigen/target-java';
 import {OmniUtil} from '@omnigen/core-util';
 import {TsRootNode} from '../ast';
 
@@ -242,17 +242,17 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
     visitCompositionType: (n, v) => {
 
       let separator: string;
-      switch (n.omniType.compositionKind) {
-        case CompositionKind.INTERSECTION:
+      switch (n.omniType.kind) {
+        case OmniTypeKind.INTERSECTION:
           separator = '&';
           break;
-        case CompositionKind.EXCLUSIVE_UNION:
-        case CompositionKind.UNION:
+        case OmniTypeKind.EXCLUSIVE_UNION:
+        case OmniTypeKind.UNION:
           // TODO: Maybe one day we can do magical exclusive or, as in: https://stackoverflow.com/questions/52836812/how-do-json-schemas-anyof-type-translate-to-typescript
           separator = '|';
           break;
         default:
-          throw new Error(`Unsupported composition kind '${n.omniType.compositionKind}' for TS composition node`);
+          throw new Error(`Unsupported composition kind '${n.omniType.kind}' for TS composition node`);
       }
 
       return n.typeNodes.map(it => render(it, v)).join(` ${separator} `);

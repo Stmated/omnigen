@@ -1,4 +1,4 @@
-import {CompositionKind, OmniModelTransformer, OmniModelTransformerArgs, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
+import {OmniModelTransformer, OmniModelTransformerArgs, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
 import {JAVA_FEATURES} from '../..';
 
@@ -24,7 +24,7 @@ export class DeleteUnnecessaryXorJavaModelTransformer implements OmniModelTransf
       if (alreadyReplaced) {
         ctx.replacement = alreadyReplaced;
         // OmniUtil.swapType(ctx.owner, ctx.type, alreadyReplaced);
-      } else if (ctx.type.kind == OmniTypeKind.COMPOSITION && ctx.type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
+      } else if (ctx.type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
 
         const distinctTypes = OmniUtil.getDistinctTypes(ctx.type.types, JAVA_FEATURES);
         if (distinctTypes.length == 1) {

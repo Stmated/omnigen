@@ -9,13 +9,5 @@
 
     "declaration": false,
     "declarationMap": false
-  },
-  "ts-node": {
-    "esm": true,
-    "experimentalResolverFeatures": true,
-    "preferTsExts": true,
-    "swc": true,
-    "transpileOnly": true,
-    "pretty": true
   }
 }

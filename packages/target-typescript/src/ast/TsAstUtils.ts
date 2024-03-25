@@ -1,6 +1,7 @@
-import {CompositionKind, OmniArrayType, OmniDictionaryType, OmniGenericTargetType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {OmniArrayType, OmniDictionaryType, OmniGenericTargetType, OmniType, OmniTypeKind} from '@omnigen/core';
 import {Ts} from '../ast';
 import {Java} from '@omnigen/target-java';
+import {OmniUtil} from '@omnigen/core-util';
 
 export class TsAstUtils {
 
@@ -18,7 +19,7 @@ export class TsAstUtils {
       } else {
         return new Java.WildcardType(type, implementation);
       }
-    } else if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind != CompositionKind.NEGATION) {
+    } else if (OmniUtil.isComposition(type) && type.kind != OmniTypeKind.NEGATION) {
       if (type.inline) {
         return new Ts.CompositionType(type, type.types.map(it => TsAstUtils.createTypeNode(it, implementation)));
       }

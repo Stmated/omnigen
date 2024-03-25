@@ -19,7 +19,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
       ...DefaultTypeScriptVisitor,
       visitClassDeclaration: (n, v) => {
 
-        if (n.type.omniType.kind != OmniTypeKind.COMPOSITION) {
+        if (!OmniUtil.isComposition(n.type.omniType)) {
           return DefaultTypeScriptVisitor.visitClassDeclaration(n, v);
         }
 
@@ -77,11 +77,8 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
         const replacementNode = typesToReplace.get(node);
         if (replacementNode) {
           return replacementNode;
-        } else if (node.omniType.kind == OmniTypeKind.COMPOSITION) {
-
-          const typeNode = TsAstUtils.createTypeNode(node.omniType);
-          // return typeNode.reduce(r);
-          return typeNode;
+        } else if (OmniUtil.isComposition(node.omniType)) {
+          return TsAstUtils.createTypeNode(node.omniType);
         }
 
         return node;

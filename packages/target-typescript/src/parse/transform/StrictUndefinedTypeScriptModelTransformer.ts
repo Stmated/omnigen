@@ -1,13 +1,11 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {
-  CompositionKind,
   OmniCompositionType,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
   OmniPrimitiveKind, OmniPrimitiveType,
-  OmniPrimitiveUndefined,
   OmniType,
-  OmniTypeKind, OmniUnknownType,
+  OmniTypeKind,
   ParserOptions,
   TargetOptions,
 } from '@omnigen/core';
@@ -49,29 +47,19 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
           continue;
         }
 
-        if (property.type.kind == OmniTypeKind.COMPOSITION) {
+        if (OmniUtil.isComposition(property.type)) {
 
           if (property.type.types.find(it => OmniUtil.isUndefined(it))) {
             continue;
           }
-
-          if (property.type.compositionKind == CompositionKind.UNION || property.type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
-            // property.type.types.push(StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE);
-            const i = 0;
-          }
-          // else {
-          //   throw new Error(`Do not yet know how to add 'undefined' to composition type ${OmniUtil.describe(property.type)}`);
-          // }
         }
-        // else {
 
         if (OmniUtil.isUndefined(property.type)) {
           continue;
         }
 
         const compositionType: OmniCompositionType = {
-          kind: OmniTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.EXCLUSIVE_UNION,
+          kind: OmniTypeKind.EXCLUSIVE_UNION,
           types: [property.type, StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE],
           inline: true,
         };
@@ -79,16 +67,7 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
         typeToUndefinedMap.set(property.type, compositionType);
 
         property.type = compositionType;
-        // }
       }
     });
   }
-
-  // private createUndefinedType(): OmniPrimitiveUndefined {
-  //
-  //   return {
-  //     kind: OmniTypeKind.PRIMITIVE,
-  //     primitiveKind: OmniPrimitiveKind.UNDEFINED,
-  //   };
-  // }
 }

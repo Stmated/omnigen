@@ -1,4 +1,4 @@
-import {CompositionKind, OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
+import {OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaUtil} from '../../util';
 
@@ -24,7 +24,7 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
       const parent = args.owner;
       const type = args.type;
 
-      if (parent && 'kind' in parent && parent.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER && type.kind == OmniTypeKind.COMPOSITION) {
+      if (parent && 'kind' in parent && parent.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
 
         let newType: OmniType | undefined = map.get(type);
         if (!newType) {
@@ -39,14 +39,14 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
   private createNewConcreteObjectFromComposition(parent: OmniType, type: OmniCompositionType): OmniType {
 
-    if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
+    if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
 
       // If it is an XOR composition, then return it as-is, since it will be its own object in Java.
       // Someday this whole XOR composition stuff needs to be overhauled, because it is brittle and too hard-coded.
       return type;
     }
 
-    const superTypeComposition: OmniCompositionType<OmniSuperTypeCapableType, typeof type.compositionKind> = {
+    const superTypeComposition: OmniCompositionType<OmniSuperTypeCapableType, typeof type.kind> = {
       ...type,
       types: [],
     };
@@ -55,7 +55,7 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
       if (!JavaUtil.asSuperType(composed)) {
         throw new Error(
-          `Not allowed '${OmniUtil.describe(composed)}' of '${OmniUtil.describe(parent)}' as a ${type.compositionKind}-composition entry since it must be super-type compatible`,
+          `Not allowed '${OmniUtil.describe(composed)}' of '${OmniUtil.describe(parent)}' as a ${type.kind}-composition entry since it must be super-type compatible`,
         );
       }
 

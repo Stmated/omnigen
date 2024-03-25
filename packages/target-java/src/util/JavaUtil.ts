@@ -15,7 +15,8 @@ import {
   OmniTypeKind,
   PackageOptions,
   TypeName,
-  UnknownKind, OmniTypeKindComposition, OmniPrimitiveKinds,
+  UnknownKind,
+  OmniPrimitiveKinds, OmniKindComposition,
 } from '@omnigen/core';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options';
 import * as Java from '../ast';
@@ -35,7 +36,7 @@ export type JavaSubTypeCapableType =
   | OmniCompositionType<OmniSubTypeCapableType>;
 
 export type JavaSuperTypeCapableType =
-  Exclude<OmniSuperTypeCapableType, { kind: OmniTypeKindComposition }>
+  Exclude<OmniSuperTypeCapableType, { kind: OmniKindComposition }>
   | OmniIntersectionType<JavaSuperTypeCapableType>
   | OmniUnionType<JavaSuperTypeCapableType>
   | OmniExclusiveUnionType<JavaSuperTypeCapableType>

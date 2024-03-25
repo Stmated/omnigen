@@ -1,5 +1,5 @@
 import {TypeName} from './TypeName';
-import {OmniTypeKind} from './OmniTypeKind.ts';
+import {OmniKindComposition, OmniKindPrimitive, OmniTypeKind} from './OmniTypeKind.ts';
 
 export interface OmniParameter {
   name: string;
@@ -131,6 +131,32 @@ export type OmniSuperGenericTypeCapableType =
   | OmniExternalModelReferenceType<OmniSuperGenericTypeCapableType> // Needs to be unwrapped/resolved every time
   ;
 
+export type OmniTypeComposition =
+  OmniIntersectionType
+  | OmniUnionType
+  | OmniExclusiveUnionType
+  | OmniNegationType
+  ;
+
+export type OmniPrimitiveNumericType =
+  OmniPrimitiveBaseType<typeof OmniTypeKind.INTEGER_SMALL>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.INTEGER>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.LONG>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.DOUBLE>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.FLOAT>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.DECIMAL>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.NUMBER>
+
+export type OmniPrimitiveType =
+  OmniPrimitiveNumericType
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.STRING>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.CHAR>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.BOOL>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.VOID>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.NULL>
+  | OmniPrimitiveBaseType<typeof OmniTypeKind.UNDEFINED>
+  ;
+
 export type OmniType =
   | OmniArrayTypes
   | OmniObjectType
@@ -139,10 +165,7 @@ export type OmniType =
   | OmniHardcodedReferenceType
   | OmniExternalModelReferenceType
   | OmniPrimitiveType
-  | OmniIntersectionType
-  | OmniUnionType
-  | OmniExclusiveUnionType
-  | OmniNegationType
+  | OmniTypeComposition
   | OmniEnumType
   | OmniGenericType
   | OmniInterfaceType
@@ -205,11 +228,9 @@ export interface OmniBaseType<T extends OmniTypeKind> {
 }
 
 export type OmniTypeOf<T extends OmniType, K extends OmniTypeKind> = Extract<T, { kind: K }>;
+export type OmniPrimitiveNull = OmniTypeOf<OmniType, typeof OmniKindPrimitive.NULL>;
 
-export type OmniTypeKindComposition = typeof OmniTypeKind.INTERSECTION | typeof OmniTypeKind.UNION | typeof OmniTypeKind.EXCLUSIVE_UNION | typeof OmniTypeKind.NEGATION;
-export type OmniTypeComposition = OmniTypeOf<OmniType, OmniTypeKindComposition>;
-
-export interface OmniCompositionTypeBase<T extends OmniType, K extends OmniTypeKindComposition> extends OmniBaseType<K>, OmniOptionallyNamedType {
+export interface OmniCompositionTypeBase<T extends OmniType, K extends OmniKindComposition> extends OmniBaseType<K>, OmniOptionallyNamedType {
   types: T[];
 }
 
@@ -218,7 +239,7 @@ export interface OmniUnionType<T extends OmniType = OmniType> extends OmniCompos
 export interface OmniExclusiveUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.EXCLUSIVE_UNION> {}
 export interface OmniNegationType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.NEGATION> {}
 
-export type OmniCompositionType<T extends OmniType = OmniType, CK extends OmniTypeKindComposition = OmniTypeKindComposition> = Extract<
+export type OmniCompositionType<T extends OmniType = OmniType, CK extends OmniKindComposition = OmniKindComposition> = Extract<
   OmniIntersectionType<T>
   | OmniUnionType<T>
   | OmniExclusiveUnionType<T>
@@ -231,7 +252,6 @@ export interface OmniDictionaryType<K extends OmniType = OmniType, V extends Omn
   keyType: K;
   valueType: V;
 }
-
 
 export interface OmniHardcodedReferenceType extends OmniBaseType<typeof OmniTypeKind.HARDCODED_REFERENCE> {
   fqn: string;
@@ -340,7 +360,7 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
 
 export type OmniPrimitiveConstantValue = string | boolean | number
 
-export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKinds>, OmniOptionallyNamedType {
+export interface OmniPrimitiveBaseType<K extends OmniPrimitiveKinds = OmniPrimitiveKinds> extends OmniBaseType<K>, OmniOptionallyNamedType {
 
   name?: TypeName;
   nullable?: boolean;
@@ -355,36 +375,10 @@ export interface OmniPrimitiveType extends OmniBaseType<OmniPrimitiveKinds>, Omn
   literal?: boolean;
 }
 
-export type OmniPrimitiveNull = (OmniPrimitiveType & {kind: typeof OmniTypeKind.NULL});
-
-export type OmniPrimitiveNullableType =
-  (OmniPrimitiveType & {nullable: true})
-  | OmniPrimitiveNull;
-
-export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKinds, typeof OmniTypeKind.NULL | typeof OmniTypeKind.VOID>;
-
-export type OmniNumericType<T extends OmniType> = OmniTypeOf<T, OmniNumericPrimitiveKinds>;
-
 export type AllowedEnumTsTypes = number | string;
 
-export type OmniNumericPrimitiveKinds =
-  | typeof OmniTypeKind.INTEGER
-  | typeof OmniTypeKind.INTEGER_SMALL
-  | typeof OmniTypeKind.LONG
-  | typeof OmniTypeKind.DOUBLE
-  | typeof OmniTypeKind.FLOAT
-  | typeof OmniTypeKind.DECIMAL
-  | typeof OmniTypeKind.NUMBER;
-
-export type OmniPrimitiveKinds =
-  | OmniNumericPrimitiveKinds
-  | typeof OmniTypeKind.STRING
-  | typeof OmniTypeKind.CHAR
-  | typeof OmniTypeKind.BOOL
-  | typeof OmniTypeKind.VOID
-  | typeof OmniTypeKind.NULL
-  | typeof OmniTypeKind.UNDEFINED
-  ;
+export type OmniPrimitiveKinds = OmniPrimitiveType['kind'];
+export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKinds, typeof OmniTypeKind.NULL | typeof OmniTypeKind.VOID>;
 
 export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, OmniNamedType {
   enumConstants?: AllowedEnumTsTypes[];

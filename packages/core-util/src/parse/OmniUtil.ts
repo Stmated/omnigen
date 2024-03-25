@@ -12,15 +12,14 @@ import {
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
-  OmniInput,
-  OmniModel, OmniNumericPrimitiveKinds, OmniNumericType,
+  OmniInput, OmniKindComposition,
+  OmniModel,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniOutput,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKinds,
-  OmniPrimitiveNull,
-  OmniPrimitiveNullableType,
+  OmniPrimitiveNull, OmniPrimitiveNumericType,
   OmniPrimitiveType,
   OmniProperty, OmniPropertyName, OmniPropertyNamePattern,
   OmniPropertyOwner,
@@ -28,7 +27,8 @@ import {
   OmniSuperGenericTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
-  OmniTypeKind, OmniTypeKindComposition, OmniTypeOf,
+  OmniTypeKind,
+  OmniTypeOf,
   PropertyDifference,
   SmartUnwrappedType,
   TargetFeatures,
@@ -532,12 +532,12 @@ export class OmniUtil {
     return false;
   }
 
-  public static isNull(type: OmniType): type is OmniPrimitiveNull {
+  public static isNull<T extends OmniType>(type: T): type is OmniTypeOf<T, typeof OmniTypeKind.NULL> {
     return type.kind === OmniTypeKind.NULL;
   }
 
-  public static isUndefined(type: OmniType): type is OmniPrimitiveNull {
-    return type.kind == OmniTypeKind.UNDEFINED;
+  public static isUndefined(type: OmniType): type is OmniTypeOf<OmniPrimitiveType, typeof OmniTypeKind.UNDEFINED> {
+    return type.kind === OmniTypeKind.UNDEFINED;
   }
 
   /**
@@ -662,7 +662,7 @@ export class OmniUtil {
     return undefined;
   }
 
-  public static isNullableType(type: OmniType): type is OmniPrimitiveNullableType | Exclude<typeof type, OmniPrimitiveType> {
+  public static isNullableType(type: OmniType): type is ((OmniPrimitiveType & {nullable: true}) | OmniPrimitiveNull) {
 
     if (OmniUtil.isPrimitive(type)) {
       if (type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
@@ -1712,7 +1712,7 @@ export class OmniUtil {
     return distinctTypes;
   }
 
-  public static isNumericType(type: OmniType): type is OmniNumericType<OmniType> {
+  public static isNumericType(type: OmniType): type is OmniPrimitiveNumericType {
 
     return type.kind == OmniTypeKind.NUMBER
       || type.kind == OmniTypeKind.DOUBLE
@@ -2245,7 +2245,7 @@ export class OmniUtil {
     return (OmniUtil.isComposition(type) || type.kind == OmniTypeKind.DECORATING || type.kind == OmniTypeKind.INTERFACE);
   }
 
-  public static isComposition<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, OmniTypeKindComposition> {
+  public static isComposition<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, OmniKindComposition> {
 
     if (!type) {
       return false;

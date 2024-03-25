@@ -1,6 +1,6 @@
 import {ToEnum} from '../options';
 
-export const OmniTypeKindPrimitive = {
+export const OmniKindPrimitive = {
   NUMBER: 'NUMBER',
   INTEGER: 'INTEGER',
   INTEGER_SMALL: 'INTEGER_SMALL',
@@ -15,43 +15,9 @@ export const OmniTypeKindPrimitive = {
   NULL: 'NULL',
   UNDEFINED: 'UNDEFINED',
 } as const;
-export type OmniTypeKindPrimitive = ToEnum<typeof OmniTypeKindPrimitive>;
+export type OmniKindPrimitive = ToEnum<typeof OmniKindPrimitive>;
 
-/**
- * TODO: Move other kinds into here, then rename it to OmniKind
- */
-export const OmniTypeKind = {
-  // PRIMITIVE: 'PRIMITIVE',
-  ENUM: 'ENUM',
-  OBJECT: 'OBJECT',
-  HARDCODED_REFERENCE: 'HARDCODED_REFERENCE',
-  /**
-   * The type lies in another, outside model.
-   * Most likely a model that contains types common to multiple other models.
-   *
-   * @deprecated Remove -- it should be part of a document store; no document should be a "main document"
-   */
-  EXTERNAL_MODEL_REFERENCE: 'EXTERNAL_MODEL_REFERENCE',
-  DICTIONARY: 'DICTIONARY',
-  ARRAY: 'ARRAY',
-  ARRAY_PROPERTIES_BY_POSITION: 'ARRAY_PROPERTIES_BY_POSITION',
-  ARRAY_TYPES_BY_POSITION: 'ARRAY_TYPES_BY_POSITION',
-  GENERIC_SOURCE: 'GENERIC_SOURCE',
-  GENERIC_TARGET: 'GENERIC_TARGET',
-  GENERIC_SOURCE_IDENTIFIER: 'GENERIC_SOURCE_IDENTIFIER',
-  GENERIC_TARGET_IDENTIFIER: 'GENERIC_TARGET_IDENTIFIER',
-  INTERFACE: 'INTERFACE',
-  DECORATING: 'DECORATING',
-  /**
-   * TODO: Deprecated. Remove. Should be up to the target language to handle the original type as best it can!
-   */
-  WRAPPED: 'WRAPPED',
-  /**
-   * Type used when the type is known to be unknown.
-   * It is a way of saying "it is an object, but it can be anything"
-   */
-  UNKNOWN: 'UNKNOWN',
-
+export const OmniKindComposition = {
   /**
    * Composition: AND
    */
@@ -68,8 +34,63 @@ export const OmniTypeKind = {
    * Composition: NOT
    */
   NEGATION: 'NEGATION',
+} as const;
+export type OmniKindComposition = ToEnum<typeof OmniKindComposition>;
 
-  ...OmniTypeKindPrimitive,
+export const OmniKindGeneric = {
+  GENERIC_SOURCE: 'GENERIC_SOURCE',
+  GENERIC_TARGET: 'GENERIC_TARGET',
+  GENERIC_SOURCE_IDENTIFIER: 'GENERIC_SOURCE_IDENTIFIER',
+  GENERIC_TARGET_IDENTIFIER: 'GENERIC_TARGET_IDENTIFIER',
+} as const;
+export type OmniKindGeneric = ToEnum<typeof OmniKindGeneric>;
+
+/**
+ * TODO: Move other kinds into here, then rename it to OmniKind
+ */
+export const OmniTypeKind = {
+  ENUM: 'ENUM',
+  OBJECT: 'OBJECT',
+  HARDCODED_REFERENCE: 'HARDCODED_REFERENCE',
+  /**
+   * The type lies in another, outside model.
+   * Most likely a model that contains types common to multiple other models.
+   *
+   * @deprecated Remove -- it should be part of a document store; no document should be a "main document"
+   */
+  EXTERNAL_MODEL_REFERENCE: 'EXTERNAL_MODEL_REFERENCE',
+  DICTIONARY: 'DICTIONARY',
+  ARRAY: 'ARRAY',
+  ARRAY_PROPERTIES_BY_POSITION: 'ARRAY_PROPERTIES_BY_POSITION',
+  ARRAY_TYPES_BY_POSITION: 'ARRAY_TYPES_BY_POSITION',
+
+  INTERFACE: 'INTERFACE',
+  DECORATING: 'DECORATING',
+  /**
+   * TODO: Deprecated. Remove. Should be up to the target language to handle the original type as best it can!
+   */
+  WRAPPED: 'WRAPPED',
+  /**
+   * Type used when the type is known to be unknown.
+   * It is a way of saying "it is an object, but it can be anything"
+   */
+  UNKNOWN: 'UNKNOWN',
+
+  ...OmniKindGeneric,
+  ...OmniKindComposition,
+  NUMBER: 'NUMBER',
+  INTEGER: 'INTEGER',
+  INTEGER_SMALL: 'INTEGER_SMALL',
+  DECIMAL: 'DECIMAL',
+  DOUBLE: 'DOUBLE',
+  FLOAT: 'FLOAT',
+  LONG: 'LONG',
+  STRING: 'STRING',
+  CHAR: 'CHAR',
+  BOOL: 'BOOL',
+  VOID: 'VOID',
+  NULL: 'NULL',
+  UNDEFINED: 'UNDEFINED',
 
 } as const;
 

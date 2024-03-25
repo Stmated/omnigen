@@ -421,7 +421,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         // Maybe there is a need for a "never" kind
         return {
           kind: OmniTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.NOT,
+          compositionKind: CompositionKind.NEGATION,
           types: [
             {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY},
           ],
@@ -433,7 +433,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
       extendedBy = OmniUtil.getUnwrappedType(extendedBy);
       if (extendedBy.kind == OmniTypeKind.COMPOSITION) {
-        if (extendedBy.compositionKind == CompositionKind.AND) {
+        if (extendedBy.compositionKind == CompositionKind.INTERSECTION) {
 
           // TODO: Allow XOR here? Since if all are primitive, that means they are the same
           const primitiveTypes: OmniPrimitiveType[] = [];
@@ -507,7 +507,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
             // So we will not return it as a non-object and let it be handled by the object code.
             return undefined;
           }
-        } else if (extendedBy.compositionKind == CompositionKind.OR) {
+        } else if (extendedBy.compositionKind == CompositionKind.UNION) {
 
           if (!this.hasDirectContent(schema)) {
             return extendedBy;
@@ -629,7 +629,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
         return {
           kind: OmniTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.XOR,
+          compositionKind: CompositionKind.EXCLUSIVE_UNION,
           types: primitiveTypes,
         };
       }
@@ -906,7 +906,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private canBeReplacedBy(type: OmniObjectType, extension: OmniType): boolean {
 
     if (OmniUtil.isEmptyType(type)) {
-      if (extension.kind == OmniTypeKind.COMPOSITION && extension.compositionKind == CompositionKind.XOR) {
+      if (extension.kind == OmniTypeKind.COMPOSITION && extension.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
         return true;
       }
     }

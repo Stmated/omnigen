@@ -346,7 +346,7 @@ export class OmniUtil {
 
     if (type.kind == OmniTypeKind.COMPOSITION) {
 
-      if (type.compositionKind == CompositionKind.AND) {
+      if (type.compositionKind == CompositionKind.INTERSECTION) {
         return type.types.flatMap(it => {
           return OmniUtil.getFlattenedSuperTypes(it);
         });
@@ -366,7 +366,7 @@ export class OmniUtil {
     if (type) {
       const unwrapped = OmniUtil.getUnwrappedType(type);
       if (unwrapped.kind == OmniTypeKind.COMPOSITION) {
-        if (unwrapped.compositionKind == CompositionKind.AND) {
+        if (unwrapped.compositionKind == CompositionKind.INTERSECTION) {
           unwrapped.types;
         }
 
@@ -375,7 +375,7 @@ export class OmniUtil {
 
       if (unwrapped.extendedBy) {
         if (unwrapped.extendedBy.kind == OmniTypeKind.COMPOSITION) {
-          if (unwrapped.extendedBy.compositionKind == CompositionKind.AND) {
+          if (unwrapped.extendedBy.compositionKind == CompositionKind.INTERSECTION) {
             return unwrapped.extendedBy.types;
           }
         } else {
@@ -782,13 +782,13 @@ export class OmniUtil {
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
       let prefix: TypeName;
-      if (type.compositionKind == CompositionKind.XOR) {
+      if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
         prefix = ['UnionOf', 'ExclusiveUnionOf'];
-      } else if (type.compositionKind == CompositionKind.OR) {
+      } else if (type.compositionKind == CompositionKind.UNION) {
         prefix = 'UnionOf';
-      } else if (type.compositionKind == CompositionKind.AND) {
+      } else if (type.compositionKind == CompositionKind.INTERSECTION) {
         prefix = 'IntersectionOf';
-      } else if (type.compositionKind == CompositionKind.NOT) {
+      } else if (type.compositionKind == CompositionKind.NEGATION) {
         prefix = 'NegationOf';
       } else {
         assertUnreachable(type);

@@ -1,10 +1,10 @@
 import {
   CompositionKind,
-  OmniCompositionAndType,
-  OmniCompositionNotType,
-  OmniCompositionOrType,
+  OmniIntersectionType,
+  OmniNegationType,
+  OmniUnionType,
   OmniCompositionType,
-  OmniCompositionXorType,
+  OmniExclusiveUnionType,
   OmniInterfaceOrObjectType,
   OmniModel,
   OmniObjectType,
@@ -32,23 +32,16 @@ export type SuperTypePredicate = { (classType: JavaSuperTypeCapableType): boolea
 
 export type JavaPotentialClassType = OmniObjectType;
 
-// type JavaSubXOR = OmniCompositionXorType<JavaSubTypeCapableType | OmniPrimitiveType>;
-
-// NOTE: This might not be the best way to look at things. Is an XOR Composition really a subtype?
 export type JavaSubTypeCapableType =
   OmniSubTypeCapableType
   | OmniCompositionType<OmniSubTypeCapableType>;
 
-// | JavaSubXOR;
-
-// FIX: IT MUST ONLY BE POSSIBLE TO HAVE COMPOSITION KIND XOR!
-
 export type JavaSuperTypeCapableType =
   Exclude<OmniSuperTypeCapableType, { kind: typeof OmniTypeKind.COMPOSITION }>
-  | OmniCompositionAndType<JavaSuperTypeCapableType>
-  | OmniCompositionOrType<JavaSuperTypeCapableType>
-  | OmniCompositionXorType<JavaSuperTypeCapableType>
-  | OmniCompositionNotType<JavaSuperTypeCapableType>;
+  | OmniIntersectionType<JavaSuperTypeCapableType>
+  | OmniUnionType<JavaSuperTypeCapableType>
+  | OmniExclusiveUnionType<JavaSuperTypeCapableType>
+  | OmniNegationType<JavaSuperTypeCapableType>;
 
 export interface TypeNameInfo {
   packageName: string | undefined;
@@ -333,13 +326,13 @@ export class JavaUtil {
     }
 
     let prefix: TypeName;
-    if (type.compositionKind == CompositionKind.XOR) {
+    if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
       prefix = ['UnionOf', 'ExclusiveUnionOf'];
-    } else if (type.compositionKind == CompositionKind.OR) {
+    } else if (type.compositionKind == CompositionKind.UNION) {
       prefix = 'UnionOf';
-    } else if (type.compositionKind == CompositionKind.AND) {
+    } else if (type.compositionKind == CompositionKind.INTERSECTION) {
       prefix = 'IntersectionOf';
-    } else if (type.compositionKind == CompositionKind.NOT) {
+    } else if (type.compositionKind == CompositionKind.NEGATION) {
       prefix = 'NegationOf';
     } else {
       assertUnreachable(type);
@@ -587,7 +580,7 @@ export class JavaUtil {
   public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
 
     const properties: OmniProperty[] = [];
-    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.XOR) {
+    if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
 
       // Collecting properties from an XOR composition makes no sense, since we cannot know which needs implementing.
       return properties;
@@ -606,7 +599,7 @@ export class JavaUtil {
           properties.push(...OmniUtil.getPropertiesOf(ctx.type.of));
         }
       } else if (ctx.type.kind == OmniTypeKind.COMPOSITION) {
-        if (ctx.type.compositionKind == CompositionKind.XOR) {
+        if (ctx.type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
           ctx.skip = true;
           return;
         }
@@ -712,9 +705,6 @@ export class JavaUtil {
 
     subType = OmniUtil.getUnwrappedType(subType);
     if (!subType || subType.kind == OmniTypeKind.COMPOSITION) {
-
-      // The XOR composition class in Java does not actually extend anything.
-      // Instead it solves things by becoming a manual mapping class with different getters.
       return undefined;
     }
 
@@ -728,8 +718,8 @@ export class JavaUtil {
 
     const extendedUnwrapped = OmniUtil.getUnwrappedType(subType.extendedBy);
 
-    if (extendedUnwrapped.kind == OmniTypeKind.COMPOSITION && extendedUnwrapped.compositionKind == CompositionKind.AND) {
-      const possible = JavaUtil.getSuperClassOfCompositionAnd(extendedUnwrapped);
+    if (extendedUnwrapped.kind == OmniTypeKind.COMPOSITION && extendedUnwrapped.compositionKind == CompositionKind.INTERSECTION) {
+      const possible = JavaUtil.getSuperClassOfIntersection(extendedUnwrapped);
       if (possible) {
         return possible;
       }
@@ -743,9 +733,9 @@ export class JavaUtil {
     }
   }
 
-  public static getSuperClassOfCompositionAnd(composition: OmniCompositionType<OmniSuperTypeCapableType>) {
+  public static getSuperClassOfIntersection(composition: OmniCompositionType<OmniSuperTypeCapableType>) {
 
-    if (composition.compositionKind != CompositionKind.AND) {
+    if (composition.compositionKind != CompositionKind.INTERSECTION) {
       throw new Error(`Only allowed to be called for 'AND' composition kind`);
     }
 
@@ -775,7 +765,7 @@ export class JavaUtil {
   public static getSuperInterfacesOfSubType(_model: OmniModel, subType: OmniType): OmniInterfaceOrObjectType[] {
 
     const interfaces: OmniInterfaceOrObjectType[] = [];
-    if (subType.kind == OmniTypeKind.COMPOSITION && subType.compositionKind == CompositionKind.XOR) {
+    if (subType.kind == OmniTypeKind.COMPOSITION && subType.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
       // The XOR composition class does in Java not actually implement anything.
       // Instead it solves things by becoming a manual mapping class with different getters.
       return interfaces;
@@ -872,7 +862,7 @@ export class JavaUtil {
           return unwrapped;
         }
 
-        if (uw.extendedBy.kind == OmniTypeKind.COMPOSITION && uw.extendedBy.compositionKind == CompositionKind.AND) {
+        if (uw.extendedBy.kind == OmniTypeKind.COMPOSITION && uw.extendedBy.compositionKind == CompositionKind.INTERSECTION) {
           if (uw.extendedBy.types.length > 0) {
             if (uw.extendedBy.types[0] == unwrapped) {
               return unwrapped;

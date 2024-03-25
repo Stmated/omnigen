@@ -243,11 +243,11 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
 
       let separator: string;
       switch (n.omniType.compositionKind) {
-        case CompositionKind.AND:
+        case CompositionKind.INTERSECTION:
           separator = '&';
           break;
-        case CompositionKind.XOR:
-        case CompositionKind.OR:
+        case CompositionKind.EXCLUSIVE_UNION:
+        case CompositionKind.UNION:
           // TODO: Maybe one day we can do magical exclusive or, as in: https://stackoverflow.com/questions/52836812/how-do-json-schemas-anyof-type-translate-to-typescript
           separator = '|';
           break;

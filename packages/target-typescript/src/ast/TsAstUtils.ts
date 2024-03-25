@@ -18,7 +18,7 @@ export class TsAstUtils {
       } else {
         return new Java.WildcardType(type, implementation);
       }
-    } else if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind != CompositionKind.NOT) {
+    } else if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind != CompositionKind.NEGATION) {
       if (type.inline) {
         return new Ts.CompositionType(type, type.types.map(it => TsAstUtils.createTypeNode(it, implementation)));
       }

@@ -24,7 +24,7 @@ export class DeleteUnnecessaryXorJavaModelTransformer implements OmniModelTransf
       if (alreadyReplaced) {
         ctx.replacement = alreadyReplaced;
         // OmniUtil.swapType(ctx.owner, ctx.type, alreadyReplaced);
-      } else if (ctx.type.kind == OmniTypeKind.COMPOSITION && ctx.type.compositionKind == CompositionKind.XOR) {
+      } else if (ctx.type.kind == OmniTypeKind.COMPOSITION && ctx.type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
 
         const distinctTypes = OmniUtil.getDistinctTypes(ctx.type.types, JAVA_FEATURES);
         if (distinctTypes.length == 1) {

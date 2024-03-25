@@ -1,6 +1,6 @@
 import {
   CompositionKind,
-  OmniCompositionAndType,
+  OmniIntersectionType,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
   OmniType,
@@ -27,9 +27,9 @@ export class ConflictingAndCompositionTargetModelTransformer implements OmniMode
 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
 
-      if (ctx.type.kind == OmniTypeKind.COMPOSITION && ctx.type.compositionKind == CompositionKind.AND) {
+      if (ctx.type.kind == OmniTypeKind.COMPOSITION && ctx.type.compositionKind == CompositionKind.INTERSECTION) {
 
-        const replacement = this.replaceCompositionAnd(ctx.type, args.targetFeatures);
+        const replacement = this.replaceIntersection(ctx.type, args.targetFeatures);
         if (replacement) {
           ctx.replacement = replacement;
         }
@@ -37,7 +37,7 @@ export class ConflictingAndCompositionTargetModelTransformer implements OmniMode
     }, undefined, false);
   }
 
-  private replaceCompositionAnd(type: OmniCompositionAndType, features: TargetFeatures): OmniType | undefined {
+  private replaceIntersection(type: OmniIntersectionType, features: TargetFeatures): OmniType | undefined {
 
     let enumCount = 0;
     let primitiveCount = 0;

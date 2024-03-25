@@ -39,7 +39,7 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
   private createNewConcreteObjectFromComposition(parent: OmniType, type: OmniCompositionType): OmniType {
 
-    if (type.compositionKind == CompositionKind.XOR) {
+    if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
 
       // If it is an XOR composition, then return it as-is, since it will be its own object in Java.
       // Someday this whole XOR composition stuff needs to be overhauled, because it is brittle and too hard-coded.

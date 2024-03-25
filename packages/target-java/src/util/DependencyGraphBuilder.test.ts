@@ -332,7 +332,7 @@ function obj(name: string, extendedBy?: OmniSuperTypeCapableType): OmniObjectTyp
   return TestUtils.obj(name, extendedBy);
 }
 
-function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.AND> {
+function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.INTERSECTION> {
   return TestUtils.and(...types);
 }
 

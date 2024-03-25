@@ -58,7 +58,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
     parent: TypeOwner | undefined,
   ): void {
 
-    if (composition.compositionKind == CompositionKind.AND) {
+    if (composition.compositionKind == CompositionKind.INTERSECTION) {
 
       // If the composition is an AND, there might be paths that have overlapping supertypes.
       // We should try to resolve and simplify if any of the types are superfluous.

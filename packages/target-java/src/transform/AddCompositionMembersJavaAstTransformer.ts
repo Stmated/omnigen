@@ -2,7 +2,7 @@ import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs
 import {
   AstNodeWithChildren,
   CompositionKind,
-  OmniCompositionAndType,
+  OmniIntersectionType,
   OmniCompositionType,
   OmniEnumType,
   OmniHardcodedReferenceType,
@@ -55,9 +55,9 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         const omniType = node.type.omniType;
 
         if (omniType.kind == OmniTypeKind.COMPOSITION) {
-          if (omniType.compositionKind == CompositionKind.XOR) {
+          if (omniType.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
             this.addXOrMappingToBody(omniType, node, args.options);
-          } else if (omniType.compositionKind == CompositionKind.AND) {
+          } else if (omniType.compositionKind == CompositionKind.INTERSECTION) {
             this.addAndCompositionToClassDeclaration(args.model, args.root, omniType, node, args.options);
           }
         }
@@ -72,7 +72,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
    * This is quite wrong, since it is not for certain that one type should be a class and another an interface.
    * This needs to be handled in some other way which orders and/or categorizes the extensions.
    */
-  private addAndCompositionToClassDeclaration(model: OmniModel, root: JavaAstRootNode, andType: OmniCompositionAndType, classDec: Java.ClassDeclaration, options: JavaAndTargetOptions): void {
+  private addAndCompositionToClassDeclaration(model: OmniModel, root: JavaAstRootNode, andType: OmniIntersectionType, classDec: Java.ClassDeclaration, options: JavaAndTargetOptions): void {
 
     const implementsDeclarations = new Java.ImplementsDeclaration(
       new Java.TypeList([]),
@@ -80,7 +80,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
     for (const type of andType.types) {
 
-      if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.AND) {
+      if (type.kind == OmniTypeKind.COMPOSITION && type.compositionKind == CompositionKind.INTERSECTION) {
 
         // We can continue deeper, and add fields for this composition as well.
 

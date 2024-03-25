@@ -101,10 +101,10 @@ export type OmniSubTypeCapableType =
   | OmniInterfaceType
   | OmniExternalModelReferenceType<OmniSubTypeCapableType>
   | OmniDecoratingType<OmniSubTypeCapableType>
-  | OmniCompositionAndType<OmniSubTypeCapableType>
-  | OmniCompositionOrType<OmniSubTypeCapableType>
-  | OmniCompositionXorType<OmniSubTypeCapableType>
-  | OmniCompositionNotType<OmniSubTypeCapableType>
+  | OmniIntersectionType<OmniSubTypeCapableType>
+  | OmniUnionType<OmniSubTypeCapableType>
+  | OmniExclusiveUnionType<OmniSubTypeCapableType>
+  | OmniNegationType<OmniSubTypeCapableType>
   ;
 
 /**
@@ -120,10 +120,10 @@ export type OmniSuperTypeCapableType =
   | OmniGenericTargetType
   | OmniEnumType
   | OmniHardcodedReferenceType
-  | OmniCompositionAndType<OmniSuperTypeCapableType>
-  | OmniCompositionOrType<OmniSuperTypeCapableType>
-  | OmniCompositionXorType<OmniSuperTypeCapableType>
-  | OmniCompositionNotType<OmniSuperTypeCapableType>
+  | OmniIntersectionType<OmniSuperTypeCapableType>
+  | OmniUnionType<OmniSuperTypeCapableType>
+  | OmniExclusiveUnionType<OmniSuperTypeCapableType>
+  | OmniNegationType<OmniSuperTypeCapableType>
   | OmniExternalModelReferenceType<OmniSuperTypeCapableType> // Needs to be unwrapped/resolved every time
   | OmniDecoratingType<OmniSuperTypeCapableType>
   | OmniPrimitiveType
@@ -145,10 +145,10 @@ export type OmniType =
   | OmniHardcodedReferenceType
   | OmniExternalModelReferenceType
   | OmniPrimitiveType
-  | OmniCompositionAndType
-  | OmniCompositionOrType
-  | OmniCompositionXorType
-  | OmniCompositionNotType
+  | OmniIntersectionType
+  | OmniUnionType
+  | OmniExclusiveUnionType
+  | OmniNegationType
   | OmniEnumType
   | OmniGenericType
   | OmniInterfaceType
@@ -214,10 +214,22 @@ export interface OmniBaseType<T extends OmniTypeKind> {
  * TODO: Rename and move into being regular OmniTypeKind entries instead, and call them Union, Intersection, et cetera
  */
 export enum CompositionKind {
-  AND = 'AND',
-  OR = 'OR',
-  XOR = 'XOR',
-  NOT = 'NOT',
+  /**
+   * AND
+   */
+  INTERSECTION = 'INTERSECTION',
+  /**
+   * OR
+   */
+  UNION = 'UNION',
+  /**
+   * XOR
+   */
+  EXCLUSIVE_UNION = 'EXCLUSIVE_UNION',
+  /**
+   * NOT
+   */
+  NEGATION = 'NEGATION',
 }
 
 export interface OmniCompositionTypeBase<T extends OmniType, K extends CompositionKind> extends OmniBaseType<typeof OmniTypeKind.COMPOSITION>, OmniOptionallyNamedType {
@@ -225,16 +237,16 @@ export interface OmniCompositionTypeBase<T extends OmniType, K extends Compositi
   types: T[];
 }
 
-export interface OmniCompositionAndType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.AND> {}
-export interface OmniCompositionOrType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.OR> {}
-export interface OmniCompositionXorType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.XOR> {}
-export interface OmniCompositionNotType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.NOT> {}
+export interface OmniIntersectionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.INTERSECTION> {}
+export interface OmniUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.UNION> {}
+export interface OmniExclusiveUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.EXCLUSIVE_UNION> {}
+export interface OmniNegationType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, CompositionKind.NEGATION> {}
 
 export type OmniCompositionType<T extends OmniType = OmniType, CK extends CompositionKind = CompositionKind> = Extract<
-  OmniCompositionAndType<T>
-  | OmniCompositionOrType<T>
-  | OmniCompositionXorType<T>
-  | OmniCompositionNotType<T>
+  OmniIntersectionType<T>
+  | OmniUnionType<T>
+  | OmniExclusiveUnionType<T>
+  | OmniNegationType<T>
   , {compositionKind: CK}>
   ;
 

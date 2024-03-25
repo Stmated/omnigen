@@ -55,7 +55,7 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
             continue;
           }
 
-          if (property.type.compositionKind == CompositionKind.OR || property.type.compositionKind == CompositionKind.XOR) {
+          if (property.type.compositionKind == CompositionKind.UNION || property.type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
             // property.type.types.push(StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE);
             const i = 0;
           }
@@ -71,7 +71,7 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
 
         const compositionType: OmniCompositionType = {
           kind: OmniTypeKind.COMPOSITION,
-          compositionKind: CompositionKind.XOR,
+          compositionKind: CompositionKind.EXCLUSIVE_UNION,
           types: [property.type, StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE],
           inline: true,
         };

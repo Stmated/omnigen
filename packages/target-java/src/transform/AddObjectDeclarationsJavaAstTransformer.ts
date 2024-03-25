@@ -108,7 +108,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       return this.addEnum(type, undefined, root, options);
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
 
-      if (type.compositionKind == CompositionKind.XOR || (type.name && isEdgeType)) {
+      if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION || (type.name && isEdgeType)) {
         return this.transformSubType(model, type, undefined, options, root);
       }
 
@@ -135,7 +135,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       return this.transformSubType(model, type.of, type, options, root, type.sourceIdentifiers);
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       for (const targetIdentifier of type.targetIdentifiers) {
-        if (targetIdentifier.type.kind == OmniTypeKind.COMPOSITION && targetIdentifier.type.compositionKind != CompositionKind.XOR) {
+        if (targetIdentifier.type.kind == OmniTypeKind.COMPOSITION && targetIdentifier.type.compositionKind != CompositionKind.EXCLUSIVE_UNION) {
 
           // If a composition is used as a generic argument, then we will be required to create a class for it.
           return this.transformSubType(model, targetIdentifier.type, undefined, options, root);
@@ -396,7 +396,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
   private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
 
     if (type.kind == OmniTypeKind.COMPOSITION) {
-      if (type.compositionKind == CompositionKind.XOR) {
+      if (type.compositionKind == CompositionKind.EXCLUSIVE_UNION) {
         if (type.types.length == 2) {
           const nullType = type.types.find(it => it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL);
           if (nullType) {

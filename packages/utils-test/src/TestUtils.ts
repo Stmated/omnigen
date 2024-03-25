@@ -23,7 +23,6 @@ export class TestUtils {
       name: name,
       kind: OmniTypeKind.OBJECT,
       extendedBy: extendedBy,
-      additionalProperties: false,
       properties: [],
     };
 
@@ -39,10 +38,10 @@ export class TestUtils {
     return omniClass;
   }
 
-  public static and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.AND> {
+  public static and<T extends OmniType>(...types: T[]): OmniCompositionType<T, CompositionKind.INTERSECTION> {
     return {
       kind: OmniTypeKind.COMPOSITION,
-      compositionKind: CompositionKind.AND,
+      compositionKind: CompositionKind.INTERSECTION,
       types: types,
     };
   }

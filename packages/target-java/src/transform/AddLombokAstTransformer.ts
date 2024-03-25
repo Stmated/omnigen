@@ -1,6 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
-  OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
@@ -211,22 +210,18 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
   private getDefaultValue(type: OmniType): Java.Literal {
 
     switch (type.kind) {
-      case OmniTypeKind.PRIMITIVE:
-        switch (type.primitiveKind) {
-          case OmniPrimitiveKind.INTEGER:
-          case OmniPrimitiveKind.INTEGER_SMALL:
-          case OmniPrimitiveKind.DOUBLE:
-          case OmniPrimitiveKind.NUMBER:
-          case OmniPrimitiveKind.LONG:
-          case OmniPrimitiveKind.DECIMAL:
-          case OmniPrimitiveKind.FLOAT:
-            return new Java.Literal(0, type.primitiveKind);
-          case OmniPrimitiveKind.BOOL:
-            return new Java.Literal(false, type.primitiveKind);
-          case OmniPrimitiveKind.CHAR:
-            return new Java.Literal('', type.primitiveKind);
-        }
-        break;
+      case OmniTypeKind.INTEGER:
+      case OmniTypeKind.INTEGER_SMALL:
+      case OmniTypeKind.DOUBLE:
+      case OmniTypeKind.NUMBER:
+      case OmniTypeKind.LONG:
+      case OmniTypeKind.DECIMAL:
+      case OmniTypeKind.FLOAT:
+        return new Java.Literal(0, type.kind);
+      case OmniTypeKind.BOOL:
+        return new Java.Literal(false, type.kind);
+      case OmniTypeKind.CHAR:
+        return new Java.Literal('', type.kind);
     }
 
 

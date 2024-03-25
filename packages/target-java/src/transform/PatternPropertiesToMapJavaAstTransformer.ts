@@ -1,5 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {CommonDenominatorType, OmniDictionaryType, OmniInterfaceType, OmniObjectType, OmniPrimitiveKind, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind} from '@omnigen/core';
+import {CommonDenominatorType, OmniDictionaryType, OmniInterfaceType, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind} from '@omnigen/core';
 import * as Java from '../ast';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaOptions, SerializationLibrary} from '../options';
@@ -130,7 +130,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
           }
 
           if (!dec.implements) {
-            dec.implements = new Java.ImplementsDeclaration(new Java.TypeList<OmniType>([]));
+            dec.implements = new Java.ImplementsDeclaration(new Java.TypeList([]));
           }
 
           dec.implements.types.children.push(newInterfaceDec.type);
@@ -201,8 +201,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
   private propertyToDictionary(property: OmniProperty): OmniDictionaryType {
 
     const keyType: OmniPrimitiveType = {
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.STRING,
+      kind: OmniTypeKind.STRING,
     };
 
     return {
@@ -323,10 +322,9 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
   private createAdderMethodSignature(keyParameterDeclaration: Java.Parameter, valueParameterDeclaration: Java.Parameter) {
     return new Java.MethodDeclarationSignature(
       new Java.Identifier(METHOD_ADDER_NAME),
-      JavaAstUtils.createTypeNode(<OmniPrimitiveType>{
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.VOID,
-      }),
+      JavaAstUtils.createTypeNode({
+        kind: OmniTypeKind.VOID,
+      } satisfies OmniPrimitiveType),
       new Java.ParameterList(
         keyParameterDeclaration,
         valueParameterDeclaration,

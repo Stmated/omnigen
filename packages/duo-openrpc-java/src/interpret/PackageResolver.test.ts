@@ -1,6 +1,6 @@
 import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
-  DEFAULT_PACKAGE_OPTIONS, OmniPrimitiveKind,
+  DEFAULT_PACKAGE_OPTIONS, OmniTypeKindPrimitive,
   PackageOptions, TargetOptions,
 } from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
@@ -15,7 +15,7 @@ describe('PackageResolver', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json', {
       modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false},
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniPrimitiveKind.DOUBLE},
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniTypeKindPrimitive.DOUBLE},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();

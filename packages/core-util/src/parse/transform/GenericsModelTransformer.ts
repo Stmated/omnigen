@@ -159,7 +159,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         if (!OmniUtil.asSuperType(lowerTarget.type)) { // lowerTarget.type.kind == OmniTypeKind.UNKNOWN) {
           continue;
         }
-        if (lowerTarget.type.kind == OmniTypeKind.PRIMITIVE) {
+        if (OmniUtil.isPrimitive(lowerTarget.type)) {
 
           // Creating generics like `? extends String` does not make much sense, though legal.
           continue;

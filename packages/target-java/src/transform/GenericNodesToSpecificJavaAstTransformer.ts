@@ -1,7 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {Java, JavaUtil} from '../';
 import {AssignExpression, Block, DeclarationReference, EdgeType, Identifier, MethodDeclarationSignature, Parameter, ParameterList, ReturnStatement, Statement} from '../ast';
-import {OmniPrimitiveKind, OmniTypeKind} from '@omnigen/core';
+import {OmniTypeKind} from '@omnigen/core';
 
 export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTransformer {
 
@@ -40,8 +40,7 @@ export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTra
           new MethodDeclarationSignature(
             new Identifier(JavaUtil.getSetterName(field.identifier.value)),
             new EdgeType({
-              kind: OmniTypeKind.PRIMITIVE,
-              primitiveKind: OmniPrimitiveKind.VOID,
+              kind: OmniTypeKind.VOID,
               nullable: true,
             }),
             new ParameterList(parameter),

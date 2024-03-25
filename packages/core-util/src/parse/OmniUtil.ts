@@ -4,7 +4,7 @@ import {
   OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
-  OmniArrayType, OmniCompositionType,
+  OmniArrayType,
   OmniDictionaryType,
   OmniEnumType,
   OmniExternalModelReferenceType,
@@ -13,12 +13,12 @@ import {
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
   OmniInput,
-  OmniModel,
+  OmniModel, OmniNumericPrimitiveKinds, OmniNumericType,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniOutput,
   OmniPrimitiveConstantValue,
-  OmniPrimitiveKind,
+  OmniPrimitiveKinds,
   OmniPrimitiveNull,
   OmniPrimitiveNullableType,
   OmniPrimitiveType,
@@ -27,7 +27,7 @@ import {
   OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
   OmniSuperTypeCapableType,
-  OmniType, OmniTypeComposition,
+  OmniType,
   OmniTypeKind, OmniTypeKindComposition, OmniTypeOf,
   PropertyDifference,
   SmartUnwrappedType,
@@ -140,10 +140,10 @@ export class OmniUtil {
   }
 
   public static isGenericAllowedType(type: OmniType): boolean {
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(type)) {
 
       // TODO: This is specific to some languages, and should not be inside OmniUtil
-      if (type.primitiveKind == OmniPrimitiveKind.STRING) {
+      if (type.kind == OmniTypeKind.STRING) {
         return true;
       }
 
@@ -238,7 +238,7 @@ export class OmniUtil {
       return true;
     }
 
-    if (type.kind == OmniTypeKind.PRIMITIVE && !type.nullable && type.primitiveKind != OmniPrimitiveKind.VOID && type.primitiveKind != OmniPrimitiveKind.NULL) {
+    if (OmniUtil.isPrimitive(type) && !type.nullable && type.kind != OmniTypeKind.VOID && type.kind != OmniTypeKind.NULL) {
       return true;
     }
 
@@ -282,7 +282,7 @@ export class OmniUtil {
       || type.kind == OmniTypeKind.ENUM
       || type.kind == OmniTypeKind.HARDCODED_REFERENCE
       || type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE
-      || type.kind == OmniTypeKind.PRIMITIVE
+      || OmniUtil.isPrimitive(type)
     ) {
 
       // These cannot be made generic.
@@ -487,15 +487,15 @@ export class OmniUtil {
     }
   }
 
-  public static nativeLiteralToPrimitivekind(value: LiteralValue): OmniPrimitiveKind {
+  public static nativeLiteralToPrimitiveKind(value: LiteralValue): OmniPrimitiveKinds {
     if (typeof value == 'string') {
-      return OmniPrimitiveKind.STRING;
+      return OmniTypeKind.STRING;
     } else if (typeof value == 'number') {
-      return OmniPrimitiveKind.NUMBER;
+      return OmniTypeKind.NUMBER;
     } else if (typeof value == 'boolean') {
-      return OmniPrimitiveKind.BOOL;
+      return OmniTypeKind.BOOL;
     } else if (value === null) {
-      return OmniPrimitiveKind.NULL;
+      return OmniTypeKind.NULL;
     }
 
     assertNever(value);
@@ -533,11 +533,11 @@ export class OmniUtil {
   }
 
   public static isNull(type: OmniType): type is OmniPrimitiveNull {
-    return type.kind == OmniTypeKind.PRIMITIVE && type.primitiveKind === OmniPrimitiveKind.NULL;
+    return type.kind === OmniTypeKind.NULL;
   }
 
   public static isUndefined(type: OmniType): type is OmniPrimitiveNull {
-    return type.kind == OmniTypeKind.PRIMITIVE && type.primitiveKind == OmniPrimitiveKind.UNDEFINED;
+    return type.kind == OmniTypeKind.UNDEFINED;
   }
 
   /**
@@ -548,34 +548,34 @@ export class OmniUtil {
    * @param kind
    * @param nullable
    */
-  public static getVirtualPrimitiveKindName(kind: OmniPrimitiveKind, nullable: boolean): string {
+  public static getVirtualPrimitiveKindName(kind: OmniPrimitiveKinds, nullable: boolean): string {
 
     switch (kind) {
-      case OmniPrimitiveKind.BOOL:
+      case OmniTypeKind.BOOL:
         return nullable ? 'Boolean' : 'bool';
-      case OmniPrimitiveKind.VOID:
+      case OmniTypeKind.VOID:
         return 'void';
-      case OmniPrimitiveKind.CHAR:
+      case OmniTypeKind.CHAR:
         return nullable ? 'Character' : 'char';
-      case OmniPrimitiveKind.STRING:
+      case OmniTypeKind.STRING:
         return nullable ? 'String' : 'string';
-      case OmniPrimitiveKind.FLOAT:
+      case OmniTypeKind.FLOAT:
         return nullable ? 'Float' : 'float';
-      case OmniPrimitiveKind.INTEGER:
+      case OmniTypeKind.INTEGER:
         return nullable ? 'Integer' : 'int';
-      case OmniPrimitiveKind.INTEGER_SMALL:
+      case OmniTypeKind.INTEGER_SMALL:
         return nullable ? 'Short' : 'short';
-      case OmniPrimitiveKind.LONG:
+      case OmniTypeKind.LONG:
         return nullable ? 'Long' : 'long';
-      case OmniPrimitiveKind.DECIMAL:
+      case OmniTypeKind.DECIMAL:
         return nullable ? 'Decimal' : 'decimal';
-      case OmniPrimitiveKind.DOUBLE:
+      case OmniTypeKind.DOUBLE:
         return nullable ? 'Double' : 'double';
-      case OmniPrimitiveKind.NUMBER:
+      case OmniTypeKind.NUMBER:
         return nullable ? 'Number' : 'number';
-      case OmniPrimitiveKind.NULL:
+      case OmniTypeKind.NULL:
         return 'null';
-      case OmniPrimitiveKind.UNDEFINED:
+      case OmniTypeKind.UNDEFINED:
         return 'undefined';
     }
   }
@@ -614,7 +614,7 @@ export class OmniUtil {
       }
     });
 
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(type)) {
       let suffix = '';
 
       if (type.value) {
@@ -664,8 +664,8 @@ export class OmniUtil {
 
   public static isNullableType(type: OmniType): type is OmniPrimitiveNullableType | Exclude<typeof type, OmniPrimitiveType> {
 
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
-      if (type.primitiveKind == OmniPrimitiveKind.NULL || type.primitiveKind == OmniPrimitiveKind.VOID) {
+    if (OmniUtil.isPrimitive(type)) {
+      if (type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
         return true;
       }
 
@@ -677,7 +677,7 @@ export class OmniUtil {
   }
 
   public static getSpecifiedDefaultValue(type: OmniType): LiteralValue | undefined {
-    if (type.kind == OmniTypeKind.PRIMITIVE && !type.literal) {
+    if (OmniUtil.isPrimitive(type) && !type.literal) {
       return type.value;
     } else {
       return undefined;
@@ -686,7 +686,7 @@ export class OmniUtil {
 
   public static hasSpecifiedConstantValue(type: OmniType): type is OmniPrimitiveType & { literal: true } {
 
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(type)) {
       if (type.literal === true) {
         return true;
       }
@@ -696,7 +696,7 @@ export class OmniUtil {
   }
 
   public static getSpecifiedConstantValue(type: OmniType): OmniPrimitiveConstantValue | null | undefined {
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(type)) {
       if (type.literal === true) {
         return type.value;
       }
@@ -717,8 +717,8 @@ export class OmniUtil {
         prefix: 'ArrayOf',
         name: OmniUtil.getVirtualTypeName(type.of),
       };
-    } else if (type.kind == OmniTypeKind.PRIMITIVE) {
-      return OmniUtil.getVirtualPrimitiveKindName(type.primitiveKind, OmniUtil.isNullableType(type));
+    } else if (OmniUtil.isPrimitive(type)) {
+      return OmniUtil.getVirtualPrimitiveKindName(type.kind, OmniUtil.isNullableType(type));
     } else if (type.kind == OmniTypeKind.UNKNOWN) {
       if (type.valueDefault != undefined) {
         return OmniUtil.primitiveConstantValueToString(type.valueDefault);
@@ -808,11 +808,11 @@ export class OmniUtil {
 
   public static toReferenceType<T extends OmniType>(type: T): T {
     // NOTE: If changed, make sure isNullable is updated
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(type)) {
 
-      if (type.primitiveKind == OmniPrimitiveKind.STRING
-        || type.primitiveKind == OmniPrimitiveKind.NULL
-        || type.primitiveKind == OmniPrimitiveKind.VOID) {
+      if (type.kind == OmniTypeKind.STRING
+        || type.kind == OmniTypeKind.NULL
+        || type.kind == OmniTypeKind.VOID) {
 
         // NOTE: The string part is NOT always true, this should be moved to code for the specific language
         return type;
@@ -1220,7 +1220,7 @@ export class OmniUtil {
       return {type: a};
     }
 
-    if (a.kind == OmniTypeKind.PRIMITIVE && b.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(a) && OmniUtil.isPrimitive(b)) {
       return OmniUtil.getCommonDenominatorBetweenPrimitives(a, b, targetFeatures, create);
     } else if (a.kind == OmniTypeKind.HARDCODED_REFERENCE && b.kind == OmniTypeKind.HARDCODED_REFERENCE) {
       return OmniUtil.getCommonDenominatorBetweenHardcodedReferences(a, b);
@@ -1251,10 +1251,10 @@ export class OmniUtil {
       if (b.kind == OmniTypeKind.GENERIC_TARGET) {
         return OmniUtil.getCommonDenominatorBetweenGenericTargets(a, b, targetFeatures, create);
       }
-    } else if ((a.kind == OmniTypeKind.ENUM || a.kind == OmniTypeKind.PRIMITIVE) && (b.kind == OmniTypeKind.ENUM || b.kind == OmniTypeKind.PRIMITIVE)) {
+    } else if ((a.kind == OmniTypeKind.ENUM || OmniUtil.isPrimitive(a)) && (b.kind == OmniTypeKind.ENUM || OmniUtil.isPrimitive(b))) {
 
       const enumOption = (a.kind == OmniTypeKind.ENUM) ? a : (b.kind == OmniTypeKind.ENUM) ? b : undefined;
-      const primitiveOption = (a.kind == OmniTypeKind.PRIMITIVE) ? a : (b.kind == OmniTypeKind.PRIMITIVE) ? b : undefined;
+      const primitiveOption = (OmniUtil.isPrimitive(a)) ? a : (OmniUtil.isPrimitive(b)) ? b : undefined;
 
       if (enumOption && primitiveOption) {
         return OmniUtil.getCommonDenominatorBetweenEnumAndPrimitive(enumOption, primitiveOption);
@@ -1264,9 +1264,9 @@ export class OmniUtil {
     return undefined;
   }
 
-  private static getCommonDenominatorBetweenEnumAndPrimitive(a: OmniEnumType, b: OmniPrimitiveType): CommonDenominatorType<OmniType> | undefined {
+  private static getCommonDenominatorBetweenEnumAndPrimitive(a: OmniEnumType, b: OmniPrimitiveType): CommonDenominatorType | undefined {
 
-    if (a.primitiveKind === b.primitiveKind) {
+    if (a.itemKind === b.kind) {
       return {type: b, diffs: [TypeDiffKind.NARROWED_TYPE]};
     }
 
@@ -1478,7 +1478,7 @@ export class OmniUtil {
     create?: boolean,
   ): CommonDenominatorType<OmniPrimitiveType> | undefined {
 
-    if (a.primitiveKind == b.primitiveKind && a.nullable == b.nullable && a.value == b.value && a.literal == b.literal) {
+    if (a.kind == b.kind && a.nullable == b.nullable && a.value == b.value && a.literal == b.literal) {
       return {type: a};
     }
 
@@ -1504,7 +1504,7 @@ export class OmniUtil {
     if (overridingNullability !== undefined && common.type) {
       if (overridingNullability) {
         const nullableType = OmniUtil.toReferenceType(common.type);
-        if (nullableType.kind == OmniTypeKind.PRIMITIVE) {
+        if (OmniUtil.isPrimitive(nullableType)) {
           common.type = nullableType;
           common.diffs = [...(common.diffs ?? []), TypeDiffKind.NULLABILITY];
         } else {
@@ -1550,83 +1550,83 @@ export class OmniUtil {
     b: OmniPrimitiveType,
   ): CommonDenominatorType<OmniPrimitiveType | undefined> | undefined {
 
-    if (a.primitiveKind == b.primitiveKind) {
+    if (a.kind == b.kind) {
       // The type being undefined means that we have no preference over a or b
       return {type: undefined};
     }
 
-    switch (a.primitiveKind) {
-      case OmniPrimitiveKind.INTEGER_SMALL:
-        switch (b.primitiveKind) {
-          case OmniPrimitiveKind.INTEGER:
-          case OmniPrimitiveKind.LONG:
+    switch (a.kind) {
+      case OmniTypeKind.INTEGER_SMALL:
+        switch (b.kind) {
+          case OmniTypeKind.INTEGER:
+          case OmniTypeKind.LONG:
             return {type: b, diffs: [TypeDiffKind.SIZE]};
-          case OmniPrimitiveKind.FLOAT:
-          case OmniPrimitiveKind.DOUBLE:
-          case OmniPrimitiveKind.DECIMAL:
+          case OmniTypeKind.FLOAT:
+          case OmniTypeKind.DOUBLE:
+          case OmniTypeKind.DECIMAL:
             return {type: b, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
         }
         break;
 
-      case OmniPrimitiveKind.INTEGER:
-        switch (b.primitiveKind) {
-          case OmniPrimitiveKind.INTEGER_SMALL:
+      case OmniTypeKind.INTEGER:
+        switch (b.kind) {
+          case OmniTypeKind.INTEGER_SMALL:
             return {type: a, diffs: [TypeDiffKind.SIZE]};
-          case OmniPrimitiveKind.LONG:
+          case OmniTypeKind.LONG:
             return {type: b, diffs: [TypeDiffKind.SIZE]};
-          case OmniPrimitiveKind.FLOAT:
+          case OmniTypeKind.FLOAT:
             return {type: b, diffs: [TypeDiffKind.PRECISION]};
-          case OmniPrimitiveKind.DOUBLE:
-          case OmniPrimitiveKind.DECIMAL:
+          case OmniTypeKind.DOUBLE:
+          case OmniTypeKind.DECIMAL:
             return {type: b, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
         }
         break;
-      case OmniPrimitiveKind.LONG:
-        switch (b.primitiveKind) {
-          case OmniPrimitiveKind.INTEGER_SMALL:
-          case OmniPrimitiveKind.INTEGER:
+      case OmniTypeKind.LONG:
+        switch (b.kind) {
+          case OmniTypeKind.INTEGER_SMALL:
+          case OmniTypeKind.INTEGER:
             return {type: a, diffs: [TypeDiffKind.SIZE]};
-          case OmniPrimitiveKind.FLOAT:
+          case OmniTypeKind.FLOAT:
             return {type: a, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
-          case OmniPrimitiveKind.DOUBLE:
-          case OmniPrimitiveKind.DECIMAL:
+          case OmniTypeKind.DOUBLE:
+          case OmniTypeKind.DECIMAL:
             return {type: b, diffs: [TypeDiffKind.PRECISION]};
         }
         break;
-      case OmniPrimitiveKind.FLOAT:
-        switch (b.primitiveKind) {
-          case OmniPrimitiveKind.INTEGER_SMALL:
-          case OmniPrimitiveKind.INTEGER:
+      case OmniTypeKind.FLOAT:
+        switch (b.kind) {
+          case OmniTypeKind.INTEGER_SMALL:
+          case OmniTypeKind.INTEGER:
             return {type: a, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
-          case OmniPrimitiveKind.DOUBLE:
-          case OmniPrimitiveKind.DECIMAL:
+          case OmniTypeKind.DOUBLE:
+          case OmniTypeKind.DECIMAL:
             return {type: b, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
         }
         break;
-      case OmniPrimitiveKind.DECIMAL:
-        switch (b.primitiveKind) {
-          case OmniPrimitiveKind.INTEGER_SMALL:
-          case OmniPrimitiveKind.INTEGER:
-          case OmniPrimitiveKind.FLOAT:
-          case OmniPrimitiveKind.DOUBLE:
+      case OmniTypeKind.DECIMAL:
+        switch (b.kind) {
+          case OmniTypeKind.INTEGER_SMALL:
+          case OmniTypeKind.INTEGER:
+          case OmniTypeKind.FLOAT:
+          case OmniTypeKind.DOUBLE:
             return {type: a, diffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]};
         }
         break;
-      case OmniPrimitiveKind.NUMBER:
-        switch (b.primitiveKind) {
-          case OmniPrimitiveKind.INTEGER:
-          case OmniPrimitiveKind.INTEGER_SMALL:
-          case OmniPrimitiveKind.LONG:
-          case OmniPrimitiveKind.DOUBLE:
-          case OmniPrimitiveKind.FLOAT:
-          case OmniPrimitiveKind.DECIMAL:
+      case OmniTypeKind.NUMBER:
+        switch (b.kind) {
+          case OmniTypeKind.INTEGER:
+          case OmniTypeKind.INTEGER_SMALL:
+          case OmniTypeKind.LONG:
+          case OmniTypeKind.DOUBLE:
+          case OmniTypeKind.FLOAT:
+          case OmniTypeKind.DECIMAL:
             // "number" is isomorphic to all other number types?
             return {type: a, diffs: [TypeDiffKind.ISOMORPHIC_TYPE]};
         }
         break;
-      case OmniPrimitiveKind.CHAR:
-        switch (b.primitiveKind) {
-          case OmniPrimitiveKind.STRING:
+      case OmniTypeKind.CHAR:
+        switch (b.kind) {
+          case OmniTypeKind.STRING:
             return {type: b, diffs: [TypeDiffKind.SIZE]};
         }
         break;
@@ -1712,24 +1712,20 @@ export class OmniUtil {
     return distinctTypes;
   }
 
-  public static isNumericType(type: OmniType): boolean {
+  public static isNumericType(type: OmniType): type is OmniNumericType<OmniType> {
 
-    if (type.kind != OmniTypeKind.PRIMITIVE) {
-      return false;
-    }
-
-    return type.primitiveKind == OmniPrimitiveKind.NUMBER
-      || type.primitiveKind == OmniPrimitiveKind.DOUBLE
-      || type.primitiveKind == OmniPrimitiveKind.LONG
-      || type.primitiveKind == OmniPrimitiveKind.INTEGER
-      || type.primitiveKind == OmniPrimitiveKind.INTEGER_SMALL
-      || type.primitiveKind == OmniPrimitiveKind.FLOAT
-      || type.primitiveKind == OmniPrimitiveKind.DECIMAL;
+    return type.kind == OmniTypeKind.NUMBER
+      || type.kind == OmniTypeKind.DOUBLE
+      || type.kind == OmniTypeKind.LONG
+      || type.kind == OmniTypeKind.INTEGER
+      || type.kind == OmniTypeKind.INTEGER_SMALL
+      || type.kind == OmniTypeKind.FLOAT
+      || type.kind == OmniTypeKind.DECIMAL;
   }
 
   public static getGeneralizedType<T extends OmniType>(type: T): T {
 
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(type)) {
       if (type.value !== undefined) {
 
         const generalizedPrimitive: T = {
@@ -1770,7 +1766,7 @@ export class OmniUtil {
     b: OmniObjectType,
     targetFeatures: TargetFeatures,
     create: boolean | undefined,
-  ): CommonDenominatorType<OmniType> | undefined {
+  ): CommonDenominatorType | undefined {
 
     if (a.properties.length != b.properties.length) {
       return undefined;
@@ -1851,7 +1847,7 @@ export class OmniUtil {
           }
         }
       }
-    } else if (from.kind == OmniTypeKind.PRIMITIVE && to.kind == OmniTypeKind.PRIMITIVE) {
+    } else if (OmniUtil.isPrimitive(from) && OmniUtil.isPrimitive(to)) {
 
       const newNullable = (from.nullable || to.nullable) ?? false;
       if (newNullable != to.nullable) {
@@ -1896,9 +1892,7 @@ export class OmniUtil {
       return [];
     }
 
-    if (baseline.kind != other.kind) {
-      return [{kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.FUNDAMENTAL_TYPE]}];
-    } else if (baseline.kind == OmniTypeKind.OBJECT && other.kind == OmniTypeKind.OBJECT) {
+    if (baseline.kind === OmniTypeKind.OBJECT && other.kind === OmniTypeKind.OBJECT) {
       return this.getDiffOfObjects(baseline, other, features);
     } else {
 
@@ -2093,22 +2087,22 @@ export class OmniUtil {
     });
   }
 
-  public static getPrimitiveNumberCoverageScore(kind: OmniPrimitiveKind): number {
+  public static getPrimitiveNumberCoverageScore(kind: OmniPrimitiveKinds): number {
 
     switch (kind) {
-      case OmniPrimitiveKind.DECIMAL:
+      case OmniTypeKind.DECIMAL:
         return 7;
-      case OmniPrimitiveKind.DOUBLE:
+      case OmniTypeKind.DOUBLE:
         return 6;
-      case OmniPrimitiveKind.FLOAT:
+      case OmniTypeKind.FLOAT:
         return 5;
-      case OmniPrimitiveKind.LONG:
+      case OmniTypeKind.LONG:
         return 4;
-      case OmniPrimitiveKind.INTEGER:
+      case OmniTypeKind.INTEGER:
         return 3;
-      case OmniPrimitiveKind.INTEGER_SMALL:
+      case OmniTypeKind.INTEGER_SMALL:
         return 2;
-      case OmniPrimitiveKind.NUMBER:
+      case OmniTypeKind.NUMBER:
         return 1;
     }
 
@@ -2262,6 +2256,32 @@ export class OmniUtil {
       case OmniTypeKind.EXCLUSIVE_UNION:
       case OmniTypeKind.INTERSECTION:
       case OmniTypeKind.NEGATION:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  public static isPrimitive<T extends OmniType>(type: T | undefined): type is OmniTypeOf<T, OmniPrimitiveKinds> {
+
+    if (!type) {
+      return false;
+    }
+
+    switch (type.kind) {
+      case OmniTypeKind.NUMBER:
+      case OmniTypeKind.INTEGER:
+      case OmniTypeKind.INTEGER_SMALL:
+      case OmniTypeKind.DECIMAL:
+      case OmniTypeKind.DOUBLE:
+      case OmniTypeKind.FLOAT:
+      case OmniTypeKind.LONG:
+      case OmniTypeKind.STRING:
+      case OmniTypeKind.CHAR:
+      case OmniTypeKind.BOOL:
+      case OmniTypeKind.VOID:
+      case OmniTypeKind.NULL:
+      case OmniTypeKind.UNDEFINED:
         return true;
       default:
         return false;

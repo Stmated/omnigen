@@ -1,14 +1,14 @@
 import {
-  AstNode, OmniArrayType,
-  OmniDictionaryType,
+  AstNode,
+  OmniArrayType,
   OmniGenericTargetType,
   OmniInterfaceOrObjectType,
   OmniInterfaceType,
   OmniObjectType,
-  OmniPrimitiveKind,
   OmniProperty,
   OmniType,
-  OmniTypeKind, RootAstNode,
+  OmniTypeKind,
+  RootAstNode,
   UnknownKind,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
@@ -17,7 +17,7 @@ import {Block, JavaAstRootNode} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaOptions} from '../options';
-import {createJavaVisitor, JavaVisitor} from '../visit';
+import {createJavaVisitor} from '../visit';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -143,9 +143,9 @@ export class JavaAstUtils {
       ),
     );
 
-    if (property.type.kind == OmniTypeKind.PRIMITIVE) {
-      if (property.type.primitiveKind == OmniPrimitiveKind.NULL) {
-        field.initializer = new Java.Literal(property.type.value ?? null, property.type.primitiveKind);
+    if (OmniUtil.isPrimitive(property.type)) {
+      if (property.type.kind == OmniTypeKind.NULL) {
+        field.initializer = new Java.Literal(property.type.value ?? null, property.type.kind);
       } else if (property.type.value !== undefined) {
         if (options.immutableModels && !property.type.literal) {
 
@@ -154,7 +154,7 @@ export class JavaAstUtils {
 
         } else {
 
-          field.initializer = new Java.Literal(property.type.value, property.type.primitiveKind);
+          field.initializer = new Java.Literal(property.type.value, property.type.kind);
         }
       }
     }

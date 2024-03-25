@@ -1,5 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {Direction, OmniPrimitiveKind, OmniProperty, OmniPropertyName, OmniTypeKind, UnknownKind} from '@omnigen/core';
+import {Direction, OmniProperty, OmniPropertyName, OmniTypeKind, UnknownKind} from '@omnigen/core';
 import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast';
 import {AbstractObjectDeclaration} from '../ast';
@@ -144,7 +144,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
           const keyType = assertDefined(JavaAstUtils.createTypeNode(type.keyType, true).reduce(r));
           const valueType = assertDefined(JavaAstUtils.createTypeNode(type.valueType, true).reduce(r));
 
-          if (keyType.omniType.kind == OmniTypeKind.PRIMITIVE && keyType.omniType.primitiveKind == OmniPrimitiveKind.STRING) {
+          if (OmniUtil.isPrimitive(keyType.omniType) && keyType.omniType.kind == OmniTypeKind.STRING) {
             if (valueType.omniType.kind == OmniTypeKind.UNKNOWN || (valueType.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE && valueType.omniType.fqn == JACKSON_JSON_NODE)) {
               // return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_OBJECT}, n.implementation);
 

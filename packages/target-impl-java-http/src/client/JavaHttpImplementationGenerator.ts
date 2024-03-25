@@ -23,7 +23,6 @@ import {
   OmniHardcodedReferenceType,
   OmniObjectType,
   OmniOutput,
-  OmniPrimitiveKind,
   OmniType,
   OmniTypeKind,
   TargetOptions,
@@ -400,7 +399,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
         new Java.EdgeType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.OBJECT}, false),
         new Java.ParameterList(
           new Java.Parameter(
-            new Java.EdgeType({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}),
+            new Java.EdgeType({kind: OmniTypeKind.STRING}),
             pathIdentifier,
           ),
           requestArgumentDeclaration,

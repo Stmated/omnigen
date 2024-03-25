@@ -4,7 +4,7 @@ import * as JavaParser from 'java-parser';
 import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '@omnigen/duo-openrpc-java-test';
 import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
 import {describe, expect, test, vi} from 'vitest';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, OmniPrimitiveKind} from '@omnigen/core';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, OmniTypeKind} from '@omnigen/core';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 import {SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
@@ -117,7 +117,7 @@ describe('Java Rendering', () => {
       modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false},
       javaOptions: {
         ...DEFAULT_TEST_JAVA_OPTIONS,
-        preferNumberType: OmniPrimitiveKind.DOUBLE,
+        preferNumberType: OmniTypeKind.DOUBLE,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
       },
@@ -182,7 +182,7 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('primitive-generics.json', {
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniPrimitiveKind.DOUBLE, serializationLibrary: 'POJO'},
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniTypeKind.DOUBLE, serializationLibrary: 'POJO'},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();

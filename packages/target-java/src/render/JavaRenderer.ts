@@ -1,4 +1,4 @@
-import {AstNode, AstVisitor, OmniArrayKind, OmniPrimitiveKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
+import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
 import {DecoratingTypeNode, GenericTypeDeclarationList, JavaAstRootNode, TokenKind} from '../ast';
 import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
@@ -430,15 +430,15 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
         return (`null`);
       } else {
         if (node.primitiveKind !== undefined) {
-          if (node.primitiveKind == OmniPrimitiveKind.DOUBLE) {
+          if (node.primitiveKind == OmniTypeKind.DOUBLE) {
             return (`${node.value}d`);
-          } else if (node.primitiveKind == OmniPrimitiveKind.FLOAT) {
+          } else if (node.primitiveKind == OmniTypeKind.FLOAT) {
             return (`${node.value}f`);
-          } else if (node.primitiveKind == OmniPrimitiveKind.LONG) {
+          } else if (node.primitiveKind == OmniTypeKind.LONG) {
             return (`${node.value}L`);
-          } else if (node.primitiveKind == OmniPrimitiveKind.INTEGER) {
+          } else if (node.primitiveKind == OmniTypeKind.INTEGER) {
             return (`${node.value}`);
-          } else if (node.primitiveKind == OmniPrimitiveKind.NUMBER) {
+          } else if (node.primitiveKind == OmniTypeKind.NUMBER) {
             // If the type is just 'number' we will have to hope type inference is good enough.
           }
         }

@@ -3,7 +3,6 @@ import {
   OmniLinkMapping,
   OmniModel,
   OmniOutput,
-  OmniPrimitiveKind,
   OmniProperty,
   OmniType,
   OmniTypeKind,
@@ -65,7 +64,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
         if (args.options.commentsOnGetters) {
           if (!node.signature.parameters || node.signature.parameters.children.length == 0) {
             const type = node.signature.type.omniType;
-            if (type.kind != OmniTypeKind.PRIMITIVE || type.primitiveKind != OmniPrimitiveKind.VOID) {
+            if (!OmniUtil.isPrimitive(type) || type.kind != OmniTypeKind.VOID) {
               this.addToCommentsOwner(node.signature, args);
             }
           }

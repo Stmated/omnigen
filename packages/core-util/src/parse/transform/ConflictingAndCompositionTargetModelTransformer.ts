@@ -43,7 +43,7 @@ export class ConflictingAndCompositionTargetModelTransformer implements OmniMode
     for (const child of type.types) {
       if (child.kind == OmniTypeKind.ENUM) {
         enumCount++;
-      } else if (child.kind == OmniTypeKind.PRIMITIVE) {
+      } else if (OmniUtil.isPrimitive(child)) {
         primitiveCount++;
       } else {
 

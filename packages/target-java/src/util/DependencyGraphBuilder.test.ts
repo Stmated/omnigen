@@ -4,7 +4,6 @@ import {
   OmniEndpoint, OmniInterfaceOrObjectType,
   OmniModel,
   OmniObjectType,
-  OmniPrimitiveKind,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
@@ -35,8 +34,7 @@ describe('Test CompositionDependencyUtil', () => {
           examples: [],
           request: {
             type: {
-              kind: OmniTypeKind.PRIMITIVE,
-              primitiveKind: OmniPrimitiveKind.STRING,
+              kind: OmniTypeKind.STRING,
             },
             contentType: 'application/json',
           },
@@ -77,8 +75,7 @@ describe('Test CompositionDependencyUtil', () => {
 
   test('One Primitive', async () => {
     const model = createModel([{
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.NUMBER,
+      kind: OmniTypeKind.NUMBER,
     }]);
 
     expect(model).toBeDefined();
@@ -372,7 +369,7 @@ const inlineClassWithProp = (name: string): OmniObjectType => {
     {
       name: `${name}Property`,
       owner: inline,
-      type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER},
+      type: {kind: OmniTypeKind.INTEGER},
     },
   ];
   return inline;

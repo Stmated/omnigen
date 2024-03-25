@@ -1,4 +1,4 @@
-import {CommonDenominatorType, OMNI_GENERIC_FEATURES, OmniPrimitiveKind, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind, TypeDiffKind} from '@omnigen/core';
+import {CommonDenominatorType, OMNI_GENERIC_FEATURES, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind, TypeDiffKind} from '@omnigen/core';
 import {Diff, DiffKind, OmniUtil, PropertyTypeDiff} from './OmniUtil';
 import {describe, expect, test} from 'vitest';
 
@@ -7,95 +7,95 @@ describe('OmniUtil', () => {
   test('EqualityLevel Primitives', async () => {
 
     expect(expectCommon(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+      {kind: OmniTypeKind.STRING},
+      {kind: OmniTypeKind.STRING},
     ).diffs ?? []).toEqual([]);
 
     expect(expectCommon(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.DOUBLE},
+      {kind: OmniTypeKind.INTEGER},
+      {kind: OmniTypeKind.DOUBLE},
     ).diffs ?? []).toEqual([TypeDiffKind.SIZE, TypeDiffKind.PRECISION]);
 
     // With default features, we cannot handle the literal types
     expect(expectCommon(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
       {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: true},
     ).diffs).toEqual([TypeDiffKind.FUNDAMENTAL_TYPE]);
 
     // With Java, the literal types become the same type in the signature
     const literalString = expectCommon(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'hello'},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: 'bye'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
       {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: false},
     );
 
     expect(literalString.diffs).toEqual([TypeDiffKind.NARROWED_LITERAL_TYPE]);
-    expect(literalString.type.kind).toEqual(OmniTypeKind.PRIMITIVE);
+    expect(OmniUtil.isPrimitive(literalString.type)).toEqual(true);
 
     const literalPrimitiveString = (literalString.type as OmniPrimitiveType);
-    expect(literalPrimitiveString.primitiveKind).toEqual(OmniPrimitiveKind.STRING);
+    expect(literalPrimitiveString.kind).toEqual(OmniTypeKind.STRING);
     expect(literalPrimitiveString.value).toBeUndefined();
     expect(literalPrimitiveString.literal).toBeUndefined();
 
     expectA(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, nullable: true},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, nullable: false},
+      {kind: OmniTypeKind.STRING, nullable: true},
+      {kind: OmniTypeKind.STRING, nullable: false},
     );
 
     expectA(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: true},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER, nullable: false},
+      {kind: OmniTypeKind.INTEGER, nullable: true},
+      {kind: OmniTypeKind.INTEGER, nullable: false},
     );
   });
 
   test('primitive diff', () => {
 
     let diff = OmniUtil.getDiff(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+      {kind: OmniTypeKind.STRING},
+      {kind: OmniTypeKind.STRING},
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(0);
 
     diff = OmniUtil.getDiff(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-      {kind: OmniTypeKind.ARRAY, of: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.DOUBLE}},
+      {kind: OmniTypeKind.STRING},
+      {kind: OmniTypeKind.ARRAY, of: {kind: OmniTypeKind.DOUBLE}},
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
     expect(diff[0]).toEqual({kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.FUNDAMENTAL_TYPE]} satisfies Diff);
 
     diff = OmniUtil.getDiff(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.DOUBLE},
+      {kind: OmniTypeKind.INTEGER},
+      {kind: OmniTypeKind.DOUBLE},
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
     expect(diff[0]).toEqual({kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]} satisfies Diff);
 
     diff = OmniUtil.getDiff(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.DOUBLE},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER},
+      {kind: OmniTypeKind.DOUBLE},
+      {kind: OmniTypeKind.INTEGER},
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
     expect(diff[0]).toEqual({kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.SIZE, TypeDiffKind.PRECISION]} satisfies Diff);
 
     diff = OmniUtil.getDiff(
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.LONG},
+      {kind: OmniTypeKind.INTEGER},
+      {kind: OmniTypeKind.LONG},
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
     expect(diff[0]).toEqual({kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.SIZE]} satisfies Diff);
   });
 
-  const aIntProp: OmniProperty = {name: 'pa', owner: undefined as any, type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER}};
-  const aStringProp: OmniProperty = {name: 'pa', owner: undefined as any, type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}};
-  const bIntProp: OmniProperty = {name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.INTEGER}};
-  const bFloatProp: OmniProperty = {name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.FLOAT}};
-  const bDoubleProp: OmniProperty = {name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.DOUBLE}};
+  const aIntProp: OmniProperty = {name: 'pa', owner: undefined as any, type: {kind: OmniTypeKind.INTEGER}};
+  const aStringProp: OmniProperty = {name: 'pa', owner: undefined as any, type: {kind: OmniTypeKind.STRING}};
+  const bIntProp: OmniProperty = {name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.INTEGER}};
+  const bFloatProp: OmniProperty = {name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.FLOAT}};
+  const bDoubleProp: OmniProperty = {name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.DOUBLE}};
 
   test('object diff', () => {
 
@@ -204,11 +204,11 @@ describe('OmniUtil', () => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
+      {kind: OmniTypeKind.NUMBER},
       {
         kind: OmniTypeKind.DICTIONARY,
-        keyType: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        valueType: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+        keyType: {kind: OmniTypeKind.STRING},
+        valueType: {kind: OmniTypeKind.STRING},
       },
     ];
 
@@ -223,7 +223,7 @@ describe('OmniUtil', () => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
+      {kind: OmniTypeKind.NUMBER},
       {kind: OmniTypeKind.OBJECT, name: 'b', properties: [bIntProp]},
     ];
 

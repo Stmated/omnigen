@@ -1,6 +1,6 @@
 import {
   OmniObjectType,
-  OmniPrimitiveKind, OmniPrimitiveTangibleKind,
+  OmniPrimitiveTangibleKind,
   OmniProperty,
   OmniPropertyOrphan,
   OmniSuperTypeCapableType, OmniType,
@@ -66,8 +66,8 @@ test('Similar (Diff Property Names)', async () => {
 
 test('Similar (Diff Property Types)', async () => {
 
-  const a1 = createObject('a', undefined, createPrimitive('x', OmniPrimitiveKind.DOUBLE));
-  const a2 = createObject('a', undefined, createPrimitive('x', OmniPrimitiveKind.INTEGER));
+  const a1 = createObject('a', undefined, createPrimitive('x', OmniTypeKind.DOUBLE));
+  const a2 = createObject('a', undefined, createPrimitive('x', OmniTypeKind.INTEGER));
 
   const replacements = OmniModelMerge.getReplacements(a1, a2).filter(byObjects);
   expect(replacements).toHaveLength(0);
@@ -168,12 +168,11 @@ function createObject(name: string, extendedBy?: OmniSuperTypeCapableType, ...pr
   return type;
 }
 
-function createPrimitive(name: string, primitiveKind: OmniPrimitiveTangibleKind = OmniPrimitiveKind.DOUBLE): Omit<OmniProperty, 'owner'> {
+function createPrimitive(name: string, primitiveKind: OmniPrimitiveTangibleKind = OmniTypeKind.DOUBLE): Omit<OmniProperty, 'owner'> {
 
   return {
     type: {
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: primitiveKind,
+      kind: primitiveKind,
     },
     name: name,
   };

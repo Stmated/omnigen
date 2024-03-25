@@ -1,4 +1,4 @@
-import {getEnumValues, OmniPrimitiveKind, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {getEnumValues, OmniTypeKind, OmniTypeKindPrimitive, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
 import {z} from 'zod';
 
 export const FieldAccessorMode = {
@@ -62,7 +62,7 @@ export const ZodJavaOptions = ZodOptions.extend({
   includeExampleCommentsMode: z.enum(getEnumValues(IncludeExampleCommentsMode)).default(IncludeExampleCommentsMode.ALWAYS),
   preferVar: ZodCoercedBoolean.default('true'),
   includeGenerated: ZodCoercedBoolean.default('true'),
-  preferNumberType: z.enum(getEnumValues(OmniPrimitiveKind)).default(OmniPrimitiveKind.INTEGER),
+  preferNumberType: z.enum(getEnumValues(OmniTypeKindPrimitive)).default(OmniTypeKindPrimitive.INTEGER),
   serializationLibrary: z.enum(getEnumValues(SerializationLibrary)).default(SerializationLibrary.JACKSON),
   javaAnnotationLibrary: z.enum(getEnumValues(JavaAnnotationLibrary)).default(JavaAnnotationLibrary.JAKARTA),
   serializationPropertyNameMode: z.enum(getEnumValues(SerializationPropertyNameMode)).default(SerializationPropertyNameMode.ALWAYS)

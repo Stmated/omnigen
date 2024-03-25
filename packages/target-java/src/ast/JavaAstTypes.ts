@@ -5,8 +5,7 @@ import {
   LiteralValue, OmniArrayType, OmniDecoratingType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
-  OmniHardcodedReferenceType,
-  OmniPrimitiveKind,
+  OmniHardcodedReferenceType, OmniPrimitiveKinds,
   OmniProperty,
   OmniType,
   OmniTypeKind,
@@ -265,12 +264,12 @@ export abstract class AbstractJavaExpression extends AbstractJavaNode {
 
 export class Literal extends AbstractJavaExpression {
   readonly value: LiteralValue;
-  readonly primitiveKind: OmniPrimitiveKind;
+  readonly primitiveKind: OmniPrimitiveKinds;
 
-  constructor(value: LiteralValue, primitiveKind?: OmniPrimitiveKind) {
+  constructor(value: LiteralValue, primitiveKind?: OmniPrimitiveKinds) {
     super();
     this.value = value;
-    this.primitiveKind = primitiveKind ?? OmniUtil.nativeLiteralToPrimitivekind(value);
+    this.primitiveKind = primitiveKind ?? OmniUtil.nativeLiteralToPrimitiveKind(value);
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {

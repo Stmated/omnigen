@@ -6,11 +6,10 @@ import {
   OmniEnumType,
   OmniHardcodedReferenceType,
   OmniModel,
-  OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind, OmniUnknownType,
-  UnknownKind,
+  UnknownKind, OmniPrimitiveKinds,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
@@ -132,7 +131,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     for (const xor of type.types) {
       if (xor.kind == OmniTypeKind.ENUM) {
         enumTypes.push(xor);
-      } else if (xor.kind == OmniTypeKind.PRIMITIVE) {
+      } else if (OmniUtil.isPrimitive(xor)) {
         primitiveTypes.push(xor);
       } else {
         otherTypeCount++;
@@ -250,7 +249,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     // 1. @JsonValue and a string field and a getter which converts to the Enum, and another getter for unknown values
     // 2. Convert the enum into an object with public static final fields which represent the enum values
 
-    const primitiveKinds = new Set<OmniPrimitiveKind>();
+    const primitiveKinds = new Set<OmniPrimitiveKinds>();
 
     const singletonFactoryMethodIdentifier = new Java.Identifier('get');
     const knownValueFields: Java.Field[] = [];
@@ -286,7 +285,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     );
 
     for (const enumType of enumTypes) {
-      primitiveKinds.add(enumType.primitiveKind);
+      primitiveKinds.add(enumType.itemKind);
       if (!enumType.enumConstants) {
 
         // If we have no enum constants, we can't really do much, since we do not know any values.
@@ -312,7 +311,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
             singletonFactoryMethodIdentifier,
             new Java.ArgumentList(
               // TODO: Somehow in the future reference the Enum item instead of the string value
-              new Java.Literal(enumValue, enumType.primitiveKind),
+              new Java.Literal(enumValue, enumType.itemKind),
             ),
           ),
         );
@@ -328,7 +327,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`is${enumTypeName}`),
-            JavaAstUtils.createTypeNode({kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL}),
+            JavaAstUtils.createTypeNode({kind: OmniTypeKind.BOOL}),
           ),
           new Java.Block(
             new Java.Statement(
@@ -353,10 +352,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
                   new Java.Identifier('valueOf'),
                   new Java.ArgumentList(
                     new Java.Cast(
-                      JavaAstUtils.createTypeNode({
-                        kind: OmniTypeKind.PRIMITIVE,
-                        primitiveKind: enumType.primitiveKind,
-                      }),
+                      JavaAstUtils.createTypeNode({kind: enumType.itemKind}),
                       new Java.FieldReference(fieldValue),
                     ),
                   ),
@@ -401,7 +397,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
           new Java.ClassName(declaration.type),
           singletonFactoryMethodIdentifier,
           new Java.ArgumentList(
-            new Java.Literal(valueConstant, primitiveType.primitiveKind),
+            new Java.Literal(valueConstant, primitiveType.kind),
           ),
         ),
       );
@@ -584,9 +580,8 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
           new Java.MethodDeclarationSignature(
             new Java.Identifier('isKnown'),
             JavaAstUtils.createTypeNode({
-              kind: OmniTypeKind.PRIMITIVE,
+              kind: OmniTypeKind.BOOL,
               nullable: false,
-              primitiveKind: OmniPrimitiveKind.BOOL,
             }),
           ),
           new Java.Block(

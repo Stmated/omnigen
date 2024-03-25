@@ -7,7 +7,6 @@ import {
   OmniInterfaceOrObjectType,
   OmniModel,
   OmniObjectType,
-  OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
   OmniSubTypeCapableType,
@@ -16,7 +15,7 @@ import {
   OmniTypeKind,
   PackageOptions,
   TypeName,
-  UnknownKind, OmniTypeKindComposition,
+  UnknownKind, OmniTypeKindComposition, OmniPrimitiveKinds,
 } from '@omnigen/core';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options';
 import * as Java from '../ast';
@@ -103,7 +102,7 @@ export class JavaUtil {
     implementation: boolean | undefined,
   ): string | undefined {
 
-    if (type.kind == OmniTypeKind.PRIMITIVE) {
+    if (OmniUtil.isPrimitive(type)) {
 
       // Primitive types do not need to be imported.
       return undefined;
@@ -156,6 +155,17 @@ export class JavaUtil {
       }
     }
 
+    if (OmniUtil.isPrimitive(args.type)) {
+      const isBoxed = args.boxed != undefined ? args.boxed : JavaUtil.isPrimitiveBoxed(args.type);
+      const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.kind, isBoxed, args.options || {preferNumberType: OmniTypeKind.NUMBER});
+      // TODO: Make a central method that handles the relative names -- especially once multi-namespaces are added
+      if (!args.withPackage) {
+        return JavaUtil.cleanClassName(primitiveKindName, args.withSuffix);
+      } else {
+        return JavaUtil.getCleanedFullyQualifiedName(primitiveKindName, args.withSuffix);
+      }
+    }
+
     switch (args.type.kind) {
       case OmniTypeKind.GENERIC_TARGET:
         // NOTE: This will not include the generics, only the actual type source name.
@@ -191,16 +201,6 @@ export class JavaUtil {
           return javaType;
         } else {
           return `${javaType}[]`;
-        }
-      }
-      case OmniTypeKind.PRIMITIVE: {
-        const isBoxed = args.boxed != undefined ? args.boxed : JavaUtil.isPrimitiveBoxed(args.type);
-        const primitiveKindName = JavaUtil.getPrimitiveKindName(args.type.primitiveKind, isBoxed, args.options || {preferNumberType: OmniPrimitiveKind.NUMBER});
-        // TODO: Make a central method that handles the relative names -- especially once multi-namespaces are added
-        if (!args.withPackage) {
-          return JavaUtil.cleanClassName(primitiveKindName, args.withSuffix);
-        } else {
-          return JavaUtil.getCleanedFullyQualifiedName(primitiveKindName, args.withSuffix);
         }
       }
       case OmniTypeKind.UNKNOWN: {
@@ -342,20 +342,18 @@ export class JavaUtil {
 
     const uniqueNames = [...new Set(type.types.map(it => {
 
-      if (it.kind == OmniTypeKind.PRIMITIVE) {
-        switch (it.primitiveKind) {
-          case OmniPrimitiveKind.NULL:
-            return 'Null';
-          case OmniPrimitiveKind.UNDEFINED:
-            return 'Undefined';
+      switch (it.kind) {
+        case OmniTypeKind.NULL:
+          return 'Null';
+        case OmniTypeKind.UNDEFINED:
+          return 'Undefined';
+        case OmniTypeKind.ARRAY: {
+          const itemName = JavaUtil.getName({...args, type: it.of, implementation: false, boxed: true});
+          return `${itemName}Array`;
         }
-      } else if (it.kind == OmniTypeKind.ARRAY) {
-
-        const itemName = JavaUtil.getName({...args, type: it.of, implementation: false, boxed: true});
-        return `${itemName}Array`;
+        default:
+          return JavaUtil.getName({...args, type: it, implementation: false, boxed: true});
       }
-
-      return JavaUtil.getName({...args, type: it, implementation: false, boxed: true});
 
     }))];
 
@@ -375,11 +373,11 @@ export class JavaUtil {
 
   private static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
 
-    if (type.primitiveKind == OmniPrimitiveKind.NULL || type.primitiveKind == OmniPrimitiveKind.VOID) {
+    if (type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
       return false;
     }
 
-    if (type.primitiveKind == OmniPrimitiveKind.STRING) {
+    if (type.kind == OmniTypeKind.STRING) {
 
       // If it's a string it's not boxed, it it always the same.
       return false;
@@ -388,36 +386,36 @@ export class JavaUtil {
     return type.nullable == true;
   }
 
-  public static getPrimitiveKindName(kind: OmniPrimitiveKind, boxed: boolean, javaOptions: Pick<JavaOptions, 'preferNumberType'>): string {
+  public static getPrimitiveKindName(kind: OmniPrimitiveKinds, boxed: boolean, javaOptions: Pick<JavaOptions, 'preferNumberType'>): string {
 
-    if (kind == OmniPrimitiveKind.NUMBER && javaOptions.preferNumberType != kind) {
+    if (kind == OmniTypeKind.NUMBER && javaOptions.preferNumberType != kind) {
       kind = javaOptions.preferNumberType;
     }
 
     switch (kind) {
-      case OmniPrimitiveKind.BOOL:
+      case OmniTypeKind.BOOL:
         return boxed ? 'java.lang.Boolean' : 'boolean';
-      case OmniPrimitiveKind.VOID:
+      case OmniTypeKind.VOID:
         return 'void';
-      case OmniPrimitiveKind.CHAR:
+      case OmniTypeKind.CHAR:
         return boxed ? 'java.lang.Character' : 'char';
-      case OmniPrimitiveKind.STRING:
+      case OmniTypeKind.STRING:
         return 'String';
-      case OmniPrimitiveKind.FLOAT:
+      case OmniTypeKind.FLOAT:
         return boxed ? 'java.lang.Float' : 'float';
-      case OmniPrimitiveKind.INTEGER:
+      case OmniTypeKind.INTEGER:
         return boxed ? 'java.lang.Integer' : 'int';
-      case OmniPrimitiveKind.INTEGER_SMALL:
+      case OmniTypeKind.INTEGER_SMALL:
         return boxed ? 'java.lang.Short' : 'short';
-      case OmniPrimitiveKind.LONG:
+      case OmniTypeKind.LONG:
         return boxed ? 'java.lang.Long' : 'long';
-      case OmniPrimitiveKind.DECIMAL:
-      case OmniPrimitiveKind.DOUBLE:
+      case OmniTypeKind.DECIMAL:
+      case OmniTypeKind.DOUBLE:
         return boxed ? 'java.lang.Double' : 'double';
-      case OmniPrimitiveKind.NUMBER:
+      case OmniTypeKind.NUMBER:
         return boxed ? 'java.lang.Number' : 'double';
-      case OmniPrimitiveKind.NULL:
-      case OmniPrimitiveKind.UNDEFINED:
+      case OmniTypeKind.NULL:
+      case OmniTypeKind.UNDEFINED:
         return boxed ? 'java.lang.Object' : 'object';
     }
   }
@@ -513,7 +511,7 @@ export class JavaUtil {
   public static getGetterName(baseName: string, type: OmniType): string {
     const capitalized = Case.pascal(baseName);
     if (type.kind != OmniTypeKind.ARRAY) {
-      if (type.kind == OmniTypeKind.PRIMITIVE && type.primitiveKind == OmniPrimitiveKind.BOOL && !type.nullable) {
+      if (OmniUtil.isPrimitive(type) && type.kind == OmniTypeKind.BOOL && !type.nullable) {
         return `is${capitalized}`;
       }
     }

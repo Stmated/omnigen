@@ -1,4 +1,4 @@
-import {OmniPrimitiveKind, OmniType, OmniTypeKind} from '@omnigen/core';
+import {OmniType, OmniTypeKind} from '@omnigen/core';
 import {CompositionUtil} from './CompositionUtil';
 import {describe, test, expect} from 'vitest';
 
@@ -16,18 +16,17 @@ describe('Test Composition Types', () => {
 
   test('Merge primitive 1', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [{
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.NUMBER,
+      kind: OmniTypeKind.NUMBER,
     }]);
 
-    expect(result?.kind).toEqual(OmniTypeKind.PRIMITIVE);
+    expect(result?.kind).toEqual(OmniTypeKind.NUMBER);
   });
 
   test('Merge Number or String', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [
       // This is invalid, it is not possible to be a Number AND String, but this method should not validate.
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+      {kind: OmniTypeKind.NUMBER},
+      {kind: OmniTypeKind.STRING},
     ]);
 
     if (!result) {
@@ -37,23 +36,23 @@ describe('Test Composition Types', () => {
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
+        {kind: OmniTypeKind.NUMBER},
+        {kind: OmniTypeKind.STRING},
       ],
     });
   });
 
   test('allOf1+anyOf1', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
-      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING}],
-      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
+      [{kind: OmniTypeKind.STRING}],
+      [{kind: OmniTypeKind.NUMBER}],
     );
 
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
+        {kind: OmniTypeKind.STRING},
+        {kind: OmniTypeKind.NUMBER},
       ],
     });
   });
@@ -61,10 +60,10 @@ describe('Test Composition Types', () => {
   test('allOf1+anyOf2', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
+        {kind: OmniTypeKind.STRING},
+        {kind: OmniTypeKind.BOOL},
       ],
-      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
+      [{kind: OmniTypeKind.NUMBER}],
     );
 
     expect(result).toMatchObject<Partial<OmniType>>({
@@ -73,11 +72,11 @@ describe('Test Composition Types', () => {
         {
           kind: OmniTypeKind.UNION,
           types: [
-            {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-            {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
+            {kind: OmniTypeKind.STRING},
+            {kind: OmniTypeKind.BOOL},
           ],
         },
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
+        {kind: OmniTypeKind.NUMBER},
       ],
     });
   });
@@ -85,22 +84,22 @@ describe('Test Composition Types', () => {
   test('allOf1+oneOf2', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
-      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
+      [{kind: OmniTypeKind.NUMBER}],
       [
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
+        {kind: OmniTypeKind.STRING},
+        {kind: OmniTypeKind.BOOL},
       ],
     );
 
     expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
+        {kind: OmniTypeKind.NUMBER},
         {
           kind: OmniTypeKind.EXCLUSIVE_UNION,
           types: [
-            {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-            {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
+            {kind: OmniTypeKind.STRING},
+            {kind: OmniTypeKind.BOOL},
           ],
         },
       ],
@@ -110,12 +109,12 @@ describe('Test Composition Types', () => {
   test('allOf1+oneOf2+not', async () => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
-      [{kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER}],
+      [{kind: OmniTypeKind.NUMBER}],
       [
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-        {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
+        {kind: OmniTypeKind.STRING},
+        {kind: OmniTypeKind.BOOL},
       ],
-      {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.FLOAT},
+      {kind: OmniTypeKind.FLOAT},
     );
 
     expect(result).toMatchObject<Partial<OmniType>>({
@@ -124,12 +123,12 @@ describe('Test Composition Types', () => {
         {
           kind: OmniTypeKind.INTERSECTION,
           types: [
-            {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER},
+            {kind: OmniTypeKind.NUMBER},
             {
               kind: OmniTypeKind.EXCLUSIVE_UNION,
               types: [
-                {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING},
-                {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL},
+                {kind: OmniTypeKind.STRING},
+                {kind: OmniTypeKind.BOOL},
               ],
             },
           ],
@@ -137,7 +136,7 @@ describe('Test Composition Types', () => {
         {
           kind: OmniTypeKind.NEGATION,
           types: [
-            {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.FLOAT},
+            {kind: OmniTypeKind.FLOAT},
           ],
         },
       ],

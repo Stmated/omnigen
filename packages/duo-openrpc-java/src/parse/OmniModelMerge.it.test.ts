@@ -1,14 +1,10 @@
-import {JavaPlugins, JavaOptions} from '@omnigen/target-java';
-import {ModelTransformOptions, OmniModelParserResult, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
+import {JavaOptions, JavaPlugins} from '@omnigen/target-java';
+import {ModelTransformOptions, OmniModelParserResult, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
 import {Naming, OmniModelMerge, OmniUtil, Util} from '@omnigen/core-util';
 import {describe, expect, test, vi} from 'vitest';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
 import {OpenRpcPlugin} from '@omnigen/parser-openrpc';
-
-function expectKind<T extends OmniType, K extends OmniTypeKind>(value: T, kind: K): asserts value is Extract<T, { kind: K }> {
-  expect(value.kind).toEqual(kind);
-}
 
 describe('merge-documents', () => {
 
@@ -39,14 +35,17 @@ describe('merge-documents', () => {
     const model = exec.result.ctx.model;
     expect(model.types).toHaveLength(3);
 
-    expectKind(model.types[0], OmniTypeKind.PRIMITIVE);
-    expectKind(model.types[1], OmniTypeKind.PRIMITIVE);
-    expectKind(model.types[2], OmniTypeKind.OBJECT);
+    if (model.types[0].kind !== OmniTypeKind.INTEGER) {
+      throw new Error(`Wrong kind`);
+    }
+    if (model.types[1].kind !== OmniTypeKind.INTEGER) {
+      throw new Error(`Wrong kind`);
+    }
+    if (model.types[2].kind !== OmniTypeKind.OBJECT) {
+      throw new Error(`Wrong kind`);
+    }
 
-    expect(model.types[0].primitiveKind).toEqual(OmniPrimitiveKind.INTEGER);
     expect(Naming.unwrap(model.types[0].name ?? '')).toEqual(`PetId`);
-
-    expect(model.types[1].primitiveKind).toEqual(OmniPrimitiveKind.INTEGER);
     expect(Naming.unwrap(model.types[1].name ?? '')).toEqual(`PetAge`);
 
     expect(Naming.unwrap(model.types[2].name)).toEqual(`Pet`);

@@ -38,7 +38,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
     if (!args.targetFeatures.primitiveInheritance) {
 
       OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-        if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && ctx.type.extendedBy.kind == OmniTypeKind.PRIMITIVE) {
+        if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && OmniUtil.isPrimitive(ctx.type.extendedBy)) {
 
           if (ctx.type.properties.length > 0) {
             throw new Error(`Cannot make object ${OmniUtil.describe(ctx.type)} which extends primitive ${OmniUtil.describe(ctx.type.extendedBy)} into the primitive since we would lose properties`);

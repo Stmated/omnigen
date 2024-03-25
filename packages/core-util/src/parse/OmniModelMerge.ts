@@ -171,10 +171,10 @@ export class OmniModelMerge {
 
     // Skip the simple type
     const skippedKinds: OmniTypeKind[] = [
-      OmniTypeKind.UNKNOWN, OmniTypeKind.PRIMITIVE, OmniTypeKind.ARRAY,
+      OmniTypeKind.UNKNOWN, OmniTypeKind.ARRAY,
       OmniTypeKind.GENERIC_TARGET, OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
     ];
-    const usefulReplacements = replacements.filter(it => !skippedKinds.includes(it.from.kind));
+    const usefulReplacements = replacements.filter(it => !OmniUtil.isPrimitive(it.from) && !skippedKinds.includes(it.from.kind));
 
     for (const replacement of usefulReplacements) {
 

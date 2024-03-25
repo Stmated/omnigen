@@ -2,7 +2,6 @@ import {TestUtils} from '@omnigen/utils-test';
 import {JavaUtil} from '@omnigen/target-java';
 import {
   type OmniModel,
-  OmniPrimitiveKind,
   OmniTypeKind,
   DEFAULT_PARSER_OPTIONS,
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
@@ -55,21 +54,18 @@ describe('Test CompositionDependencyUtil', () => {
 
     const a = TestUtils.obj('A', undefined, [
       TestUtils.prop('propA', {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER,
+        kind: OmniTypeKind.INTEGER,
       }),
     ]);
 
     const aa = TestUtils.obj('aa', a, [
       TestUtils.prop('propX', {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER,
+        kind: OmniTypeKind.INTEGER,
       }),
     ]);
     const ab = TestUtils.obj('ab', a, [
       TestUtils.prop('propX', {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.DOUBLE,
+        kind: OmniTypeKind.DOUBLE,
       }),
     ]);
 
@@ -116,15 +112,15 @@ describe('Test CompositionDependencyUtil', () => {
     expect(model.types[2].extendedBy.source).toEqual(model.types[0]);
 
     // if (model.types[0].generics[0].kind != OmniTypeKind.PRIMITIVE) throw new Error(`Wrong kind`);
-    if (model.types[1].extendedBy.targetIdentifiers[0].type.kind != OmniTypeKind.PRIMITIVE) throw new Error(`Wrong kind`);
-    if (model.types[2].extendedBy.targetIdentifiers[0].type.kind != OmniTypeKind.PRIMITIVE) throw new Error(`Wrong kind`);
+    if (!OmniUtil.isPrimitive(model.types[1].extendedBy.targetIdentifiers[0].type)) throw new Error(`Wrong kind`);
+    if (!OmniUtil.isPrimitive(model.types[2].extendedBy.targetIdentifiers[0].type)) throw new Error(`Wrong kind`);
 
-    expect(model.types[1].extendedBy.targetIdentifiers[0].type.primitiveKind).toEqual(OmniPrimitiveKind.INTEGER);
-    expect(model.types[2].extendedBy.targetIdentifiers[0].type.primitiveKind).toEqual(OmniPrimitiveKind.DOUBLE);
+    expect(model.types[1].extendedBy.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.INTEGER);
+    expect(model.types[2].extendedBy.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.DOUBLE);
 
     if (!model.types[0].sourceIdentifiers[0].upperBound) throw new Error(`No upper bound`);
-    if (model.types[0].sourceIdentifiers[0].upperBound.kind != OmniTypeKind.PRIMITIVE) throw new Error(`Wrong kind`);
+    if (!OmniUtil.isPrimitive(model.types[0].sourceIdentifiers[0].upperBound)) throw new Error(`Wrong kind`);
 
-    expect(model.types[0].sourceIdentifiers[0].upperBound.primitiveKind).toEqual(OmniPrimitiveKind.DOUBLE);
+    expect(model.types[0].sourceIdentifiers[0].upperBound.kind).toEqual(OmniTypeKind.DOUBLE);
   });
 });

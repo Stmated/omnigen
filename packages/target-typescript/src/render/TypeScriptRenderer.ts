@@ -1,4 +1,4 @@
-import {OmniPrimitiveKind, OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
+import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {createJavaRenderer, Java, JavaOptions, JavaRendererOptions, render} from '@omnigen/target-java';
@@ -169,7 +169,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
 
     visitEdgeType: (n, v) => {
 
-      if (n.omniType.kind == OmniTypeKind.PRIMITIVE) {
+      if (OmniUtil.isPrimitive(n.omniType)) {
         if (n.omniType.literal) {
 
           if (n.omniType.value === undefined) {
@@ -179,15 +179,15 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
               return 'void';
             }
           } else {
-            return new Java.Literal(n.omniType.value, n.omniType.primitiveKind).visit(v);
+            return new Java.Literal(n.omniType.value, n.omniType.kind).visit(v);
           }
         }
 
-        if (n.omniType.primitiveKind == OmniPrimitiveKind.STRING) {
+        if (n.omniType.kind == OmniTypeKind.STRING) {
           return 'string';
         } else if (OmniUtil.isNumericType(n.omniType)) {
-          return 'number';
-        } else if (n.omniType.primitiveKind == OmniPrimitiveKind.UNDEFINED) {
+          return `number`;
+        } else if (n.omniType.kind == OmniTypeKind.UNDEFINED) {
           return 'undefined';
         }
       }
@@ -267,7 +267,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
 
     visitLiteral: (n, v) => {
 
-      if (n.primitiveKind == OmniPrimitiveKind.STRING && options.preferSingleQuoteStrings) {
+      if (n.primitiveKind == OmniTypeKind.STRING && options.preferSingleQuoteStrings) {
         return `'${n.value}'`;
       } else {
         return parentRenderer.visitLiteral(n, v);

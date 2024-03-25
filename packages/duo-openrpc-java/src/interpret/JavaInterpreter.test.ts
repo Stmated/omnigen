@@ -80,7 +80,7 @@ describe('JavaInterpreter', () => {
 
     expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
     expect(type.targetIdentifiers).toHaveLength(1);
-    expect(type.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.PRIMITIVE);
+    expect(OmniUtil.isPrimitive(type.targetIdentifiers[0].type)).toEqual(true);
 
     // TODO: Check that JsonRpcRequest has the correct generics!!!!!
   });

@@ -3,7 +3,7 @@ import {
   OmniCompositionType,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniPrimitiveKind, OmniPrimitiveType,
+  OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
   ParserOptions,
@@ -20,8 +20,7 @@ const logger = LoggerFactory.create(import.meta.url);
 export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPassTransformer<ParserOptions & TargetOptions & TypeScriptOptions> {
 
   private static readonly _UNDEFINED_TYPE: OmniPrimitiveType = {
-    kind: OmniTypeKind.PRIMITIVE,
-    primitiveKind: OmniPrimitiveKind.UNDEFINED,
+    kind: OmniTypeKind.UNDEFINED,
   };
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions>): void {

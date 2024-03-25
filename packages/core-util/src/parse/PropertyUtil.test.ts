@@ -1,6 +1,5 @@
 import {
   OmniObjectType,
-  OmniPrimitiveKind,
   OmniPrimitiveTangibleKind,
   OmniProperty,
   OmniPropertyOwner,
@@ -35,17 +34,17 @@ describe('Test PropertyUtil', () => {
       name: 'c',
     };
 
-    const ax = addPrim(a, 'x', OmniPrimitiveKind.STRING, 'foo');
-    const ay = addPrim(a, 'y', OmniPrimitiveKind.NUMBER);
-    const az = addPrim(a, 'z', OmniPrimitiveKind.DOUBLE);
+    const ax = addPrim(a, 'x', OmniTypeKind.STRING, 'foo');
+    const ay = addPrim(a, 'y', OmniTypeKind.NUMBER);
+    const az = addPrim(a, 'z', OmniTypeKind.DOUBLE);
 
-    const bx = addPrim(b, 'x', OmniPrimitiveKind.STRING);
-    const by = addPrim(b, 'y', OmniPrimitiveKind.DOUBLE, 'bar');
-    const bz = addPrim(b, 'z', OmniPrimitiveKind.DOUBLE);
+    const bx = addPrim(b, 'x', OmniTypeKind.STRING);
+    const by = addPrim(b, 'y', OmniTypeKind.DOUBLE, 'bar');
+    const bz = addPrim(b, 'z', OmniTypeKind.DOUBLE);
 
-    const cx = addPrim(c, 'x', OmniPrimitiveKind.STRING, 'foo');
-    const cy = addPrim(c, 'y', OmniPrimitiveKind.INTEGER);
-    const cz = addPrim(c, 'z', OmniPrimitiveKind.DOUBLE, 'baz');
+    const cx = addPrim(c, 'x', OmniTypeKind.STRING, 'foo');
+    const cy = addPrim(c, 'y', OmniTypeKind.INTEGER);
+    const cz = addPrim(c, 'z', OmniTypeKind.DOUBLE, 'baz');
 
     expect(PropertyUtil.getPropertyEquality(ax, ay, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
     expect(PropertyUtil.getPropertyEquality(az, by, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
@@ -68,7 +67,7 @@ describe('Test PropertyUtil', () => {
 function addPrim(owner: OmniPropertyOwner, name: string, primitiveKind: OmniPrimitiveTangibleKind, description?: string): OmniProperty {
 
   return PropertyUtil.addProperty(owner, {
-    type: {kind: OmniTypeKind.PRIMITIVE, primitiveKind: primitiveKind},
+    type: {kind: primitiveKind},
     name: name,
     description: description,
   });

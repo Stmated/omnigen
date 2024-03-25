@@ -1,4 +1,4 @@
-import {OmniModel, OmniPrimitiveKind, OmniPrimitiveType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {OmniModel, OmniPrimitiveType, OmniType, OmniTypeKind} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {TypeOwner} from '@omnigen/core';
 import {OmniUtil} from './OmniUtil.js';
@@ -34,8 +34,7 @@ export interface BFSTraverseCallback<R> {
 export class OmniTypeVisitor {
 
   private static readonly _NULL_TYPE: OmniPrimitiveType = {
-    kind: OmniTypeKind.PRIMITIVE,
-    primitiveKind: OmniPrimitiveKind.NULL,
+    kind: OmniTypeKind.NULL,
     nullable: true,
   };
 
@@ -182,7 +181,7 @@ export class OmniTypeVisitor {
             q.push({...dq, owner: type, parent: type, type: type.upperBound, typeDepth: dq.typeDepth + 1, useDepth: dq.useDepth + 1});
           }
           break;
-        case OmniTypeKind.PRIMITIVE:
+        // case OmniTypeKind.PRIMITIVE:
         case OmniTypeKind.ENUM:
         case OmniTypeKind.HARDCODED_REFERENCE:
           // There are no type children of these
@@ -191,8 +190,13 @@ export class OmniTypeVisitor {
           // NOTE: Should it be allowed to follow this?
           // TODO: Allow to follow if the external reference is into our own model
           break;
-        default:
+        default: {
+          if (OmniUtil.isPrimitive(type)) {
+            break;
+          }
+
           throw new Error(`Do not know how to handle kind '${(type as any)?.kind || '?'}`);
+        }
       }
     }
 
@@ -451,7 +455,6 @@ export class OmniTypeVisitor {
             }
           }
           break;
-        case OmniTypeKind.PRIMITIVE:
         case OmniTypeKind.ENUM:
         case OmniTypeKind.HARDCODED_REFERENCE:
           // There are no type children of these
@@ -460,8 +463,12 @@ export class OmniTypeVisitor {
           // NOTE: Should it be allowed to follow this?
           // TODO: Allow to follow if the external reference is into our own model
           break;
-        default:
+        default: {
+          if (OmniUtil.isPrimitive(input)) {
+            break;
+          }
           throw new Error(`Do not know how to handle kind '${(input as any).kind || '?'}`);
+        }
       }
     } finally {
       if (!onlyOnce) {

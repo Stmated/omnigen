@@ -20,7 +20,6 @@ import {
   OmniObjectType,
   OmniOutput,
   OmniPayloadPathQualifier,
-  OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
@@ -647,8 +646,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       const hasConstantVersion = (options.jsonRpcVersion || '').length > 0;
       const responseJsonRpcPropertyType: OmniPrimitiveType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.STRING,
+        kind: OmniTypeKind.STRING,
         nullable: false,
       };
 
@@ -678,16 +676,14 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     let codeType: OmniPrimitiveType;
     if (isUnknownCode) {
       codeType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER,
+        kind: OmniTypeKind.INTEGER,
         nullable: true,
         value: -1,
         literal: false,
       };
     } else {
       codeType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.INTEGER,
+        kind: OmniTypeKind.INTEGER,
         nullable: false,
         value: error.code,
         literal: true,
@@ -695,10 +691,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     const messageType: OmniPrimitiveType = {
-      kind: OmniTypeKind.PRIMITIVE,
+      kind: OmniTypeKind.STRING,
       value: error.message,
       literal: false,
-      primitiveKind: OmniPrimitiveKind.STRING,
     };
 
     errorPropertyType.properties.push({
@@ -734,8 +729,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     if (options.jsonRpcErrorNameIncluded) {
 
       const nameType: OmniPrimitiveType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.STRING,
+        kind: OmniTypeKind.STRING,
         value: 'JSONRPCError',
         literal: true,
       };
@@ -759,8 +753,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     target.properties.push({
       name: 'result',
       type: {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.NULL,
+        kind: OmniTypeKind.NULL,
         nullable: true,
       },
       owner: target,
@@ -770,8 +763,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       target.properties.push({
         name: 'id',
         type: {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
+          kind: OmniTypeKind.STRING,
         },
         owner: target,
       });
@@ -996,8 +988,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   ): void {
 
     const requestMethodType: OmniPrimitiveType = {
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: OmniPrimitiveKind.STRING,
+      kind: OmniTypeKind.STRING,
       value: method.name,
       literal: true,
       nullable: false,
@@ -1007,8 +998,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       const hasConstantVersion = (options.jsonRpcVersion || '').length > 0;
       const requestJsonRpcType: OmniPrimitiveType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.STRING,
+        kind: OmniTypeKind.STRING,
         nullable: true,
       };
 
@@ -1040,14 +1030,12 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       let requestIdType: OmniPrimitiveType;
       if (options.trustedClients) {
         requestIdType = {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
+          kind: OmniTypeKind.STRING,
           nullable: false,
         };
       } else {
         requestIdType = {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
+          kind: OmniTypeKind.STRING,
           nullable: true,
         };
       }
@@ -1071,8 +1059,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       const hasConstantVersion = (options.jsonRpcVersion || '').length > 0;
       const responseJsonRpcPropertyType: OmniPrimitiveType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.STRING,
+        kind: OmniTypeKind.STRING,
         nullable: false,
       };
 
@@ -1092,8 +1079,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     target.properties.push({
       name: 'error',
       type: {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: OmniPrimitiveKind.NULL,
+        kind: OmniTypeKind.NULL,
         nullable: true,
       },
       owner: target,
@@ -1103,8 +1089,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       target.properties.push({
         name: 'id',
         type: {
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.STRING,
+          kind: OmniTypeKind.STRING,
         },
         owner: target,
       });

@@ -12,8 +12,7 @@ import {
   OmniModel,
   OmniModelParserResult,
   OmniObjectType,
-  OmniPrimitiveConstantValue,
-  OmniPrimitiveKind,
+  OmniPrimitiveConstantValue, OmniPrimitiveKinds,
   OmniPrimitiveType,
   OmniProperty,
   OmniPropertyName,
@@ -440,7 +439,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
           for (const superType of extendedBy.types) {
 
-            if (superType.kind == OmniTypeKind.PRIMITIVE) {
+            if (OmniUtil.isPrimitive(superType)) {
               primitiveTypes.push(superType);
             } else {
               otherTypes.push(superType);
@@ -452,16 +451,16 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
           // TODO: Replace any primitive 'number' types with the best other distinct number type: decimal, double, float, integer, integer_small (in that order)
 
-          let bestPrimitiveNumberKind: OmniPrimitiveKind | undefined = undefined;
+          let bestPrimitiveNumberKind: OmniPrimitiveKinds | undefined = undefined;
           const indexesToReplace: number[] = [];
           for (let i = 0; i < primitiveTypes.length; i++) {
             if (OmniUtil.isNumericType(primitiveTypes[i])) {
               if (primitiveTypes[i].implicit) {
                 indexesToReplace.push(i);
               } else {
-                const score = OmniUtil.getPrimitiveNumberCoverageScore(primitiveTypes[i].primitiveKind);
+                const score = OmniUtil.getPrimitiveNumberCoverageScore(primitiveTypes[i].kind);
                 if (!bestPrimitiveNumberKind || score > OmniUtil.getPrimitiveNumberCoverageScore(bestPrimitiveNumberKind)) {
-                  bestPrimitiveNumberKind = primitiveTypes[i].primitiveKind;
+                  bestPrimitiveNumberKind = primitiveTypes[i].kind;
                 }
               }
             }
@@ -471,21 +470,17 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
             for (let i = 0; i < indexesToReplace.length; i++) {
 
               // Overwrite any guessed primitive kinds with a definitive primitive kind.
-              primitiveTypes[indexesToReplace[i]].primitiveKind = bestPrimitiveNumberKind;
+              primitiveTypes[indexesToReplace[i]].kind = bestPrimitiveNumberKind;
             }
           }
 
           const uniquePrimitiveKinds = new Set(
-            primitiveTypes.map(it => it.primitiveKind),
+            primitiveTypes.map(it => it.kind),
           );
 
           logger.silent(`Found ${primitiveTypes.length} - ${otherTypes.length} - ${objectTypes.length}`);
 
           if (otherTypes.length == 0 && primitiveTypes.length > 0 && uniquePrimitiveKinds.size == 1) {
-
-            // TODO: If the only diff between the primitives is "size" then we can just merge them (?)
-
-            // const uniqueDiffs = OmniUtil.getCommonDenominator(OMNI_GENERIC_FEATURES, ...primitiveTypes);
 
             let merged = {...primitiveTypes[0]};
             for (let i = 1; i < primitiveTypes.length; i++) {
@@ -513,7 +508,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         }
       }
 
-      if (extendedBy.kind == OmniTypeKind.PRIMITIVE || extendedBy.kind == OmniTypeKind.ARRAY || extendedBy.kind == OmniTypeKind.ENUM) {
+      if (OmniUtil.isPrimitive(extendedBy) || extendedBy.kind == OmniTypeKind.ARRAY || extendedBy.kind == OmniTypeKind.ENUM) {
         if (this.hasDirectContent(schema)) {
           return this.createDecoratedType(schema, extendedBy, name);
         } else {
@@ -635,9 +630,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const enumValues = schema.enum;
 
     const lcType = schemaType.toLowerCase();
-    let primitiveKind: OmniPrimitiveKind;
+    let primitiveKind: OmniPrimitiveKinds;
     if (lcType == 'null') {
-      primitiveKind = OmniPrimitiveKind.NULL;
+      primitiveKind = OmniTypeKind.NULL;
     } else {
       primitiveKind = this.typeAndFormatToPrimitiveKind(lcType, schema.format?.toLowerCase() ?? '');
     }
@@ -646,7 +641,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       return this.toOmniEnum(name, schemaType, primitiveKind, enumValues, schema, schema.description);
     }
 
-    const isLiteral = ('const' in schema) || primitiveKind == OmniPrimitiveKind.NULL || primitiveKind == OmniPrimitiveKind.VOID;
+    const isLiteral = ('const' in schema) || primitiveKind == OmniTypeKind.NULL || primitiveKind == OmniTypeKind.VOID;
     const isNullable = this.vendorExtensionToBool(schema, 'x-nullable', () => {
       const possiblePropertyName = Naming.unwrap(name);
       return this.isRequiredProperty(ownerSchema, possiblePropertyName);
@@ -654,8 +649,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     const primitiveType: OmniPrimitiveType = {
       name: name,
-      kind: OmniTypeKind.PRIMITIVE,
-      primitiveKind: primitiveKind,
+      kind: primitiveKind,
       implicit: implicit,
       literal: isLiteral,
       nullable: isNullable,
@@ -674,26 +668,22 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     if (extendedBy) {
       switch (extendedBy.kind) {
-        case OmniTypeKind.PRIMITIVE:
-          switch (extendedBy.primitiveKind) {
-            case OmniPrimitiveKind.CHAR:
-            case OmniPrimitiveKind.STRING:
-              return 'string';
-            case OmniPrimitiveKind.LONG:
-            case OmniPrimitiveKind.INTEGER:
-            case OmniPrimitiveKind.INTEGER_SMALL:
-              return 'integer';
-            case OmniPrimitiveKind.NUMBER:
-            case OmniPrimitiveKind.DECIMAL:
-            case OmniPrimitiveKind.FLOAT:
-            case OmniPrimitiveKind.DOUBLE:
-              return 'number';
-            case OmniPrimitiveKind.BOOL:
-              return 'boolean';
-            case OmniPrimitiveKind.NULL:
-              return 'null';
-          }
-          break;
+        case OmniTypeKind.CHAR:
+        case OmniTypeKind.STRING:
+          return 'string';
+        case OmniTypeKind.LONG:
+        case OmniTypeKind.INTEGER:
+        case OmniTypeKind.INTEGER_SMALL:
+          return 'integer';
+        case OmniTypeKind.NUMBER:
+        case OmniTypeKind.DECIMAL:
+        case OmniTypeKind.FLOAT:
+        case OmniTypeKind.DOUBLE:
+          return 'number';
+        case OmniTypeKind.BOOL:
+          return 'boolean';
+        case OmniTypeKind.NULL:
+          return 'null';
         case OmniTypeKind.UNKNOWN:
           return 'any';
       }
@@ -932,36 +922,36 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   private static _uniqueCounter = 0;
 
-  private typeAndFormatToPrimitiveKind(lcType: string, lcFormat: string): OmniPrimitiveKind {
+  private typeAndFormatToPrimitiveKind(lcType: string, lcFormat: string): OmniPrimitiveKinds {
 
     switch (lcType) {
       case 'number':
         switch (lcFormat) {
           case 'decimal':
-            return OmniPrimitiveKind.DECIMAL;
+            return OmniTypeKind.DECIMAL;
           case 'double':
-            return OmniPrimitiveKind.DOUBLE;
+            return OmniTypeKind.DOUBLE;
           case 'float':
-            return OmniPrimitiveKind.FLOAT;
+            return OmniTypeKind.FLOAT;
           default:
-            return this.getIntegerPrimitiveFromFormat(lcFormat, OmniPrimitiveKind.NUMBER);
+            return this.getIntegerPrimitiveFromFormat(lcFormat, OmniTypeKind.NUMBER);
         }
       case 'integer':
-        return this.getIntegerPrimitiveFromFormat(lcFormat, OmniPrimitiveKind.INTEGER);
+        return this.getIntegerPrimitiveFromFormat(lcFormat, OmniTypeKind.INTEGER);
       case 'boolean':
-        return OmniPrimitiveKind.BOOL;
+        return OmniTypeKind.BOOL;
       case 'string':
         switch (lcFormat) {
           case 'char':
           case 'character':
-            return OmniPrimitiveKind.CHAR;
+            return OmniTypeKind.CHAR;
           default:
-            return OmniPrimitiveKind.STRING;
+            return OmniTypeKind.STRING;
         }
       default:
         if (this._options.relaxedUnknownTypes) {
           logger.warn(`Do not know what given schema type '${lcType}' is, so will assume String`);
-          return OmniPrimitiveKind.STRING;
+          return OmniTypeKind.STRING;
         } else {
           throw new Error(`Invalid schema type '${lcType}' given, do not know how to translate into a known type`);
         }
@@ -971,22 +961,22 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private toOmniEnum(
     name: TypeName,
     schemaType: Extract<AnyJSONSchema['type'], string>,
-    primitiveType: OmniPrimitiveKind,
+    primitiveType: OmniTypeKind,
     enumValues: JSONSchema7Type[],
     enumOwner?: AnyJSONSchema,
     description?: string,
   ) {
 
     let allowedValues: AllowedEnumTsTypes[];
-    if (primitiveType == OmniPrimitiveKind.STRING) {
+    if (primitiveType == OmniTypeKind.STRING) {
       allowedValues = enumValues.map(it => `${String(it)}`);
-    } else if (primitiveType == OmniPrimitiveKind.DECIMAL
-      || primitiveType == OmniPrimitiveKind.FLOAT
-      || primitiveType == OmniPrimitiveKind.NUMBER) {
+    } else if (primitiveType == OmniTypeKind.DECIMAL
+      || primitiveType == OmniTypeKind.FLOAT
+      || primitiveType == OmniTypeKind.NUMBER) {
       allowedValues = enumValues.map(it => Number.parseFloat(`${String(it)}`));
     } else {
       allowedValues = enumValues.map(it => Number.parseInt(`${String(it)}`));
-      primitiveType = OmniPrimitiveKind.STRING;
+      primitiveType = OmniTypeKind.STRING;
     }
 
     const enumNames = JsonSchemaParser.getEnumNames(enumOwner, name);
@@ -996,7 +986,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const omniEnum: OmniEnumType = {
       name: name ?? schemaType,
       kind: OmniTypeKind.ENUM,
-      primitiveKind: primitiveType,
+      itemKind: primitiveType,
       enumConstants: allowedValues,
       description: description,
     };
@@ -1080,16 +1070,16 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   private getIntegerPrimitiveFromFormat(
     format: string,
-    fallback: typeof OmniPrimitiveKind.INTEGER | typeof OmniPrimitiveKind.NUMBER,
-  ): OmniPrimitiveKind {
+    fallback: typeof OmniTypeKind.INTEGER | typeof OmniTypeKind.NUMBER,
+  ): OmniPrimitiveKinds {
 
     switch (format) {
       case 'integer':
       case 'int':
-        return OmniPrimitiveKind.INTEGER;
+        return OmniTypeKind.INTEGER;
       case 'long':
       case 'int64':
-        return OmniPrimitiveKind.LONG;
+        return OmniTypeKind.LONG;
       default:
         return fallback;
     }
@@ -1440,13 +1430,13 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     if (def === undefined) {
       return undefined;
     } else if (def === null) {
-      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NULL, literal: true, value: null};
+      return {kind: OmniTypeKind.NULL, literal: true, value: null};
     } else if (typeof def === 'string') {
-      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.STRING, literal: true, value: def};
+      return {kind: OmniTypeKind.STRING, literal: true, value: def};
     } else if (typeof def === 'number') {
-      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.NUMBER, literal: true, value: def};
+      return {kind: OmniTypeKind.NUMBER, literal: true, value: def};
     } else if (typeof def === 'boolean') {
-      return {kind: OmniTypeKind.PRIMITIVE, primitiveKind: OmniPrimitiveKind.BOOL, literal: true, value: def};
+      return {kind: OmniTypeKind.BOOL, literal: true, value: def};
     } else if (Array.isArray(def)) {
       return {
         kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,

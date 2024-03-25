@@ -1,16 +1,35 @@
 import {ToEnum} from '../options';
 
+export const OmniTypeKindPrimitive = {
+  NUMBER: 'NUMBER',
+  INTEGER: 'INTEGER',
+  INTEGER_SMALL: 'INTEGER_SMALL',
+  DECIMAL: 'DECIMAL',
+  DOUBLE: 'DOUBLE',
+  FLOAT: 'FLOAT',
+  LONG: 'LONG',
+  STRING: 'STRING',
+  CHAR: 'CHAR',
+  BOOL: 'BOOL',
+  VOID: 'VOID',
+  NULL: 'NULL',
+  UNDEFINED: 'UNDEFINED',
+} as const;
+export type OmniTypeKindPrimitive = ToEnum<typeof OmniTypeKindPrimitive>;
+
 /**
  * TODO: Move other kinds into here, then rename it to OmniKind
  */
 export const OmniTypeKind = {
-  PRIMITIVE: 'PRIMITIVE',
+  // PRIMITIVE: 'PRIMITIVE',
   ENUM: 'ENUM',
   OBJECT: 'OBJECT',
   HARDCODED_REFERENCE: 'HARDCODED_REFERENCE',
   /**
    * The type lies in another, outside model.
    * Most likely a model that contains types common to multiple other models.
+   *
+   * @deprecated Remove -- it should be part of a document store; no document should be a "main document"
    */
   EXTERNAL_MODEL_REFERENCE: 'EXTERNAL_MODEL_REFERENCE',
   DICTIONARY: 'DICTIONARY',
@@ -49,6 +68,9 @@ export const OmniTypeKind = {
    * Composition: NOT
    */
   NEGATION: 'NEGATION',
+
+  ...OmniTypeKindPrimitive,
+
 } as const;
 
 export type OmniTypeKind = ToEnum<typeof OmniTypeKind>;

@@ -149,10 +149,10 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     for (const requiredArgument of superTypeRequirements) {
       const resolvedType = this.getResolvedGenericArgumentType(requiredArgument, node);
       const type = resolvedType.omniType;
-      if (type.kind == OmniTypeKind.PRIMITIVE && type.literal) {
+      if (OmniUtil.isPrimitive(type) && type.literal) {
         const literalValue = type.value ?? null;
         superConstructorArguments.push(new Java.Literal(literalValue));
-      } else if (type.kind == OmniTypeKind.PRIMITIVE && type.value !== undefined) {
+      } else if (OmniUtil.isPrimitive(type) && type.value !== undefined) {
         const literalValue = type.value ?? null;
         const parameter = this.createParameter(requiredArgument.field, resolvedType, requiredArgument.identifier);
         requiredSuperArguments.push(parameter);

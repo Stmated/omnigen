@@ -8,7 +8,6 @@ import {
   OmniModel,
   OmniObjectType,
   OmniOptionallyNamedType,
-  OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
@@ -201,7 +200,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
             return new Java.EnumItem(
               new Java.Identifier(name),
-              new Java.Literal(item, type.primitiveKind),
+              new Java.Literal(item, type.itemKind),
               comment,
             );
           }),
@@ -209,8 +208,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       );
 
       const itemType: OmniPrimitiveType = {
-        kind: OmniTypeKind.PRIMITIVE,
-        primitiveKind: type.primitiveKind,
+        kind: type.itemKind,
       };
 
       const fieldType = new Java.EdgeType(itemType);
@@ -396,10 +394,10 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     if (type.kind == OmniTypeKind.EXCLUSIVE_UNION && type.types.length == 2) {
 
-      const nullType = type.types.find(it => it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL);
+      const nullType = type.types.find(it => it.kind == OmniTypeKind.NULL);
       if (nullType) {
-        const otherType = type.types.find(it => !(it.kind == OmniTypeKind.PRIMITIVE && it.primitiveKind == OmniPrimitiveKind.NULL));
-        if (otherType && otherType.kind == OmniTypeKind.PRIMITIVE) {
+        const otherType = type.types.find(it => it.kind != OmniTypeKind.NULL);
+        if (otherType && OmniUtil.isPrimitive(otherType)) {
 
           // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
           this.clearProperties(type);

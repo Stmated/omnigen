@@ -4,12 +4,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Thing implements IAdditionalProperties {
+  private final Map<String, Object> _additionalProperties = new HashMap<String, Object>();
   private final String id;
   public Thing(String id) {
     this.id = id;
   }
 
-  private final Map<String, Object> _additionalProperties = new HashMap<String, Object>();
   public void addAdditionalProperty(String key, Object value) {
     this._additionalProperties.put(key, value);
   }

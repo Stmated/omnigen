@@ -10,7 +10,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class JsonSchemaToTypeScriptTestUtil {
 
-  public static async render(inPath: string, options?: Partial<TypeScriptOptions & TargetOptions>): Promise<RenderedCompilationUnit[]> {
+  public static async render(inPath: string, options?: Partial<TypeScriptOptions & TargetOptions & JavaOptions>): Promise<RenderedCompilationUnit[]> {
 
     const pm = new PluginManager({includeAuto: true});
 

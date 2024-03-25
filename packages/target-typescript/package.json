@@ -30,6 +30,6 @@
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.3"
   }
 }

@@ -34,7 +34,7 @@
     "@omnigen/eslint-config-custom": "workspace:*",
     "@types/node": "^18.13.0",
     "@types/figlet": "1.5.2",
-    "typescript": "^5.4.2",
+    "typescript": "^5.4.3",
     "pino-pretty": "^10.3.1",
     "tsx": "^4.7.1"
   }

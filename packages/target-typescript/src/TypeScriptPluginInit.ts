@@ -15,7 +15,7 @@ import * as Ts from './ast';
 import {
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
-  OmniModelTransformer,
+  OmniModelTransformer, OmniModelTransformer2ndPassArgs,
   OmniModelTransformerArgs,
   PackageOptions,
   ParserOptions,
@@ -44,6 +44,8 @@ import {
   PackageResolverAstTransformer,
   ReorderMembersTransformer,
   SimplifyGenericsAstTransformer,
+  ZodJavaOptions,
+  JavaPlugins,
 } from '@omnigen/target-java';
 import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
 import {TYPESCRIPT_FEATURES} from './features';
@@ -54,6 +56,8 @@ import {ClassToInterfaceTypeScriptAstTransformer} from './ast/ClassToInterfaceTy
 import {ToHardCodedTypeTypeScriptAstTransformer} from './ast/ToHardCodedTypeTypeScriptAstTransformer.ts';
 import {SingleFileTypeScriptAstTransformer} from './ast/SingleFileTypeScriptAstTransformer.ts';
 import {RemoveEnumFieldsTypeScriptAstTransformer} from './ast/RemoveEnumFieldsTypeScriptAstTransformer.ts';
+import {StrictUndefinedTypeScriptModelTransformer} from './parse';
+import {TsRootNode} from './ast';
 
 export const ZodParserOptionsContext = z.object({
   parserOptions: ZodParserOptions,
@@ -74,6 +78,7 @@ export const ZodTypeScriptInitContextIn = ZodModelContext.extend({
 
 export const ZodTypeScriptInitContextOut = ZodModelContext
   .merge(ZodTypeScriptOptionsContext)
+  .merge(JavaPlugins.ZodJavaOptionsContext)
   .merge(ZodTypeScriptTargetContext);
 
 export const ZodTypeScriptContextIn = ZodModelContext
@@ -82,7 +87,8 @@ export const ZodTypeScriptContextIn = ZodModelContext
   .merge(ZodTargetOptionsContext)
   .merge(ZodModelTransformOptionsContext)
   .merge(ZodTypeScriptOptionsContext)
-  .merge(ZodTypeScriptTargetContext);
+  .merge(ZodTypeScriptTargetContext)
+  .merge(JavaPlugins.ZodJavaOptionsContext);
 
 export const ZodTypeScriptContextOut = ZodTypeScriptContextIn
   .merge(ZodAstNodeContext);
@@ -106,10 +112,16 @@ export const TypeScriptPluginInit = createPlugin(
       return typescriptOptions.error;
     }
 
+    const javaOptions = ZodJavaOptions.safeParse(ctx.arguments);
+    if (!javaOptions.success) {
+      return javaOptions.error;
+    }
+
     return {
       ...ctx,
       target: 'typescript',
       tsOptions: typescriptOptions.data,
+      javaOptions: javaOptions.data,
       targetFeatures: TYPESCRIPT_FEATURES,
     } as const;
   },
@@ -132,6 +144,22 @@ export const TypeScriptPlugin = createPlugin(
 
     for (const transformer of transformers) {
       transformer.transformModel(modelTransformerArgs);
+    }
+
+    // Then do 2nd pass transforming
+
+    const modelTransformer2Args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & JavaOptions & TypeScriptOptions> = {
+      model: ctx.model,
+      options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.javaOptions, ...ctx.tsOptions},
+      targetFeatures: TYPESCRIPT_FEATURES,
+    };
+
+    const transformers2 = [
+      new StrictUndefinedTypeScriptModelTransformer(),
+    ] as const;
+
+    for (const transformer of transformers2) {
+      transformer.transformModel2ndPass(modelTransformer2Args);
     }
 
     const astNode = new Ts.TsRootNode([]);
@@ -161,7 +189,7 @@ export const TypeScriptPlugin = createPlugin(
     ] as const;
 
     const options: TypeScriptOptions & JavaOptions & TargetOptions & PackageOptions = {
-      ...DEFAULT_JAVA_OPTIONS,
+      ...ctx.javaOptions,
       ...ctx.tsOptions,
       ...ctx.targetOptions,
       ...ctx.packageOptions,
@@ -200,7 +228,8 @@ export const TypeScriptRendererPlugin = createPlugin(
   {name: 'ts-render', in: TypeScriptRendererCtxIn, out: TypeScriptRendererCtxOut, score: PluginScoreKind.IMPORTANT},
   async ctx => {
 
-    const renderer = createTypeScriptRenderer({
+    const rootTsNode = ctx.astNode as TsRootNode;
+    const renderer = createTypeScriptRenderer(rootTsNode, {
       ...DEFAULT_JAVA_OPTIONS,
       ...DEFAULT_PACKAGE_OPTIONS,
       ...DEFAULT_TARGET_OPTIONS,

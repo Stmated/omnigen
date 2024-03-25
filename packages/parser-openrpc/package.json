@@ -32,6 +32,6 @@
     "@types/json-schema": "^7.0.15",
     "@types/string-similarity": "^4.0.0",
     "@types/json-pointer": "^1.0.34",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.3"
   }
 }

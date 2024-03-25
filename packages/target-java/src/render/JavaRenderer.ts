@@ -1,6 +1,6 @@
 import {AstNode, AstVisitor, OmniArrayKind, OmniPrimitiveKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
-import {GenericTypeDeclarationList, TokenKind} from '../ast';
+import {GenericTypeDeclarationList, JavaAstRootNode, TokenKind} from '../ast';
 import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
 import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -110,7 +110,6 @@ const visitCommonTypeDeclaration = (
   node: Java.AbstractObjectDeclaration,
   typeString: string,
   objectDecStack: Java.AbstractObjectDeclaration[],
-  // generics?: GenericTypeDeclarationList,
 ): VisitResult<string> => {
 
   try {
@@ -168,7 +167,7 @@ export const DefaultJavaRendererOptions: JavaRendererOptions = {
   fileExtension: 'java',
 };
 
-export const createJavaRenderer = (options: JavaOptions, renderOptions = DefaultJavaRendererOptions): JavaRenderer => {
+export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, renderOptions = DefaultJavaRendererOptions): JavaRenderer => {
 
   let blockDepth = 0;
   let insideDeclaration = false;
@@ -195,7 +194,11 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
       return units;
     },
 
-    visitFieldReference: (node, visitor) => (`this.${render(node.field.identifier, visitor)}`),
+    visitFieldReference: (node, visitor) => {
+
+      const field = root.getNodeWithId<Java.Field>(node.targetId);
+      return `this.${render(field.identifier, visitor)}`;
+    },
 
     /**
      * TODO: Should this be used together with the field reference above?
@@ -443,16 +446,6 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
       }
     },
 
-    visitFieldGetterSetter: (node, visitor) => {
-      const content = join([
-        node.field.visit(visitor),
-        node.getter.visit(visitor),
-        node.setter.visit(visitor),
-      ]);
-
-      return `${content}\n`;
-    },
-
     visitField: (node, visitor) => {
       const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
       const annotations = node.annotations ? `${render(node.annotations, visitor)}\n` : '';
@@ -608,6 +601,20 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
     visitClassName: (node, visitor) => `${render(node.type, visitor)}`,
     visitClassReference: (node, visitor) => `${render(node.className, visitor)}.class`,
 
+    visitIdentifierOf: (n, v) => {
+
+      const target = root.getNodeWithId(n.id);
+      const identifier = ('identifier' in target) ? target.identifier : undefined;
+      const name = ('name' in target) ? target.name : undefined;
+      const preferred = identifier ?? name;
+
+      if (preferred instanceof Java.Identifier) {
+        return render(preferred, v);
+      } else {
+        throw new Error(`Do not know how to get an identifier out of '${n}'`);
+      }
+    },
+
     visitArrayInitializer: (node, visitor) => {
 
       // TODO: This needs to support multiple levels. Right now it only supports one. Or is that up to end-user to add blocks?
@@ -653,7 +660,8 @@ export const createJavaRenderer = (options: JavaOptions, renderOptions = Default
     },
     visitFreeTextPropertyLink: (node, visitor) => {
 
-      const targetName = node.property.fieldName || node.property.propertyName || node.property.name;
+      const targetName = OmniUtil.getPropertyName(node.property.name, true);
+      // .fieldName || node.property.propertyName || node.property.name;
       return `{@link ${render(node.type, visitor)}#${targetName}}`;
     },
     visitFreeTextList: (node, visitor) => {

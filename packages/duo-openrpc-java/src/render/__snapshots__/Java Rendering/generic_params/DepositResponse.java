@@ -9,7 +9,6 @@ public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResp
     super(id, result);
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class DepositResponseObject {
     private final Data data;
     private final String method;
@@ -43,7 +42,6 @@ public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResp
       return this.uuid;
     }
 
-    @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
     public static class Data {
       private final String orderid;
       private final String url;

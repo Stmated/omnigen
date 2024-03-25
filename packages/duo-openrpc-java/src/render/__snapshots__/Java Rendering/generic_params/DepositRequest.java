@@ -11,7 +11,6 @@ public class DepositRequest extends JsonRpcRequest<DepositRequest.Params> {
     super(id, params, "Deposit");
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class Params extends JsonRpcRequestParams<Params.Data> {
     public Params(
       @JsonProperty(value = "Signature", required = true) String signature,
@@ -21,7 +20,6 @@ public class DepositRequest extends JsonRpcRequest<DepositRequest.Params> {
       super(signature, uuid, data);
     }
 
-    @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
     public static class Data extends AbstractRequestData<Data.Attributes> {
       private final String messageId;
       public Data(
@@ -40,7 +38,6 @@ public class DepositRequest extends JsonRpcRequest<DepositRequest.Params> {
         return this.messageId;
       }
 
-      @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
       public static class Attributes {
         private final String depositAttribute1;
         public Attributes(@JsonProperty(value = "DepositAttribute1", required = true) String depositAttribute1) {

@@ -24,7 +24,11 @@ export class AddAbstractAccessorsAstTransformer extends AbstractJavaAstTransform
             continue;
           }
 
-          const name = property.propertyName ?? property.fieldName ?? property.name;
+          const name = OmniUtil.getPropertyAccessorName(property.name);
+          if (!name) {
+            continue;
+          }
+
           const type = property.type;
 
           const literalMethod = new Java.AbstractMethodDeclaration(

@@ -11,7 +11,7 @@ export function assertUnreachable(x: never): never {
 
 export function assertDefined<T>(x: T): Exclude<T, undefined | null> {
   if (x === undefined || x === null) {
-    throw new Error(`Undefined`);
+    throw new Error(`A reduced node became 'undefined' when it is required.`);
   }
 
   // @ts-ignore

@@ -39,6 +39,6 @@
     "@types/string-similarity": "^4.0.0",
     "colors": "^1.4.0",
     "nock": "^13.3.0",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.3"
   }
 }

@@ -16,6 +16,7 @@ export const OmniPrimitiveKind = {
   BOOL: 'BOOL',
   VOID: 'VOID',
   NULL: 'NULL',
+  UNDEFINED: 'UNDEFINED',
 } as const;
 
 export type OmniPrimitiveKind = ToEnum<typeof OmniPrimitiveKind>;

@@ -112,7 +112,7 @@ describe('OmniUtil', () => {
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
-    expect(diff[0]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: aIntProp.name} satisfies Diff);
+    expect(diff[0]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
 
     diff = OmniUtil.getDiff(
       {kind: OmniTypeKind.OBJECT, name: 'a', properties: []},
@@ -120,7 +120,7 @@ describe('OmniUtil', () => {
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
-    expect(diff[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: aIntProp.name} satisfies Diff);
+    expect(diff[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
 
     diff = OmniUtil.getDiff(
       {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]},
@@ -135,8 +135,8 @@ describe('OmniUtil', () => {
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(2);
-    expect(diff[0]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: aIntProp.name} satisfies Diff);
-    expect(diff[1]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: bIntProp.name} satisfies Diff);
+    expect(diff[0]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
+    expect(diff[1]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies Diff);
 
     diff = OmniUtil.getDiff(
       {kind: OmniTypeKind.OBJECT, name: 'a', properties: [bIntProp]},
@@ -144,7 +144,7 @@ describe('OmniUtil', () => {
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
-    expect(diff[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: bIntProp.name} satisfies Diff);
+    expect(diff[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies Diff);
 
     diff = OmniUtil.getDiff(
       {kind: OmniTypeKind.OBJECT, name: 'a', properties: [bIntProp]},
@@ -152,7 +152,7 @@ describe('OmniUtil', () => {
       OMNI_GENERIC_FEATURES,
     );
     expect(diff).toHaveLength(1);
-    expect(diff[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: bIntProp.name} satisfies PropertyTypeDiff);
+    expect(diff[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies PropertyTypeDiff);
   });
 
   test('unique diffs', () => {
@@ -165,8 +165,8 @@ describe('OmniUtil', () => {
     const uniqueDiffs = OmniUtil.getAllEncompassingDiffs(baseline, others, OMNI_GENERIC_FEATURES);
 
     expect(uniqueDiffs).toHaveLength(2);
-    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: aIntProp.name} satisfies Diff);
-    expect(uniqueDiffs[1]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: bIntProp.name} satisfies Diff);
+    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
+    expect(uniqueDiffs[1]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies Diff);
   });
 
   test('unique diffs, 2 same others', () => {
@@ -181,8 +181,8 @@ describe('OmniUtil', () => {
 
     // 'pa' does not exist in any other, 'pb' exist in all other
     expect(uniqueDiffs).toHaveLength(2);
-    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: aIntProp.name} satisfies Diff);
-    expect(uniqueDiffs[1]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: bIntProp.name} satisfies Diff);
+    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
+    expect(uniqueDiffs[1]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies Diff);
   });
 
   test('unique diffs, 2 different others', () => {
@@ -197,7 +197,7 @@ describe('OmniUtil', () => {
 
     // 'pa' exist in at least one other, 'pb' does not exist in all, 'pa' if it exists it is always an int
     expect(uniqueDiffs).toHaveLength(1);
-    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: aIntProp.name} satisfies Diff);
+    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
   });
 
   test('unique diffs, different fundamental types', () => {
@@ -215,7 +215,7 @@ describe('OmniUtil', () => {
     const uniqueDiffs = OmniUtil.getAllEncompassingDiffs(baseline, others, OMNI_GENERIC_FEATURES);
 
     expect(uniqueDiffs).toHaveLength(2);
-    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: aIntProp.name} satisfies Diff);
+    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
     expect(uniqueDiffs[1]).toEqual({kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.FUNDAMENTAL_TYPE]} satisfies Diff);
   });
 
@@ -230,7 +230,7 @@ describe('OmniUtil', () => {
     const uniqueDiffs = OmniUtil.getAllEncompassingDiffs(baseline, others, OMNI_GENERIC_FEATURES);
 
     expect(uniqueDiffs).toHaveLength(1);
-    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: aIntProp.name} satisfies Diff);
+    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
   });
 });
 

@@ -49,7 +49,7 @@ export type JavaAnnotationLibrary = ToEnum<typeof JavaAnnotationLibrary>;
 export const ZodJavaOptions = ZodOptions.extend({
   immutableModels: ZodCoercedBoolean.default('true'),
   includeAlwaysNullProperties: ZodCoercedBoolean.default('false'),
-  unknownType: z.enum(getEnumValues(UnknownKind)).default(UnknownKind.MUTABLE_OBJECT),
+  unknownType: z.enum(getEnumValues(UnknownKind)).default(UnknownKind.ANY),
   includeLinksOnType: ZodCoercedBoolean.default('false'),
   includeLinksOnProperty: ZodCoercedBoolean.default('true'),
   interfaceNamePrefix: z.string().default('I'),

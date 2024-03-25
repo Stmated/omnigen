@@ -42,7 +42,6 @@ exports[`Java Rendering > Enum 1`] = `
 exports[`Java Rendering > Test multiple inheritance (interfaces) 1`] = `
 [
   "A.java",
-  "AXOrB.java",
   "Abs.java",
   "B.java",
   "C.java",
@@ -64,6 +63,7 @@ exports[`Java Rendering > Test multiple inheritance (interfaces) 1`] = `
   "JsonRpcResponse.java",
   "Out.java",
   "Out2.java",
+  "UnionOfAB.java",
 ]
 `;
 

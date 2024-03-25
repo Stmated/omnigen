@@ -27,7 +27,6 @@ public class GiveInGetOut2Request extends JsonRpcRequest {
     return this.params;
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class Params extends JsonRpcRequestParams {
     private final In param;
     public Params(In param) {

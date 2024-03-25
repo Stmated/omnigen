@@ -24,7 +24,6 @@ public class ErrorUnknown extends JsonRpcErrorResponse {
     return "2.0";
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class Error extends JsonRpcError {
     private final Integer code;
     private final JsonNode data;

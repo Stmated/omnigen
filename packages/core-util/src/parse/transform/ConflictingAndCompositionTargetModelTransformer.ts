@@ -23,7 +23,7 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class ConflictingAndCompositionTargetModelTransformer implements OmniModel2ndPassTransformer {
 
-  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions, TargetOptions>): void {
+  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
 

@@ -1,8 +1,9 @@
-import {CompositionKind, OmniPrimitiveKind, OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
+import {CompositionKind, OmniPrimitiveKind, OmniType, OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {createJavaRenderer, Java, JavaOptions, JavaRendererOptions, JavaUtil, render} from '@omnigen/target-java';
 import {OmniUtil} from '@omnigen/core-util';
+import {TsRootNode} from '../ast';
 
 export type TypeScriptRenderer = TypeScriptVisitor<string> & Renderer;
 
@@ -13,13 +14,13 @@ export const DefaultTypeScriptRendererOptions: JavaRendererOptions = {
 // TODO:
 //  * extend modifiers so there is 'export' to differentiate it from 'public'
 
-export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions & JavaOptions & TypeScriptOptions): TypeScriptRenderer => {
+export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptions & TargetOptions & JavaOptions & TypeScriptOptions): TypeScriptRenderer => {
 
   let bodyDepth = 0;
 
   const parentRenderer = {
     ...createTypeScriptVisitor(),
-    ...createJavaRenderer(options, DefaultTypeScriptRendererOptions),
+    ...createJavaRenderer(root, options, DefaultTypeScriptRendererOptions),
   } satisfies TypeScriptVisitor<string>;
 
   return {
@@ -49,17 +50,36 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
 
     visitField: (node, visitor) => {
 
-      const comments = node.comments ? `${node.comments.visit(visitor)}\n` : '';
-      const annotations = node.annotations ? `${node.annotations.visit(visitor)}\n` : '';
-      const modifiers = node.modifiers.visit(visitor);
-      const typeName = node.type.visit(visitor);
-      const initializer = node.initializer ? ` = ${node.initializer.visit(visitor)}` : '';
-      const identifier = node.identifier.visit(visitor);
+      const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
+      const annotations = node.annotations ? `${render(node.annotations, visitor)}\n` : '';
+      const modifiers = render(node.modifiers, visitor);
+      const typeName = render(node.type, visitor);
+      const initializer = node.initializer ? ` = ${render(node.initializer, visitor)}` : '';
+      const identifier = render(node.identifier, visitor);
+
+      const isOptional = (node.property && !node.property.required);
+      const isPatternName = (node.property && OmniUtil.isPatternPropertyName(node.property.name));
+
+      const optional = (isOptional && !isPatternName) ? '?' : '';
+      let key: string;
+      if (node.property && isPatternName) {
+
+        const pattern = OmniUtil.getPropertyNamePattern(node.property.name);
+
+        let keyComment = '';
+        if (pattern) {
+          keyComment = ` /* Pattern: "${pattern}" */`;
+        }
+
+        key = `[key: string${keyComment}]`;
+      } else {
+        key = identifier;
+      }
 
       return [
         comments,
         annotations,
-        `${modifiers ? `${modifiers} ` : ''}${identifier}: ${typeName}${initializer};\n`,
+        `${modifiers ? `${modifiers} ` : ''}${key}${optional}: ${typeName}${initializer};\n`,
       ];
     },
 
@@ -88,17 +108,21 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
       ];
     },
 
+    /**
+     * Should perhaps be replaced by a TS-specific node
+     */
     visitFieldBackedGetter: (n, v) => {
-
-      const body = n.body ? render(n.body, v) : '';
-      return `${render(n.signature.modifiers, v)} get ${n.field.identifier.value}() {\n${body}}\n`;
+      const field = root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+      return `get ${field.identifier.value}() { return this.${field.identifier.value}}\n`;
     },
 
+    /**
+     * Should perhaps be replaced by a TS-specific node
+     */
     visitFieldBackedSetter: (n, v) => {
-
-      const body = n.body ? render(n.body, v) : '';
-      const parameters = n.signature.parameters ? render(n.signature.parameters, v) : '/*ERROR: No setter parameters found/*';
-      return `${n.signature.modifiers.visit(v)} set ${n.field.identifier.value}(${parameters}) {\n${body}}\n`;
+      const field = root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+      const type = render(field.type, v);
+      return `set ${field.identifier.value}(value: ${type}) { this.${field.identifier.value} = value;}\n`;
     },
 
     visitPackage: () => undefined,
@@ -158,26 +182,13 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
             return new Java.Literal(n.omniType.value, n.omniType.primitiveKind).visit(v);
           }
         }
-      }
 
-      if (n.omniType.kind == OmniTypeKind.PRIMITIVE) {
         if (n.omniType.primitiveKind == OmniPrimitiveKind.STRING) {
           return 'string';
         } else if (OmniUtil.isNumericType(n.omniType)) {
           return 'number';
-        }
-      }
-
-      if (n.omniType.kind == OmniTypeKind.COMPOSITION) {
-        if (n.omniType.compositionKind == CompositionKind.XOR) {
-
-          // TODO: This is wrong. We do not know if these are the actual names for the types. Must find the AST nodes for the types and get the local name from there!
-          //        To be able to get those names as local, maybe we must add a new AST node that are for these composition types, so they can be properly represented!
-          //        But maybe we want some to be inlined and some to not be?
-          //        An option for "max length" or "max entries" of a composition before an alias node is created for a type? Then the alias is used.
-          //        But same thing here, we must find that node so we can use it here instead.
-
-          return n.omniType.types.map(it => JavaUtil.getName({type: it, options: options})).join(' | ');
+        } else if (n.omniType.primitiveKind == OmniPrimitiveKind.UNDEFINED) {
+          return 'undefined';
         }
       }
 
@@ -185,7 +196,24 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
     },
 
     visitArrayType: (n, v) => {
-      return `Array<${render(n.of, v)}>`;
+
+      const arrayTypeName = options.immutableModels ? 'ReadonlyArray' : 'Array';
+      const itemText = render(n.of, v);
+      const minLength = n.omniType.minLength ?? 0;
+      const maxLength = n.omniType.maxLength ?? -1;
+      if (minLength > 0) {
+
+        const readonlyPrefix = options.immutableModels ? 'readonly ' : '';
+        const prefixItemTexts: string[] = Array(minLength).fill(itemText);
+        if (maxLength !== -1) {
+          const suffixItemTexts: string[] = Array(maxLength - minLength).fill(`${itemText}?`);
+          return `${readonlyPrefix}[${prefixItemTexts.join(', ')}, ${suffixItemTexts.join(', ')}]`;
+        } else {
+          return `${readonlyPrefix}[${prefixItemTexts.join(', ')}, ...${arrayTypeName}<${itemText}>]`;
+        }
+      }
+
+      return `${arrayTypeName}<${itemText}>`;
     },
 
     visitWildcardType: (n, v) => {
@@ -227,7 +255,7 @@ export const createTypeScriptRenderer = (options: PackageOptions & TargetOptions
           throw new Error(`Unsupported composition kind '${n.omniType.compositionKind}' for TS composition node`);
       }
 
-      return n.typeNodes.map(it => it.visit(v)).join(` ${separator} `);
+      return n.typeNodes.map(it => render(it, v)).join(` ${separator} `);
     },
 
     visitTypeAliasDeclaration: (n, v) => {

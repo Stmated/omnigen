@@ -11,7 +11,6 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
     super(id, result);
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class RefundDepositResponseObject {
     private final Data data;
     private final String method;
@@ -45,7 +44,6 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
       return this.uuid;
     }
 
-    @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
     public static class Data {
       private final String orderid;
       private final String result;

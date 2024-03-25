@@ -12,19 +12,21 @@ import {
   AddGeneratedAnnotationJavaAstTransformer,
   AddJakartaValidationAstTransformer,
   AddLombokAstTransformer,
-  AddSubTypeHintsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer,
   AddObjectDeclarationsJavaAstTransformer,
+  AddSubTypeHintsAstTransformer,
+  AddThrowsForKnownMethodsAstTransformer, FlattenSuperfluousNodesAstTransformer,
   InnerTypeCompressionAstTransformer,
+  JacksonJavaAstTransformer,
   JavaAndTargetOptions,
   PackageResolverAstTransformer,
-  ToHardCodedTypeJavaAstTransformer,
+  PatternPropertiesToMapJavaAstTransformer,
   ReorderMembersTransformer,
-  SimplifyGenericsAstTransformer, JacksonJavaAstTransformer,
+  SimplifyGenericsAstTransformer,
+  ToHardCodedTypeJavaAstTransformer,
 } from '../transform';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
-import {AddMissingDeclarationsForTypesAstTransformer} from '../transform';
+import {GenericNodesToSpecificJavaAstTransformer} from '../transform/GenericNodesToSpecificJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -33,9 +35,8 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
   * getTransformers(options: JavaAndTargetOptions): Generator<AstTransformer<AstNode, JavaAndTargetOptions>> {
 
     yield new AddObjectDeclarationsJavaAstTransformer();
-    yield new AddCompositionMembersJavaAstTransformer();
+
     yield new AddFieldsAstTransformer();
-    yield new AddMissingDeclarationsForTypesAstTransformer();
     switch (options.fieldAccessorMode) {
       case FieldAccessorMode.POJO:
         yield new AddAccessorsForFieldsAstTransformer();
@@ -50,20 +51,25 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
         throw new Error(`Do not know how to handle field accessor mode ${options.fieldAccessorMode}`);
     }
 
-    // Is possible abstract accessors might clash with the Lombok accessors, will need future revisions
+    yield new AddCompositionMembersJavaAstTransformer();
+
     yield new AddAbstractAccessorsAstTransformer();
     yield new AddConstructorJavaAstTransformer();
     yield new AddAdditionalPropertiesInterfaceAstTransformer();
-    yield new AddCommentsAstTransformer();
+
     yield new AddJakartaValidationAstTransformer();
-    yield new AddGeneratedAnnotationJavaAstTransformer();
     yield new AddSubTypeHintsAstTransformer();
     yield new InnerTypeCompressionAstTransformer();
     yield new AddThrowsForKnownMethodsAstTransformer();
     yield new SimplifyGenericsAstTransformer();
+    yield new GenericNodesToSpecificJavaAstTransformer();
+    yield new AddCommentsAstTransformer();
+    yield new PatternPropertiesToMapJavaAstTransformer(); // Ran too late
     yield new JacksonJavaAstTransformer();
     yield new ToHardCodedTypeJavaAstTransformer();
+    yield new AddGeneratedAnnotationJavaAstTransformer();
     yield new PackageResolverAstTransformer();
+    yield new FlattenSuperfluousNodesAstTransformer();
     yield new ReorderMembersTransformer();
   }
 

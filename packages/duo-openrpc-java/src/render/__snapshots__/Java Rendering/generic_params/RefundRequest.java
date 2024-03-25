@@ -11,7 +11,6 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
     super(id, params, "Refund");
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class Params extends JsonRpcRequestParams<Params.Data> {
     public Params(
       @JsonProperty(value = "Signature", required = true) String signature,
@@ -21,7 +20,6 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
       super(signature, uuid, data);
     }
 
-    @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
     public static class Data extends AbstractRequestData<Data.Attributes> {
       private final String amount;
       private final String currency;
@@ -58,7 +56,6 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
         return this.orderId;
       }
 
-      @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
       public static class Attributes {
         private final String externalReference;
         public Attributes(@JsonProperty("ExternalReference") String externalReference) {

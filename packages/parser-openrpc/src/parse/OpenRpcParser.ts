@@ -495,7 +495,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const resultType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
       name: `${typeNamePrefix}Response`,
-      additionalProperties: false,
       properties: [],
       description: method.description,
       summary: method.summary,
@@ -511,7 +510,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniTypeKind.OBJECT,
         name: jsonRpcResponseClassName,
         description: `Generic class to describe the JsonRpc response package`,
-        additionalProperties: false,
         properties: [],
       };
       this._jsonSchemaParser.registerCustomTypeManually(jsonRpcResponseClassName, this._jsonRpcResponseClass);
@@ -578,7 +576,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniTypeKind.OBJECT,
         name: className,
         description: `Generic class to describe the JsonRpc error response package`,
-        additionalProperties: false,
         properties: [],
         debug: `Created by ${this.doc.info.title}`,
       };
@@ -593,7 +590,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniTypeKind.OBJECT,
         name: className,
         description: `Generic class to describe the JsonRpc error inside an error response`,
-        additionalProperties: false,
         properties: [],
         debug: `Created by ${this.doc.info.title}`,
       };
@@ -606,7 +602,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       name: typeName,
       accessLevel: OmniAccessLevel.PUBLIC,
       extendedBy: this._jsonRpcErrorResponseClass,
-      additionalProperties: false,
       properties: [],
       debug: `Created by ${this.doc.info.title}`,
     };
@@ -675,7 +670,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         name: target.name,
         suffix: 'Error',
       },
-      additionalProperties: false,
       properties: [],
       debug: `Created by ${doc.info.title}`,
       extendedBy: errorPropertySuperType,
@@ -829,7 +823,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   ): OmniExampleParam {
 
     // If the name of the example param is the same as the property name, it will match here.
-    let property = inputProperties.find(it => it.name == param.name);
+    let property = inputProperties.find(
+      it => OmniUtil.isPropertyNameMatching(it.name, param.name),
+    );
     if (!property) {
 
       // But most of the time, the example param is actually just in the same index as the request params.
@@ -926,7 +922,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniTypeKind.OBJECT,
         name: `${method.name}RequestParams`,
         properties: [],
-        additionalProperties: false,
       } satisfies OmniObjectType;
 
       const properties = method.params.map(it => {
@@ -946,7 +941,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
           kind: OmniTypeKind.OBJECT,
           name: 'JsonRpcRequestParams', // TODO: Make it a setting
           description: `Generic class to describe the JsonRpc request params`,
-          additionalProperties: false,
           properties: [],
         };
       }
@@ -959,7 +953,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       name: `${method.name}Request`,
       title: method.name,
       properties: [],
-      additionalProperties: false,
       description: method.description,
       summary: method.summary,
     };
@@ -983,7 +976,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniTypeKind.OBJECT,
         name: className,
         description: `Generic class to describe the JsonRpc request package`,
-        additionalProperties: false,
         properties: [],
       };
       this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcRequestClass);
@@ -1185,7 +1177,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     // The request type is always a class type, since it is created as such by us.
     const requestClass = targetEndpoint.request.type as OmniObjectType;
-    const requestParamsParameter = requestClass.properties?.find(it => it.name == 'params');
+    const requestParamsParameter = requestClass.properties?.find(
+      it => OmniUtil.isPropertyNameEqual(it.name, 'params'),
+    );
     if (!requestParamsParameter) {
       throw new Error(`The target request type must be Class and have a 'params' property`);
     }
@@ -1195,7 +1189,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const mappings: OmniLinkMapping[] = [];
     for (const linkParamName of paramNames) {
 
-      const requestResultParamParameter = requestResultClass.properties?.find(prop => prop.name == linkParamName);
+      const requestResultParamParameter = requestResultClass.properties?.find(
+        prop => OmniUtil.isPropertyNameEqual(prop.name, linkParamName),
+      );
 
       if (requestResultParamParameter) {
 
@@ -1292,7 +1288,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     for (let i = 0; i < pathParts.length; i++) {
       if (pointer.kind == OmniTypeKind.OBJECT) {
 
-        const property = pointer.properties?.find(it => it.name == pathParts[i]);
+        const property = pointer.properties?.find(
+          it => OmniUtil.isPropertyNameMatching(it.name, pathParts[i]),
+        );
         if (property) {
           propertyPath.push(property);
           pointer = property.type;

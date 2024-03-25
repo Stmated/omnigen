@@ -23,7 +23,7 @@ import lombok.With;
 @RequiredArgsConstructor(access = true)
 @Value
 @With
-public class In extends AXOrB {
+public class In extends UnionOfAB {
   @Default
   @JsonProperty("in_type")
   String inType = null;

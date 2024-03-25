@@ -29,7 +29,7 @@ describe('Case', () => {
     expect(Case.pascal('foo/bar/baz')).toEqual('FooBarBaz');
     expect(Case.pascal('foo[bar)baz')).toEqual('FooBarBaz');
     expect(Case.pascal('#foo+bar*baz')).toEqual('FooBarBaz');
-    expect(Case.pascal('$foo~bar`baz')).toEqual('FooBarBaz');
+    expect(Case.pascal('$foo~bar`baz')).toEqual('$fooBarBaz');
     expect(Case.pascal('_foo_bar-baz-')).toEqual('FooBarBaz');
     expect(Case.pascal('foo 2 bar 5 baz')).toEqual('Foo2Bar5Baz');
     expect(Case.pascal('foo2bar5baz')).toEqual('Foo2Bar5Baz');

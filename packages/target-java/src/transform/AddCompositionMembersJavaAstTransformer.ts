@@ -10,13 +10,13 @@ import {
   OmniPrimitiveKind,
   OmniPrimitiveType,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, OmniUnknownType,
   UnknownKind,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 import {
-  AbstractExpression,
+  AbstractJavaExpression,
   AbstractObjectDeclaration, Annotation, AnnotationList, ArgumentList, BinaryExpression,
   Block, ClassName, ClassReference, DeclarationReference,
   Field, FieldBackedGetter,
@@ -169,19 +169,20 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       ));
     }
 
-    const untypedFieldType = {
+    const untypedFieldType: OmniUnknownType = {
       kind: OmniTypeKind.UNKNOWN,
+      unknownKind: UnknownKind.ANY,
     };
 
     const untypedField = new Field(
-      new EdgeType(untypedFieldType),
+      JavaAstUtils.createTypeNode(untypedFieldType),
       new Identifier('_raw', 'raw'),
       new ModifierList(new Modifier(ModifierType.PRIVATE), new Modifier(ModifierType.FINAL)),
       undefined,
       fieldAnnotations,
     );
     const untypedGetter = new FieldBackedGetter(
-      untypedField,
+      new Java.FieldReference(untypedField),
     );
 
     target.children.push(untypedField);
@@ -535,7 +536,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     declaration.body.children.push(fieldValue);
     declaration.body.children.push(
       new Java.FieldBackedGetter(
-        fieldValue,
+        new Java.FieldReference(fieldValue),
       ),
     );
 
@@ -549,7 +550,11 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     // const typeName = JavaUtil.getPrimitiveKindName(primitiveKind, false);
 
     const parameterIdentifier = new Java.Identifier('value');
-    const constructorParameter = new Java.ConstructorParameter(fieldValue, fieldValueType, parameterIdentifier);
+    const constructorParameter = new Java.ConstructorParameter(
+      new Java.FieldReference(fieldValue),
+      fieldValueType,
+      parameterIdentifier,
+    );
 
     declaration.body.children.push(
       new Java.ConstructorDeclaration(
@@ -650,8 +655,8 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     const typedFieldReference = new FieldReference(typedField);
 
     const parameterList = new ParameterList();
-    let conversionExpression: AbstractExpression;
-    if (options.unknownType == UnknownKind.MUTABLE_OBJECT) {
+    let conversionExpression: AbstractJavaExpression;
+    if (options.unknownType == UnknownKind.MUTABLE_OBJECT || options.unknownType == UnknownKind.ANY) {
 
       if (options.serializationLibrary == SerializationLibrary.JACKSON) {
         conversionExpression = this.modifyGetterForJackson(untypedField, typedField, parameterList);
@@ -688,7 +693,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     };
   }
 
-  private modifyGetterForJackson(untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractExpression {
+  private modifyGetterForJackson(untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractJavaExpression {
 
     const objectMapperReference = new Identifier('objectMapper');
     const objectMapperDeclaration = new Parameter(
@@ -707,7 +712,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     );
   }
 
-  private modifyGetterForPojo(untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractExpression {
+  private modifyGetterForPojo(untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractJavaExpression {
 
     const transformerIdentifier = new Identifier('transformer');
     const type: OmniHardcodedReferenceType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.Function'};

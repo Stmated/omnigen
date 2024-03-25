@@ -9,9 +9,9 @@ const UPPERCASE = /[\p{Lu}]/u;
 const LOWERCASE = /[\p{Ll}]/u;
 const LEADING_CAPITAL = /^[\p{Lu}](?![\p{Lu}])/gu;
 const IDENTIFIER = /([\p{Alpha}\p{N}_]|$)/u;
-const SEPARATORS = /[.\-/[\]()\s#+*~`]+/;
+const SEPARATORS = /[_.\-/[\]()\s#+*~`]+/;
 
-const LEADING_SEPARATORS = /^[.\-/[\]()\s#+*~`]+/; // Allows to start with '_' and '$'
+const LEADING_SEPARATORS = /^[_.\-/[\]()\s#+*~`]+/; // Allows to start with '$'
 const SEPARATORS_AND_IDENTIFIER = new RegExp(SEPARATORS.source + IDENTIFIER.source, 'gu');
 const NUMBERS_AND_IDENTIFIER = new RegExp('\\d+' + IDENTIFIER.source, 'gu');
 
@@ -172,6 +172,8 @@ class CamelCase {
       input = toUpperCase(input.charAt(0)) + input.slice(1);
     }
 
-    return CamelCase.postProcess(input, toUpperCase);
+    const n = CamelCase.postProcess(input, toUpperCase);
+
+    return n;
   }
 }

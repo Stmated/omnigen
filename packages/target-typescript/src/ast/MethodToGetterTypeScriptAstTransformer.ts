@@ -17,19 +17,15 @@ export class MethodToGetterTypeScriptAstTransformer implements AstTransformer<Ja
         if (!(n instanceof Java.FieldBackedGetter)) {
 
           // TODO: "FieldBackedGetter" should not inherit from MethodDeclaration, it should be its own thing
-          const getterField = JavaAstUtils.getGetterField(n);
-          if (getterField) {
+          const getterFieldId = JavaAstUtils.getGetterFieldId(args.root, n);
+          if (getterFieldId !== undefined) {
 
-            const getter = new Java.FieldBackedGetter(
-              getterField,
+            return new Java.FieldBackedGetter(
+              new Java.FieldReference(getterFieldId),
               n.signature.annotations,
               n.signature.comments,
               undefined,
             );
-
-            getter.body = n.body;
-
-            return getter;
           }
         }
 

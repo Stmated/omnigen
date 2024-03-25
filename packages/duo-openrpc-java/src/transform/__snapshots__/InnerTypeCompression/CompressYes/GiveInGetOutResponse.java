@@ -23,7 +23,6 @@ public class GiveInGetOutResponse extends JsonRpcResponse {
     return this.result;
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class Out {
     private final String result;
     public Out(String result) {

@@ -3,7 +3,6 @@
 exports[`InnerTypeCompression > CompressNo 1`] = `
 [
   "A.java",
-  "AXOrB.java",
   "Abs.java",
   "B.java",
   "C.java",
@@ -25,13 +24,13 @@ exports[`InnerTypeCompression > CompressNo 1`] = `
   "JsonRpcResponse.java",
   "Out.java",
   "Out2.java",
+  "UnionOfAB.java",
 ]
 `;
 
 exports[`InnerTypeCompression > CompressYes 1`] = `
 [
   "A.java",
-  "AXOrB.java",
   "Abs.java",
   "C.java",
   "ErrorUnknown.java",
@@ -47,6 +46,7 @@ exports[`InnerTypeCompression > CompressYes 1`] = `
   "JsonRpcRequest.java",
   "JsonRpcRequestParams.java",
   "JsonRpcResponse.java",
+  "UnionOfAB.java",
 ]
 `;
 

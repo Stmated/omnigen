@@ -40,7 +40,7 @@ describe('Java Rendering', () => {
 
           let baseDir: string;
 
-          const target_test_dir = path.resolve('./.target_test');
+          const targetTestDir = path.resolve('./.target_test');
 
           try {
             baseDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
@@ -82,7 +82,7 @@ describe('Java Rendering', () => {
           }
 
           // Everything went fine. So we delete the test output directory. If things went badly it will stay around.
-          fs.rmSync(target_test_dir, {recursive: true, force: true});
+          fs.rmSync(targetTestDir, {recursive: true, force: true});
 
         } catch (ex) {
           throw LoggerFactory.formatError(ex, `File ${fileName}`);

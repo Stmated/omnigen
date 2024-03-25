@@ -85,6 +85,6 @@ describe('Error-Schema', () => {
     expect(error100.foundLiterals[2]).toEqual(100);
 
     const customError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
-    expect(customError.foundFields).toEqual(['data', 'method', 'signature', 'uuid', '_additionalProperties']);
+    expect(customError.foundFields).toEqual(['_additionalProperties', 'data', 'method', 'signature', 'uuid']);
   });
 });

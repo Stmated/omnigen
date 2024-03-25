@@ -18,6 +18,7 @@ import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOpt
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {DeleteUnnecessaryXorJavaModelTransformer} from './parse/transform/DeleteUnnecessaryXorJavaModelTransformer.ts';
+import {JavaAstRootNode} from './ast';
 
 export const ZodParserOptionsContext = z.object({
   parserOptions: ZodParserOptions,
@@ -128,7 +129,8 @@ export const JavaRendererPlugin = createPlugin(
   {name: 'java-render', in: JavaRendererCtxIn, out: JavaRendererCtxOut, score: PluginScoreKind.IMPORTANT},
   async ctx => {
 
-    const renderer = createJavaRenderer(ctx.javaOptions);
+    const javaRootNode = ctx.astNode as JavaAstRootNode;
+    const renderer = createJavaRenderer(javaRootNode, ctx.javaOptions);
     const rendered = renderer.executeRender(ctx.astNode, renderer);
 
     return {

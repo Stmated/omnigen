@@ -27,6 +27,6 @@
     "@types/json-pointer": "^1.0.34",
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.3"
   }
 }

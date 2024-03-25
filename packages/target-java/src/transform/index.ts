@@ -20,5 +20,6 @@ export * from './AddThrowsForKnownMethodsAstTransformer.ts';
 export * from './AddSubTypeHintsAstTransformer.ts';
 export * from './SimplifyGenericsAstTransformer.ts';
 export * from './JacksonJavaAstTransformer.ts';
-export * from './AddMissingDeclarationsForTypesAstTransformer.ts';
+export * from './PatternPropertiesToMapJavaAstTransformer.ts';
+export * from './FlattenSuperfluousNodesAstTransformer.ts';
 export * from './JavaAstUtils.ts';

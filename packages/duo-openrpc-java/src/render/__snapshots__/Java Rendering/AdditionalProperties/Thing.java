@@ -9,12 +9,12 @@ import java.util.Map;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class Thing implements IAdditionalProperties {
+  private final Map<String, JsonNode> _additionalProperties = new HashMap<String, JsonNode>();
   private final String id;
   public Thing(String id) {
     this.id = id;
   }
 
-  private final Map<String, JsonNode> _additionalProperties = new HashMap<String, JsonNode>();
   @JsonAnySetter
   public void addAdditionalProperty(String key, JsonNode value) {
     this._additionalProperties.put(key, value);

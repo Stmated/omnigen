@@ -1,11 +1,10 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {Direction, OmniPrimitiveKind, OmniProperty, OmniTypeKind, UnknownKind} from '@omnigen/core';
+import {Direction, OmniPrimitiveKind, OmniProperty, OmniPropertyName, OmniTypeKind, UnknownKind} from '@omnigen/core';
 import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast';
 import {AbstractObjectDeclaration} from '../ast';
 import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaReducer} from '../reduce';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -93,7 +92,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       visitMethodDeclaration: (node, visitor) => {
 
         // Figure out of method is a getter, and if it is, then add the JsonProperty there -- irregardless if constructor already adds one (until we can separate "client" vs "server")
-        const getterField = JavaAstUtils.getGetterField(node);
+        const getterField = JavaAstUtils.getGetterField(args.root, node);
 
         if (getterField && getterField.property) {
 
@@ -120,70 +119,48 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     args.root.visit(visitor);
 
     const defaultReducer = args.root.createReducer();
-    const reducer: JavaReducer = {
+    const newRoot = args.root.reduce({
       ...defaultReducer,
-      ...{
-        reduceWildcardType: (n, r) => {
+      reduceField: (n, r) => {
+        return defaultReducer.reduceField(n, r);
+      },
+      reduceWildcardType: (n, r) => {
 
-          const unknownKind = n.omniType.unknownKind ?? args.options.unknownType;
-          if (unknownKind == UnknownKind.MUTABLE_OBJECT) {
-            return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_NODE}, n.implementation);
-          }
+        const unknownKind = n.omniType.unknownKind ?? args.options.unknownType;
+        if (unknownKind == UnknownKind.MUTABLE_OBJECT) {
+          return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_OBJECT}, n.implementation);
+        } else if (unknownKind == UnknownKind.ANY) {
+          return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_NODE}, n.implementation);
+        }
 
-          return defaultReducer.reduceWildcardType(n, r);
-        },
-        reduceEdgeType: (n, r) => {
+        return defaultReducer.reduceWildcardType(n, r);
+      },
+      reduceEdgeType: (n, r) => {
 
-          if (n.omniType.kind == OmniTypeKind.DICTIONARY) {
+        if (n.omniType.kind == OmniTypeKind.DICTIONARY) {
 
-            // Check key and value and make the appropriate decision for what Jackson type might be the best one!
-            const type = n.omniType;
-            const keyType = assertDefined(JavaAstUtils.createTypeNode(type.keyType, true).reduce(r));
-            const valueType = assertDefined(JavaAstUtils.createTypeNode(type.valueType, true).reduce(r));
+          // Check key and value and make the appropriate decision for what Jackson type might be the best one!
+          const type = n.omniType;
+          const keyType = assertDefined(JavaAstUtils.createTypeNode(type.keyType, true).reduce(r));
+          const valueType = assertDefined(JavaAstUtils.createTypeNode(type.valueType, true).reduce(r));
 
-            if (keyType.omniType.kind == OmniTypeKind.PRIMITIVE && keyType.omniType.primitiveKind == OmniPrimitiveKind.STRING) {
-              if (valueType.omniType.kind == OmniTypeKind.UNKNOWN || (valueType.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE && valueType.omniType.fqn == JACKSON_JSON_NODE)) {
-                // return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_OBJECT}, n.implementation);
+          if (keyType.omniType.kind == OmniTypeKind.PRIMITIVE && keyType.omniType.primitiveKind == OmniPrimitiveKind.STRING) {
+            if (valueType.omniType.kind == OmniTypeKind.UNKNOWN || (valueType.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE && valueType.omniType.fqn == JACKSON_JSON_NODE)) {
+              // return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_OBJECT}, n.implementation);
 
-                const type = n.omniType;
-                const mapClassOrInterface = n.implementation ? 'HashMap' : 'Map';
-                const mapType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: `java.util.${mapClassOrInterface}`});
+              const type = n.omniType;
+              const mapClassOrInterface = n.implementation ? 'HashMap' : 'Map';
+              const mapType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: `java.util.${mapClassOrInterface}`});
 
-                return new Java.GenericType(type, mapType, [keyType, valueType]);
-              }
+              return new Java.GenericType(type, mapType, [keyType, valueType]);
             }
           }
+        }
 
-          return defaultReducer.reduceEdgeType(n, r);
-        },
-        reduceNewStatement: (n, r) => {
-
-          const reduced = defaultReducer.reduceNewStatement(n, r);
-
-          // NOTE: Uncomment below for support to convert `Map<string, JsonNode>` to `ObjectNode` -- currently badly interacting with @JsonAnyGetter
-          // if (reduced instanceof Java.NewStatement) {
-          //
-          //   if (reduced.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE && reduced.type.omniType.fqn == JACKSON_JSON_OBJECT) {
-          //
-          //     const defaultFactoryInstance = new Java.StaticMemberReference(
-          //       new Java.ClassName(new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_NODE_FACTORY})),
-          //       new Java.Identifier('instance'),
-          //     );
-          //
-          //     return new Java.MethodCall(
-          //       defaultFactoryInstance,
-          //       new Java.Identifier('objectNode'),
-          //       new Java.ArgumentList(),
-          //     );
-          //   }
-          // }
-
-          return reduced;
-        },
+        return defaultReducer.reduceEdgeType(n, r);
       },
-    };
+    });
 
-    const newRoot = args.root.reduce(reducer);
     if (newRoot) {
       args.root = newRoot;
     }
@@ -240,7 +217,8 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
       for (const parameter of node.parameters.children) {
 
-        const property = parameter.field.property;
+        const field = args.root.getNodeWithId<Java.Field>(parameter.field.targetId);
+        const property = field.property;
         if (!property) {
           continue;
         }
@@ -249,7 +227,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
         if (this.shouldAddJsonPropertyAnnotation(parameter.identifier.value, property.name, args.options)) {
           hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1] = true;
-          parameterAnnotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(parameter.field.identifier.value, property, Direction.IN, args.options, false));
+          parameterAnnotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(field.identifier.value, property, Direction.IN, args.options, false));
         }
 
         if (!parameter.annotations && parameterAnnotations.children.length > 0) {
@@ -288,8 +266,13 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
     const annotationArguments = new Java.AnnotationKeyValuePairList();
 
-    if (direction != Direction.OUT || (direction == Direction.OUT && fieldName != property.name)) {
-      annotationArguments.children.push(new Java.AnnotationKeyValuePair(undefined, new Java.Literal(property.name)));
+    const resolvedPropertyName = OmniUtil.getPropertyName(property.name);
+    if (direction != Direction.OUT || (direction == Direction.OUT && fieldName != resolvedPropertyName)) {
+
+      // NOTE: Perhaps if this is undefined (name is a regex), then we should add some other annotation?
+      if (resolvedPropertyName) {
+        annotationArguments.children.push(new Java.AnnotationKeyValuePair(undefined, new Java.Literal(resolvedPropertyName)));
+      }
     } else if (requiresName) {
       return undefined;
     }
@@ -336,12 +319,15 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     return undefined;
   }
 
-  private shouldAddJsonPropertyAnnotation(sourceCodeName: string | undefined, propertyName: string | undefined, javaOptions: JavaOptions) {
+  private shouldAddJsonPropertyAnnotation(sourceCodeName: string | undefined, propertyName: OmniPropertyName | undefined, javaOptions: JavaOptions) {
 
     if (javaOptions.serializationPropertyNameMode == SerializationPropertyNameMode.ALWAYS) {
       return true;
     } else if (javaOptions.serializationPropertyNameMode == SerializationPropertyNameMode.IF_REQUIRED) {
-      return (sourceCodeName ?? propertyName) != (propertyName ?? sourceCodeName);
+
+      const resolvedPropertyName = propertyName ? OmniUtil.getPropertyName(propertyName) : undefined;
+      return (sourceCodeName ?? resolvedPropertyName) != (resolvedPropertyName ?? sourceCodeName);
+
     } else if (javaOptions.serializationPropertyNameMode == SerializationPropertyNameMode.SKIP) {
       return false;
     }

@@ -38,7 +38,6 @@ public class ResponseData {
     return this._responseDataWithResult = objectMapper.convertValue(this._raw, WithResult.class);
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class WithReject {
     private final String rejected;
     public WithReject(@JsonProperty(value = "rejected", required = true) String rejected) {
@@ -54,7 +53,6 @@ public class ResponseData {
       return "0";
     }
   }
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class WithResult {
     public String getResult() {
       return "1";

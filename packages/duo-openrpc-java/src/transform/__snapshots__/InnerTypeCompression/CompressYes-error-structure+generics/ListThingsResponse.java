@@ -27,7 +27,6 @@ public class ListThingsResponse extends JsonRpcResponse {
     return this.result;
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class Thing {
     private final String id;
     public Thing(String id) {

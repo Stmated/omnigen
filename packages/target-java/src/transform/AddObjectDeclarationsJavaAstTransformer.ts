@@ -48,7 +48,6 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       }
 
       // NOTE: Check if wrapped type has a name and resolve/change it too?
-      // const unwrappedType = OmniUtil.getUnwrappedType(type);
       if ('name' in type) {
         namePairs.push({
           owner: type,
@@ -218,7 +217,11 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
       body.children.push(field);
 
-      const parameter = new Java.ConstructorParameter(field, fieldType, fieldIdentifier);
+      const parameter = new Java.ConstructorParameter(
+        new Java.FieldReference(field),
+        fieldType,
+        fieldIdentifier,
+      );
 
       body.children.push(
         new Java.ConstructorDeclaration(
@@ -345,7 +348,11 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
   ): Java.AbstractObjectDeclaration {
 
     const javaClassName = JavaUtil.getClassName(originalType || type, options);
-    const javaType = new Java.EdgeType(type);
+    const javaType = JavaAstUtils.createTypeNode(type);
+    const javaClassIdentifier = new Java.Identifier(javaClassName);
+    if (OmniUtil.isIdentifiable(type) && !type.name) {
+      javaClassIdentifier.implicit = true;
+    }
 
     if (genericSourceIdentifiers) {
 
@@ -358,7 +365,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
       return new Java.ClassDeclaration(
         javaType,
-        new Java.Identifier(javaClassName),
+        javaClassIdentifier,
         body,
         undefined,
         new Java.GenericTypeDeclarationList(genericSourceArgExpressions),
@@ -373,7 +380,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       }
     }
 
-    return new Java.ClassDeclaration(javaType, new Java.Identifier(javaClassName), body, modifiers);
+    return new Java.ClassDeclaration(javaType, javaClassIdentifier, body, modifiers);
   }
 
   /**

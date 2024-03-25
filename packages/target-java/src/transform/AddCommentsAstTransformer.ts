@@ -12,7 +12,7 @@ import {IncludeExampleCommentsMode, JavaOptions} from '../options';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 import * as Java from '../ast';
 import {JavaUtil} from '../util';
-import {Util, VisitorFactoryManager} from '@omnigen/core-util';
+import {OmniUtil, Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -76,6 +76,8 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
       },
     }));
+
+
   }
 
   private addToCommentsOwner(node: Java.Field | Java.MethodDeclarationSignature, args: JavaAstTransformerArgs) {
@@ -361,20 +363,25 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     if (!only || only == 'target') {
       const targetPath = mapping.target.propertyPath;
       for (let i = 0; i < targetPath.length; i++) {
-
-        const typeName = JavaUtil.getFullyQualifiedName(targetPath[i].owner);
-
         const prop = targetPath[i];
+
+        const typeName = JavaUtil.getFullyQualifiedName(prop.owner);
+        const propertyName = OmniUtil.getPropertyName(prop.name);
+
+        if (propertyName === undefined) {
+          continue;
+        }
+
         let memberName: string;
         if (i < targetPath.length - 1) {
-          memberName = `${JavaUtil.getGetterName(prop.name, prop.type)}()`;
+          memberName = `${JavaUtil.getGetterName(propertyName, prop.type)}()`;
         } else {
           // TODO: Possible to find the *actual* setter/field and use that as the @link?
           //       We should not need to check for immutability here, should be centralized somehow
           if (options.immutableModels) {
-            memberName = prop.name;
+            memberName = propertyName;
           } else {
-            memberName = `${JavaUtil.getSetterName(prop.name)}(${JavaUtil.getFullyQualifiedName(prop.type)})`;
+            memberName = `${JavaUtil.getSetterName(propertyName)}(${JavaUtil.getFullyQualifiedName(prop.type)})`;
           }
         }
 
@@ -423,7 +430,7 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
         const staticArrayStrings = property.type.properties.map((prop, idx) => {
           const typeName = JavaUtil.getFullyQualifiedName(prop.type);
-          const parameterName = prop.name;
+          const parameterName = OmniUtil.getPropertyName(prop.name);
           const description = prop.description || prop.type.description;
           return `[${idx}] ${typeName} ${parameterName}${(description ? ` - ${description}` : '')}`;
         });

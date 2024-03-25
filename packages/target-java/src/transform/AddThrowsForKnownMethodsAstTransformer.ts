@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
-import {OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {OmniHardcodedReferenceType, OmniType, OmniTypeKind, RootAstNode} from '@omnigen/core';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {VisitorFactoryManager} from '@omnigen/core-util';
@@ -80,7 +80,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
       visitMethodCall: (node, visitor) => {
 
         const methodName = (node.methodName.original || node.methodName.value);
-        const targetType = this.resolveTargetType(node.target);
+        const targetType = this.resolveTargetType(args.root, node.target);
 
         if (targetType && targetType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
 
@@ -126,20 +126,21 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     return false;
   }
 
-  private resolveTargetType(exp: Java.AbstractExpression | undefined): OmniType | undefined {
+  private resolveTargetType(root: RootAstNode, exp: Java.AbstractJavaExpression | undefined): OmniType | undefined {
 
     if (exp instanceof Java.EdgeType) {
       return exp.omniType;
     } else if (exp instanceof Java.GenericType) {
       return exp.omniType;
     } else if (exp instanceof Java.FieldReference) {
-      return this.resolveTargetType(exp.field.type);
+      const field = root.getNodeWithId<Java.Field>(exp.targetId);
+      return this.resolveTargetType(root, field.type);
     } else if (exp instanceof Java.DeclarationReference) {
-      return this.resolveTargetType(exp.declaration);
+      return this.resolveTargetType(root, exp.declaration);
     } else if (exp instanceof Java.Parameter) {
-      return this.resolveTargetType(exp.type);
+      return this.resolveTargetType(root, exp.type);
     } else if (exp instanceof Java.VariableDeclaration) {
-      return this.resolveTargetType(exp.type);
+      return this.resolveTargetType(root, exp.type);
     }
 
     return undefined;

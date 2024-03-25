@@ -28,13 +28,13 @@ importers:
         version: 3.2.5
       syncpack:
         specifier: ^12.3.0
-        version: 12.3.0(typescript@5.4.2)
+        version: 12.3.0(typescript@5.4.3)
       turbo:
         specifier: ^1.12.4
         version: 1.12.4
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
       vite:
         specifier: ^5.1.6
         version: 5.1.6
@@ -91,8 +91,8 @@ importers:
         specifier: ^18.13.0
         version: 18.13.0
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   apps/omnigen-cli:
     dependencies:
@@ -158,8 +158,8 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/config-typescript:
     dependencies:
@@ -240,8 +240,8 @@ importers:
         specifier: ^13.3.0
         version: 13.3.0
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/core-log:
     dependencies:
@@ -262,8 +262,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/core-plugin:
     dependencies:
@@ -296,8 +296,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/core-util:
     dependencies:
@@ -384,8 +384,8 @@ importers:
         specifier: ^13.3.0
         version: 13.3.0
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/duo-jsonschema-java:
     dependencies:
@@ -430,8 +430,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/duo-jsonschema-typescript:
     dependencies:
@@ -476,8 +476,8 @@ importers:
         specifier: workspace:*
         version: link:../utils-test-target-java
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/duo-openrpc-java:
     dependencies:
@@ -528,8 +528,8 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/duo-openrpc-java-test:
     dependencies:
@@ -583,8 +583,8 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/eslint-config-custom:
     dependencies:
@@ -654,8 +654,8 @@ importers:
         specifier: ^7.0.15
         version: 7.0.15
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/parser-openapi3:
     dependencies:
@@ -706,8 +706,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/parser-openrpc:
     dependencies:
@@ -761,8 +761,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/plugin:
     dependencies:
@@ -786,8 +786,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-custom
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/target-impl-java-http:
     dependencies:
@@ -820,8 +820,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-custom
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/target-java:
     dependencies:
@@ -857,8 +857,8 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/target-typescript:
     dependencies:
@@ -894,8 +894,8 @@ importers:
         specifier: workspace:*
         version: link:../utils-test
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/utils-test:
     dependencies:
@@ -910,8 +910,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-custom
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
   packages/utils-test-target-java:
     dependencies:
@@ -929,8 +929,8 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
       typescript:
-        specifier: ^5.4.2
-        version: 5.4.2
+        specifier: ^5.4.3
+        version: 5.4.3
 
 packages:
 
@@ -2293,7 +2293,7 @@ packages:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
     dev: true
 
-  /cosmiconfig@9.0.0(typescript@5.4.2):
+  /cosmiconfig@9.0.0(typescript@5.4.3):
     resolution: {integrity: sha512-itvL5h8RETACmOTFc4UfIyB2RfEHi71Ax6E/PivVxq9NseKbOWpeyHEOIbmAw1rs8Ak0VursQNww7lf7YtUwzg==}
     engines: {node: '>=14'}
     peerDependencies:
@@ -2306,7 +2306,7 @@ packages:
       import-fresh: 3.3.0
       js-yaml: 4.1.0
       parse-json: 5.2.0
-      typescript: 5.4.2
+      typescript: 5.4.3
     dev: true
 
   /cross-spawn@7.0.3:
@@ -3974,7 +3974,7 @@ packages:
     dependencies:
       has-flag: 4.0.0
 
-  /syncpack@12.3.0(typescript@5.4.2):
+  /syncpack@12.3.0(typescript@5.4.3):
     resolution: {integrity: sha512-Gz2uGn96OmGfVVlKztvFac1EJYjP+WptQ2ohA6Uf48C6qLkhSayhkdujKQ6q7bGOTy8HSGI0iDfwfCJu6wvRig==}
     engines: {node: '>=16'}
     hasBin: true
@@ -3982,7 +3982,7 @@ packages:
       '@effect/schema': 0.56.1(effect@2.0.0-next.62)(fast-check@3.15.0)
       chalk: 4.1.2
       commander: 11.1.0
-      cosmiconfig: 9.0.0(typescript@5.4.2)
+      cosmiconfig: 9.0.0(typescript@5.4.3)
       effect: 2.0.0-next.62
       enquirer: 2.4.1
       fast-check: 3.15.0
@@ -4192,8 +4192,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  /typescript@5.4.2:
-    resolution: {integrity: sha512-+2/g0Fds1ERlP6JsakQQDXjZdZMM+rqpamFZJEKh4kwTIn3iDkgKtby0CeNd5ATNZ4Ry1ax15TMx0W2V+miizQ==}
+  /typescript@5.4.3:
+    resolution: {integrity: sha512-KrPd3PKaCLr78MalgiwJnA25Nm8HAmdwN3mYUYZgG/wizIo9EainNVQI9/yDavtVFRN2h3k8uf3GLHuhDMgEHg==}
     engines: {node: '>=14.17'}
     hasBin: true
     dev: true

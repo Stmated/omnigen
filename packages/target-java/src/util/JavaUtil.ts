@@ -1,5 +1,4 @@
 import {
-  AstNode,
   CompositionKind,
   OmniCompositionAndType,
   OmniCompositionNotType,
@@ -17,14 +16,15 @@ import {
   OmniType,
   OmniTypeKind,
   PackageOptions,
+  TypeName,
   UnknownKind,
 } from '@omnigen/core';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../options';
 import * as Java from '../ast';
-import {LoggerFactory} from '@omnigen/core-log';
-import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {JavaAndTargetOptions} from '../transform';
 import {JavaAstRootNode} from '../ast';
+import {LoggerFactory} from '@omnigen/core-log';
+import {assertUnreachable, Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {JavaAndTargetOptions} from '../transform';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -175,7 +175,7 @@ export class JavaUtil {
         return args.type.placeholderName || args.type.sourceIdentifier.placeholderName;
       case OmniTypeKind.ARRAY: {
         const arrayOf = JavaUtil.getName({...args, type: args.type.of});
-        return arrayOf + (args.withSuffix === false ? '' : '[]');
+        return arrayOf + (args.withSuffix ? '[]' : '');
       }
       case OmniTypeKind.ARRAY_TYPES_BY_POSITION:
       case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION: {
@@ -249,7 +249,8 @@ export class JavaUtil {
 
         // TODO: This is bad. The name should be set as a TypeName and evaluated once needed.
         const compositionName = JavaUtil.getCompositionClassName(args.type, args);
-        return JavaUtil.getClassNameWithPackageName(args.type, compositionName, args.options, args.withPackage);
+        const unwrappedCompositionName = Naming.unwrap(compositionName);
+        return JavaUtil.getClassNameWithPackageName(args.type, unwrappedCompositionName, args.options, args.withPackage);
       }
       case OmniTypeKind.GENERIC_SOURCE:
         return JavaUtil.getName({...args, type: args.type.of});
@@ -325,43 +326,56 @@ export class JavaUtil {
     }
   }
 
-  private static getCompositionClassName<T extends OmniType>(type: OmniCompositionType<T>, args: FqnOptions): string {
+  private static getCompositionClassName<T extends OmniType>(type: OmniCompositionType<T>, args: FqnOptions): TypeName {
 
     if (type.name) {
       return Naming.unwrap(type.name);
     }
 
-    let compositionTypes: OmniType[];
-    let prefix = '';
-    let delimiter: string;
-    switch (type.compositionKind) {
-      case CompositionKind.AND:
-        compositionTypes = type.types;
-        delimiter = 'And';
-        break;
-      case CompositionKind.OR:
-        compositionTypes = type.types;
-        delimiter = 'Or';
-        break;
-      case CompositionKind.XOR:
-        compositionTypes = type.types;
-        delimiter = 'XOr';
-        break;
-      case CompositionKind.NOT:
-        compositionTypes = type.types;
-        prefix = 'Not';
-        delimiter = '';
-        break;
+    let prefix: TypeName;
+    if (type.compositionKind == CompositionKind.XOR) {
+      prefix = ['UnionOf', 'ExclusiveUnionOf'];
+    } else if (type.compositionKind == CompositionKind.OR) {
+      prefix = 'UnionOf';
+    } else if (type.compositionKind == CompositionKind.AND) {
+      prefix = 'IntersectionOf';
+    } else if (type.compositionKind == CompositionKind.NOT) {
+      prefix = 'NegationOf';
+    } else {
+      assertUnreachable(type);
     }
 
-    const uniqueNames = new Set(compositionTypes.map(it => JavaUtil.getName({
-      ...args,
-      type: it,
-      implementation: false,
-      boxed: true,
-    })));
+    const uniqueNames = [...new Set(type.types.map(it => {
 
-    return `${prefix}${[...uniqueNames].join(delimiter)}`;
+      if (it.kind == OmniTypeKind.PRIMITIVE) {
+        switch (it.primitiveKind) {
+          case OmniPrimitiveKind.NULL:
+            return 'Null';
+          case OmniPrimitiveKind.UNDEFINED:
+            return 'Undefined';
+        }
+      } else if (it.kind == OmniTypeKind.ARRAY) {
+
+        const itemName = JavaUtil.getName({...args, type: it.of, implementation: false, boxed: true});
+        return `${itemName}Array`;
+      }
+
+      return JavaUtil.getName({...args, type: it, implementation: false, boxed: true});
+
+    }))];
+
+    let name: TypeName = {
+      name: prefix,
+    };
+
+    for (let i = 0; i < uniqueNames.length; i++) {
+      name = {
+        prefix: name,
+        name: uniqueNames[i],
+      };
+    }
+
+    return name;
   }
 
   private static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
@@ -408,6 +422,7 @@ export class JavaUtil {
       case OmniPrimitiveKind.NUMBER:
         return boxed ? 'java.lang.Number' : 'double';
       case OmniPrimitiveKind.NULL:
+      case OmniPrimitiveKind.UNDEFINED:
         return boxed ? 'java.lang.Object' : 'object';
     }
   }
@@ -490,6 +505,7 @@ export class JavaUtil {
       case UnknownKind.MAP:
         return 'java.util.Map<String, Object>';
       case UnknownKind.OBJECT:
+      case UnknownKind.ANY:
         return 'java.lang.Object';
       case UnknownKind.WILDCARD:
         return '?';

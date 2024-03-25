@@ -8,7 +8,7 @@ import {
   OmniPrimitiveKind,
   OmniProperty,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, RootAstNode,
   UnknownKind,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
@@ -17,7 +17,7 @@ import {Block, JavaAstRootNode} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaOptions} from '../options';
-import {createJavaVisitor} from '../visit';
+import {createJavaVisitor, JavaVisitor} from '../visit';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -30,10 +30,16 @@ export class JavaAstUtils {
 
     // Transform the object, but add no fields and only add the abstract method declaration (signature only)
     for (const property of OmniUtil.getPropertiesOf(interfaceLikeTarget)) {
+
+      const accessorName = OmniUtil.getPropertyAccessorName(property.name);
+      if (!accessorName) {
+        continue;
+      }
+
       body.children.push(
         new Java.AbstractMethodDeclaration(
           new Java.MethodDeclarationSignature(
-            new Java.Identifier(JavaUtil.getGetterName(property.propertyName || property.name, property.type)),
+            new Java.Identifier(JavaUtil.getGetterName(accessorName, property.type)),
             JavaAstUtils.createTypeNode(property.type, false),
           ),
         ),
@@ -108,7 +114,23 @@ export class JavaAstUtils {
     }
 
     const fieldType = JavaAstUtils.createTypeNode(property.type);
-    const fieldIdentifier = new Java.Identifier(property.fieldName || Case.camel(property.name), property.name);
+    let originalName = OmniUtil.getPropertyName(property.name);
+    if (!originalName) {
+      if (OmniUtil.isPatternPropertyName(property.name)) {
+
+        // The field's property does not have a name per se.
+        // But the field needs a name until it can be replaced by something better at later stages.
+        // So we set a (hopefully) temporary field name, which likely will not compile since it contains the regex.
+        originalName = `additionalProperties=${OmniUtil.getPropertyName(property.name, true)}`;
+
+      } else {
+        return;
+      }
+    }
+
+    const fieldName = OmniUtil.getPropertyFieldNameOnly(property.name) || Case.camel(originalName);
+
+    const fieldIdentifier = new Java.Identifier(fieldName, originalName);
 
     const field = new Java.Field(
       fieldType,
@@ -227,11 +249,50 @@ export class JavaAstUtils {
     return declaration;
   }
 
+  public static getReferenceIdNodeMap(root: JavaAstRootNode): Map<number, AstNode> {
+
+    const map = new Map<number, AstNode>();
+    const ids: number[] = [];
+
+    root.visit({
+      ...root.createVisitor<void>(),
+      visitFieldReference: (n, v) => {
+        ids.push(n.targetId);
+      },
+      visitField: (n, v) => {
+        map.set(n.id, n);
+      },
+      // Remove as many visits as possible to make the visiting faster.
+      // visitEnumDeclaration: () => {},
+      visitInterfaceDeclaration: () => {},
+      visitMethodDeclarationSignature: () => {}, // Could speed up by not going through any methods (not just signature) and returning a huge map.
+      visitImportList: () => {},
+      visitExtendsDeclaration: () => {},
+      visitImplementsDeclaration: () => {},
+      visitTypeList: () => {},
+      visitArrayInitializer: () => {},
+      visitBoundedType: () => {},
+      visitArrayType: () => {},
+      visitWildcardType: () => {},
+      visitGenericType: () => {},
+      visitEdgeType: () => {},
+      // visitConstructor: () => {},
+    });
+
+    for (const key of map.keys()) {
+      if (!ids.includes(key)) {
+        map.delete(key);
+      }
+    }
+
+    return map;
+  }
+
   public static getConstructorRequirements(
     root: JavaAstRootNode,
     node: Java.AbstractObjectDeclaration,
     followSupertype = false,
-  ): { fields: Java.Field[], parameters: Java.ConstructorParameter[] } { // [Java.Field[], Java.ConstructorParameter[]] {
+  ): { fields: Java.Field[], parameters: Java.ConstructorParameter[] } {
 
     const constructors: Java.ConstructorDeclaration[] = [];
     const fields: Java.Field[] = [];
@@ -263,7 +324,7 @@ export class JavaAstUtils {
       return {fields: [], parameters: []};
     }
 
-    const fieldsWithSetters = setters.map(setter => setter.field);
+    const fieldsWithSetters = setters.map(setter => root.getNodeWithId(setter.fieldRef.targetId)); // setter.fieldRef.field);
     const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type == Java.ModifierType.FINAL));
     const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
     const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer == undefined);
@@ -329,14 +390,24 @@ export class JavaAstUtils {
     return statement.expression;
   }
 
-  public static getGetterField(method: Java.MethodDeclaration): Java.Field | undefined {
+  public static getGetterFieldId(root: RootAstNode, method: Java.MethodDeclaration): number | undefined {
 
-    const expression = JavaAstUtils.getSoloReturn(method);
-    if (!(expression instanceof Java.FieldReference)) {
+    const fieldRef = JavaAstUtils.getSoloReturn(method);
+    if (!(fieldRef instanceof Java.FieldReference)) {
       return undefined;
     }
 
-    return expression.field;
+    return fieldRef.targetId;
+  }
+
+  public static getGetterField(root: RootAstNode, method: Java.MethodDeclaration): Java.Field | undefined {
+
+    const fieldId = JavaAstUtils.getGetterFieldId(root, method);
+    if (fieldId === undefined) {
+      return undefined;
+    }
+
+    return root.getNodeWithId<Java.Field>(fieldId);
   }
 
   public static getOmniType(node: AstNode): OmniType | undefined {
@@ -351,27 +422,6 @@ export class JavaAstUtils {
       return undefined;
     }
   }
-
-  // public static addFieldGetter(target: AstNodeWithChildren, field: Field, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
-  //
-  //   const methodSignature = new Java.MethodDeclarationSignature(
-  //     getterName ?? new Java.Identifier(JavaUtil.getGetterName(field.identifier.value, field.type.omniType)),
-  //     field.type,
-  //     undefined,
-  //     undefined,
-  //     annotations,
-  //     comments,
-  //   );
-  //
-  //   const methodBody = new Java.Block(
-  //     new Statement(new Java.ReturnStatement(new Java.FieldReference(field))),
-  //   );
-  //
-  //   const methodDeclaration = new Java.MethodDeclaration(methodSignature, methodBody);
-  //
-  //   target.children.push(field);
-  //   target.children.push(methodDeclaration);
-  // }
 
   public static unwrap(node: AstNode): AstNode {
 

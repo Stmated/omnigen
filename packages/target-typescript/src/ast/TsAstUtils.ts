@@ -1,4 +1,4 @@
-import {CompositionKind, OmniDictionaryType, OmniGenericTargetType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {CompositionKind, OmniArrayType, OmniDictionaryType, OmniGenericTargetType, OmniType, OmniTypeKind} from '@omnigen/core';
 import {Ts} from '../ast';
 import {Java} from '@omnigen/target-java';
 
@@ -10,13 +10,15 @@ export class TsAstUtils {
       return this.createMapTypeNode(type, implementation);
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       return this.createGenericTargetTypeNode(type, implementation);
+    } else if (type.kind == OmniTypeKind.ARRAY) {
+      return this.createArrayTypeNode(type, implementation);
     } else if (type.kind == OmniTypeKind.UNKNOWN) {
       if (type.upperBound) {
         return new Java.BoundedType(type, new Java.WildcardType(type, implementation), TsAstUtils.createTypeNode(type.upperBound, implementation));
       } else {
         return new Java.WildcardType(type, implementation);
       }
-    } else if (type.kind == OmniTypeKind.COMPOSITION && (type.compositionKind == CompositionKind.XOR || type.compositionKind == CompositionKind.AND)) {
+    } else if (type.kind == OmniTypeKind.COMPOSITION && (type.compositionKind == CompositionKind.XOR || type.compositionKind == CompositionKind.OR || type.compositionKind == CompositionKind.AND)) {
       return new Ts.CompositionType(type, type.types.map(it => TsAstUtils.createTypeNode(it, implementation)));
     } else {
       return new Java.EdgeType<T>(type, implementation);
@@ -31,6 +33,15 @@ export class TsAstUtils {
     const baseType = new Java.EdgeType(type, implementation);
     const mappedGenericTargetArguments = type.targetIdentifiers.map(it => TsAstUtils.createTypeNode(it.type, implementation));
     return new Java.GenericType(type, baseType, mappedGenericTargetArguments);
+  }
+
+  private static createArrayTypeNode<const T extends OmniArrayType>(
+    type: T,
+    implementation: boolean | undefined,
+  ): Java.TypeNode<T> {
+
+    const itemNode = TsAstUtils.createTypeNode(type.of);
+    return new Java.ArrayType(type, itemNode, implementation);
   }
 
   private static createMapTypeNode(

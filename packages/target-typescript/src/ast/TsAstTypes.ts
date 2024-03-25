@@ -2,7 +2,7 @@ import {AstNode, OmniCompositionType, Reducer, ReducerResult, VisitResult} from 
 import {TypeScriptVisitor} from '../visit';
 import {Java} from '@omnigen/target-java';
 
-export abstract class AbstractTypeScriptNode implements AstNode {
+export abstract class AbstractTypeScriptNode extends Java.AbstractJavaNode implements AstNode {
 
   abstract visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R>;
 

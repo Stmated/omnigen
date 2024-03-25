@@ -1,7 +1,6 @@
 import {
   AstNode,
   AstNodeWithChildren,
-  AstToken,
   AstVisitor,
   LiteralValue, OmniArrayType,
   OmniEnumType,
@@ -16,9 +15,9 @@ import {
   ReducerResult,
   VisitResult,
 } from '@omnigen/core';
-import {JavaUtil} from '../util';
 import {AstFreeTextVisitor, JavaVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core-util';
+import {JavaReducer} from '../reduce';
 
 export enum TokenKind {
   ASSIGN,
@@ -37,10 +36,48 @@ export enum TokenKind {
   AND,
 }
 
-export class JavaToken implements AstToken {
+class CounterSource {
+  private _counter = 0;
+
+  public getNext(): number {
+    this._counter++;
+    return this._counter;
+  }
+}
+
+export abstract class AbstractJavaNode implements AstNode {
+
+  private static readonly _COUNTER_SOURCE = new CounterSource();
+
+  private _id?: number;
+
+  get id(): number {
+    if (this._id !== undefined) {
+      return this._id;
+    } else {
+      this._id = AbstractJavaNode._COUNTER_SOURCE.getNext();
+    }
+
+    return this._id;
+  }
+
+  public setId(id: number): this {
+    if (this._id !== undefined) {
+      throw new Error(`Not allowed to change id if one has already been set, existing:${this._id}, new:${id}`);
+    }
+    this._id = id;
+    return this;
+  }
+
+  abstract visit<R>(visitor: JavaVisitor<R>): VisitResult<R>;
+  abstract reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AbstractJavaNode>;
+}
+
+export class JavaToken extends AbstractJavaNode {
   type: TokenKind;
 
   constructor(type: TokenKind) {
+    super();
     this.type = type;
   }
 
@@ -53,13 +90,7 @@ export class JavaToken implements AstToken {
   }
 }
 
-export abstract class AbstractJavaNode implements AstNode {
-  abstract visit<R>(visitor: JavaVisitor<R>): VisitResult<R>;
-
-  abstract reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AbstractJavaNode>;
-}
-
-export interface TypeNode<T extends OmniType = OmniType> extends AstNode {
+export interface TypeNode<T extends OmniType = OmniType> extends AbstractJavaNode {
   omniType: T;
   implementation?: boolean | undefined;
 
@@ -212,6 +243,7 @@ export class GenericType<
 export class Identifier extends AbstractJavaNode {
   value: string;
   original?: string | undefined;
+  implicit?: boolean;
 
   constructor(name: string, original?: string) {
     super();
@@ -228,10 +260,10 @@ export class Identifier extends AbstractJavaNode {
   }
 }
 
-export abstract class AbstractExpression extends AbstractJavaNode {
+export abstract class AbstractJavaExpression extends AbstractJavaNode {
 }
 
-export class Literal extends AbstractExpression {
+export class Literal extends AbstractJavaExpression {
   readonly value: LiteralValue;
   readonly primitiveKind: OmniPrimitiveKind;
 
@@ -344,9 +376,9 @@ export type StaticTarget = ClassName;
 
 export class StaticMemberReference extends AbstractJavaNode {
   target: StaticTarget;
-  member: AbstractExpression;
+  member: AbstractJavaExpression;
 
-  constructor(target: StaticTarget, member: AbstractExpression) {
+  constructor(target: StaticTarget, member: AbstractJavaExpression) {
     super();
     this.target = target;
     this.member = member;
@@ -401,9 +433,9 @@ export class ParameterList extends AbstractJavaNode implements AstNodeWithChildr
 
 export class ConstructorParameter extends Parameter {
 
-  field: Field;
+  field: FieldReference;
 
-  constructor(field: Field, type: TypeNode, identifier: Identifier, annotations?: AnnotationList) {
+  constructor(field: FieldReference, type: TypeNode, identifier: Identifier, annotations?: AnnotationList) {
     super(type, identifier, annotations);
     this.field = field;
   }
@@ -435,11 +467,11 @@ export class ConstructorParameterList extends AbstractJavaNode implements AstNod
 }
 
 export class BinaryExpression extends AbstractJavaNode {
-  left: AbstractExpression;
+  left: AbstractJavaExpression;
   token: JavaToken;
-  right: AbstractExpression;
+  right: AbstractJavaExpression;
 
-  constructor(left: AbstractExpression, token: JavaToken, right: AbstractExpression) {
+  constructor(left: AbstractJavaExpression, token: JavaToken, right: AbstractJavaExpression) {
     super();
     this.left = left;
     this.token = token;
@@ -456,7 +488,7 @@ export class BinaryExpression extends AbstractJavaNode {
 }
 
 export class AssignExpression extends BinaryExpression {
-  constructor(left: AbstractExpression, right: AbstractExpression) {
+  constructor(left: AbstractJavaExpression, right: AbstractJavaExpression) {
     super(left, new JavaToken(TokenKind.ASSIGN), right);
   }
 
@@ -496,7 +528,7 @@ export type TokenTypePredicate =
 
 export class Predicate extends BinaryExpression {
 
-  constructor(left: AbstractExpression, token: TokenTypePredicate, right: AbstractExpression) {
+  constructor(left: AbstractJavaExpression, token: TokenTypePredicate, right: AbstractJavaExpression) {
     super(left, new JavaToken(token), right);
   }
 
@@ -509,10 +541,10 @@ export class Predicate extends BinaryExpression {
   }
 }
 
-export class ArgumentList extends AbstractJavaNode implements AstNodeWithChildren<AbstractExpression> {
-  children: AbstractExpression[];
+export class ArgumentList extends AbstractJavaNode implements AstNodeWithChildren<AbstractJavaExpression> {
+  children: AbstractJavaExpression[];
 
-  constructor(...children: AbstractExpression[]) {
+  constructor(...children: AbstractJavaExpression[]) {
     super();
     this.children = children;
   }
@@ -523,6 +555,23 @@ export class ArgumentList extends AbstractJavaNode implements AstNodeWithChildre
 
   reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<ArgumentList> {
     return reducer.reduceArgumentList(this, reducer);
+  }
+}
+
+export class Nodes extends AbstractJavaNode implements AstNodeWithChildren {
+  children: AstNode[];
+
+  constructor(...children: AstNode[]) {
+    super();
+    this.children = children;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitNodes(this, visitor);
+  }
+
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AbstractJavaNode> {
+    return reducer.reduceNodes(this, reducer);
   }
 }
 
@@ -543,10 +592,10 @@ export class EnumItemList extends AbstractJavaNode implements AstNodeWithChildre
   }
 }
 
-export class Block extends AbstractJavaNode implements AstNodeWithChildren<AbstractJavaNode> {
-  children: AbstractJavaNode[];
+export class Block extends AbstractJavaNode implements AstNodeWithChildren {
+  children: AstNode[];
 
-  constructor(...children: AbstractJavaNode[]) {
+  constructor(...children: AstNode[]) {
     super();
     this.children = children;
   }
@@ -651,6 +700,10 @@ const fromFriendlyFreeText = (text: FriendlyFreeTextIn): AnyFreeText => {
     return new FreeText(text);
   } else {
     if (Array.isArray(text)) {
+      if (text.length == 1) {
+        return fromFriendlyFreeText(text[0]);
+      }
+
       return new FreeTexts(...text.map(it => fromFriendlyFreeText(it)));
     } else {
       return text;
@@ -767,9 +820,9 @@ export class FreeTextSection extends AbstractFreeText {
 }
 
 export class FreeTextTypeLink extends AbstractFreeText {
-  readonly type: TypeNode;
+  readonly type: AstNode;
 
-  constructor(type: TypeNode) {
+  constructor(type: AstNode) {
     super();
     this.type = type;
   }
@@ -784,10 +837,10 @@ export class FreeTextTypeLink extends AbstractFreeText {
 }
 
 export class FreeTextMethodLink extends AbstractFreeText {
-  readonly type: TypeNode;
+  readonly type: AstNode;
   readonly method: AstNode;
 
-  constructor(type: TypeNode, method: AstNode) {
+  constructor(type: AstNode, method: AstNode) {
     super();
     this.type = type;
     this.method = method;
@@ -803,10 +856,10 @@ export class FreeTextMethodLink extends AbstractFreeText {
 }
 
 export class FreeTextPropertyLink extends AbstractFreeText {
-  readonly type: TypeNode;
+  readonly type: AstNode;
   readonly property: OmniProperty;
 
-  constructor(type: TypeNode, property: OmniProperty) {
+  constructor(type: AstNode, property: OmniProperty) {
     super();
     this.type = type;
     this.property = property;
@@ -874,13 +927,13 @@ export class CommentBlock extends AbstractJavaNode {
 export class Field extends AbstractJavaNode {
   identifier: Identifier;
   type: TypeNode;
-  initializer?: AbstractExpression | undefined;
+  initializer?: AbstractJavaExpression | undefined;
   comments?: CommentBlock | undefined;
   modifiers: ModifierList;
   annotations?: AnnotationList | undefined;
   property?: OmniProperty;
 
-  constructor(type: TypeNode, name: Identifier, modifiers?: ModifierList, initializer?: AbstractExpression | undefined, annotations?: AnnotationList) {
+  constructor(type: TypeNode, name: Identifier, modifiers?: ModifierList, initializer?: AbstractJavaExpression | undefined, annotations?: AnnotationList) {
     super();
     this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PRIVATE));
     this.type = type;
@@ -893,7 +946,7 @@ export class Field extends AbstractJavaNode {
     return visitor.visitField(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<Field> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AbstractJavaNode> {
     return reducer.reduceField(this, reducer);
   }
 }
@@ -969,15 +1022,15 @@ export class MethodDeclaration extends AbstractJavaNode {
     return visitor.visitMethodDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<MethodDeclaration | MethodDeclarationSignature | Statement> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<MethodDeclaration | MethodDeclarationSignature | Statement | Field | FieldBackedGetter> {
     return reducer.reduceMethodDeclaration(this, reducer);
   }
 }
 
 export class ReturnStatement extends AbstractJavaNode {
-  expression: AbstractExpression;
+  expression: AbstractJavaExpression;
 
-  constructor(expression: AbstractExpression) {
+  constructor(expression: AbstractJavaExpression) {
     super();
     this.expression = expression;
   }
@@ -991,7 +1044,7 @@ export class ReturnStatement extends AbstractJavaNode {
   }
 }
 
-export class SelfReference extends AbstractExpression {
+export class SelfReference extends AbstractJavaExpression {
 
   constructor() {
     super();
@@ -1006,12 +1059,15 @@ export class SelfReference extends AbstractExpression {
   }
 }
 
-export class FieldReference extends AbstractExpression {
-  field: Field;
+/**
+ * TODO: Maybe remove in favor of a generic `Reference<T>` to replace all other
+ */
+export class FieldReference extends AbstractJavaExpression {
+  targetId: number;
 
-  constructor(field: Field) {
+  constructor(target: number | Field) {
     super();
-    this.field = field;
+    this.targetId = (typeof target === 'number') ? target : target.id;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -1023,6 +1079,9 @@ export class FieldReference extends AbstractExpression {
   }
 }
 
+/**
+ * TODO: Must change so that the reference is for the id, and not directly to the target object -- it will become messed up when reducing
+ */
 export class DeclarationReference extends AbstractJavaNode {
   declaration: VariableDeclaration | Parameter;
 
@@ -1043,10 +1102,10 @@ export class DeclarationReference extends AbstractJavaNode {
 export class VariableDeclaration extends AbstractJavaNode {
   identifier: Identifier;
   type?: TypeNode | undefined;
-  initializer?: AbstractExpression | undefined;
+  initializer?: AbstractJavaExpression | undefined;
   constant?: boolean | undefined;
 
-  constructor(variableName: Identifier, initializer?: AbstractExpression, type?: TypeNode | undefined, constant?: boolean) {
+  constructor(variableName: Identifier, initializer?: AbstractJavaExpression, type?: TypeNode | undefined, constant?: boolean) {
     super();
     if (!type && !initializer) {
       throw new Error(`Either a type or an initializer must be given to the field declaration`);
@@ -1067,122 +1126,57 @@ export class VariableDeclaration extends AbstractJavaNode {
   }
 }
 
-export abstract class AbstractFieldBackedMethodDeclaration extends MethodDeclaration {
+export class FieldBackedGetter extends AbstractJavaNode {
 
-  /**
-   * TODO: Should we really have a really have a reference to the field here?
-   */
-  readonly field: Field;
+  readonly fieldRef: FieldReference;
+  readonly annotations?: AnnotationList | undefined;
+  readonly comments?: CommentBlock | undefined;
+  readonly getterName?: Identifier | undefined;
 
-  protected constructor(field: Field, signature: MethodDeclarationSignature, body?: Block) {
-    super(signature, body);
-    this.field = field;
-  }
-}
-
-/**
- * TODO: Redo so that it only refers to an expression to return, and has its own properties for annotations, comments, et cetera.
- */
-export class FieldBackedGetter extends AbstractFieldBackedMethodDeclaration {
-
-  constructor(field: Field, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
-    super(
-      field,
-      new MethodDeclarationSignature(
-        getterName ?? new Identifier(JavaUtil.getGetterName(field.identifier.value, field.type.omniType)),
-        field.type,
-        undefined,
-        undefined,
-        annotations,
-        comments,
-      ),
-      new Block(
-        new Statement(new ReturnStatement(new FieldReference(field))),
-      ));
+  constructor(fieldRef: FieldReference, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
+    super();
+    this.fieldRef = fieldRef;
+    this.annotations = annotations;
+    this.comments = comments;
+    this.getterName = getterName;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitFieldBackedGetter(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldBackedGetter | MethodDeclarationSignature | Statement> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldBackedGetter | MethodDeclarationSignature | Statement | Field | MethodDeclaration> {
     return reducer.reduceFieldBackedGetter(this, reducer);
   }
 }
 
-export class FieldBackedSetter extends AbstractFieldBackedMethodDeclaration {
+export class FieldBackedSetter extends AbstractJavaNode {
 
-  constructor(field: Field, annotations?: AnnotationList, comments?: CommentBlock) {
-    const parameter = new Parameter(
-      field.type,
-      field.identifier,
-    );
+  readonly fieldRef: FieldReference;
+  readonly annotations?: AnnotationList | undefined;
+  readonly comments?: CommentBlock | undefined;
 
-    super(
-      field,
-      new MethodDeclarationSignature(
-        new Identifier(JavaUtil.getSetterName(field.identifier.value)),
-        new EdgeType({
-          kind: OmniTypeKind.PRIMITIVE,
-          primitiveKind: OmniPrimitiveKind.VOID,
-          nullable: true,
-        }),
-        new ParameterList(parameter),
-        undefined,
-        annotations,
-        comments,
-      ),
-      new Block(
-        new Statement(
-          new AssignExpression(
-            new FieldReference(field),
-            new DeclarationReference(parameter),
-          ),
-        ),
-      ));
+  constructor(fieldRef: FieldReference, annotations?: AnnotationList, comments?: CommentBlock) {
+    super();
+    this.fieldRef = fieldRef;
+    this.annotations = annotations;
+    this.comments = comments;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitFieldBackedSetter(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldBackedSetter> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldBackedSetter | MethodDeclaration> {
     return reducer.reduceFieldBackedSetter(this, reducer);
-  }
-}
-
-export class FieldGetterSetter extends AbstractJavaNode {
-  field: Field;
-  readonly getter: FieldBackedGetter;
-  readonly setter: FieldBackedSetter;
-
-  constructor(
-    type: TypeNode,
-    fieldIdentifier: Identifier,
-    getterAnnotations?: AnnotationList,
-    comments?: CommentBlock,
-    getterIdentifier?: Identifier,
-  ) {
-    super();
-    this.field = new Field(type, fieldIdentifier, undefined, undefined, undefined);
-    this.getter = new FieldBackedGetter(this.field, getterAnnotations, comments, getterIdentifier);
-    this.setter = new FieldBackedSetter(this.field);
-  }
-
-  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitFieldGetterSetter(this, visitor);
-  }
-
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldGetterSetter> {
-    return reducer.reduceFieldGetterSetter(this, reducer);
   }
 }
 
 export class Cast extends AbstractJavaNode {
   toType: TypeNode;
-  expression: AbstractExpression;
+  expression: AbstractJavaExpression;
 
-  constructor(toType: TypeNode, expression: AbstractExpression) {
+  constructor(toType: TypeNode, expression: AbstractJavaExpression) {
     super();
     this.toType = toType;
     this.expression = expression;
@@ -1369,7 +1363,7 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration {
   }
 }
 
-export class GenericTypeDeclaration implements AstNode {
+export class GenericTypeDeclaration extends AbstractJavaNode {
   sourceIdentifier?: OmniGenericSourceIdentifierType | undefined;
   name: Identifier;
   /**
@@ -1382,6 +1376,7 @@ export class GenericTypeDeclaration implements AstNode {
   upperBounds?: TypeNode | undefined;
 
   constructor(name: Identifier, sourceIdentifier?: OmniGenericSourceIdentifierType, upperBounds?: TypeNode, lowerBounds?: TypeNode) {
+    super();
     this.name = name;
     this.sourceIdentifier = sourceIdentifier;
     this.upperBounds = upperBounds;
@@ -1392,7 +1387,7 @@ export class GenericTypeDeclaration implements AstNode {
     return visitor.visitGenericTypeDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<GenericTypeDeclaration> {
+  reduce(reducer: JavaReducer): ReducerResult<GenericTypeDeclaration> {
     return reducer.reduceGenericTypeDeclaration(this, reducer);
   }
 }
@@ -1490,10 +1485,10 @@ export class IfElseStatement extends AbstractJavaNode {
 
 export class TernaryExpression extends AbstractJavaNode {
   predicate: Predicate;
-  passing: AbstractExpression;
-  failing: AbstractExpression;
+  passing: AbstractJavaExpression;
+  failing: AbstractJavaExpression;
 
-  constructor(condition: Predicate, passing: AbstractExpression, failing: AbstractExpression) {
+  constructor(condition: Predicate, passing: AbstractJavaExpression, failing: AbstractJavaExpression) {
     super();
     this.predicate = condition;
     this.passing = passing;
@@ -1579,11 +1574,11 @@ export class SuperConstructorCall extends AbstractJavaNode {
 }
 
 export class MethodCall extends AbstractJavaNode {
-  target: AbstractExpression;
+  target: AbstractJavaExpression;
   methodName: Identifier;
   methodArguments?: ArgumentList;
 
-  constructor(target: AbstractExpression, methodName: Identifier, methodArguments: ArgumentList) {
+  constructor(target: AbstractJavaExpression, methodName: Identifier, methodArguments: ArgumentList) {
     super();
     this.target = target;
     this.methodName = methodName;
@@ -1616,15 +1611,15 @@ export class NewStatement extends AbstractJavaNode {
     return visitor.visitNewStatement(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AstNode> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AbstractJavaNode> {
     return reducer.reduceNewStatement(this, reducer);
   }
 }
 
 export class ThrowStatement extends AbstractJavaNode {
-  expression: AbstractExpression;
+  expression: AbstractJavaExpression;
 
-  constructor(expression: AbstractExpression) {
+  constructor(expression: AbstractJavaExpression) {
     super();
     this.expression = expression;
   }
@@ -1655,7 +1650,7 @@ export class HardCoded extends AbstractJavaNode {
   }
 }
 
-export class ClassName extends AbstractExpression {
+export class ClassName extends AbstractJavaExpression {
   type: TypeNode;
 
   constructor(type: TypeNode) {
@@ -1672,7 +1667,7 @@ export class ClassName extends AbstractExpression {
   }
 }
 
-export class ClassReference extends AbstractExpression {
+export class ClassReference extends AbstractJavaExpression {
   className: ClassName;
 
   constructor(className: ClassName) {
@@ -1686,5 +1681,22 @@ export class ClassReference extends AbstractExpression {
 
   reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<ClassReference> {
     return reducer.reduceClassReference(this, reducer);
+  }
+}
+
+export class IdentifierOf extends AbstractJavaNode {
+  targetId: number;
+
+  constructor(targetId: number) {
+    super();
+    this.targetId = targetId;
+  }
+
+  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
+    return visitor.visitIdentifierOf(this, visitor);
+  }
+
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<IdentifierOf> {
+    return reducer.reduceIdentifierOf(this, reducer);
   }
 }

@@ -1,9 +1,8 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {OmniType, OmniTypeKind} from '@omnigen/core';
+import {OmniTypeKind} from '@omnigen/core';
 import {JavaUtil} from '../util';
 import {JavaAstUtils} from './JavaAstUtils.ts';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {AdditionalPropertiesDeclaration} from '../ast';
 
 export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): void {
@@ -26,11 +25,11 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
             JavaAstUtils.addOmniPropertyToBlockAsField(property, body, args.options);
           }
 
-          if (type.additionalProperties && !JavaUtil.superMatches(args.model, type, parent => this.hasAdditionalProperties(parent))) {
-
-            // No parent implements additional properties, so we should.
-            body.children.push(new AdditionalPropertiesDeclaration(args.options));
-          }
+          // if (type.additionalProperties && !JavaUtil.superMatches(args.model, type, parent => this.hasAdditionalProperties(parent))) {
+          //
+          //   // No parent implements additional properties, so we should.
+          //   body.children.push(new AdditionalPropertiesDeclaration(args.options));
+          // }
         }
 
         for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
@@ -43,7 +42,7 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
     }));
   }
 
-  private hasAdditionalProperties(parent: OmniType): boolean {
-    return parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true;
-  }
+  // private hasAdditionalProperties(parent: OmniType): boolean {
+  //   return parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true;
+  // }
 }

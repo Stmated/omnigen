@@ -9,7 +9,9 @@ describe('jsonschema-typescript-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/discriminator.json'), {});
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/discriminator.json'), {
+      singleFile: false,
+    });
     const fileContents = getFileContents(rendered);
 
     expect(Object.keys(fileContents).sort()).toMatchSnapshot();
@@ -18,12 +20,15 @@ describe('jsonschema-typescript-render', () => {
     }
   });
 
-  test('jsonschema7', async ({task}) => {
+  test('jsonschema7-lax-undefined', async ({task}) => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     // https://json-schema.org/draft-07/schema
-    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-typescript/examples/jsonschema-draft-07.json'), {});
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-typescript/examples/jsonschema-draft-07.json'), {
+      strictUndefined: false,
+      includeGenerated: false,
+    });
     const fileContents = getFileContents(rendered);
 
     expect(Object.keys(fileContents).sort()).toMatchSnapshot();
@@ -34,12 +39,14 @@ describe('jsonschema-typescript-render', () => {
 
   test('jsonschema7-strict-undefined', async ({task}) => {
 
-    // TODO: Implement separate setting for strict undefined (no `| undefined` automatically added to `?:` properties)
-
+    // TODO: Make sure this works properly -- UNTESTED!
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     // https://json-schema.org/draft-07/schema
-    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-typescript/examples/jsonschema-draft-07.json'), {});
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-typescript/examples/jsonschema-draft-07.json'), {
+      strictUndefined: true,
+      includeGenerated: false,
+    });
     const fileContents = getFileContents(rendered);
 
     expect(Object.keys(fileContents).sort()).toMatchSnapshot();

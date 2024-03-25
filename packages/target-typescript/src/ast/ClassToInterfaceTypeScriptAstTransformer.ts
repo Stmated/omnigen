@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer} from '@omnigen/core';
+import {AstTransformer, RootAstNode} from '@omnigen/core';
 import {Java, JavaAstUtils} from '@omnigen/target-java';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
@@ -29,7 +29,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
           fieldNamesStack.push([]);
           const body = n.body.reduce(r) ?? new Java.Block();
 
-          const newInterface = new Java.InterfaceDeclaration(n.type, n.name, body, n.modifiers);
+          const newInterface = new Java.InterfaceDeclaration(n.type, n.name, body, n.modifiers).setId(n.id);
           if (n.implements) {
             if (n.implements.types.children.length == 1) {
               newInterface.extends = new Java.ExtendsDeclaration(n.implements.types.children[0]);
@@ -44,8 +44,15 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
         }
       },
       reduceConstructor: () => undefined,
-      reduceMethodDeclaration: n => fieldNamesStack.length > 0 ? this.methodSignatureToField(n, fieldNamesStack[fieldNamesStack.length - 1]) : n,
-      reduceFieldBackedGetter: n => fieldNamesStack.length > 0 ? this.toUniqueField(n.field, fieldNamesStack[fieldNamesStack.length - 1]) : n,
+      reduceMethodDeclaration: n => fieldNamesStack.length > 0 ? this.methodSignatureToField(args.root, n, fieldNamesStack[fieldNamesStack.length - 1]) : n,
+      reduceFieldBackedGetter: n => {
+        if (fieldNamesStack.length > 0) {
+          const field = args.root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+          return this.toUniqueField(field, fieldNamesStack[fieldNamesStack.length - 1]);
+        } else {
+          return n;
+        }
+      },
       reduceField: n => fieldNamesStack.length > 0 ? this.toUniqueField(n, fieldNamesStack[fieldNamesStack.length - 1]) : n,
     };
 
@@ -55,9 +62,9 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
     }
   }
 
-  private methodSignatureToField(method: Java.MethodDeclaration, fieldNames: string[]): Java.Field | undefined {
+  private methodSignatureToField(root: RootAstNode, method: Java.MethodDeclaration, fieldNames: string[]): Java.Field | undefined {
 
-    const getterField = JavaAstUtils.getGetterField(method);
+    const getterField = JavaAstUtils.getGetterField(root, method);
     if (getterField) {
       return this.toUniqueField(getterField, fieldNames);
     }

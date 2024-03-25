@@ -19,6 +19,10 @@ import {Reducer, ReducerResult} from '../reduce';
  */
 export interface AstNode {
 
+  id?: number;
+
+  setId(id: number): this;
+
   visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode>;
 }
@@ -27,4 +31,5 @@ export interface RootAstNode extends AstNode {
 
   createVisitor<R>(): AstVisitor<R>;
   createReducer(): Reducer<AstVisitor<unknown>>;
+  getNodeWithId<T extends AstNode>(id: number): T;
 }

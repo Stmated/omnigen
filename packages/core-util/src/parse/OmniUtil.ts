@@ -14,14 +14,16 @@ import {
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
   OmniInput,
-  OmniModel, OmniNumericPrimitiveKinds,
-  OmniObjectType, OmniOptionallyNamedType,
+  OmniModel, OmniNamedType,
+  OmniObjectType,
+  OmniOptionallyNamedType,
   OmniOutput,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKind,
+  OmniPrimitiveNull,
   OmniPrimitiveNullableType,
   OmniPrimitiveType,
-  OmniProperty,
+  OmniProperty, OmniPropertyName, OmniPropertyNamePattern,
   OmniPropertyOwner,
   OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
@@ -42,6 +44,7 @@ import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVi
 import {Naming} from './Naming.js';
 import {util} from 'zod';
 import assertNever = util.assertNever;
+import {assertUnreachable} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -504,8 +507,17 @@ export class OmniUtil {
     assertNever(value);
   }
 
+  /**
+   * NOTE: Probably outdated, since Omni does not really have notion of "additional properties" instead can have multiple pattern properties.
+   */
   public static hasAdditionalProperties(type: OmniObjectType): boolean {
-    return (type.additionalProperties != undefined && type.additionalProperties);
+    for (const property of type.properties) {
+      if (OmniUtil.isPatternPropertyName(property.name)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -526,13 +538,12 @@ export class OmniUtil {
     return false;
   }
 
-  public static isNull(type: OmniType): boolean {
+  public static isNull(type: OmniType): type is OmniPrimitiveNull {
+    return type.kind == OmniTypeKind.PRIMITIVE && type.primitiveKind === OmniPrimitiveKind.NULL;
+  }
 
-    if (type.kind != OmniTypeKind.PRIMITIVE) {
-      return false;
-    }
-
-    return type.primitiveKind == OmniPrimitiveKind.NULL;
+  public static isUndefined(type: OmniType): type is OmniPrimitiveNull {
+    return type.kind == OmniTypeKind.PRIMITIVE && type.primitiveKind == OmniPrimitiveKind.UNDEFINED;
   }
 
   /**
@@ -570,6 +581,8 @@ export class OmniUtil {
         return nullable ? 'Number' : 'number';
       case OmniPrimitiveKind.NULL:
         return 'null';
+      case OmniPrimitiveKind.UNDEFINED:
+        return 'undefined';
     }
   }
 
@@ -725,6 +738,8 @@ export class OmniUtil {
           return '_object';
         case UnknownKind.WILDCARD:
           return '_wildcard';
+        case UnknownKind.ANY:
+          return '_any';
         default:
           throw new Error(`Unknown UnknownType '${type.unknownKind}`);
       }
@@ -765,7 +780,28 @@ export class OmniUtil {
     } else if (type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
       return type.fqn;
     } else if (type.kind == OmniTypeKind.COMPOSITION) {
-      return `Composition${type.compositionKind}(${type.types.map(it => OmniUtil.getVirtualTypeName(it)).join(',')})`;
+
+      let prefix: TypeName;
+      if (type.compositionKind == CompositionKind.XOR) {
+        prefix = ['UnionOf', 'ExclusiveUnionOf'];
+      } else if (type.compositionKind == CompositionKind.OR) {
+        prefix = 'UnionOf';
+      } else if (type.compositionKind == CompositionKind.AND) {
+        prefix = 'IntersectionOf';
+      } else if (type.compositionKind == CompositionKind.NOT) {
+        prefix = 'NegationOf';
+      } else {
+        assertUnreachable(type);
+      }
+
+      return {
+        prefix: prefix,
+        name: {
+          prefix: '(',
+          name: type.types.map(it => OmniUtil.getVirtualTypeName(it)).join(','),
+        },
+        suffix: `)`,
+      };
     }
 
     const typeName = OmniUtil.getTypeName(type);
@@ -1135,13 +1171,16 @@ export class OmniUtil {
     return diffAmount > 0;
   }
 
-  public static getCommonDenominator(targetFeatures: TargetFeatures, ...types: OmniType[]): CommonDenominatorType<OmniType> | undefined {
+  public static getCommonDenominator(options: TargetFeatures | {features: TargetFeatures, create?: boolean}, ...types: OmniType[]): CommonDenominatorType<OmniType> | undefined {
 
     if (types.length == 1) {
       return {
         type: types[0],
       };
     }
+
+    const opt = ('features' in options) ? options : {features: options, create: undefined};
+    // const targetFeatures = ('features' in options) ? options.features : options;
 
     let commonDiffAmount = 0;
     let common: CommonDenominatorType<OmniType> = {
@@ -1150,7 +1189,7 @@ export class OmniUtil {
 
     for (let i = 1; i < types.length; i++) {
 
-      const denominator = OmniUtil.getCommonDenominatorBetween(common.type, types[i], targetFeatures);
+      const denominator = OmniUtil.getCommonDenominatorBetween(common.type, types[i], opt.features, opt.create);
       if (!denominator || (denominator.diffs && denominator.diffs.includes(TypeDiffKind.FUNDAMENTAL_TYPE))) {
         return undefined;
       }
@@ -1684,6 +1723,7 @@ export class OmniUtil {
 
     return type.primitiveKind == OmniPrimitiveKind.NUMBER
       || type.primitiveKind == OmniPrimitiveKind.DOUBLE
+      || type.primitiveKind == OmniPrimitiveKind.LONG
       || type.primitiveKind == OmniPrimitiveKind.INTEGER
       || type.primitiveKind == OmniPrimitiveKind.INTEGER_SMALL
       || type.primitiveKind == OmniPrimitiveKind.FLOAT
@@ -1736,10 +1776,6 @@ export class OmniUtil {
   ): CommonDenominatorType<OmniType> | undefined {
 
     if (a.properties.length != b.properties.length) {
-      return undefined;
-    }
-
-    if (a.additionalProperties != b.additionalProperties) {
       return undefined;
     }
 
@@ -1805,7 +1841,7 @@ export class OmniUtil {
     if (from.kind == OmniTypeKind.OBJECT && to.kind == OmniTypeKind.OBJECT) {
 
       for (const fromProperty of (from.properties || [])) {
-        const toProperty = to.properties?.find(p => p.name == fromProperty.name);
+        const toProperty = to.properties?.find(p => OmniUtil.isPropertyNameMatching(p.name, fromProperty.name));
         if (!toProperty) {
           // This is a new property, and can just be added to the 'to'.
           OmniUtil.addPropertyToClassType(fromProperty, to);
@@ -1896,15 +1932,15 @@ export class OmniUtil {
 
         const propertyCommon = OmniUtil.getCommonDenominatorBetween(baseProperty.type, withSameName.type, features, false);
         if (propertyCommon === undefined) {
-          diffs.push({kind: DiffKind.PROPERTY_TYPE, propertyName: baseProperty.name}); // , other: withSameName, propertyTypeDiff: [TypeDiffKind.FUNDAMENTAL_TYPE]});
+          diffs.push({kind: DiffKind.PROPERTY_TYPE, propertyName: OmniUtil.getPropertyName(baseProperty.name, true)});
         } else if (propertyCommon?.diffs && propertyCommon.diffs.length > 0) {
-          diffs.push({kind: DiffKind.PROPERTY_TYPE, propertyName: baseProperty.name}); // , other: withSameName, propertyTypeDiff: propertyCommon.diffs});
+          diffs.push({kind: DiffKind.PROPERTY_TYPE, propertyName: OmniUtil.getPropertyName(baseProperty.name, true)});
         }
 
       } else {
 
         // This property does not exist in the other object, so it is different by virtue of existing.
-        diffs.push({kind: DiffKind.MISSING_PROPERTY, propertyName: baseProperty.name});
+        diffs.push({kind: DiffKind.MISSING_PROPERTY, propertyName: OmniUtil.getPropertyName(baseProperty.name, true)});
       }
     }
 
@@ -1912,7 +1948,7 @@ export class OmniUtil {
 
       const existsInBase = baseProperties.find(it => it.name == otherProperty.name);
       if (!existsInBase) {
-        diffs.push({kind: DiffKind.EXTRA_PROPERTY, propertyName: otherProperty.name});
+        diffs.push({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(otherProperty.name, true)});
       }
     }
 
@@ -1948,11 +1984,13 @@ export class OmniUtil {
           diff.typeDiffs.forEach(it => otherDifferences.add(it));
           if (baseline.kind == OmniTypeKind.OBJECT) {
             for (const property of baseline.properties) {
-              missingProperty.set(property.name, (missingProperty.get(property.name) ?? 0) + 1);
+              const resolvedName = OmniUtil.getPropertyName(property.name, true);
+              missingProperty.set(resolvedName, (missingProperty.get(resolvedName) ?? 0) + 1);
             }
           } else if (other.kind == OmniTypeKind.OBJECT) {
             for (const property of other.properties) {
-              missingProperty.set(property.name, (missingProperty.get(property.name) ?? 0) + 1);
+              const resolvedName = OmniUtil.getPropertyName(property.name, true);
+              missingProperty.set(resolvedName, (missingProperty.get(resolvedName) ?? 0) + 1);
             }
           }
         } else if (diff.kind == DiffKind.PROPERTY_TYPE) {
@@ -2057,6 +2095,164 @@ export class OmniUtil {
       type: as || property.type,
     });
   }
+
+  public static getPrimitiveNumberCoverageScore(kind: OmniPrimitiveKind): number {
+
+    switch (kind) {
+      case OmniPrimitiveKind.DECIMAL:
+        return 7;
+      case OmniPrimitiveKind.DOUBLE:
+        return 6;
+      case OmniPrimitiveKind.FLOAT:
+        return 5;
+      case OmniPrimitiveKind.LONG:
+        return 4;
+      case OmniPrimitiveKind.INTEGER:
+        return 3;
+      case OmniPrimitiveKind.INTEGER_SMALL:
+        return 2;
+      case OmniPrimitiveKind.NUMBER:
+        return 1;
+    }
+
+    return 0;
+  }
+
+  public static isPropertyNameEqual(a: OmniPropertyName, b: OmniPropertyName): boolean {
+
+    const aResolved = OmniUtil.getPropertyNameOrPattern(a);
+    const bResolved = OmniUtil.getPropertyNameOrPattern(b);
+
+    if (typeof aResolved === 'string' && typeof bResolved === 'string') {
+      return aResolved === bResolved;
+    } else {
+      return false;
+    }
+  }
+
+  public static isPropertyNameMatching(a: OmniPropertyName, b: OmniPropertyName): boolean {
+
+    const aResolved = OmniUtil.getPropertyNameOrPattern(a);
+    const bResolved = OmniUtil.getPropertyNameOrPattern(b);
+
+    if (typeof aResolved === 'string') {
+      if (typeof bResolved === 'string') {
+        return aResolved === bResolved;
+      } else {
+        return bResolved.test(aResolved);
+      }
+    } else {
+      if (typeof bResolved === 'string') {
+        return aResolved.test(bResolved);
+      } else {
+        return aResolved.source === bResolved.source;
+      }
+    }
+  }
+
+  /**
+   * Returns the serializable name of a property name, or undefined if the name is a regex pattern and cannot be properly translated to a name.
+   */
+  public static getPropertyName(name: OmniPropertyName, regexAcceptable: true): string;
+  public static getPropertyName(name: OmniPropertyName, regexAcceptable?: boolean): string | undefined;
+  public static getPropertyName(name: OmniPropertyName, regexAcceptable?: boolean): string | undefined {
+    if (typeof name === 'string') {
+      return name;
+    } else {
+      if (name.isPattern) {
+        return regexAcceptable ? name.name.source : undefined;
+      } else {
+        return name.name;
+      }
+    }
+  }
+
+  public static getPropertyNameOrPattern(name: OmniPropertyName): string | RegExp {
+    if (typeof name === 'string') {
+      return name;
+    } else {
+      if (name.isPattern) {
+        return name.name;
+      } else {
+        return name.name;
+      }
+    }
+  }
+
+  public static isPatternPropertyName(name: OmniPropertyName): name is OmniPropertyNamePattern {
+    return typeof name === 'object' && name.isPattern === true;
+  }
+
+  public static getPropertyFieldName(name: OmniPropertyName, regexAcceptable: true): string;
+  public static getPropertyFieldName(name: OmniPropertyName, regexAcceptable?: boolean): string | undefined;
+  public static getPropertyFieldName(name: OmniPropertyName, regexAcceptable = false): string | undefined {
+
+    if (typeof name === 'object') {
+      if (!name.isPattern) {
+        if (name.fieldName) {
+          return name.fieldName;
+        } else if (name.propertyName) {
+          return name.propertyName;
+        }
+      }
+    }
+
+    return OmniUtil.getPropertyName(name, regexAcceptable);
+  }
+
+  public static getPropertyAccessorName(name: OmniPropertyName, regexAcceptable: true): string;
+  public static getPropertyAccessorName(name: OmniPropertyName, regexAcceptable?: boolean): string | undefined;
+  public static getPropertyAccessorName(name: OmniPropertyName, regexAcceptable = false): string | undefined {
+
+    if (typeof name === 'object') {
+      if (!name.isPattern) {
+        if (name.propertyName) {
+          return name.propertyName;
+        } else if (name.fieldName) {
+          return name.fieldName;
+        }
+      }
+    }
+
+    return OmniUtil.getPropertyName(name, regexAcceptable);
+  }
+
+  public static getPropertyAccessorNameOnly(name: OmniPropertyName): string | undefined {
+
+    if (typeof name === 'object' && !name.isPattern && name.propertyName) {
+      return name.propertyName;
+    }
+
+    return undefined;
+  }
+
+  public static getPropertyFieldNameOnly(name: OmniPropertyName): string | undefined {
+
+    if (typeof name === 'object' && !name.isPattern && name.fieldName) {
+      return name.fieldName;
+    }
+
+    return undefined;
+  }
+
+  public static getPropertyNamePattern(name: OmniPropertyName): string | undefined {
+    if (typeof name === 'object') {
+      if (name.isPattern) {
+        return name.name.source;
+      }
+    }
+
+    return undefined;
+  }
+
+  static isIdentifiable(type: OmniType): type is typeof type & OmniOptionallyNamedType {
+
+    if ('name' in type) {
+      return true;
+    }
+
+    return (type.kind == OmniTypeKind.COMPOSITION || type.kind == OmniTypeKind.DECORATING || type.kind == OmniTypeKind.INTERFACE);
+  }
 }
 
 export type Diff =
@@ -2070,7 +2266,6 @@ export interface BaseDiff<K extends DiffKind> {
 
 export enum DiffKind {
   TYPE = 'TYPE',
-  // MISSING_PROPERTY_NAME = 'MISSING_PROPERTY_NAME',
   MISSING_PROPERTY = 'MISSING_PROPERTY',
   EXTRA_PROPERTY = 'EXTRA_PROPERTY',
   PROPERTY_TYPE = 'PROPERTY_TYPE',
@@ -2084,12 +2279,6 @@ export interface PropertyDiff extends BaseDiff<DiffKind.MISSING_PROPERTY | DiffK
   propertyName: string;
 }
 
-// export interface PropertyNameDiff extends BaseDiff<DiffKind.MISSING_PROPERTY_NAME> {
-//   propertyName: string;
-// }
-
 export interface PropertyTypeDiff extends BaseDiff<DiffKind.PROPERTY_TYPE> {
   propertyName: string;
-  // other: OmniProperty;
-  // propertyTypeDiff: TypeDiffKind[];
 }

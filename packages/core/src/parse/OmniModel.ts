@@ -31,11 +31,7 @@ export enum OmniArrayKind {
   SET,
 }
 
-export interface OmniProperty {
-  /**
-   * The name of the property when it will be serialized/deserialized.
-   */
-  name: string;
+export interface OmniAdditionalPropertyName {
   /**
    * The preferred name of the field when it is placed in an object.
    */
@@ -44,33 +40,46 @@ export interface OmniProperty {
    * The preferred name of the property when it is placed in an object (basis for getter and setter method names)
    */
   propertyName?: string | undefined;
+}
+
+export interface OmniAccessorPropertyName {
+
+}
+
+export interface OmniSerializationPropertyName {
+  /**
+   * The name of the property when it will be serialized/deserialized.
+   */
+  name: string;
+  isPattern?: false;
+}
+
+export type OmniPropertyNames = (OmniSerializationPropertyName & OmniAdditionalPropertyName);
+
+export interface OmniPropertyNamePattern {
+  name: RegExp;
+  isPattern: true;
+}
+
+export type OmniPropertyName = string | OmniPropertyNames | OmniPropertyNamePattern;
+
+export interface OmniProperty {
+
+  name: OmniPropertyName;
+
   type: OmniType;
   /**
    * TODO: REMOVE! It is ugly and should not really be needed...
+   * @deprecated Find some other way of finding this
    */
   owner: OmniPropertyOwner;
 
   description?: string | undefined;
   summary?: string | undefined;
-  /**
-   * TODO: Is this supposed to be a modifier? And have all the booleans as modifiers that can easily be added to
-   */
   deprecated?: boolean;
-  /**
-   * TODO: Move this into the type? A validation hint?
-   */
   required?: boolean;
-  /**
-   * TODO: Move this into the type? A validation hint?
-   */
   readOnly?: boolean;
-  /**
-   * TODO: Move this into the type? A validation hint?
-   */
   writeOnly?: boolean;
-  /**
-   * TODO: Is this supposed to be a modifier?
-   */
   abstract?: true;
 
   accessLevel?: OmniAccessLevel;
@@ -159,11 +168,7 @@ export interface OmniNamedType {
 
   /**
    * The name of the type.
-   * The name is not necessarily unique. There might be many types with the same name.
-   * Generally, only the OmniClassType is generally more certain to be unique.
-   *
-   * TODO: Make this into a possibility of being an array as well, and remove "nameClassifier"
-   *        Maybe remake TypeName so that the array is lazily calculated, to decrease load
+   * The name is not necessarily unique. There might be many types with the same name, until late-stage name-resolution before rendering.
    */
   name: TypeName;
 }
@@ -181,6 +186,12 @@ export interface OmniExample<T> {
 export interface OmniBaseType<T extends OmniTypeKind> {
 
   kind: T;
+  /**
+   * True if the type was implicitly deduced but not specifically spelled out.
+   * For example if a type contains no specification of what type it is, but has a default value of "0".
+   * We can then deduce that it is a number, but it was never said as such. Can be used to downgrade this type's importance if we ever need to simplify (for example) compositions.
+   */
+  implicit?: boolean;
   /**
    * TODO: Implement! REMOVE the optional and make it required! ALL types MUST have an absolute uri, to make it possible to merge types between schemas/contracts
    */
@@ -289,7 +300,16 @@ export const UnknownKind = {
   MAP: 'MAP',
   MUTABLE_OBJECT: 'MUTABLE_OBJECT',
   OBJECT: 'OBJECT',
+
+  /**
+   * For language like Java this would represent '?', while in TypeScript this would represent 'unknown'
+   */
   WILDCARD: 'WILDCARD',
+
+  /**
+   * Java: `Object`, TypeScript: `any`
+   */
+  ANY: 'ANY',
 } as const;
 export type UnknownKind = (typeof UnknownKind)[keyof typeof UnknownKind];
 
@@ -323,13 +343,6 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
 
   properties: OmniProperty[];
 
-  /**
-   * In difference to JsonSchema, this needs to be specifically `true` to enable additional properties.
-   *
-   * TODO: This should be something more advanced! We must be able to tell format of key and type(s) of values for the additional properties!
-   */
-  additionalProperties?: boolean | undefined;
-
   abstract?: boolean | undefined;
 }
 
@@ -351,9 +364,12 @@ export interface OmniPrimitiveType extends OmniBaseType<typeof OmniTypeKind.PRIM
   literal?: boolean;
 }
 
+export type OmniPrimitiveNull = (OmniPrimitiveType & {primitiveKind: typeof OmniPrimitiveKind.NULL});
+export type OmniPrimitiveUndefined = (OmniPrimitiveType & {primitiveKind: typeof OmniPrimitiveKind.UNDEFINED});
+
 export type OmniPrimitiveNullableType =
   (OmniPrimitiveType & {nullable: true})
-  | (OmniPrimitiveType & {primitiveKind: typeof OmniPrimitiveKind.NULL});
+  | OmniPrimitiveNull;
 
 export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKind, typeof OmniPrimitiveKind.NULL | typeof OmniPrimitiveKind.VOID>;
 

@@ -6,6 +6,7 @@ import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.ts';
 import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
 import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
 import {describe, test, expect} from 'vitest';
+import {LoggerFactory} from '@omnigen/core-log';
 
 describe('Test Generic Model Creation', () => {
 
@@ -25,8 +26,12 @@ describe('Test Generic Model Creation', () => {
       );
 
       const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS});
-      const model = (await parser.parse()).model;
-      expect(model).toBeDefined();
+      try {
+        const model = (await parser.parse()).model;
+        expect(model).toBeDefined();
+      } catch (ex) {
+        throw LoggerFactory.formatError(ex);
+      }
     }
   }, {timeout: 5_000});
 
@@ -64,7 +69,7 @@ describe('Test Generic Model Creation', () => {
     expect(response0properties).toBeDefined();
 
     // All the properties are there, since we have not yet ran any model transformers over the parsed schema
-    expect(response0properties.map(it => it.name)).toEqual([
+    expect(response0properties.map(it => OmniUtil.getPropertyName(it.name, true))).toEqual([
       'jsonrpc',
       'error',
       'id',

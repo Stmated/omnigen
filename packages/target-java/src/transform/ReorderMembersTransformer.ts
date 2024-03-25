@@ -3,7 +3,6 @@ import {AstNode} from '@omnigen/core';
 import * as Java from '../ast';
 import {ModifierType} from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {AdditionalPropertiesDeclaration} from '../ast';
 
 export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
 
@@ -48,6 +47,26 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
         defaultVisitor.visitObjectDeclaration(node, visitor);
       },
 
+      visitCompilationUnit: (node, visitor) => {
+
+        // NOTE: This is likely better off being sorted by dependency graph, so types are declared in proper order
+        node.children.sort((a, b) => {
+
+          const aWeight = this.getWeight(a);
+          const bWeight = this.getWeight(b);
+
+          let result = bWeight[0] - aWeight[0];
+          if (result == 0) {
+            result = aWeight[1].localeCompare(bWeight[1]);
+          }
+
+          return result;
+        });
+
+        // Go deeper, in case there nested types
+        defaultVisitor.visitCompilationUnit(node, visitor);
+      },
+
       visitField: () => {},
       visitMethodDeclaration: () => {},
       visitConstructor: () => {},
@@ -77,37 +96,17 @@ export class ReorderMembersTransformer extends AbstractJavaAstTransformer {
       return [weight, node.signature.identifier.value];
     }
 
-    // TODO: Should be removed. Should have been replaced with a CST
-    if (node instanceof Java.FieldGetterSetter) {
-
-      weight += 100;
-      weight -= this.getModifierWeight(node.getter.signature.modifiers);
-      return [weight, node.getter.field.identifier.value];
-    }
-
-    // TODO: Should be removed. Should have been replaced with a CST
-    if (node instanceof Java.FieldBackedGetter) {
-
-      weight += 100;
-      weight -= this.getModifierWeight(node.signature.modifiers);
-      return [weight, node.signature.identifier.value];
-    }
-
-    // TODO: Should be removed. Should have been replaced with a CST
-    if (node instanceof AdditionalPropertiesDeclaration) {
-
-      const adderMethod = node.children.find(it => it instanceof Java.MethodDeclaration);
-      if (adderMethod && adderMethod instanceof Java.MethodDeclaration) {
-        weight += 100;
-        weight -= this.getModifierWeight(adderMethod.signature.modifiers);
-        return [weight, adderMethod.signature.identifier.value];
-      }
-    }
-
     if (node instanceof Java.AbstractObjectDeclaration) {
 
       weight += 0;
       weight += this.getModifierWeight(node.modifiers);
+      return [weight, node.name.value];
+    }
+
+    if ('name' in node && node.name instanceof Java.Identifier) {
+
+      weight += 0;
+      // weight += this.getModifierWeight(node.modifiers);
       return [weight, node.name.value];
     }
 

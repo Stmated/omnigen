@@ -14,7 +14,6 @@ public class RequestData {
     return this.senderInformation;
   }
 
-  @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
   public static class SenderInformation {
     private final String dateOfBirth;
     public SenderInformation(@JsonProperty("DateOfBirth") String dateOfBirth) {

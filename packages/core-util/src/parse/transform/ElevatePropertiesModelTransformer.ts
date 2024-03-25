@@ -30,7 +30,7 @@ import {Sorters} from '../../util';
  */
 export class ElevatePropertiesModelTransformer implements OmniModelTransformer, OmniModel2ndPassTransformer {
 
-  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions, TargetOptions>): void {
+  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
     this.transformInner(args, args.targetFeatures);
   }
 
@@ -94,7 +94,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
           continue;
         }
 
-        if (superType.properties.find(it => it.name == propertyName)) {
+        if (superType.properties.find(it => OmniUtil.isPropertyNameEqual(it.name, propertyName))) {
 
           // The superType already has a property with that name.
           continue;

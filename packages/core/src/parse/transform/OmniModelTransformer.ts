@@ -7,9 +7,6 @@ export interface OmniModelTransformer<TParserOpt extends ParserOptions = ParserO
   transformModel(args: OmniModelTransformerArgs<TParserOpt>): void;
 }
 
-export interface OmniModel2ndPassTransformer<
-  TParserOpt extends ParserOptions = ParserOptions,
-  TTargetOpt extends TargetOptions = TargetOptions
-> {
-  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<TParserOpt, TTargetOpt>): void;
+export interface OmniModel2ndPassTransformer<TOpt extends ParserOptions & TargetOptions = ParserOptions & TargetOptions> {
+  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<TOpt>): void;
 }

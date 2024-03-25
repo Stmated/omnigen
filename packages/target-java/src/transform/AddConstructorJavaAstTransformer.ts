@@ -60,7 +60,8 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     for (let i = 0; i < fields.length; i++) {
 
       const constructorField = fields[i];
-      const parameter = this.createParameter(constructorField, constructorField.type, constructorField.identifier);
+      const constructorFieldRef = new Java.FieldReference(constructorField);
+      const parameter = this.createParameter(constructorFieldRef, constructorField.type, constructorField.identifier);
       parameters.push(parameter);
 
       const defaultValue = OmniUtil.getSpecifiedDefaultValue(constructorField.type.omniType);
@@ -144,7 +145,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     }
 
     const requiredSuperArguments: Java.ConstructorParameter[] = [];
-    const superConstructorArguments: Java.AbstractExpression[] = [];
+    const superConstructorArguments: Java.AbstractJavaExpression[] = [];
     for (const requiredArgument of superTypeRequirements) {
       const resolvedType = this.getResolvedGenericArgumentType(requiredArgument, node);
       const type = resolvedType.omniType;
@@ -183,7 +184,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     return requiredSuperArguments;
   }
 
-  private createParameter(field: Java.Field, type: Java.TypeNode<OmniType>, identifier: Java.Identifier): Java.ConstructorParameter {
+  private createParameter(fieldRef: Java.FieldReference, type: Java.TypeNode, identifier: Java.Identifier): Java.ConstructorParameter {
 
     const schemaIdentifier = identifier.original || identifier.value;
     const safeName = JavaUtil.getPrettyParameterName(schemaIdentifier);
@@ -194,7 +195,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     }
 
     return new Java.ConstructorParameter(
-      field,
+      fieldRef,
       type,
       usedIdentifier,
     );

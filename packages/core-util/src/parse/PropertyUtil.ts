@@ -9,6 +9,7 @@ import {
 import {OmniUtil} from './OmniUtil.js';
 import {TargetFeatures} from '@omnigen/core';
 import {PropertyDifference, PropertyEquality, TypeDiffKind} from '@omnigen/core';
+import {isDefined} from '../util';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
 
@@ -95,7 +96,7 @@ export class PropertyUtil {
     const propertiesPerType = types.map(t => OmniUtil.getPropertiesOf(t));
     for (const properties of propertiesPerType) {
 
-      const propertyNames = properties.map(p => p.name);
+      const propertyNames = properties.map(p => OmniUtil.getPropertyName(p.name)).filter(isDefined);
       if (commonPropertyNames == undefined) {
         commonPropertyNames = propertyNames;
       } else {
@@ -116,7 +117,7 @@ export class PropertyUtil {
     for (const propertyName of (commonPropertyNames || [])) {
 
       const commonPropertiesWithSameName = propertiesPerType.flatMap(
-        perType => perType.filter(p => (p.name == propertyName)),
+        perType => perType.filter(p => OmniUtil.isPropertyNameEqual(p.name, propertyName)),
       );
 
       const propertyEquality = this.getLowestAllowedPropertyEquality(
@@ -225,9 +226,9 @@ export class PropertyUtil {
       return {type: a.type};
     }
 
-    const aName = a.name;
-    const bName = b.name;
-    if (aName !== bName) {
+    // const aName = ;
+    // const bName = ;
+    if (!OmniUtil.isPropertyNameMatching(a.name, b.name)) { // } aName !== bName) {
       return {propertyDiffs: [PropertyDifference.NAME]};
     }
 
@@ -247,8 +248,14 @@ export class PropertyUtil {
       };
     }
 
-    if (((a.propertyName || b.propertyName) && a.propertyName != b.propertyName)
-      || ((a.fieldName || b.fieldName) && a.fieldName != b.fieldName)) {
+    const aAccessorName = OmniUtil.getPropertyAccessorNameOnly(a.name);
+    const bAccessorName = OmniUtil.getPropertyAccessorNameOnly(b.name);
+
+    const aFieldName = OmniUtil.getPropertyFieldNameOnly(a.name);
+    const bFieldName = OmniUtil.getPropertyFieldNameOnly(b.name);
+
+    if (((aAccessorName || bAccessorName) && aAccessorName != bAccessorName)
+      || ((aFieldName || bFieldName) && aFieldName != bFieldName)) {
       return {
         propertyDiffs: [PropertyDifference.FIELD_NAME],
         typeDiffs: commonType.diffs,

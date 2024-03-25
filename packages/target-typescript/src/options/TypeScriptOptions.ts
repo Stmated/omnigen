@@ -8,6 +8,8 @@ export const ZodTypeScriptOptions = ZodOptions.extend({
   explicitReturns: ZodCoercedBoolean.default('f'),
   preferInterfaces: ZodCoercedBoolean.default('t'),
   importWithExtension: z.union([z.string(), z.undefined()]).default('ts'),
+  strictUndefined: ZodCoercedBoolean.default('f'),
+  singleFile: ZodCoercedBoolean.default('t'),
 });
 
 export type TypeScriptOptions = z.infer<typeof ZodTypeScriptOptions>;

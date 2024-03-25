@@ -7,13 +7,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class AXOrB {
+public class UnionOfAB {
   @JsonValue
   private final JsonNode _raw;
   private A _a;
   private B _b;
   @JsonCreator
-  public AXOrB(JsonNode raw) {
+  public UnionOfAB(JsonNode raw) {
     this._raw = raw;
   }
 

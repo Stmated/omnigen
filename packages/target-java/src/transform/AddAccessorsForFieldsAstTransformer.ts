@@ -2,7 +2,7 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJava
 import {AstNode, OmniTypeKind} from '@omnigen/core';
 import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast';
-import {AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
+import {AbstractObjectDeclaration, AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
 import {DefaultStringJavaVisitor} from '../visit';
 
@@ -51,49 +51,53 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
           return;
         }
 
-        const body = owner.node.body;
-
-        // Move comments from field over to the getter.
-        const commentList: CommentBlock | undefined = node.comments;
-        node.comments = undefined;
-
-        // Move annotations from field over to the getter.
-        // TODO: This should be an option, to move or not.
-        const annotationList: AnnotationList | undefined = (node.annotations)
-          ? new AnnotationList(...(node.annotations.children || []))
-          : undefined;
-        node.annotations = undefined;
-
-        const type = node.type.omniType;
-
-        const getterIdentifier = node.property?.propertyName
-          ? new Java.Identifier(JavaUtil.getGetterName(node.property?.propertyName, type))
-          : undefined;
-
-        if (OmniUtil.hasSpecifiedConstantValue(type)) {
-
-          const literalMethod = new Java.MethodDeclaration(
-            new Java.MethodDeclarationSignature(
-              getterIdentifier ?? new Identifier(JavaUtil.getGetterName(node.identifier.value, type)),
-              new Java.EdgeType(type), undefined, undefined, annotationList, commentList,
-            ),
-            new Java.Block(
-              new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.value ?? null))),
-            ),
-          );
-
-          const fieldIndex = body.children.indexOf(node);
-          body.children.splice(fieldIndex, 1, literalMethod);
-
-        } else {
-
-          body.children.push(new Java.FieldBackedGetter(node, annotationList, commentList, getterIdentifier));
-          if (!node.modifiers.children.find(it => it.type == ModifierType.FINAL)) {
-            body.children.push(new Java.FieldBackedSetter(node, undefined, undefined));
-          }
-        }
+        AddAccessorsForFieldsAstTransformer.addAccessorForField(owner.node.body, node);
       },
     }));
+  }
+
+  private static addAccessorForField(body: Java.Block, field: Java.Field) {
+
+    // Move comments from field over to the getter.
+    const commentList: CommentBlock | undefined = field.comments;
+    field.comments = undefined;
+
+    // Move annotations from field over to the getter.
+    // TODO: This should be an option, to move or not.
+    const annotationList: AnnotationList | undefined = (field.annotations)
+      ? new AnnotationList(...(field.annotations.children || []))
+      : undefined;
+    field.annotations = undefined;
+
+    const type = field.type.omniType;
+
+    const propertyAccessorName = field.property ? OmniUtil.getPropertyAccessorName(field.property.name) : undefined;
+    const getterIdentifier = propertyAccessorName
+      ? new Java.Identifier(JavaUtil.getGetterName(propertyAccessorName, type))
+      : undefined;
+
+    if (OmniUtil.hasSpecifiedConstantValue(type)) {
+
+      const literalMethod = new Java.MethodDeclaration(
+        new Java.MethodDeclarationSignature(
+          getterIdentifier ?? new Identifier(JavaUtil.getGetterName(field.identifier.value, type)),
+          new Java.EdgeType(type), undefined, undefined, annotationList, commentList,
+        ),
+        new Java.Block(
+          new Java.Statement(new Java.ReturnStatement(new Java.Literal(type.value ?? null))),
+        ),
+      );
+
+      const fieldIndex = body.children.indexOf(field);
+      body.children.splice(fieldIndex, 1, literalMethod);
+
+    } else {
+
+      body.children.push(new Java.FieldBackedGetter(new Java.FieldReference(field), annotationList, commentList, getterIdentifier));
+      if (!field.modifiers.children.find(it => it.type == ModifierType.FINAL)) {
+        body.children.push(new Java.FieldBackedSetter(new Java.FieldReference(field), undefined, undefined));
+      }
+    }
   }
 
   private findGetterMethodForField(latestBody: AstNode): string | string[] | undefined {

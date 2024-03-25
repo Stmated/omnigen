@@ -281,7 +281,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
       // Remove the now generic property from the original property owner.
       const idx = property.owner.properties.indexOf(property);
       if (idx == -1) {
-        throw new Error(`Could not find property '${property.name}' in owner ${OmniUtil.describe(property.owner)}, something is wrong with the generic hoisting`);
+        throw new Error(`Could not find property '${OmniUtil.getPropertyNameOrPattern(property.name)}' in owner ${OmniUtil.describe(property.owner)}, something is wrong with the generic hoisting`);
       }
 
       property.owner.properties.splice(idx, 1);

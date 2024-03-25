@@ -3,11 +3,8 @@ import {TargetFeatures, TargetOptions} from '../../interpret';
 import {ModelTransformOptions} from '../ModelTransformOptions';
 import {OmniModelTransformerArgs} from './OmniModelTransformerArgs';
 
-export interface OmniModelTransformer2ndPassArgs<
-  TParserOpt extends ParserOptions,
-  TTargetOpt extends TargetOptions
-> extends OmniModelTransformerArgs<TParserOpt> {
+export interface OmniModelTransformer2ndPassArgs<TOpt extends ParserOptions & TargetOptions = ParserOptions & TargetOptions> extends OmniModelTransformerArgs<TOpt> {
 
-  options: TParserOpt & ModelTransformOptions & TTargetOpt;
+  options: TOpt & ModelTransformOptions;
   targetFeatures: TargetFeatures;
 }

@@ -1,4 +1,3 @@
-import {JSONSchema4, JSONSchema6, JSONSchema6Definition, JSONSchema7, JSONSchema7Definition, JSONSchema7Type} from 'json-schema';
 import {
   AllowedEnumTsTypes,
   OMNI_GENERIC_FEATURES,
@@ -12,7 +11,8 @@ import {
   OmniModel,
   OmniModelParserResult,
   OmniObjectType,
-  OmniPrimitiveConstantValue, OmniPrimitiveKinds,
+  OmniPrimitiveConstantValue,
+  OmniPrimitiveKinds,
   OmniPrimitiveType,
   OmniProperty,
   OmniPropertyName,
@@ -30,7 +30,10 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
 import {Case, CompositionUtil, isDefined, Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
-import {ExternalDocumentsFinder, RefResolver, ToDefined} from '../visit';
+import {ExternalDocumentsFinder, RefResolver, SimpleObjectWalker, ToDefined} from '../visit';
+import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
+import {JsonSchemaMigrator} from '../migrate';
+import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -42,28 +45,11 @@ export interface PostDiscriminatorMapping {
   schema: DiscriminatorAwareSchema;
 }
 
-export type AnyJSONSchema = JSONSchema7 | JSONSchema6 | JSONSchema4;
-export type AnyJsonDefinition = JSONSchema7Definition | JSONSchema6Definition | JSONSchema4;
+export type AnyJSONSchema = JSONSchema9;
+export type AnyJsonDefinition = JSONSchema9Definition;
 // TODO: Move into OpenApiJsonSchemaParser
 export type DiscriminatorAwareSchema = boolean | (AnyJSONSchema & DiscriminatorAware);
-export type AnyJsonSchemaItems = AnyJSONSchema['items'];
 
-function isJSONSchema4(schema: AnyJSONSchema): schema is JSONSchema4 {
-  return ('$schema' in schema) && `${schema.$schema}`.includes('draft-04');
-}
-
-function isJSONSchema6(schema: AnyJSONSchema): schema is JSONSchema6 {
-  return ('$schema' in schema) && `${schema.$schema}`.includes('draft-06');
-}
-
-function isJSONSchema7(schema: AnyJSONSchema): schema is JSONSchema7 {
-
-  if (!('$schema' in schema)) {
-    return true;
-  }
-
-  return ('$schema' in schema) && (`${schema.$schema}`.includes('draft-07') || `${schema.$schema}`.includes('2020-12'));
-}
 
 export class NewJsonSchemaParser implements Parser {
 
@@ -81,7 +67,7 @@ export class NewJsonSchemaParser implements Parser {
     root = JsonSchemaParser.preProcessJsonSchema(this._schemaFile.getAbsolutePath(), root);
 
     const model: OmniModel = {
-      name: (('id' in root && root.id) ? root.id : '') || root.$id || '',
+      name: root.$id || '',
       version: '1.0',
       endpoints: [],
       servers: [],
@@ -111,17 +97,19 @@ export class NewJsonSchemaParser implements Parser {
     };
   }
 
-  private* getAllSchemas(schema: Exclude<AnyJSONSchema, boolean>): Generator<[string, AnyJsonDefinition]> {
+  private* getAllSchemas(schema: JSONSchema9Definition): Generator<[string, AnyJsonDefinition]> {
 
-    if (schema.type || schema.properties || schema.format) {
-      yield [schema.$id, schema];
+    if (typeof schema === 'boolean') {
+      return;
     }
 
-    if (isJSONSchema7(schema)) {
-      if (schema.$defs) {
-        for (const e of Object.entries(schema.$defs)) {
-          yield e;
-        }
+    if (schema.type == 'object' || (schema.type === undefined && schema.enum) || schema.format) {
+      yield [schema.$id ?? '', schema];
+    }
+
+    if (schema.$defs) {
+      for (const e of Object.entries(schema.$defs)) {
+        yield e;
       }
     }
 
@@ -180,7 +168,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // If contentDescriptor contains an anonymous schema,
     // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
     // That way we will not get duplicates of the schema when called from different locations.
-    const id: string | undefined = (typeof schema == 'object') ? (schema.$id ?? ('id' in schema ? schema.id : undefined)) : (`_${JsonSchemaParser._uniqueCounter++}`);
+    const id: string | undefined = (typeof schema == 'object') ? schema.$id : (`_${JsonSchemaParser._uniqueCounter++}`);
     if (!id) {
       throw new Error(`Encountered schema without ID: ${Util.getShallowPayloadString(schema)} (${Naming.unwrap(name)}); should have been assigned by schema transformers`);
     }
@@ -241,26 +229,56 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   public static preProcessJsonSchema(absolutePath: string | undefined, root: AnyJSONSchema): typeof root {
 
-    if (isJSONSchema7(root)) {
+    // TODO: Add schema version migration, should support from 04 -> 2020
 
-      const transformers = [
-        // new NormalizeDefsJsonSchemaTransformerFactory().create(),
-        new SimplifyJsonSchemaTransformerFactory().create(),
-        new ApplyIdJsonSchemaTransformerFactory(absolutePath).create(),
-      ];
+    const migrator = new JsonSchemaMigrator();
+    migrator.migrate(root);
 
-      let jsonSchema7: JSONSchema7 = root;
-      for (const transformer of transformers) {
-        const transformed = transformer.visit(jsonSchema7, transformer);
-        if (transformed && typeof transformed == 'object') {
-          jsonSchema7 = transformed;
-        }
+    const ajv = new Ajv2020({allErrors: true, strict: false});
+    const schemaVersion = ajv.defaultMeta() ?? 'https://json-schema.org/draft/2020-12/schema';
+
+    const valid = ajv.validate(schemaVersion, root);
+    if (!valid) {
+
+      const errors = (ajv.errors || []);
+      const message = JsonSchemaParser.ajvErrorsToPrettyError(errors);
+      throw new Error(message || ajv.errorsText() || 'JSONSchema Unknown Validation Error');
+    }
+
+    // TODO: Add validation step that checks if "definitions" exists, and in that case throw an error! It should not be allowed!
+    // const walker = new SimpleObjectWalker(root);
+    // walker.walk((obj, path) => {
+    //   if (path[path.length - 1] === 'definitions' && path[path.length - 2] !== 'properties') {
+    //     throw new Error(`There are deprecated JSONSchema properties ('definitions') after schema version upgrade. Is your document version properly specified?`);
+    //   }
+    //
+    //   return obj;
+    // });
+
+    const transformers = [
+      // new NormalizeDefsJsonSchemaTransformerFactory().create(),
+      new SimplifyJsonSchemaTransformerFactory().create(),
+      new ApplyIdJsonSchemaTransformerFactory(absolutePath).create(),
+    ];
+
+    for (const transformer of transformers) {
+      const transformed = transformer.visit(root, transformer);
+      if (transformed && typeof transformed == 'object') {
+        root = transformed;
       }
-
-      root = jsonSchema7;
     }
 
     return root;
+  }
+
+  private static ajvErrorsToPrettyError(errors: ErrorObject[]) {
+
+    const messages: string[] = [];
+    for (const error of errors) {
+      messages.push(`@ ${error.schemaPath} => ${error.message}: ${JSON.stringify(error.params)}`);
+    }
+
+    return `\n${messages.join('\n')}`;
   }
 
   private jsonSchemaToObjectType(schema: AnyJsonDefinition, name: TypeName, actualRef: string | undefined, extendedBy?: OmniType): OmniType {
@@ -278,12 +296,10 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       });
     }
 
-
     names.push({
       name: name,
       suffix: 'object',
     });
-
 
     const type: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
@@ -340,10 +356,17 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       let additionalPropertiesPropertyName: OmniPropertyName | undefined = undefined;
       if (schema.propertyNames) {
 
-        if (schema.propertyNames.pattern) {
+        if (typeof schema.propertyNames === 'boolean') {
+
           additionalPropertiesPropertyName = {
             isPattern: true,
-            name: schema.propertyNames.pattern,
+            name: new RegExp(schema.propertyNames ? /.*/ : /^(?!.+)$/),
+          };
+
+        } else if (schema.propertyNames.pattern) {
+          additionalPropertiesPropertyName = {
+            isPattern: true,
+            name: new RegExp(schema.propertyNames.pattern),
           };
         } else if (schema.propertyNames.const) {
           additionalPropertiesPropertyName = String(schema.propertyNames.const);
@@ -516,7 +539,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         }
       }
     } else if (schema.type === 'array' || schema.items !== undefined) {
-      return this.toArrayType(schema, schema.items, name);
+      return this.toArrayType(schema, schema.items, schema.additionalItems, schema.unevaluatedItems, name);
     } else if (schema.properties || schema.additionalProperties || schema.propertyNames || schema.patternProperties) {
       // Only objects can have properties
       return undefined;
@@ -544,7 +567,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     schema: AnyJSONSchema,
     extendedBy: OmniType | undefined,
     defaultType: OmniType | undefined,
-  ): { type: AnyJSONSchema['type'], implicit: boolean } | undefined {
+  ): { type: AnyJSONSchema['type'] | 'any', implicit: boolean } | undefined {
 
     if (schema.type) {
       return {type: schema.type, implicit: false};
@@ -560,23 +583,23 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       return {type: typeFromDefault, implicit: true};
     }
 
-    const typeFromEnum = schema.enum
+    const typeFromEnum: JSONSchema9TypeName[] = schema.enum
       ? ([...new Set(schema.enum.map(it => {
         const javaType = typeof it;
         if (javaType == 'bigint') {
           return 'number';
         } else if (javaType == 'symbol' || javaType == 'function') {
-          return 'any';
+          return 'object';
         } else if (javaType == 'undefined') {
           return 'null';
         }
 
         return javaType;
       }))])
-      : undefined;
+      : [];
 
-    if (typeFromEnum) {
-      return {type: typeFromEnum, implicit: true};
+    if (typeFromEnum.length > 0) {
+      return {type: typeFromEnum[0], implicit: true};
     }
 
     return undefined;
@@ -584,7 +607,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   private toPrimitive(
     schema: AnyJSONSchema,
-    schemaType: AnyJSONSchema['type'],
+    schemaType: AnyJSONSchema['type'] | 'any',
     name: TypeName,
     id: string,
     ownerSchema: AnyJSONSchema | undefined,
@@ -664,7 +687,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return primitiveType;
   }
 
-  private static omniTypeToJsonSchemaType(schema: AnyJSONSchema, extendedBy: OmniType | undefined): AnyJSONSchema['type'] {
+  private static omniTypeToJsonSchemaType(schema: AnyJSONSchema, extendedBy: OmniType | undefined): AnyJSONSchema['type'] | 'any' {
 
     if (extendedBy) {
       switch (extendedBy.kind) {
@@ -960,9 +983,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   private toOmniEnum(
     name: TypeName,
-    schemaType: Extract<AnyJSONSchema['type'], string>,
+    schemaType: Extract<AnyJSONSchema['type'], string> | 'any',
     primitiveType: OmniTypeKind,
-    enumValues: JSONSchema7Type[],
+    enumValues: JSONSchema9Type[],
     enumOwner?: AnyJSONSchema,
     description?: string,
   ) {
@@ -1002,7 +1025,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return omniEnum;
   }
 
-  private static getEnumDescriptions(enumOwner: JSONSchema7 | JSONSchema6 | JSONSchema4 | undefined, allowedValues: AllowedEnumTsTypes[], name: any) {
+  private static getEnumDescriptions(enumOwner: JSONSchema9 | undefined, allowedValues: AllowedEnumTsTypes[], name: any) {
 
     let enumDescriptions: Record<string, string> | undefined = undefined;
     if (enumOwner && 'x-enum-descriptions' in enumOwner) {
@@ -1034,7 +1057,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return enumDescriptions;
   }
 
-  private static getEnumNames(enumOwner: JSONSchema7 | JSONSchema6 | JSONSchema4 | undefined, name: any) {
+  private static getEnumNames(enumOwner: JSONSchema9 | undefined, name: any) {
     let enumNames: string[] | undefined = undefined;
     if (enumOwner && 'x-enum-varnames' in enumOwner) {
 
@@ -1053,7 +1076,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return enumNames;
   }
 
-  private getLiteralValueOfSchema(schema: JSONSchema7Type): OmniPrimitiveConstantValue | null | undefined {
+  private getLiteralValueOfSchema(schema: JSONSchema9Type): OmniPrimitiveConstantValue | null | undefined {
 
     if (typeof schema == 'string') {
       return schema;
@@ -1276,12 +1299,14 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       return undefined;
     }
 
-    return schema.$id || ('id' in schema ? schema.id : undefined);
+    return schema.$id; // || ('id' in schema ? schema.id : undefined);
   }
 
   private toArrayType(
     schema: AnyJsonDefinition,
-    items: AnyJsonSchemaItems,
+    items: AnyJSONSchema['items'],
+    additionalItems: AnyJSONSchema['additionalItems'],
+    unevaluatedItems: AnyJSONSchema['unevaluatedItems'],
     name: TypeName | undefined,
   ): OmniArrayTypes {
 
@@ -1289,7 +1314,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       throw new Error(`The schema object should not be able to be a boolean`);
     }
 
-    if (!items || typeof items == 'boolean') {
+    if (items === undefined || typeof items == 'boolean') {
       // No items, so the schema for the array items is undefined.
       return {
         kind: OmniTypeKind.ARRAY,
@@ -1356,12 +1381,12 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     // The type is a JSONSchema7, though the type system seems unsure of that fact.
-    const derefJsonSchema = this._refResolver.resolve(schema);
+    let derefJsonSchema = this._refResolver.resolve(schema);
     if (!derefJsonSchema.$id) {
       derefJsonSchema.$id = name;
     }
 
-    JsonSchemaParser.preProcessJsonSchema(undefined, schema);
+    derefJsonSchema = JsonSchemaParser.preProcessJsonSchema(undefined, derefJsonSchema);
 
     const omniType = this.jsonSchemaToType(name, derefJsonSchema).type;
     logger.debug(`Using the from jsonschema converted omni type '${OmniUtil.describe(omniType)}'`);

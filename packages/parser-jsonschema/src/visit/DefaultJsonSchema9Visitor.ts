@@ -1,12 +1,12 @@
-import {JsonSchema7Visitor} from './JsonSchema7Visitor.ts';
+import {JsonSchema9Visitor} from './JsonSchema9Visitor.ts';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JSONSchema7} from 'json-schema';
 import {z} from 'zod';
 import {DocVisitorTransformer, DocVisitorUnknownTransformer, safeSet, visitUniformArray, visitUniformObject} from './helpers.ts';
+import {JSONSchema9} from '../definitions';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-function createUnknownPropertiesHandler<S extends JSONSchema7>(): DocVisitorTransformer<DocVisitorUnknownTransformer<unknown>, JsonSchema7Visitor<S>> {
+function createUnknownPropertiesHandler<S extends JSONSchema9>(): DocVisitorTransformer<DocVisitorUnknownTransformer<unknown>, JsonSchema9Visitor<S>> {
 
   return (v, visitor) => {
     const value = v.value;
@@ -56,7 +56,7 @@ function createUnknownPropertiesHandler<S extends JSONSchema7>(): DocVisitorTran
   };
 }
 
-export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
+export const DefaultJsonSchema9Visitor: JsonSchema9Visitor = {
   visit: (v, visitor) => {
     if (typeof v == 'boolean') {
       return visitor.schema_boolean(v, visitor);
@@ -64,7 +64,7 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
       return visitor.schema(v, visitor);
     }
   },
-  visit_unknown: createUnknownPropertiesHandler<JSONSchema7>(),
+  visit_unknown: createUnknownPropertiesHandler<JSONSchema9>(),
   schema: function(v, visitor) {
 
     const handled: string[] = [];
@@ -98,7 +98,8 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
     safeSet(v, visitor, 'oneOf', handled);
     safeSet(v, visitor, 'not', handled);
     safeSet(v, visitor, 'default', handled);
-    safeSet(v, visitor, 'dependencies', handled);
+    safeSet(v, visitor, 'dependentRequired', handled);
+    safeSet(v, visitor, 'dependentSchemas', handled);
     safeSet(v, visitor, 'description', handled);
     safeSet(v, visitor, 'enum', handled);
     safeSet(v, visitor, 'exclusiveMinimum', handled);
@@ -147,7 +148,7 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
         delete unknownOwner[unknownKey];
       } else {
 
-        logger.trace(`Moving over unrecognized JSONSchema property '${unknownKey}'`);
+        logger.silent(`Moving over unrecognized JSONSchema property '${unknownKey}'`);
         unknownOwner[unknownKey] = handledUnknownProperty.value;
       }
     }
@@ -160,21 +161,18 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
   jsonSchemaType: (v, vi) => {
 
     if (Array.isArray(v)) {
-      return vi.jsonSchemaArray(v, vi);
-    } else if (v && typeof v == 'object') {
-      return vi.jsonSchemaObject(v, vi);
+      return visitUniformArray(v, it => vi.jsonSchemaType(it, vi));
+    } else if (v && typeof v === 'object') {
+      return visitUniformObject(v, it => vi.jsonSchemaType(it, vi));
     }
 
-    return vi.jsonSchemaTypePrimitive(v, vi);
+    return v;
   },
   $schema: v => v,
   schema_option: (option, visitor) => {
     const res = visitor.visit(option.value, visitor);
     return res ? {idx: option.idx, value: res} : undefined;
   },
-  jsonSchemaArray: (v, vi) => visitUniformArray(v, it => vi.jsonSchemaType(it, vi)),
-  jsonSchemaObject: (v, visitor) => visitUniformObject(v, it => visitor.jsonSchemaType(it, visitor)),
-  jsonSchemaTypePrimitive: v => v,
   jsonSchemaTypeName: v => v,
   additionalItems: (v, visitor) => v ? visitor.visit(v, visitor) : v,
   additionalProperties: (v, visitor) => v ? visitor.visit(v, visitor) : v,
@@ -183,7 +181,8 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
   oneOf: (v, visitor) => v ? visitUniformArray(v, (it, idx) => visitor.schema_option({idx, value: it}, visitor)?.value) : v,
   not: (v, visitor) => v ? visitor.visit(v, visitor) : v,
   default: (v, visitor) => v ? visitor.jsonSchemaType(v, visitor) : v,
-  dependencies: (v, visitor) => v ? visitUniformObject(v, it => Array.isArray(it) ? visitor.dependencies_strings(it, visitor) : visitor.visit(it, visitor)) : v,
+  dependentRequired: (v, visitor) => v ? visitUniformObject(v, it => visitor.dependencies_strings(it, visitor)) : v,
+  dependentSchemas: (v, visitor) => v ? visitUniformObject(v, it => visitor.visit(it, visitor)) : v,
   dependencies_strings: v => v,
   description: v => v,
   enum: (v, visitor) => v ? visitUniformArray(v, it => visitor.enum_option(it, visitor)) : v,
@@ -209,20 +208,22 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
     return res ? {key: option.key, value: res} : undefined;
   },
   title: v => v,
-  type: (v, visitor) => Array.isArray(v) ? visitor.type_array(v, visitor) : v ? visitor.type_option(v, visitor) : v,
-  type_array: (v, visitor) => v ? visitUniformArray(v, it => visitor.type_option(it, visitor)) : v,
-  type_option: (v, visitor) => visitor.jsonSchemaTypeName(v, visitor),
+  type: (v, visitor) => {
+    if (Array.isArray(v)) {
+      return visitUniformArray(v, it => visitor.jsonSchemaTypeName(it, visitor));
+    } else if (v) {
+      return visitor.jsonSchemaTypeName(v, visitor);
+    } else {
+      return undefined;
+    }
+  },
   format: v => v,
   uniqueItems: v => v,
   $ref: v => v,
 
-  definitions: (v, visitor) => v ? visitUniformObject(v, (it, k) => visitor.definitions_option({key: k, value: it}, visitor)) : v,
+  definitions: (v, visitor) => v ? visitUniformObject(v, (it, k) => visitor.$defs_option({key: k, value: it}, visitor)) : v,
   $defs: (v, visitor) => v ? visitUniformObject(v, (it, k) => visitor.$defs_option({key: k, value: it}, visitor)) : v,
 
-  definitions_option: (option, visitor) => {
-    const res = visitor.visit(option.value, visitor);
-    return res ? {key: option.key, value: res} : undefined;
-  },
   $defs_option: (option, visitor) => {
     const res = visitor.visit(option.value, visitor);
     return res ? {key: option.key, value: res} : undefined;
@@ -231,7 +232,7 @@ export const DefaultJsonSchema7Visitor: JsonSchema7Visitor = {
   $id: v => v,
   const: (v, visitor) => v ? visitor.jsonSchemaType(v, visitor) : v,
   contains: (v, visitor) => v ? visitor.visit(v, visitor) : v,
-  examples: (v, visitor) => v ? visitor.jsonSchemaType(v, visitor) : v,
+  examples: (v, visitor) => v ? visitUniformArray(v, item => visitor.jsonSchemaType(item, visitor)) : v, // visitor.jsonSchemaType(v, visitor) : v,
   propertyNames: (v, visitor) => v ? visitor.visit(v, visitor) : v,
   required: (v, visitor) => Array.isArray(v) ? visitUniformArray(v, it => visitor.required_option(it, visitor)) : v,
   required_option: v => v,

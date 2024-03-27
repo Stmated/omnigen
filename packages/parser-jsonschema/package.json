@@ -20,7 +20,8 @@
     "@omnigen/core-plugin": "workspace:*",
     "json-pointer": "^0.6.2",
     "json-schema": "^0.4.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "ajv": "^8.12.0"
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",

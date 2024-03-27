@@ -54,16 +54,14 @@ import {
   OpenrpcDocument,
   ServerObject,
 } from '@open-rpc/meta-schema';
-import {JSONSchema6, JSONSchema7} from 'json-schema';
 import * as stringSimilarity from 'string-similarity';
 import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
 import {
   AnyJsonDefinition,
-  AnyJSONSchema,
   ApplyIdJsonSchemaTransformerFactory,
-  ExternalDocumentsFinder,
+  ExternalDocumentsFinder, JSONSchema9, JSONSchema9Definition,
   JsonSchemaParser,
   RefResolver,
   SchemaToTypeResult,
@@ -104,7 +102,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
 
     // TODO: Make the visitor able to handle OpenRpc documents as well, rethink how we build the transforms -- we should give a visitor to decorate with overriding things
 
-    const transform = (doc: JSONSchema7) => {
+    const transform = (doc: JSONSchema9) => {
       for (const transformer of transformers) {
         const transformed = transformer.visit(doc, transformer);
         if (transformed && typeof transformed == 'object') {
@@ -123,7 +121,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
     for (const doc of documentFinder.documents) {
 
       // TODO: lol, completely wrong. Needs to be replaced eventually.
-      transform(doc as JSONSchema7);
+      transform(doc as JSONSchema9);
 
       // TODO: This whole thing needs to be done much easier and faster. It's a mess.
       const walker = new SimpleObjectWalker(doc);
@@ -207,12 +205,12 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
           }
 
           if (edgePath == 'schema') {
-            transform(v as JSONSchema7);
+            transform(v as JSONSchema9);
           }
 
           if (v && typeof v == 'object' && path.length >= 3 && path[path.length - 3] == 'components' && path[path.length - 2] == 'schemas' && typeof edgePath == 'string') {
             applyIdTransformer.pushPath({name: edgePath});
-            transform(v as JSONSchema7);
+            transform(v as JSONSchema9);
             registerOnPop(() => applyIdTransformer.popPath());
           }
         }
@@ -331,7 +329,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     // We most likely still want those types to be included.
     if (this.doc.components?.schemas) {
       for (const key of Object.keys(this.doc.components.schemas)) {
-        const schema = this.doc.components.schemas[key] as JSONSchema7;
+        const schema = this.doc.components.schemas[key] as JSONSchema9;
         const deref = this._refResolver.resolve(schema);
 
         // Call to get the type from the schema.
@@ -454,7 +452,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     fallbackName?: TypeName,
   ): SchemaToTypeResult {
 
-    const resolved = this._refResolver.resolve(contentDescriptor.schema);
+    const resolved = this._refResolver.resolve(contentDescriptor.schema) as JSONSchema9Definition;
 
     const preferredName = this.getPreferredContentDescriptorName(resolved, contentDescriptor, fallbackName);
     return this._jsonSchemaParser.jsonSchemaToType(preferredName, resolved);
@@ -719,9 +717,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       });
     } else {
 
+      const optionsErrorSchema = OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver);
+
       errorPropertyType.properties.push({
         name: options.jsonRpcErrorPropertyName,
-        type: OpenRpcParser.toOmniType(options.jsonRpcErrorDataSchema, options, this._refResolver) || {kind: OmniTypeKind.UNKNOWN},
+        type: optionsErrorSchema || {kind: OmniTypeKind.UNKNOWN},
         owner: errorPropertyType,
       });
     }
@@ -804,7 +804,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       return source;
     }
 
-    const jsonSchemaParser = new JsonSchemaParser<JSONSchema7 | JSONSchema6, JsonRpcParserOptions & ParserOptions>(refResolver, openrpcParserOptions);
+    const jsonSchemaParser = new JsonSchemaParser<JSONSchema9, JsonRpcParserOptions & ParserOptions>(refResolver, openrpcParserOptions);
     return jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', source);
   }
 

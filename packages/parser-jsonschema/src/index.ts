@@ -4,6 +4,8 @@ import {JsonSchemaPlugin} from './JsonSchemaPluginInit.ts';
 export * from './parse';
 export * from './transform';
 export * from './visit';
+export * from './definitions';
+export * from './migrate';
 
 export * as JsonSchemaPlugins from './JsonSchemaPluginInit.ts';
 

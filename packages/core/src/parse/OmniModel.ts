@@ -358,7 +358,7 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
   abstract?: boolean | undefined;
 }
 
-export type OmniPrimitiveConstantValue = string | boolean | number
+export type OmniPrimitiveConstantValue = string | boolean | number | object | null;
 
 export interface OmniPrimitiveBaseType<K extends OmniPrimitiveKinds = OmniPrimitiveKinds> extends OmniBaseType<K>, OmniOptionallyNamedType {
 
@@ -368,7 +368,7 @@ export interface OmniPrimitiveBaseType<K extends OmniPrimitiveKinds = OmniPrimit
   /**
    * Means "default" if `literal` is false, means "constant value" if `literal` is true.
    */
-  value?: OmniPrimitiveConstantValue | null | undefined;
+  value?: OmniPrimitiveConstantValue | OmniPrimitiveConstantValue[] | undefined;
   /**
    * aka 'const' / 'constant' -- cannot be set, it is a static, literal value that can be inlined without any issues.
    */

@@ -33,6 +33,9 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/examples" />
       <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-typescript/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.turbo" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

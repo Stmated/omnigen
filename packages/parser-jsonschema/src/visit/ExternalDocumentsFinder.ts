@@ -1,8 +1,8 @@
 import nodePath from 'path';
 import pointer, {JsonObject} from 'json-pointer';
 import {isDefined, ProtocolHandler, Util} from '@omnigen/core-util';
-import {JSONSchema7} from 'json-schema';
 import {SimpleObjectWalker} from './helpers.ts';
+import {JSONSchema9} from '../definitions';
 
 export type WithoutRef<T> = T extends { $ref: string }
   ? Exclude<T, { $ref: string }>
@@ -64,7 +64,7 @@ export class ExternalDocumentsFinder {
       for (const newDocument of newDocuments) {
 
         const awaited = await newDocument.promise;
-        const subSchema = awaited as JSONSchema7;
+        const subSchema = awaited as JSONSchema9;
 
         this._documents.set(newDocument.uri.absoluteDocumentUri, subSchema);
         queue.push({uri: newDocument.uri, schema: subSchema});

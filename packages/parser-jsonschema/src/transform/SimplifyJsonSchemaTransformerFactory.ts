@@ -1,9 +1,9 @@
-import {JsonSchema7Visitor} from '../visit/JsonSchema7Visitor.ts';
-import {DefaultJsonSchema7Visitor} from '../visit/DefaultJsonSchema7Visitor.ts';
-import {JsonSchema7VisitorFactory} from '../visit/JsonSchema7VisitorFactory.ts';
+import {JsonSchema9Visitor} from '../visit/JsonSchema9Visitor.ts';
+import {DefaultJsonSchema9Visitor} from '../visit/DefaultJsonSchema9Visitor.ts';
+import {JsonSchema9VisitorFactory} from '../visit/JsonSchema9VisitorFactory.ts';
 
-const visitor: JsonSchema7Visitor = {
-  ...DefaultJsonSchema7Visitor,
+const visitor: JsonSchema9Visitor = {
+  ...DefaultJsonSchema9Visitor,
   schema: (v, visitor) => {
 
     if (v.oneOf && v.oneOf.length == 1) {
@@ -28,13 +28,13 @@ const visitor: JsonSchema7Visitor = {
       }
     }
 
-    return DefaultJsonSchema7Visitor.schema(v, visitor);
+    return DefaultJsonSchema9Visitor.schema(v, visitor);
   },
 };
 
-export class SimplifyJsonSchemaTransformerFactory implements JsonSchema7VisitorFactory {
+export class SimplifyJsonSchemaTransformerFactory implements JsonSchema9VisitorFactory {
 
-  create(): JsonSchema7Visitor {
+  create(): JsonSchema9Visitor {
     return visitor;
   }
 }

@@ -488,14 +488,16 @@ export class OmniUtil {
   }
 
   public static nativeLiteralToPrimitiveKind(value: LiteralValue): OmniPrimitiveKinds {
-    if (typeof value == 'string') {
+    if (typeof value === 'string') {
       return OmniTypeKind.STRING;
-    } else if (typeof value == 'number') {
+    } else if (typeof value === 'number') {
       return OmniTypeKind.NUMBER;
-    } else if (typeof value == 'boolean') {
+    } else if (typeof value === 'boolean') {
       return OmniTypeKind.BOOL;
     } else if (value === null) {
       return OmniTypeKind.NULL;
+    } else if (typeof value === 'object') {
+      throw new Error(`Need to implement what should happen if given an object literal`);
     }
 
     assertNever(value);

@@ -1,6 +1,6 @@
-import {JsonSchema7VisitorFactory} from '../visit/JsonSchema7VisitorFactory.ts';
-import {JsonSchema7Visitor} from '../visit/JsonSchema7Visitor.ts';
-import {DefaultJsonSchema7Visitor} from '../visit/DefaultJsonSchema7Visitor.ts';
+import {JsonSchema9VisitorFactory} from '../visit/JsonSchema9VisitorFactory.ts';
+import {JsonSchema9Visitor} from '../visit/JsonSchema9Visitor.ts';
+import {DefaultJsonSchema9Visitor} from '../visit/DefaultJsonSchema9Visitor.ts';
 import {Case, Util} from '@omnigen/core-util';
 
 export type IdHint = {
@@ -32,7 +32,7 @@ interface Collected {
   done: boolean;
 }
 
-export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema7VisitorFactory {
+export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFactory {
 
   private static _uniqueIdCounter = 0;
 
@@ -157,16 +157,16 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema7VisitorFa
     return `${collected.id}_${ApplyIdJsonSchemaTransformerFactory._uniqueIdCounter++}`;
   }
 
-  create(): JsonSchema7Visitor {
+  create(): JsonSchema9Visitor {
 
     const registeredIds: string[] = [];
 
     return {
-      ...DefaultJsonSchema7Visitor,
+      ...DefaultJsonSchema9Visitor,
       schema: (v, visitor) => {
 
         if (v.$ref) {
-          return DefaultJsonSchema7Visitor.schema(v, DefaultJsonSchema7Visitor);
+          return DefaultJsonSchema9Visitor.schema(v, DefaultJsonSchema9Visitor);
         }
 
         if (!v.$id) {
@@ -212,7 +212,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema7VisitorFa
           try {
             names.forEach(it => this._hints.push({name: it}));
             tags.forEach(it => this._hints.push({tag: it, suffix: true}));
-            return DefaultJsonSchema7Visitor.schema(v, visitor);
+            return DefaultJsonSchema9Visitor.schema(v, visitor);
           } finally {
             tags.forEach(_ => this._hints.pop());
             names.forEach(_ => this._hints.pop());
@@ -222,7 +222,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema7VisitorFa
 
           try {
             this._hints.push({id: v.$id});
-            return DefaultJsonSchema7Visitor.schema(v, visitor);
+            return DefaultJsonSchema9Visitor.schema(v, visitor);
           } finally {
             this._hints.pop();
           }
@@ -233,7 +233,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema7VisitorFa
 
         try {
           this.pushPath({tag: `${item.idx}`, suffix: true});
-          return DefaultJsonSchema7Visitor.schema_option(item, visitor);
+          return DefaultJsonSchema9Visitor.schema_option(item, visitor);
         } finally {
           this.popPath();
         }
@@ -253,11 +253,10 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema7VisitorFa
 
         return v;
       },
-      $defs_option: (e, visitor) => visitor.definitions_option(e, visitor),
-      definitions_option: (e, visitor) => {
+      $defs_option: (e, visitor) => {
         try {
           this.pushPath({name: e.key});
-          return DefaultJsonSchema7Visitor.definitions_option(e, visitor);
+          return DefaultJsonSchema9Visitor.$defs_option(e, visitor);
         } finally {
           this.popPath();
         }
@@ -265,7 +264,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema7VisitorFa
       properties_option: (e, visitor) => {
         try {
           this._hints.push({name: e.key, suffix: true});
-          return DefaultJsonSchema7Visitor.properties_option(e, visitor);
+          return DefaultJsonSchema9Visitor.properties_option(e, visitor);
         } finally {
           this._hints.pop();
         }

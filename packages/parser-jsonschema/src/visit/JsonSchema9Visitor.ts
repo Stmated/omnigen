@@ -77,17 +77,8 @@ export interface JsonSchema9Visitor<S extends AnyJSONSchema = AnyJSONSchema> {
   $ref: DocVisitorTransformer<S['$ref'], this>;
 }
 
-// export interface JsonSchema6PlusVisitor<S extends AnyJSONSchema | AnyJSONSchema> extends JsonSchemaBaseProperties<S> {
-//
-// }
-
 type JsonSchemaDefinitionArray<S extends AnyJSONSchema> = ToDefined<ToArray<ToDefined<S['const']>>>;
 type JsonSchemaDefinitionObject<S extends AnyJSONSchema> = Exclude<Extract<ToDefined<S['const']>, object>, Array<any>>;
 type JsonSchemaDefinitionPrimitive<S extends AnyJSONSchema> = Exclude<ToDefined<S['const']>, JsonSchemaDefinitionObject<S> | JsonSchemaDefinitionArray<S>>;
 
-
 export type ArrayItem<T> = {idx: number, value: T};
-
-// export interface JsonSchemaBaseProperties<S extends AnyJSONSchema> {
-//
-// }

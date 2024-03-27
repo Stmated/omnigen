@@ -11,6 +11,9 @@ import {
   TypeOwner,
 } from '@omnigen/core';
 import {OmniUtil} from '../OmniUtil.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.
@@ -37,6 +40,8 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
     if (!args.targetFeatures.primitiveInheritance) {
 
+      logger.debug(`Language does not support primitive inheritance, so will look for replacements. Looking inside '${args.model.name}'`);
+
       OmniUtil.visitTypesDepthFirst(args.model, ctx => {
         if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && OmniUtil.isPrimitive(ctx.type.extendedBy)) {
 
@@ -45,7 +50,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
           }
 
           // Replace ourself with the extension.
-          ctx.replacement = ctx.type.extendedBy;
+          ctx.replacement = OmniUtil.cloneAndCopyTypeMeta(ctx.type.extendedBy, ctx.type);
         }
       });
     }

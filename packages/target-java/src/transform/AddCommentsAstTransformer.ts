@@ -325,7 +325,8 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
     return [
       new Java.FreeTextLine('<hr />'),
-      // new Java.FreeTextHeader(2, `Example #${index + 1}`),
+
+      // TODO: Replace this with managed node types and not this hardcoded string
       new Java.FreeTextLine([
         '<strong>',
         `Example #${index}`,

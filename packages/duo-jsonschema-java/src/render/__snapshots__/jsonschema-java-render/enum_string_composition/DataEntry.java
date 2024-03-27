@@ -9,6 +9,15 @@ public class DataEntry {
     this.transferstate = transferstate;
   }
 
+  /**
+   * The current state of the withdrawal.
+   * <h5>Examples</h5>
+   * <ul>
+   *   <li>EXECUTING</li>
+   *   <li>EXECUTED</li>
+   *   <li>PENDING</li>
+   * </ul>
+   */
   public String getTransferstate() {
     return this.transferstate;
   }

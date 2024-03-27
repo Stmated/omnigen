@@ -8,14 +8,15 @@
         "EXECUTING",
         "EXECUTED",
         "PENDING"
-      ]
+      ],
+      "description": "Enum Description"
     },
     "DataEntry": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "transferstate": {
-          "title": "DataEntryTransferState",
+          "title": "EnumAndStringIntersection",
           "allOf": [
             {"$ref": "#/definitions/TransferState"},
             {"type": "string"}

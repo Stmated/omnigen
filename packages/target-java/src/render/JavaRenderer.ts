@@ -99,7 +99,11 @@ function renderListWithWrapping(children: AstNode[], visitor: JavaVisitor<string
   return joinedListString;
 }
 
-function replaceWithHtml(text: string): string {
+function replaceWithHtml(text: string | undefined): string {
+
+  if (!text) {
+    return '';
+  }
 
   return text
     .replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -120,8 +124,6 @@ const visitCommonTypeDeclaration = (
     if (node instanceof Java.ClassDeclaration) {
       generics = node.genericParameterList;
     }
-    // const filtered = node.typeList.types.length > 0 ? node.typeList : undefined;
-    // return visitCommonTypeDeclaration(visitor, node, 'class', filtered);
 
     const modifiers = render(node.modifiers, visitor);
     const name = render(node.name, visitor);
@@ -130,6 +132,9 @@ const visitCommonTypeDeclaration = (
     const classImplementations = node.implements ? ` implements ${render(node.implements, visitor)}` : '';
 
     const typeDeclarationContent: VisitResult<string>[] = [];
+
+    // typeDeclarationContent.push(`// TYPE DEBUG: ${OmniUtil.describe(node.type.omniType)}\n`);
+
     if (node.comments) {
       typeDeclarationContent.push(node.comments.visit(visitor));
       typeDeclarationContent.push('\n');
@@ -142,12 +147,6 @@ const visitCommonTypeDeclaration = (
     typeDeclarationContent.push(`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
     typeDeclarationContent.push(visitor.visitObjectDeclarationBody(node, visitor));
     typeDeclarationContent.push(('}\n'));
-
-    // typeDeclarationContent += (node.comments ? `${render(node.comments, visitor)}\n` : '');
-    // typeDeclarationContent += (node.annotations ? `${render(node.annotations, visitor)}\n` : '');
-    // typeDeclarationContent += (`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
-    // typeDeclarationContent += (render(node.body, visitor));
-    // typeDeclarationContent += ('}\n');
 
     return typeDeclarationContent;
   } finally {
@@ -227,7 +226,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
 
       const owner = objectDecStack[objectDecStack.length - 1];
 
-      return `${annotations}${modifiers}${render(owner.name, visitor)}(${render(node.parameters, visitor)}) {${body}}\n\n`;
+      return `\n${annotations}${modifiers}${render(owner.name, visitor)}(${render(node.parameters, visitor)}) {${body}}\n\n`;
     },
     visitConstructorParameterList: (node, visitor) => renderListWithWrapping(node.children, visitor),
 

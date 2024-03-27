@@ -3,6 +3,9 @@ import pointer, {JsonObject} from 'json-pointer';
 import {isDefined, ProtocolHandler, Util} from '@omnigen/core-util';
 import {ObjectReducer} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export type WithoutRef<T> = T extends { $ref: string }
   ? Exclude<T, { $ref: string }>
@@ -75,36 +78,14 @@ export class ExternalDocumentsFinder {
       resolve: v => {
 
         const origin = v;
+        let maxRecursion = 10;
         while (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
 
-          let uri = ExternalDocumentsFinder.toPartialUri(v.$ref);
-          if (!uri.documentUri) {
-            uri = {
-              ...uri,
-              documentUri: this._uri,
-            };
+          if (maxRecursion-- <= 0) {
+            throw new Error(`Encountered too much recursion when resolving $ref: ${v.$ref}`);
           }
 
-          const schema = this._documents.get(uri.documentUri!);
-
-          if (!schema) {
-            throw new Error(`Could not find ${v.$ref}, expected in uri '${uri.documentUri}', it must be pre-loaded`);
-          }
-
-          let element: any;
-          try {
-            element = uri.path ? pointer.get(schema, uri.path) : schema;
-          } catch (ex) {
-
-            const shallowPayloadString = Util.getShallowPayloadString(origin);
-            throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}: ${ex}`, {cause: ex});
-          }
-
-          if (!element) {
-            throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}`);
-          }
-
-          v = element;
+          v = this.resolveRef(v.$ref, origin);
         }
 
         return v as WithoutRef<typeof v>;
@@ -112,42 +93,86 @@ export class ExternalDocumentsFinder {
     };
   }
 
+  private resolveRef<T>(ref: string, origin: T) {
+
+    let uri = ExternalDocumentsFinder.toPartialUri(ref);
+    if (!uri.documentUri) {
+      uri = {
+        ...uri,
+        documentUri: this._uri,
+      };
+    }
+
+    const schema = this._documents.get(uri.documentUri!);
+
+    if (!schema) {
+      throw new Error(`Could not find ${ref}, expected in uri '${uri.documentUri}', it must be pre-loaded`);
+    }
+
+    let element: any;
+    try {
+      element = uri.path ? pointer.get(schema, uri.path) : schema;
+    } catch (ex) {
+
+      const shallowPayloadString = Util.getShallowPayloadString(origin);
+      throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}: ${ex}`, {cause: ex});
+    }
+
+    if (!element) {
+      throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}`);
+    }
+
+    return element;
+  }
+
   private static searchInto(schema: JsonObject, parentUri: JsonItemAbsoluteUri, documents: Map<string, JsonObject>) {
 
-    // const newDocuments = new Map<JsonItemAbsoluteUri, Promise<JsonObject>>();
     type NewDocument = { uri: JsonItemAbsoluteUri, promise: Promise<JsonObject> };
     const newDocuments: NewDocument[] = [];
 
     const walker = new ObjectReducer(schema);
     walker.walk((obj, path) => {
 
-      if (path.length > 0 && path[path.length - 1] == '$ref' && obj && typeof obj == 'string') {
-
-        const absoluteUri = ExternalDocumentsFinder.toAbsoluteUriParts(parentUri, obj);
-
-        if (!documents.has(absoluteUri.absoluteDocumentUri)) {
-
-          const newDocument = newDocuments.find(it => it.uri.absoluteDocumentUri == absoluteUri.absoluteDocumentUri);
-          if (!newDocument) {
-
-            let promise: Promise<JsonObject>;
-            if (absoluteUri.protocol == 'file') {
-              promise = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
-            } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {
-              promise = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
-            } else {
-              throw new Error(`Unknown protocol ${absoluteUri.protocol}`);
-            }
-
-            newDocuments.push({uri: absoluteUri, promise: promise});
-          }
-        }
-
-        // Replace with the absolute uri
-        return absoluteUri.absoluteUri;
+      if (!(path.length > 0 && obj && typeof obj === 'string')) {
+        return obj;
       }
 
-      return obj;
+      const refKey = (path[path.length - 1] === '$ref')
+        ? '$ref'
+        : (path[path.length - 3] === 'discriminator' && path[path.length - 2] === 'mapping')
+          ? path[path.length - 1]
+          : undefined;
+
+      if (!refKey) {
+        return obj;
+      }
+
+      if (refKey !== '$ref') {
+        logger.info(`--- Loading and resolving relative custom $ref: ${refKey}: ${obj}`);
+      }
+
+      const absoluteUri = ExternalDocumentsFinder.toAbsoluteUriParts(parentUri, obj);
+
+      if (!documents.has(absoluteUri.absoluteDocumentUri)) {
+
+        const newDocument = newDocuments.find(it => (it.uri.absoluteDocumentUri === absoluteUri.absoluteDocumentUri));
+        if (!newDocument) {
+
+          let promise: Promise<JsonObject>;
+          if (absoluteUri.protocol == 'file') {
+            promise = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
+          } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {
+            promise = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
+          } else {
+            throw new Error(`Unknown protocol ${absoluteUri.protocol}`);
+          }
+
+          newDocuments.push({uri: absoluteUri, promise: promise});
+        }
+      }
+
+      // Replace RELATIVE $ref with ABSOLUTE $ref
+      return absoluteUri.absoluteUri;
     });
 
     return newDocuments;

@@ -195,11 +195,32 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
         new Java.EnumItemList(
           ...type.enumConstants.map((item, idx) => {
 
-            const comment = type.enumDescriptions ? new Java.CommentBlock(new Java.FreeText(type.enumDescriptions[`${item}`])) : undefined;
-            const name = type.enumNames ? type.enumNames[idx] : Case.constant(String(item));
+            let enumName: string | undefined = undefined;
+            if (type.enumNames) {
+              const enumText = type.enumNames[idx];
+              if (enumText) {
+                enumName = enumText;
+              } else {
+                logger.warn(`Could not find enum name of '${item}`);
+              }
+            }
+
+            let comment: Java.CommentBlock | undefined = undefined;
+            if (type.enumDescriptions) {
+
+              const commentText = type.enumDescriptions[enumName || `${item}`]
+                ?? type.enumDescriptions[`${item}`]
+                ?? type.enumDescriptions[`${idx}`];
+
+              if (commentText) {
+                comment = new Java.CommentBlock(new Java.FreeText(commentText));
+              } else {
+                logger.warn(`Could not find description of enum '${item}'`);
+              }
+            }
 
             return new Java.EnumItem(
-              new Java.Identifier(name),
+              new Java.Identifier(enumName || Case.constant(String(item))),
               new Java.Literal(item, type.itemKind),
               comment,
             );

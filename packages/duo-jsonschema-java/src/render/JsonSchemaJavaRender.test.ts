@@ -54,7 +54,7 @@ describe('jsonschema-java-render', () => {
 
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/duo-jsonschema-java/examples/enum_string_composition.json'), {
       compressSoloReferencedTypes: false,
-      serializationLibrary: 'POJO',
+      serializationLibrary: SerializationLibrary.POJO,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 

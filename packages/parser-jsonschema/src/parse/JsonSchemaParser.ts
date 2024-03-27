@@ -34,6 +34,7 @@ import {ExternalDocumentsFinder, RefResolver, ToDefined} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
 import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';
+import {JsonExpander} from '@omnigen/core-json';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -160,7 +161,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   }
 
   public jsonSchemaToType(
-    name: TypeName,
+    name: TypeName | undefined,
     schema: AnyJsonDefinition,
     ownerSchema?: AnyJSONSchema | undefined,
   ): SchemaToTypeResult {
@@ -170,7 +171,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // That way we will not get duplicates of the schema when called from different locations.
     const id: string | undefined = (typeof schema == 'object') ? schema.$id : (`_${JsonSchemaParser._uniqueCounter++}`);
     if (!id) {
-      throw new Error(`Encountered schema without ID: ${Util.getShallowPayloadString(schema)} (${Naming.unwrap(name)}); should have been assigned by schema transformers`);
+      throw new Error(`Encountered schema without ID: ${Util.getShallowPayloadString(schema)} (${name ? Naming.unwrap(name) : ''}); should have been assigned by schema transformers`);
     }
 
     const existing = this._typeMap.get(id);
@@ -180,12 +181,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       };
     }
 
-    // The ref is the much better unique name of the type.
-    if (id) {
-
-      // We only use the ref as a replacement name if the actual element has a ref.
-      // We do not include the fallback ref here, since it might not be the best name.
-      // We also cannot use the hash as the name
+    if (!name) {
       name = id;
     }
 
@@ -231,6 +227,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     // TODO: Add schema version migration, should support from 04 -> 2020
 
+    const expander = new JsonExpander();
+    expander.expand(root);
+
     const migrator = new JsonSchemaMigrator();
     migrator.migrate(root);
 
@@ -244,16 +243,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       const message = JsonSchemaParser.ajvErrorsToPrettyError(errors);
       throw new Error(message || ajv.errorsText() || 'JSONSchema Unknown Validation Error');
     }
-
-    // TODO: Add validation step that checks if "definitions" exists, and in that case throw an error! It should not be allowed!
-    // const walker = new SimpleObjectWalker(root);
-    // walker.walk((obj, path) => {
-    //   if (path[path.length - 1] === 'definitions' && path[path.length - 2] !== 'properties') {
-    //     throw new Error(`There are deprecated JSONSchema properties ('definitions') after schema version upgrade. Is your document version properly specified?`);
-    //   }
-    //
-    //   return obj;
-    // });
 
     const transformers = [
       // new NormalizeDefsJsonSchemaTransformerFactory().create(),
@@ -391,6 +380,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     if (extendedBy && this.canBeReplacedBy(type, extendedBy)) {
 
+      // TODO: This should be removed and placed inside a parser-agnostic transformer
       // Simplify empty types by only returning the inner content.
       const newType: OmniType = {
         ...extendedBy,
@@ -400,7 +390,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       };
 
       // TODO: A bit ugly? Is there a better way, or just a matter of introducing a helper method that does it for us?
-      if ('name' in newType || OmniUtil.isComposition(newType) || newType.kind == OmniTypeKind.INTERFACE) {
+      if ('name' in newType || (OmniUtil.isComposition(newType) && !newType.inline) || newType.kind == OmniTypeKind.INTERFACE) {
 
         // The name should be kept the same, since it is likely much more specific.
         newType.name = type.name;
@@ -896,23 +886,28 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   }
 
   public getMostPreferredNames(dereferenced: unknown, schema: AnyJsonDefinition): TypeName[] {
+
     const names: TypeName[] = [];
-    // if (dereferenced.hash) {
-    //   names.push(dereferenced.hash);
-    // }
     if (typeof schema == 'object') {
+      if (schema.title) {
+        names.push(schema.title);
+      }
+
       if (schema.$id) {
         names.push(schema.$id);
       }
 
-      if (schema.title) {
-        names.push(schema.title);
+      if (schema.$ref) {
+        names.push(schema.$ref);
       }
     }
 
     return names;
   }
 
+  /**
+   * TODO: This should be removed and placed inside a parser-agnostic transformer
+   */
   private canBeReplacedBy(type: OmniObjectType, extension: OmniType): boolean {
 
     if (OmniUtil.isEmptyType(type)) {
@@ -1037,7 +1032,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         for (let i = 0; i < varDescriptions.length; i++) {
           const key = String(allowedValues[i]);
           const value = String(varDescriptions[i]);
-          logger.info(`Setting ${key} description to: ${value}`);
+          logger.debug(`Setting ${key} description to: ${value}`);
           enumDescriptions[key] = value;
         }
 
@@ -1045,7 +1040,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
         enumDescriptions = {};
         for (const [key, value] of Object.entries(varDescriptions)) {
-          logger.info(`Setting ${key} description to: ${value}`);
+          logger.debug(`Setting ${key} description to: ${value}`);
           enumDescriptions[key] = String(value);
         }
 
@@ -1073,6 +1068,23 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         throw new Error(`x-enum-varnames of ${Naming.unwrap(name)} must be an array`);
       }
     }
+
+    // "NumberBoolean": {
+    //       "enum": [
+    //         0,
+    //         1
+    //       ],
+    //       "x-enum-varnames": [
+    //         "FALSE",
+    //         "TRUE"
+    //       ],
+    //       "x-enum-descriptions": {
+    //         "FALSE": "0 for false",
+    //         "TRUE": "1 for true"
+    //       },
+    //       "type": "number"
+    //     },
+
     return enumNames;
   }
 
@@ -1125,30 +1137,33 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     if (schema.oneOf) {
       for (const entry of schema.oneOf) {
         const resolved = this._refResolver.resolve(entry);
-        const oneOfTitle = this.getPreferredName(resolved, resolved, undefined);
-        compositionsOneOfOr.push(this.jsonSchemaToType(oneOfTitle, resolved).type);
+        const preferredName = this.getPreferredName(entry, resolved, name);
+        compositionsOneOfOr.push(this.jsonSchemaToType(preferredName, resolved).type);
       }
     }
 
     if (schema.allOf) {
       for (const entry of schema.allOf) {
-        const subType = this.jsonSchemaToType(name, this._refResolver.resolve(entry));
-        compositionsAllOfAnd.push(subType.type);
+        const resolved = this._refResolver.resolve(entry);
+        const preferredName = this.getPreferredName(entry, resolved, name);
+        compositionsAllOfAnd.push(this.jsonSchemaToType(preferredName, resolved).type);
       }
     }
 
     if (schema.anyOf) {
       for (const entry of schema.anyOf) {
-        const subType = this.jsonSchemaToType(name, this._refResolver.resolve(entry));
-        compositionsAnyOfOr.push(subType.type);
+        const resolved = this._refResolver.resolve(entry);
+        const preferredName = this.getPreferredName(entry, resolved, name);
+        compositionsAnyOfOr.push(this.jsonSchemaToType(preferredName, resolved).type);
       }
     }
 
     // TODO: This is wrong -- it needs to be done in order
     if (schema.not && typeof schema.not !== 'boolean') {
 
-      const resolvedNot = this._refResolver.resolve(schema.not);
-      compositionsNot = (this.jsonSchemaToType(name, resolvedNot)).type;
+      const resolved = this._refResolver.resolve(schema.not);
+      const preferredName = this.getPreferredName(schema.not, resolved, name);
+      compositionsNot = (this.jsonSchemaToType(preferredName, resolved)).type;
     }
 
     const composition = CompositionUtil.getCompositionOrExtensionType(
@@ -1173,25 +1188,14 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   /**
    * NOTE: This is not JsonSchema -- it is OpenApi and/or OpenRpc -- it does not belong here!
    */
-  private getDiscriminatorAware(
-    schema: AnyJsonDefinition | DiscriminatorAwareSchema,
-  ): (AnyJSONSchema & DiscriminatorAware) | undefined {
+  private getDiscriminatorAware(schema: AnyJsonDefinition | DiscriminatorAwareSchema): (AnyJSONSchema & DiscriminatorAware) | undefined {
 
     if (typeof schema == 'boolean') {
       return undefined;
     }
 
     if ('discriminator' in schema) {
-
       return schema as typeof schema & DiscriminatorAware;
-
-      // return {
-      //   // JsonSchema4 matches for all since it has a {[key: string] any} fallback, so we typecast it.
-      //   obj: schema.obj as AnyJSONSchema & DiscriminatorAware,
-      //   hash: schema.hash,
-      //   root: schema.root,
-      //   mix: schema.mix,
-      // };
     }
 
     return undefined;
@@ -1219,10 +1223,10 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
           const fakeRef: Required<Pick<AnyJSONSchema, '$ref'>> = {$ref: ref};
           const deref = this._refResolver.resolve(fakeRef);
-          const type = this.jsonSchemaToType(this.getId(deref) || ref, deref);
+          const typeResult = this.jsonSchemaToType(this.getId(deref) || ref, deref);
 
           subTypeHints.push({
-            type: type.type,
+            type: typeResult.type,
             qualifiers: [
               {
                 path: [discriminatorPropertyName],
@@ -1231,10 +1235,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
               },
             ],
           });
-
-          // TODO: If "mappings" is given, then add that class as extension to all classes being pointed to
-          // TODO: If no "mappings" is given, then that must be part of the runtime mapping instead
-          // TODO: ... do this later? And focus on fully functional interfaces code first, without complexity of mappings? YES!!!! DO IT!
 
         } catch (ex) {
           throw new Error(`Could not find schema for mapping ${key}: '${ref}' --- ${String(ex)}`, {cause: ex});

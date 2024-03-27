@@ -3,11 +3,12 @@ import {OmniUtil} from '@omnigen/core-util';
 import {JAVA_FEATURES} from '../..';
 
 /**
- * Java cannot represent XOR/union types without wrapping inside an object to handle those situations.
- *
- * But if we have an XOR that is for example `string | string` then we can just normalize it into `string` (and also moving names/descriptions)
+ * These are examples of unions that we will simplify/remove when the target is Java:
+ * <ul>
+ *   <li>`string | string` to `string`</li>
+ * </ul>
  */
-export class DeleteUnnecessaryXorJavaModelTransformer implements OmniModelTransformer {
+export class DeleteUnnecessaryCompositionsJavaModelTransformer implements OmniModelTransformer {
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
@@ -23,14 +24,12 @@ export class DeleteUnnecessaryXorJavaModelTransformer implements OmniModelTransf
       const alreadyReplaced = replaced.get(ctx.type);
       if (alreadyReplaced) {
         ctx.replacement = alreadyReplaced;
-        // OmniUtil.swapType(ctx.owner, ctx.type, alreadyReplaced);
-      } else if (ctx.type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
+      } else if (ctx.type.kind == OmniTypeKind.EXCLUSIVE_UNION || ctx.type.kind == OmniTypeKind.UNION) {
 
         const distinctTypes = OmniUtil.getDistinctTypes(ctx.type.types, JAVA_FEATURES);
         if (distinctTypes.length == 1) {
 
           const merged = this.mergeTypes(ctx.type, ctx.type.types, lossless);
-          // OmniUtil.swapType(ctx.owner, ctx.type, merged);
           ctx.replacement = merged;
           replaced.set(ctx.type, merged);
         }

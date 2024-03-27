@@ -41,15 +41,15 @@ describe('JsonExpander', () => {
       foo: 'a',
       array: [
         {
-          $expand: {
+          'x-expand': {
             using: ['x', 'y', 'z'],
             find: [
               {path: '/bar', prefix: 'Pre-', suffix: '-Post'},
               {path: '/baz', prefix: 'before-', suffix: '-after'},
             ],
           } satisfies ExpandOptions,
-          bar: 'BarValue',
-          baz: 'BazValue',
+          'bar': 'BarValue',
+          'baz': 'BazValue',
         },
       ],
     };

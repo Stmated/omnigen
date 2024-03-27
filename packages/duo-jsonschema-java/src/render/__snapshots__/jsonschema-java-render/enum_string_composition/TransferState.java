@@ -2,6 +2,9 @@ package generated.omnigen;
 
 import jakarta.annotation.Generated;
 
+/**
+ * Enum Description
+ */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public enum TransferState {
   EXECUTING("EXECUTING"),

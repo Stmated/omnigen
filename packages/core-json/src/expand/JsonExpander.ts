@@ -1,12 +1,15 @@
 import pointer, {JsonObject} from 'json-pointer';
 import {ObjectVisitor} from '../visitor';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export type ExpandUsingValue = string | number | object;
 export type ExpandUsing = ExpandUsingValue[];
 
 export type JsonPointerPath = string;
 
-export type ExpandNeedleObj = {path: JsonPointerPath, prefix?: string, suffix?: string};
+export type ExpandNeedleObj = { path: JsonPointerPath, prefix?: string, suffix?: string };
 export type ExpandNeedle = JsonPointerPath | ExpandNeedleObj;
 export type ExpandFind = ExpandNeedle | ExpandNeedle[];
 
@@ -28,42 +31,60 @@ export class JsonExpander {
     const visitor = new ObjectVisitor(args => {
 
       const current = args.obj;
-      if (current && typeof current === 'object' && '$expand' in current) {
+      if (!(current && typeof current === 'object')) {
+        return true;
+      }
 
-        const options = current.$expand as ExpandOptions;
-        delete current.$expand;
+      const optionKey = '$expand' in current
+        ? '$expand'
+        : 'x-expand' in current
+          ? 'x-expand'
+          : undefined;
 
-        const parentPath = `/${args.path.slice(0, -1).join('/')}`;
-        const parent = pointer.get(original, parentPath);
-        if (!Array.isArray(parent)) {
-          throw new Error(`Parent of the expansion object must be an array`);
-        }
+      if (!optionKey) {
+        return true;
+      }
 
-        const ourIndex = parent.indexOf(current);
-        if (ourIndex === -1) {
-          throw new Error(`Could not find the expansion object (${current}) inside array ${parent}`);
-        }
-        parent.splice(ourIndex, 1);
+      const options = current[optionKey] as ExpandOptions;
+      delete current[optionKey];
 
-        const findArray = Array.isArray(options.find) ? options.find : [options.find];
+      logger.info(`Expanding '${args.path.join('/')}' with ${JSON.stringify(options.using)}`);
 
-        for (const source of options.using) {
+      const parentPath = `/${args.path.slice(0, -1).join('/')}`;
+      const parent = pointer.get(original, parentPath);
+      if (!Array.isArray(parent)) {
+        throw new Error(`Parent of the expansion object must be an array`);
+      }
 
-          const clone = {...current};
+      const ourIndex = parent.indexOf(current);
+      if (ourIndex === -1) {
+        throw new Error(`Could not find the expansion object (${current}) inside array ${parent}`);
+      }
+      parent.splice(ourIndex, 1);
 
-          for (const findItem of findArray) {
+      const findArray = Array.isArray(options.find) ? options.find : [options.find];
 
-            if (typeof findItem === 'string') {
-              pointer.set(clone, findItem, source);
-            } else {
+      for (const source of options.using) {
 
-              const changedValue = `${findItem.prefix ?? ''}${source}${findItem.suffix ?? ''}`;
-              pointer.set(clone, findItem.path, changedValue);
-            }
+        const clone = (JSON.parse(JSON.stringify(current)));
+
+        for (const findItem of findArray) {
+
+          if (typeof findItem === 'string') {
+
+            logger.debug(`Setting '${findItem}' to '${source}`);
+            pointer.set(clone, findItem, source);
+          } else {
+
+            const changedValue = `${findItem.prefix ?? ''}${source}${findItem.suffix ?? ''}`;
+            logger.debug(`Setting '${findItem.path}' to '${changedValue}`);
+
+            pointer.set(clone, findItem.path, changedValue);
           }
-
-          parent.push(clone);
         }
+
+        logger.debug(`Adding expanded object for '${source}' to: ${parentPath}`);
+        parent.push(clone);
       }
 
       return true;

@@ -43,7 +43,7 @@ import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVi
 import {Naming} from './Naming.js';
 import {util} from 'zod';
 import assertNever = util.assertNever;
-import {assertUnreachable} from '../util';
+import {assertUnreachable, Case} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -616,6 +616,14 @@ export class OmniUtil {
       }
     });
 
+    if (type.kind == OmniTypeKind.OBJECT) {
+      if (type.extendedBy) {
+        return `${baseName} [${type.kind}, with ${OmniUtil.describe(type.extendedBy)}]`;
+      } else {
+        return `${baseName} [${type.kind}]`;
+      }
+    }
+
     if (OmniUtil.isPrimitive(type)) {
       let suffix = '';
 
@@ -718,6 +726,16 @@ export class OmniUtil {
       return {
         prefix: 'ArrayOf',
         name: OmniUtil.getVirtualTypeName(type.of),
+      };
+    } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
+      return {
+        prefix: 'TupleOf',
+        name: type.types.map(it => OmniUtil.getVirtualTypeName(it)).join(''),
+      };
+    } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
+      return {
+        prefix: 'PropertiesByPositionOf',
+        name: type.properties.map(it => Case.pascal(String(OmniUtil.getPropertyNameOrPattern(it.name)))).join(''),
       };
     } else if (OmniUtil.isPrimitive(type)) {
       return OmniUtil.getVirtualPrimitiveKindName(type.kind, OmniUtil.isNullableType(type));
@@ -1868,24 +1886,30 @@ export class OmniUtil {
     return to;
   }
 
-  public static cloneAndCopyTypeMeta(source: OmniType & OmniOptionallyNamedType, other: OmniType): typeof source {
+  public static cloneAndCopyTypeMeta(toClone: OmniType & OmniOptionallyNamedType, toCopyMetaFrom: OmniType): typeof toClone {
 
-    const newType: typeof source = {
-      ...source,
-      description: other.description ?? source.description,
-      summary: other.summary ?? source.summary,
-      accessLevel: other.accessLevel ?? source.accessLevel,
-      debug: other.debug ?? source.debug,
-      title: other.title ?? source.title,
-      absoluteUri: other.absoluteUri ?? source.absoluteUri,
+    const cloned: typeof toClone = {
+      ...toClone,
     };
 
-    const newName = ('name' in other ? other.name : undefined) ?? source.name;
+    OmniUtil.copyTypeMeta(toCopyMetaFrom, cloned);
+
+    const newName = ('name' in toCopyMetaFrom ? toCopyMetaFrom.name : undefined) ?? toClone.name;
     if (newName) {
-      newType.name = newName;
+      cloned.name = newName;
     }
 
-    return newType;
+    return cloned;
+  }
+
+  public static copyTypeMeta(from: OmniType, to: OmniType): void {
+
+    to.description = from.description ?? to.description;
+    to.summary = from.summary ?? to.summary;
+    to.accessLevel = from.accessLevel ?? to.accessLevel;
+    to.debug = from.debug ?? to.debug;
+    to.title = from.title ?? to.title;
+    to.absoluteUri = from.absoluteUri ?? to.absoluteUri;
   }
 
   public static getDiff(baseline: OmniType, other: OmniType, features: TargetFeatures): Diff[] {

@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "pino": "8.6.0",
-    "json-pointer": "^0.6.2"
+    "json-pointer": "^0.6.2",
+    "@omnigen/core-log": "workspace:*"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",

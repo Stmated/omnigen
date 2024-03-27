@@ -17,7 +17,7 @@ import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from '.';
 import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
-import {DeleteUnnecessaryXorJavaModelTransformer} from './parse/transform/DeleteUnnecessaryXorJavaModelTransformer.ts';
+import {DeleteUnnecessaryCompositionsJavaModelTransformer} from './parse/transform/DeleteUnnecessaryCompositionsJavaModelTransformer.ts';
 import {JavaAstRootNode} from './ast';
 
 export const ZodParserOptionsContext = z.object({
@@ -94,7 +94,7 @@ export const JavaPlugin = createPlugin(
     const transformers = [
       new CompositionGenericTargetToObjectJavaModelTransformer(),
       new InterfaceJavaModelTransformer(),
-      new DeleteUnnecessaryXorJavaModelTransformer(),
+      new DeleteUnnecessaryCompositionsJavaModelTransformer(),
     ];
 
     for (const transformer of transformers) {

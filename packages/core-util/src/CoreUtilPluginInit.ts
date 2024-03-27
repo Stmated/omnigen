@@ -15,7 +15,7 @@ import {
   ZodTypeLibraryContext,
 } from '@omnigen/core-plugin';
 import {z} from 'zod';
-import {ConflictingAndCompositionTargetModelTransformer, ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse';
+import {ConflictingIntersectionModelTransformer, ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse';
 import {OmniModel2ndPassTransformer, OmniModelTransformer, RenderedCompilationUnit, ZodModelTransformOptions, ZodPackageOptions, ZodParserOptions, ZodTargetOptions} from '@omnigen/core';
 import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary.ts';
 import {FileWriter} from './write';
@@ -112,7 +112,7 @@ export const CommonTransform2Plugin = createPlugin(
 
     const transformers: OmniModel2ndPassTransformer<typeof ctx.parserOptions & typeof ctx.targetOptions>[] = [
       new ElevatePropertiesModelTransformer(),
-      new ConflictingAndCompositionTargetModelTransformer(),
+      new ConflictingIntersectionModelTransformer(),
       new SimplifyInheritanceModelTransformer(),
     ];
 

@@ -1,7 +1,7 @@
 import nodePath from 'path';
 import pointer, {JsonObject} from 'json-pointer';
 import {isDefined, ProtocolHandler, Util} from '@omnigen/core-util';
-import {SimpleObjectWalker} from './helpers.ts';
+import {ObjectReducer} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
 
 export type WithoutRef<T> = T extends { $ref: string }
@@ -118,7 +118,7 @@ export class ExternalDocumentsFinder {
     type NewDocument = { uri: JsonItemAbsoluteUri, promise: Promise<JsonObject> };
     const newDocuments: NewDocument[] = [];
 
-    const walker = new SimpleObjectWalker(schema);
+    const walker = new ObjectReducer(schema);
     walker.walk((obj, path) => {
 
       if (path.length > 0 && path[path.length - 1] == '$ref' && obj && typeof obj == 'string') {

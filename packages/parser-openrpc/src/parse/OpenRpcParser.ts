@@ -65,9 +65,9 @@ import {
   JsonSchemaParser,
   RefResolver,
   SchemaToTypeResult,
-  SimpleObjectWalker,
   SimplifyJsonSchemaTransformerFactory,
 } from '@omnigen/parser-jsonschema';
+import {ObjectReducer} from '@omnigen/core-json';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
 
@@ -124,7 +124,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
       transform(doc as JSONSchema9);
 
       // TODO: This whole thing needs to be done much easier and faster. It's a mess.
-      const walker = new SimpleObjectWalker(doc);
+      const walker = new ObjectReducer(doc);
       walker.walk((v, path, registerOnPop) => {
 
         // There are potential JsonSchemas in these locations:

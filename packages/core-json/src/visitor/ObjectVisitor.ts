@@ -2,6 +2,7 @@ export interface VisitorArgs<T = any> {
   obj: T;
   path: (string | number)[];
   onAfter?: () => void;
+  replaceWith?: unknown;
 }
 
 export type Visitor = (args: VisitorArgs) => boolean;
@@ -36,7 +37,11 @@ export class ObjectVisitor {
 
         try {
           args.path.push(i);
-          this.visitInto({obj: args.obj[i], path: args.path});
+          const a: VisitorArgs = {obj: args.obj[i], path: args.path};
+          this.visitInto(a);
+          if (a.replaceWith) {
+            args.obj[i] = a.replaceWith;
+          }
         } finally {
           args.path.pop();
         }
@@ -51,7 +56,11 @@ export class ObjectVisitor {
 
         try {
           args.path.push(key);
-          this.visitInto({obj: args.obj[key], path: args.path});
+          const a: VisitorArgs = {obj: args.obj[key], path: args.path};
+          this.visitInto(a);
+          if (a.replaceWith) {
+            args.obj[key] = a.replaceWith;
+          }
         } finally {
           args.path.pop();
         }

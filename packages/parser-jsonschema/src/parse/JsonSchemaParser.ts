@@ -30,7 +30,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
 import {Case, CompositionUtil, isDefined, Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
-import {ExternalDocumentsFinder, RefResolver, SimpleObjectWalker, ToDefined} from '../visit';
+import {ExternalDocumentsFinder, RefResolver, ToDefined} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
 import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';

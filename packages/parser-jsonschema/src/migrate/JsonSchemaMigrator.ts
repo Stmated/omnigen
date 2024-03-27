@@ -6,7 +6,7 @@ import {JSONSchema6to7} from './JSONSchema6to7.ts';
 import {JSONSchema7to8} from './JSONSchema7to8.ts';
 import {JSONSchema8to9} from './JSONSchema8to9.ts';
 import {JSONSchema9ToCleanup} from './JSONSchema9ToCleanup.ts';
-import {ObjectVisitor} from './ObjectVisitor.ts';
+import {ObjectVisitor} from '@omnigen/core-json';
 
 /**
  * Will search into the object and find any $schema and update from that version up until the latest.

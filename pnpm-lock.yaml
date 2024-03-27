@@ -246,6 +246,34 @@ importers:
         specifier: ^5.4.3
         version: 5.4.3
 
+  packages/core-json:
+    dependencies:
+      json-pointer:
+        specifier: ^0.6.2
+        version: 0.6.2
+      pino:
+        specifier: 8.6.0
+        version: 8.6.0
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@types/json-pointer':
+        specifier: ^1.0.34
+        version: 1.0.34
+      colors:
+        specifier: ^1.4.0
+        version: 1.4.0
+      pino-pretty:
+        specifier: ^10.3.1
+        version: 10.3.1
+      typescript:
+        specifier: ^5.4.3
+        version: 5.4.3
+
   packages/core-log:
     dependencies:
       pino:
@@ -625,6 +653,9 @@ importers:
       '@omnigen/core':
         specifier: workspace:*
         version: link:../core
+      '@omnigen/core-json':
+        specifier: workspace:*
+        version: link:../core-json
       '@omnigen/core-log':
         specifier: workspace:*
         version: link:../core-log
@@ -720,6 +751,9 @@ importers:
       '@omnigen/core':
         specifier: workspace:*
         version: link:../core
+      '@omnigen/core-json':
+        specifier: workspace:*
+        version: link:../core-json
       '@omnigen/core-log':
         specifier: workspace:*
         version: link:../core-log

@@ -1,5 +1,5 @@
 {
-  "name": "@omnigen/parser-jsonschema",
+  "name": "@omnigen/core-json",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -14,21 +14,15 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@omnigen/core": "workspace:*",
-    "@omnigen/core-log": "workspace:*",
-    "@omnigen/core-util": "workspace:*",
-    "@omnigen/core-plugin": "workspace:*",
-    "@omnigen/core-json": "workspace:*",
-    "json-pointer": "^0.6.2",
-    "json-schema": "^0.4.0",
-    "zod": "^3.22.4",
-    "ajv": "^8.12.0"
+    "pino": "8.6.0",
+    "json-pointer": "^0.6.2"
   },
   "devDependencies": {
-    "@types/json-schema": "^7.0.15",
-    "@types/json-pointer": "^1.0.34",
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
-    "typescript": "^5.4.3"
+    "@types/json-pointer": "^1.0.34",
+    "colors": "^1.4.0",
+    "typescript": "^5.4.3",
+    "pino-pretty": "^10.3.1"
   }
 }

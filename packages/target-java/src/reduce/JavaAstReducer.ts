@@ -2,7 +2,6 @@ import {AstFreeTextVisitor, JavaVisitor} from '../visit';
 import {OmniTypeKind, reduce, Reducer} from '@omnigen/core';
 import * as Java from '../ast';
 import {assertDefined, isDefined, OmniUtil} from '@omnigen/core-util';
-import {DecoratingTypeNode} from '../ast';
 
 export type FreeTextReducer = Reducer<AstFreeTextVisitor<unknown>>;
 
@@ -169,7 +168,7 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       ).setId(n.id);
     },
     reduceAbstractMethodDeclaration: (n, reducer) => new Java.AbstractMethodDeclaration(assertDefined(n.signature.reduce(reducer))).setId(n.id),
-    reduceExtendsDeclaration: (n, reducer) => new Java.ExtendsDeclaration(assertDefined(n.type.reduce(reducer))).setId(n.id),
+    reduceExtendsDeclaration: (n, reducer) => new Java.ExtendsDeclaration(assertDefined(n.types.reduce(reducer))).setId(n.id),
     reduceImplementsDeclaration: (n, reducer) => new Java.ImplementsDeclaration(assertDefined(n.types.reduce(reducer))).setId(n.id),
     reduceTypeList: (n, reducer) => new Java.TypeList(n.children.map(it => it.reduce(reducer)).filter(isDefined)).setId(n.id),
     reduceLiteral: n => n,
@@ -200,7 +199,7 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
     reduceThrowStatement: (n, reducer) => new Java.ThrowStatement(
       assertDefined(n.expression.reduce(reducer)),
     ).setId(n.id),
-    reduceArgumentList: (n, reducer) => new Java.ArgumentList(...n.children.map(it => it.reduce(reducer)).filter(isDefined)).setId(n.id),
+    reduceArgumentList: (n, reducer) => new Java.ArgumentList(...n.children.map(it => it.reduce(reducer)).filter(isDefined)).withIdFrom(n),
     reduceReturnStatement: (n, reducer) => {
       const expr = n.expression.reduce(reducer);
       return expr ? new Java.ReturnStatement(expr).setId(n.id) : undefined;
@@ -211,16 +210,17 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       n.type?.reduce(reducer),
       n.constant,
     ).setId(n.id),
-    reduceDeclarationReference: (n, reducer) => {
-      const dec = n.declaration.reduce(reducer);
-      if (dec === undefined) {
-
-        // If the declaration we are referring to was removed, then we need to remove this reference as well.
-        return undefined;
-      }
-
-      return new Java.DeclarationReference(dec).setId(n.id);
-    },
+    reduceDeclarationReference: n => n,
+    // reduceDeclarationReference: (n, reducer) => {
+    //   const dec = n.declaration.reduce(reducer);
+    //   if (dec === undefined) {
+    //
+    //     // If the declaration we are referring to was removed, then we need to remove this reference as well.
+    //     return undefined;
+    //   }
+    //
+    //   return new Java.DeclarationReference(dec).setId(n.id);
+    // },
     reduceAnnotation: (n, reducer) => {
 
       const type = assertDefined(n.type.reduce(reducer));
@@ -241,7 +241,13 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       assertDefined(n.value.reduce(reducer)),
     ).setId(n.id),
     reduceHardCoded: n => n,
-    reduceBlock: (n, reducer) => new Java.Block(...n.children.map(it => it.reduce(reducer)).filter(isDefined)).setId(n.id),
+    reduceBlock: (n, reducer) => {
+      const reduced = new Java.Block(...n.children.map(it => it.reduce(reducer)).filter(isDefined)).setId(n.id);
+      reduced.enclosed = n.enclosed;
+      reduced.compact = n.compact;
+
+      return reduced;
+    },
     reducePackage: n => n,
     reducePredicate: (n, reducer) => reducer.reduceBinaryExpression(n, reducer),
     reduceModifierList: (n, reducer) => new Java.ModifierList(...n.children.map(it => it.reduce(reducer)).filter(isDefined)).setId(n.id),
@@ -291,6 +297,8 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       dec.annotations = n.annotations?.reduce(reducer);
       dec.extends = n.extends?.reduce(reducer);
       dec.implements = n.implements?.reduce(reducer);
+      dec.genericParameterList = n.genericParameterList?.reduce(reducer);
+      dec.inline = n.inline;
 
       return dec;
     },
@@ -315,6 +323,7 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       dec.annotations = n.annotations?.reduce(reducer);
       dec.extends = n.extends?.reduce(reducer);
       dec.implements = n.implements?.reduce(reducer);
+      dec.genericParameterList = n.genericParameterList?.reduce(reducer);
 
       return dec;
     },
@@ -361,25 +370,25 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       new Java.ConstructorParameterList(...n.children.map(it => it.reduce(r)).filter(isDefined)).setId(n.id),
     reduceConstructorParameter: (n, r) => {
 
-      const field = n.field.reduce(r);
-      if (!field || !(field instanceof Java.FieldReference)) {
+      const fieldRef = n.fieldRef.reduce(r);
+      if (!fieldRef || !(fieldRef instanceof Java.FieldReference)) {
         // If no longer a field, then there is no need for it as a constructor parameter.
         return undefined;
       }
 
       return new Java.ConstructorParameter(
-        field,
+        fieldRef,
         assertDefined(n.type.reduce(r)),
         assertDefined(n.identifier.reduce(r)),
         n.annotations?.reduce(r),
-      ).setId(n.id);
+      ).withIdFrom(n);
     },
 
     reduceStatement: (n, r) => {
       const child = n.child.reduce(r);
       return child ? new Java.Statement(child).setId(n.id) : undefined;
     },
-    reduceSuperConstructorCall: (n, r) => new Java.SuperConstructorCall(assertDefined(n.parameters.reduce(r))),
+    reduceSuperConstructorCall: (n, r) => new Java.SuperConstructorCall(assertDefined(n.arguments.reduce(r))).withIdFrom(n),
 
     reduceClassName: (n, r) => new Java.ClassName(assertDefined(n.type.reduce(r))).setId(n.id),
     reduceClassReference: (n, r) => new Java.ClassReference(assertDefined(n.className.reduce(r))).setId(n.id),

@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 public class Abs {
   private final String common;
   private final String kind;
+
   public Abs(String kind, String common) {
     this.kind = kind;
     this.common = common;

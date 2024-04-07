@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 public class AccountNotificationData {
   private final String orderid;
   private final StringBoolean verified;
+
   public AccountNotificationData(String orderid, StringBoolean verified) {
     this.orderid = orderid;
     this.verified = verified;
@@ -26,6 +27,7 @@ public class AccountNotificationData {
     Fail("0"),
     OK("1");
     private String value;
+
     StringBoolean(String value) {
       this.value = value;
     }

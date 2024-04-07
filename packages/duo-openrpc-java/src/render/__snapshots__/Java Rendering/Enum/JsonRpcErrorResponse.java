@@ -6,6 +6,7 @@ package generated.omnigen;
 public class JsonRpcErrorResponse<T extends JsonRpcError> {
   private final T error;
   private final String id;
+
   public JsonRpcErrorResponse(String id, T error) {
     this.id = id;
     this.error = error;

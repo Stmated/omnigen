@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {OmniTypeKind, UnknownKind} from '@omnigen/core';
-import {Java, JavaAstUtils} from '../';
+import {Java} from '../';
 import {assertDefined} from '@omnigen/core-util';
 
 export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransformer {
@@ -29,8 +29,8 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
           const mapClassOrInterface = n.implementation ? 'HashMap' : 'Map';
           const mapClass = `java.util.${mapClassOrInterface}`;
           const mapType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
-          const keyType = assertDefined(JavaAstUtils.createTypeNode(type.keyType, true).reduce(r));
-          const valueType = assertDefined(JavaAstUtils.createTypeNode(type.valueType, true).reduce(r));
+          const keyType = assertDefined(args.root.getAstUtils().createTypeNode(type.keyType, true).reduce(r));
+          const valueType = assertDefined(args.root.getAstUtils().createTypeNode(type.valueType, true).reduce(r));
 
           return new Java.GenericType(type, mapType, [keyType, valueType]).setId(n.id);
 

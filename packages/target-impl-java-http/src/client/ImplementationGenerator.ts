@@ -1,10 +1,10 @@
-import {AstNode} from '@omnigen/core';
+import {AstNode, RootAstNode} from '@omnigen/core';
 import {ImplementationArgs} from './ImplementationArgs';
 import {ImplementationOptions} from './ImplementationOptions';
 import {JavaAndTargetOptions} from '@omnigen/target-java';
 
 export interface ImplementationGenerator<
-  TRootNode extends AstNode,
+  TRootNode extends RootAstNode,
   TTargetOpt extends JavaAndTargetOptions,
   TImplOpt extends ImplementationOptions
 > {

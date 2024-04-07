@@ -14,6 +14,7 @@ public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResp
     private final String method;
     private final String signature;
     private final String uuid;
+
     public DepositResponseObject(
       @JsonProperty("signature") String signature,
       @JsonProperty("uuid") String uuid,
@@ -45,6 +46,7 @@ public class DepositResponse extends JsonRpcResponse<DepositResponse.DepositResp
     public static class Data {
       private final String orderid;
       private final String url;
+
       public Data(@JsonProperty("orderid") String orderid, @JsonProperty("url") String url) {
         this.orderid = orderid;
         this.url = url;

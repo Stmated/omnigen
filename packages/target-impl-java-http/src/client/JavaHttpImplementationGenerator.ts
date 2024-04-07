@@ -5,14 +5,15 @@ import {
   AddCompositionMembersJavaAstTransformer,
   AddConstructorJavaAstTransformer,
   AddFieldsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer, JacksonJavaAstTransformer,
+  AddThrowsForKnownMethodsAstTransformer,
+  JacksonJavaAstTransformer,
   Java,
   JAVA_FEATURES,
   JavaAndTargetOptions,
-  JavaAstUtils,
   JavaOptions,
-  PackageResolverAstTransformer,
-  ReorderMembersTransformer,
+  PackageResolverAstTransformer, RemoveConstantParametersAstTransformer,
+  ReorderMembersAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer,
 } from '@omnigen/target-java';
 import {type ImplementationArgs} from './ImplementationArgs';
 import {
@@ -25,7 +26,9 @@ import {
   OmniOutput,
   OmniType,
   OmniTypeKind,
+  RootAstNode,
   TargetOptions,
+  TypeNode,
   UnknownKind,
 } from '@omnigen/core';
 import {ImplementationOptions} from './ImplementationOptions';
@@ -34,8 +37,8 @@ import {Case, Naming, OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-type JavaHttpGeneratorType = ImplementationGenerator<AstNode, JavaAndTargetOptions, ImplementationOptions>;
-type JavaHttpArgs = ImplementationArgs<AstNode, JavaAndTargetOptions, ImplementationOptions>;
+type JavaHttpGeneratorType = ImplementationGenerator<RootAstNode, JavaAndTargetOptions, ImplementationOptions>;
+type JavaHttpArgs = ImplementationArgs<Java.JavaAstRootNode, JavaAndTargetOptions, ImplementationOptions>;
 
 /**
  * TODO: Transformer that checks the response object, and counts the number of non-literal final values
@@ -119,9 +122,11 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new AddAccessorsForFieldsAstTransformer([objectMapperField.identifier]),
       new AddAbstractAccessorsAstTransformer(),
       new AddThrowsForKnownMethodsAstTransformer(),
+      new ResolveGenericSourceIdentifiersAstTransformer(),
+      new RemoveConstantParametersAstTransformer(),
       new JacksonJavaAstTransformer(),
       new PackageResolverAstTransformer(),
-      new ReorderMembersTransformer(),
+      new ReorderMembersAstTransformer(),
     ];
 
     for (const transformer of transformers) {
@@ -207,14 +212,14 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
             errorResponses.push(response);
             // TODO: Need to throw the actual exception :)
             qualifierResultBlock.children.push(
-              ...this.createExceptionThrowingBlock(objectMapperField, responseDeclaration, response.type, client.body, throwsTypeList),
+              ...this.createExceptionThrowingBlock(args, objectMapperField, responseDeclaration, response.type, client.body, throwsTypeList),
             );
           } else {
             regularResponses.push(response);
             qualifierResultBlock.children.push(
               new Java.Statement(
                 new Java.ReturnStatement(
-                  this.createConverterMethodCall(objectMapperField, responseDeclaration, response.type),
+                  this.createConverterMethodCall(args.root, objectMapperField, responseDeclaration, response.type),
                 ),
               ),
             );
@@ -535,6 +540,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
   }
 
   private createExceptionThrowingBlock(
+    args: JavaHttpArgs,
     converterField: Java.Field,
     fromValueDeclaration: Java.VariableDeclaration | Java.Parameter,
     type: OmniType,
@@ -542,7 +548,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     throws: Java.TypeList<OmniType>,
   ): Java.Statement[] {
 
-    const result = this.createConverterMethodCall(converterField, fromValueDeclaration, type);
+    const result = this.createConverterMethodCall(args.root, converterField, fromValueDeclaration, type);
     const resultVariable = new Java.VariableDeclaration(
       new Java.Identifier('errorResponse'),
       result,
@@ -550,7 +556,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       true,
     );
 
-    const astType = this.getOrCreateExceptionAstType(type, cuBody);
+    const astType = this.getOrCreateExceptionAstType(args, type, cuBody);
     throws.children.push(astType);
 
     return [
@@ -568,9 +574,9 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     ];
   }
 
-  private readonly _typeToExceptionMap = new Map<OmniType, Java.EdgeType<OmniType>>();
+  private readonly _typeToExceptionMap = new Map<OmniType, Java.EdgeType>();
 
-  private getOrCreateExceptionAstType(type: OmniType, cuBody: Java.Block): Java.EdgeType<OmniType> {
+  private getOrCreateExceptionAstType(args: JavaHttpArgs, type: OmniType, cuBody: Java.Block): Java.EdgeType {
 
     const existing = this._typeToExceptionMap.get(type);
     if (existing) {
@@ -615,7 +621,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     );
 
     newExceptionDeclaration.extends = new Java.ExtendsDeclaration(
-      JavaAstUtils.createTypeNode(exceptionType),
+      new Java.TypeList([args.root.getAstUtils().createTypeNode(exceptionType)]),
     );
 
     cuBody.children.push(newExceptionDeclaration);
@@ -625,6 +631,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
   }
 
   private createConverterMethodCall(
+    root: RootAstNode,
     converterField: Java.Field,
     fromValueDeclaration: Java.VariableDeclaration | Java.Parameter,
     type: OmniType,
@@ -635,7 +642,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new Java.Identifier('convertValue'),
       new Java.ArgumentList(
         new Java.DeclarationReference(fromValueDeclaration),
-        new Java.ClassReference(new Java.ClassName(JavaAstUtils.createTypeNode(type, false))),
+        new Java.ClassReference(new Java.ClassName(root.getAstUtils().createTypeNode(type, false))),
       ),
     );
   }
@@ -644,15 +651,15 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     args: JavaHttpArgs,
     regularResponses: OmniOutput[],
     errorResponses: OmniOutput[],
-  ): Java.TypeNode {
+  ): TypeNode {
 
     if (regularResponses.length == 1) {
 
       if (args.implOptions.onErrorThrowExceptions) {
-        return JavaAstUtils.createTypeNode(regularResponses[0].type, false);
+        return args.root.getAstUtils().createTypeNode(regularResponses[0].type, false);
       } else {
         if (errorResponses.length == 0) {
-          return JavaAstUtils.createTypeNode(regularResponses[0].type, false);
+          return args.root.getAstUtils().createTypeNode(regularResponses[0].type, false);
         } else {
           // TODO: We need to merge the different responses into on container object. An XOR composition.
           //        (and then run the XOR composition transformer over it all)
@@ -664,10 +671,10 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     }
 
     if (regularResponses.length == 0) {
-      return JavaAstUtils.createTypeNode({kind: OmniTypeKind.UNKNOWN}, false);
+      return args.root.getAstUtils().createTypeNode({kind: OmniTypeKind.UNKNOWN}, false);
     }
 
-    return JavaAstUtils.createTypeNode(regularResponses[0].type, false);
+    return args.root.getAstUtils().createTypeNode(regularResponses[0].type, false);
   }
 
   private getTypeAndLiteral(value: unknown | undefined): ['null' | 'string' | 'number' | 'boolean', LiteralValue] {

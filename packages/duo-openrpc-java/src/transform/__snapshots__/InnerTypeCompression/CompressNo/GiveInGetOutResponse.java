@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 public class GiveInGetOutResponse extends JsonRpcResponse {
   private final String id;
   private final Out result;
+
   public GiveInGetOutResponse(String id, Out result) {
     this.id = id;
     this.result = result;

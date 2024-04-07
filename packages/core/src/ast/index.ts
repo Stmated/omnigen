@@ -1,6 +1,8 @@
 
-export * from './AstNode.js';
-export * from './AstToken.js';
-export * from './CompilationUnitRenderCallback.js';
-export * from './RenderedCompilationUnit.js';
-export * from './AstNodeWithChildren.js';
+export * from './AstNode.ts';
+export * from './AstToken.ts';
+export * from './CompilationUnitRenderCallback.ts';
+export * from './RenderedCompilationUnit.ts';
+export * from './AstNodeWithChildren.ts';
+export * from './TypeNode.ts';
+export * from './AstTargetFunctions.ts';

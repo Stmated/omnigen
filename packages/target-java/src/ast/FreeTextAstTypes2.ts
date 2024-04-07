@@ -1,4 +1,3 @@
-import {TypeNode} from './JavaAstTypes.ts';
 import {assertUnreachable} from '@omnigen/core-util';
 
 export enum FreeTextNodeKind2 {

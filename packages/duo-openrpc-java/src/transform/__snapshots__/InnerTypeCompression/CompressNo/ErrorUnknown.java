@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 public class ErrorUnknown extends JsonRpcErrorResponse {
   private final ErrorUnknownError error;
   private final String id;
+
   public ErrorUnknown(ErrorUnknownError error, String id) {
     this.error = error;
     this.id = id;

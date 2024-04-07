@@ -141,22 +141,17 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(info.propertyName)}`;
 
     const upperBound = this.toGenericBoundType(info.commonType);
-    // if (lowerBound) {
-    //   if (expandedGenericSourceIdentifier) {
-    //     propertyNameExpansions.set(info.propertyName, [expandedGenericSourceIdentifier]);
-    //   }
-    // }
 
     const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
       placeholderName: genericName,
     };
 
-    if (upperBound && upperBound.kind == OmniTypeKind.GENERIC_TARGET) {
+    if (upperBound && upperBound.kind === OmniTypeKind.GENERIC_TARGET) {
 
       for (let i = 0; i < upperBound.targetIdentifiers.length; i++) {
         const lowerTarget = upperBound.targetIdentifiers[i];
-        if (!OmniUtil.asSuperType(lowerTarget.type)) { // lowerTarget.type.kind == OmniTypeKind.UNKNOWN) {
+        if (!OmniUtil.asSuperType(lowerTarget.type)) {
           continue;
         }
         if (OmniUtil.isPrimitive(lowerTarget.type)) {
@@ -178,35 +173,6 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     if (upperBound) {
       genericSourceIdentifier.upperBound = upperBound;
     }
-
-    // let targetIdentifierType: OmniType | undefined; // property.type
-    // if (genericSource.of.kind == OmniTypeKind.GENERIC_TARGET) {
-    //
-    //   let i = 0;
-    //   logger.info(`Hello`);
-    //   let newTargetIdentifier: OmniGenericTargetType | undefined = undefined;
-    //   // for (const nestedTarget of property.type.targetIdentifiers) {
-    //   //
-    //   //   if (ownerToGenericTargetMap.has(nestedTarget.type) || (nestedTarget.type.kind == OmniTypeKind.OBJECT && nestedTarget.type.abstract)) {
-    //   //
-    //   //     if (newTargetIdentifier === undefined) {
-    //   //
-    //   //       // Copy the target identifier so it is a new instance and not related to the previous.
-    //   //       // property.type
-    //   //       newTargetIdentifier = {
-    //   //         ...property.type,
-    //   //       };
-    //   //     }
-    //   //
-    //   //     // Now we can work with our specialized target type.
-    //   //     newTargetIdentifier.targetIdentifiers
-    //   //   }
-    //   // }
-    //
-    //   targetIdentifierType = newTargetIdentifier ?? property.type;
-    // } else {
-    //   targetIdentifierType = property.type;
-    // }
 
     genericSource.sourceIdentifiers.push(genericSourceIdentifier);
 
@@ -251,26 +217,6 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         }
       }
 
-      // TODO: Improve the readability and flexibility of this whole expansion thing.
-      //        Right now very hard-coded. Can only handle one expansion, and takes no heed to "UNKNOWN" types.
-      // const expandedGenericSourceIdentifier = this.expandLowerBoundGenericIfRequired(
-      //   property.type,
-      //   genericSource,
-      // );
-
-      // if (expandedGenericSourceIdentifier) {
-      //   let i = 0;
-      // }
-
-      // const expansions = propertyNameExpansions.get(info.propertyName);
-      // if (expansions && expansions.length > 0 && property.type.kind == OmniTypeKind.OBJECT && property.type.extendedBy && property.type.extendedBy.kind == OmniTypeKind.GENERIC_TARGET) {
-      //
-      //   // Let's expand the property's generic target identifiers into this current generic type.
-      //   // TODO: This should probably be done recursively somehow, so any depth is handled.
-      //   const targets = property.type.extendedBy.targetIdentifiers;
-      //   genericTarget.targetIdentifiers.push(...targets);
-      // }
-
       const targetIdentifier: OmniGenericTargetIdentifierType = {
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
         type: property.type,
@@ -287,73 +233,23 @@ export class GenericsModelTransformer implements OmniModelTransformer {
       property.owner.properties.splice(idx, 1);
     }
 
-    if (genericSource.of.kind == OmniTypeKind.OBJECT) {
+    if (genericSource.of.kind === OmniTypeKind.OBJECT) {
       genericSource.of.properties.push({
         name: info.propertyName,
         type: genericSourceIdentifier,
         owner: genericSource.of,
+
+        readOnly: info.properties.every(it => it.readOnly),
+        writeOnly: info.properties.every(it => it.writeOnly),
+        required: info.properties.every(it => it.required),
+        deprecated: info.properties.every(it => it.deprecated),
+        abstract: info.properties.every(it => it.abstract),
       });
     } else {
 
       // Go back to info logging? Feels like this should have been filtered away earlier!
       throw new Error(`Encountered ${OmniUtil.describe(genericSource.of)} as generic source, which cannot represent properties, so cannot move ${info.propertyName} there`);
     }
-  }
-
-  private expandUpperBoundGenericIfRequired(
-    upperBound: OmniType,
-    genericSource: OmniGenericSourceType,
-  ): OmniGenericSourceIdentifierType | undefined {
-
-    if (upperBound.kind != OmniTypeKind.GENERIC_TARGET) {
-
-      // We only expand the bound if it is a generic target
-      return undefined;
-    }
-
-    if (upperBound.targetIdentifiers.length != 1) {
-
-      // For now we only support if there is one, for simplicity. Needs improvement in the future.
-      return undefined;
-    }
-
-    const upperBoundUpperBound = upperBound.targetIdentifiers[0].sourceIdentifier.upperBound;
-    if (!upperBoundUpperBound || upperBoundUpperBound.kind == OmniTypeKind.UNKNOWN) {
-
-      // If the lower bound of the identifier is unknown, then it makes no sense exploding it.
-      // It should just be rendered as "Class" or "Class<?>" or "Class<>" depending on context.
-      return undefined;
-    }
-
-    // The property generic type is itself a generic target.
-    // This can for example be: <T extends JsonRpcRequest<AbstractRequestParams>>
-    // To make it better and more exact to work with, we should replace with this:
-    // <TData extends AbstractRequestParams, T extends JsonRpcRequest<TData>>
-    const targetIdentifier = upperBound.targetIdentifiers[0];
-    const sourceIdentifierUpperBound = this.toGenericBoundType(targetIdentifier.type); // , args, targetFeatures);
-
-    const sourceDesc = OmniUtil.describe(targetIdentifier.sourceIdentifier);
-    const targetDesc = OmniUtil.describe(targetIdentifier);
-    const lowerDesc = OmniUtil.describe(upperBound);
-
-    const sourceIdentifier: OmniGenericSourceIdentifierType = {
-      placeholderName: this.getExplodedSourceIdentifierName(targetIdentifier.sourceIdentifier),
-      kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-      debug: `Exploded from '${sourceDesc}' of '${targetDesc}' of '${lowerDesc}'`,
-    };
-
-    if (sourceIdentifierUpperBound) {
-      sourceIdentifier.upperBound = sourceIdentifierUpperBound;
-    }
-
-    genericSource.sourceIdentifiers.push(sourceIdentifier);
-    upperBound.targetIdentifiers[0] = {
-      kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-      type: sourceIdentifier,
-      sourceIdentifier: sourceIdentifier,
-    };
-
-    return sourceIdentifier;
   }
 
   private toGenericBoundType(targetIdentifierType: OmniType | undefined): OmniType | undefined {
@@ -363,22 +259,5 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     }
 
     return targetIdentifierType;
-  }
-
-  private getExplodedSourceIdentifierName(identifier: OmniGenericSourceIdentifierType): string {
-
-    if (identifier.lowerBound) {
-
-      // TODO: This needs to be improved someday. It should be based on the property name, and not guessed from type.
-      const lowerName = Naming.unwrap(OmniUtil.getVirtualTypeName(identifier.lowerBound));
-      const words = lowerName.split(/(?=[A-Z])/);
-      if (words.length > 2) {
-        return `T${words[words.length - 2]}${words[words.length - 1]}`;
-      } else if (words.length > 1) {
-        return `T${words[words.length - 1]}`;
-      }
-    }
-
-    return `TExploded${identifier.placeholderName}`;
   }
 }

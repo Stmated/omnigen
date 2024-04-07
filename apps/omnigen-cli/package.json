@@ -21,6 +21,7 @@
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
     "@omnigen/target-java": "workspace:*",
+    "@omnigen/target-typescript": "workspace:*",
     "@omnigen/plugin": "workspace:*",
     "@omnigen/omnigen": "workspace:*",
     "commander": "^12.0.0",

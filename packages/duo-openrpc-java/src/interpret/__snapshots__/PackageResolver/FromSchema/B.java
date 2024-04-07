@@ -7,6 +7,7 @@ import jakarta.annotation.Generated;
 public class B extends Abs {
   private final String b;
   private final double x;
+
   public B(String kind, String common, String b, double x) {
     super(kind, common);
     this.b = b;

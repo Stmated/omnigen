@@ -10,6 +10,7 @@ public class AbortData {
   private final String orderid;
   private final StringBoolean systemInitiated;
   private final StringBoolean userInitiated;
+
   public AbortData(
     @JsonProperty(value = "orderid", required = true) String orderid,
     @JsonProperty("user_initiated") StringBoolean userInitiated,

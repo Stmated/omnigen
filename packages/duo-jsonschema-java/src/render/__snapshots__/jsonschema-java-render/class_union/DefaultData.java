@@ -9,6 +9,7 @@ import jakarta.annotation.Generated;
 public class DefaultData {
   private final StringBoolean inlineResult;
   private final String orderid;
+
   public DefaultData(
     @JsonProperty(value = "orderid", required = true) String orderid,
     @JsonProperty("inlineResult") StringBoolean inlineResult

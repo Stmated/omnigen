@@ -23,6 +23,8 @@
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",
+    "graphology": "^0.25.4",
+    "graphology-dag": "0.4.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {

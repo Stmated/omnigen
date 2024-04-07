@@ -22,7 +22,7 @@ import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '../option
 import * as Java from '../ast';
 import {JavaAstRootNode} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
-import {assertUnreachable, Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {AbortVisitingWithResult, assertUnreachable, Case, Naming, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaAndTargetOptions} from '../transform';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -525,56 +525,22 @@ export class JavaUtil {
     return `set${capitalized}`;
   }
 
-  public static getMostCommonTypeInHierarchies(hierarchies: OmniType[][]): OmniType | undefined {
-
-    if (hierarchies.length == 0) {
-      return undefined;
-    }
-
-    const firstHierarchy = hierarchies[0];
-    for (let typeIndex = firstHierarchy.length - 1; typeIndex >= 0; typeIndex--) {
-
-      let common: OmniType | undefined = firstHierarchy[typeIndex];
-      for (let n = 1; n < hierarchies.length; n++) {
-
-        const indexOfInOtherHierarchy = hierarchies[n].indexOf(common);
-        if (indexOfInOtherHierarchy == -1) {
-
-          // Could not find this type in the other's hierarchy. Need to search deeper.
-          common = undefined;
-          break;
-        }
-      }
-
-      if (common) {
-        return common;
-      }
-    }
-
-    return undefined;
-  }
-
   public static getClassDeclaration(root: JavaAstRootNode, type: OmniType): Java.ClassDeclaration | undefined {
 
-    // TODO: Need a way of making the visiting stop. Since right now we keep on looking here, which is... bad to say the least.
-    const holder: { ref?: Java.ClassDeclaration } = {};
-
-    const defaultVisitor = root.createVisitor();
-    root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    const defaultVisitor = root.createVisitor<Java.ClassDeclaration | undefined>();
+    return VisitResultFlattener.visitWithSingularResult(VisitorFactoryManager.create(defaultVisitor, {
       visitClassDeclaration: node => {
         if (node.type.omniType == type) {
-          holder.ref = node;
+          throw new AbortVisitingWithResult(node);
         } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
           if (node.type.omniType == type.source.of) {
             // Return the class declaration; which will be generic.
             // It is up to the calling code to map the generic arguments to real types.
-            holder.ref = node;
+            throw new AbortVisitingWithResult(node);
           }
         }
       },
-    }));
-
-    return holder.ref;
+    }), root, undefined);
   }
 
 

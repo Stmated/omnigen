@@ -107,7 +107,7 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
 
       visitEdgeType: node => {
 
-        if (node.omniType.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
+        if (node.omniType.kind === OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
           const replacement = sourceIdentifierReplacements.get(node.omniType);
           if (replacement) {
             node.omniType = replacement;

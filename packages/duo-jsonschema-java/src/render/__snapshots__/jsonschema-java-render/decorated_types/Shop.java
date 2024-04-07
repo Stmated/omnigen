@@ -11,6 +11,7 @@ public class Shop {
   private final String name;
   private final Order[] orders;
   private final String tag;
+
   public Shop(int id, Order[] orders, String name, String tag) {
     this.id = id;
     this.orders = orders;

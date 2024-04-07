@@ -11,7 +11,7 @@ import {
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
-  PackageOptions,
+  PackageOptions, RootAstNode,
 } from '@omnigen/core';
 import * as Java from '../ast';
 import {JavaAstRootNode, Modifier, ModifierList, ModifierType} from '../ast';
@@ -284,7 +284,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     root: Java.JavaAstRootNode,
   ): Java.InterfaceDeclaration {
 
-    const declaration = JavaAstUtils.createInterfaceWithBody(type, options);
+    const declaration = JavaAstUtils.createInterfaceWithBody(root, type, options);
 
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(JavaUtil.getPackageName(type, declaration.name.value, options)),
@@ -310,7 +310,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     //        Make use of the DependencyGraph to figure things out...
     const body = new Java.Block();
 
-    const declaration = this.createSubTypeDeclaration(genericSourceIdentifiers, type, originalType, body, options);
+    const declaration = this.createSubTypeDeclaration(root, genericSourceIdentifiers, type, originalType, body, options);
 
     // TODO: Move to separate transformer, which job it is to add the proper extends / implements
     const [typeExtends, typeImplements] = JavaUtil.getExtendsAndImplements(model, type);
@@ -325,7 +325,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     if (typeExtends) {
       declaration.extends = new Java.ExtendsDeclaration(
-        JavaAstUtils.createTypeNode(typeExtends),
+        new Java.TypeList([root.getAstUtils().createTypeNode(typeExtends)]),
       );
 
       if (!this._map.has(typeExtends)) {
@@ -338,7 +338,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     if (typeImplements.length > 0) {
       declaration.implements = new Java.ImplementsDeclaration(
-        new Java.TypeList(typeImplements.map(it => JavaAstUtils.createTypeNode(it))),
+        new Java.TypeList(typeImplements.map(it => root.getAstUtils().createTypeNode(it))),
       );
 
       for (const typeInterface of typeImplements) {
@@ -365,6 +365,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
   }
 
   private createSubTypeDeclaration(
+    root: RootAstNode,
     genericSourceIdentifiers: OmniGenericSourceIdentifierType[] | undefined,
     type: OmniType,
     originalType: OmniGenericSourceType | undefined,
@@ -373,7 +374,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
   ): Java.AbstractObjectDeclaration {
 
     const javaClassName = JavaUtil.getClassName(originalType || type, options);
-    const javaType = JavaAstUtils.createTypeNode(type);
+    const javaType = root.getAstUtils().createTypeNode(type);
     const javaClassIdentifier = new Java.Identifier(javaClassName);
     if (OmniUtil.isIdentifiable(type) && !type.name) {
       javaClassIdentifier.implicit = true;
@@ -384,8 +385,8 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       const genericSourceArgExpressions = genericSourceIdentifiers.map(it => new Java.GenericTypeDeclaration(
         new Java.Identifier(it.placeholderName),
         it,
-        it.upperBound ? JavaAstUtils.createTypeNode(it.upperBound) : undefined,
-        it.lowerBound ? JavaAstUtils.createTypeNode(it.lowerBound) : undefined,
+        it.upperBound ? root.getAstUtils().createTypeNode(it.upperBound) : undefined,
+        it.lowerBound ? root.getAstUtils().createTypeNode(it.lowerBound) : undefined,
       ));
 
       return new Java.ClassDeclaration(
@@ -399,7 +400,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
     const modifiers = new ModifierList(new Modifier(ModifierType.PUBLIC));
 
-    if (type.kind == OmniTypeKind.OBJECT) {
+    if (type.kind === OmniTypeKind.OBJECT) {
       if (type.abstract) {
         modifiers.children.push(new Modifier(ModifierType.ABSTRACT));
       }

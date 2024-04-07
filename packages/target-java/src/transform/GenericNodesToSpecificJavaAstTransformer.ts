@@ -12,7 +12,7 @@ export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTra
       ...defaultReducer,
       reduceFieldBackedGetter: (n, r) => {
 
-        const field = args.root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+        const field = args.root.resolveNodeRef(n.fieldRef);
         return new Java.MethodDeclaration(
           new MethodDeclarationSignature(
             n.getterName ?? new Identifier(JavaUtil.getGetterName(field.identifier.value, field.type.omniType)),
@@ -29,7 +29,7 @@ export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTra
       },
       reduceFieldBackedSetter: (n, r) => {
 
-        const field = args.root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+        const field = args.root.resolveNodeRef(n.fieldRef);
 
         const parameter = new Parameter(
           field.type,

@@ -4,7 +4,7 @@ import {Naming, OmniModelMerge, OmniUtil, Util} from '@omnigen/core-util';
 import {describe, expect, test, vi} from 'vitest';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
-import {OpenRpcPlugin} from '@omnigen/parser-openrpc';
+import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 
 describe('merge-documents', () => {
 
@@ -66,7 +66,7 @@ describe('merge-models', () => {
 
   test('find-equivalent-models-error-structure-1.0+1.1', async () => {
 
-    expect(OpenRpcPlugin, 'Here to make sure OpenRPC plugins are registered').toBeDefined();
+    expect(OpenRpcPlugins.OpenRpcPlugin, 'Here to make sure OpenRPC plugins are registered').toBeDefined();
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

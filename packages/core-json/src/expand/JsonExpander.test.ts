@@ -19,7 +19,7 @@ describe('JsonExpander', () => {
         {
           $expand: {
             using: ['x', 'y', 'z'],
-            find: '/baz',
+            at: '/baz',
           } satisfies ExpandOptions,
           baz: 'q',
         },
@@ -43,7 +43,7 @@ describe('JsonExpander', () => {
         {
           'x-expand': {
             using: ['x', 'y', 'z'],
-            find: [
+            at: [
               {path: '/bar', prefix: 'Pre-', suffix: '-Post'},
               {path: '/baz', prefix: 'before-', suffix: '-after'},
             ],

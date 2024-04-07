@@ -26,7 +26,26 @@ export const JsonSchemaPlugin = createPlugin(
     } else if (ctx.source == undefined) {
 
       const obj = await ctx.schemaFile.asObject();
-      if (!obj || !(typeof obj == 'object') || (!('$schema' in obj) && !('$id' in obj))) {
+      if (!obj) {
+        return new z.ZodError([
+          {code: 'custom', path: ['source'], message: `File is empty`},
+        ]);
+      }
+
+      if (!(typeof obj == 'object')) {
+        return new z.ZodError([
+          {code: 'custom', path: ['source'], message: `File is not an object`},
+        ]);
+      }
+
+      const schema = '$schema' in obj ? String(obj.$schema) : undefined;
+      if (schema && !schema.includes('json-schema')) {
+        return new z.ZodError([
+          {code: 'custom', path: ['source'], message: `File is not a JsonSchema file, it is '${schema}'`},
+        ]);
+      }
+
+      if (!schema && !('$id' in obj)) {
         return new z.ZodError([
           {code: 'custom', path: ['source'], message: `File is not a JsonSchema file`},
         ]);

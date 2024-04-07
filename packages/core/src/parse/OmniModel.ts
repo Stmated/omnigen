@@ -75,7 +75,7 @@ export interface OmniProperty {
   required?: boolean;
   readOnly?: boolean;
   writeOnly?: boolean;
-  abstract?: true;
+  abstract?: boolean;
 
   accessLevel?: OmniAccessLevel;
 

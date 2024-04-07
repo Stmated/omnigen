@@ -34,7 +34,6 @@ import {
   AddConstructorJavaAstTransformer,
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
-  AddJakartaValidationAstTransformer,
   AddObjectDeclarationsJavaAstTransformer,
   AddSubTypeHintsAstTransformer,
   AddThrowsForKnownMethodsAstTransformer,
@@ -42,10 +41,10 @@ import {
   InnerTypeCompressionAstTransformer,
   JavaOptions,
   PackageResolverAstTransformer,
-  ReorderMembersTransformer,
+  ReorderMembersAstTransformer,
   SimplifyGenericsAstTransformer,
   ZodJavaOptions,
-  JavaPlugins,
+  JavaPlugins, ResolveGenericSourceIdentifiersAstTransformer, RemoveConstantParametersAstTransformer,
 } from '@omnigen/target-java';
 import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
 import {TYPESCRIPT_FEATURES} from './features';
@@ -58,6 +57,11 @@ import {SingleFileTypeScriptAstTransformer} from './ast/SingleFileTypeScriptAstT
 import {RemoveEnumFieldsTypeScriptAstTransformer} from './ast/RemoveEnumFieldsTypeScriptAstTransformer.ts';
 import {StrictUndefinedTypeScriptModelTransformer} from './parse';
 import {TsRootNode} from './ast';
+import {LoggerFactory} from '@omnigen/core-log';
+import {RemoveSuperfluousGetterTypeScriptAstTransformer} from './ast/RemoveSuperfluousGetterTypeScriptAstTransformer.ts';
+import {InterfaceToTypeAliasTypeScriptAstTransformer} from './ast/InterfaceToTypeAliasTypeScriptAstTransformer.ts';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export const ZodParserOptionsContext = z.object({
   parserOptions: ZodParserOptions,
@@ -142,6 +146,8 @@ export const TypeScriptPlugin = createPlugin(
       // new DeleteUnnecessaryXorJavaModelTransformer(),
     ];
 
+    logger.info(`${modelTransformerArgs.model.types.length}`);
+
     for (const transformer of transformers) {
       transformer.transformModel(modelTransformerArgs);
     }
@@ -159,6 +165,8 @@ export const TypeScriptPlugin = createPlugin(
     ] as const;
 
     for (const transformer of transformers2) {
+
+      logger.info(`${transformer.transformModel2ndPass.name}: ${modelTransformer2Args.model.types.length}`);
       transformer.transformModel2ndPass(modelTransformer2Args);
     }
 
@@ -172,20 +180,23 @@ export const TypeScriptPlugin = createPlugin(
       new AddConstructorJavaAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
-      new AddJakartaValidationAstTransformer(),
       new AddSubTypeHintsAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
       new AddThrowsForKnownMethodsAstTransformer(),
+      new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
       new CompositionTypeScriptAstTransformer(),
       new MethodToGetterTypeScriptAstTransformer(),
+      new RemoveSuperfluousGetterTypeScriptAstTransformer(),
+      new RemoveConstantParametersAstTransformer(),
       new ClassToInterfaceTypeScriptAstTransformer(),
+      new InterfaceToTypeAliasTypeScriptAstTransformer(),
       new ToHardCodedTypeTypeScriptAstTransformer(),
       new SingleFileTypeScriptAstTransformer(),
       new RemoveEnumFieldsTypeScriptAstTransformer(),
-      new AddGeneratedCommentAstTransformer(),
       new PackageResolverAstTransformer(),
-      new ReorderMembersTransformer(),
+      new ReorderMembersAstTransformer(),
+      new AddGeneratedCommentAstTransformer(),
     ] as const;
 
     const options: TypeScriptOptions & JavaOptions & TargetOptions & PackageOptions = {
@@ -204,6 +215,8 @@ export const TypeScriptPlugin = createPlugin(
     };
 
     for (const transformer of astTransformers) {
+
+      logger.info(`${transformer.transformAst.name}: ${astTransformerArgs.root.children.length}`);
       transformer.transformAst(astTransformerArgs);
     }
 
@@ -229,6 +242,9 @@ export const TypeScriptRendererPlugin = createPlugin(
   async ctx => {
 
     const rootTsNode = ctx.astNode as TsRootNode;
+
+    logger.info(`Root node: ${rootTsNode.children.length}`);
+
     const renderer = createTypeScriptRenderer(rootTsNode, {
       ...DEFAULT_JAVA_OPTIONS,
       ...DEFAULT_PACKAGE_OPTIONS,
@@ -245,4 +261,5 @@ export const TypeScriptRendererPlugin = createPlugin(
   },
 );
 
+logger.info(`Registering typescript plugins`);
 export default PluginAutoRegistry.register([TypeScriptPluginInit, TypeScriptPlugin, TypeScriptRendererPlugin]);

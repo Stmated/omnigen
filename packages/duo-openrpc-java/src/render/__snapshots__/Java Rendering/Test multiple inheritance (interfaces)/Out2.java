@@ -7,6 +7,7 @@ import jakarta.annotation.Generated;
 public class Out2 extends A implements IB, IC {
   private final String bar;
   private final String xyz;
+
   public Out2(
     @JsonProperty("kind") String kind,
     @JsonProperty("foo") String foo,

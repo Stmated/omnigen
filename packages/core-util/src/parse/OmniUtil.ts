@@ -38,9 +38,9 @@ import {
   UnknownKind,
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import {PropertyUtil} from './PropertyUtil.js';
-import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.js';
-import {Naming} from './Naming.js';
+import {PropertyUtil} from './PropertyUtil.ts';
+import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.ts';
+import {Naming} from './Naming.ts';
 import {util} from 'zod';
 import assertNever = util.assertNever;
 import {assertUnreachable, Case} from '../util';
@@ -712,7 +712,7 @@ export class OmniUtil {
       }
     }
 
-    return false;
+    return undefined;
   }
 
   /**
@@ -1188,7 +1188,7 @@ export class OmniUtil {
     return diffAmount > 0;
   }
 
-  public static getCommonDenominator(options: TargetFeatures | {features: TargetFeatures, create?: boolean}, ...types: OmniType[]): CommonDenominatorType<OmniType> | undefined {
+  public static getCommonDenominator(options: TargetFeatures | {features: TargetFeatures, create?: boolean}, ...types: OmniType[]): CommonDenominatorType | undefined {
 
     if (types.length == 1) {
       return {
@@ -1197,7 +1197,7 @@ export class OmniUtil {
     }
 
     const opt = ('features' in options) ? options : {features: options, create: undefined};
-    // const targetFeatures = ('features' in options) ? options.features : options;
+
 
     let commonDiffAmount = 0;
     let common: CommonDenominatorType<OmniType> = {
@@ -1207,7 +1207,7 @@ export class OmniUtil {
     for (let i = 1; i < types.length; i++) {
 
       const denominator = OmniUtil.getCommonDenominatorBetween(common.type, types[i], opt.features, opt.create);
-      if (!denominator || (denominator.diffs && denominator.diffs.includes(TypeDiffKind.FUNDAMENTAL_TYPE))) {
+      if (!denominator) { // } || (denominator.diffs && denominator.diffs.includes(TypeDiffKind.FUNDAMENTAL_TYPE))) {
         return undefined;
       }
 
@@ -1745,17 +1745,15 @@ export class OmniUtil {
 
   public static getGeneralizedType<T extends OmniType>(type: T): T {
 
-    if (OmniUtil.isPrimitive(type)) {
-      if (type.value !== undefined) {
+    if (OmniUtil.isPrimitive(type) && type.value !== undefined) {
 
-        const generalizedPrimitive: T = {
-          ...type,
-        };
-        delete (generalizedPrimitive as any).value;
-        delete (generalizedPrimitive as any).literal;
+      const generalizedPrimitive: T = {
+        ...type,
+      };
+      delete generalizedPrimitive.value;
+      delete generalizedPrimitive.literal;
 
-        return generalizedPrimitive;
-      }
+      return generalizedPrimitive;
     }
 
     return type;
@@ -2269,6 +2267,21 @@ export class OmniUtil {
     }
 
     return (OmniUtil.isComposition(type) || type.kind == OmniTypeKind.DECORATING || type.kind == OmniTypeKind.INTERFACE);
+  }
+
+  public static isUnion<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, typeof OmniTypeKind.EXCLUSIVE_UNION | typeof OmniTypeKind.UNION> {
+
+    if (!type) {
+      return false;
+    }
+
+    switch (type.kind) {
+      case OmniTypeKind.UNION:
+      case OmniTypeKind.EXCLUSIVE_UNION:
+        return true;
+      default:
+        return false;
+    }
   }
 
   public static isComposition<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, OmniKindComposition> {

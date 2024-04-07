@@ -10,16 +10,12 @@
       "params": [
         {
           "name": "param",
-          "schema": {
-            "$ref": "#/components/schemas/in"
-          }
+          "schema": {"$ref": "#/components/schemas/in"}
         }
       ],
       "result": {
         "name": "give_string_get_string_result",
-        "schema": {
-          "$ref": "#/components/schemas/out"
-        }
+        "schema": {"$ref": "#/components/schemas/out"}
       }
     },
     {
@@ -27,16 +23,12 @@
       "params": [
         {
           "name": "param",
-          "schema": {
-            "$ref": "#/components/schemas/in"
-          }
+          "schema": {"$ref": "#/components/schemas/in"}
         }
       ],
       "result": {
         "name": "give_string_get_string_result2",
-        "schema": {
-          "$ref": "#/components/schemas/out_2"
-        }
+        "schema": {"$ref": "#/components/schemas/out_2"}
       }
     }
   ],
@@ -50,12 +42,8 @@
           }
         },
         "oneOf": [
-          {
-            "$ref": "#/components/schemas/a"
-          },
-          {
-            "$ref": "#/components/schemas/b"
-          }
+          {"$ref": "#/components/schemas/a"},
+          {"$ref": "#/components/schemas/b"}
         ]
       },
       "Abs": {
@@ -69,9 +57,7 @@
       "a": {
         "type": "object",
         "allOf": [
-          {
-            "$ref": "#/components/schemas/Abs"
-          }
+          {"$ref": "#/components/schemas/Abs"}
         ],
         "properties": {
           "foo": {
@@ -82,9 +68,7 @@
       "b": {
         "type": "object",
         "allOf": [
-          {
-            "$ref": "#/components/schemas/Abs"
-          }
+          {"$ref": "#/components/schemas/Abs"}
         ],
         "properties": {
           "bar": {
@@ -95,9 +79,7 @@
       "c": {
         "type": "object",
         "allOf": [
-          {
-            "$ref": "#/components/schemas/Abs"
-          }
+          {"$ref": "#/components/schemas/Abs"}
         ],
         "properties": {
           "xyz": {
@@ -117,15 +99,9 @@
       "out_2": {
         "type": "object",
         "allOf": [
-          {
-            "$ref": "#/components/schemas/a"
-          },
-          {
-            "$ref": "#/components/schemas/b"
-          },
-          {
-            "$ref": "#/components/schemas/c"
-          }
+          {"$ref": "#/components/schemas/a"},
+          {"$ref": "#/components/schemas/b"},
+          {"$ref": "#/components/schemas/c"}
         ]
       }
     }

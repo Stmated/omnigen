@@ -11,6 +11,7 @@ public enum TransferState {
   EXECUTED("EXECUTED"),
   PENDING("PENDING");
   private String value;
+
   TransferState(String value) {
     this.value = value;
   }

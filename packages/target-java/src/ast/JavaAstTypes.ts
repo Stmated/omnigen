@@ -2,21 +2,25 @@ import {
   AstNode,
   AstNodeWithChildren,
   AstVisitor,
-  LiteralValue, OmniArrayType, OmniDecoratingType,
+  LiteralValue,
+  OmniArrayType,
+  OmniDecoratingType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
-  OmniHardcodedReferenceType, OmniPrimitiveKinds,
+  OmniHardcodedReferenceType,
+  OmniPrimitiveKinds,
   OmniProperty,
   OmniType,
-  OmniTypeKind,
   OmniUnknownType,
   Reducer,
-  ReducerResult,
+  ReducerResult, Reference, RootAstNode,
+  TypeNode,
   VisitResult,
 } from '@omnigen/core';
 import {AstFreeTextVisitor, JavaVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaReducer} from '../reduce';
+import {JavaAstUtils} from '../transform';
 
 export enum TokenKind {
   ASSIGN,
@@ -61,15 +65,22 @@ export abstract class AbstractJavaNode implements AstNode {
   }
 
   public setId(id: number): this {
-    if (this._id !== undefined) {
+    if (this._id !== undefined && this._id !== id) {
       throw new Error(`Not allowed to change id if one has already been set, existing:${this._id}, new:${id}`);
     }
     this._id = id;
     return this;
   }
 
+  public withIdFrom(node: AstNode): this {
+
+    const copiedId = node.id;
+    return this.setId(copiedId);
+  }
+
   abstract visit<R>(visitor: JavaVisitor<R>): VisitResult<R>;
-  abstract reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AbstractJavaNode>;
+
+  abstract reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AstNode>;
 }
 
 export class JavaToken extends AbstractJavaNode {
@@ -89,22 +100,11 @@ export class JavaToken extends AbstractJavaNode {
   }
 }
 
-export interface TypeNode<T extends OmniType = OmniType> extends AbstractJavaNode {
-  omniType: T;
-  implementation?: boolean | undefined;
-
-  reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<TypeNode>;
-}
-
 export class EdgeType<T extends OmniType = OmniType> extends AbstractJavaNode implements TypeNode<T> {
   omniType: T;
   private _localName?: string | undefined;
   private _importName?: string | undefined;
   readonly implementation?: boolean | undefined;
-
-  get array(): boolean {
-    return this.omniType.kind == OmniTypeKind.ARRAY;
-  }
 
   getLocalName(): string | undefined {
     return this._localName;
@@ -213,6 +213,9 @@ export class BoundedType extends AbstractJavaNode implements TypeNode {
  *        That way RegularType and GenericType can just become Type, and skip the JavaAstUtils method
  *
  * TODO: Introduce generics to this? So we can be more restrictive
+ *
+ * TODO: Force 'baseType' to be the inner type -- ie NOT a GENERIC_TARGET or similar
+ * TODO: Force 'genericArguments' to be of OmniType GENERIC_TARGET_IDENTIFIER
  */
 export class GenericType<
   T extends OmniType = OmniType,
@@ -432,11 +435,11 @@ export class ParameterList extends AbstractJavaNode implements AstNodeWithChildr
 
 export class ConstructorParameter extends Parameter {
 
-  field: FieldReference;
+  fieldRef: FieldReference;
 
   constructor(field: FieldReference, type: TypeNode, identifier: Identifier, annotations?: AnnotationList) {
     super(type, identifier, annotations);
-    this.field = field;
+    this.fieldRef = field;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -593,6 +596,8 @@ export class EnumItemList extends AbstractJavaNode implements AstNodeWithChildre
 
 export class Block extends AbstractJavaNode implements AstNodeWithChildren {
   children: AstNode[];
+  enclosed?: boolean | undefined;
+  compact?: boolean | undefined;
 
   constructor(...children: AstNode[]) {
     super();
@@ -1058,15 +1063,16 @@ export class SelfReference extends AbstractJavaExpression {
   }
 }
 
-/**
- * TODO: Maybe remove in favor of a generic `Reference<T>` to replace all other
- */
-export class FieldReference extends AbstractJavaExpression {
+export class FieldReference extends AbstractJavaExpression implements Reference<Field> {
   targetId: number;
 
   constructor(target: number | Field) {
     super();
     this.targetId = (typeof target === 'number') ? target : target.id;
+  }
+
+  public resolve(root: RootAstNode): Field {
+    return root.resolveNodeRef(this);
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -1078,22 +1084,23 @@ export class FieldReference extends AbstractJavaExpression {
   }
 }
 
-/**
- * TODO: Must change so that the reference is for the id, and not directly to the target object -- it will become messed up when reducing
- */
-export class DeclarationReference extends AbstractJavaNode {
-  declaration: VariableDeclaration | Parameter;
+export class DeclarationReference extends AbstractJavaNode implements Reference<VariableDeclaration | Parameter> {
+  targetId: number;
 
-  constructor(declaration: VariableDeclaration | Parameter) {
+  constructor(target: number | VariableDeclaration | Parameter) {
     super();
-    this.declaration = declaration;
+    this.targetId = (typeof target === 'number') ? target : target.id;
+  }
+
+  public resolve(root: RootAstNode): VariableDeclaration | Parameter {
+    return root.resolveNodeRef(this);
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
     return visitor.visitDeclarationReference(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<DeclarationReference> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceDeclarationReference(this, reducer);
   }
 }
@@ -1127,12 +1134,12 @@ export class VariableDeclaration extends AbstractJavaNode {
 
 export class FieldBackedGetter extends AbstractJavaNode {
 
-  readonly fieldRef: FieldReference;
+  readonly fieldRef: Reference<Field>;
   readonly annotations?: AnnotationList | undefined;
   readonly comments?: CommentBlock | undefined;
   readonly getterName?: Identifier | undefined;
 
-  constructor(fieldRef: FieldReference, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
+  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
     super();
     this.fieldRef = fieldRef;
     this.annotations = annotations;
@@ -1151,11 +1158,11 @@ export class FieldBackedGetter extends AbstractJavaNode {
 
 export class FieldBackedSetter extends AbstractJavaNode {
 
-  readonly fieldRef: FieldReference;
+  readonly fieldRef: Reference<Field>;
   readonly annotations?: AnnotationList | undefined;
   readonly comments?: CommentBlock | undefined;
 
-  constructor(fieldRef: FieldReference, annotations?: AnnotationList, comments?: CommentBlock) {
+  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: CommentBlock) {
     super();
     this.fieldRef = fieldRef;
     this.annotations = annotations;
@@ -1208,11 +1215,11 @@ export class TypeList<T extends OmniType = OmniType> extends AbstractJavaNode im
 }
 
 export class ExtendsDeclaration extends AbstractJavaNode {
-  type: TypeNode;
+  types: TypeList;
 
-  constructor(type: TypeNode) {
+  constructor(type: TypeList) {
     super();
-    this.type = type;
+    this.types = type;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -1246,9 +1253,6 @@ export class ImplementsDeclaration extends AbstractJavaNode {
  */
 export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> extends AbstractJavaNode implements Identifiable, Typed {
   name: Identifier;
-  /**
-   * TODO: Make the "Type" generic if possible, since we for example here can know what type it is.
-   */
   type: TypeNode<T>;
   comments?: CommentBlock | undefined;
   annotations?: AnnotationList | undefined;
@@ -1256,6 +1260,7 @@ export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> e
   extends?: ExtendsDeclaration | undefined;
   implements?: ImplementsDeclaration | undefined;
   body: Block;
+  genericParameterList?: GenericTypeDeclarationList | undefined;
 
   get omniType() {
     return this.type.omniType;
@@ -1269,7 +1274,7 @@ export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> e
     this.body = body;
   }
 
-  abstract reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AbstractObjectDeclaration<T>>;
+  abstract reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<Identifiable>;
 }
 
 export interface Identifiable extends AstNode {
@@ -1286,6 +1291,7 @@ export class CompilationUnit extends AbstractJavaNode implements AstNodeWithChil
   children: Identifiable[];
   packageDeclaration: PackageDeclaration;
   imports: ImportList;
+  name?: string;
 
   constructor(packageDeclaration: PackageDeclaration, imports: ImportList, ...children: Identifiable[]) {
     super();
@@ -1329,8 +1335,6 @@ export class ConstructorDeclaration extends AbstractJavaNode {
 
 export class ClassDeclaration extends AbstractObjectDeclaration {
 
-  genericParameterList?: GenericTypeDeclarationList | undefined;
-
   constructor(type: TypeNode, name: Identifier, body: Block, modifiers?: ModifierList, genericParameterList?: GenericTypeDeclarationList) {
     super(type, name, body, modifiers);
     this.genericParameterList = genericParameterList;
@@ -1349,6 +1353,9 @@ export class ClassDeclaration extends AbstractObjectDeclaration {
  * TODO: Remove this and instead just add a boolean to the ClassDeclaration and GenericClassDeclaration?
  */
 export class InterfaceDeclaration extends AbstractObjectDeclaration {
+
+  inline?: boolean | undefined;
+
   constructor(type: TypeNode, name: Identifier, body: Block, modifiers?: ModifierList) {
     super(type, name, body, modifiers);
   }
@@ -1357,7 +1364,7 @@ export class InterfaceDeclaration extends AbstractObjectDeclaration {
     return visitor.visitInterfaceDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<InterfaceDeclaration> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<Identifiable> {
     return reducer.reduceInterfaceDeclaration(this, reducer);
   }
 }
@@ -1555,12 +1562,12 @@ export class Statement extends AbstractJavaNode {
 }
 
 export class SuperConstructorCall extends AbstractJavaNode {
-  parameters: ArgumentList;
+  arguments: ArgumentList;
 
 
   constructor(parameters: ArgumentList) {
     super();
-    this.parameters = parameters;
+    this.arguments = parameters;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {

@@ -14,13 +14,15 @@ import {
   AddLombokAstTransformer,
   AddObjectDeclarationsJavaAstTransformer,
   AddSubTypeHintsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer, FlattenSuperfluousNodesAstTransformer,
+  AddThrowsForKnownMethodsAstTransformer,
+  FlattenSuperfluousNodesAstTransformer,
   InnerTypeCompressionAstTransformer,
   JacksonJavaAstTransformer,
   JavaAndTargetOptions,
   PackageResolverAstTransformer,
-  PatternPropertiesToMapJavaAstTransformer,
-  ReorderMembersTransformer,
+  PatternPropertiesToMapJavaAstTransformer, RemoveConstantParametersAstTransformer,
+  ReorderMembersAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyGenericsAstTransformer,
   ToHardCodedTypeJavaAstTransformer,
 } from '../transform';
@@ -54,23 +56,25 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new AddCompositionMembersJavaAstTransformer();
 
     yield new AddAbstractAccessorsAstTransformer();
-    yield new AddConstructorJavaAstTransformer();
+    yield new AddConstructorJavaAstTransformer(); // Move to much later, so things like generic normalization/simplification has been done?
     yield new AddAdditionalPropertiesInterfaceAstTransformer();
 
     yield new AddJakartaValidationAstTransformer();
     yield new AddSubTypeHintsAstTransformer();
     yield new InnerTypeCompressionAstTransformer();
     yield new AddThrowsForKnownMethodsAstTransformer();
+    yield new ResolveGenericSourceIdentifiersAstTransformer();
     yield new SimplifyGenericsAstTransformer();
     yield new GenericNodesToSpecificJavaAstTransformer();
     yield new AddCommentsAstTransformer();
     yield new PatternPropertiesToMapJavaAstTransformer(); // Ran too late
+    yield new RemoveConstantParametersAstTransformer();
     yield new JacksonJavaAstTransformer();
     yield new ToHardCodedTypeJavaAstTransformer();
     yield new AddGeneratedAnnotationJavaAstTransformer();
     yield new PackageResolverAstTransformer();
     yield new FlattenSuperfluousNodesAstTransformer();
-    yield new ReorderMembersTransformer();
+    yield new ReorderMembersAstTransformer();
   }
 
   newRootNode(): AstNode {

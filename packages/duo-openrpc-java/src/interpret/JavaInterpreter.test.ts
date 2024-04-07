@@ -75,14 +75,12 @@ describe('JavaInterpreter', () => {
     expect(asObject(giveNumberGetCharacterRequestParams.children[0]).extends).toBeDefined();
     expect(asObject(giveStringGetStringRequestParams.children[0]).extends).toBeDefined();
 
-    const type = asObject(giveIntGetDoubleRequestParams.children[0]).extends?.type.omniType;
+    const type = asObject(giveIntGetDoubleRequestParams.children[0]).extends?.types.children[0].omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind: ${OmniUtil.describe(type)}`);
 
     expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
     expect(type.targetIdentifiers).toHaveLength(1);
     expect(OmniUtil.isPrimitive(type.targetIdentifiers[0].type)).toEqual(true);
-
-    // TODO: Check that JsonRpcRequest has the correct generics!!!!!
   });
 
   test('ensureGenericsAreSkipped', async () => {
@@ -121,7 +119,7 @@ describe('JavaInterpreter', () => {
 
     const giveNumberGetCharResponse = JavaTestUtils.getCompilationUnit(root, 'GiveIntGetDoubleRequestParams');
     expect(asObject(giveNumberGetCharResponse.children[0]).extends).toBeDefined();
-    expect(asObject(giveNumberGetCharResponse.children[0]).extends?.type.omniType?.kind).toEqual(OmniTypeKind.OBJECT);
+    expect(asObject(giveNumberGetCharResponse.children[0]).extends?.types.children[0].omniType?.kind).toEqual(OmniTypeKind.OBJECT);
   });
 });
 

@@ -38,6 +38,10 @@ export const ZodWrittenFilesContext = z.object({
   writtenFiles: z.array(z.string()),
 });
 
+export const ZodSomeTargetContextOut = ZodBaseContext.extend({
+  target: z.string().or(z.undefined()),
+});
+
 const TypeLibraryPluginOut = ZodTypeLibraryContext
   .merge(ZodModelLibraryContext);
 
@@ -50,7 +54,9 @@ const ZodStdOptionsContext = ZodArgumentsContext
 const CorePluginOut = ZodSchemaFileContext
   .merge(ZodStdOptionsContext)
   .merge(ZodFileWriteOptionsContext)
-  .merge(TypeLibraryPluginOut);
+  .merge(TypeLibraryPluginOut)
+  .merge(ZodSomeTargetContextOut)
+;
 
 export const CorePlugin = createPlugin(
   {name: 'core', in: ZodFileContext, out: CorePluginOut},
@@ -62,6 +68,7 @@ export const CorePlugin = createPlugin(
 
     return {
       ...ctx,
+      target: ctx.arguments.target,
       schemaFile: new SchemaFile(ctx.file, ctx.file),
       parserOptions: parserOptions,
       modelTransformOptions: ZodModelTransformOptions.parse(ctx.arguments),
@@ -143,6 +150,8 @@ export const fileWriter = createPlugin(
 
     const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
     const filesWritten: string[] = [];
+
+    logger.info(`Will start writing '${ctx.compilationUnits.length}' files`);
 
     if (fileWriteOptions.outputFiles) {
 

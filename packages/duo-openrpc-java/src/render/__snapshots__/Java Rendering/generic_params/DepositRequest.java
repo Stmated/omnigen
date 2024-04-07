@@ -15,17 +15,18 @@ public class DepositRequest extends JsonRpcRequest<DepositRequest.Params> {
     public Params(
       @JsonProperty(value = "Signature", required = true) String signature,
       @JsonProperty(value = "UUID", required = true) String uuid,
-      @JsonProperty("Data") Data data
+      @JsonProperty(value = "Data", required = true) Data data
     ) {
       super(signature, uuid, data);
     }
 
     public static class Data extends AbstractRequestData<Data.Attributes> {
       private final String messageId;
+
       public Data(
         @JsonProperty(value = "Username", required = true) String username,
         @JsonProperty(value = "Password", required = true) String password,
-        @JsonProperty("Attributes") Attributes attributes,
+        @JsonProperty(value = "Attributes", required = true) Attributes attributes,
         @JsonProperty(value = "MessageID", required = true) String messageId
       ) {
         super(username, password, attributes);
@@ -40,6 +41,7 @@ public class DepositRequest extends JsonRpcRequest<DepositRequest.Params> {
 
       public static class Attributes {
         private final String depositAttribute1;
+
         public Attributes(@JsonProperty(value = "DepositAttribute1", required = true) String depositAttribute1) {
           this.depositAttribute1 = depositAttribute1;
         }

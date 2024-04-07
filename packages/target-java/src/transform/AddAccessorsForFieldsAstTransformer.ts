@@ -1,8 +1,8 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {AstNode, OmniTypeKind} from '@omnigen/core';
+import {AstNode, OmniTypeKind, RootAstNode} from '@omnigen/core';
 import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast';
-import {AbstractObjectDeclaration, AnnotationList, CommentBlock, Identifier, ModifierType} from '../ast';
+import {AbstractObjectDeclaration, AnnotationList, CommentBlock, Identifier, JavaAstRootNode, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
 import {DefaultStringJavaVisitor} from '../visit';
 
@@ -30,7 +30,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
 
       visitClassDeclaration: (node, visitor) => {
 
-        const foundGetter = this.findGetterMethodForField(node);
+        const foundGetter = this.findGetterMethodForField(args.root, node);
         if (foundGetter) {
 
           // There already exists a getter in the class, so something more specific was already done to it.
@@ -100,16 +100,17 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
     }
   }
 
-  private findGetterMethodForField(latestBody: AstNode): string | string[] | undefined {
+  private findGetterMethodForField(root: JavaAstRootNode, latestBody: AstNode): string | string[] | undefined {
 
+    const defaultVisitor = root.createVisitor<string>();
 
-    const visitor = VisitorFactoryManager.create(DefaultStringJavaVisitor, {
+    const visitor = VisitorFactoryManager.create(defaultVisitor, {
 
-      visitField: () => undefined,
-      visitConstructor: () => undefined,
-      visitExtendsDeclaration: () => undefined,
-      visitTypeList: () => undefined,
-      visitFieldBackedSetter: () => undefined,
+      visitField: () => {},
+      visitConstructor: () => {},
+      visitExtendsDeclaration: () => {},
+      visitTypeList: () => {},
+      visitFieldBackedSetter: () => {},
 
       visitMethodDeclarationSignature: node => {
         const methodName = node.identifier.value;

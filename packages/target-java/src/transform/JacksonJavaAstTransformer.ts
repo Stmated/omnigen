@@ -141,8 +141,8 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
           // Check key and value and make the appropriate decision for what Jackson type might be the best one!
           const type = n.omniType;
-          const keyType = assertDefined(JavaAstUtils.createTypeNode(type.keyType, true).reduce(r));
-          const valueType = assertDefined(JavaAstUtils.createTypeNode(type.valueType, true).reduce(r));
+          const keyType = assertDefined(args.root.getAstUtils().createTypeNode(type.keyType, true).reduce(r));
+          const valueType = assertDefined(args.root.getAstUtils().createTypeNode(type.valueType, true).reduce(r));
 
           if (OmniUtil.isPrimitive(keyType.omniType) && keyType.omniType.kind == OmniTypeKind.STRING) {
             if (valueType.omniType.kind == OmniTypeKind.UNKNOWN || (valueType.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE && valueType.omniType.fqn == JACKSON_JSON_NODE)) {
@@ -217,7 +217,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
       for (const parameter of node.parameters.children) {
 
-        const field = args.root.getNodeWithId<Java.Field>(parameter.field.targetId);
+        const field = args.root.resolveNodeRef(parameter.fieldRef);
         const property = field.property;
         if (!property) {
           continue;

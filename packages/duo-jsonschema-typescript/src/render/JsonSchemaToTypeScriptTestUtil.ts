@@ -21,6 +21,7 @@ export class JsonSchemaToTypeScriptTestUtil {
       target: 'typescript',
       arguments: {
         ...options,
+        target: 'typescript',
         ...{
           serializationLibrary: SerializationLibrary.POJO,
         } satisfies Partial<JavaOptions>,

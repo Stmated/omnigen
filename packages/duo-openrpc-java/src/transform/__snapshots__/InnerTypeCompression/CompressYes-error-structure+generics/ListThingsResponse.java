@@ -10,6 +10,7 @@ import jakarta.annotation.Generated;
 public class ListThingsResponse extends JsonRpcResponse {
   private final String id;
   private final Thing[] result;
+
   public ListThingsResponse(String id, Thing[] result) {
     this.id = id;
     this.result = result;
@@ -29,6 +30,7 @@ public class ListThingsResponse extends JsonRpcResponse {
 
   public static class Thing {
     private final String id;
+
     public Thing(String id) {
       this.id = id;
     }
@@ -38,3 +40,4 @@ public class ListThingsResponse extends JsonRpcResponse {
     }
   }
 }
+

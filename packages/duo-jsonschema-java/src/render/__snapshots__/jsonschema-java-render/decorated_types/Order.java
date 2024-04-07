@@ -7,6 +7,7 @@ public class Order {
   private final boolean active;
   private final int id;
   private final int percentage;
+
   public Order(int id, boolean active, int percentage) {
     this.id = id;
     this.active = active;

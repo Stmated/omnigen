@@ -35,7 +35,7 @@ export class JsonSchemaMigrator {
       if (args.obj && typeof args.obj === 'object' && args.path[args.path.length - 1] !== 'properties') {
 
         const foundVersion = '$schema' in args.obj ? this.versionStringToNumber(args.obj.$schema) : undefined;
-        if (foundVersion !== undefined) {
+        if (foundVersion !== undefined && foundVersion !== -1) {
           args.onAfter = () => {
 
             for (let version = foundVersion; version < JsonSchemaMigrator._LAST_VERSION; version++) {
@@ -55,20 +55,23 @@ export class JsonSchemaMigrator {
 
   private versionStringToNumber(str: string): number {
 
-    if (str.includes('draft-03')) {
-      return 3;
-    } else if (str.includes('draft-04')) {
-      return 4;
-    } else if (str.includes('draft-05')) {
-      return 5;
-    } else if (str.includes('draft-06')) {
-      return 6;
-    } else if (str.includes('draft-07')) {
-      return 7;
-    } else if (str.includes('2019-09')) {
-      return 8;
-    } else if (str.includes('2020-12')) {
-      return 9;
+    if (str.includes('json-schema')) {
+
+      if (str.includes('draft-03')) {
+        return 3;
+      } else if (str.includes('draft-04')) {
+        return 4;
+      } else if (str.includes('draft-05')) {
+        return 5;
+      } else if (str.includes('draft-06')) {
+        return 6;
+      } else if (str.includes('draft-07')) {
+        return 7;
+      } else if (str.includes('2019-09')) {
+        return 8;
+      } else if (str.includes('2020-12')) {
+        return 9;
+      }
     }
 
     return -1;

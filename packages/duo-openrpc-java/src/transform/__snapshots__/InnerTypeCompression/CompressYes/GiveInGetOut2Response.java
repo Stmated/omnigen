@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 public class GiveInGetOut2Response extends JsonRpcResponse {
   private final String id;
   private final Out2 result;
+
   public GiveInGetOut2Response(String id, Out2 result) {
     this.id = id;
     this.result = result;
@@ -26,6 +27,7 @@ public class GiveInGetOut2Response extends JsonRpcResponse {
   public static class Out2 extends A implements IB, IC {
     private final String bar;
     private final String xyz;
+
     public Out2(String kind, String foo, String bar, String xyz) {
       super(kind, foo);
       this.bar = bar;

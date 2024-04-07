@@ -15,6 +15,8 @@ export enum TypeDiffKind {
   NARROWED_LITERAL_TYPE = 'NARROWED_LITERAL_TYPE',
   /**
    * Narrowed type is for example if one is type `string` and the other is constant/enum/literal `"foo"`.
+   *
+   * Or if one is `T | U` and the other is `T`.
    */
   NARROWED_TYPE = 'NARROWED_TYPE',
 

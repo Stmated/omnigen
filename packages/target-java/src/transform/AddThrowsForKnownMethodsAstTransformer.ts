@@ -133,13 +133,19 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     } else if (exp instanceof Java.GenericType) {
       return exp.omniType;
     } else if (exp instanceof Java.FieldReference) {
-      const field = root.getNodeWithId<Java.Field>(exp.targetId);
-      return this.resolveTargetType(root, field.type);
+      const resolved = root.resolveNodeRef(exp);
+      if (resolved instanceof Java.AbstractJavaExpression) {
+        return this.resolveTargetType(root, resolved);
+      } else {
+        throw new Error(`Do not know how to resolve the type of reference to '${resolved}'`);
+      }
     } else if (exp instanceof Java.DeclarationReference) {
       return this.resolveTargetType(root, exp.declaration);
     } else if (exp instanceof Java.Parameter) {
       return this.resolveTargetType(root, exp.type);
     } else if (exp instanceof Java.VariableDeclaration) {
+      return this.resolveTargetType(root, exp.type);
+    } else if (exp instanceof Java.Field) {
       return this.resolveTargetType(root, exp.type);
     }
 

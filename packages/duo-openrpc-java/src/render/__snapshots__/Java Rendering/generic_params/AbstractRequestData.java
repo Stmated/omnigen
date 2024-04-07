@@ -10,13 +10,15 @@ public class AbstractRequestData<T> {
   private final T attributes;
   private final String password;
   private final String username;
+
   public AbstractRequestData(String username, String password, T attributes) {
     this.username = username;
     this.password = password;
     this.attributes = attributes;
   }
 
-  @JsonProperty("Attributes")
+  @JsonProperty(value = "Attributes", required = true)
+  @JsonInclude(Include.ALWAYS)
   public T getAttributes() {
     return this.attributes;
   }

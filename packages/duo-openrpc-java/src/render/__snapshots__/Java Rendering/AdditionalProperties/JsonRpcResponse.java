@@ -9,6 +9,7 @@ import jakarta.annotation.Generated;
 public class JsonRpcResponse {
   private final String id;
   private final Thing[] result;
+
   public JsonRpcResponse(String id, Thing[] result) {
     this.id = id;
     this.result = result;

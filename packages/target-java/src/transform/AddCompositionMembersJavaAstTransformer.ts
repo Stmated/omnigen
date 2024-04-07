@@ -1,31 +1,54 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {
   AstNodeWithChildren,
-  OmniIntersectionType,
   OmniCompositionType,
   OmniEnumType,
   OmniHardcodedReferenceType,
+  OmniIntersectionType,
   OmniModel,
+  OmniPrimitiveKinds,
   OmniPrimitiveType,
   OmniType,
-  OmniTypeKind, OmniUnknownType,
-  UnknownKind, OmniPrimitiveKinds,
+  OmniTypeKind,
+  OmniUnknownType,
+  RootAstNode,
+  TypeNode,
+  UnknownKind,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
 import {
   AbstractJavaExpression,
-  AbstractObjectDeclaration, Annotation, AnnotationList, ArgumentList, BinaryExpression,
-  Block, ClassName, ClassReference, DeclarationReference,
-  Field, FieldBackedGetter,
-  FieldReference, GenericType,
+  AbstractObjectDeclaration,
+  Annotation,
+  AnnotationList,
+  ArgumentList,
+  BinaryExpression,
+  Block,
+  ClassName,
+  ClassReference,
+  DeclarationReference,
+  EdgeType,
+  Field,
+  FieldBackedGetter,
+  GenericType,
   Identifier,
   IfStatement,
-  JavaAstRootNode, JavaToken,
-  Literal, MethodCall,
+  JavaAstRootNode,
+  JavaToken,
+  Literal,
+  MethodCall,
   MethodDeclaration,
-  MethodDeclarationSignature, Modifier, ModifierList, ModifierType, Parameter,
-  ParameterList, Predicate, EdgeType, ReturnStatement, Statement, TokenKind,
+  MethodDeclarationSignature,
+  Modifier,
+  ModifierList,
+  ModifierType,
+  Parameter,
+  ParameterList,
+  Predicate,
+  ReturnStatement,
+  Statement,
+  TokenKind,
 } from '../ast';
 import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {JavaAstUtils} from './JavaAstUtils';
@@ -53,7 +76,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         const omniType = node.type.omniType;
 
         if (omniType.kind == OmniTypeKind.EXCLUSIVE_UNION) {
-          this.addXOrMappingToBody(omniType, node, args.options);
+          this.addXOrMappingToBody(args.root, omniType, node, args.options);
         } else if (omniType.kind == OmniTypeKind.INTERSECTION) {
           this.addAndCompositionToClassDeclaration(args.model, args.root, omniType, node, args.options);
         }
@@ -85,18 +108,18 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         if (JavaUtil.asSuperType(type)) {
 
           if (!classDec.extends) {
-            classDec.extends = new Java.ExtendsDeclaration(JavaAstUtils.createTypeNode(type));
+            classDec.extends = new Java.ExtendsDeclaration(new Java.TypeList([root.getAstUtils().createTypeNode(type)]));
           } else {
 
             if (type.kind === OmniTypeKind.OBJECT) {
               const interfaceType = JavaAstUtils.addInterfaceOf(type, root, options);
-              implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(interfaceType));
+              implementsDeclarations.types.children.push(root.getAstUtils().createTypeNode(interfaceType));
             } else if (type.kind === OmniTypeKind.INTERFACE) {
-              implementsDeclarations.types.children.push(JavaAstUtils.createTypeNode(type));
+              implementsDeclarations.types.children.push(root.getAstUtils().createTypeNode(type));
             }
 
             for (const property of OmniUtil.getPropertiesOf(type)) {
-              JavaAstUtils.addOmniPropertyToBlockAsField(property, classDec.body, options);
+              JavaAstUtils.addOmniPropertyToBlockAsField(root, property, classDec.body, options);
             }
           }
 
@@ -112,6 +135,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
   }
 
   private addXOrMappingToBody(
+    root: RootAstNode,
     type: OmniCompositionType<OmniType | OmniPrimitiveType>,
     declaration: AbstractObjectDeclaration,
     options: JavaAndTargetOptions,
@@ -139,12 +163,12 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     }
 
     if (enumTypes.length > 0 && primitiveTypes.length > 0 && otherTypeCount == 0) {
-      this.addEnumAndPrimitivesAsObjectEnum(enumTypes, primitiveTypes, declaration, options);
+      this.addEnumAndPrimitivesAsObjectEnum(root, enumTypes, primitiveTypes, declaration, options);
     } else {
 
       // This means the specification did not have any discriminators.
       // Instead we need to figure out what it is in runtime.
-      this.addRuntimeMapping(declaration.body, type.types, options);
+      this.addRuntimeMapping(root, declaration.body, type.types, options);
 
       // declaration.body.children.push(
       //   new RuntimeTypeMapping(type.types, options),
@@ -152,7 +176,12 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     }
   }
 
-  private addRuntimeMapping(target: AstNodeWithChildren, types: OmniType[], options: JavaAndTargetOptions) {
+  private addRuntimeMapping(
+    root: RootAstNode,
+    target: AstNodeWithChildren,
+    types: OmniType[],
+    options: JavaAndTargetOptions,
+  ) {
 
     // this.fields = [];
     // this.getters = [];
@@ -171,7 +200,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     };
 
     const untypedField = new Field(
-      JavaAstUtils.createTypeNode(untypedFieldType),
+      root.getAstUtils().createTypeNode(untypedFieldType),
       new Identifier('_raw', 'raw'),
       new ModifierList(new Modifier(ModifierType.PRIVATE), new Modifier(ModifierType.FINAL)),
       undefined,
@@ -198,7 +227,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
       handled.push(type);
 
-      const pair = this.createdTypedPair(untypedField, type, options);
+      const pair = this.createdTypedPair(root, untypedField, type, options);
       typedPairs.push(pair);
 
       target.children.push(pair.field);
@@ -238,6 +267,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
   }
 
   private addEnumAndPrimitivesAsObjectEnum(
+    root: RootAstNode,
     enumTypes: OmniEnumType[],
     primitiveTypes: OmniPrimitiveType[],
     declaration: Java.AbstractObjectDeclaration,
@@ -327,7 +357,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`is${enumTypeName}`),
-            JavaAstUtils.createTypeNode({kind: OmniTypeKind.BOOL}),
+            root.getAstUtils().createTypeNode({kind: OmniTypeKind.BOOL}),
           ),
           new Java.Block(
             new Java.Statement(
@@ -340,7 +370,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         checkMethods.push(new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(`getAs${enumTypeName}`),
-            JavaAstUtils.createTypeNode(enumType),
+            root.getAstUtils().createTypeNode(enumType),
           ),
           new Java.Block(
             new Java.Statement(
@@ -348,11 +378,11 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
                 new Java.MethodCall(
                   // NOTE: Is it really all right creating a new Java.Type here? Should we not used the *REAL* target?
                   //        Since it might be in a separate package based on specific language needs
-                  new Java.ClassName(JavaAstUtils.createTypeNode(enumType)),
+                  new Java.ClassName(root.getAstUtils().createTypeNode(enumType)),
                   new Java.Identifier('valueOf'),
                   new Java.ArgumentList(
                     new Java.Cast(
-                      JavaAstUtils.createTypeNode({kind: enumType.itemKind}),
+                      root.getAstUtils().createTypeNode({kind: enumType.itemKind}),
                       new Java.FieldReference(fieldValue),
                     ),
                   ),
@@ -414,14 +444,14 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     };
 
     const fieldValues = new Java.Field(
-      JavaAstUtils.createTypeNode(fieldValuesType, false),
+      root.getAstUtils().createTypeNode(fieldValuesType, false),
       dictionaryIdentifier,
       new Java.ModifierList(
         new Java.Modifier(Java.ModifierType.PRIVATE),
         new Java.Modifier(Java.ModifierType.STATIC),
         new Java.Modifier(Java.ModifierType.FINAL),
       ),
-      new Java.NewStatement(JavaAstUtils.createTypeNode(fieldValuesType, true)),
+      new Java.NewStatement(root.getAstUtils().createTypeNode(fieldValuesType, true)),
     );
     declaration.body.children.push(fieldValues);
 
@@ -533,7 +563,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       ),
     );
 
-    this.addSelfIfOfOneOfStaticFieldsMethod(knownValueFields, declaration);
+    this.addSelfIfOfOneOfStaticFieldsMethod(root, knownValueFields, declaration);
 
     // Add any check methods that we have created.
     declaration.body.children.push(...checkMethods);
@@ -569,6 +599,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
   }
 
   private addSelfIfOfOneOfStaticFieldsMethod(
+    root: RootAstNode,
     knownValueFields: Java.Field[],
     declaration: Java.AbstractObjectDeclaration,
   ): void {
@@ -579,7 +610,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         new Java.MethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier('isKnown'),
-            JavaAstUtils.createTypeNode({
+            root.getAstUtils().createTypeNode({
               kind: OmniTypeKind.BOOL,
               nullable: false,
             }),
@@ -596,7 +627,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
   private createSelfIfOneOfStaticFieldsBinary(
     knownValueFields: Java.Field[],
-    selfType: Java.TypeNode<OmniType>,
+    selfType: TypeNode,
   ): Java.BinaryExpression | undefined {
 
     let knownBinary: Java.BinaryExpression | undefined = undefined;
@@ -639,12 +670,12 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     return Case.camel(javaName);
   }
 
-  private createdTypedPair(untypedField: Field, type: OmniType, options: JavaAndTargetOptions): TypedPair {
+  private createdTypedPair(root: RootAstNode, untypedField: Field, type: OmniType, options: JavaAndTargetOptions): TypedPair {
 
     const typedFieldName = this.getFieldName(type);
 
-    const typedField = new Field(JavaAstUtils.createTypeNode(type), new Identifier(`_${typedFieldName}`));
-    const typedFieldReference = new FieldReference(typedField);
+    const typedField = new Field(root.getAstUtils().createTypeNode(type), new Identifier(`_${typedFieldName}`));
+    const typedFieldReference = new Java.FieldReference(typedField);
 
     const parameterList = new ParameterList();
     let conversionExpression: AbstractJavaExpression;
@@ -653,7 +684,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       if (options.serializationLibrary == SerializationLibrary.JACKSON) {
         conversionExpression = this.modifyGetterForJackson(untypedField, typedField, parameterList);
       } else {
-        conversionExpression = this.modifyGetterForPojo(untypedField, typedField, parameterList);
+        conversionExpression = this.modifyGetterForPojo(root, untypedField, typedField, parameterList);
       }
 
     } else {
@@ -698,13 +729,13 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       new DeclarationReference(objectMapperDeclaration),
       new Identifier('convertValue'),
       new ArgumentList(
-        new FieldReference(untypedField),
+        new Java.FieldReference(untypedField),
         new ClassReference(new ClassName(typedField.type)),
       ),
     );
   }
 
-  private modifyGetterForPojo(untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractJavaExpression {
+  private modifyGetterForPojo(root: RootAstNode, untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractJavaExpression {
 
     const transformerIdentifier = new Identifier('transformer');
     const type: OmniHardcodedReferenceType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.Function'};
@@ -713,8 +744,8 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       type,
       new EdgeType(type),
       [
-        JavaAstUtils.createTypeNode(JavaUtil.getGenericCompatibleType(untypedField.type.omniType)),
-        JavaAstUtils.createTypeNode(JavaUtil.getGenericCompatibleType(typedField.type.omniType)),
+        root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(untypedField.type.omniType)),
+        root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(typedField.type.omniType)),
       ],
     );
 
@@ -725,7 +756,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       new DeclarationReference(transformerParameter),
       new Identifier('apply'),
       new ArgumentList(
-        new FieldReference(untypedField),
+        new Java.FieldReference(untypedField),
       ),
     );
   }

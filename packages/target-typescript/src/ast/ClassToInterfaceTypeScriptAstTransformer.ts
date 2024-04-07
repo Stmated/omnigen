@@ -1,15 +1,19 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, RootAstNode} from '@omnigen/core';
+import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/core';
 import {Java, JavaAstUtils} from '@omnigen/target-java';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
-import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
-import {Case} from '@omnigen/core-util';
+import {Case, OmniUtil} from '@omnigen/core-util';
+import {TsAstUtils} from './TsAstUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-const IGNORED_MODIFIERS = [Java.ModifierType.PRIVATE, Java.ModifierType.PUBLIC];
+const IGNORED_MODIFIERS = [Java.ModifierType.PRIVATE, Java.ModifierType.PUBLIC, Java.ModifierType.ABSTRACT];
+const IGNORED_INTERFACE_MODIFIERS = [Java.ModifierType.ABSTRACT];
 
+/**
+ * TODO: Perhaps move this into an earlier 2nd stage model transformer
+ */
 export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<TsRootNode> {
 
   transformAst(args: TypeScriptAstTransformerArgs): void {
@@ -21,21 +25,89 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
     const defaultReducer = args.root.createReducer();
     const fieldNamesStack: string[][] = [];
 
-    // NOTE: Can speed-up / simplify this by using a visitor first to find classes, and then run the reducer on only that.
-    const reducer: TypeScriptAstReducer = {
+    const classToInterfaceMap = new Map<TypeNode, TypeNode>();
+    const newInterfaces: TypeNode[] = [];
+
+    const newRoot = args.root.reduce({
       ...defaultReducer,
       reduceClassDeclaration: (n, r) => {
         try {
           fieldNamesStack.push([]);
           const body = n.body.reduce(r) ?? new Java.Block();
 
-          const newInterface = new Java.InterfaceDeclaration(n.type, n.name, body, n.modifiers).setId(n.id);
+          const modifiers = n.modifiers.children.filter(it => !IGNORED_INTERFACE_MODIFIERS.includes(it.type));
+
+          // TODO: Add support for generic parameters
+          // TODO: Add support for better "implements", which actually targets an existing type node
+
+          const newInterface = new Java.InterfaceDeclaration(n.type, n.name, body, new Java.ModifierList(...modifiers)).setId(n.id);
+
+          // TODO: Need to be able to just copy these over -- should be the same as the class one, no?
+          // TODO: Need to properly convert the nested generic parameters into the interface versions
+          newInterface.genericParameterList = n.genericParameterList;
+
+          const interfaces: TypeNode[] = [];
+
           if (n.implements) {
-            if (n.implements.types.children.length == 1) {
-              newInterface.extends = new Java.ExtendsDeclaration(n.implements.types.children[0]);
-            } else if (n.implements.types.children.length > 1) {
-              throw new Error(`No support at the moment to extend multiple. Report it if needed.`);
+
+            for (const child of n.implements.types.children) {
+
+
+              interfaces.push(child);
+
+              if (child.omniType.kind === OmniTypeKind.INTERFACE && !child.omniType.name) {
+
+                const implementationName = ('name' in child.omniType.of) ? child.omniType.of.name : undefined;
+                if (implementationName) {
+
+                  // We prefer the exact same name as the original thing we are wrapping, since all classes will be interfaces.
+                  child.omniType.name = implementationName;
+                }
+              }
+
             }
+          }
+
+          if (n.extends) {
+
+            // If a class extends another class, then we should instead convert those classes into interfaces and add to our extends list.
+            for (const child of n.extends.types.children) {
+
+              const existing = classToInterfaceMap.get(child);
+              if (existing) {
+
+                interfaces.push(existing);
+
+              } else {
+
+                if (OmniUtil.asSuperType(child.omniType)) {
+
+                  const implementationName = ('name' in child.omniType) ? child.omniType.name : undefined;
+                  const interfaceType: OmniInterfaceType = {
+                    kind: OmniTypeKind.INTERFACE,
+                    of: child.omniType,
+                  };
+
+                  if (implementationName) {
+
+                    // We prefer the exact same name as the original thing we are wrapping, since all classes will be interfaces.
+                    interfaceType.name = implementationName;
+                  }
+
+                  // TODO: A node for this might already exist! We SHOULD/MUST use that one instead. Perhaps the transformation needs to be done in two steps.
+                  const interfaceTypeNode = args.root.getAstUtils().createTypeNode(interfaceType);
+
+                  interfaces.push(interfaceTypeNode);
+
+                } else {
+                  logger.warn(`Could not move ${OmniUtil.describe(child.omniType)} to be a TypeScript interface, since it is not a supertype`);
+                }
+              }
+            }
+          }
+
+          if (interfaces.length > 0) {
+            newInterface.extends = new Java.ExtendsDeclaration(new Java.TypeList(interfaces));
           }
 
           return newInterface;
@@ -47,16 +119,26 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
       reduceMethodDeclaration: n => fieldNamesStack.length > 0 ? this.methodSignatureToField(args.root, n, fieldNamesStack[fieldNamesStack.length - 1]) : n,
       reduceFieldBackedGetter: n => {
         if (fieldNamesStack.length > 0) {
-          const field = args.root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+          const field = args.root.resolveNodeRef(n.fieldRef);
           return this.toUniqueField(field, fieldNamesStack[fieldNamesStack.length - 1]);
         } else {
           return n;
         }
       },
-      reduceField: n => fieldNamesStack.length > 0 ? this.toUniqueField(n, fieldNamesStack[fieldNamesStack.length - 1]) : n,
-    };
+      reduceField: n => {
 
-    const newRoot = args.root.reduce(reducer);
+        const reducedField = fieldNamesStack.length > 0 ? this.toUniqueField(n, fieldNamesStack[fieldNamesStack.length - 1]) : n;
+        if (reducedField && reducedField.property) {
+          const propertyName = OmniUtil.getPropertyName(reducedField.property.name);
+          if (propertyName) {
+            reducedField.identifier = new Java.Identifier(propertyName);
+          }
+        }
+
+        return reducedField;
+      },
+    });
+
     if (newRoot) {
       args.root = newRoot;
     }
@@ -102,12 +184,16 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
     }
   }
 
+  /**
+   * A field might come from different places, like an actual field or a getter method. We only want it once.
+   */
   private toUniqueField(field: Java.Field, fieldNames: string[]): Java.Field | undefined {
 
-    if (fieldNames.includes(field.identifier.value)) {
+    const propertyName = (field.property ? OmniUtil.getPropertyName(field.property.name) : field.identifier.original) ?? field.identifier.value;
+    if (fieldNames.includes(propertyName)) {
       return undefined;
     }
-    fieldNames.push(field.identifier.value);
+    fieldNames.push(propertyName);
 
     if (field.initializer) {
       field.initializer = undefined;

@@ -31,9 +31,7 @@ exports[`Java Rendering > Enum 1`] = `
   "ListThingsRequest.java",
   "ListThingsRequestParams.java",
   "ListThingsResponse.java",
-  "Species.java",
   "Tag.java",
-  "TagOrSpeciesOrString.java",
   "Thing.java",
   "ThingType.java",
 ]
@@ -139,5 +137,6 @@ public class GiveNumberGetCharRequestParams extends JsonRpcRequestParams<Double>
     super(param);
   }
 }
+
 "
 `;

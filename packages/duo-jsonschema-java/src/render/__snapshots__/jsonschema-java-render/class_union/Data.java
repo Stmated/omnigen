@@ -12,6 +12,7 @@ public class Data {
   private final JsonNode _raw;
   private AbortData _abortData;
   private DefaultData _defaultData;
+
   @JsonCreator
   public Data(JsonNode raw) {
     this._raw = raw;

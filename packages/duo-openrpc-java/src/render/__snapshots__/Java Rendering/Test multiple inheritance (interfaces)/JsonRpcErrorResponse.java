@@ -12,6 +12,7 @@ import jakarta.annotation.Generated;
 public class JsonRpcErrorResponse {
   private final ErrorUnknownError error;
   private final String id;
+
   public JsonRpcErrorResponse(
     @JsonProperty(value = "error", required = true) ErrorUnknownError error,
     @JsonProperty("id") String id

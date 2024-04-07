@@ -7,6 +7,7 @@ public enum StringBoolean {
   Fail("0"),
   OK("1");
   private String value;
+
   StringBoolean(String value) {
     this.value = value;
   }

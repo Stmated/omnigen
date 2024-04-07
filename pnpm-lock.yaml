@@ -129,6 +129,9 @@ importers:
       '@omnigen/target-java':
         specifier: workspace:*
         version: link:../../packages/target-java
+      '@omnigen/target-typescript':
+        specifier: workspace:*
+        version: link:../../packages/target-typescript
       commander:
         specifier: ^12.0.0
         version: 12.0.0
@@ -620,6 +623,61 @@ importers:
         specifier: ^5.4.3
         version: 5.4.3
 
+  packages/duo-openrpc-typescript:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/parser-openrpc':
+        specifier: workspace:*
+        version: link:../parser-openrpc
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      '@omnigen/target-typescript':
+        specifier: workspace:*
+        version: link:../target-typescript
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/duo-openrpc-java-test':
+        specifier: workspace:*
+        version: link:../duo-openrpc-java-test
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      '@omnigen/utils-test-target-java':
+        specifier: workspace:*
+        version: link:../utils-test-target-java
+      java-parser:
+        specifier: ^2.0.3
+        version: 2.3.0
+      typescript:
+        specifier: ^5.4.3
+        version: 5.4.3
+
   packages/eslint-config-custom:
     dependencies:
       '@typescript-eslint/eslint-plugin':
@@ -883,6 +941,12 @@ importers:
       '@omnigen/plugin':
         specifier: workspace:*
         version: link:../plugin
+      graphology:
+        specifier: ^0.25.4
+        version: 0.25.4(graphology-types@0.24.7)
+      graphology-dag:
+        specifier: 0.4.1
+        version: 0.4.1(graphology-types@0.24.7)
       zod:
         specifier: ^3.22.4
         version: 3.22.4
@@ -2956,6 +3020,38 @@ packages:
     resolution: {integrity: sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==}
     dev: false
 
+  /graphology-dag@0.4.1(graphology-types@0.24.7):
+    resolution: {integrity: sha512-3ch9oOAnHZDoT043vyg7ukmSkKJ505nFzaHaYOn0IF2PgGo5VtIavyVK4UpbIa4tli3hhGm1ZTdBsubTmaxu/w==}
+    peerDependencies:
+      graphology-types: '>=0.19.0'
+    dependencies:
+      graphology-types: 0.24.7
+      graphology-utils: 2.5.2(graphology-types@0.24.7)
+      mnemonist: 0.39.8
+    dev: false
+
+  /graphology-types@0.24.7:
+    resolution: {integrity: sha512-tdcqOOpwArNjEr0gNQKCXwaNCWnQJrog14nJNQPeemcLnXQUUGrsCWpWkVKt46zLjcS6/KGoayeJfHHyPDlvwA==}
+    dev: false
+
+  /graphology-utils@2.5.2(graphology-types@0.24.7):
+    resolution: {integrity: sha512-ckHg8MXrXJkOARk56ZaSCM1g1Wihe2d6iTmz1enGOz4W/l831MBCKSayeFQfowgF8wd+PQ4rlch/56Vs/VZLDQ==}
+    peerDependencies:
+      graphology-types: '>=0.23.0'
+    dependencies:
+      graphology-types: 0.24.7
+    dev: false
+
+  /graphology@0.25.4(graphology-types@0.24.7):
+    resolution: {integrity: sha512-33g0Ol9nkWdD6ulw687viS8YJQBxqG5LWII6FI6nul0pq6iM2t5EKquOTFDbyTblRB3O9I+7KX4xI8u5ffekAQ==}
+    peerDependencies:
+      graphology-types: '>=0.24.0'
+    dependencies:
+      events: 3.3.0
+      graphology-types: 0.24.7
+      obliterator: 2.0.4
+    dev: false
+
   /has-flag@3.0.0:
     resolution: {integrity: sha512-sKJf1+ceQBr4SMkvQnBDNDtf4TXpVhVGateu0t918bl30FnbE2m4vNLX+VWe/dpjlb+HugGYzW7uQXH98HPEYw==}
     engines: {node: '>=4'}
@@ -3387,6 +3483,12 @@ packages:
       ufo: 1.4.0
     dev: true
 
+  /mnemonist@0.39.8:
+    resolution: {integrity: sha512-vyWo2K3fjrUw8YeeZ1zF0fy6Mu59RHokURlld8ymdUPjMlD9EC9ov1/YPqTgqRvUN9nTr3Gqfz29LYAmu0PHPQ==}
+    dependencies:
+      obliterator: 2.0.4
+    dev: false
+
   /mrmime@2.0.0:
     resolution: {integrity: sha512-eu38+hdgojoyq63s+yTpN4XMBdt5l8HhMhc4VKLO9KM5caLIBvUm4thi7fFaxyTmCKeNnXZ5pAlBwCUnhA09uw==}
     engines: {node: '>=10'}
@@ -3465,6 +3567,10 @@ packages:
   /object-hash@3.0.0:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
+    dev: false
+
+  /obliterator@2.0.4:
+    resolution: {integrity: sha512-lgHwxlxV1qIg1Eap7LgIeoBWIMFibOjbrYPIPJZcI1mmGAI2m3lNYpK12Y+GBdPQ0U1hRwSord7GIaawz962qQ==}
     dev: false
 
   /on-exit-leak-free@2.1.0:

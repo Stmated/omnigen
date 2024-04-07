@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 public class GiveInGetOut2Request extends JsonRpcRequest {
   private final String id;
   private final Params params;
+
   public GiveInGetOut2Request(Params params, String id) {
     this.params = params;
     this.id = id;
@@ -29,6 +30,7 @@ public class GiveInGetOut2Request extends JsonRpcRequest {
 
   public static class Params extends JsonRpcRequestParams {
     private final In param;
+
     public Params(In param) {
       this.param = param;
     }

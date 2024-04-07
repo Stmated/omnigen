@@ -8,6 +8,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcResponse {
   private final String id;
+
   public JsonRpcResponse(String id) {
     this.id = id;
   }

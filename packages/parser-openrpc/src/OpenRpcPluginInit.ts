@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {JsonRpcParserOptions, ZodJsonRpcParserOptions} from './options';
-import {createPlugin, ZodModelContext, ZodPackageOptionsContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
+import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
 import {ZodSchemaFileContext} from '@omnigen/core-util';
 import {OpenRpcParserBootstrapFactory} from './parse';
 import {PackageOptions, ParserOptions, ZodPackageOptions} from '@omnigen/core';
@@ -74,3 +74,5 @@ export const OpenRpcPlugin = createPlugin(
     } satisfies z.output<typeof OpenRpcParserOut>;
   },
 );
+
+export default PluginAutoRegistry.register([OpenRpcPlugin]);

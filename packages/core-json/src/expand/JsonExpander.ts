@@ -9,13 +9,15 @@ export type ExpandUsing = ExpandUsingValue[];
 
 export type JsonPointerPath = string;
 
-export type ExpandNeedleObj = { path: JsonPointerPath, prefix?: string, suffix?: string };
+export type ExpandNeedleMeta = { prefix?: string, suffix?: string };
+export type ExpandNeedleObj = { path: JsonPointerPath } & ExpandNeedleMeta;
+
 export type ExpandNeedle = JsonPointerPath | ExpandNeedleObj;
 export type ExpandFind = ExpandNeedle | ExpandNeedle[];
 
 export interface ExpandOptions {
   using: ExpandUsing;
-  find: ExpandFind;
+  at: ExpandFind;
   inline?: boolean;
 }
 
@@ -62,7 +64,7 @@ export class JsonExpander {
       }
       parent.splice(ourIndex, 1);
 
-      const findArray = Array.isArray(options.find) ? options.find : [options.find];
+      const findArray = Array.isArray(options.at) ? options.at : [options.at];
 
       for (const source of options.using) {
 
@@ -72,12 +74,12 @@ export class JsonExpander {
 
           if (typeof findItem === 'string') {
 
-            logger.debug(`Setting '${findItem}' to '${source}`);
+            logger.silent(`Setting '${findItem}' to '${source}`);
             pointer.set(clone, findItem, source);
           } else {
 
             const changedValue = `${findItem.prefix ?? ''}${source}${findItem.suffix ?? ''}`;
-            logger.debug(`Setting '${findItem.path}' to '${changedValue}`);
+            logger.silent(`Setting '${findItem.path}' to '${changedValue}`);
 
             pointer.set(clone, findItem.path, changedValue);
           }

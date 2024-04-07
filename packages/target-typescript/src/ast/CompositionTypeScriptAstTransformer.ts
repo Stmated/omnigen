@@ -1,11 +1,10 @@
-import {AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, OmniType, PackageOptions, TargetOptions, TypeNode} from '@omnigen/core';
 import {TsRootNode} from './TsRootNode.ts';
 import {DefaultTypeScriptVisitor} from '../visit';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '@omnigen/core-util';
 import {Ts, TsAstUtils} from '../ast';
 import {Java, JavaUtil} from '@omnigen/target-java';
-import {DefaultTypeScriptAstReducer} from './TypeScriptAstReducer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -13,7 +12,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
 
   transformAst(args: AstTransformerArguments<TsRootNode, PackageOptions & TargetOptions>): void {
 
-    const typesToReplace = new Map<Java.TypeNode, Java.TypeNode>();
+    const typesToReplace = new Map<TypeNode, TypeNode>();
 
     args.root.visit({
       ...DefaultTypeScriptVisitor,
@@ -31,7 +30,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
             ...n.type.omniType,
             inline: true,
           };
-          const aliasRhsTypeNode = TsAstUtils.createTypeNode(inlinedType);
+          const aliasRhsTypeNode = args.root.getAstUtils().createTypeNode(inlinedType);
           const replacementAliasTargetNode = new Java.EdgeType(n.type.omniType, false);
 
           // TODO: Add this to an existing suitable CompilationUnit instead? Make it an option to move it elsewhere? Maybe to where it is used the most?
@@ -78,7 +77,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
         if (replacementNode) {
           return replacementNode;
         } else if (OmniUtil.isComposition(node.omniType)) {
-          return TsAstUtils.createTypeNode(node.omniType);
+          return args.root.getAstUtils().createTypeNode(node.omniType);
         }
 
         return node;

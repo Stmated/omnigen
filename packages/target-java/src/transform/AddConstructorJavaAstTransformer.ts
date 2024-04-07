@@ -1,5 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {LiteralValue, OmniModel, OmniType, OmniTypeKind} from '@omnigen/core';
+import {LiteralValue, OmniModel, RootAstNode, TypeNode} from '@omnigen/core';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {FieldAccessorMode} from '../options';
 import {JavaUtil} from '../util';
@@ -24,7 +24,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     const defaultVisitor = args.root.createVisitor();
     args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
       visitClassDeclaration: (node, visitor) => {
-        defaultVisitor.visitClassDeclaration(node, visitor); // Continue, so we look in nested classes.
+        defaultVisitor.visitClassDeclaration(node, visitor);
         classDeclarations.push(node);
       },
     }));
@@ -38,7 +38,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       if (requirements.fields.length > 0 || requirements.parameters.length > 0) {
 
         const constructorDeclaration = this.createConstructorDeclaration(
-          classDeclaration, requirements.fields, requirements.parameters,
+          args.root, classDeclaration, requirements.fields, requirements.parameters,
         );
 
         classDeclaration.body.children.push(constructorDeclaration);
@@ -47,6 +47,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   }
 
   private createConstructorDeclaration(
+    root: RootAstNode,
     node: Java.ClassDeclaration,
     fields: Java.Field[],
     superParameters: Java.ConstructorParameter[],
@@ -54,35 +55,31 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
 
     const blockExpressions: Java.AbstractJavaNode[] = [];
 
-    const requiredSuperParameters = this.addSuperConstructorCall(superParameters, node, blockExpressions);
+    const requiredSuperParameters = this.addSuperConstructorCall(root, superParameters, node, blockExpressions);
     const parameters: Java.ConstructorParameter[] = [];
 
     for (let i = 0; i < fields.length; i++) {
 
       const constructorField = fields[i];
       const constructorFieldRef = new Java.FieldReference(constructorField);
-      const parameter = this.createParameter(constructorFieldRef, constructorField.type, constructorField.identifier);
+      const parameter = this.createConstructorParameter(constructorFieldRef, constructorField.type, constructorField.identifier);
       parameters.push(parameter);
 
-      const defaultValue = OmniUtil.getSpecifiedDefaultValue(constructorField.type.omniType);
-      if (defaultValue !== undefined) {
-        blockExpressions.push(this.createAssignmentWithFallback(parameter, constructorField, defaultValue));
-      } else {
+      // const defaultValue = OmniUtil.getSpecifiedDefaultValue(constructorField.type.omniType);
+      // if (defaultValue !== undefined) {
+      //   blockExpressions.push(this.createAssignmentWithFallback(parameter, constructorField, defaultValue));
+      // } else {
         blockExpressions.push(new Java.Statement(new Java.AssignExpression(
           new Java.FieldReference(constructorField),
           new Java.DeclarationReference(parameter),
         )));
-      }
+      // }
     }
 
     const allConstructorParameters = requiredSuperParameters.concat(parameters);
 
     return new Java.ConstructorDeclaration(
-      new Java.ConstructorParameterList(
-        // TODO: Can this be handled in a better way?
-        //  To intrinsically link the argument to the field? A "FieldBackedArgumentDeclaration"? Too silly?
-        ...allConstructorParameters,
-      ),
+      new Java.ConstructorParameterList(...allConstructorParameters),
       new Java.Block(...blockExpressions),
     );
   }
@@ -135,39 +132,48 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   }
 
   private addSuperConstructorCall(
-    superTypeRequirements: Java.ConstructorParameter[],
+    root: RootAstNode,
+    superConstructorParameters: Java.ConstructorParameter[],
     node: Java.ClassDeclaration,
     blockExpressions: Java.AbstractJavaNode[],
   ): Java.ConstructorParameter[] {
 
-    if (superTypeRequirements.length == 0) {
+    if (superConstructorParameters.length == 0) {
       return [];
     }
 
     const requiredSuperArguments: Java.ConstructorParameter[] = [];
     const superConstructorArguments: Java.AbstractJavaExpression[] = [];
-    for (const requiredArgument of superTypeRequirements) {
-      const resolvedType = this.getResolvedGenericArgumentType(requiredArgument, node);
-      const type = resolvedType.omniType;
+    for (const superParameter of superConstructorParameters) {
+
+      const type = superParameter.type.omniType;
+
+      // Create a new node instance from the given type.
+      const typeNode = root.getAstUtils().createTypeNode(superParameter.type.omniType);
+
       if (OmniUtil.isPrimitive(type) && type.literal) {
         const literalValue = type.value ?? null;
         superConstructorArguments.push(new Java.Literal(literalValue));
       } else if (OmniUtil.isPrimitive(type) && type.value !== undefined) {
-        const literalValue = type.value ?? null;
-        const parameter = this.createParameter(requiredArgument.field, resolvedType, requiredArgument.identifier);
+        // const literalValue = type.value ?? null;
+        const parameter = this.createConstructorParameter(superParameter.fieldRef, typeNode, superParameter.identifier);
         requiredSuperArguments.push(parameter);
-        superConstructorArguments.push(new Java.TernaryExpression(
-          new Java.Predicate(
-            new Java.DeclarationReference(parameter),
-            TokenKind.EQUALS,
-            new Java.Literal(null),
-          ),
-          new Java.Literal(literalValue),
-          new Java.DeclarationReference(parameter),
-        ));
+        superConstructorArguments.push(new Java.DeclarationReference(parameter));
+        // superConstructorArguments.push(new Java.TernaryExpression(
+        //   new Java.Predicate(
+        //     new Java.DeclarationReference(parameter),
+        //     TokenKind.EQUALS,
+        //     new Java.Literal(null),
+        //   ),
+        //   new Java.Literal(literalValue),
+        //   new Java.DeclarationReference(parameter),
+        // ));
       } else {
-        superConstructorArguments.push(new Java.DeclarationReference(requiredArgument));
-        requiredSuperArguments.push(this.createParameter(requiredArgument.field, resolvedType, requiredArgument.identifier));
+
+        const constructorParam = this.createConstructorParameter(superParameter.fieldRef, typeNode, superParameter.identifier);
+
+        superConstructorArguments.push(new Java.DeclarationReference(constructorParam));
+        requiredSuperArguments.push(constructorParam);
       }
     }
 
@@ -184,7 +190,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     return requiredSuperArguments;
   }
 
-  private createParameter(fieldRef: Java.FieldReference, type: Java.TypeNode, identifier: Java.Identifier): Java.ConstructorParameter {
+  private createConstructorParameter(fieldRef: Java.FieldReference, type: TypeNode, identifier: Java.Identifier): Java.ConstructorParameter {
 
     const schemaIdentifier = identifier.original || identifier.value;
     const safeName = JavaUtil.getPrettyParameterName(schemaIdentifier);
@@ -194,42 +200,6 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       usedIdentifier = new Java.Identifier(safeName, schemaIdentifier);
     }
 
-    return new Java.ConstructorParameter(
-      fieldRef,
-      type,
-      usedIdentifier,
-    );
-  }
-
-  private getResolvedGenericArgumentType(requiredArgument: Java.Parameter, node: Java.ClassDeclaration): Java.TypeNode<OmniType> {
-
-    if (requiredArgument.type.omniType.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-      // The type is 'T' or something. Need to get the actual type from our current parent class.
-      if (node.type.omniType.kind == OmniTypeKind.OBJECT) {
-        const target = node.type.omniType.extendedBy;
-        if (target && target.kind == OmniTypeKind.GENERIC_TARGET) {
-          const foundGenericType = target.targetIdentifiers.find(it => {
-            if (it.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-              if (it.sourceIdentifier == requiredArgument.type.omniType) {
-                return true;
-              }
-            }
-
-            return false;
-          });
-
-          if (foundGenericType) {
-            return JavaAstUtils.createTypeNode(foundGenericType.type);
-          } else {
-            const typeName = requiredArgument.identifier.value;
-            const placeholderName = OmniUtil.describe(requiredArgument.type.omniType);
-            throw new Error(`Could not find the generic type of '${typeName}' ${placeholderName}`);
-          }
-        }
-      }
-    }
-
-    // NOTE: This might be incorrect. Should throw more informational errors in else-cases above.
-    return requiredArgument.type;
+    return new Java.ConstructorParameter(fieldRef, type, usedIdentifier);
   }
 }

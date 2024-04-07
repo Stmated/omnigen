@@ -8,6 +8,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcErrorResponse<TError extends JsonRpcError> {
   private final TError error;
+
   public JsonRpcErrorResponse(TError error) {
     this.error = error;
   }
@@ -16,3 +17,4 @@ public class JsonRpcErrorResponse<TError extends JsonRpcError> {
     return this.error;
   }
 }
+

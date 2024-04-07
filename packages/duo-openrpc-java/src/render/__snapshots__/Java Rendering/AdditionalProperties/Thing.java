@@ -11,6 +11,7 @@ import java.util.Map;
 public class Thing implements IAdditionalProperties {
   private final Map<String, JsonNode> _additionalProperties = new HashMap<String, JsonNode>();
   private final String id;
+
   public Thing(String id) {
     this.id = id;
   }

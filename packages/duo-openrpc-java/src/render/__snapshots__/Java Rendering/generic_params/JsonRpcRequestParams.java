@@ -13,17 +13,19 @@ public class JsonRpcRequestParams<T extends AbstractRequestData<?>> {
   private final T data;
   private final String signature;
   private final String uuid;
+
   public JsonRpcRequestParams(
     @JsonProperty(value = "Signature", required = true) String signature,
     @JsonProperty(value = "UUID", required = true) String uuid,
-    @JsonProperty("Data") T data
+    @JsonProperty(value = "Data", required = true) T data
   ) {
     this.signature = signature;
     this.uuid = uuid;
     this.data = data;
   }
 
-  @JsonProperty("Data")
+  @JsonProperty(value = "Data", required = true)
+  @JsonInclude(Include.ALWAYS)
   public T getData() {
     return this.data;
   }

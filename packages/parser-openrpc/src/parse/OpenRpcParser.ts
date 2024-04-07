@@ -4,7 +4,7 @@ import {
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniComparisonOperator,
-  OmniContact,
+  OmniContact, OmniDecoratingType,
   OmniEndpoint,
   OmniExamplePairing,
   OmniExampleParam,
@@ -59,7 +59,7 @@ import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
 import {
-  AnyJsonDefinition,
+  AnyJsonDefinition, AnyJSONSchema,
   ApplyIdJsonSchemaTransformerFactory,
   ExternalDocumentsFinder, JSONSchema9, JSONSchema9Definition,
   JsonSchemaParser,
@@ -447,31 +447,23 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     fallbackName?: TypeName,
   ): SchemaToTypeResult {
 
-    const resolved = this._refResolver.resolve(contentDescriptor.schema as JSONSchema9Definition);
-    const preferredName = this.getPreferredContentDescriptorName(resolved, contentDescriptor, fallbackName);
+    const schema = contentDescriptor.schema as JSONSchema9Definition;
+    const resolved = this._refResolver.resolve(schema) as JSONSchema9Definition;
+    const preferredName = this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
 
-    return this._jsonSchemaParser.jsonSchemaToType(preferredName, resolved);
-  }
+    const type = this._jsonSchemaParser.jsonSchemaToType(preferredName, resolved);
 
-  private getPreferredContentDescriptorName(
-    schema: AnyJsonDefinition,
-    contentDescriptor: ContentDescriptorObject,
-    fallbackName?: TypeName,
-  ): TypeName {
+    // const decoratingType: OmniDecoratingType = {
+    //   kind: OmniTypeKind.DECORATING,
+    //   of: type.type,
+    //   name: [
+    //     contentDescriptor.name,
+    //   ],
+    // };
 
-    const names: TypeName[] = [];
-    names.push(contentDescriptor.name);
-    names.push(...this._jsonSchemaParser.getMostPreferredNames(contentDescriptor, schema));
-    if (fallbackName) {
-      names.push(fallbackName);
-    }
-    if (contentDescriptor && contentDescriptor.description && contentDescriptor.description.length < 20) {
-      // Very ugly, but it's something?
-      names.push(Case.pascal(contentDescriptor.description));
-    }
-    names.push(...this._jsonSchemaParser.getFallbackNamesOfJsonSchemaType(schema));
-
-    return names;
+    return {
+      type: type.type,
+    };
   }
 
   private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: ContentDescriptorObject): OutputAndType {
@@ -479,15 +471,28 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const typeNamePrefix = Case.pascal(method.name);
     const responseTypeName = `${typeNamePrefix}Response`;
 
-    const resultSchema = this._refResolver.resolve(contentDescriptor.schema as JSONSchema9Definition);
+    const resultSchema = contentDescriptor.schema as JSONSchema9Definition;
+    const resolvedResultSchema = this._refResolver.resolve(resultSchema);
 
     const resultTypeName: TypeName = [
+      this._jsonSchemaParser.getPreferredName(resultSchema, resolvedResultSchema),
       contentDescriptor.name,
       `${responseTypeName}Result`,
       `${responseTypeName}ResultPayload`,
     ];
 
-    const resultType = this._jsonSchemaParser.jsonSchemaToType(resultTypeName, resultSchema);
+    const resultType = this._jsonSchemaParser.jsonSchemaToType(resultTypeName, resolvedResultSchema);
+
+    // const decoratingType: OmniDecoratingType = {
+    //   kind: OmniTypeKind.DECORATING,
+    //   of: resultType.type,
+    //   name: [
+    //     // this._jsonSchemaParser.getPreferredName(resultSchema, resolvedResultSchema),
+    //     contentDescriptor.name,
+    //     `${responseTypeName}Result`,
+    //     `${responseTypeName}ResultPayload`,
+    //   ],
+    // };
 
     const responseType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
@@ -880,8 +885,8 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       name: descriptor.name,
       description: descriptor.description,
       summary: descriptor.summary,
-      deprecated: descriptor.deprecated || false,
-      required: descriptor.required || false,
+      deprecated: descriptor.deprecated ?? false,
+      required: descriptor.required ?? false,
       type: propertyType.type,
       owner: owner,
     };

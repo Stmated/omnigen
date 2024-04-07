@@ -1,4 +1,4 @@
-import {TargetFeatures} from '@omnigen/core';
+import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
 
 export * from './visit';
 export * from './transform';
@@ -12,6 +12,7 @@ export * as Java from './ast';
 export * as JavaPlugins from './JavaPluginInit.ts';
 
 export const JAVA_FEATURES: TargetFeatures = {
+  ...OMNI_GENERIC_FEATURES,
   literalTypes: false,
   primitiveGenerics: false,
   primitiveInheritance: false,

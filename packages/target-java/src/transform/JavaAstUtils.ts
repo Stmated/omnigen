@@ -1,5 +1,5 @@
 import {
-  AstNode,
+  AstNode, AstTargetFunctions,
   OmniArrayType,
   OmniGenericTargetType,
   OmniInterfaceOrObjectType,
@@ -7,13 +7,13 @@ import {
   OmniObjectType,
   OmniProperty,
   OmniType,
-  OmniTypeKind,
-  RootAstNode,
+  OmniTypeKind, Reference,
+  RootAstNode, TypeNode,
   UnknownKind,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {Block, JavaAstRootNode} from '../ast';
+import {Block, Field, JavaAstRootNode} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaOptions} from '../options';
@@ -22,9 +22,9 @@ import {JavaAndTargetOptions} from './AbstractJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export class JavaAstUtils {
+export class JavaAstUtils implements AstTargetFunctions {
 
-  public static addInterfaceProperties(type: OmniInterfaceOrObjectType, body: Java.Block): void {
+  public static addInterfaceProperties(root: RootAstNode, type: OmniInterfaceOrObjectType, body: Java.Block): void {
 
     const interfaceLikeTarget = (type.kind == OmniTypeKind.INTERFACE) ? type.of : type;
 
@@ -40,14 +40,14 @@ export class JavaAstUtils {
         new Java.AbstractMethodDeclaration(
           new Java.MethodDeclarationSignature(
             new Java.Identifier(JavaUtil.getGetterName(accessorName, property.type)),
-            JavaAstUtils.createTypeNode(property.type, false),
+            root.getAstUtils().createTypeNode(property.type, false),
           ),
         ),
       );
     }
   }
 
-  public static createTypeNode<const T extends OmniType>(type: T, implementation?: boolean): Java.TypeNode {
+  public createTypeNode<const T extends OmniType>(type: T, implementation?: boolean): TypeNode {
 
     if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       return this.createGenericTargetTypeNode(type, implementation);
@@ -55,31 +55,31 @@ export class JavaAstUtils {
       return this.createArrayTypeNode(type, implementation);
     } else if (type.kind == OmniTypeKind.UNKNOWN) {
       if (type.upperBound) {
-        return new Java.BoundedType(type, new Java.WildcardType(type, implementation), JavaAstUtils.createTypeNode(type.upperBound, implementation));
+        return new Java.BoundedType(type, new Java.WildcardType(type, implementation), this.createTypeNode(type.upperBound, implementation));
       } else {
         return new Java.WildcardType(type, implementation);
       }
     } else if (type.kind == OmniTypeKind.DECORATING) {
-      const of = JavaAstUtils.createTypeNode(type.of, implementation);
+      const of = this.createTypeNode(type.of, implementation);
       return new Java.DecoratingTypeNode(of, type);
     }
 
     return new Java.EdgeType(type, implementation);
   }
 
-  private static createArrayTypeNode<const T extends OmniArrayType>(
+  private createArrayTypeNode<const T extends OmniArrayType>(
     type: T,
     implementation: boolean | undefined,
-  ): Java.TypeNode<T> {
+  ): TypeNode<T> {
 
-    const itemNode = JavaAstUtils.createTypeNode(type.of);
+    const itemNode = this.createTypeNode(type.of);
     return new Java.ArrayType(type, itemNode, implementation);
   }
 
-  private static createGenericTargetTypeNode<const T extends OmniGenericTargetType>(
+  private createGenericTargetTypeNode<const T extends OmniGenericTargetType>(
     type: T,
     implementation: boolean | undefined,
-  ): Java.TypeNode<T> {
+  ): TypeNode<T> {
 
     const baseType = new Java.EdgeType(type, implementation);
 
@@ -97,13 +97,13 @@ export class JavaAstUtils {
         };
       }
 
-      return JavaAstUtils.createTypeNode(referenceType);
+      return this.createTypeNode(referenceType);
     });
 
     return new Java.GenericType(type, baseType, mappedGenericTargetArguments);
   }
 
-  public static addOmniPropertyToBlockAsField(property: OmniProperty, body: Block, options: JavaOptions): void {
+  public static addOmniPropertyToBlockAsField(root: RootAstNode, property: OmniProperty, body: Block, options: JavaOptions): void {
 
     if (OmniUtil.isNull(property.type) && !options.includeAlwaysNullProperties) {
       return;
@@ -116,7 +116,7 @@ export class JavaAstUtils {
       return;
     }
 
-    const fieldType = JavaAstUtils.createTypeNode(property.type);
+    const fieldType = root.getAstUtils().createTypeNode(property.type);
     let originalName = OmniUtil.getPropertyName(property.name);
     if (!originalName) {
       if (OmniUtil.isPatternPropertyName(property.name)) {
@@ -208,7 +208,7 @@ export class JavaAstUtils {
         debug: `Created from composition member transformer because ${OmniUtil.describe(objectType)} used as interface`,
       };
 
-      const interfaceDeclaration = JavaAstUtils.createInterfaceWithBody(interfaceType, options);
+      const interfaceDeclaration = this.createInterfaceWithBody(root, interfaceType, options);
 
       root.children.push(new Java.CompilationUnit(
         new Java.PackageDeclaration(JavaUtil.getPackageName(interfaceType, interfaceDeclaration.name.value, options)),
@@ -223,7 +223,7 @@ export class JavaAstUtils {
           ast.implements = new Java.ImplementsDeclaration(new Java.TypeList<OmniInterfaceOrObjectType>([]));
         }
 
-        ast.implements.types.children.push(JavaAstUtils.createTypeNode(interfaceType));
+        ast.implements.types.children.push(root.getAstUtils().createTypeNode(interfaceType));
       }
 
       return interfaceType;
@@ -239,15 +239,15 @@ export class JavaAstUtils {
     }
   }
 
-  public static createInterfaceWithBody(type: OmniInterfaceType, options: JavaAndTargetOptions) {
+  public static createInterfaceWithBody(root: RootAstNode, type: OmniInterfaceType, options: JavaAndTargetOptions) {
 
     const declaration = new Java.InterfaceDeclaration(
-      JavaAstUtils.createTypeNode(type),
+      root.getAstUtils().createTypeNode(type),
       new Java.Identifier(`${JavaUtil.getClassName(type, options)}`),
       new Java.Block(),
     );
 
-    JavaAstUtils.addInterfaceProperties(type, declaration.body);
+    JavaAstUtils.addInterfaceProperties(root, type, declaration.body);
 
     return declaration;
   }
@@ -257,29 +257,55 @@ export class JavaAstUtils {
     const map = new Map<number, AstNode>();
     const ids: number[] = [];
 
+    const defaultVisitor = root.createVisitor<void>();
     root.visit({
-      ...root.createVisitor<void>(),
+      ...defaultVisitor,
       visitFieldReference: (n, v) => {
+        ids.push(n.targetId);
+      },
+      visitDeclarationReference: (n, v) => {
         ids.push(n.targetId);
       },
       visitField: (n, v) => {
         map.set(n.id, n);
       },
+      visitParameter: (n, v) => {
+
+        map.set(n.id, n);
+        defaultVisitor.visitParameter(n, v);
+      },
+      visitVariableDeclaration: (n, v) => {
+        map.set(n.id, n);
+        defaultVisitor.visitVariableDeclaration(n, v);
+      },
+      visitConstructorParameter: (n, v) => {
+
+        map.set(n.id, n);
+        defaultVisitor.visitConstructorParameter(n, v);
+      },
       // Remove as many visits as possible to make the visiting faster.
-      // visitEnumDeclaration: () => {},
-      visitInterfaceDeclaration: () => {},
-      visitMethodDeclarationSignature: () => {}, // Could speed up by not going through any methods (not just signature) and returning a huge map.
-      visitImportList: () => {},
-      visitExtendsDeclaration: () => {},
-      visitImplementsDeclaration: () => {},
-      visitTypeList: () => {},
-      visitArrayInitializer: () => {},
-      visitBoundedType: () => {},
-      visitArrayType: () => {},
-      visitWildcardType: () => {},
-      visitGenericType: () => {},
-      visitEdgeType: () => {},
-      // visitConstructor: () => {},
+      visitInterfaceDeclaration: () => {
+      },
+      visitImportList: () => {
+      },
+      visitExtendsDeclaration: () => {
+      },
+      visitImplementsDeclaration: () => {
+      },
+      visitTypeList: () => {
+      },
+      visitArrayInitializer: () => {
+      },
+      visitBoundedType: () => {
+      },
+      visitArrayType: () => {
+      },
+      visitWildcardType: () => {
+      },
+      visitGenericType: () => {
+      },
+      visitEdgeType: () => {
+      },
     });
 
     for (const key of map.keys()) {
@@ -327,39 +353,45 @@ export class JavaAstUtils {
       return {fields: [], parameters: []};
     }
 
-    const fieldsWithSetters = setters.map(setter => root.getNodeWithId(setter.fieldRef.targetId)); // setter.fieldRef.field);
-    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type == Java.ModifierType.FINAL));
+    const fieldsWithSetters = setters.map(setter => root.resolveNodeRef(setter.fieldRef));
+    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type === Java.ModifierType.FINAL));
     const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
-    const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer == undefined);
+    const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer === undefined);
 
     const immediateRequired = fields.filter(field => {
-
-      if (fieldsWithSetters.includes(field) && fieldsWithoutInitializer.includes(field)) {
-        return true;
-      }
-
-      if (fieldsWithFinal.includes(field) && fieldsWithoutInitializer.includes(field)) {
-        return true;
-      }
-
-      return false;
+      return fieldsWithoutInitializer.includes(field) && (fieldsWithSetters.includes(field) || fieldsWithFinal.includes(field));
     });
 
     if (followSupertype && node.extends) {
 
       const supertypeArguments: Java.ConstructorParameter[] = [];
-      const extendedBy = JavaUtil.getClassDeclaration(root, node.extends.type.omniType);
-      if (extendedBy) {
+      for (const extendChild of node.extends.types.children) {
+        const extendedBy = JavaUtil.getClassDeclaration(root, extendChild.omniType);
+        if (extendedBy) {
 
-        const constructorVisitor = VisitorFactoryManager.create(root.createVisitor(), {
-          visitConstructor: node => {
-            if (node.parameters) {
-              supertypeArguments.push(...node.parameters.children);
-            }
-          },
-        });
+          let depth = 0;
+          const defaultVisitor = root.createVisitor();
+          extendedBy.visit(VisitorFactoryManager.create(defaultVisitor, {
+            visitConstructor: n => {
+              if (n.parameters) {
+                supertypeArguments.push(...n.parameters.children);
+              }
+            },
+            visitObjectDeclarationBody: (n, v) => {
+              if (depth > 0) {
+                // We only check one level of object declaration, or we will find nested ones.
+                return;
+              }
 
-        extendedBy.visit(constructorVisitor);
+              try {
+                depth++;
+                defaultVisitor.visitObjectDeclarationBody(n, v);
+              } finally {
+                depth--;
+              }
+            },
+          }));
+        }
       }
 
       return {
@@ -393,24 +425,24 @@ export class JavaAstUtils {
     return statement.expression;
   }
 
-  public static getGetterFieldId(root: RootAstNode, method: Java.MethodDeclaration): number | undefined {
+  public static getGetterFieldReference(root: RootAstNode, method: Java.MethodDeclaration): Reference<Field> | undefined {
 
     const fieldRef = JavaAstUtils.getSoloReturn(method);
     if (!(fieldRef instanceof Java.FieldReference)) {
       return undefined;
     }
 
-    return fieldRef.targetId;
+    return fieldRef;
   }
 
   public static getGetterField(root: RootAstNode, method: Java.MethodDeclaration): Java.Field | undefined {
 
-    const fieldId = JavaAstUtils.getGetterFieldId(root, method);
+    const fieldId = JavaAstUtils.getGetterFieldReference(root, method);
     if (fieldId === undefined) {
       return undefined;
     }
 
-    return root.getNodeWithId<Java.Field>(fieldId);
+    return root.resolveNodeRef<Java.Field>(fieldId);
   }
 
   public static getOmniType(node: AstNode): OmniType | undefined {

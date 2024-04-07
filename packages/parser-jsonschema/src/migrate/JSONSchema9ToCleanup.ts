@@ -1,5 +1,4 @@
 import {AnyDoc, Migrator} from './Migrator.ts';
-import {ObjectVisitor, Visitor} from '../../../core-json/src/visitor/ObjectVisitor.ts';
 
 export class JSONSchema9ToCleanup implements Migrator {
 

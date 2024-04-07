@@ -13,10 +13,11 @@ public class JsonRpcRequest<TParams extends JsonRpcRequestParams> {
   private final String id;
   private final String method;
   private final TParams params;
+
   public JsonRpcRequest(
     @JsonProperty(value = "id", required = true) String id,
     @JsonProperty("params") TParams params,
-    @JsonProperty("method") String method
+    @JsonProperty(value = "method", required = true) String method
   ) {
     this.id = id;
     this.params = params;
@@ -32,6 +33,7 @@ public class JsonRpcRequest<TParams extends JsonRpcRequestParams> {
     return "2.0";
   }
 
+  @JsonInclude(Include.ALWAYS)
   public String getMethod() {
     return this.method;
   }

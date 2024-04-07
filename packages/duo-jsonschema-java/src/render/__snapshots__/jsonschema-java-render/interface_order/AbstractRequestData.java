@@ -9,6 +9,7 @@ import jakarta.annotation.Generated;
 public class AbstractRequestData {
   private final String password;
   private final String username;
+
   public AbstractRequestData(
     @JsonProperty(value = "Username", required = true) String username,
     @JsonProperty(value = "Password", required = true) String password

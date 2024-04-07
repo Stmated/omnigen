@@ -1,9 +1,8 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {CommonDenominatorType, OmniDictionaryType, OmniInterfaceType, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind} from '@omnigen/core';
+import {OmniDictionaryType, OmniInterfaceType, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/core';
 import * as Java from '../ast';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaOptions, SerializationLibrary} from '../options';
-import {JavaAstUtils} from './JavaAstUtils.ts';
 import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER} from './JacksonJavaAstTransformer.ts';
 import {JavaUtil} from '../util';
 
@@ -50,7 +49,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
           allDictionaries.push(dictionaryType);
 
           // Replace with something else
-          const replacingNodes = this.createJsonAnyNode(dictionaryType, args.options);
+          const replacingNodes = this.createJsonAnyNode(args.root, dictionaryType, args.options);
 
           replacedProperties.set(n.property, replacingNodes);
           replacedFieldIds.push(n.id);
@@ -104,60 +103,47 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
       // There are several objects which have additional properties, so we will introduce a common interface for them.
       const commonDictionary = OmniUtil.getCommonDenominator({features: args.features, create: true}, ...allDictionaries)!;
-      const commonKey = OmniUtil.getCommonDenominator(args.features, ...allDictionaries.map(it => it.keyType));
-      const commonValue = OmniUtil.getCommonDenominator(args.features, ...allDictionaries.map(it => it.valueType));
 
-      // const commonDenominator = OmniUtil.getCommonDenominator(args.features, ...dictionaryTypes);
-      if (!commonDictionary || !commonKey || !commonValue) {
-        throw new Error(`Should always be able to get some common denominator`);
+      if (!commonDictionary) {
+
+        const dictionariesString = allDictionaries.map(it => OmniUtil.describe(it)).join('\n');
+        throw new Error(`Should always be able to get some common denominator from:\n${dictionariesString}`);
       }
 
-      const commonDictionaryType = commonDictionary.type;
-
-      if (commonDictionaryType.kind != OmniTypeKind.DICTIONARY) {
+      if (commonDictionary.type.kind != OmniTypeKind.DICTIONARY) {
         throw new Error(`The common denominator of the pattern properties must be a map/dictionary`);
       }
 
-      if (!commonDictionary.diffs || OmniUtil.getDiffAmount(commonDictionary.diffs) === 0) {
+      // TODO: Future improvement would be to either create different AdditionalProperties interfaces, or to create an Exclusive Union of the different key/value types.
 
-        // The types are the same so there is no need for any generics. We can just add the same interface as-is to all declarations.
-        const newInterfaceDec = this.createNonGenericDictionary(commonDictionaryType, args.options);
+      // The types are the same so there is no need for any generics. We can just add the same interface as-is to all declarations.
+      const newInterfaceDec = this.createNonGenericDictionary(args.root, commonDictionary.type, args.options);
 
-        for (const decId of decWithDictionary.keys()) {
-          const dec = decIdToDec.get(decId);
-          if (!dec) {
-            throw new Error(`Could not find the class declaration with id ${decId}`);
-          }
-
-          if (!dec.implements) {
-            dec.implements = new Java.ImplementsDeclaration(new Java.TypeList([]));
-          }
-
-          dec.implements.types.children.push(newInterfaceDec.type);
+      for (const decId of decWithDictionary.keys()) {
+        const dec = decIdToDec.get(decId);
+        if (!dec) {
+          throw new Error(`Could not find the class declaration with id ${decId}`);
         }
 
-        const typeName = JavaUtil.getClassName(newInterfaceDec.type.omniType, args.options);
-        const packageName = JavaUtil.getPackageName(newInterfaceDec.type.omniType, typeName, args.options);
+        if (!dec.implements) {
+          dec.implements = new Java.ImplementsDeclaration(new Java.TypeList([]));
+        }
 
-        args.root.children.push(new Java.CompilationUnit(
-          new Java.PackageDeclaration(packageName),
-          new Java.ImportList([]),
-          newInterfaceDec,
-        ));
-
-      } else {
-
-        throw new Error(`Implement!`);
-
+        dec.implements.types.children.push(newInterfaceDec.type);
       }
+
+      const typeName = JavaUtil.getClassName(newInterfaceDec.type.omniType, args.options);
+      const packageName = JavaUtil.getPackageName(newInterfaceDec.type.omniType, typeName, args.options);
+
+      args.root.children.push(new Java.CompilationUnit(
+        new Java.PackageDeclaration(packageName),
+        new Java.ImportList([]),
+        newInterfaceDec,
+      ));
     }
   }
 
-  private createGenericDictionary(commonDictionary: CommonDenominatorType) {
-
-  }
-
-  private createNonGenericDictionary(commonDictionary: OmniDictionaryType, options: JavaAndTargetOptions) {
+  private createNonGenericDictionary(root: RootAstNode, commonDictionary: OmniDictionaryType, options: JavaAndTargetOptions) {
 
     const properties: OmniProperty[] = [];
     const newInterfaceObjectType: OmniObjectType = {
@@ -177,8 +163,8 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       owner: newInterfaceObjectType,
     });
 
-    const newDictionaryTypeNode = JavaAstUtils.createTypeNode(commonDictionary);
-    const newInterfaceTypeNode = JavaAstUtils.createTypeNode(newInterfaceType);
+    const newDictionaryTypeNode = root.getAstUtils().createTypeNode(commonDictionary);
+    const newInterfaceTypeNode = root.getAstUtils().createTypeNode(newInterfaceType);
 
     const block = new Java.Block(
       new Java.Statement(this.createGetterMethodSignature(newDictionaryTypeNode)),
@@ -186,8 +172,9 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
     if (!options.immutableModels) {
       block.children.push(new Java.Statement(this.createAdderMethodSignature(
-        this.createAdderMethodKeyParameter(commonDictionary),
-        this.createAdderMethodValueParameter(commonDictionary),
+        root,
+        this.createAdderMethodKeyParameter(root, commonDictionary),
+        this.createAdderMethodValueParameter(root, commonDictionary),
       )));
     }
 
@@ -212,6 +199,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
   }
 
   private createJsonAnyNode(
+    root: RootAstNode,
     dictionaryType: OmniDictionaryType,
     options: JavaOptions,
   ): Java.Nodes {
@@ -223,7 +211,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
     const additionalPropertiesFieldIdentifier = new Java.Identifier('_additionalProperties');
 
-    const additionalPropertiesTypeNode = this.createAdditionalPropertiesTypeNode(dictionaryType);
+    const additionalPropertiesTypeNode = this.createAdditionalPropertiesTypeNode(root, dictionaryType);
     const additionalPropertiesField = new Java.Field(
       additionalPropertiesTypeNode,
       additionalPropertiesFieldIdentifier,
@@ -231,14 +219,14 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
         new Java.Modifier(Java.ModifierType.PRIVATE),
         new Java.Modifier(Java.ModifierType.FINAL),
       ),
-      new Java.NewStatement(JavaAstUtils.createTypeNode(dictionaryType, true)),
+      new Java.NewStatement(root.getAstUtils().createTypeNode(dictionaryType, true)),
     );
 
-    const keyParameterDeclaration = this.createAdderMethodKeyParameter(dictionaryType);
-    const valueParameterDeclaration = this.createAdderMethodValueParameter(dictionaryType);
+    const keyParameterDeclaration = this.createAdderMethodKeyParameter(root, dictionaryType);
+    const valueParameterDeclaration = this.createAdderMethodValueParameter(root, dictionaryType);
 
     const adderMethod = new Java.MethodDeclaration(
-      this.createAdderMethodSignature(keyParameterDeclaration, valueParameterDeclaration),
+      this.createAdderMethodSignature(root, keyParameterDeclaration, valueParameterDeclaration),
       new Java.Block(
         new Java.Statement(
           new Java.MethodCall(
@@ -295,11 +283,11 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
   }
 
-  private createAdditionalPropertiesTypeNode(dictionaryType: OmniDictionaryType) {
-    return JavaAstUtils.createTypeNode(dictionaryType, false);
+  private createAdditionalPropertiesTypeNode(root: RootAstNode, dictionaryType: OmniDictionaryType) {
+    return root.getAstUtils().createTypeNode(dictionaryType, false);
   }
 
-  private createGetterMethodSignature(additionalPropertiesTypeNode: Java.TypeNode, getterAnnotations?: Java.AnnotationList) {
+  private createGetterMethodSignature(additionalPropertiesTypeNode: TypeNode, getterAnnotations?: Java.AnnotationList) {
     return new Java.MethodDeclarationSignature(
       new Java.Identifier(METHOD_GETTER_NAME),
       additionalPropertiesTypeNode,
@@ -309,20 +297,20 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     );
   }
 
-  private createAdderMethodValueParameter(dictionaryType: OmniDictionaryType) {
+  private createAdderMethodValueParameter(root: RootAstNode, dictionaryType: OmniDictionaryType) {
     const valueParameterIdentifier = new Java.Identifier('value');
-    return new Java.Parameter(JavaAstUtils.createTypeNode(dictionaryType.valueType), valueParameterIdentifier);
+    return new Java.Parameter(root.getAstUtils().createTypeNode(dictionaryType.valueType), valueParameterIdentifier);
   }
 
-  private createAdderMethodKeyParameter(dictionaryType: OmniDictionaryType) {
+  private createAdderMethodKeyParameter(root: RootAstNode, dictionaryType: OmniDictionaryType) {
     const keyParameterIdentifier = new Java.Identifier('key');
-    return new Java.Parameter(JavaAstUtils.createTypeNode(dictionaryType.keyType), keyParameterIdentifier);
+    return new Java.Parameter(root.getAstUtils().createTypeNode(dictionaryType.keyType), keyParameterIdentifier);
   }
 
-  private createAdderMethodSignature(keyParameterDeclaration: Java.Parameter, valueParameterDeclaration: Java.Parameter) {
+  private createAdderMethodSignature(root: RootAstNode, keyParameterDeclaration: Java.Parameter, valueParameterDeclaration: Java.Parameter) {
     return new Java.MethodDeclarationSignature(
       new Java.Identifier(METHOD_ADDER_NAME),
-      JavaAstUtils.createTypeNode({
+      root.getAstUtils().createTypeNode({
         kind: OmniTypeKind.VOID,
       } satisfies OmniPrimitiveType),
       new Java.ParameterList(

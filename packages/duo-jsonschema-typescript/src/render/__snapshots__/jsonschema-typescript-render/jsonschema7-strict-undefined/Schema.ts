@@ -46,20 +46,25 @@ export interface Schema {
   readonly uniqueItems?: boolean;
   readonly writeOnly?: boolean;
 }
+
 export interface SchemaDefinitions {
   readonly [key: string /* Pattern: ".*" */]: Schema;
 }
+
 export interface SchemaDependencies {
   readonly [key: string /* Pattern: ".*" */]: SchemaDependenciesObject;
 }
+
 export type SchemaDependenciesObject = Schema | ReadonlyArray<string>;
 export type SchemaItems = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
 export interface SchemaPatternProperties {
   readonly [key: string /* Pattern: ".*" */]: Schema;
 }
+
 export interface SchemaProperties {
   readonly [key: string /* Pattern: ".*" */]: Schema;
 }
+
 export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];
 export enum SimpleTypes {
   ARRAY = 'array',

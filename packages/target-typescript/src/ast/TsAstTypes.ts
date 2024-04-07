@@ -1,4 +1,4 @@
-import {AstNode, OmniCompositionType, Reducer, ReducerResult, VisitResult} from '@omnigen/core';
+import {AstNode, OmniType, Reducer, ReducerResult, TypeNode, VisitResult} from '@omnigen/core';
 import {TypeScriptVisitor} from '../visit';
 import {Java} from '@omnigen/target-java';
 
@@ -9,23 +9,15 @@ export abstract class AbstractTypeScriptNode extends Java.AbstractJavaNode imple
   abstract reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<AbstractTypeScriptNode>;
 }
 
-export class CompositionType<T extends OmniCompositionType = OmniCompositionType> extends AbstractTypeScriptNode implements Java.TypeNode<T> {
+export class CompositionType extends AbstractTypeScriptNode implements TypeNode {
 
-  omniType: T;
-  typeNodes: Java.TypeNode[];
+  omniType: OmniType;
+  typeNodes: AstNode[];
 
-  constructor(omniType: T, typeNodes: Java.TypeNode[]) {
+  constructor(omniType: OmniType, typeNodes: AstNode[]) {
     super();
     this.omniType = omniType;
     this.typeNodes = typeNodes;
-  }
-
-  getImportName(): string | undefined {
-    throw new Error(`Cannot get the import name of a composition type node`);
-  }
-
-  getLocalName(): string | undefined {
-    throw new Error(`Cannot get the local name of a composition type node`);
   }
 
   visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {
@@ -40,14 +32,14 @@ export class CompositionType<T extends OmniCompositionType = OmniCompositionType
 export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Java.Identifiable, Java.Typed {
 
   readonly name: Java.Identifier;
-  readonly of: Java.TypeNode;
+  readonly of: TypeNode;
   readonly modifiers?: Java.ModifierList | undefined;
 
   get omniType() {
     return this.of.omniType;
   }
 
-  constructor(identifier: Java.Identifier, of: Java.TypeNode, modifiers?: Java.ModifierList) {
+  constructor(identifier: Java.Identifier, of: TypeNode, modifiers?: Java.ModifierList) {
     super();
     this.name = identifier;
     this.of = of;

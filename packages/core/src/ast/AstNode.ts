@@ -1,5 +1,6 @@
 import {AstVisitor, VisitResult} from '../visit';
 import {Reducer, ReducerResult} from '../reduce';
+import {AstTargetFunctions} from './AstTargetFunctions.ts';
 
 /**
  * This is an abstract general ST (Syntax Tree) Node.
@@ -19,9 +20,10 @@ import {Reducer, ReducerResult} from '../reduce';
  */
 export interface AstNode {
 
-  id?: number;
+  id: number;
 
   setId(id: number): this;
+  withIdFrom(node: AstNode): this;
 
   visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode>;
@@ -31,5 +33,16 @@ export interface RootAstNode extends AstNode {
 
   createVisitor<R>(): AstVisitor<R>;
   createReducer(): Reducer<AstVisitor<unknown>>;
-  getNodeWithId<T extends AstNode>(id: number): T;
+  resolveNodeRef<T extends AstNode>(reference: Reference<T>): T;
+
+  /**
+   * TODO: Should likely be removed in favor of making type nodes more specific and then adding an AST transformer per target to rewrite them into a suitable form for that target
+   */
+  getAstUtils(): AstTargetFunctions;
+}
+
+export interface Reference<T extends AstNode> extends AstNode {
+  targetId: number;
+
+  resolve(root: RootAstNode): T;
 }

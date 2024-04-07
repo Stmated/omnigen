@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class RequestData {
   private final SenderInformation senderInformation;
+
   public RequestData(@JsonProperty("senderInformation") SenderInformation senderInformation) {
     this.senderInformation = senderInformation;
   }
@@ -16,6 +17,7 @@ public class RequestData {
 
   public static class SenderInformation {
     private final String dateOfBirth;
+
     public SenderInformation(@JsonProperty("DateOfBirth") String dateOfBirth) {
       this.dateOfBirth = dateOfBirth;
     }

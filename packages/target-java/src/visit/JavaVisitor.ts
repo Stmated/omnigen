@@ -77,7 +77,6 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitArgumentList: JavaVisitFn<Java.ArgumentList, R>;
   visitReturnStatement: JavaVisitFn<Java.ReturnStatement, R>;
   visitVariableDeclaration: JavaVisitFn<Java.VariableDeclaration, R>;
-  visitDeclarationReference: JavaVisitFn<Java.DeclarationReference, R>;
   visitAnnotation: JavaVisitFn<Java.Annotation, R>;
   visitAnnotationKeyValuePairList: JavaVisitFn<Java.AnnotationKeyValuePairList, R>;
   visitAnnotationKeyValuePair: JavaVisitFn<Java.AnnotationKeyValuePair, R>;
@@ -96,7 +95,6 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitEnumDeclaration: JavaVisitFn<Java.EnumDeclaration, R>;
   visitEnumItem: JavaVisitFn<Java.EnumItem, R>;
   visitEnumItemList: JavaVisitFn<Java.EnumItemList, R>;
-  visitFieldReference: JavaVisitFn<Java.FieldReference, R>;
   visitAssignExpression: JavaVisitFn<Java.AssignExpression, R>;
   visitCompilationUnit: JavaVisitFn<Java.CompilationUnit, R>;
   visitConstructor: JavaVisitFn<Java.ConstructorDeclaration, R>;
@@ -111,6 +109,9 @@ export interface JavaVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitSelfReference: JavaVisitFn<Java.SelfReference, R>;
   visitNodes: JavaVisitFn<Java.Nodes, R>;
   visitDecoratingTypeNode: JavaVisitFn<Java.DecoratingTypeNode, R>;
+
+  visitDeclarationReference: JavaVisitFn<Java.DeclarationReference, R>;
+  visitFieldReference: JavaVisitFn<Java.FieldReference, R>;
 }
 
 export const createJavaVisitor = <R>(partial?: Partial<JavaVisitor<R>>, noop?: R | undefined): Readonly<JavaVisitor<R>> => {
@@ -211,7 +212,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       return results;
     },
     visitAbstractMethodDeclaration: (node, visitor) => node.signature.visit(visitor),
-    visitExtendsDeclaration: (node, visitor) => node.type.visit(visitor),
+    visitExtendsDeclaration: (node, visitor) => node.types.visit(visitor),
     visitImplementsDeclaration: (node, visitor) => node.types.visit(visitor),
     visitTypeList: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitLiteral: () => noop,
@@ -246,7 +247,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       node.identifier.visit(visitor),
       node.initializer?.visit(visitor),
     ],
-    visitDeclarationReference: (node, visitor) => node.declaration.identifier.visit(visitor),
+    visitDeclarationReference: () => noop,
     visitAnnotation: (node, visitor) => node.pairs
       ? [node.type.visit(visitor), node.pairs.visit(visitor)]
       : node.type.visit(visitor),
@@ -265,6 +266,10 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
     ],
     visitObjectDeclaration: (node, visitor) => {
       const result: VisitResult<R>[] = [];
+
+      // TODO: This is likely to cause trouble for other parts of the code -- might need to be removed! The ReorderMembersTransformer needs to come up with another solution
+      result.push(node.type.visit(visitor));
+
       if (node.comments) {
         result.push(node.comments.visit(visitor));
       }
@@ -274,7 +279,7 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
       result.push(node.modifiers.visit(visitor));
       result.push(node.name.visit(visitor));
 
-      if (node instanceof Java.ClassDeclaration && node.genericParameterList) {
+      if (node.genericParameterList) {
         result.push(visitor.visitGenericTypeDeclarationList(node.genericParameterList, visitor));
       }
 
@@ -321,10 +326,13 @@ export const createJavaVisitorInternal = <R>(partial?: Partial<JavaVisitor<R>>, 
     ],
 
     visitConstructorParameterList: (node, visitor) => node.children.map(it => it.visit(visitor)),
-    visitConstructorParameter: (node, visitor) => visitor.visitParameter(node, visitor),
+    visitConstructorParameter: (node, visitor) => [
+      visitor.visitParameter(node, visitor),
+      visitor.visitFieldReference(node.fieldRef, visitor),
+    ],
 
     visitStatement: (node, visitor) => node.child.visit(visitor),
-    visitSuperConstructorCall: (node, visitor) => node.parameters.visit(visitor),
+    visitSuperConstructorCall: (node, visitor) => node.arguments.visit(visitor),
     visitClassName: (node, visitor) => node.type.visit(visitor),
     visitClassReference: (node, visitor) => node.className.visit(visitor),
     visitArrayInitializer: (node, visitor) => node.children.map(it => it.visit(visitor)),

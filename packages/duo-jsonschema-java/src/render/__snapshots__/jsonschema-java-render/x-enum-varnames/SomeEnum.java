@@ -9,6 +9,7 @@ public enum SomeEnum {
   Two(2),
   Three(3);
   private String value;
+
   SomeEnum(String value) {
     this.value = value;
   }

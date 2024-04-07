@@ -10,6 +10,7 @@ public enum Kind1 {
   _1_A("1A"),
   _1_B("1B");
   private String value;
+
   Kind1(String value) {
     this.value = value;
   }

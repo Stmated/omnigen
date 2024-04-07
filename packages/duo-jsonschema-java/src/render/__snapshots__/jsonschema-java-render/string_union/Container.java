@@ -6,6 +6,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class Container {
   private final String dateOfBirth;
+
   public Container(@JsonProperty("dateOfBirth") String dateOfBirth) {
     this.dateOfBirth = dateOfBirth;
   }

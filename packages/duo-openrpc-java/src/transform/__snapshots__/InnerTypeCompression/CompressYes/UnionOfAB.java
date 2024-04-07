@@ -12,6 +12,7 @@ public class UnionOfAB {
   private final JsonNode _raw;
   private A _a;
   private B _b;
+
   @JsonCreator
   public UnionOfAB(JsonNode raw) {
     this._raw = raw;
@@ -37,6 +38,7 @@ public class UnionOfAB {
 
   public static class B extends Abs implements IB {
     private final String bar;
+
     public B(String kind, String bar) {
       super(kind);
       this.bar = bar;

@@ -98,14 +98,14 @@ export class NewJsonSchemaParser implements Parser {
     };
   }
 
-  private* getAllSchemas(schema: JSONSchema9Definition): Generator<[string, AnyJsonDefinition]> {
+  private* getAllSchemas(schema: JSONSchema9Definition): Generator<[string | undefined, AnyJsonDefinition]> {
 
     if (typeof schema === 'boolean') {
       return;
     }
 
-    if (schema.type == 'object' || (schema.type === undefined && schema.enum) || schema.format) {
-      yield [schema.$id ?? '', schema];
+    if (schema.properties || schema.patternProperties || schema.type || schema.default !== undefined || (schema.type === undefined && schema.enum) || schema.format) {
+      yield [undefined, schema];
     }
 
     if (schema.$defs) {
@@ -793,8 +793,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const resolvedSchema = this._refResolver.resolve(schemaOrRef);
 
     const preferredName = this.getPreferredName(
-      resolvedSchema,
       schemaOrRef,
+      resolvedSchema,
       // NOTE: This might not be the best way to create the property name
       // But for now it will have to do, since most type names will be a simple type.
       {
@@ -851,9 +851,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return mapper(def);
   }
 
-  private getPreferredName(
+  public getPreferredName(
     schema: AnyJsonDefinition,
-    dereferenced?: unknown,
+    dereferenced: AnyJsonDefinition,
     fallback?: TypeName | undefined,
   ): TypeName {
 
@@ -885,7 +885,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return names;
   }
 
-  public getMostPreferredNames(dereferenced: unknown, schema: AnyJsonDefinition): TypeName[] {
+  public getMostPreferredNames(dereferenced: AnyJsonDefinition, schema: AnyJsonDefinition): TypeName[] {
 
     const names: TypeName[] = [];
     if (typeof schema == 'object') {
@@ -899,6 +899,16 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
       if (schema.$ref) {
         names.push(schema.$ref);
+      }
+    }
+
+    if (typeof dereferenced === 'object') {
+      if (dereferenced.title) {
+        names.push(dereferenced.title);
+      }
+
+      if (dereferenced.$id) {
+        names.push(dereferenced.$id);
       }
     }
 
@@ -1178,7 +1188,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       // This is a name that might not be the best suitable one. Might need to be more restrictive, or send more information along with the type.
       // For the name to be decided later by the target.
       if (!this.hasDirectContent(schema)) {
-        composition.name = this.getPreferredName(schema);
+        composition.name = this.getPreferredName(schema, schema);
       }
     }
 
@@ -1349,19 +1359,12 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     } else {
 
-      // items is a single JSONSchemaObject
-      // const itemsSchema = this.unwrapJsonSchema(items);
-      let itemTypeName: TypeName;
-      if (items.title) {
-        itemTypeName = Case.pascal(items.title);
-      } else {
-        itemTypeName = {
-          name: name ?? '',
-          suffix: 'Item',
-        };
-      }
-
       const resolved = this._refResolver.resolve(items);
+      const fallbackItemName: TypeName = {
+        name: name ?? '',
+        suffix: 'Item',
+      };
+      const itemTypeName = this.getPreferredName(items, resolved, fallbackItemName);
       const itemType = this.jsonSchemaToType(itemTypeName, resolved);
 
       return {

@@ -9,6 +9,7 @@ import jakarta.annotation.Generated;
 public class JsonRpcRequest {
   private final String id;
   private final ListThingsRequestParams params;
+
   public JsonRpcRequest(ListThingsRequestParams params, String id) {
     this.params = params;
     this.id = id;

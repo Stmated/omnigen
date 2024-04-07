@@ -1,6 +1,6 @@
-import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, UnknownKind, VisitResult} from '@omnigen/core';
+import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
-import {DecoratingTypeNode, GenericTypeDeclarationList, JavaAstRootNode, TokenKind} from '../ast';
+import {JavaAstRootNode, TokenKind} from '../ast';
 import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
 import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -120,20 +120,13 @@ const visitCommonTypeDeclaration = (
 
     objectDecStack.push(node);
 
-    let generics: GenericTypeDeclarationList | undefined;
-    if (node instanceof Java.ClassDeclaration) {
-      generics = node.genericParameterList;
-    }
-
     const modifiers = render(node.modifiers, visitor);
     const name = render(node.name, visitor);
-    const genericsString = generics ? render(generics, visitor) : '';
+    const genericsString = node.genericParameterList ? render(node.genericParameterList, visitor) : '';
     const classExtension = node.extends ? ` extends ${render(node.extends, visitor)}` : '';
     const classImplementations = node.implements ? ` implements ${render(node.implements, visitor)}` : '';
 
     const typeDeclarationContent: VisitResult<string>[] = [];
-
-    // typeDeclarationContent.push(`// TYPE DEBUG: ${OmniUtil.describe(node.type.omniType)}\n`);
 
     if (node.comments) {
       typeDeclarationContent.push(node.comments.visit(visitor));
@@ -146,7 +139,7 @@ const visitCommonTypeDeclaration = (
 
     typeDeclarationContent.push(`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
     typeDeclarationContent.push(visitor.visitObjectDeclarationBody(node, visitor));
-    typeDeclarationContent.push(('}\n'));
+    typeDeclarationContent.push(('}\n\n'));
 
     return typeDeclarationContent;
   } finally {
@@ -195,12 +188,28 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
 
     visitFieldReference: (node, visitor) => {
 
-      const field = root.getNodeWithId<Java.Field>(node.targetId);
-      return `this.${render(field.identifier, visitor)}`;
+      const resolved = root.resolveNodeRef(node);
+      if (resolved instanceof Java.Field) {
+        return `this.${render(resolved.identifier, visitor)}`;
+      } else {
+        // ???
+        return `${render(resolved, visitor)}`;
+      }
+    },
+
+    visitDeclarationReference: (n, v) => {
+
+      const resolved = root.resolveNodeRef(n);
+      if (resolved) { // } instanceof Java.Parameter || resolved instanceof Java.VariableDeclaration) {
+        return `${render(resolved.identifier, v)}`;
+      } else {
+        // ???
+        return `${render(resolved, v)}`;
+      }
     },
 
     /**
-     * TODO: Should this be used together with the field reference above?
+     * TODO: Should this be used together with the field reference above, so 'this.' is not hard coded
      */
     visitSelfReference: () => `this`,
     visitVariableDeclaration: (node, visitor) => {
@@ -229,14 +238,24 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       return `\n${annotations}${modifiers}${render(owner.name, visitor)}(${render(node.parameters, visitor)}) {${body}}\n\n`;
     },
     visitConstructorParameterList: (node, visitor) => renderListWithWrapping(node.children, visitor),
+    visitConstructorParameter: (n, v) => v.visitParameter(n, v),
 
-    visitBlock: (node, visitor) => {
+    visitBlock: (n, visitor) => {
       blockDepth++;
       const indentation = getIndentation(1);
-      const blockContent = join(node.children.map(it => it.visit(visitor))).trim();
+      const blockContent = join(n.children.map(it => it.visit(visitor))).trim();
       blockDepth--;
 
-      return blockContent.replace(patternLineStart, indentation) + '\n';
+      const indentedContent = blockContent.replace(patternLineStart, indentation);
+      if (n.enclosed) {
+        if (n.compact) {
+          return `{ ${indentedContent.trim()} }`;
+        } else {
+          return `{ ${indentedContent} }\n`;
+        }
+      } else {
+        return indentedContent + '\n';
+      }
     },
 
     visitClassDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'class', objectDecStack),
@@ -338,6 +357,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     },
 
     visitImplementsDeclaration: (node, visitor) => render(node.types, visitor),
+    visitExtendsDeclaration: (node, visitor) => render(node.types, visitor),
 
     visitEnumItem: (node, visitor) => {
 
@@ -404,7 +424,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       ';\n',
     ],
 
-    // TODO: The "multiline" should be contextual and automatic in my opinion.
+    // TODO: The "multiline" should be contextual and automatic
     //        There should be different methods:
     //        visitClassAnnotationList, visitFieldAnnotationList, visitMethodAnnotationList, visitParameterAnnotationList
     visitAnnotationList: (node, visitor) => (node.children.map(it => render(it, visitor)).join(node.multiline ? '\n' : ' ')),
@@ -560,7 +580,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       return undefined;
     },
 
-    visitSuperConstructorCall: (node, visitor) => `super(${render(node.parameters, visitor)})`,
+    visitSuperConstructorCall: (node, visitor) => `super(${render(node.arguments, visitor)})`,
     visitIfStatement: (node, visitor) => `if (${render(node.predicate, visitor)}) {\n${render(node.body, visitor)}}\n`,
 
     visitPredicate(node, visitor) {

@@ -48,6 +48,18 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
       ];
     },
 
+    visitInterfaceDeclaration: (n, v) => {
+
+      if (n.inline) {
+
+        const bodyString = `${n.body.visit(v)}`.trim();
+        return `{ ${bodyString} }`;
+
+      } else {
+        return parentRenderer.visitInterfaceDeclaration(n, v);
+      }
+    },
+
     visitField: (node, visitor) => {
 
       const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
@@ -97,7 +109,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
       const annotations = (n.annotations && n.annotations.children.length > 0) ? `${n.annotations.visit(v)}\n` : '';
 
       const modifiers = n.modifiers.visit(v);
-      const type = options.explicitReturns || options.preferInterfaces ? `: ${render(n.type, v)}` : '';
+      const type = (options.explicitReturns || options.preferInterfaces) ? `: ${render(n.type, v)}` : '';
       const name = n.identifier.visit(v);
       const parameters = n.parameters ? n.parameters.visit(v) : '';
 
@@ -112,7 +124,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
      * Should perhaps be replaced by a TS-specific node
      */
     visitFieldBackedGetter: (n, v) => {
-      const field = root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+      const field = root.resolveNodeRef(n.fieldRef);
       return `get ${field.identifier.value}() { return this.${field.identifier.value}}\n`;
     },
 
@@ -120,7 +132,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
      * Should perhaps be replaced by a TS-specific node
      */
     visitFieldBackedSetter: (n, v) => {
-      const field = root.getNodeWithId<Java.Field>(n.fieldRef.targetId);
+      const field = root.resolveNodeRef(n.fieldRef);
       const type = render(field.type, v);
       return `set ${field.identifier.value}(value: ${type}) { this.${field.identifier.value} = value;}\n`;
     },
@@ -165,6 +177,14 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
       }
 
       return parentRenderer.visitModifier(node, visitor);
+    },
+
+    visitConstructor: (n, v) => {
+      const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
+      const body = n.body ? `\n${render(n.body, v)}` : '';
+      const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
+
+      return `\n${annotations}${modifiers}constructor(${render(n.parameters, v)}) {${body}}\n\n`;
     },
 
     visitEdgeType: (n, v) => {

@@ -19,7 +19,7 @@ import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
 import {z, ZodObject} from 'zod';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OpenRpcPlugin} from '@omnigen/parser-openrpc';
+import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -46,7 +46,7 @@ export interface JavaTestUtilsOptions {
 export class JavaTestUtils {
 
   constructor() {
-    logger.debug(`Loaded OpenRPC: ${OpenRpcPlugin}`);
+    logger.debug(`Loaded OpenRPC: ${OpenRpcPlugins.OpenRpcPlugin}`);
   }
 
   public static async getFileContentsFromFile(fileName: string, options?: JavaTestUtilsOptions, source = 'openrpc'): Promise<Map<string, string>> {

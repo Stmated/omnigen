@@ -45,17 +45,13 @@
       "in1": {
         "type": "object",
         "properties": {
-          "value": {
-            "type": "string"
-          }
+          "value": {"type": "string"}
         }
       },
       "in2": {
         "type": "object",
         "properties": {
-          "value": {
-            "type": "string"
-          }
+          "value": {"type": "string"}
         }
       },
       "Abs": {

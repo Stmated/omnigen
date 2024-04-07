@@ -5,6 +5,7 @@ public enum Tag {
   TAG_B("TagB"),
   TAG_C("TagC");
   private String value;
+
   Tag(String value) {
     this.value = value;
   }

@@ -12,6 +12,7 @@ public class UnionOfAB {
   private final JsonNode _raw;
   private A _a;
   private B _b;
+
   @JsonCreator
   public UnionOfAB(JsonNode raw) {
     this._raw = raw;

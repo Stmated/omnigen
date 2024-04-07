@@ -1,7 +1,7 @@
 import {
   OmniTypeKind,
 } from '@omnigen/core';
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 import * as Java from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
@@ -78,7 +78,7 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
                 ),
                 new Java.AnnotationKeyValuePair(
                   new Java.Identifier('value'),
-                  new Java.ClassReference(new Java.ClassName(JavaAstUtils.createTypeNode(subTypeHint.type))),
+                  new Java.ClassReference(new Java.ClassName(args.root.getAstUtils().createTypeNode(subTypeHint.type))),
                 ),
               ),
             ));

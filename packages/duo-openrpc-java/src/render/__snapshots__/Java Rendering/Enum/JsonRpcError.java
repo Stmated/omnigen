@@ -9,6 +9,7 @@ public class JsonRpcError {
   private final int code;
   private final JsonNode data;
   private final String message;
+
   public JsonRpcError(JsonNode data, int code, String message) {
     this.data = data;
     this.code = code;

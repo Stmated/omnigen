@@ -3,7 +3,6 @@ import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} 
 import {Java} from '@omnigen/target-java';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptOptions} from '../options';
-import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -22,11 +21,12 @@ export class SingleFileTypeScriptAstTransformer implements AstTransformer<TsRoot
 
     let firstUnit: Java.CompilationUnit | undefined = undefined;
 
-    const reducer: TypeScriptAstReducer = {
+    const newRoot = args.root.reduce({
       ...defaultReducer,
       reduceCompilationUnit: (n, r) => {
 
         if (firstUnit === undefined) {
+
           firstUnit = n;
           return n;
         } else {
@@ -36,9 +36,8 @@ export class SingleFileTypeScriptAstTransformer implements AstTransformer<TsRoot
           return undefined;
         }
       },
-    };
+    });
 
-    const newRoot = args.root.reduce(reducer);
     if (newRoot) {
       args.root = newRoot;
     }

@@ -9,6 +9,7 @@ import jakarta.annotation.Generated;
 public class ListThingsRequest extends JsonRpcRequest {
   private final String id;
   private final Params params;
+
   public ListThingsRequest(Params params, String id) {
     this.params = params;
     this.id = id;
@@ -34,3 +35,4 @@ public class ListThingsRequest extends JsonRpcRequest {
 
   }
 }
+

@@ -15,7 +15,7 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
     public Params(
       @JsonProperty(value = "Signature", required = true) String signature,
       @JsonProperty(value = "UUID", required = true) String uuid,
-      @JsonProperty("Data") Data data
+      @JsonProperty(value = "Data", required = true) Data data
     ) {
       super(signature, uuid, data);
     }
@@ -24,10 +24,11 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
       private final String amount;
       private final String currency;
       private final String orderId;
+
       public Data(
         @JsonProperty(value = "Username", required = true) String username,
         @JsonProperty(value = "Password", required = true) String password,
-        @JsonProperty("Attributes") Attributes attributes,
+        @JsonProperty(value = "Attributes", required = true) Attributes attributes,
         @JsonProperty(value = "OrderID", required = true) String orderId,
         @JsonProperty(value = "Amount", required = true) String amount,
         @JsonProperty(value = "Currency", required = true) String currency
@@ -58,6 +59,7 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
 
       public static class Attributes {
         private final String externalReference;
+
         public Attributes(@JsonProperty("ExternalReference") String externalReference) {
           this.externalReference = externalReference;
         }

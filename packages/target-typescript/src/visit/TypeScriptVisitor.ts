@@ -14,15 +14,11 @@ export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R
 
   return {
     ...createJavaVisitor(java, noop),
-    visitCompositionType: (node, visitor) => {
-      return node.typeNodes.map(it => it.visit(visitor));
-    },
-    visitTypeAliasDeclaration: (node, visitor) => {
-      return [
-        node.modifiers?.visit(visitor),
-        node.of.visit(visitor),
-      ];
-    },
+    visitCompositionType: (node, visitor) => node.typeNodes.map(it => it.visit(visitor)),
+    visitTypeAliasDeclaration: (node, visitor) => [
+      node.modifiers?.visit(visitor),
+      node.of.visit(visitor),
+    ],
   };
 };
 

@@ -10,6 +10,7 @@ import jakarta.annotation.Generated;
 public class JsonRpcResponse<T> {
   private final String id;
   private final T result;
+
   public JsonRpcResponse(@JsonProperty("id") String id, @JsonProperty("result") T result) {
     this.id = id;
     this.result = result;

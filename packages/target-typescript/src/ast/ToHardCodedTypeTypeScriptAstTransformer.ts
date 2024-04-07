@@ -1,6 +1,6 @@
 import {AstTransformer, AstTransformerArguments, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
 import {Java} from '@omnigen/target-java';
-import {TsAstUtils, TsRootNode} from '../ast';
+import {TsRootNode} from '../ast';
 import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
 
 export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<Java.JavaAstRootNode> {
@@ -18,8 +18,8 @@ export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<J
             const type = n.omniType;
             // const dictionaryClass = ;
             const dictionaryType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'Record'});
-            const keyType = TsAstUtils.createTypeNode(type.keyType, true);
-            const valueType = TsAstUtils.createTypeNode(type.valueType, true);
+            const keyType = args.root.getAstUtils().createTypeNode(type.keyType, true);
+            const valueType = args.root.getAstUtils().createTypeNode(type.valueType, true);
 
             return new Java.GenericType(type, dictionaryType, [keyType, valueType]);
 

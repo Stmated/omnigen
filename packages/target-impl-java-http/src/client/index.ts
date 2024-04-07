@@ -1,5 +1,5 @@
 import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
-import {JavaPlugins} from '@omnigen/target-java';
+import {Java, JavaPlugins} from '@omnigen/target-java';
 import {ZodImplementationOptions} from './ImplementationOptions.ts';
 import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/core';
 import {JavaHttpImplementationGenerator} from './JavaHttpImplementationGenerator.ts';
@@ -27,7 +27,7 @@ export const JavaHttpClientPlugin = createPlugin(
 
     const nodes = await generator.generate({
       model: ctx.model,
-      root: ctx.astNode,
+      root: ctx.astNode as Java.JavaAstRootNode,
 
       targetOptions: {...ctx.packageOptions, ...ctx.targetOptions, ...ctx.javaOptions},
       implOptions: ctx.implementationOptions,

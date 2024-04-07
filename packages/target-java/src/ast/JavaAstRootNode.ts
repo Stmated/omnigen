@@ -1,11 +1,13 @@
-import {AstNode, AstNodeWithChildren, Reducer, ReducerResult, RootAstNode, VisitResult} from '@omnigen/core';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, Reducer, ReducerResult, Reference, RootAstNode, VisitResult} from '@omnigen/core';
 import {createJavaVisitor, JavaVisitor} from '../visit';
-import {isDefined} from '@omnigen/core-util';
+import {isDefined, ReferenceNodeNotFoundError} from '@omnigen/core-util';
 import {DefaultJavaReducer, JavaReducer} from '../reduce';
 import {AbstractJavaNode} from './JavaAstTypes.ts';
 import {JavaAstUtils} from '../transform';
 
 export class JavaAstRootNode extends AbstractJavaNode implements RootAstNode, AstNodeWithChildren {
+
+  private static _astUtils: JavaAstUtils | undefined;
 
   readonly children: AstNode[] = [];
 
@@ -23,15 +25,24 @@ export class JavaAstRootNode extends AbstractJavaNode implements RootAstNode, As
     return DefaultJavaReducer;
   }
 
-  public getNodeWithId<T extends AstNode>(id: number): T {
+  getAstUtils(): AstTargetFunctions {
+    if (!JavaAstRootNode._astUtils) {
+      JavaAstRootNode._astUtils = new JavaAstUtils();
+    }
+
+    return JavaAstRootNode._astUtils;
+  }
+
+  public resolveNodeRef<T extends AstNode>(reference: Reference<T>): T {
 
     if (this._referenceIdNodeMap === undefined) {
       this._referenceIdNodeMap = JavaAstUtils.getReferenceIdNodeMap(this);
     }
 
-    const result = this._referenceIdNodeMap.get(id);
+    const targetId = reference.targetId;
+    const result = this._referenceIdNodeMap.get(targetId);
     if (!result) {
-      throw new Error(`Queried for node with id ${id}, but it could not be found. Some transformation made the node tree out-of-sync.`);
+      throw new ReferenceNodeNotFoundError(targetId);
     }
 
     // The cast might be wrong, but it is probably fine most of the time, and makes the caller code simpler.

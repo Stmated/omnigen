@@ -7,6 +7,7 @@ import jakarta.annotation.Generated;
 public class ErrorUnknown extends JsonRpcErrorResponse {
   private final Error error;
   private final String id;
+
   public ErrorUnknown(Error error, String id) {
     this.error = error;
     this.id = id;
@@ -28,17 +29,10 @@ public class ErrorUnknown extends JsonRpcErrorResponse {
     private final Integer code;
     private final JsonNode data;
     private final String message;
+
     public Error(Integer code, String message, JsonNode data) {
-      if (code != null) {
-        this.code = code;
-      } else {
-        this.code = -1;
-      }
-      if (message != null) {
-        this.message = message;
-      } else {
-        this.message = "Unknown Error";
-      }
+      this.code = ((code == null) ? -1 : code);
+      this.message = ((message == null) ? "Unknown Error" : message);
       this.data = data;
     }
 

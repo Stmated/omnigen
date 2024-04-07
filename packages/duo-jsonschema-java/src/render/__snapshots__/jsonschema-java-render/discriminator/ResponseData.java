@@ -15,6 +15,7 @@ public class ResponseData {
   private final JsonNode _raw;
   private WithReject _responseDataWithReject;
   private WithResult _responseDataWithResult;
+
   @JsonCreator
   public ResponseData(JsonNode raw) {
     this._raw = raw;
@@ -40,6 +41,7 @@ public class ResponseData {
 
   public static class WithReject {
     private final String rejected;
+
     public WithReject(@JsonProperty(value = "rejected", required = true) String rejected) {
       this.rejected = rejected;
     }
@@ -53,6 +55,7 @@ public class ResponseData {
       return "0";
     }
   }
+
   public static class WithResult {
     public String getResult() {
       return "1";

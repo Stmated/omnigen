@@ -19,6 +19,9 @@ import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {DeleteUnnecessaryCompositionsJavaModelTransformer} from './parse/transform/DeleteUnnecessaryCompositionsJavaModelTransformer.ts';
 import {JavaAstRootNode} from './ast';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export const ZodParserOptionsContext = z.object({
   parserOptions: ZodParserOptions,
@@ -61,6 +64,8 @@ export const JavaPluginInit = createPlugin(
     scoreModifier: LATER_IS_BETTER,
   },
   async ctx => {
+
+    logger.info(`Java Init, target: ${ctx.target}`);
 
     if (ctx.target !== undefined && ctx.target != 'java') {
       return new z.ZodError([
@@ -141,4 +146,5 @@ export const JavaRendererPlugin = createPlugin(
   },
 );
 
+logger.info(`Registering Java plugins`);
 export default PluginAutoRegistry.register([JavaPluginInit, JavaPlugin, JavaRendererPlugin]);

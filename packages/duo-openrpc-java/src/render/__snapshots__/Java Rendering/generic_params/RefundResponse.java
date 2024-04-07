@@ -16,6 +16,7 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
     private final String method;
     private final String signature;
     private final String uuid;
+
     public RefundDepositResponseObject(
       @JsonProperty("signature") String signature,
       @JsonProperty("uuid") String uuid,
@@ -47,6 +48,7 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDeposit
     public static class Data {
       private final String orderid;
       private final String result;
+
       public Data(
         @JsonProperty("orderid") String orderid,
         @JsonProperty(value = "result", required = true) String result

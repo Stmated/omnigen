@@ -3,7 +3,7 @@ import {
   OMNI_GENERIC_FEATURES,
   OmniArrayKind,
   OmniArrayTypes,
-  OmniArrayTypesByPositionType,
+  OmniTupleType,
   OmniComparisonOperator,
   OmniDecoratingType,
   OmniEnumType,
@@ -1351,11 +1351,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       const commonDenominator = OmniUtil.getCommonDenominator(OMNI_GENERIC_FEATURES, ...staticArrayTypes.map(it => it.type))?.type;
 
       return {
-        kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
+        kind: OmniTypeKind.TUPLE,
         types: staticArrayTypes.map(it => it.type),
         description: schema.description,
         commonDenominator: commonDenominator,
-      } satisfies OmniArrayTypesByPositionType;
+      } satisfies OmniTupleType;
 
     } else {
 
@@ -1467,7 +1467,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       return {kind: OmniTypeKind.BOOL, literal: true, value: def};
     } else if (Array.isArray(def)) {
       return {
-        kind: OmniTypeKind.ARRAY_TYPES_BY_POSITION,
+        kind: OmniTypeKind.TUPLE,
         arrayKind: OmniArrayKind.PRIMITIVE,
         types: def.map(it => this.getDefault(it, path)).filter(isDefined),
       };

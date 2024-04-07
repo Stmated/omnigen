@@ -727,7 +727,7 @@ export class OmniUtil {
         prefix: 'ArrayOf',
         name: OmniUtil.getVirtualTypeName(type.of),
       };
-    } else if (type.kind == OmniTypeKind.ARRAY_TYPES_BY_POSITION) {
+    } else if (type.kind == OmniTypeKind.TUPLE) {
       return {
         prefix: 'TupleOf',
         name: type.types.map(it => OmniUtil.getVirtualTypeName(it)).join(''),
@@ -1043,7 +1043,7 @@ export class OmniUtil {
         }
         break;
       }
-      case OmniTypeKind.ARRAY_TYPES_BY_POSITION: {
+      case OmniTypeKind.TUPLE: {
         for (let i = 0; i < parent.types.length; i++) {
           const found = OmniUtil.swapType(parent.types[i], from, to, maxDepth - 1);
           if (found) {

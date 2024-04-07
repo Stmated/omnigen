@@ -180,7 +180,7 @@ export class JavaUtil {
         const arrayOf = JavaUtil.getName({...args, type: args.type.of});
         return arrayOf + (args.withSuffix ? '[]' : '');
       }
-      case OmniTypeKind.ARRAY_TYPES_BY_POSITION:
+      case OmniTypeKind.TUPLE:
       case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION: {
         // TODO: This must be handled somehow. How?!?!?! Enough to introduce a common marker interface?
 

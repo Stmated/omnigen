@@ -86,7 +86,7 @@ export type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<Omni
 
 // TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
 
-export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType | OmniArrayTypesByPositionType;
+export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType | OmniTupleType;
 
 export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
 export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
@@ -283,13 +283,14 @@ export interface OmniArrayPropertiesByPositionType extends OmniBaseType<typeof O
   commonDenominator?: OmniType | undefined;
 }
 
-export interface OmniArrayTypesByPositionType extends OmniBaseType<typeof OmniTypeKind.ARRAY_TYPES_BY_POSITION>, OmniArrayBase {
+export interface OmniTupleType extends OmniBaseType<typeof OmniTypeKind.TUPLE>, OmniArrayBase {
   types: OmniType[];
   commonDenominator?: OmniType | undefined;
 }
 
 
-export interface OmniInterfaceType<T extends OmniSuperTypeCapableType = OmniSuperTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.INTERFACE>, OmniOptionallyNamedType, OmniTypeWithInnerType<T> {
+export interface OmniInterfaceType<T extends OmniSuperTypeCapableType = OmniSuperTypeCapableType>
+  extends OmniBaseType<typeof OmniTypeKind.INTERFACE>, OmniOptionallyNamedType, OmniTypeWithInnerType<T> {
 
   /**
    * This is a replacement of any potential 'extendedBy' inside the original type inside 'of'.

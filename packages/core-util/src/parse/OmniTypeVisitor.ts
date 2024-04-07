@@ -117,7 +117,7 @@ export class OmniTypeVisitor {
             q.push({...dq, owner: p, parent: undefined, type: p.type, useDepth: dq.useDepth + 1});
           }
           break;
-        case OmniTypeKind.ARRAY_TYPES_BY_POSITION:
+        case OmniTypeKind.TUPLE:
           q.push(...type.types.map(it => {
             return {...dq, owner: type, parent: undefined, type: it, useDepth: dq.useDepth + 1};
           }));
@@ -379,7 +379,7 @@ export class OmniTypeVisitor {
             if (result !== undefined) return result;
           }
           break;
-        case OmniTypeKind.ARRAY_TYPES_BY_POSITION:
+        case OmniTypeKind.TUPLE:
           result = this.visitTypesDepthFirstInternal(input.types, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
           result = this.visitTypesDepthFirstInternal(input.commonDenominator, ctx, onDown, onUp, onlyOnce);

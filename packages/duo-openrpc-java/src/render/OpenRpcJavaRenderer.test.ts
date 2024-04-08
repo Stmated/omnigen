@@ -1,8 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as JavaParser from 'java-parser';
-import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '../util';
-import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
+import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils, OpenRpcTestUtils, ParsedJavaTestVisitor} from '../util';
 import {describe, expect, test, vi} from 'vitest';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, OmniTypeKind} from '@omnigen/core';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';

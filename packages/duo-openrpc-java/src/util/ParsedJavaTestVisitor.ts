@@ -3,6 +3,7 @@ import {
   ArgumentListCtx,
   BaseJavaCstVisitorWithDefaults,
   BooleanLiteralCtx,
+  ClassDeclarationCtx,
   ClassOrInterfaceTypeCtx,
   FieldDeclarationCtx,
   FloatingPointLiteralCtx,
@@ -13,13 +14,14 @@ import {
   IToken,
   LiteralCtx,
   MethodDeclaratorCtx,
+  MethodHeaderCtx,
+  MethodNameCtx,
+  NormalClassDeclarationCtx,
   NormalInterfaceDeclarationCtx,
   PackageDeclarationCtx,
   SuperclassCtx,
   SuperinterfacesCtx,
   UnannClassTypeCtx,
-  MethodHeaderCtx,
-  MethodNameCtx, ClassDeclarationCtx, TypeDeclarationCtx, ClassMemberDeclarationCtx, NormalClassDeclarationCtx,
 } from 'java-parser';
 
 export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {

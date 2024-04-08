@@ -12,7 +12,7 @@ import {
   ZodTargetOptions,
 } from '@omnigen/core';
 import {createJavaVisitor, Java, JavaOptions, SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
-import {ParsedJavaTestVisitor} from '@omnigen/utils-test-target-java';
+import {ParsedJavaTestVisitor} from '../util';
 import {TestUtils} from '@omnigen/utils-test';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {PluginManager} from '@omnigen/plugin';

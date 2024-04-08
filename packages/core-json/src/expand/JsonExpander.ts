@@ -18,6 +18,10 @@ export type ExpandFind = ExpandNeedle | ExpandNeedle[];
 export interface ExpandOptions {
   using: ExpandUsing;
   at: ExpandFind;
+  /**
+   * Only required if the parent is an object, so we can know what key to use.
+   */
+  as?: ExpandNeedleMeta;
   inline?: boolean;
 }
 
@@ -52,17 +56,25 @@ export class JsonExpander {
 
       logger.info(`Expanding '${args.path.join('/')}' with ${JSON.stringify(options.using)}`);
 
+      const lastKey = args.path[args.path.length - 1];
       const parentPath = `/${args.path.slice(0, -1).join('/')}`;
       const parent = pointer.get(original, parentPath);
-      if (!Array.isArray(parent)) {
-        throw new Error(`Parent of the expansion object must be an array`);
-      }
+      if (Array.isArray(parent)) {
+        const ourIndex = parent.indexOf(current);
+        if (ourIndex === -1) {
+          throw new Error(`Could not find the expansion object (${current}) inside array ${parent}`);
+        }
+        parent.splice(ourIndex, 1);
 
-      const ourIndex = parent.indexOf(current);
-      if (ourIndex === -1) {
-        throw new Error(`Could not find the expansion object (${current}) inside array ${parent}`);
+      } else if (typeof parent === 'object' && parent) {
+
+        // Also remove the object which contains the expansion from its parent.
+        // It will be re-added in its expanded form as different keys.
+        delete parent[lastKey];
+
+      } else {
+        throw new Error(`Parent of the expansion object must be an array or an object`);
       }
-      parent.splice(ourIndex, 1);
 
       const findArray = Array.isArray(options.at) ? options.at : [options.at];
 
@@ -85,8 +97,21 @@ export class JsonExpander {
           }
         }
 
-        logger.debug(`Adding expanded object for '${source}' to: ${parentPath}`);
-        parent.push(clone);
+        if (Array.isArray(parent)) {
+
+          logger.debug(`Adding expanded object for '${source}' to: ${parentPath}`);
+          parent.push(clone);
+        } else {
+
+          const targetKey = options.as ? `${options.as.prefix ?? ''}${source}${options.as.suffix ?? ''}` : source;
+          if (typeof targetKey === 'string' || typeof targetKey === 'number') {
+
+            logger.debug(`Adding expanded object for '${source}' to: ${parentPath} as ${targetKey}`);
+            parent[targetKey] = clone;
+          } else {
+            throw new Error(`Expansion target key must be a string or number`);
+          }
+        }
       }
 
       return true;

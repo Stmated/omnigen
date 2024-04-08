@@ -63,6 +63,7 @@ logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
     args['outputFiles'] = 'true';
   }
 
+  const startTime = new Date();
   const runOptions: BaseContext & FileContext = {
     arguments: args,
     file: args['file'],
@@ -85,7 +86,10 @@ logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
   }
 
   const execution = await pluginManager.execute({ctx: runOptions, debug: true});
-  logger.info('Execution finished: %o', Object.keys(execution.result.ctx));
+
+  const stopTime = new Date();
+  const timeTaken = stopTime.getTime() - startTime.getTime();
+  logger.info(`Execution finished in ${timeTaken}ms: %o`, Object.keys(execution.result.ctx));
 
   process.exit(0);
 

@@ -3,7 +3,7 @@ import {
   DEFAULT_PACKAGE_OPTIONS, OmniKindPrimitive,
   PackageOptions, TargetOptions,
 } from '@omnigen/core';
-import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '../util';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '@omnigen/target-java';
 import {describe, expect, test, vi} from 'vitest';
 

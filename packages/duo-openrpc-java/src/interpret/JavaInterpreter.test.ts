@@ -3,7 +3,7 @@ import {
   DEFAULT_TEST_TARGET_OPTIONS,
   JavaTestUtils,
   OpenRpcTestUtils,
-} from '@omnigen/duo-openrpc-java-test';
+} from '../util';
 import {Java, JAVA_FEATURES, JavaInterpreter, JavaUtil} from '@omnigen/target-java';
 import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,

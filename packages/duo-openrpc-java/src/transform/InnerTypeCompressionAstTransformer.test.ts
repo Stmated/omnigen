@@ -1,4 +1,4 @@
-import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '@omnigen/duo-openrpc-java-test';
+import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '../util';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, Direction} from '@omnigen/core';
 import {describe, expect, test, vi} from 'vitest';
 import {SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';

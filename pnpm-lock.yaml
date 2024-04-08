@@ -549,9 +549,6 @@ importers:
       '@omnigen/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
-      '@omnigen/duo-openrpc-java-test':
-        specifier: workspace:*
-        version: link:../duo-openrpc-java-test
       '@omnigen/eslint-config-custom':
         specifier: workspace:*
         version: link:../eslint-config-custom
@@ -561,61 +558,6 @@ importers:
       '@omnigen/utils-test-target-java':
         specifier: workspace:*
         version: link:../utils-test-target-java
-      java-parser:
-        specifier: ^2.0.3
-        version: 2.0.3
-      typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
-
-  packages/duo-openrpc-java-test:
-    dependencies:
-      '@omnigen/core':
-        specifier: workspace:*
-        version: link:../core
-      '@omnigen/core-log':
-        specifier: workspace:*
-        version: link:../core-log
-      '@omnigen/core-plugin':
-        specifier: workspace:*
-        version: link:../core-plugin
-      '@omnigen/core-util':
-        specifier: workspace:*
-        version: link:../core-util
-      '@omnigen/parser-jsonschema':
-        specifier: workspace:*
-        version: link:../parser-jsonschema
-      '@omnigen/parser-openrpc':
-        specifier: workspace:*
-        version: link:../parser-openrpc
-      '@omnigen/plugin':
-        specifier: workspace:*
-        version: link:../plugin
-      '@omnigen/target-java':
-        specifier: workspace:*
-        version: link:../target-java
-      json-schema:
-        specifier: ^0.4.0
-        version: 0.4.0
-      zod:
-        specifier: ^3.22.4
-        version: 3.22.4
-    devDependencies:
-      '@omnigen/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@omnigen/eslint-config-custom':
-        specifier: workspace:*
-        version: link:../eslint-config-custom
-      '@omnigen/utils-test':
-        specifier: workspace:*
-        version: link:../utils-test
-      '@omnigen/utils-test-target-java':
-        specifier: workspace:*
-        version: link:../utils-test-target-java
-      '@types/json-schema':
-        specifier: ^7.0.15
-        version: 7.0.15
       java-parser:
         specifier: ^2.0.3
         version: 2.0.3
@@ -659,9 +601,6 @@ importers:
       '@omnigen/config-typescript':
         specifier: workspace:*
         version: link:../config-typescript
-      '@omnigen/duo-openrpc-java-test':
-        specifier: workspace:*
-        version: link:../duo-openrpc-java-test
       '@omnigen/eslint-config-custom':
         specifier: workspace:*
         version: link:../eslint-config-custom

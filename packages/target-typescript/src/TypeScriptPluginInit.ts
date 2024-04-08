@@ -55,7 +55,7 @@ import {ClassToInterfaceTypeScriptAstTransformer} from './ast/ClassToInterfaceTy
 import {ToHardCodedTypeTypeScriptAstTransformer} from './ast/ToHardCodedTypeTypeScriptAstTransformer.ts';
 import {SingleFileTypeScriptAstTransformer} from './ast/SingleFileTypeScriptAstTransformer.ts';
 import {RemoveEnumFieldsTypeScriptAstTransformer} from './ast/RemoveEnumFieldsTypeScriptAstTransformer.ts';
-import {StrictUndefinedTypeScriptModelTransformer} from './parse';
+import {RemoveWildcardGenericParamTypeScriptModelTransformer, StrictUndefinedTypeScriptModelTransformer} from './parse';
 import {TsRootNode} from './ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {RemoveSuperfluousGetterTypeScriptAstTransformer} from './ast/RemoveSuperfluousGetterTypeScriptAstTransformer.ts';
@@ -162,6 +162,7 @@ export const TypeScriptPlugin = createPlugin(
 
     const transformers2 = [
       new StrictUndefinedTypeScriptModelTransformer(),
+      new RemoveWildcardGenericParamTypeScriptModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -215,8 +216,6 @@ export const TypeScriptPlugin = createPlugin(
     };
 
     for (const transformer of astTransformers) {
-
-      logger.info(`${transformer.transformAst.name}: ${astTransformerArgs.root.children.length}`);
       transformer.transformAst(astTransformerArgs);
     }
 

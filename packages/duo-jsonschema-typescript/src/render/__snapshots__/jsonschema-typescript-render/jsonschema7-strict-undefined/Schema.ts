@@ -52,10 +52,10 @@ export interface SchemaDefinitions {
 }
 
 export interface SchemaDependencies {
-  readonly [key: string /* Pattern: ".*" */]: SchemaDependenciesObject;
+  readonly [key: string /* Pattern: ".*" */]: SchemaDependenciesSchema;
 }
 
-export type SchemaDependenciesObject = Schema | ReadonlyArray<string>;
+export type SchemaDependenciesSchema = Schema | ReadonlyArray<string>;
 export type SchemaItems = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
 export interface SchemaPatternProperties {
   readonly [key: string /* Pattern: ".*" */]: Schema;

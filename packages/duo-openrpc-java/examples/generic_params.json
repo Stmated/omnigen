@@ -20,7 +20,7 @@
         {"$ref": "#/components/contentDescriptors/DepositRequestParamsData"}
       ],
       "result": {
-        "name": "DepositResponse",
+        "name": "DepositResponseResult",
         "schema": {
           "type": "object",
           "properties": {
@@ -41,7 +41,7 @@
         {"$ref": "#/components/contentDescriptors/RefundRequestParamsData"}
       ],
       "result": {
-        "name": "DepositResponse",
+        "name": "RefundResponseResult",
         "schema": {
           "type": "object",
           "properties": {

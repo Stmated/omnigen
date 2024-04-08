@@ -3,9 +3,9 @@ import {AstNode, OmniType, OmniTypeKind, TypeNode} from '@omnigen/core';
 import * as Java from '../ast';
 import {Identifiable, ModifierType} from '../ast';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
-import {topologicalSort} from 'graphology-dag/topological-sort';
-import {DirectedGraph} from 'graphology';
-import {willCreateCycle} from 'graphology-dag';
+// import {topologicalSort} from 'graphology-dag/topological-sort';
+// import {DirectedGraph} from 'graphology';
+// import {willCreateCycle} from 'graphology-dag';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -53,55 +53,55 @@ export class ReorderMembersAstTransformer extends AbstractJavaAstTransformer {
 
       visitCompilationUnit: (node, visitor) => {
 
-        const otherIds: string[] = [];
-        const typeToIdMap = new Map<OmniType, string>();
-        const nodeToIdMap = new Map<Identifiable, string>();
+        // const otherIds: string[] = [];
+        // const typeToIdMap = new Map<OmniType, string>();
+        // const nodeToIdMap = new Map<Identifiable, string>();
+        //
+        // const v = VisitorFactoryManager.create(defaultVisitor, {
+        //   visitEdgeType: n => {
+        //     const targetPair = this.getNodeId(n, typeToIdMap);
+        //     if (targetPair[0] !== undefined) {
+        //       otherIds.push(targetPair[0]);
+        //     }
+        //   },
+        // });
 
-        const v = VisitorFactoryManager.create(defaultVisitor, {
-          visitEdgeType: n => {
-            const targetPair = this.getNodeId(n, typeToIdMap);
-            if (targetPair[0] !== undefined) {
-              otherIds.push(targetPair[0]);
-            }
-          },
-        });
-
-        const sortedOrders = new Map<Identifiable, OmniType[]>();
-        for (const child of node.children) {
-
-          const graph = new DirectedGraph();
-
-          otherIds.length = 0;
-          child.visit(v);
-
-          for (const sourceId of otherIds) {
-            for (const targetId of otherIds) {
-              if (!willCreateCycle(graph, sourceId, targetId)) {
-                graph.mergeEdge(sourceId, targetId);
-              }
-            }
-          }
-
-          const order = topologicalSort(graph);
-          for (const other of otherIds) {
-            if (!order.includes(other)) {
-              order.push(other);
-            }
-          }
-
-          const entries = [...typeToIdMap.entries()];
-          const types: OmniType[] = [];
-          for (const o of order) {
-            const matched = entries.filter(it => it[1] === o).map(it => it[0]);
-            if (matched.length === 1) {
-              types.push(matched[0]);
-            } else {
-              throw new Error(`It should not be able to be a non-single result when mapping from reordering type to id`);
-            }
-          }
-
-          sortedOrders.set(child, types);
-        }
+        // const sortedOrders = new Map<Identifiable, OmniType[]>();
+        // for (const child of node.children) {
+        //
+        //   const graph = new DirectedGraph();
+        //
+        //   otherIds.length = 0;
+        //   child.visit(v);
+        //
+        //   for (const sourceId of otherIds) {
+        //     for (const targetId of otherIds) {
+        //       if (!willCreateCycle(graph, sourceId, targetId)) {
+        //         graph.mergeEdge(sourceId, targetId);
+        //       }
+        //     }
+        //   }
+        //
+        //   const order = topologicalSort(graph);
+        //   for (const other of otherIds) {
+        //     if (!order.includes(other)) {
+        //       order.push(other);
+        //     }
+        //   }
+        //
+        //   const entries = [...typeToIdMap.entries()];
+        //   const types: OmniType[] = [];
+        //   for (const o of order) {
+        //     const matched = entries.filter(it => it[1] === o).map(it => it[0]);
+        //     if (matched.length === 1) {
+        //       types.push(matched[0]);
+        //     } else {
+        //       throw new Error(`It should not be able to be a non-single result when mapping from reordering type to id`);
+        //     }
+        //   }
+        //
+        //   sortedOrders.set(child, types);
+        // }
 
         node.children.sort((a, b) => {
 

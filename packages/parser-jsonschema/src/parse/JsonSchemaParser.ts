@@ -851,13 +851,60 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return mapper(def);
   }
 
+  public getSpecifiedNames(
+    schema: AnyJsonDefinition,
+    dereferenced: AnyJsonDefinition,
+  ): TypeName[] {
+
+    const names: TypeName[] = [];
+    if (typeof schema == 'object') {
+      if (schema.title) {
+        names.push(schema.title);
+      }
+    }
+
+    if (typeof dereferenced === 'object') {
+      if (dereferenced.title) {
+        names.push(dereferenced.title);
+      }
+    }
+
+    return names;
+  }
+
+  public getLikelyNames(
+    schema: AnyJsonDefinition,
+    dereferenced: AnyJsonDefinition,
+  ): TypeName[] {
+
+    const names = this.getSpecifiedNames(schema, dereferenced);
+
+    if (typeof schema == 'object') {
+      if (schema.$id) {
+        names.push(schema.$id);
+      }
+
+      if (schema.$ref) {
+        names.push(schema.$ref);
+      }
+    }
+
+    if (typeof dereferenced === 'object') {
+      if (dereferenced.$id) {
+        names.push(dereferenced.$id);
+      }
+    }
+
+    return names;
+  }
+
   public getPreferredName(
     schema: AnyJsonDefinition,
     dereferenced: AnyJsonDefinition,
     fallback?: TypeName | undefined,
   ): TypeName {
 
-    const names = this.getMostPreferredNames(dereferenced, schema);
+    const names = this.getLikelyNames(schema, dereferenced);
 
     if (fallback) {
       names.push(fallback);
@@ -869,6 +916,9 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     return names;
   }
 
+  /**
+   * TODO: Remove, and figure out another way where this is not used prematurely. Should be up to the final user of the name to pick a suitable fallback
+   */
   public getFallbackNamesOfJsonSchemaType(schema: AnyJsonDefinition): TypeName[] {
 
     const names: TypeName[] = [];
@@ -879,36 +929,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         if (schema.type) {
           names.push(Case.pascal(schema.type));
         }
-      }
-    }
-
-    return names;
-  }
-
-  public getMostPreferredNames(dereferenced: AnyJsonDefinition, schema: AnyJsonDefinition): TypeName[] {
-
-    const names: TypeName[] = [];
-    if (typeof schema == 'object') {
-      if (schema.title) {
-        names.push(schema.title);
-      }
-
-      if (schema.$id) {
-        names.push(schema.$id);
-      }
-
-      if (schema.$ref) {
-        names.push(schema.$ref);
-      }
-    }
-
-    if (typeof dereferenced === 'object') {
-      if (dereferenced.title) {
-        names.push(dereferenced.title);
-      }
-
-      if (dereferenced.$id) {
-        names.push(dereferenced.$id);
       }
     }
 
@@ -1155,7 +1175,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     if (schema.allOf) {
       for (const entry of schema.allOf) {
         const resolved = this._refResolver.resolve(entry);
-        const preferredName = this.getPreferredName(entry, resolved, name);
+        const preferredName = this.getPreferredName(entry, resolved, {name: name, prefix: `IntersectionFor`});
         compositionsAllOfAnd.push(this.jsonSchemaToType(preferredName, resolved).type);
       }
     }

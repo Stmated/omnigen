@@ -85,7 +85,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     const commonProperties = PropertyUtil.getCommonProperties(
       // We do not care *at all* if they have nothing in-common. Just nice if get one.
       () => false,
-      pdiff => EqualityFinder.matchesPropDiff(pdiff, PropertyDifference.META),
+      () => false, //  EqualityFinder.matchesPropDiff(pdiff, PropertyDifference.META),
 
       OMNI_GENERIC_FEATURES,
       ...subTypes,
@@ -164,7 +164,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
           ...lowerTarget,
           type: {
             kind: OmniTypeKind.UNKNOWN,
-            upperBound: {...lowerTarget.type}, // This should maybe clone instead
+            upperBound: lowerTarget.type, // {...lowerTarget.type},
           },
         };
       }

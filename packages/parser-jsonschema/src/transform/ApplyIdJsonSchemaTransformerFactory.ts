@@ -21,6 +21,10 @@ export type IdHint = {
    */
   tag?: string;
   /**
+   * Something extra to add if all else fails, but should be avoided if possible.
+   */
+  extra?: string;
+  /**
    * If true this must be appended to a previous hint and not used by itself. Likely difference being no '/' to delimit to the previous.
    */
   suffix?: boolean;
@@ -56,105 +60,131 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
     this._hints.pop();
   }
 
-  collect(tags: number, acceptable: (id: string) => boolean): Collected {
+  newIdFromContext(others: string[]): string {
+
+    let bestUri = this.addSlash(this._hints.findLast(it => !!it.uri)?.uri || '');
 
     const parts: string[] = [];
-    let unusedTags = 0;
+    const tags: string[] = [];
 
-    let bestUri = this._hints.findLast(it => !!it.uri)?.uri || '';
-    if (bestUri) {
-      bestUri += '/';
-    }
-
-    let i = this._hints.length - 1;
-    for (; i >= 0; i--) {
+    for (let i = this._hints.length - 1; i >= 0; i--) {
 
       const hint = this._hints[i];
       if (hint.suffix) {
-        // We do not add the suffix itself to the parts, the suffix is added to whatever else we find.
         continue;
       }
 
-      const suffixes: string[] = [];
-      let suffixIndex = i;
-
-      while (this._hints[suffixIndex + 1]?.suffix) {
-        suffixIndex++;
+      let changed = false;
+      if (hint.uri) {
+        bestUri = this.addSlash(hint.uri);
+        changed = true;
       }
-
-      while (suffixIndex > i) {
-
-        const suffixHint = this._hints[suffixIndex];
-        const important = suffixHint.id ?? suffixHint.name;
-        if (important) {
-          suffixes.push(Case.pascal(important));
-        } else if (suffixHint.tag) {
-          if (tags > 0) {
-            suffixes.push(Case.pascal(suffixHint.tag));
-            tags--;
-          } else {
-            unusedTags++;
-          }
-        }
-
-        suffixIndex--;
-      }
-
-      const suffix = suffixes.reverse().join('');
 
       if (hint.id) {
-        parts.push(`${hint.id}${suffix}`);
+        parts.push(hint.id);
+        tags.length = 0;
+        changed = true;
       }
 
       if (hint.name) {
-        parts.push(`${hint.name}${suffix}`);
+        parts.push(hint.name);
+        tags.length = 0;
+        changed = true;
       }
 
       if (hint.tag) {
-        if (tags > 0) {
-          parts.push(`${hint.tag}${suffix}`);
-          tags--;
-        } else {
-          unusedTags++;
-        }
+        tags.push(hint.tag);
+        changed = true;
       }
 
-      // TODO: Add "const" or "enum" to the tags, to differentiate, so we do not end up with names like TagOrSpeciesOrString4String -- there should be some better option
+      if (changed) {
 
-      const id = Util.trimAny(`${bestUri}${parts.reverse().join('/')}`, '/', false, true);
-      if (acceptable(id)) {
-        return {
-          id: id,
-          exhausted: false,
-          done: true,
-        };
+        const allParts = parts.concat(tags);
+        const part = allParts.toReversed().join('/');
+        const suffixes = this.getSuffixes(i);
+
+        for (const suffix of suffixes) {
+
+          const uri = Util.trimAny(`${bestUri}${part}${suffix}`, '/', false, true);
+          if (!others.includes(uri)) {
+            return uri;
+          }
+        }
       }
     }
 
-    return {
-      id: parts.reverse().join('/'),
-      exhausted: (unusedTags == 0),
-      done: false,
-    };
-  }
-
-  newIdFromContext(others: string[]): string {
-
-    let tagCount = 0;
-    let collected: Collected;
-    do {
-
-      collected = this.collect(tagCount, id => !others.includes(id));
-      if (collected.done) {
-        return collected.id;
-      }
-      tagCount++;
-
-    } while (!collected.exhausted);
-
     // If all else fails, then take the most specific id, and add a unique id to the end of it.
     // This might mess up reproducibility of runs, but there's not much we can do.
-    return `${collected.id}_${ApplyIdJsonSchemaTransformerFactory._uniqueIdCounter++}`;
+    return `${bestUri}_${ApplyIdJsonSchemaTransformerFactory._uniqueIdCounter++}`;
+  }
+
+  private addSlash(bestUri: string) {
+
+    if (bestUri && !bestUri.endsWith('/')) {
+      bestUri += '/';
+    }
+
+    return bestUri;
+  }
+
+  getSuffixes(i: number): string[] {
+
+    let name = '';
+    const suffixes: string[] = [];
+    const suffixesWithExtra: string[] = [];
+    const tags: string[] = [];
+    const extras: string[] = [];
+
+    for (let s = i + 1; s < this._hints.length && this._hints[s].suffix; s++) {
+
+      const hint = this._hints[s];
+      let changed = false;
+      if (hint.name) {
+        name = Case.pascal(hint.name);
+        tags.length = 0;
+        extras.length = 0;
+        changed = true;
+      } else if (hint.tag) {
+        tags.push(hint.tag);
+        extras.length = 0;
+        changed = true;
+      } else if (hint.extra) {
+        extras.push(hint.extra);
+        changed = true;
+      }
+
+      if (changed) {
+
+        const newSuffix = `${name}${tags.map(it => Case.pascal(it)).join('')}`;
+        if (newSuffix && !suffixes.includes(newSuffix)) {
+          suffixes.push(newSuffix);
+        }
+
+        if (extras) {
+
+          for (let i = 0; i < extras.length; i++) {
+
+            const withExtra = `${newSuffix}${Case.pascal(extras[i])}`;
+            if (!suffixesWithExtra.includes(withExtra)) {
+              suffixesWithExtra.push(withExtra);
+            }
+          }
+
+          const extrasStr = extras.map(it => Case.pascal(it)).join('');
+
+          const joinedWithExtra = `${newSuffix}${extrasStr}`;
+          if (!suffixesWithExtra.includes(joinedWithExtra)) {
+            suffixesWithExtra.push(joinedWithExtra);
+          }
+        }
+      }
+    }
+
+    suffixes.reverse();
+    suffixes.push('');
+    suffixes.push(...suffixesWithExtra);
+
+    return suffixes;
   }
 
   create(): JsonSchema9Visitor {
@@ -183,39 +213,42 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
           }
 
           const typeExtra = typeExtras.map(it => Case.pascal(it)).join('');
-          const tags: string[] = [];
+          const hints: IdHint[] = [];
           if (v.type) {
             const typeStrings = (v.type ? (Array.isArray(v.type) ? v.type : [v.type]) : []);
             if (typeExtra) {
-              tags.push(...typeStrings.map(it => `${Case.pascal(it)}${typeExtra}`));
+              hints.push(...typeStrings.map(it => ({extra: `${Case.pascal(it)}${typeExtra}`, suffix: true})));
             } else {
-              tags.push(...typeStrings);
+              hints.push(...typeStrings.map(it => ({extra: it, suffix: true})));
             }
           } else if (typeExtra) {
-            tags.push(typeExtra);
+            hints.push({extra: typeExtra, suffix: true});
           }
 
           if (v.properties) {
             const keys = Object.keys(v.properties);
             if (keys.length == 1) {
-              tags.push(`With${Case.pascal(keys[0])}`);
+              hints.push({extra: `With${Case.pascal(keys[0])}`, suffix: true});
             } else {
               // Do something here? Like creating a tag that is a join of all property names, if there are fewer than, say... 4?
             }
           }
 
-          const names: string[] = [];
           if (v.title) {
-            names.push(v.title);
+            hints.push({name: v.title});
+          }
+
+          if (!hints.find(it => it.name || it.tag)) {
+
+            // There was nothing inside the schema which unique identifies it, so will add a suffix to differentiate it from its parent/owner or similar.
+            hints.splice(0, 0, {extra: `Schema`, suffix: true});
           }
 
           try {
-            names.forEach(it => this._hints.push({name: it}));
-            tags.forEach(it => this._hints.push({tag: it, suffix: true}));
+            hints.forEach(it => this._hints.push(it));
             return DefaultJsonSchema9Visitor.schema(v, visitor);
           } finally {
-            tags.forEach(_ => this._hints.pop());
-            names.forEach(_ => this._hints.pop());
+            hints.forEach(_ => this._hints.pop());
           }
 
         } else {
@@ -232,7 +265,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       schema_option: (item, visitor) => {
 
         try {
-          this.pushPath({tag: `${item.idx}`, suffix: true});
+          this.pushPath({extra: `${item.idx}`, suffix: true});
           return DefaultJsonSchema9Visitor.schema_option(item, visitor);
         } finally {
           this.popPath();

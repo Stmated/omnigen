@@ -255,10 +255,6 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
       return parentRenderer.visitWildcardType(n, v);
     },
 
-    visitBoundedType: (n, v) => {
-      return parentRenderer.visitBoundedType(n, v);
-    },
-
     visitCompositionType: (n, v) => {
 
       let separator: string;

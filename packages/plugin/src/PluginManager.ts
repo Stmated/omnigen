@@ -72,32 +72,45 @@ export class PluginManager {
     try {
 
       // Try to load the plugin. This is all *very* ugly, but temporary until core functionality is stable.
+      logger.info(process.cwd());
       logger.info(`Importing ${qualifier.packageName}`);
-      const packageContents = await import(qualifier.packageName)
-        .catch(() => {
-          logger.info(`1: ${qualifier.packageName}`);
-          return import(`../../${qualifier.packageName}/src/index.ts`);
+      const packageContents = await import(`@omnigen/${qualifier.packageName}`)
+        // .catch(e => {
+        //   logger.info(process.cwd());
+        //   logger.info(`0: @omnigen/${qualifier.packageName} (${e})`);
+        //   return import(`@omnigen/${qualifier.packageName}`);
+        // })
+        .catch(e => {
+          logger.info(process.cwd());
+          const resolved = ioPath.resolve(`../../packages/${qualifier.packageName}/src/index.ts`);
+          logger.info(`1: ${qualifier.packageName} @ ${resolved}} (${e})`);
+          return import(resolved);
         })
-        .catch(() => {
-          logger.info(`2: ${qualifier.packageName}`);
-          return import(`../../parser-${qualifier.packageName}/src/index.ts`);
+        .catch(e => {
+          logger.info(process.cwd());
+          const resolved = ioPath.resolve(`../../packages/parser-${qualifier.packageName}/src/index.ts`);
+          logger.info(`2: ${qualifier.packageName}} @ ${resolved} (${e})`);
+          return import(resolved);
         })
-        .catch(() => {
-          logger.info(`3: ${qualifier.packageName}`);
-          return import(`../../target-${qualifier.packageName}/src/index.ts`);
+        .catch(e => {
+          logger.info(process.cwd());
+          const resolved = ioPath.resolve(`../../packages/target-${qualifier.packageName}/src/index.ts`);
+          logger.info(`3: ${qualifier.packageName}} ${resolved} (${e})`);
+          return import(resolved);
         })
-        .catch(() => {
-          logger.info(`4: ${qualifier.packageName}`);
-          return import(`./plugins/${qualifier.packageName}/src/index.ts`);
-        })
-        .catch(() => {
-          logger.info(`5: ${qualifier.packageName}`);
-          return import(`./plugins/parser-${qualifier.packageName}/src/index.ts`);
-        })
-        .catch(() => {
-          logger.info(`6: ${qualifier.packageName}`);
-          return import(`./plugins/target-${qualifier.packageName}/src/index.ts`);
-        });
+        // .catch(() => {
+        //   logger.info(`4: ${qualifier.packageName}`);
+        //   return import(`./plugins/${qualifier.packageName}/src/index.ts`);
+        // })
+        // .catch(() => {
+        //   logger.info(`5: ${qualifier.packageName}`);
+        //   return import(`./plugins/parser-${qualifier.packageName}/src/index.ts`);
+        // })
+        // .catch(() => {
+        //   logger.info(`6: ${qualifier.packageName}`);
+        //   return import(`./plugins/target-${qualifier.packageName}/src/index.ts`);
+        // })
+      ;
 
       // TODO: Check if "default" exists and if it is an init function -- then use that.
       if ('init' in packageContents) {

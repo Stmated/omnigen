@@ -6,18 +6,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class RefundResponse extends JsonRpcResponse<RefundResponse.RefundDepositResponseObject> {
-  public RefundResponse(@JsonProperty("id") String id, @JsonProperty("result") RefundDepositResponseObject result) {
+public class RefundResponse extends JsonRpcResponse<RefundResponse.Result> {
+  public RefundResponse(@JsonProperty("id") String id, @JsonProperty("result") Result result) {
     super(id, result);
   }
 
-  public static class RefundDepositResponseObject {
+  public static class Result {
     private final Data data;
     private final String method;
     private final String signature;
     private final String uuid;
 
-    public RefundDepositResponseObject(
+    public Result(
       @JsonProperty("signature") String signature,
       @JsonProperty("uuid") String uuid,
       @JsonProperty("method") String method,

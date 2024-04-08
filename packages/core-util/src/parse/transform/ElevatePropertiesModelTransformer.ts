@@ -124,7 +124,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
 
         } else if (uniqueDiffs.length == 0) {
 
-          // There needs to be ZERO diffs to be able to elevate the proper
+          // There needs to be ZERO diffs to be able to elevate the property
           superType.properties.push({
             ...propertyToElevate,
             type: info.commonType,

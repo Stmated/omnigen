@@ -76,4 +76,18 @@ describe('TypeScript Rendering', () => {
     const fileContent = fileContents.get([...fileContents.keys()][0]);
     expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
   });
+
+  test('method-in-response', async ({task}) => {
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('method-in-response.json', {
+      options: {
+        preferInterfaces: true,
+        singleFile: true,
+      },
+    });
+
+    const fileContent = fileContents.get([...fileContents.keys()][0]);
+    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+  });
 });

@@ -32,9 +32,7 @@ export class InterfaceJavaModelTransformer implements OmniModelTransformer {
     // Then we go through all types and find those that have multiple inheritances and convert any 1..N extensions into interfaces.
     for (let type of exportableTypes.all) {
 
-      if (type.kind == OmniTypeKind.DECORATING) {
-        type = type.of;
-      }
+      type = OmniUtil.getUnwrappedType(type);
 
       if (handled.includes(type)) {
         continue;

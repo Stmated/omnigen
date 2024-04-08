@@ -16,7 +16,7 @@ exports[`JavaInterpreter > ensureBasicParsingDoesNotCrash 1`] = `
   "GetPetsRequest",
   "GetPetsRequestParams",
   "GetPetsResponse",
-  "IPetWithId",
+  "IPetSchema",
   "JsonRpcError",
   "JsonRpcErrorResponse",
   "JsonRpcRequest",
@@ -25,6 +25,6 @@ exports[`JavaInterpreter > ensureBasicParsingDoesNotCrash 1`] = `
   "NewPet",
   "Pet",
   "PetDeleted",
-  "PetWithId",
+  "PetSchema",
 ]
 `;

@@ -66,25 +66,6 @@ export class PropertyUtil {
     return false;
   }
 
-  public static getPropertyDiffScore(diff?: PropertyDifference): number {
-
-    if (diff === PropertyDifference.NAME) {
-      return 10;
-    } else if (diff === PropertyDifference.FIELD_NAME) {
-      return 9;
-    } else if (diff === PropertyDifference.TYPE) {
-      return 8;
-    } else if (diff === PropertyDifference.SIGNATURE) {
-      return 7;
-    } else if (diff === PropertyDifference.REQUIRED) {
-      return 6;
-    } else if (diff === PropertyDifference.META) {
-      return 5;
-    }
-
-    return 0;
-  }
-
   public static getCommonProperties(
     bannedTypeDiff: (diff: TypeDiffKind) => boolean,
     bannedPropDiff: (diff: PropertyDifference) => boolean,

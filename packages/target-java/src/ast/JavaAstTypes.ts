@@ -1344,7 +1344,7 @@ export class ClassDeclaration extends AbstractObjectDeclaration {
     return visitor.visitClassDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<ClassDeclaration> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<Identifiable> {
     return reducer.reduceClassDeclaration(this, reducer);
   }
 }

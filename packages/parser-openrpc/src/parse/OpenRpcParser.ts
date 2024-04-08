@@ -208,7 +208,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
             }
           }
 
-          if (edgePath == 'schema') {
+          if (edgePath === 'schema') {
             transform(v as JSONSchema9);
           }
 
@@ -468,14 +468,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
   private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: ContentDescriptorObject): OutputAndType {
 
-    const typeNamePrefix = Case.pascal(method.name);
-    const responseTypeName = `${typeNamePrefix}Response`;
+    const responseTypeName = `${Case.pascal(method.name)}Response`;
 
     const resultSchema = contentDescriptor.schema as JSONSchema9Definition;
     const resolvedResultSchema = this._refResolver.resolve(resultSchema);
 
     const resultTypeName: TypeName = [
-      this._jsonSchemaParser.getPreferredName(resultSchema, resolvedResultSchema),
+      this._jsonSchemaParser.getLikelyNames(resultSchema, resolvedResultSchema),
       contentDescriptor.name,
       `${responseTypeName}Result`,
       `${responseTypeName}ResultPayload`,
@@ -483,20 +482,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const resultType = this._jsonSchemaParser.jsonSchemaToType(resultTypeName, resolvedResultSchema);
 
-    // const decoratingType: OmniDecoratingType = {
-    //   kind: OmniTypeKind.DECORATING,
-    //   of: resultType.type,
-    //   name: [
-    //     // this._jsonSchemaParser.getPreferredName(resultSchema, resolvedResultSchema),
-    //     contentDescriptor.name,
-    //     `${responseTypeName}Result`,
-    //     `${responseTypeName}ResultPayload`,
-    //   ],
-    // };
-
     const responseType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
-      name: responseTypeName,
+      name: `${Case.pascal(method.name)}Response`,
       properties: [],
       description: method.description,
       summary: method.summary,

@@ -22,7 +22,7 @@ describe('merge-documents', () => {
 
     const exec = await pm.execute({
       ctx: {
-        file: Util.getPathFromRoot('./packages/duo-openrpc-java/examples/petstore-simple-jsonschema.json'),
+        file: Util.getPathFromRoot('./packages/test-openrpc-java/examples/petstore-simple-jsonschema.json'),
         arguments: {},
       } satisfies BaseContext & FileContext,
       debug: true,

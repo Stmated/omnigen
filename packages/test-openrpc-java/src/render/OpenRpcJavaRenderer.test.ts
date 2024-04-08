@@ -194,7 +194,7 @@ describe('Java Rendering', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const result = await JavaTestUtils.getResultFromFilePath(Util.getPathFromRoot(`./packages/duo-openrpc-java/examples/generic_params.json`), {
+    const result = await JavaTestUtils.getResultFromFilePath(Util.getPathFromRoot(`./packages/test-openrpc-java/examples/generic_params.json`), {
       parserOptions: {...DEFAULT_PARSER_OPTIONS, defaultAdditionalProperties: false},
       targetOptions: {
         ...DEFAULT_TEST_TARGET_OPTIONS,

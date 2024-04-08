@@ -19,7 +19,7 @@
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/target-java": "workspace:*",
-    "@omnigen/duo-openrpc-java": "workspace:*",
+    "@omnigen/test-openrpc-java": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

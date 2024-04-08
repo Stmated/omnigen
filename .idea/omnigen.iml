@@ -8,8 +8,6 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/.yarn" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/.turbo" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/.target_test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/target-java/lib" />
       <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/core/lib" />
@@ -18,30 +16,29 @@
       <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/node_modules" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/src/interpret/__snapshots__" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/src/render/__snapshots__" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/src/transform/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/src/visit/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/plugin/.turbo" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/.turbo" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/src/render/__snapshots__" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-java/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/.profiling" />
       <excludeFolder url="file://$MODULE_DIR$/.test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.test" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-typescript/src/render/__snapshots__" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/coverage" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-java/examples" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-jsonschema-typescript/.test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/.test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.turbo" />
-      <excludeFolder url="file://$MODULE_DIR$/packages/duo-openrpc-typescript/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/examples" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-typescript/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-typescript/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/.target_test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/interpret/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-typescript/src/render/__snapshots__" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-  <component name="SonarLintModuleSettings">
-    <option name="uniqueId" value="23d32568-1611-4b4c-b7b4-c2bcb55dac21" />
   </component>
 </module>

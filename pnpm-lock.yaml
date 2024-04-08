@@ -424,199 +424,6 @@ importers:
         specifier: ^5.4.3
         version: 5.4.3
 
-  packages/duo-jsonschema-java:
-    dependencies:
-      '@omnigen/core':
-        specifier: workspace:*
-        version: link:../core
-      '@omnigen/core-log':
-        specifier: workspace:*
-        version: link:../core-log
-      '@omnigen/core-plugin':
-        specifier: workspace:*
-        version: link:../core-plugin
-      '@omnigen/core-util':
-        specifier: workspace:*
-        version: link:../core-util
-      '@omnigen/parser-jsonschema':
-        specifier: workspace:*
-        version: link:../parser-jsonschema
-      '@omnigen/plugin':
-        specifier: workspace:*
-        version: link:../plugin
-      '@omnigen/target-java':
-        specifier: workspace:*
-        version: link:../target-java
-      zod:
-        specifier: ^3.22.4
-        version: 3.22.4
-    devDependencies:
-      '@omnigen/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@omnigen/eslint-config-custom':
-        specifier: workspace:*
-        version: link:../eslint-config-custom
-      '@omnigen/utils-test':
-        specifier: workspace:*
-        version: link:../utils-test
-      '@omnigen/utils-test-target-java':
-        specifier: workspace:*
-        version: link:../utils-test-target-java
-      java-parser:
-        specifier: ^2.3.0
-        version: 2.3.0
-      typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
-
-  packages/duo-jsonschema-typescript:
-    dependencies:
-      '@omnigen/core':
-        specifier: workspace:*
-        version: link:../core
-      '@omnigen/core-log':
-        specifier: workspace:*
-        version: link:../core-log
-      '@omnigen/core-plugin':
-        specifier: workspace:*
-        version: link:../core-plugin
-      '@omnigen/core-util':
-        specifier: workspace:*
-        version: link:../core-util
-      '@omnigen/parser-jsonschema':
-        specifier: workspace:*
-        version: link:../parser-jsonschema
-      '@omnigen/plugin':
-        specifier: workspace:*
-        version: link:../plugin
-      '@omnigen/target-java':
-        specifier: workspace:*
-        version: link:../target-java
-      '@omnigen/target-typescript':
-        specifier: workspace:*
-        version: link:../target-typescript
-      zod:
-        specifier: ^3.22.4
-        version: 3.22.4
-    devDependencies:
-      '@omnigen/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@omnigen/eslint-config-custom':
-        specifier: workspace:*
-        version: link:../eslint-config-custom
-      '@omnigen/utils-test':
-        specifier: workspace:*
-        version: link:../utils-test
-      '@omnigen/utils-test-target-java':
-        specifier: workspace:*
-        version: link:../utils-test-target-java
-      typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
-
-  packages/duo-openrpc-java:
-    dependencies:
-      '@omnigen/core':
-        specifier: workspace:*
-        version: link:../core
-      '@omnigen/core-log':
-        specifier: workspace:*
-        version: link:../core-log
-      '@omnigen/core-plugin':
-        specifier: workspace:*
-        version: link:../core-plugin
-      '@omnigen/core-util':
-        specifier: workspace:*
-        version: link:../core-util
-      '@omnigen/parser-jsonschema':
-        specifier: workspace:*
-        version: link:../parser-jsonschema
-      '@omnigen/parser-openrpc':
-        specifier: workspace:*
-        version: link:../parser-openrpc
-      '@omnigen/plugin':
-        specifier: workspace:*
-        version: link:../plugin
-      '@omnigen/target-java':
-        specifier: workspace:*
-        version: link:../target-java
-      zod:
-        specifier: ^3.22.4
-        version: 3.22.4
-    devDependencies:
-      '@omnigen/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@omnigen/eslint-config-custom':
-        specifier: workspace:*
-        version: link:../eslint-config-custom
-      '@omnigen/utils-test':
-        specifier: workspace:*
-        version: link:../utils-test
-      '@omnigen/utils-test-target-java':
-        specifier: workspace:*
-        version: link:../utils-test-target-java
-      java-parser:
-        specifier: ^2.0.3
-        version: 2.0.3
-      typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
-
-  packages/duo-openrpc-typescript:
-    dependencies:
-      '@omnigen/core':
-        specifier: workspace:*
-        version: link:../core
-      '@omnigen/core-log':
-        specifier: workspace:*
-        version: link:../core-log
-      '@omnigen/core-plugin':
-        specifier: workspace:*
-        version: link:../core-plugin
-      '@omnigen/core-util':
-        specifier: workspace:*
-        version: link:../core-util
-      '@omnigen/parser-jsonschema':
-        specifier: workspace:*
-        version: link:../parser-jsonschema
-      '@omnigen/parser-openrpc':
-        specifier: workspace:*
-        version: link:../parser-openrpc
-      '@omnigen/plugin':
-        specifier: workspace:*
-        version: link:../plugin
-      '@omnigen/target-java':
-        specifier: workspace:*
-        version: link:../target-java
-      '@omnigen/target-typescript':
-        specifier: workspace:*
-        version: link:../target-typescript
-      zod:
-        specifier: ^3.22.4
-        version: 3.22.4
-    devDependencies:
-      '@omnigen/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@omnigen/eslint-config-custom':
-        specifier: workspace:*
-        version: link:../eslint-config-custom
-      '@omnigen/utils-test':
-        specifier: workspace:*
-        version: link:../utils-test
-      '@omnigen/utils-test-target-java':
-        specifier: workspace:*
-        version: link:../utils-test-target-java
-      java-parser:
-        specifier: ^2.0.3
-        version: 2.3.0
-      typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
-
   packages/eslint-config-custom:
     dependencies:
       '@typescript-eslint/eslint-plugin':
@@ -843,12 +650,12 @@ importers:
       '@omnigen/core-util':
         specifier: workspace:*
         version: link:../core-util
-      '@omnigen/duo-openrpc-java':
-        specifier: workspace:*
-        version: link:../duo-openrpc-java
       '@omnigen/target-java':
         specifier: workspace:*
         version: link:../target-java
+      '@omnigen/test-openrpc-java':
+        specifier: workspace:*
+        version: link:../test-openrpc-java
       zod:
         specifier: ^3.22.4
         version: 3.22.4
@@ -900,8 +707,8 @@ importers:
         specifier: workspace:*
         version: link:../utils-test
       java-parser:
-        specifier: ^2.0.3
-        version: 2.0.3
+        specifier: ^2.3.0
+        version: 2.3.0
       typescript:
         specifier: ^5.4.3
         version: 5.4.3
@@ -943,6 +750,187 @@ importers:
         specifier: ^5.4.3
         version: 5.4.3
 
+  packages/test-jsonschema-java:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      java-parser:
+        specifier: ^2.3.0
+        version: 2.3.0
+      typescript:
+        specifier: ^5.4.3
+        version: 5.4.3
+
+  packages/test-jsonschema-typescript:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      '@omnigen/target-typescript':
+        specifier: workspace:*
+        version: link:../target-typescript
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      typescript:
+        specifier: ^5.4.3
+        version: 5.4.3
+
+  packages/test-openrpc-java:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/parser-openrpc':
+        specifier: workspace:*
+        version: link:../parser-openrpc
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      java-parser:
+        specifier: ^2.3.0
+        version: 2.3.0
+      typescript:
+        specifier: ^5.4.3
+        version: 5.4.3
+
+  packages/test-openrpc-typescript:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/parser-openrpc':
+        specifier: workspace:*
+        version: link:../parser-openrpc
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      '@omnigen/target-typescript':
+        specifier: workspace:*
+        version: link:../target-typescript
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      java-parser:
+        specifier: ^2.3.0
+        version: 2.3.0
+      typescript:
+        specifier: ^5.4.3
+        version: 5.4.3
+
   packages/utils-test:
     dependencies:
       '@omnigen/core':
@@ -955,25 +943,6 @@ importers:
       '@omnigen/eslint-config-custom':
         specifier: workspace:*
         version: link:../eslint-config-custom
-      typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
-
-  packages/utils-test-target-java:
-    dependencies:
-      '@omnigen/core':
-        specifier: workspace:*
-        version: link:../core
-    devDependencies:
-      '@omnigen/config-typescript':
-        specifier: workspace:*
-        version: link:../config-typescript
-      '@omnigen/eslint-config-custom':
-        specifier: workspace:*
-        version: link:../eslint-config-custom
-      java-parser:
-        specifier: ^2.0.3
-        version: 2.0.3
       typescript:
         specifier: ^5.4.3
         version: 5.4.3
@@ -2260,12 +2229,6 @@ packages:
       lodash-es: 4.17.21
     dev: true
 
-  /chevrotain@6.5.0:
-    resolution: {integrity: sha512-BwqQ/AgmKJ8jcMEjaSnfMybnKMgGTrtDKowfTP3pX4jwVy0kNjRsT/AP6h+wC3+3NC+X8X15VWBnTCQlX+wQFg==}
-    dependencies:
-      regexp-to-ast: 0.4.0
-    dev: true
-
   /cli-cursor@3.1.0:
     resolution: {integrity: sha512-I/zHAwsKf9FqGoXM4WWRACob9+SNukZTd94DWF57E4toouRulbCxcUh6RKUEOQlYTHJnzkPMySvPNaaSLNfLZw==}
     engines: {node: '>=8'}
@@ -3159,13 +3122,6 @@ packages:
       istanbul-lib-report: 3.0.1
     dev: true
 
-  /java-parser@2.0.3:
-    resolution: {integrity: sha512-z+ZsqcY3LCN0NPK1KnC7AXFHQxtzlsADJ2OVQmenKS/4gHBQ6SkEQYIMVV/2WrxRBMWXMXW7KeOVmXPLHCMRAQ==}
-    dependencies:
-      chevrotain: 6.5.0
-      lodash: 4.17.21
-    dev: true
-
   /java-parser@2.3.0:
     resolution: {integrity: sha512-P6Ma4LU1w/e0Lr4SVM/0PtqCGoL2/i/KP9ZoiyLa824oBqhF0yGTgHDyZkLgp9GTzqR43wm5wabE56FF5X7cqg==}
     dependencies:
@@ -3847,10 +3803,6 @@ packages:
     resolution: {integrity: sha512-57frrGM/OCTLqLOAh0mhVA9VBMHd+9U7Zb2THMGdBUoZVOtGbJzjxsYGDJ3A9AYYCP4hn6y1TVbaOfzWtm5GFg==}
     engines: {node: '>= 12.13.0'}
     dev: false
-
-  /regexp-to-ast@0.4.0:
-    resolution: {integrity: sha512-4qf/7IsIKfSNHQXSwial1IFmfM1Cc/whNBQqRwe0V2stPe7KmN1U0tWQiIx6JiirgSrisjE0eECdNf7Tav1Ntw==}
-    dev: true
 
   /require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}

@@ -1,11 +1,9 @@
 {
-  "name": "@omnigen/duo-jsonschema-java",
+  "name": "@omnigen/test-jsonschema-typescript",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
@@ -19,6 +17,7 @@
     "@omnigen/core-util": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/target-java": "workspace:*",
+    "@omnigen/target-typescript": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",
     "zod": "^3.22.4"
@@ -27,8 +26,6 @@
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
-    "@omnigen/utils-test-target-java": "workspace:*",
-    "typescript": "^5.4.3",
-    "java-parser": "^2.3.0"
+    "typescript": "^5.4.3"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@omnigen/duo-openrpc-typescript",
+  "name": "@omnigen/test-openrpc-java",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -18,7 +18,6 @@
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
     "@omnigen/target-java": "workspace:*",
-    "@omnigen/target-typescript": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",
     "zod": "^3.22.4"
@@ -27,8 +26,7 @@
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
-    "@omnigen/utils-test-target-java": "workspace:*",
     "typescript": "^5.4.3",
-    "java-parser": "^2.0.3"
+    "java-parser": "^2.3.0"
   }
 }

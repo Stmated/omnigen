@@ -4,7 +4,7 @@ import {
   OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
-  OmniArrayType,
+  OmniArrayType, OmniDecoratingType,
   OmniDictionaryType,
   OmniEnumType,
   OmniExternalModelReferenceType,
@@ -359,15 +359,16 @@ export class OmniUtil {
     if (type) {
       const unwrapped = OmniUtil.getUnwrappedType(type);
       if (OmniUtil.isComposition(unwrapped)) {
-        if (unwrapped.kind == OmniTypeKind.INTERSECTION) {
-          unwrapped.types;
-        }
-
-        return [unwrapped];
+        // if (unwrapped.kind === OmniTypeKind.INTERSECTION) {
+        //   unwrapped.types;
+        // }
+        //
+        // return [unwrapped];
+        return [];
       }
 
       if (OmniUtil.isComposition(unwrapped.extendedBy)) {
-        if (unwrapped.extendedBy.kind == OmniTypeKind.INTERSECTION) {
+        if (unwrapped.extendedBy.kind === OmniTypeKind.INTERSECTION) {
           return unwrapped.extendedBy.types;
         }
       } else if (unwrapped.extendedBy) {
@@ -454,7 +455,7 @@ export class OmniUtil {
     }
 
     const queue: OmniSubTypeCapableType[] = [type];
-    let maxDepth = 1000;
+    let maxDepth = 100;
     while (queue.length > 0) {
 
       if (maxDepth-- <= 0) {
@@ -675,7 +676,7 @@ export class OmniUtil {
   public static isNullableType(type: OmniType): type is ((OmniPrimitiveType & {nullable: true}) | OmniPrimitiveNull) {
 
     if (OmniUtil.isPrimitive(type)) {
-      if (type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
+      if (type.kind == OmniTypeKind.STRING || type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
         return true;
       }
 
@@ -827,6 +828,20 @@ export class OmniUtil {
   }
 
   public static toReferenceType<T extends OmniType>(type: T): T {
+
+    if (type.kind === OmniTypeKind.DECORATING) {
+
+      const ofAsRef = OmniUtil.toReferenceType(type.of);
+      if (ofAsRef === type.of) {
+        return type;
+      }
+
+      return ({
+        ...type,
+        of: ofAsRef,
+      } satisfies OmniDecoratingType) as T;
+    }
+
     // NOTE: If changed, make sure isNullable is updated
     if (OmniUtil.isPrimitive(type)) {
 

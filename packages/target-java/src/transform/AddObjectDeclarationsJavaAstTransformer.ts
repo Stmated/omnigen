@@ -53,7 +53,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
       }
 
       // NOTE: Check if wrapped type has a name and resolve/change it too?
-      if ('name' in type) {
+      if ('name' in type && type.name) {
         namePairs.push({
           owner: type,
           name: type.name,
@@ -75,7 +75,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     if (namePairs.length > 0) {
       const resolved = Naming.unwrap(namePairs);
       for (const pair of resolved) {
-        pair.owner.name = Naming.prefixedPascalCase(pair.name);
+        pair.owner.name = JavaUtil.getSafeIdentifierName(Naming.prefixedPascalCase(pair.name));
       }
     }
 
@@ -151,8 +151,19 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     options: JavaAndTargetOptions,
   ): AstNode {
 
-    const enumDeclaration = this.createEnum(type, originalType, options);
-    return this.addObjectDeclaration(enumDeclaration, root, options);
+    const dec = this.createEnum(type, originalType, options);
+
+    const packageName = JavaUtil.getPackageName(dec.type.omniType, dec.name.value, options);
+    const cu = new Java.CompilationUnit(
+      new Java.PackageDeclaration(packageName),
+      new Java.ImportList(
+        [],
+      ),
+      dec,
+    );
+
+    root.children.push(cu);
+    return cu;
   }
 
   private createEnum(
@@ -262,20 +273,6 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     }
 
     return enumDeclaration;
-  }
-
-  private addObjectDeclaration(dec: Java.AbstractObjectDeclaration, root: Java.JavaAstRootNode, options: PackageOptions): Java.CompilationUnit {
-
-    const cu = new Java.CompilationUnit(
-      new Java.PackageDeclaration(JavaUtil.getPackageName(dec.type.omniType, dec.name.value, options)),
-      new Java.ImportList(
-        [],
-      ),
-      dec,
-    );
-
-    root.children.push(cu);
-    return cu;
   }
 
   private transformInterface(

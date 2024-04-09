@@ -135,22 +135,22 @@ export const TypeScriptPlugin = createPlugin(
   {name: 'ts', in: ZodTypeScriptContextIn, out: ZodTypeScriptContextOut, score: PluginScoreKind.REQUIRED},
   async ctx => {
 
-    const modelTransformerArgs: OmniModelTransformerArgs<ParserOptions> = {
-      model: ctx.model,
-      options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
-    };
-
-    const transformers: OmniModelTransformer[] = [
-      // new CompositionGenericTargetToObjectJavaModelTransformer(),
-      // new InterfaceJavaModelTransformer(),
-      // new DeleteUnnecessaryXorJavaModelTransformer(),
-    ];
-
-    logger.info(`${modelTransformerArgs.model.types.length}`);
-
-    for (const transformer of transformers) {
-      transformer.transformModel(modelTransformerArgs);
-    }
+    // const modelTransformerArgs: OmniModelTransformerArgs<ParserOptions> = {
+    //   model: ctx.model,
+    //   options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
+    // };
+    //
+    // const transformers: OmniModelTransformer[] = [
+    //   // new CompositionGenericTargetToObjectJavaModelTransformer(),
+    //   // new InterfaceJavaModelTransformer(),
+    //   // new DeleteUnnecessaryXorJavaModelTransformer(),
+    // ];
+    //
+    // logger.info(`${modelTransformerArgs.model.types.length}`);
+    //
+    // for (const transformer of transformers) {
+    //   transformer.transformModel(modelTransformerArgs);
+    // }
 
     // Then do 2nd pass transforming
 

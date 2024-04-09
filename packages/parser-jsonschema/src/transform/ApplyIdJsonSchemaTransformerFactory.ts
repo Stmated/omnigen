@@ -30,12 +30,6 @@ export type IdHint = {
   suffix?: boolean;
 };
 
-interface Collected {
-  id: string;
-  exhausted: boolean;
-  done: boolean;
-}
-
 export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFactory {
 
   private static _uniqueIdCounter = 0;
@@ -195,7 +189,9 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       ...DefaultJsonSchema9Visitor,
       schema: (v, visitor) => {
 
-        if (v.$ref) {
+        if (v.$ref && Object.keys(v).length === 1) {
+
+          // Skip this one, since it is a clean redirect.
           return DefaultJsonSchema9Visitor.schema(v, DefaultJsonSchema9Visitor);
         }
 
@@ -298,6 +294,14 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
         try {
           this._hints.push({name: e.key, suffix: true});
           return DefaultJsonSchema9Visitor.properties_option(e, visitor);
+        } finally {
+          this._hints.pop();
+        }
+      },
+      items: (e, visitor) => {
+        try {
+          this._hints.push({tag: 'Item', suffix: true});
+          return DefaultJsonSchema9Visitor.items(e, visitor);
         } finally {
           this._hints.pop();
         }

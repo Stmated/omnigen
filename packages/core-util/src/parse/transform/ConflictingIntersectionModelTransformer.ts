@@ -32,7 +32,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
           ctx.replacement = replacement;
         }
       }
-    }, undefined, false);
+    }, undefined, true);
   }
 
   private replaceIntersection(type: OmniIntersectionType, features: TargetFeatures): OmniType | undefined {

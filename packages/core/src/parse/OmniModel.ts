@@ -181,7 +181,16 @@ export type SmartUnwrappedType<T extends OmniType | undefined> =
       ? Exclude<R, UnwrappableTypes<any>>
       : T;
 
-export interface OmniNamedType {
+export interface OmniOptionallyNamedType {
+
+  /**
+   * The name of the type.
+   * The name is not necessarily unique. There might be many types with the same name, until late-stage name-resolution before rendering.
+   */
+  name?: TypeName | undefined;
+}
+
+export interface OmniNamedType extends OmniOptionallyNamedType {
 
   /**
    * The name of the type.
@@ -189,8 +198,6 @@ export interface OmniNamedType {
    */
   name: TypeName;
 }
-
-export type OmniOptionallyNamedType = Partial<OmniNamedType>;
 
 export interface OmniTypeWithInnerType<T extends OmniType | OmniType[] = OmniType> {
   of: T;
@@ -266,7 +273,7 @@ interface OmniArrayBase {
   arrayKind?: OmniArrayKind | undefined;
 }
 
-export interface OmniArrayType<Item extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.ARRAY>, OmniTypeWithInnerType<Item>, OmniArrayBase {
+export interface OmniArrayType<Item extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.ARRAY>, OmniTypeWithInnerType<Item>, OmniArrayBase, OmniOptionallyNamedType {
   minLength?: number | undefined;
   maxLength?: number | undefined;
   possiblySingle?: boolean;

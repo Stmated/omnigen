@@ -1,7 +1,7 @@
 import {ZodSchemaFileContext} from '@omnigen/core-util';
 import {ActionKind, createPlugin, ZodModelContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
 import {z} from 'zod';
-import {NewJsonSchemaParser} from './parse';
+import {DefaultJsonSchemaParser} from './parse';
 
 export const ZodJsonSchemaSourceContext = z.object({
   source: z.literal('jsonschema'),
@@ -52,7 +52,7 @@ export const JsonSchemaPlugin = createPlugin(
       }
     }
 
-    const parser = new NewJsonSchemaParser(ctx.schemaFile, ctx.parserOptions);
+    const parser = new DefaultJsonSchemaParser(ctx.schemaFile, ctx.parserOptions);
     const model = await parser.parse();
 
     return {

@@ -71,7 +71,7 @@ describe('Java Rendering', () => {
               cst = JavaParser.parse(cu.content);
               expect(cst).toBeDefined();
             } catch (ex) {
-              throw new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}`, {cause: ex});
+              throw new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}\n\n${cu.content}\n\n`, {cause: ex});
             }
 
             // Visit the syntax tree, but do nothing with the result.
@@ -160,6 +160,24 @@ describe('Java Rendering', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+    }
+  });
+
+  test('description-inheritance', async ({task}) => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('description-inheritance.json', {
+      targetOptions: DEFAULT_TEST_TARGET_OPTIONS,
+      javaOptions: DEFAULT_TEST_JAVA_OPTIONS,
+    });
+
+    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    for (const [fileName, fileContent] of fileContents) {
+      if (fileName.startsWith('JsonRpc')) {
+        continue;
+      }
       expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
     }
   });

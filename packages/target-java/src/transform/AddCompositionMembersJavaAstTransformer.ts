@@ -11,7 +11,7 @@ import {
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
-  RootAstNode,
+  RootAstNode, TargetFeatures,
   TypeNode,
   UnknownKind,
 } from '@omnigen/core';
@@ -76,7 +76,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
         const omniType = node.type.omniType;
 
         if (omniType.kind == OmniTypeKind.EXCLUSIVE_UNION) {
-          this.addXOrMappingToBody(args.root, omniType, node, args.options);
+          this.addXOrMappingToBody(args.root, omniType, node, args.options, args.features);
         } else if (omniType.kind == OmniTypeKind.INTERSECTION) {
           this.addAndCompositionToClassDeclaration(args.model, args.root, omniType, node, args.options);
         }
@@ -139,6 +139,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     type: OmniCompositionType<OmniType | OmniPrimitiveType>,
     declaration: AbstractObjectDeclaration,
     options: JavaAndTargetOptions,
+    features: TargetFeatures,
   ): void {
 
     // The composition type is XOR, it can only be one of them.
@@ -168,7 +169,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
       // This means the specification did not have any discriminators.
       // Instead we need to figure out what it is in runtime.
-      this.addRuntimeMapping(root, declaration.body, type.types, options);
+      this.addRuntimeMapping(root, declaration.body, type.types, options, features);
 
       // declaration.body.children.push(
       //   new RuntimeTypeMapping(type.types, options),
@@ -181,6 +182,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     target: AstNodeWithChildren,
     types: OmniType[],
     options: JavaAndTargetOptions,
+    features: TargetFeatures,
   ) {
 
     // this.fields = [];
@@ -227,7 +229,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
 
       handled.push(type);
 
-      const pair = this.createdTypedPair(root, untypedField, type, options);
+      const pair = this.createdTypedPair(root, untypedField, type, options, features);
       typedPairs.push(pair);
 
       target.children.push(pair.field);
@@ -670,7 +672,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     return Case.camel(javaName);
   }
 
-  private createdTypedPair(root: RootAstNode, untypedField: Field, type: OmniType, options: JavaAndTargetOptions): TypedPair {
+  private createdTypedPair(root: RootAstNode, untypedField: Field, type: OmniType, options: JavaAndTargetOptions, features: TargetFeatures): TypedPair {
 
     const typedFieldName = this.getFieldName(type);
 
@@ -684,7 +686,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       if (options.serializationLibrary == SerializationLibrary.JACKSON) {
         conversionExpression = this.modifyGetterForJackson(untypedField, typedField, parameterList);
       } else {
-        conversionExpression = this.modifyGetterForPojo(root, untypedField, typedField, parameterList);
+        conversionExpression = this.modifyGetterForPojo(root, untypedField, typedField, parameterList, features);
       }
 
     } else {
@@ -735,21 +737,56 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     );
   }
 
-  private modifyGetterForPojo(root: RootAstNode, untypedField: Field, typedField: Field, parameterList: ParameterList): AbstractJavaExpression {
+  private modifyGetterForPojo(root: RootAstNode, untypedField: Field, typedField: Field, parameterList: ParameterList, features: TargetFeatures): AbstractJavaExpression {
 
     const transformerIdentifier = new Identifier('transformer');
-    const type: OmniHardcodedReferenceType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.Function'};
+    const sourceType = OmniUtil.getUnwrappedType(untypedField.type.omniType);
+    const targetType = OmniUtil.getUnwrappedType(typedField.type.omniType);
 
-    const targetClass = new GenericType(
-      type,
-      new EdgeType(type),
-      [
-        root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(untypedField.type.omniType)),
-        root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(typedField.type.omniType)),
-      ],
-    );
+    let targetTypeNode: GenericType | undefined = undefined;
 
-    const transformerParameter = new Parameter(targetClass, transformerIdentifier);
+    let hardType: OmniHardcodedReferenceType | undefined = undefined;
+    if (!OmniUtil.isNullableType(targetType)) {
+      if (targetType.kind === OmniTypeKind.INTEGER || targetType.kind === OmniTypeKind.INTEGER_SMALL) {
+        hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.ToIntFunction'};
+      } else if (targetType.kind === OmniTypeKind.DOUBLE) {
+        hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.ToDoubleFunction'};
+      } else if (targetType.kind === OmniTypeKind.LONG) {
+        hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.ToLongFunction'};
+      }
+    } else {
+
+      const common = OmniUtil.getCommonDenominatorBetween(sourceType, targetType, features);
+      if (common && common.type == sourceType) {
+        hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.UnaryOperator'};
+      }
+    }
+
+    if (hardType) {
+
+      targetTypeNode = new GenericType(
+        hardType,
+        new EdgeType(hardType),
+        [
+          root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(untypedField.type.omniType)),
+        ],
+      );
+    }
+
+    if (!hardType || !targetTypeNode) {
+      hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Function'};
+
+      targetTypeNode = new GenericType(
+        hardType,
+        new EdgeType(hardType),
+        [
+          root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(untypedField.type.omniType)),
+          root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(typedField.type.omniType)),
+        ],
+      );
+    }
+
+    const transformerParameter = new Parameter(targetTypeNode, transformerIdentifier);
 
     parameterList.children.push(transformerParameter);
     return new MethodCall(

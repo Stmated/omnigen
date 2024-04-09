@@ -417,7 +417,7 @@ export class JavaUtil {
         return boxed ? 'java.lang.Number' : 'double';
       case OmniTypeKind.NULL:
       case OmniTypeKind.UNDEFINED:
-        return boxed ? 'java.lang.Object' : 'object';
+        return boxed ? 'java.lang.Object' : 'Object';
     }
   }
 

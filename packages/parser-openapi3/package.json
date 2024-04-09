@@ -11,7 +11,9 @@
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+
+    "generate": "tsx ../../apps/omnigen-cli/src/index.ts -i ./schemas/openapi-v31.json -o ./src/__generated__/ -p core-util jsonschema typescript -t typescript"
   },
   "dependencies": {
     "@omnigen/core": "workspace:*",
@@ -31,6 +33,8 @@
     "@types/json-schema": "^7.0.15",
     "@types/string-similarity": "^4.0.0",
     "@types/json-pointer": "^1.0.34",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.3",
+    "@omnigen/omnigen-cli": "workspace:*",
+    "tsx": "^4.7.2"
   }
 }

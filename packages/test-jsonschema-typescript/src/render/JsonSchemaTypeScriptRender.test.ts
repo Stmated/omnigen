@@ -39,7 +39,6 @@ describe('jsonschema-typescript-render', () => {
 
   test('jsonschema7-strict-undefined', async ({task}) => {
 
-    // TODO: Make sure this works properly -- UNTESTED!
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     // https://json-schema.org/draft-07/schema
@@ -53,6 +52,27 @@ describe('jsonschema-typescript-render', () => {
     for (const [fileName, content] of Object.entries(fileContents)) {
       await expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
     }
+  });
+
+  /**
+   * NOTE: This is in essence very wrong, but there are no compiler errors. There are lots of JSONSchema functionality inside that is not yet supported:
+   *        * dependentSchemas
+   *        * if, then, else
+   *        * anyOf: [{required: [...]}, {required: [...]}]
+   *        * $dynamicRef
+   *        * $dynamicAnchor
+   */
+  test('openapi', async ({task}) => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-openapi3/schemas/openapi-v31.json'), {
+      includeGenerated: false,
+      singleFile: true,
+    });
+    const fileContents = getFileContents(rendered);
+    const keys = Object.keys(fileContents);
+    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
   });
 });
 

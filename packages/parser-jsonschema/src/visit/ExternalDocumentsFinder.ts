@@ -85,7 +85,26 @@ export class ExternalDocumentsFinder {
             throw new Error(`Encountered too much recursion when resolving $ref: ${v.$ref}`);
           }
 
-          v = this.resolveRef(v.$ref, origin);
+          const resolved = this.resolveRef(v.$ref, origin);
+          const keys = Object.keys(v);
+          if (keys.length == 2 && '$id' in v) {
+
+            // This object only contains $id and $ref, which makes it quite useless. Replace with the resolved.
+            v = resolved;
+          } else if (keys.length > 1) {
+
+            delete v.$ref;
+            if ('allOf' in v) {
+              (v as any).allOf.push(resolved);
+            } else {
+              (v as any).allOf = [resolved];
+            }
+
+          } else {
+
+            // The only key is the $ref, so there is no need to spend time merging.
+            v = resolved;
+          }
         }
 
         return v as WithoutRef<typeof v>;

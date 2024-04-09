@@ -473,12 +473,18 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const resultSchema = contentDescriptor.schema as JSONSchema9Definition;
     const resolvedResultSchema = this._refResolver.resolve(resultSchema);
 
-    const resultTypeName: TypeName = [
-      this._jsonSchemaParser.getLikelyNames(resultSchema, resolvedResultSchema),
+    const resultTypeName: TypeName[] = [];
+
+    const likelyName = this._jsonSchemaParser.getLikelyNames(resultSchema, resolvedResultSchema);
+    if (likelyName) {
+      resultTypeName.push(likelyName);
+    }
+
+    resultTypeName.push(
       contentDescriptor.name,
       `${responseTypeName}Result`,
       `${responseTypeName}ResultPayload`,
-    ];
+    );
 
     const resultType = this._jsonSchemaParser.jsonSchemaToType(resultTypeName, resolvedResultSchema);
 

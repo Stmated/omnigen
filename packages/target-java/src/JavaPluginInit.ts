@@ -65,8 +65,6 @@ export const JavaPluginInit = createPlugin(
   },
   async ctx => {
 
-    logger.info(`Java Init, target: ${ctx.target}`);
-
     if (ctx.target !== undefined && ctx.target != 'java') {
       return new z.ZodError([
         {code: 'custom', path: ['target'], message: `Target is not Java`},

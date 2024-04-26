@@ -1,5 +1,8 @@
 import {
-  AstNode, AstTargetFunctions,
+  AstNode,
+  AstTargetFunctions,
+  AstVisitor,
+  NodeResolveCtx,
   OmniArrayType,
   OmniGenericTargetType,
   OmniInterfaceOrObjectType,
@@ -7,13 +10,15 @@ import {
   OmniObjectType,
   OmniProperty,
   OmniType,
-  OmniTypeKind, Reference,
-  RootAstNode, TypeNode,
+  OmniTypeKind,
+  Reference,
+  RootAstNode,
+  TypeNode,
   UnknownKind,
 } from '@omnigen/core';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {Block, Field, JavaAstRootNode} from '../ast';
+import {Block, Field, JavaAstRootNode, ModifierList, ModifierType} from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaOptions} from '../options';
@@ -41,6 +46,8 @@ export class JavaAstUtils implements AstTargetFunctions {
           new Java.MethodDeclarationSignature(
             new Java.Identifier(JavaUtil.getGetterName(accessorName, property.type)),
             root.getAstUtils().createTypeNode(property.type, false),
+            undefined,
+            new ModifierList(),
           ),
         ),
       );
@@ -103,35 +110,41 @@ export class JavaAstUtils implements AstTargetFunctions {
     return new Java.GenericType(type, baseType, mappedGenericTargetArguments);
   }
 
-  public static addOmniPropertyToBlockAsField(root: RootAstNode, property: OmniProperty, body: Block, options: JavaOptions): void {
+  public static addOmniPropertyToBlockAsField(args: {
+    root: RootAstNode,
+    property: OmniProperty,
+    body: Block,
+    options: JavaOptions,
+    modifiers?: ModifierType[],
+  }): void {
 
-    if (OmniUtil.isNull(property.type) && !options.includeAlwaysNullProperties) {
+    if (OmniUtil.isNull(args.property.type) && !args.options.includeAlwaysNullProperties) {
       return;
     }
 
-    if (property.abstract) {
+    if (args.property.abstract) {
 
       // If the property is abstract, then we should not be adding a field for it.
       // Instead it will be added by another transformer that deals with the getters and setters.
       return;
     }
 
-    const fieldType = root.getAstUtils().createTypeNode(property.type);
-    let originalName = OmniUtil.getPropertyName(property.name);
+    const fieldType = args.root.getAstUtils().createTypeNode(args.property.type);
+    let originalName = OmniUtil.getPropertyName(args.property.name);
     if (!originalName) {
-      if (OmniUtil.isPatternPropertyName(property.name)) {
+      if (OmniUtil.isPatternPropertyName(args.property.name)) {
 
         // The field's property does not have a name per se.
         // But the field needs a name until it can be replaced by something better at later stages.
         // So we set a (hopefully) temporary field name, which likely will not compile since it contains the regex.
-        originalName = `additionalProperties=${OmniUtil.getPropertyName(property.name, true)}`;
+        originalName = `additionalProperties=${OmniUtil.getPropertyName(args.property.name, true)}`;
 
       } else {
         return;
       }
     }
 
-    const fieldName = OmniUtil.getPropertyFieldNameOnly(property.name) || Case.camel(originalName);
+    const fieldName = OmniUtil.getPropertyFieldNameOnly(args.property.name) || Case.camel(originalName);
 
     const fieldIdentifier = new Java.Identifier(fieldName, originalName);
 
@@ -139,33 +152,33 @@ export class JavaAstUtils implements AstTargetFunctions {
       fieldType,
       fieldIdentifier,
       new Java.ModifierList(
-        new Java.Modifier(Java.ModifierType.PRIVATE),
+        ...(args.modifiers ?? [Java.ModifierType.PRIVATE]).map(m => new Java.Modifier(m)),
       ),
     );
 
-    if (OmniUtil.isPrimitive(property.type)) {
-      if (property.type.kind == OmniTypeKind.NULL) {
-        field.initializer = new Java.Literal(property.type.value ?? null, property.type.kind);
-      } else if (property.type.value !== undefined) {
-        if (options.immutableModels && !property.type.literal) {
+    if (OmniUtil.isPrimitive(args.property.type)) {
+      if (args.property.type.kind == OmniTypeKind.NULL) {
+        field.initializer = new Java.Literal(args.property.type.value ?? null, args.property.type.kind);
+      } else if (args.property.type.value !== undefined) {
+        if (args.options.immutableModels && !args.property.type.literal) {
 
           // If the model is immutable and the value given is just a default,
           // then it will have to be given through the constructor in the constructor transformer.
 
         } else {
 
-          field.initializer = new Java.Literal(property.type.value, property.type.kind);
+          field.initializer = new Java.Literal(args.property.type.value, args.property.type.kind);
         }
       }
     }
 
-    field.property = property;
+    field.property = args.property;
 
-    if (options.immutableModels || OmniUtil.isNull(property.type)) {
+    if (args.options.immutableModels || OmniUtil.isNull(args.property.type)) {
       field.modifiers.children.push(new Java.Modifier(Java.ModifierType.FINAL));
     }
 
-    body.children.push(field);
+    args.body.children.push(field);
   }
 
   public static addInterfaceOf(objectType: OmniObjectType, root: JavaAstRootNode, options: JavaAndTargetOptions): OmniInterfaceType {
@@ -252,60 +265,22 @@ export class JavaAstUtils implements AstTargetFunctions {
     return declaration;
   }
 
-  public static getReferenceIdNodeMap(root: JavaAstRootNode): Map<number, AstNode> {
+  public static getReferenceIdNodeMap<
+    R,
+    V extends AstVisitor<R>
+  >(
+    root: RootAstNode,
+    partial: (ctx: NodeResolveCtx<R, V>) => Partial<V>,
+  ): Map<number, AstNode> {
 
     const map = new Map<number, AstNode>();
     const ids: number[] = [];
 
-    const defaultVisitor = root.createVisitor<void>();
+    // NOTE: Bad conversion. Needs to be fixed one day (after all visitors have been made non-generic)
+    const defaultVisitor = root.createVisitor<void>() as unknown as V;
     root.visit({
       ...defaultVisitor,
-      visitFieldReference: (n, v) => {
-        ids.push(n.targetId);
-      },
-      visitDeclarationReference: (n, v) => {
-        ids.push(n.targetId);
-      },
-      visitField: (n, v) => {
-        map.set(n.id, n);
-      },
-      visitParameter: (n, v) => {
-
-        map.set(n.id, n);
-        defaultVisitor.visitParameter(n, v);
-      },
-      visitVariableDeclaration: (n, v) => {
-        map.set(n.id, n);
-        defaultVisitor.visitVariableDeclaration(n, v);
-      },
-      visitConstructorParameter: (n, v) => {
-
-        map.set(n.id, n);
-        defaultVisitor.visitConstructorParameter(n, v);
-      },
-      // Remove as many visits as possible to make the visiting faster.
-      visitInterfaceDeclaration: () => {
-      },
-      visitImportList: () => {
-      },
-      visitExtendsDeclaration: () => {
-      },
-      visitImplementsDeclaration: () => {
-      },
-      visitTypeList: () => {
-      },
-      visitArrayInitializer: () => {
-      },
-      visitBoundedType: () => {
-      },
-      visitArrayType: () => {
-      },
-      visitWildcardType: () => {
-      },
-      visitGenericType: () => {
-      },
-      visitEdgeType: () => {
-      },
+      ...partial({ids, map, visitor: defaultVisitor}),
     });
 
     for (const key of map.keys()) {

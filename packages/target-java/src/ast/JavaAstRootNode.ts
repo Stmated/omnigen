@@ -1,4 +1,4 @@
-import {AstNode, AstNodeWithChildren, AstTargetFunctions, Reducer, ReducerResult, Reference, RootAstNode, VisitResult} from '@omnigen/core';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, Reducer, ReducerResult, Reference, RootAstNode, VisitResult} from '@omnigen/core';
 import {createJavaVisitor, JavaVisitor} from '../visit';
 import {isDefined, ReferenceNodeNotFoundError} from '@omnigen/core-util';
 import {DefaultJavaReducer, JavaReducer} from '../reduce';
@@ -34,9 +34,8 @@ export class JavaAstRootNode extends AbstractJavaNode implements RootAstNode, As
   }
 
   public resolveNodeRef<T extends AstNode>(reference: Reference<T>): T {
-
     if (this._referenceIdNodeMap === undefined) {
-      this._referenceIdNodeMap = JavaAstUtils.getReferenceIdNodeMap(this);
+      this._referenceIdNodeMap = JavaAstUtils.getReferenceIdNodeMap(this, this.createIdVisitor);
     }
 
     const targetId = reference.targetId;
@@ -47,6 +46,62 @@ export class JavaAstRootNode extends AbstractJavaNode implements RootAstNode, As
 
     // The cast might be wrong, but it is probably fine most of the time, and makes the caller code simpler.
     return result as T;
+  }
+
+  createIdVisitor(ctx: NodeResolveCtx<void, JavaVisitor<void>>): Partial<JavaVisitor<void>> {
+    return {
+      visitFieldReference: (n, v) => {
+        ctx.ids.push(n.targetId);
+      },
+      visitDeclarationReference: (n, v) => {
+        ctx.ids.push(n.targetId);
+      },
+      visitField: (n, v) => {
+        ctx.map.set(n.id, n);
+      },
+      visitParameter: (n, v) => {
+        ctx.map.set(n.id, n);
+        ctx.visitor.visitParameter(n, v);
+      },
+      visitVariableDeclaration: (n, v) => {
+        ctx.map.set(n.id, n);
+        ctx.visitor.visitVariableDeclaration(n, v);
+      },
+      visitConstructorParameter: (n, v) => {
+        ctx.map.set(n.id, n);
+        ctx.visitor.visitConstructorParameter(n, v);
+      },
+      visitDelegate: (n, v) => {
+        ctx.map.set(n.id, n);
+        ctx.visitor.visitDelegate(n, v);
+      },
+      visitGenericRef: (n, v) => {
+        ctx.ids.push(n.targetId);
+      },
+      // Remove as many visits as possible to make the visiting faster.
+      visitInterfaceDeclaration: () => {
+      },
+      visitImportList: () => {
+      },
+      visitExtendsDeclaration: () => {
+      },
+      visitImplementsDeclaration: () => {
+      },
+      visitTypeList: () => {
+      },
+      visitArrayInitializer: () => {
+      },
+      visitBoundedType: () => {
+      },
+      visitArrayType: () => {
+      },
+      visitWildcardType: () => {
+      },
+      visitGenericType: () => {
+      },
+      visitEdgeType: () => {
+      },
+    };
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {

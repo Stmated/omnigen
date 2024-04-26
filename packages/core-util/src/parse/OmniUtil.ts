@@ -1748,14 +1748,18 @@ export class OmniUtil {
   }
 
   public static isNumericType(type: OmniType): type is OmniPrimitiveNumericType {
+    return OmniUtil.isNumericKind(type.kind);
+  }
 
-    return type.kind == OmniTypeKind.NUMBER
-      || type.kind == OmniTypeKind.DOUBLE
-      || type.kind == OmniTypeKind.LONG
-      || type.kind == OmniTypeKind.INTEGER
-      || type.kind == OmniTypeKind.INTEGER_SMALL
-      || type.kind == OmniTypeKind.FLOAT
-      || type.kind == OmniTypeKind.DECIMAL;
+  public static isNumericKind(kind: OmniTypeKind): kind is Extract<Pick<OmniPrimitiveNumericType, 'kind'>, OmniTypeKind> {
+
+    return kind == OmniTypeKind.NUMBER
+      || kind == OmniTypeKind.DOUBLE
+      || kind == OmniTypeKind.LONG
+      || kind == OmniTypeKind.INTEGER
+      || kind == OmniTypeKind.INTEGER_SMALL
+      || kind == OmniTypeKind.FLOAT
+      || kind == OmniTypeKind.DECIMAL;
   }
 
   public static getGeneralizedType<T extends OmniType>(type: T): T {

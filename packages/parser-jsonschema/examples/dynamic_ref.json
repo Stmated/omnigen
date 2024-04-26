@@ -1,0 +1,41 @@
+{
+  "$id": "https://example.com/dynamic_ref.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Dynamic refs",
+  "$defs": {
+    "BaseTree": {
+      "$id": "https://example.com/schemas/base-tree",
+      "$dynamicAnchor": "branch",
+
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {"$dynamicRef": "#leaf"},
+          {"$dynamicRef": "#branch"}
+        ]
+      },
+
+      "$defs": {
+        "leaf": {
+          "$dynamicAnchor": "leaf",
+          "type": "string"
+        }
+      }
+    },
+
+    "BoundedNumberTree": {
+      "$id": "https://example.com/schemas/bounded-number-tree",
+      "$dynamicAnchor": "branch",
+
+      "$ref": "#/$defs/BaseTree",
+      "maxItems": 2,
+
+      "$defs": {
+        "leaf": {
+          "$dynamicAnchor": "leaf",
+          "type": "number"
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ import {OmniUtil} from '@omnigen/core-util';
 import {JavaOptions, SerializationLibrary} from '../options';
 import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER} from './JacksonJavaAstTransformer.ts';
 import {JavaUtil} from '../util';
+import {AbstractObjectDeclaration} from '../ast';
 
 const METHOD_GETTER_NAME = 'getAdditionalProperties';
 const METHOD_ADDER_NAME = 'addAdditionalProperty';
@@ -17,7 +18,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     const replacedFieldIds: number[] = [];
     const classDeclarationStack: Java.ClassDeclaration[] = [];
     const decWithDictionary = new Map<number, OmniDictionaryType[]>();
-    const decIdToDec = new Map<number, Java.ClassDeclaration>();
+    const decIdToDec = new Map<number, Java.Identifiable>();
     const allDictionaries: OmniDictionaryType[] = [];
 
     const defaultVisitor = args.root.createVisitor<void>();
@@ -125,11 +126,13 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
           throw new Error(`Could not find the class declaration with id ${decId}`);
         }
 
-        if (!dec.implements) {
-          dec.implements = new Java.ImplementsDeclaration(new Java.TypeList([]));
-        }
+        if (dec instanceof Java.AbstractObjectDeclaration) {
+          if (!dec.implements) {
+            dec.implements = new Java.ImplementsDeclaration(new Java.TypeList([]));
+          }
 
-        dec.implements.types.children.push(newInterfaceDec.type);
+          dec.implements.types.children.push(newInterfaceDec.type);
+        }
       }
 
       const typeName = JavaUtil.getClassName(newInterfaceDec.type.omniType, args.options);
@@ -230,8 +233,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       new Java.Block(
         new Java.Statement(
           new Java.MethodCall(
-            new Java.FieldReference(additionalPropertiesField.id),
-            new Java.Identifier('put'),
+            new Java.MemberAccess(new Java.FieldReference(additionalPropertiesField.id), new Java.Identifier('put')),
             new Java.ArgumentList(
               new Java.DeclarationReference(keyParameterDeclaration),
               new Java.DeclarationReference(valueParameterDeclaration),

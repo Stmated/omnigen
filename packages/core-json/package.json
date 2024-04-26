@@ -23,7 +23,7 @@
     "@omnigen/eslint-config-custom": "workspace:*",
     "@types/json-pointer": "^1.0.34",
     "colors": "^1.4.0",
-    "typescript": "^5.4.3",
+    "typescript": "^5.5.0-beta",
     "pino-pretty": "^10.3.1"
   }
 }

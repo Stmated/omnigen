@@ -1,7 +1,7 @@
 import nodePath from 'path';
 import pointer, {JsonObject} from 'json-pointer';
 import {isDefined, ProtocolHandler, Util} from '@omnigen/core-util';
-import {ObjectReducer} from '@omnigen/core-json';
+import {ObjectVisitor, PathItem} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -28,6 +28,13 @@ export interface JsonItemPartialUri {
   protocol?: Protocols | undefined;
   documentUri?: string | undefined;
   path?: string | undefined;
+}
+
+type NewDocument = { uri: JsonItemAbsoluteUri, promise: Promise<JsonObject> };
+type DynamicAnchor = {
+  anchorName: string;
+  path: string;
+  obj: object;
 }
 
 export class ExternalDocumentsFinder {
@@ -144,57 +151,144 @@ export class ExternalDocumentsFinder {
     return element;
   }
 
-  private static searchInto(schema: JsonObject, parentUri: JsonItemAbsoluteUri, documents: Map<string, JsonObject>) {
+  private static searchInto(
+    schema: JsonObject,
+    parentUri: JsonItemAbsoluteUri,
+    documents: Map<string, JsonObject>,
+  ): NewDocument[] {
 
-    type NewDocument = { uri: JsonItemAbsoluteUri, promise: Promise<JsonObject> };
     const newDocuments: NewDocument[] = [];
 
-    const walker = new ObjectReducer(schema);
-    walker.walk((obj, path) => {
+    const dynamicAnchorMap = new Map<string, DynamicAnchor[]>();
+    const dynamicAnchorVisitor = new ObjectVisitor(args => {
+      if (args.path[args.path.length - 2] === '$dynamicAnchor') {
+
+        // TODO: Need to be able to access the parent objects, so we can save the correct object as the dynamicAnchor object.
+
+        const anchorName = String(args.path[args.path.length - 1]);
+        const stringPath = `${args.path.map(it => String(it)).join('/')}/`;
+
+        let anchors = dynamicAnchorMap.get(anchorName);
+        if (!anchors) {
+          anchors = [];
+          dynamicAnchorMap.set(anchorName, anchors);
+        }
+
+        anchors.push({anchorName: anchorName, path: stringPath, obj: args.obj});
+
+        // dynamicAnchorMap.set(stringPath, {anchorName: anchorName, obj: args.obj});
+      }
+
+      return true;
+    });
+    dynamicAnchorVisitor.visit(schema);
+
+    const dynamicRefMap = new Map<string, DynamicAnchor>();
+    const dynamicRefVisitor = new ObjectVisitor(args => {
+      if (args.path[args.path.length - 2] === '$dynamicRef') {
+        let anchorName = String(args.path[args.path.length - 1]);
+        if (anchorName.startsWith('#')) {
+          anchorName = anchorName.substring(1);
+        }
+
+        const stringPath = `${args.path.map(it => String(it)).join('/')}/`;
+        const anchors = dynamicAnchorMap.get(anchorName) ?? [];
+        let anchor: DynamicAnchor | undefined = undefined;
+        if (anchors.length == 1) {
+          anchor = anchors[0];
+        } else {
+
+          for (const a of anchors) {
+
+          }
+        }
+
+        // TODO: Find the closest $dynamicAnchor for this $dynamicRef, then figure out where to take it from there
+        //        Figure something out :( :( :(
+        const closestDynamicAnchor = '';
+
+        if (!anchor) {
+          throw new Error(`Could not find any $dynamicAnchor for '${anchorName}' for $dynamicRef`);
+        }
+
+        dynamicRefMap.set(stringPath, anchor);
+      }
+
+      return true;
+    });
+    dynamicRefVisitor.visit(schema);
+
+    const visitor = new ObjectVisitor(args => {
+
+      const path = args.path;
+      const obj = args.obj;
 
       if (!(path.length > 0 && obj && typeof obj === 'string')) {
-        return obj;
+        return true;
       }
 
-      const refKey = (path[path.length - 1] === '$ref')
-        ? '$ref'
-        : (path[path.length - 3] === 'discriminator' && path[path.length - 2] === 'mapping')
-          ? path[path.length - 1]
-          : undefined;
+      // TODO: Add support for $dynamicAnchor and $dynamicRef
+      // TODO: Perhaps separate this into different classes, one for making absolute ref only, et cetera
 
-      if (!refKey) {
-        return obj;
+      if (ExternalDocumentsFinder.getRefKey(path)) {
+        args.replaceWith = ExternalDocumentsFinder.relativeRefToAbsolute(obj, parentUri, documents, newDocuments);
+        return true;
       }
 
-      if (refKey !== '$ref') {
-        logger.info(`--- Loading and resolving relative custom $ref: ${refKey}: ${obj}`);
+      // TODO: Add each found $dynamicRef to a list of unresolved ones
+      //        Record location and path
+      //        Then after search through parents using path.slice(0, -1)
+      //        Do not search for any $dynamicAnchor unless found a $dynamicRef
+      //        Go onwards from there -- try to figure out how all this should work...
+
+      if (path[path.length - 1] === '$dynamicAnchor') {
+        const i = 0;
       }
 
-      const absoluteUri = ExternalDocumentsFinder.toAbsoluteUriParts(parentUri, obj);
-
-      if (!documents.has(absoluteUri.absoluteDocumentUri)) {
-
-        const newDocument = newDocuments.find(it => (it.uri.absoluteDocumentUri === absoluteUri.absoluteDocumentUri));
-        if (!newDocument) {
-
-          let promise: Promise<JsonObject>;
-          if (absoluteUri.protocol == 'file') {
-            promise = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
-          } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {
-            promise = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
-          } else {
-            throw new Error(`Unknown protocol ${absoluteUri.protocol}`);
-          }
-
-          newDocuments.push({uri: absoluteUri, promise: promise});
-        }
+      if (path[path.length - 1] === '$dynamicRef') {
+        const i = 0;
       }
 
-      // Replace RELATIVE $ref with ABSOLUTE $ref
-      return absoluteUri.absoluteUri;
+      return true;
     });
 
+    visitor.visit(schema);
+
     return newDocuments;
+  }
+
+  private static getRefKey(path: PathItem[]) {
+    return (path[path.length - 1] === '$ref')
+      ? '$ref'
+      : (path[path.length - 3] === 'discriminator' && path[path.length - 2] === 'mapping')
+        ? path[path.length - 1]
+        : undefined;
+  }
+
+  private static relativeRefToAbsolute(obj: string, parentUri: JsonItemAbsoluteUri, documents: Map<string, JsonObject>, newDocuments: NewDocument[]): string {
+
+    const absoluteUri = ExternalDocumentsFinder.toAbsoluteUriParts(parentUri, obj);
+
+    if (!documents.has(absoluteUri.absoluteDocumentUri)) {
+
+      const newDocument = newDocuments.find(it => (it.uri.absoluteDocumentUri === absoluteUri.absoluteDocumentUri));
+      if (!newDocument) {
+
+        let promise: Promise<JsonObject>;
+        if (absoluteUri.protocol == 'file') {
+          promise = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
+        } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {
+          promise = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
+        } else {
+          throw new Error(`Unknown protocol ${absoluteUri.protocol}`);
+        }
+
+        newDocuments.push({uri: absoluteUri, promise: promise});
+      }
+    }
+
+    // Replace RELATIVE $ref with ABSOLUTE $ref
+    return absoluteUri.absoluteUri;
   }
 
   static toPartialUri(uriString: string): Readonly<JsonItemPartialUri> {

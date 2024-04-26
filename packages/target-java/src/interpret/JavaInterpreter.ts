@@ -1,4 +1,4 @@
-import {AstNode, AstTransformer} from '@omnigen/core';
+import {AstTransformer, RootAstNode} from '@omnigen/core';
 import {AbstractInterpreter} from '@omnigen/core-util';
 import {FieldAccessorMode} from '../options';
 import {
@@ -15,26 +15,30 @@ import {
   AddObjectDeclarationsJavaAstTransformer,
   AddSubTypeHintsAstTransformer,
   AddThrowsForKnownMethodsAstTransformer,
+  DelegatesToJavaAstTransformer,
   FlattenSuperfluousNodesAstTransformer,
+  GenericNodesToSpecificJavaAstTransformer,
   InnerTypeCompressionAstTransformer,
   JacksonJavaAstTransformer,
   JavaAndTargetOptions,
   PackageResolverAstTransformer,
-  PatternPropertiesToMapJavaAstTransformer, RemoveConstantParametersAstTransformer,
+  PatternPropertiesToMapJavaAstTransformer,
+  RemoveConstantParametersAstTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
-  SimplifyGenericsAstTransformer,
+  SimplifyGenericsAstTransformer, ToConstructorBodySuperCallAstTransformer,
   ToHardCodedTypeJavaAstTransformer,
 } from '../transform';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
-import {GenericNodesToSpecificJavaAstTransformer} from '../transform/GenericNodesToSpecificJavaAstTransformer.ts';
+import {GroupExampleTextsToSectionAstTransformer} from '../transform/GroupExampleTextsToSectionAstTransformer.ts';
+import {ToJavaAstTransformer} from '../transform/ToJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
 
-  * getTransformers(options: JavaAndTargetOptions): Generator<AstTransformer<AstNode, JavaAndTargetOptions>> {
+  * getTransformers(options: JavaAndTargetOptions): Generator<AstTransformer<RootAstNode, JavaAndTargetOptions>> {
 
     yield new AddObjectDeclarationsJavaAstTransformer();
 
@@ -67,17 +71,21 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new SimplifyGenericsAstTransformer();
     yield new GenericNodesToSpecificJavaAstTransformer();
     yield new AddCommentsAstTransformer();
-    yield new PatternPropertiesToMapJavaAstTransformer(); // Ran too late
+    yield new GroupExampleTextsToSectionAstTransformer();
+    yield new PatternPropertiesToMapJavaAstTransformer();
     yield new RemoveConstantParametersAstTransformer();
     yield new JacksonJavaAstTransformer();
     yield new ToHardCodedTypeJavaAstTransformer();
+    yield new ToConstructorBodySuperCallAstTransformer();
+    yield new ToJavaAstTransformer();
+    yield new DelegatesToJavaAstTransformer();
     yield new AddGeneratedAnnotationJavaAstTransformer();
     yield new PackageResolverAstTransformer();
     yield new FlattenSuperfluousNodesAstTransformer();
     yield new ReorderMembersAstTransformer();
   }
 
-  newRootNode(): AstNode {
+  newRootNode(): RootAstNode {
     return new Java.JavaAstRootNode();
   }
 }

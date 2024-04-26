@@ -1,9 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
-import {
-  OmniType,
-  OmniTypeKind,
-  TargetOptions,
-} from '@omnigen/core';
+import {OmniType, OmniTypeKind, StaticInnerTypeKind, TargetFeatures, TargetOptions} from '@omnigen/core';
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaUtil} from '../util';
@@ -70,7 +66,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
             throw new Error(`Could not find the CompilationUnit source where '${OmniUtil.describe(type)}' is defined`);
           }
 
-          this.moveCompilationUnit(definedInUnit, definedInObjectDec, singleUseInUnit, type, args.root);
+          this.moveUnit(definedInUnit, definedInObjectDec, singleUseInUnit, type, args.root, args.features);
         }
       }
     }
@@ -106,7 +102,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     const objectDecStack: Java.AbstractObjectDeclaration[] = [];
 
     const defaultVisitor = root.createVisitor();
-    const visitor = VisitorFactoryManager.create(defaultVisitor, {
+    root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
@@ -151,9 +147,8 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
             || usedType.kind == OmniTypeKind.ENUM
             || (usedType.kind == OmniTypeKind.INTERFACE && options.allowCompressInterfaceToInner)) {
 
-            // const cu = cuInfoStack[cuInfoStack.length - 1];
             const objectDec = objectDecStack[objectDecStack.length - 1];
-            if (usedType != objectDec.type.omniType) { // cu.children.type.omniType) {
+            if (usedType != objectDec.type.omniType) {
               const mapping = objectDecUsedInType.get(objectDec);
               if (mapping) {
                 if (!mapping.includes(usedType)) {
@@ -166,9 +161,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
           }
         }
       },
-    });
-
-    root.visit(visitor);
+    }));
   }
 
   /**
@@ -196,10 +189,6 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       const targetTypes = type.targetIdentifiers.flatMap(it => InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(it.type));
       return [...sourceType, ...targetTypes];
     }
-    // else if (type.kind == OmniTypeKind.INTERFACE) {
-    //   const sourceType = InnerTypeCompressionAstTransformer.getResolvedVisibleTypes(type.of);
-    //   return [type, ...sourceType];
-    // }
 
     // Should we follow external model references here?
 
@@ -217,12 +206,13 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     return options.compressTypeKinds.length == 0 || options.compressTypeKinds.includes(type.kind);
   }
 
-  private moveCompilationUnit(
+  private moveUnit(
     sourceUnit: Java.CompilationUnit,
     sourceObject: Java.AbstractObjectDeclaration,
     targetChild: Java.Identifiable | undefined,
     type: OmniType,
     root: Java.JavaAstRootNode,
+    features: TargetFeatures,
   ): void {
 
     if (!targetChild) {
@@ -235,11 +225,13 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
     if (!sourceObject.modifiers.children.find(it => it.type == Java.ModifierType.STATIC)) {
 
-      // Add the static modifier if it is not already added.
-      // TODO: This does not need to be done for enums?
-      sourceObject.modifiers.children.push(
-        new Java.Modifier(Java.ModifierType.STATIC),
-      );
+      if (features.staticInnerTypes === StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE) {
+
+        // Add the static modifier if it is not already added.
+        sourceObject.modifiers.children.push(
+          new Java.Modifier(Java.ModifierType.STATIC),
+        );
+      }
     }
 
     targetChild.body.children.push(
@@ -250,7 +242,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     if (rootCuIndex != -1) {
       sourceUnit.children.splice(rootCuIndex, 1);
     } else {
-      throw new Error(`The CompilationUnit for '${sourceObject.name.value}' was not found in source unit '${sourceUnit}'`);
+      throw new Error(`Unit for '${sourceObject.name.value}' was not found in source unit '${sourceUnit}'`);
     }
 
     if (sourceUnit.children.length == 0) {

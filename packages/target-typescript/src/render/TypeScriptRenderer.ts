@@ -1,13 +1,14 @@
 import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
-import {createJavaRenderer, Java, JavaOptions, JavaRendererOptions, render} from '@omnigen/target-java';
+import {createJavaRenderer, DefaultJavaRendererOptions, Java, JavaOptions, JavaRendererOptions, render} from '@omnigen/target-java';
 import {OmniUtil} from '@omnigen/core-util';
 import {TsRootNode} from '../ast';
 
 export type TypeScriptRenderer = TypeScriptVisitor<string> & Renderer;
 
 export const DefaultTypeScriptRendererOptions: JavaRendererOptions = {
+  ...DefaultJavaRendererOptions,
   fileExtension: 'ts',
 };
 
@@ -181,10 +182,10 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
 
     visitConstructor: (n, v) => {
       const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
-      const body = n.body ? `\n${render(n.body, v)}` : '';
+      const body = n.body ? `${render(n.body, v)}` : '';
       const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
 
-      return `\n${annotations}${modifiers}constructor(${render(n.parameters, v)}) {${body}}\n\n`;
+      return `\n${annotations}${modifiers}constructor(${render(n.parameters, v)})${body}\n`;
     },
 
     visitEdgeType: (n, v) => {

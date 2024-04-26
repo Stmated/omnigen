@@ -2,9 +2,9 @@ import {ExternalSyntaxTree, OmniType, TargetFeatures, TargetOptions} from '@omni
 import {JavaUtil} from '../util';
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
 import * as Java from '../ast';
-import {LoggerFactory} from '@omnigen/core-log';
-import {isDefined, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {AbstractObjectDeclaration, EdgeType} from '../ast';
+import {LoggerFactory} from '@omnigen/core-log';
+import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -43,20 +43,54 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
 
     const unitStack: CompilationUnitInfo[] = [];
     const objectStack: Java.AbstractObjectDeclaration[] = [];
+    const namespaceStack: string[] = [];
 
     // Then we will go through the currently compiling root node and set all type nodes' local names.
     const defaultVisitor = args.root.createVisitor();
     args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
+      visitNamespace: (n, v) => {
+
+        try {
+          namespaceStack.push(n.name.value);
+          return defaultVisitor.visitNamespace(n, v);
+        } finally {
+          namespaceStack.pop();
+        }
+      },
+
       visitCompilationUnit: (node, visitor) => {
 
-        const firstTypedChild = node.children.map(it => JavaAstUtils.getOmniType(it)).filter(isDefined).find(it => !!it);
-        if (!firstTypedChild) {
-          throw new Error(`No named object declaration found inside ${node.toString()}`);
-        }
+        let cuPackage: string | undefined = namespaceStack.length > 0 ? namespaceStack[namespaceStack.length - 1] : undefined;
 
-        const cuClassName = JavaUtil.getClassName(firstTypedChild, args.options);
-        const cuPackage = JavaUtil.getPackageName(firstTypedChild, cuClassName, args.options);
+        if (!cuPackage) {
+          let firstTypedChild: OmniType | undefined = undefined;
+          for (const child of node.children) {
+            if (child instanceof Java.Namespace) {
+
+              // NOTE: Maybe restructure somehow, so that we do not end up inside the compilation unit content until *after* we've entered a namespace.
+              //        Do not know yet how that would be done though. As things are right now it would break if there are multiple namespaces inside the same unit.
+              cuPackage = child.name.value;
+              break;
+
+            } else {
+              firstTypedChild = JavaAstUtils.getOmniType(child);
+              if (firstTypedChild) {
+                break;
+              }
+            }
+          }
+
+          if (!cuPackage) {
+            if (firstTypedChild) {
+              const cuClassName = JavaUtil.getClassName(firstTypedChild, args.options);
+              cuPackage = JavaUtil.getPackageName(firstTypedChild, cuClassName, args.options);
+            } else {
+              const name = node.name || `Owner of ${node.children.map(it => it.name.value).join(', ')}`;
+              throw new Error(`No named object declaration found inside ${name}`);
+            }
+          }
+        }
 
         const cuInfo: CompilationUnitInfo = {
           unit: node,

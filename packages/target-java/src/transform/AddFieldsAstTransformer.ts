@@ -22,18 +22,13 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
 
           const properties = OmniUtil.getPropertiesOf(type);
           for (const property of properties) {
-            JavaAstUtils.addOmniPropertyToBlockAsField(args.root, property, body, args.options);
+            // Add fields as "public" -- it is up to later transformers to add accessors and make it
+            JavaAstUtils.addOmniPropertyToBlockAsField({root: args.root, property, body, options: args.options});
           }
-
-          // if (type.additionalProperties && !JavaUtil.superMatches(args.model, type, parent => this.hasAdditionalProperties(parent))) {
-          //
-          //   // No parent implements additional properties, so we should.
-          //   body.children.push(new AdditionalPropertiesDeclaration(args.options));
-          // }
         }
 
         for (const property of JavaUtil.collectUnimplementedPropertiesFromInterfaces(type)) {
-          JavaAstUtils.addOmniPropertyToBlockAsField(args.root, property, body, args.options);
+          JavaAstUtils.addOmniPropertyToBlockAsField({root: args.root, property, body, options: args.options});
         }
 
         // Then keep searching deeper, into nested types
@@ -41,8 +36,4 @@ export class AddFieldsAstTransformer extends AbstractJavaAstTransformer {
       },
     }));
   }
-
-  // private hasAdditionalProperties(parent: OmniType): boolean {
-  //   return parent.kind == OmniTypeKind.OBJECT && parent.additionalProperties == true;
-  // }
 }

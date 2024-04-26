@@ -445,6 +445,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       }
     } else if (schema.type == undefined && extendedBy) {
 
+      schema.$recursiveAnchor;
+
       logger.silent(`No schema type found for ${schema.$id}, will check if can be deduced by: ${OmniUtil.describe(extendedBy)}`);
 
       extendedBy = OmniUtil.getUnwrappedType(extendedBy);
@@ -1019,22 +1021,20 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
   private toOmniEnum(
     name: TypeName,
     schemaType: Extract<AnyJSONSchema['type'], string> | 'any',
-    primitiveType: OmniTypeKind,
+    primitiveKind: OmniTypeKind,
     enumValues: JSONSchema9Type[],
     enumOwner?: AnyJSONSchema,
     description?: string,
   ) {
 
     let allowedValues: AllowedEnumTsTypes[];
-    if (primitiveType == OmniTypeKind.STRING) {
+    if (primitiveKind == OmniTypeKind.STRING) {
       allowedValues = enumValues.map(it => `${String(it)}`);
-    } else if (primitiveType == OmniTypeKind.DECIMAL
-      || primitiveType == OmniTypeKind.FLOAT
-      || primitiveType == OmniTypeKind.NUMBER) {
+    } else if (OmniUtil.isNumericKind(primitiveKind)) {
       allowedValues = enumValues.map(it => Number.parseFloat(`${String(it)}`));
     } else {
       allowedValues = enumValues.map(it => Number.parseInt(`${String(it)}`));
-      primitiveType = OmniTypeKind.STRING;
+      primitiveKind = OmniTypeKind.STRING;
     }
 
     const enumNames = JsonSchemaParser.getEnumNames(enumOwner, name);
@@ -1044,7 +1044,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     const omniEnum: OmniEnumType = {
       name: name ?? schemaType,
       kind: OmniTypeKind.ENUM,
-      itemKind: primitiveType,
+      itemKind: primitiveKind,
       enumConstants: allowedValues,
       description: description,
     };
@@ -1108,22 +1108,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         throw new Error(`x-enum-varnames of ${Naming.unwrap(name)} must be an array`);
       }
     }
-
-    // "NumberBoolean": {
-    //       "enum": [
-    //         0,
-    //         1
-    //       ],
-    //       "x-enum-varnames": [
-    //         "FALSE",
-    //         "TRUE"
-    //       ],
-    //       "x-enum-descriptions": {
-    //         "FALSE": "0 for false",
-    //         "TRUE": "1 for true"
-    //       },
-    //       "type": "number"
-    //     },
 
     return enumNames;
   }

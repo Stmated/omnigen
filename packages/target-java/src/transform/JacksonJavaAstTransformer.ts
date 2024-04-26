@@ -2,7 +2,7 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '
 import {Direction, OmniProperty, OmniPropertyName, OmniTypeKind, UnknownKind} from '@omnigen/core';
 import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast';
-import {AbstractObjectDeclaration} from '../ast';
+import {AbstractObjectDeclaration, Field} from '../ast';
 import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -217,7 +217,12 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
       for (const parameter of node.parameters.children) {
 
-        const field = args.root.resolveNodeRef(parameter.fieldRef);
+        const resolved = args.root.resolveNodeRef(parameter.ref);
+        const field = (resolved instanceof Field) ? resolved : undefined;
+        if (!field) {
+          continue;
+        }
+
         const property = field.property;
         if (!property) {
           continue;

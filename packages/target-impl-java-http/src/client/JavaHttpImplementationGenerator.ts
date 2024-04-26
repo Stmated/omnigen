@@ -114,7 +114,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       package: args.implOptions.clientPackage,
     };
 
-    const transformers: AstTransformer<AstNode, TargetOptions & JavaOptions>[] = [
+    const transformers: AstTransformer<RootAstNode, TargetOptions & JavaOptions>[] = [
       // new ElevateAsAbstractMembersAstTransformer(),
       new AddCompositionMembersJavaAstTransformer(),
       new AddFieldsAstTransformer(),
@@ -189,8 +189,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       const responseDeclaration = new Java.VariableDeclaration(
         responseIdentifier,
         new Java.MethodCall(
-          new Java.SelfReference(),
-          callMethod.signature.identifier,
+          new Java.MemberAccess(new Java.SelfReference(), callMethod.signature.identifier),
           new Java.ArgumentList(
             new Java.DeclarationReference(requestParameter),
           ),
@@ -288,11 +287,13 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const httpClientBuilderDeclaration = new Java.VariableDeclaration(
       httpClientBuilderIdentifier,
       new Java.MethodCall(
-        new Java.ClassName(new Java.EdgeType({
-          kind: OmniTypeKind.HARDCODED_REFERENCE,
-          fqn: 'java.net.http.HttpClient',
-        })),
-        new Java.Identifier('newBuilder'),
+        new Java.MemberAccess(
+          new Java.ClassName(new Java.EdgeType({
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
+            fqn: 'java.net.http.HttpClient',
+          })),
+          new Java.Identifier('newBuilder'),
+        ),
         new Java.ArgumentList(),
       ),
       undefined, true,
@@ -306,18 +307,22 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const httpRequestBuilderDeclaration = new Java.VariableDeclaration(
       new Java.Identifier('httpRequestBuilder'),
       new Java.MethodCall(
-        new Java.ClassName(new Java.EdgeType({
-          kind: OmniTypeKind.HARDCODED_REFERENCE,
-          fqn: 'java.net.http.HttpRequest',
-        })),
-        new Java.Identifier('newBuilder'),
+        new Java.MemberAccess(
+          new Java.ClassName(new Java.EdgeType({
+            kind: OmniTypeKind.HARDCODED_REFERENCE,
+            fqn: 'java.net.http.HttpRequest',
+          })),
+          new Java.Identifier('newBuilder'),
+        ),
         new Java.ArgumentList(
           new Java.MethodCall(
-            new Java.ClassName(new Java.EdgeType({
-              kind: OmniTypeKind.HARDCODED_REFERENCE,
-              fqn: 'java.net.URI',
-            })),
-            new Java.Identifier('create'),
+            new Java.MemberAccess(
+              new Java.ClassName(new Java.EdgeType({
+                kind: OmniTypeKind.HARDCODED_REFERENCE,
+                fqn: 'java.net.URI',
+              })),
+              new Java.Identifier('create'),
+            ),
             new Java.ArgumentList(
               new Java.Literal('https://google.com'),
             ),
@@ -330,25 +335,33 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const httpRequestVariableDeclaration = new Java.VariableDeclaration(
       httpRequestIdentifier,
       new Java.MethodCall(
-        new Java.MethodCall(
+        new Java.MemberAccess(
           new Java.MethodCall(
-            new Java.DeclarationReference(httpRequestBuilderDeclaration),
-            new Java.Identifier('header'),
-            new Java.ArgumentList(new Java.Literal('Content-Type'), new Java.Literal('application/json')),
-          ),
-          new Java.Identifier('POST'),
-          new Java.ArgumentList(
-            new Java.MethodCall(
-              new Java.ClassName(new Java.EdgeType({
-                kind: OmniTypeKind.HARDCODED_REFERENCE,
-                fqn: 'java.net.http.HttpRequest.BodyPublishers',
-              })),
-              new Java.Identifier('ofString'),
-              new Java.ArgumentList(stringValueIdentifier),
+            new Java.MemberAccess(
+              new Java.MethodCall(
+                new Java.MemberAccess(
+                  new Java.DeclarationReference(httpRequestBuilderDeclaration),
+                  new Java.Identifier('header'),
+                ),
+                new Java.ArgumentList(new Java.Literal('Content-Type'), new Java.Literal('application/json')),
+              ),
+              new Java.Identifier('POST'),
+            ),
+            new Java.ArgumentList(
+              new Java.MethodCall(
+                new Java.MemberAccess(
+                  new Java.ClassName(new Java.EdgeType({
+                    kind: OmniTypeKind.HARDCODED_REFERENCE,
+                    fqn: 'java.net.http.HttpRequest.BodyPublishers',
+                  })),
+                  new Java.Identifier('ofString'),
+                ),
+                new Java.ArgumentList(stringValueIdentifier),
+              ),
             ),
           ),
+          new Java.Identifier('build'),
         ),
-        new Java.Identifier('build'),
         new Java.ArgumentList(),
       ),
       undefined, true,
@@ -358,8 +371,10 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const httpClientDeclaration = new Java.VariableDeclaration(
       httpClientIdentifier,
       new Java.MethodCall(
-        new Java.DeclarationReference(httpClientBuilderDeclaration),
-        new Java.Identifier('build'),
+        new Java.MemberAccess(
+          new Java.DeclarationReference(httpClientBuilderDeclaration),
+          new Java.Identifier('build'),
+        ),
         new Java.ArgumentList(),
       ),
       new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.net.http.HttpClient'}),
@@ -369,16 +384,20 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const httpResponseVariableDeclaration = new Java.VariableDeclaration(
       httpResponseIdentifier,
       new Java.MethodCall(
-        new Java.DeclarationReference(httpClientDeclaration),
-        new Java.Identifier('send'),
+        new Java.MemberAccess(
+          new Java.DeclarationReference(httpClientDeclaration),
+          new Java.Identifier('send'),
+        ),
         new Java.ArgumentList(
           new Java.DeclarationReference(httpRequestVariableDeclaration),
           new Java.MethodCall(
-            new Java.ClassName(new Java.EdgeType({
-              kind: OmniTypeKind.HARDCODED_REFERENCE,
-              fqn: 'java.net.http.HttpResponse.BodyHandlers',
-            })),
-            new Java.Identifier('ofString'),
+            new Java.MemberAccess(
+              new Java.ClassName(new Java.EdgeType({
+                kind: OmniTypeKind.HARDCODED_REFERENCE,
+                fqn: 'java.net.http.HttpResponse.BodyHandlers',
+              })),
+              new Java.Identifier('ofString'),
+            ),
             new Java.ArgumentList(),
           ),
         ),
@@ -389,8 +408,10 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const stringValueDeclaration = new Java.VariableDeclaration(
       stringValueIdentifier,
       new Java.MethodCall(
-        new Java.FieldReference(objectMapperField),
-        new Java.Identifier('writeValueAsString'),
+        new Java.MemberAccess(
+          new Java.FieldReference(objectMapperField),
+          new Java.Identifier('writeValueAsString'),
+        ),
         new Java.ArgumentList(
           new Java.DeclarationReference(requestArgumentDeclaration),
         ),
@@ -428,12 +449,16 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
         new Java.Statement(
           new Java.ReturnStatement(
             new Java.MethodCall(
-              new Java.FieldReference(objectMapperField),
-              new Java.Identifier('readValue'),
+              new Java.MemberAccess(
+                new Java.FieldReference(objectMapperField),
+                new Java.Identifier('readValue'),
+              ),
               new Java.ArgumentList(
                 new Java.MethodCall(
-                  new Java.DeclarationReference(httpResponseVariableDeclaration),
-                  new Java.Identifier('body'),
+                  new Java.MemberAccess(
+                    new Java.DeclarationReference(httpResponseVariableDeclaration),
+                    new Java.Identifier('body'),
+                  ),
                   new Java.ArgumentList(),
                 ),
                 new Java.ClassReference(new Java.ClassName(new Java.EdgeType({
@@ -482,14 +507,15 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
             new Java.IfStatement(
               new Java.Predicate(
                 new Java.MethodCall(
-                  new Java.MethodCall(
-                    new Java.DeclarationReference(responseDeclaration),
-                    new Java.Identifier('at'),
-                    new Java.ArgumentList(
-                      new Java.Literal(`/${qualifier.path.join('/')}`),
+                  new Java.MemberAccess(
+                    new Java.MethodCall(
+                      new Java.MemberAccess(new Java.DeclarationReference(responseDeclaration), new Java.Identifier('at')),
+                      new Java.ArgumentList(
+                        new Java.Literal(`/${qualifier.path.join('/')}`),
+                      ),
                     ),
+                    new Java.Identifier('isMissingNode'),
                   ),
-                  new Java.Identifier('isMissingNode'),
                   new Java.ArgumentList(),
                 ),
                 Java.TokenKind.EQUALS,
@@ -510,14 +536,18 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
             new Java.IfStatement(
               new Java.Predicate(
                 new Java.MethodCall(
-                  new Java.MethodCall(
-                    new Java.DeclarationReference(responseDeclaration),
-                    new Java.Identifier('at'),
-                    new Java.ArgumentList(
-                      new Java.Literal(`/${qualifier.path.join('/')}`),
+                  new Java.MemberAccess(
+                    new Java.MethodCall(
+                      new Java.MemberAccess(
+                        new Java.DeclarationReference(responseDeclaration),
+                        new Java.Identifier('at'),
+                      ),
+                      new Java.ArgumentList(
+                        new Java.Literal(`/${qualifier.path.join('/')}`),
+                      ),
                     ),
+                    new Java.Identifier(jsonObjectMethodName),
                   ),
-                  new Java.Identifier(jsonObjectMethodName),
                   new Java.ArgumentList(),
                 ),
                 Java.TokenKind.EQUALS,
@@ -638,8 +668,10 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
   ): Java.MethodCall {
 
     return new Java.MethodCall(
-      new Java.FieldReference(converterField),
-      new Java.Identifier('convertValue'),
+      new Java.MemberAccess(
+        new Java.FieldReference(converterField),
+        new Java.Identifier('convertValue'),
+      ),
       new Java.ArgumentList(
         new Java.DeclarationReference(fromValueDeclaration),
         new Java.ClassReference(new Java.ClassName(root.getAstUtils().createTypeNode(type, false))),

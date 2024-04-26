@@ -27,8 +27,6 @@ import {JavaAndTargetOptions} from '../transform';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export type SuperTypePredicate = { (classType: JavaSuperTypeCapableType): boolean };
-
 export type JavaPotentialClassType = OmniObjectType;
 
 export type JavaSubTypeCapableType =
@@ -600,40 +598,6 @@ export class JavaUtil {
     return Case.camel(safeName.replaceAll(JavaUtil._PATTERN_WITH_PREFIX, ''));
   }
 
-
-  // TODO: MOVE ALL THE METHODS BELOW INTO A GENERAL CLASS THAT TAKES THE LANGUAGE FEATURES AS AN ARGUMENT
-  //        BECAUSE IT SHOULD BE LIKELY THAT THE CODE IS VERY SIMILAR TO ALL DIFFERENT LANGUAGES!
-
-
-  /**
-   * Check if any of the supertypes of 'type' matches the predicate callback.
-   *
-   * @param model The current OmniModel
-   * @param type The type to begin searching in
-   * @param predicate Predicate which returns true if the object type matches, otherwise false.
-   */
-  public static superMatches(
-    model: OmniModel,
-    type: JavaSubTypeCapableType | undefined,
-    predicate: SuperTypePredicate,
-  ): boolean {
-
-    const superType = JavaUtil.getSuperClassOfSubType(model, type);
-    if (superType) {
-      if (predicate(superType)) {
-        return true;
-      }
-
-      if (JavaUtil.asSubType(superType)) {
-
-        // The supertype is also a subtype which we can keep searching upwards in
-        return JavaUtil.superMatches(model, superType, predicate);
-      }
-    }
-
-    return false;
-  }
-
   public static asSubType(type: OmniType): type is JavaSubTypeCapableType {
     return OmniUtil.asSubType(type);
   }
@@ -839,33 +803,6 @@ export class JavaUtil {
     return OmniUtil.getSuperTypeToSubTypesMap(model);
   }
 
-  /**
-   * Get the types that implement the given class.
-   * There is a difference between implementing (interface) and extending (class)
-   */
-  public static getSubTypesOfInterface(model: OmniModel, interfaceType: OmniInterfaceOrObjectType): OmniSubTypeCapableType[] {
-
-    const subTypesOfInterface = new Set<OmniSubTypeCapableType>();
-
-    const superTypeToSubTypeMap = JavaUtil.getSuperTypeToSubTypesMap(model);
-    const subTypes = superTypeToSubTypeMap.get(interfaceType);
-    if (subTypes) {
-      for (const subType of subTypes) {
-        subTypesOfInterface.add(subType);
-      }
-    }
-
-    return [...subTypesOfInterface];
-  }
-
-  public static getCommonSuperClasses(model: OmniModel, a: JavaSubTypeCapableType, b: JavaSubTypeCapableType): OmniType[] {
-
-    const aAncestors = JavaUtil.getSuperClassHierarchy(model, a);
-    const bAncestors = JavaUtil.getSuperClassHierarchy(model, b);
-
-    return this.getCommon(aAncestors, bAncestors);
-  }
-
   public static getSuperClassHierarchy(model: OmniModel, type: JavaSubTypeCapableType | undefined): OmniSuperTypeCapableType[] {
 
     const path: OmniSuperTypeCapableType[] = [];
@@ -886,10 +823,6 @@ export class JavaUtil {
     }
 
     return path;
-  }
-
-  private static getCommon<T>(a: T[], b: T[]): T[] {
-    return a.filter(value => b.includes(value));
   }
 
   public static isReservedWord(word: string): boolean {

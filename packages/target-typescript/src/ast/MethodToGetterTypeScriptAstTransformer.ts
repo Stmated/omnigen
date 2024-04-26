@@ -18,7 +18,7 @@ export class MethodToGetterTypeScriptAstTransformer implements AstTransformer<Ja
         if (getterFieldReference !== undefined) {
 
           return new Java.FieldBackedGetter(
-            new Java.JavaReference<Java.Field>(getterFieldReference.targetId),
+            new Java.FieldReference(getterFieldReference.targetId),
             n.signature.annotations,
             n.signature.comments,
             undefined,

@@ -1,18 +1,11 @@
-import {
-  OmniExamplePairing,
-  OmniLinkMapping,
-  OmniModel,
-  OmniOutput,
-  OmniProperty,
-  OmniType,
-  OmniTypeKind,
-} from '@omnigen/core';
+import {OmniExamplePairing, OmniLinkMapping, OmniModel, OmniOutput, OmniProperty, OmniType, OmniTypeKind} from '@omnigen/core';
 import {IncludeExampleCommentsMode, JavaOptions} from '../options';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 import * as Java from '../ast';
 import {JavaUtil} from '../util';
 import {OmniUtil, Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
+import {FreeTextUtils} from '../util/FreeTextUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -23,71 +16,68 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     const baseVisitor = args.root.createVisitor();
     args.root.visit(VisitorFactoryManager.create(baseVisitor, {
 
-      visitObjectDeclaration: (node, visitor) => {
+      visitObjectDeclaration: (n, v) => {
 
         if (args.options.commentsOnTypes) {
-          const comments = AddCommentsAstTransformer.getCommentsForType(node.type.omniType, args.model, args.options);
+          const comments = AddCommentsAstTransformer.getCommentsForType(n.type.omniType, args.model, args.options);
           if (comments) {
-            if (!node.comments) {
-              node.comments = new Java.CommentBlock(comments);
-            } else {
-              node.comments.text = new Java.FreeTexts(new Java.FreeTextLine(node.comments.text), comments);
-            }
+            n.comments = new Java.Comment(FreeTextUtils.add(n.comments?.text, comments), n.comments?.kind);
+
+            // if (!n.comments) {
+            //   n.comments = new Java.Comment(comments);
+            // } else {
+            //   n.comments = new Java.Comment(new Java.FreeTexts(new Java.FreeTextLine(n.comments.text), comments), n.comments.kind);
+            // }
           }
         }
 
         // Then keep visiting downwards.
-        baseVisitor.visitObjectDeclaration(node, visitor);
+        baseVisitor.visitObjectDeclaration(n, v);
       },
 
-      visitField: node => {
+      visitField: n => {
 
         if (args.options.commentsOnFields) {
-          this.addToCommentsOwner(node, args);
+          this.addToCommentsOwner(n, args);
 
-          if (node.property) {
+          if (n.property) {
 
-            const comments = this.getCommentsList(node.property, args.model, args.options);
+            const comments = this.getCommentsList(n.property, args.model, args.options);
             if (comments) {
-              if (!node.comments) {
-                node.comments = new Java.CommentBlock(comments);
-              } else {
-                node.comments.text = new Java.FreeTexts(new Java.FreeTextLine(node.comments.text), comments);
-              }
+              n.comments = new Java.Comment(FreeTextUtils.add(n.comments?.text, comments), n.comments?.kind);
+
+              // if (!n.comments) {
+              //   n.comments = new Java.Comment(comments);
+              // } else {
+              //   n.comments = new Java.Comment(new Java.FreeTexts(new Java.FreeTextLine(n.comments.text), comments), n.comments.kind);
+              // }
             }
           }
         }
       },
 
-      visitMethodDeclaration: node => {
+      visitMethodDeclaration: n => {
 
         if (args.options.commentsOnGetters) {
-          if (!node.signature.parameters || node.signature.parameters.children.length == 0) {
-            const type = node.signature.type.omniType;
+          if (!n.signature.parameters || n.signature.parameters.children.length == 0) {
+            const type = n.signature.type.omniType;
             if (!OmniUtil.isPrimitive(type) || type.kind != OmniTypeKind.VOID) {
-              this.addToCommentsOwner(node.signature, args);
+              this.addToCommentsOwner(n.signature, args);
             }
           }
         }
       },
 
-      visitConstructor: (node, visitor) => {
-
+      visitConstructor: () => {
       },
     }));
-
-
   }
 
   private addToCommentsOwner(node: Java.Field | Java.MethodDeclarationSignature, args: JavaAstTransformerArgs) {
 
     const comments = AddCommentsAstTransformer.getCommentsForType(node.type.omniType, args.model, args.options);
     if (comments) {
-      if (!node.comments) {
-        node.comments = new Java.CommentBlock(comments);
-      } else {
-        node.comments.text = new Java.FreeTexts(new Java.FreeTextLine(node.comments.text), comments);
-      }
+      node.comments = new Java.Comment(FreeTextUtils.add(node.comments?.text, comments), node.comments?.kind);
     }
   }
 
@@ -106,10 +96,10 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
         for (const property of endpoint.request.type.properties) {
           if (property.type == type) {
             if (property.description) {
-              comments.push(new Java.FreeTextParagraph(new Java.FreeText(property.description)));
+              comments.push(new Java.FreeTextSummary(property.description));
             }
             if (property.summary) {
-              comments.push(new Java.FreeTextParagraph(new Java.FreeText(property.summary)));
+              comments.push(new Java.FreeTextSummary(property.summary));
             }
           }
         }
@@ -152,33 +142,25 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
     if (type.description) {
       if (hasExtraComments) {
-        comments.splice(0, 0, new Java.FreeTextLine(type.description));
+        comments.splice(0, 0, new Java.FreeTextSummary(type.description));
       } else {
-        comments.push(type.description);
+        comments.push(new Java.FreeTextSummary(type.description));
       }
     }
 
     if (type.summary) {
       if (hasExtraComments) {
-        comments.splice(0, 0, new Java.FreeTextLine(type.summary));
+        comments.splice(0, 0, new Java.FreeTextSummary(type.summary));
       } else {
-        comments.push(type.summary);
+        comments.push(new Java.FreeTextSummary(type.summary));
       }
     }
 
     if (options.includeExampleCommentsMode == IncludeExampleCommentsMode.ALWAYS) {
       if (type.examples && type.examples.length > 0) {
-
-        comments.push(new Java.FreeTextHeader(5, new Java.FreeText(`Examples`)));
-
-        const lines: Java.FreeText[] = [];
         for (const example of type.examples) {
-
-          const stringValue = Util.trimAny(JSON.stringify(example.value), `"'`);
-          lines.push(new Java.FreeText(stringValue));
+          comments.push(new Java.FreeTextExample(Util.trimAny(JSON.stringify(example.value), `"'`)));
         }
-
-        comments.push(new Java.FreeTextList(lines, false));
       }
     }
 
@@ -248,13 +230,6 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
     const commentLines: Java.AnyFreeText[] = [];
 
-    // if (example.description) {
-    //   commentLines.push(new Java.FreeTextParagraph(example.description));
-    // }
-    // if (example.summary) {
-    //   commentLines.push(new Java.FreeTextParagraph(example.summary));
-    // }
-
     const params = (example.params || []);
     if (params.length > 0) {
 
@@ -290,13 +265,10 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
 
       const lines: Java.FreeTextLine[] = [];
 
-      // if (example.result.description) {
-      //   lines.push(new Java.FreeTextLine(new Java.FreeText(`💡 ${example.result.description}`)));
-      // }
       if (example.result.summary && example.result.description) {
 
         // Only show summary if no description (since it will be shown as the title)
-        lines.push(new Java.FreeTextLine(new Java.FreeText(`💡 ${example.result.summary}`)));
+        lines.push(new Java.FreeTextLine(new Java.FreeTextSummary(`💡 ${example.result.summary}`)));
       }
 
       // WRONG CLASS!
@@ -319,7 +291,6 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
           new Java.FreeTextLine(['<strong>', `📤 Response`, '</strong>', ` - ${displayName}`]),
           ...lines,
         ])));
-        // commentLines.push(lines));
       }
     }
 
@@ -405,14 +376,15 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
     if (property.description && !this.hasComment(property.description, comments)) {
 
       // Sometimes a description can be set both to the property itself and its type.
-      this.addComment(new Java.FreeTextLine(property.description), comments);
+      this.addComment(new Java.FreeTextSummary(property.description), comments);
     }
 
     if (property.summary && !this.hasComment(property.summary, comments)) {
-      this.addComment(new Java.FreeTextLine(property.summary), comments);
+      this.addComment(new Java.FreeTextSummary(property.summary), comments);
     }
 
     if (property.deprecated) {
+      // TODO: Move to a specific FreeText class, so different targets can render it differently
       this.addComment(new Java.FreeTextLine('@deprecated'), comments);
     }
 

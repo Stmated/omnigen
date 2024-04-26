@@ -1,7 +1,7 @@
 
 type OnPopCallback = () => void;
 type OnPopRegistrator = (callback: OnPopCallback) => void;
-type PathItem = (string | number);
+export type PathItem = (string | number);
 type Interceptor = (obj: unknown, path: PathItem[], onPop: OnPopRegistrator) => typeof obj | undefined;
 
 /**

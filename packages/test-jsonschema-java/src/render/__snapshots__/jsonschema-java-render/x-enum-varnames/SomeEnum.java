@@ -8,9 +8,9 @@ public enum SomeEnum {
   One(1),
   Two(2),
   Three(3);
-  private String value;
+  private int value;
 
-  SomeEnum(String value) {
+  SomeEnum(int value) {
     this.value = value;
   }
 }

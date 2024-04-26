@@ -5,11 +5,13 @@ import {OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
+/**
+ * If field original name is same as current name, then remove the getter
+ */
 export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTransformer<Java.JavaAstRootNode> {
 
   transformAst(args: AstTransformerArguments<Java.JavaAstRootNode, PackageOptions & TargetOptions>): void {
 
-    const defaultReducer = args.root.createReducer();
     const gettersToRemove: Java.FieldBackedGetter[] = [];
     const fieldsToMakePublic: Java.Field[] = [];
 
@@ -33,7 +35,6 @@ export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTrans
             }
           }
 
-          // TODO: Remove 'private' from the field modifiers
           fieldsToMakePublic.push(field);
         }
 
@@ -41,6 +42,7 @@ export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTrans
       },
     });
 
+    const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
       ...defaultReducer,
 
@@ -49,7 +51,8 @@ export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTrans
         if (fieldsToMakePublic.includes(n)) {
 
           // NOTE: This should not be allowed later on; everything should be read-only and need to be fully re-created. No assignments like below.
-          n.modifiers = new Java.ModifierList(...n.modifiers.children.filter(it => it.type !== Java.ModifierType.PRIVATE)).withIdFrom(n.modifiers);
+          const newModifiers = n.modifiers.children.filter(it => it.type !== Java.ModifierType.PRIVATE);
+          n.modifiers = new Java.ModifierList(...newModifiers).withIdFrom(n.modifiers);
 
           return n;
         }

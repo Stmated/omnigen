@@ -15,12 +15,6 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
         const className = this.getUnknownClassName(n.omniType.unknownKind ?? args.options.unknownType);
         return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: className}, n.implementation).setId(n.id);
       },
-      reduceGenericType: (n, r) => {
-        return defaultReducer.reduceGenericType(n, r);
-      },
-      reduceFieldBackedGetter: (n, r) => {
-        return defaultReducer.reduceFieldBackedGetter(n, r);
-      },
       reduceEdgeType: (n, r) => {
 
         if (n.omniType.kind == OmniTypeKind.DICTIONARY) {

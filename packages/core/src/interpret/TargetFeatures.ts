@@ -1,3 +1,7 @@
+export enum StaticInnerTypeKind {
+  DEFAULT_STATIC,
+  DEFAULT_PARENT_ACCESSIBLE,
+}
 
 export interface TargetFeatures {
   /**
@@ -32,6 +36,13 @@ export interface TargetFeatures {
    * But in `TypeScript` any type outside of the current file must be imported.
    */
   forcedImports: boolean;
+
+  /**
+   * In `Java` the default is that an inner class can access the wrapping class.
+   *
+   * In `C#` the default is no access (static class).
+   */
+  staticInnerTypes: StaticInnerTypeKind;
 }
 
 /**
@@ -45,4 +56,5 @@ export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   nestedDeclarations: true,
   relativeImports: true,
   forcedImports: false,
+  staticInnerTypes: StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE,
 };

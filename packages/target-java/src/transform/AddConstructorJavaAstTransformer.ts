@@ -1,10 +1,9 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {LiteralValue, OmniModel, RootAstNode, TypeNode} from '@omnigen/core';
+import {AstNode, OmniModel, Reference, RootAstNode, TypeNode} from '@omnigen/core';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {FieldAccessorMode} from '../options';
 import {JavaUtil} from '../util';
 import * as Java from '../ast';
-import {TokenKind} from '../ast';
 
 /**
  * Adds a constructor to a class, based on what fields are required (final) and what fields are required from any potential supertype.
@@ -38,7 +37,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       if (requirements.fields.length > 0 || requirements.parameters.length > 0) {
 
         const constructorDeclaration = this.createConstructorDeclaration(
-          args.root, classDeclaration, requirements.fields, requirements.parameters,
+          args.root, requirements.fields, requirements.parameters,
         );
 
         classDeclaration.body.children.push(constructorDeclaration);
@@ -48,14 +47,13 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
 
   private createConstructorDeclaration(
     root: RootAstNode,
-    node: Java.ClassDeclaration,
     fields: Java.Field[],
     superParameters: Java.ConstructorParameter[],
   ): Java.ConstructorDeclaration {
 
     const blockExpressions: Java.AbstractJavaNode[] = [];
 
-    const requiredSuperParameters = this.addSuperConstructorCall(root, superParameters, node, blockExpressions);
+    const [requiredSuperParameters, superCall] = this.addSuperConstructorCall(root, superParameters);
     const parameters: Java.ConstructorParameter[] = [];
 
     for (let i = 0; i < fields.length; i++) {
@@ -65,52 +63,23 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       const parameter = this.createConstructorParameter(constructorFieldRef, constructorField.type, constructorField.identifier);
       parameters.push(parameter);
 
-      // const defaultValue = OmniUtil.getSpecifiedDefaultValue(constructorField.type.omniType);
-      // if (defaultValue !== undefined) {
-      //   blockExpressions.push(this.createAssignmentWithFallback(parameter, constructorField, defaultValue));
-      // } else {
-        blockExpressions.push(new Java.Statement(new Java.AssignExpression(
-          new Java.FieldReference(constructorField),
-          new Java.DeclarationReference(parameter),
-        )));
-      // }
+      blockExpressions.push(new Java.Statement(new Java.AssignExpression(
+        new Java.FieldReference(constructorField),
+        new Java.DeclarationReference(parameter),
+      )));
     }
 
     const allConstructorParameters = requiredSuperParameters.concat(parameters);
 
-    return new Java.ConstructorDeclaration(
+    const constructor = new Java.ConstructorDeclaration(
       new Java.ConstructorParameterList(...allConstructorParameters),
       new Java.Block(...blockExpressions),
     );
-  }
 
-  private createAssignmentWithFallback(
-    argumentDeclaration: Java.Parameter,
-    targetField: Java.Field,
-    defaultValue: LiteralValue,
-  ): Java.IfElseStatement {
+    // This will be moved to the constructor body in a later transformer.
+    constructor.superCall = superCall;
 
-    return new Java.IfElseStatement(
-      [
-        new Java.IfStatement(
-          new Java.Predicate(
-            new Java.DeclarationReference(argumentDeclaration),
-            TokenKind.NOT_EQUALS,
-            new Java.Literal(null),
-          ),
-          new Java.Block(new Java.Statement(new Java.AssignExpression(
-            new Java.FieldReference(targetField),
-            new Java.DeclarationReference(argumentDeclaration),
-          ))),
-        ),
-      ],
-      new Java.Block(
-        new Java.Statement(new Java.AssignExpression(
-          new Java.FieldReference(targetField),
-          new Java.Literal(defaultValue),
-        )),
-      ),
-    );
+    return constructor;
   }
 
   private static compareSuperClassHierarchy(model: OmniModel, a: Java.ClassDeclaration, b: Java.ClassDeclaration): number {
@@ -134,12 +103,11 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   private addSuperConstructorCall(
     root: RootAstNode,
     superConstructorParameters: Java.ConstructorParameter[],
-    node: Java.ClassDeclaration,
-    blockExpressions: Java.AbstractJavaNode[],
-  ): Java.ConstructorParameter[] {
+    // blockExpressions: Java.AbstractJavaNode[],
+  ): [Java.ConstructorParameter[], Java.SuperConstructorCall | undefined] {
 
     if (superConstructorParameters.length == 0) {
-      return [];
+      return [[], undefined];
     }
 
     const requiredSuperArguments: Java.ConstructorParameter[] = [];
@@ -155,42 +123,34 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
         const literalValue = type.value ?? null;
         superConstructorArguments.push(new Java.Literal(literalValue));
       } else if (OmniUtil.isPrimitive(type) && type.value !== undefined) {
-        // const literalValue = type.value ?? null;
-        const parameter = this.createConstructorParameter(superParameter.fieldRef, typeNode, superParameter.identifier);
+        const parameter = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier);
         requiredSuperArguments.push(parameter);
         superConstructorArguments.push(new Java.DeclarationReference(parameter));
-        // superConstructorArguments.push(new Java.TernaryExpression(
-        //   new Java.Predicate(
-        //     new Java.DeclarationReference(parameter),
-        //     TokenKind.EQUALS,
-        //     new Java.Literal(null),
-        //   ),
-        //   new Java.Literal(literalValue),
-        //   new Java.DeclarationReference(parameter),
-        // ));
       } else {
 
-        const constructorParam = this.createConstructorParameter(superParameter.fieldRef, typeNode, superParameter.identifier);
+        const constructorParam = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier);
 
         superConstructorArguments.push(new Java.DeclarationReference(constructorParam));
         requiredSuperArguments.push(constructorParam);
       }
     }
 
-    if (superConstructorArguments.length > 0) {
-      blockExpressions.push(
-        new Java.Statement(
-          new Java.SuperConstructorCall(
-            new Java.ArgumentList(...superConstructorArguments),
-          ),
-        ),
-      );
-    }
+    const superCall = (superConstructorArguments.length > 0)
+    ? new Java.SuperConstructorCall(new Java.ArgumentList(...superConstructorArguments))
+      : undefined;
 
-    return requiredSuperArguments;
+    // if (superConstructorArguments.length > 0) {
+    //   return ;
+    //
+    //   // blockExpressions.push(
+    //   //
+    //   // );
+    // }
+
+    return [requiredSuperArguments, superCall];
   }
 
-  private createConstructorParameter(fieldRef: Java.FieldReference, type: TypeNode, identifier: Java.Identifier): Java.ConstructorParameter {
+  private createConstructorParameter(fieldRef: Reference<AstNode>, type: TypeNode, identifier: Java.Identifier): Java.ConstructorParameter {
 
     const schemaIdentifier = identifier.original || identifier.value;
     const safeName = JavaUtil.getPrettyParameterName(schemaIdentifier);

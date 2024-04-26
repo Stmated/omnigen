@@ -79,7 +79,12 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
 
       visitMethodCall: (node, visitor) => {
 
-        const methodName = (node.methodName.original || node.methodName.value);
+        const methodName = node.target instanceof Java.MemberAccess
+          ? node.target.member instanceof Java.Identifier
+            ? (node.target.member.original || node.target.member.value)
+            : undefined
+          : undefined;
+
         const targetType = this.resolveTargetType(args.root, node.target);
 
         if (targetType && targetType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
@@ -140,7 +145,8 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
         throw new Error(`Do not know how to resolve the type of reference to '${resolved}'`);
       }
     } else if (exp instanceof Java.DeclarationReference) {
-      return this.resolveTargetType(root, exp.declaration);
+      const dec = exp.resolve(root);
+      return this.resolveTargetType(root, dec);
     } else if (exp instanceof Java.Parameter) {
       return this.resolveTargetType(root, exp.type);
     } else if (exp instanceof Java.VariableDeclaration) {
@@ -152,7 +158,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     return undefined;
   }
 
-  private getExceptionClasses(targetType: OmniHardcodedReferenceType, methodName: string): string[] {
+  private getExceptionClasses(targetType: OmniHardcodedReferenceType, methodName: string | undefined): string[] {
     switch (targetType.fqn) {
       case 'com.fasterxml.jackson.databind.ObjectMapper':
         switch (methodName) {

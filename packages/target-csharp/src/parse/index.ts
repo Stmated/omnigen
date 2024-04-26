@@ -1,0 +1,2 @@
+
+export const CSHARP_PARSE_PLACEHOLDER = 123;

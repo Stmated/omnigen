@@ -28,13 +28,13 @@ importers:
         version: 3.2.5
       syncpack:
         specifier: ^12.3.0
-        version: 12.3.0(typescript@5.4.3)
+        version: 12.3.0(typescript@5.5.0-dev.20240426)
       turbo:
         specifier: ^1.12.4
         version: 1.12.4
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
       vite:
         specifier: ^5.1.6
         version: 5.1.6
@@ -94,8 +94,8 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   apps/omnigen-cli:
     dependencies:
@@ -164,8 +164,8 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/config-typescript:
     dependencies:
@@ -246,8 +246,8 @@ importers:
         specifier: ^13.3.0
         version: 13.3.0
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/core-json:
     dependencies:
@@ -277,8 +277,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/core-log:
     dependencies:
@@ -299,8 +299,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/core-plugin:
     dependencies:
@@ -333,8 +333,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/core-util:
     dependencies:
@@ -421,8 +421,8 @@ importers:
         specifier: ^13.3.0
         version: 13.3.0
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/eslint-config-custom:
     dependencies:
@@ -498,8 +498,8 @@ importers:
         specifier: ^7.0.15
         version: 7.0.15
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/parser-openapi3:
     dependencies:
@@ -556,8 +556,8 @@ importers:
         specifier: ^4.7.2
         version: 4.7.2
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/parser-openrpc:
     dependencies:
@@ -614,8 +614,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/plugin:
     dependencies:
@@ -639,8 +639,48 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-custom
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
+
+  packages/target-csharp:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      '@omnigen/target-typescript':
+        specifier: workspace:*
+        version: link:../target-typescript
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      typescript:
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/target-impl-java-http:
     dependencies:
@@ -673,8 +713,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-custom
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/target-java:
     dependencies:
@@ -716,8 +756,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/target-typescript:
     dependencies:
@@ -753,8 +793,57 @@ importers:
         specifier: workspace:*
         version: link:../utils-test
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
+
+  packages/test-jsonschema-csharp:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-csharp':
+        specifier: workspace:*
+        version: link:../target-csharp
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      '@omnigen/target-typescript':
+        specifier: workspace:*
+        version: link:../target-typescript
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      java-parser:
+        specifier: ^2.3.0
+        version: 2.3.0
+      typescript:
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/test-jsonschema-java:
     dependencies:
@@ -796,8 +885,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/test-jsonschema-typescript:
     dependencies:
@@ -839,8 +928,8 @@ importers:
         specifier: workspace:*
         version: link:../utils-test
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/test-openrpc-java:
     dependencies:
@@ -885,8 +974,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/test-openrpc-typescript:
     dependencies:
@@ -934,8 +1023,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
   packages/utils-test:
     dependencies:
@@ -950,8 +1039,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-custom
       typescript:
-        specifier: ^5.4.3
-        version: 5.4.3
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
 
 packages:
 
@@ -2317,7 +2406,7 @@ packages:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
     dev: true
 
-  /cosmiconfig@9.0.0(typescript@5.4.3):
+  /cosmiconfig@9.0.0(typescript@5.5.0-dev.20240426):
     resolution: {integrity: sha512-itvL5h8RETACmOTFc4UfIyB2RfEHi71Ax6E/PivVxq9NseKbOWpeyHEOIbmAw1rs8Ak0VursQNww7lf7YtUwzg==}
     engines: {node: '>=14'}
     peerDependencies:
@@ -2330,7 +2419,7 @@ packages:
       import-fresh: 3.3.0
       js-yaml: 4.1.0
       parse-json: 5.2.0
-      typescript: 5.4.3
+      typescript: 5.5.0-dev.20240426
     dev: true
 
   /cross-spawn@7.0.3:
@@ -4038,7 +4127,7 @@ packages:
     dependencies:
       has-flag: 4.0.0
 
-  /syncpack@12.3.0(typescript@5.4.3):
+  /syncpack@12.3.0(typescript@5.5.0-dev.20240426):
     resolution: {integrity: sha512-Gz2uGn96OmGfVVlKztvFac1EJYjP+WptQ2ohA6Uf48C6qLkhSayhkdujKQ6q7bGOTy8HSGI0iDfwfCJu6wvRig==}
     engines: {node: '>=16'}
     hasBin: true
@@ -4046,7 +4135,7 @@ packages:
       '@effect/schema': 0.56.1(effect@2.0.0-next.62)(fast-check@3.15.0)
       chalk: 4.1.2
       commander: 11.1.0
-      cosmiconfig: 9.0.0(typescript@5.4.3)
+      cosmiconfig: 9.0.0(typescript@5.5.0-dev.20240426)
       effect: 2.0.0-next.62
       enquirer: 2.4.1
       fast-check: 3.15.0
@@ -4267,8 +4356,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  /typescript@5.4.3:
-    resolution: {integrity: sha512-KrPd3PKaCLr78MalgiwJnA25Nm8HAmdwN3mYUYZgG/wizIo9EainNVQI9/yDavtVFRN2h3k8uf3GLHuhDMgEHg==}
+  /typescript@5.5.0-dev.20240426:
+    resolution: {integrity: sha512-96cu+y3DrjSNhNSgB3t3nRiesCwBVjZpbjJ6DcQoCgt0crXXPrOMmJQH/E8TZ41U4JzaULD+cB1Z2owh5HANew==}
     engines: {node: '>=14.17'}
     hasBin: true
     dev: true

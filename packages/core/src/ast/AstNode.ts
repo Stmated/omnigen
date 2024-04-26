@@ -29,10 +29,17 @@ export interface AstNode {
   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode>;
 }
 
+export interface NodeResolveCtx<R, V extends AstVisitor<R>> {
+  map: Map<number, AstNode>;
+  ids: number[];
+  visitor: V;
+}
+
 export interface RootAstNode extends AstNode {
 
   createVisitor<R>(): AstVisitor<R>;
   createReducer(): Reducer<AstVisitor<unknown>>;
+  createIdVisitor(map: NodeResolveCtx<void, AstVisitor<void>>): Partial<AstVisitor<void>>;
   resolveNodeRef<T extends AstNode>(reference: Reference<T>): T;
 
   /**

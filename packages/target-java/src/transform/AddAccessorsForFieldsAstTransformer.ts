@@ -1,10 +1,9 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {AstNode, OmniTypeKind, RootAstNode} from '@omnigen/core';
+import {AstNode} from '@omnigen/core';
 import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast';
-import {AbstractObjectDeclaration, AnnotationList, CommentBlock, Identifier, JavaAstRootNode, ModifierType} from '../ast';
+import {AnnotationList, Identifier, JavaAstRootNode, ModifierType} from '../ast';
 import {JavaUtil} from '../util';
-import {DefaultStringJavaVisitor} from '../visit';
 
 export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransformer {
 
@@ -59,7 +58,7 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
   private static addAccessorForField(body: Java.Block, field: Java.Field) {
 
     // Move comments from field over to the getter.
-    const commentList: CommentBlock | undefined = field.comments;
+    const commentList: Java.Comment | undefined = field.comments;
     field.comments = undefined;
 
     // Move annotations from field over to the getter.
@@ -106,11 +105,16 @@ export class AddAccessorsForFieldsAstTransformer extends AbstractJavaAstTransfor
 
     const visitor = VisitorFactoryManager.create(defaultVisitor, {
 
-      visitField: () => {},
-      visitConstructor: () => {},
-      visitExtendsDeclaration: () => {},
-      visitTypeList: () => {},
-      visitFieldBackedSetter: () => {},
+      visitField: () => {
+      },
+      visitConstructor: () => {
+      },
+      visitExtendsDeclaration: () => {
+      },
+      visitTypeList: () => {
+      },
+      visitFieldBackedSetter: () => {
+      },
 
       visitMethodDeclarationSignature: node => {
         const methodName = node.identifier.value;

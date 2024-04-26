@@ -1,0 +1,33 @@
+{
+  "name": "@omnigen/test-jsonschema-csharp",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "tsc -w",
+    "lint": "TIMING=1 eslint src/**/*.ts* --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@omnigen/core": "workspace:*",
+    "@omnigen/core-log": "workspace:*",
+    "@omnigen/core-util": "workspace:*",
+    "@omnigen/parser-jsonschema": "workspace:*",
+    "@omnigen/target-java": "workspace:*",
+    "@omnigen/target-typescript": "workspace:*",
+    "@omnigen/target-csharp": "workspace:*",
+    "@omnigen/core-plugin": "workspace:*",
+    "@omnigen/plugin": "workspace:*",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@omnigen/config-typescript": "workspace:*",
+    "@omnigen/eslint-config-custom": "workspace:*",
+    "@omnigen/utils-test": "workspace:*",
+    "typescript": "^5.5.0-beta",
+    "java-parser": "^2.3.0"
+  }
+}

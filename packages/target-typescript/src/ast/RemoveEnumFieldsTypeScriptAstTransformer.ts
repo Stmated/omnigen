@@ -1,6 +1,6 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Java, JavaReducer} from '@omnigen/target-java';
+import {Java} from '@omnigen/target-java';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -8,10 +8,8 @@ export class RemoveEnumFieldsTypeScriptAstTransformer implements AstTransformer<
 
   transformAst(args: AstTransformerArguments<Java.JavaAstRootNode, PackageOptions & TargetOptions>): void {
 
-    const defaultReducer = args.root.createReducer();
-
-    const reducer: JavaReducer = {
-      ...defaultReducer,
+    const newRoot = args.root.reduce({
+      ...args.root.createReducer(),
       reduceEnumDeclaration: (n, r) => {
 
         n.body.children = n.body.children.filter(it => it instanceof Java.EnumItemList);
@@ -21,9 +19,8 @@ export class RemoveEnumFieldsTypeScriptAstTransformer implements AstTransformer<
 
         return n;
       },
-    };
+    });
 
-    const newRoot = args.root.reduce(reducer);
     if (newRoot) {
       args.root = newRoot;
     }

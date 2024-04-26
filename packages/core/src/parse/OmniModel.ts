@@ -378,7 +378,7 @@ export interface OmniPrimitiveBaseType<K extends OmniPrimitiveKinds = OmniPrimit
    */
   value?: OmniPrimitiveConstantValue | OmniPrimitiveConstantValue[] | undefined;
   /**
-   * aka 'const' / 'constant' -- cannot be set, it is a static, literal value that can be inlined without any issues.
+   * aka `const` -- cannot be set, it is a static, literal value that can be inlined without any issues.
    */
   literal?: boolean;
 }

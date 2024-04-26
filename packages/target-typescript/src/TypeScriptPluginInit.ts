@@ -44,7 +44,7 @@ import {
   ReorderMembersAstTransformer,
   SimplifyGenericsAstTransformer,
   ZodJavaOptions,
-  JavaPlugins, ResolveGenericSourceIdentifiersAstTransformer, RemoveConstantParametersAstTransformer,
+  JavaPlugins, ResolveGenericSourceIdentifiersAstTransformer, RemoveConstantParametersAstTransformer, ToConstructorBodySuperCallAstTransformer,
 } from '@omnigen/target-java';
 import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
 import {TYPESCRIPT_FEATURES} from './features';
@@ -100,7 +100,7 @@ export const ZodTypeScriptContextOut = ZodTypeScriptContextIn
 export const TypeScriptPluginInit = createPlugin(
   {
     name: 'ts-init', in: ZodTypeScriptInitContextIn, out: ZodTypeScriptInitContextOut,
-    action: ActionKind.SPLITS,
+    action: ActionKind.RUNTIME_REFINES,
     scoreModifier: LATER_IS_BETTER,
   },
   async ctx => {
@@ -179,6 +179,7 @@ export const TypeScriptPlugin = createPlugin(
       new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
       new AddConstructorJavaAstTransformer(),
+      new ToConstructorBodySuperCallAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
       new AddSubTypeHintsAstTransformer(),

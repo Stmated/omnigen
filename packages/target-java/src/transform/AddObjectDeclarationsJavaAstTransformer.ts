@@ -216,7 +216,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
               }
             }
 
-            let comment: Java.CommentBlock | undefined = undefined;
+            let comment: Java.Comment | undefined = undefined;
             if (type.enumDescriptions) {
 
               const commentText = type.enumDescriptions[enumName || `${item}`]
@@ -224,7 +224,7 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
                 ?? type.enumDescriptions[`${idx}`];
 
               if (commentText) {
-                comment = new Java.CommentBlock(new Java.FreeText(commentText));
+                comment = new Java.Comment(new Java.FreeText(commentText));
               } else {
                 logger.warn(`Could not find description of enum '${item}'`);
               }
@@ -253,10 +253,12 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
 
       body.children.push(field);
 
+      const parameterName = JavaUtil.getPrettyParameterName(fieldIdentifier.value);
+      const parameterIdentifier = new Java.Identifier(parameterName);
       const parameter = new Java.ConstructorParameter(
         new Java.FieldReference(field),
         fieldType,
-        fieldIdentifier,
+        parameterIdentifier,
       );
 
       body.children.push(

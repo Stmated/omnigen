@@ -10,7 +10,7 @@ import {
   OmniHardcodedReferenceType,
   OmniPrimitiveKinds,
   OmniProperty,
-  OmniType,
+  OmniType, OmniTypeKind,
   OmniUnknownType,
   Reducer,
   ReducerResult, Reference, RootAstNode,
@@ -20,7 +20,7 @@ import {
 import {AstFreeTextVisitor, JavaVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaReducer} from '../reduce';
-import {JavaAstUtils} from '../transform';
+import {FreeTextUtils} from '../util';
 
 export enum TokenKind {
   ASSIGN,
@@ -435,11 +435,11 @@ export class ParameterList extends AbstractJavaNode implements AstNodeWithChildr
 
 export class ConstructorParameter extends Parameter {
 
-  fieldRef: FieldReference;
+  readonly ref: Reference<AstNode>;
 
-  constructor(field: FieldReference, type: TypeNode, identifier: Identifier, annotations?: AnnotationList) {
+  constructor(ref: Reference<AstNode>, type: TypeNode, identifier: Identifier, annotations?: AnnotationList) {
     super(type, identifier, annotations);
-    this.fieldRef = field;
+    this.ref = ref;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -602,6 +602,7 @@ export class Block extends AbstractJavaNode implements AstNodeWithChildren {
   constructor(...children: AstNode[]) {
     super();
     this.children = children;
+    this.enclosed = true;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -623,6 +624,15 @@ export enum ModifierType {
   STATIC,
   FINAL,
   ABSTRACT,
+
+  READONLY,
+
+  /**
+   * In `C#` this is a `static readonly` which has a compile-time constant.
+   *
+   * In `Java` there is no such thing and can be replaced with closest `static final`.
+   */
+  CONST,
 }
 
 export class Modifier extends AbstractJavaNode {
@@ -681,46 +691,30 @@ export class FreeText extends AbstractFreeText {
 }
 
 export class FreeTexts extends AbstractFreeText implements AstNodeWithChildren<AnyFreeText> {
-  readonly children: AnyFreeText[];
+  readonly children: ReadonlyArray<AnyFreeText>;
 
   constructor(...children: FriendlyFreeTextIn[]) {
     super();
-    this.children = children.map(it => fromFriendlyFreeText(it));
+    this.children = children.map(it => FreeTextUtils.fromFriendlyFreeText(it));
   }
 
   visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
     return visitor.visitFreeTexts(this, visitor);
   }
 
-  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<FreeTexts> {
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
     return reducer.reduceFreeTexts(this, reducer);
   }
 }
 
 export type FriendlyFreeTextIn = AnyFreeText | string | Array<FriendlyFreeTextIn>;
 
-const fromFriendlyFreeText = (text: FriendlyFreeTextIn): AnyFreeText => {
-  if (typeof text == 'string') {
-    return new FreeText(text);
-  } else {
-    if (Array.isArray(text)) {
-      if (text.length == 1) {
-        return fromFriendlyFreeText(text[0]);
-      }
-
-      return new FreeTexts(...text.map(it => fromFriendlyFreeText(it)));
-    } else {
-      return text;
-    }
-  }
-};
-
 export class FreeTextLine extends AbstractFreeText {
   readonly child: AnyFreeText;
 
   constructor(text: FriendlyFreeTextIn) {
     super();
-    this.child = fromFriendlyFreeText(text);
+    this.child = FreeTextUtils.fromFriendlyFreeText(text);
   }
 
   visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
@@ -737,7 +731,7 @@ export class FreeTextIndent extends AbstractFreeText {
 
   constructor(text: FriendlyFreeTextIn) {
     super();
-    this.child = fromFriendlyFreeText(text);
+    this.child = FreeTextUtils.fromFriendlyFreeText(text);
   }
 
   visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
@@ -754,7 +748,7 @@ export class FreeTextParagraph extends AbstractFreeText {
 
   constructor(text: FriendlyFreeTextIn) {
     super();
-    this.child = fromFriendlyFreeText(text);
+    this.child = FreeTextUtils.fromFriendlyFreeText(text);
   }
 
   visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
@@ -772,7 +766,7 @@ export class FreeTextList extends AbstractFreeText {
 
   constructor(children: FriendlyFreeTextIn[], ordered?: boolean) {
     super();
-    this.children = children.map(it => fromFriendlyFreeText(it));
+    this.children = children.map(it => FreeTextUtils.fromFriendlyFreeText(it));
     this.ordered = ordered ?? false;
   }
 
@@ -792,7 +786,7 @@ export class FreeTextHeader extends AbstractFreeText {
   constructor(level: number, text: FriendlyFreeTextIn) {
     super();
     this.level = level;
-    this.child = fromFriendlyFreeText(text);
+    this.child = FreeTextUtils.fromFriendlyFreeText(text);
   }
 
   visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
@@ -811,7 +805,7 @@ export class FreeTextSection extends AbstractFreeText {
   constructor(header: FreeTextHeader, content: FriendlyFreeTextIn) {
     super();
     this.header = header;
-    this.content = fromFriendlyFreeText(content);
+    this.content = FreeTextUtils.fromFriendlyFreeText(content);
   }
 
   visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
@@ -820,6 +814,74 @@ export class FreeTextSection extends AbstractFreeText {
 
   reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
     return reducer.reduceFreeTextSection(this, reducer);
+  }
+}
+
+export class FreeTextExample extends AbstractFreeText {
+  readonly content: AnyFreeText;
+
+  constructor(content: FriendlyFreeTextIn) {
+    super();
+    this.content = FreeTextUtils.fromFriendlyFreeText(content);
+  }
+
+  visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextExample(this, visitor);
+  }
+
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
+    return reducer.reduceFreeTextExample(this, reducer);
+  }
+}
+
+export class FreeTextCode extends AbstractFreeText {
+  readonly content: AnyFreeText;
+
+  constructor(content: FriendlyFreeTextIn) {
+    super();
+    this.content = FreeTextUtils.fromFriendlyFreeText(content);
+  }
+
+  visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextCode(this, visitor);
+  }
+
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
+    return reducer.reduceFreeTextCode(this, reducer);
+  }
+}
+
+export class FreeTextSummary extends AbstractFreeText {
+  readonly content: AnyFreeText;
+
+  constructor(content: FriendlyFreeTextIn) {
+    super();
+    this.content = FreeTextUtils.fromFriendlyFreeText(content);
+  }
+
+  visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextSummary(this, visitor);
+  }
+
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
+    return reducer.reduceFreeTextSummary(this, reducer);
+  }
+}
+
+export class FreeTextRemark extends AbstractFreeText {
+  readonly content: AnyFreeText;
+
+  constructor(content: FriendlyFreeTextIn) {
+    super();
+    this.content = FreeTextUtils.fromFriendlyFreeText(content);
+  }
+
+  visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextRemark(this, visitor);
+  }
+
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
+    return reducer.reduceFreeTextRemark(this, reducer);
   }
 }
 
@@ -889,14 +951,26 @@ export type AnyFreeText =
   | FreeTextPropertyLink
   | FreeTextMethodLink
   | FreeTextTypeLink
-  | FreeTexts;
+  | FreeTexts
+  | FreeTextExample
+  | FreeTextCode
+  | FreeTextSummary
+  | FreeTextRemark;
+
+export enum CommentKind {
+  SINGLE,
+  MULTI,
+  DOC,
+}
 
 export class Comment extends AbstractJavaNode {
-  text: AnyFreeText;
+  readonly text: AnyFreeText;
+  readonly kind: CommentKind;
 
-  constructor(text: AnyFreeText) {
+  constructor(text: FriendlyFreeTextIn, kind = CommentKind.DOC) {
     super();
-    this.text = text;
+    this.text = FreeTextUtils.fromFriendlyFreeText(text);
+    this.kind = kind;
   }
 
   visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
@@ -908,23 +982,6 @@ export class Comment extends AbstractJavaNode {
   }
 }
 
-export class CommentBlock extends AbstractJavaNode {
-  text: AnyFreeText;
-
-  constructor(text: FriendlyFreeTextIn) {
-    super();
-    this.text = fromFriendlyFreeText(text);
-  }
-
-  visit<R>(visitor: JavaVisitor<R>): VisitResult<R> {
-    return visitor.visitCommentBlock(this, visitor);
-  }
-
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<CommentBlock> {
-    return reducer.reduceCommentBlock(this, reducer);
-  }
-}
-
 /**
  * NOTE: Split into Field and FieldDeclaration? Or rename it? ArgumentDeclaration and VariableDeclaration precedence
  */
@@ -932,7 +989,7 @@ export class Field extends AbstractJavaNode {
   identifier: Identifier;
   type: TypeNode;
   initializer?: AbstractJavaExpression | undefined;
-  comments?: CommentBlock | undefined;
+  comments?: Comment | undefined;
   modifiers: ModifierList;
   annotations?: AnnotationList | undefined;
   property?: OmniProperty;
@@ -959,7 +1016,7 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
 
   identifier: Identifier;
   type: TypeNode;
-  comments?: CommentBlock | undefined;
+  comments?: Comment | undefined;
   annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
   parameters?: ParameterList | undefined;
@@ -971,7 +1028,7 @@ export class MethodDeclarationSignature extends AbstractJavaNode {
     parameters?: ParameterList,
     modifiers?: ModifierList,
     annotations?: AnnotationList,
-    comments?: CommentBlock,
+    comments?: Comment,
     throws?: TypeList,
   ) {
     super();
@@ -1079,7 +1136,7 @@ export class FieldReference extends AbstractJavaExpression implements Reference<
     return visitor.visitFieldReference(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<FieldReference> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceFieldReference(this, reducer);
   }
 }
@@ -1136,10 +1193,16 @@ export class FieldBackedGetter extends AbstractJavaNode {
 
   readonly fieldRef: Reference<Field>;
   readonly annotations?: AnnotationList | undefined;
-  readonly comments?: CommentBlock | undefined;
+  readonly comments?: Comment | undefined;
+
+  /**
+   * TODO: This is too specific for Java, since other languages will handle getters in other ways.
+   *        Think of a better way to abstract getters -- maybe just remove this and instead rely on some other method?
+   *        Perhaps the "getterName" should be a dynamic identifier, like a "GetterIdentifier" which is rendered differently per language?
+   */
   readonly getterName?: Identifier | undefined;
 
-  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: CommentBlock, getterName?: Identifier) {
+  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: Comment, getterName?: Identifier) {
     super();
     this.fieldRef = fieldRef;
     this.annotations = annotations;
@@ -1160,9 +1223,9 @@ export class FieldBackedSetter extends AbstractJavaNode {
 
   readonly fieldRef: Reference<Field>;
   readonly annotations?: AnnotationList | undefined;
-  readonly comments?: CommentBlock | undefined;
+  readonly comments?: Comment | undefined;
 
-  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: CommentBlock) {
+  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: Comment) {
     super();
     this.fieldRef = fieldRef;
     this.annotations = annotations;
@@ -1254,7 +1317,7 @@ export class ImplementsDeclaration extends AbstractJavaNode {
 export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> extends AbstractJavaNode implements Identifiable, Typed {
   name: Identifier;
   type: TypeNode<T>;
-  comments?: CommentBlock | undefined;
+  comments?: Comment | undefined;
   annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
   extends?: ExtendsDeclaration | undefined;
@@ -1314,7 +1377,8 @@ export class ConstructorDeclaration extends AbstractJavaNode {
   modifiers: ModifierList;
   parameters?: ConstructorParameterList | undefined;
   annotations?: AnnotationList | undefined;
-  comments?: CommentBlock | undefined;
+  comments?: Comment | undefined;
+  superCall?: SuperConstructorCall | undefined;
   body?: Block | undefined;
 
   constructor(parameters?: ConstructorParameterList, body?: Block, modifiers?: ModifierList) {
@@ -1425,7 +1489,7 @@ export class EnumDeclaration extends AbstractObjectDeclaration<OmniEnumType> {
     return visitor.visitEnumDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<EnumDeclaration> {
+  reduce(reducer: Reducer<JavaVisitor<unknown>>): ReducerResult<EnumDeclaration | ClassDeclaration> {
     return reducer.reduceEnumDeclaration(this, reducer);
   }
 }
@@ -1510,6 +1574,9 @@ export class TernaryExpression extends AbstractJavaNode {
   }
 }
 
+/**
+ * TODO: Replace `TypeNode` with `TypePath` which then each separate language can handle its own way
+ */
 export class ImportStatement extends AbstractJavaNode {
   type: TypeNode;
 
@@ -1581,13 +1648,13 @@ export class SuperConstructorCall extends AbstractJavaNode {
 
 export class MethodCall extends AbstractJavaNode {
   target: AbstractJavaExpression;
-  methodName: Identifier;
+  // methodName: Identifier;
   methodArguments?: ArgumentList;
 
-  constructor(target: AbstractJavaExpression, methodName: Identifier, methodArguments: ArgumentList) {
+  constructor(target: AbstractJavaExpression, methodArguments: ArgumentList) {
     super();
     this.target = target;
-    this.methodName = methodName;
+    // this.methodName = methodName;
     this.methodArguments = methodArguments;
   }
 
@@ -1673,6 +1740,9 @@ export class ClassName extends AbstractJavaExpression {
   }
 }
 
+/**
+ * TODO: Rename into something more telling for what it does, which is reference the compile-time class in runtime. So reference to `Foo` would render as `Foo.class`.
+ */
 export class ClassReference extends AbstractJavaExpression {
   className: ClassName;
 
@@ -1708,3 +1778,172 @@ export class DecoratingTypeNode extends AbstractJavaNode implements TypeNode {
     return reducer.reduceDecoratingTypeNode(this, reducer);
   }
 }
+
+export class NamespaceBlock extends AbstractJavaNode {
+
+  readonly block: Block;
+
+  constructor(block: Block) {
+    super();
+    this.block = block;
+  }
+
+  visit<R>(v: JavaVisitor<R>): VisitResult<R> {
+    return v.visitNamespaceBlock(this, v);
+  }
+
+  reduce(r: Reducer<JavaVisitor<unknown>>): ReducerResult<NamespaceBlock> {
+    return r.reduceNamespaceBlock(this, r);
+  }
+}
+
+export class Namespace extends AbstractJavaNode implements Identifiable {
+
+  readonly name: Identifier;
+  readonly block: NamespaceBlock;
+
+  constructor(name: Identifier, block: NamespaceBlock) {
+    super();
+    this.name = name;
+    this.block = block;
+  }
+
+  visit<R>(v: JavaVisitor<R>): VisitResult<R> {
+    return v.visitNamespace(this, v);
+  }
+
+  reduce(r: Reducer<JavaVisitor<unknown>>): ReducerResult<Namespace> {
+    return r.reduceNamespace(this, r);
+  }
+}
+
+/**
+ * For representing things like `java.util.Comparator` or `{Foo} from '../some/path'`.
+ *
+ * No path will "work" between languages, but it will more likely render properly than using string splits and whatnot.
+ */
+export class TypePath extends AbstractJavaNode {
+
+  readonly parts: Identifier[];
+  readonly leaf: TypeNode;
+
+  constructor(parts: Identifier[], leaf: TypeNode) {
+    super();
+    this.parts = parts;
+    this.leaf = leaf;
+  }
+
+  visit<R>(v: JavaVisitor<R>): VisitResult<R> {
+    return v.visitTypeNamespace(this, v);
+  }
+
+  reduce(r: Reducer<JavaVisitor<unknown>>): ReducerResult<TypePath> {
+    return r.reduceTypeNamespace(this, r);
+  }
+}
+
+/**
+ * Representing a callback/delegate/functional-interface -- in Java perhaps a `java.util.Function<T, R>` or `java.util.Supplier<R>`, in C# perhaps a `System.Func<T, R>` or `System.Action<T>`.
+ *
+ * It will be up to the renderer how to represent the delegate.
+ */
+export class Delegate extends AbstractJavaNode implements TypeNode {
+
+  readonly parameterTypes: TypeNode[];
+  readonly returnType: TypeNode;
+
+  constructor(parameterTypes: TypeNode[], returnType: TypeNode) {
+    super();
+    this.parameterTypes = parameterTypes;
+    this.returnType = returnType;
+  }
+
+  get omniType(): OmniType {
+    // NOTE: This should be something else. Perhaps a new type kind that is "function" so we can have a first-class type for a function
+    return {
+      kind: OmniTypeKind.UNKNOWN,
+    };
+  }
+
+  visit<R>(v: JavaVisitor<R>): VisitResult<R> {
+    return v.visitDelegate(this, v);
+  }
+
+  reduce(r: Reducer<JavaVisitor<unknown>>): ReducerResult<Delegate | TypeNode> {
+    return r.reduceDelegate(this, r);
+  }
+}
+
+/**
+ * Calling a delegate can be different from calling a regular function, depending on target language.
+ *
+ * This abstraction will either leave the correct call-site syntax up to the renderer, or let some reducer replace it with another specialized node.
+ */
+export class DelegateCall extends AbstractJavaNode {
+
+  readonly target: AbstractJavaExpression;
+  readonly delegateRef: GenericRef<Delegate>;
+  readonly args: ArgumentList;
+
+  constructor(target: AbstractJavaExpression, delegateRef: GenericRef<Delegate>, args: ArgumentList) {
+    super();
+    this.target = target;
+    this.delegateRef = delegateRef;
+    this.args = args;
+  }
+
+  visit<R>(v: JavaVisitor<R>): VisitResult<R> {
+    return v.visitDelegateCall(this, v);
+  }
+
+  reduce(r: Reducer<JavaVisitor<unknown>>): ReducerResult<DelegateCall | MethodCall> {
+    return r.reduceDelegateCall(this, r);
+  }
+}
+
+export class GenericRef<T extends AstNode> extends AbstractJavaNode implements Reference<T> {
+
+  readonly targetId: number;
+
+  constructor(target: T | number) {
+    super();
+    this.targetId = (typeof target === 'number') ? target : target.id;
+  }
+
+  visit<R>(v: JavaVisitor<R>): VisitResult<R> {
+    return v.visitGenericRef(this, v);
+  }
+
+  reduce(r: Reducer<JavaVisitor<unknown>>): ReducerResult<GenericRef<T>> {
+    // NOTE: Someday we should get rid of this bad cast, since it could lie.
+    return r.reduceGenericRef(this, r) as ReducerResult<GenericRef<T>>;
+  }
+
+  resolve(root: RootAstNode): T {
+    return root.resolveNodeRef(this);
+  }
+}
+
+export class MemberAccess extends AbstractJavaNode {
+
+  readonly owner: AstNode;
+  readonly member: AstNode;
+
+  constructor(owner: AstNode, member: AstNode) {
+    super();
+    this.owner = owner;
+    this.member = member;
+  }
+
+  visit<R>(v: JavaVisitor<R>): VisitResult<R> {
+    return v.visitMemberAccess(this, v);
+  }
+
+  reduce(r: Reducer<JavaVisitor<unknown>>): ReducerResult<AstNode> {
+    return r.reduceMemberAccess(this, r);
+  }
+}
+
+// TODO:
+//  * proper type namespace
+//  * Function -> Func -- introduce new TypeNode which is a generic "delegate"/"functional interface" which can be properly rendered by different languages

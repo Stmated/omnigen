@@ -1,15 +1,15 @@
 import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/core';
 import * as Java from '../ast';
-import {JavaAstRootNode, TokenKind} from '../ast';
+import {CommentKind, JavaAstRootNode, TokenKind} from '../ast';
 import {createJavaVisitor, DefaultJavaVisitor, JavaVisitor} from '../visit';
 import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil} from '@omnigen/core-util';
+import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import {JavaUtil} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-function getModifierString(type: Java.ModifierType): 'public' | 'private' | 'protected' | 'final' | 'static' | 'abstract' | '' {
+function getModifierString(type: Java.ModifierType): string {
   switch (type) {
     case Java.ModifierType.PUBLIC:
       return 'public';
@@ -25,6 +25,10 @@ function getModifierString(type: Java.ModifierType): 'public' | 'private' | 'pro
       return 'static';
     case Java.ModifierType.ABSTRACT:
       return 'abstract';
+    case Java.ModifierType.READONLY:
+      return 'final';
+    case Java.ModifierType.CONST:
+      return 'final';
   }
 }
 
@@ -63,7 +67,7 @@ function getTokenTypeString(type: Java.TokenKind): string {
 
 export type JavaRenderer = JavaVisitor<string> & Renderer;
 
-const join = (result: VisitResult<string>): string => {
+export const join = (result: VisitResult<string>): string => {
   if (Array.isArray(result)) {
     return result.map(it => join(it)).join('');
   } else {
@@ -137,9 +141,9 @@ const visitCommonTypeDeclaration = (
       typeDeclarationContent.push('\n');
     }
 
-    typeDeclarationContent.push(`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations} {\n`);
+    typeDeclarationContent.push(`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations}`);
     typeDeclarationContent.push(visitor.visitObjectDeclarationBody(node, visitor));
-    typeDeclarationContent.push(('}\n\n'));
+    typeDeclarationContent.push('\n');
 
     return typeDeclarationContent;
   } finally {
@@ -153,25 +157,31 @@ const getIndentation = (d: number): string => {
 
 export interface JavaRendererOptions {
   fileExtension: string;
+  blockPrefix?: string;
 }
 
 export const DefaultJavaRendererOptions: JavaRendererOptions = {
   fileExtension: 'java',
+  blockPrefix: ' ',
 };
 
-export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, renderOptions = DefaultJavaRendererOptions): JavaRenderer => {
+export interface JavaRenderContext {
+  insideDeclaration?: boolean;
+  objectDecStack: Java.AbstractObjectDeclaration[];
+  // TODO: Maybe change so that renderer either returns string OR the compilation unit.
+  units: RenderedCompilationUnit[];
+}
 
-  let blockDepth = 0;
-  let insideDeclaration = false;
-  const patternLineStart = new RegExp(/(?<!$)^/mg);
-  const tokenPrefix = ' ';
-  const tokenSuffix = ' ';
-  const objectDecStack: Java.AbstractObjectDeclaration[] = [];
+const patternLineStart = new RegExp(/(?<!$)^/mg);
+const tokenPrefix = ' ';
+const tokenSuffix = ' ';
 
-  /**
-   * TODO: Maybe change so that renderer either returns string OR the compilation unit.
-   */
-  const units: RenderedCompilationUnit[] = [];
+export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, renderOptions = DefaultJavaRendererOptions, ctxIn?: JavaRenderContext): JavaRenderer => {
+
+  const ctx: JavaRenderContext = ctxIn ?? {
+    objectDecStack: [],
+    units: [],
+  };
 
   return {
     ...createJavaVisitor(),
@@ -181,9 +191,9 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
         return [];
       }
 
-      units.length = 0;
+      ctx.units.length = 0;
       node.visit(visitor);
-      return units;
+      return ctx.units;
     },
 
     visitFieldReference: (node, visitor) => {
@@ -200,7 +210,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     visitDeclarationReference: (n, v) => {
 
       const resolved = root.resolveNodeRef(n);
-      if (resolved) { // } instanceof Java.Parameter || resolved instanceof Java.VariableDeclaration) {
+      if (resolved) {
         return `${render(resolved.identifier, v)}`;
       } else {
         // ???
@@ -212,55 +222,56 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
      * TODO: Should this be used together with the field reference above, so 'this.' is not hard coded
      */
     visitSelfReference: () => `this`,
-    visitVariableDeclaration: (node, visitor) => {
+    visitVariableDeclaration: (n, v) => {
 
-      const constant = (node.constant) ? 'final ' : '';
-      const type = (options.preferVar || !node.type) ? 'var ' : `${render(node.type, visitor)} `;
-      const name = render(node.identifier, visitor);
+      const constant = (n.constant) ? 'final ' : '';
+      const type = (options.preferVar || !n.type) ? 'var ' : `${render(n.type, v)} `;
+      const name = render(n.identifier, v);
 
-      insideDeclaration = true;
-      const initializer = node.initializer ? ` = ${render(node.initializer, visitor)}` : '';
-      insideDeclaration = false;
-
-      return `${constant}${type}${name}${initializer}`;
+      try {
+        ctx.insideDeclaration = true;
+        const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
+        return `${constant}${type}${name}${initializer}`;
+      } finally {
+        ctx.insideDeclaration = false;
+      }
     },
 
-    visitReturnStatement: (node, visitor) => (`return ${render(node.expression, visitor)}`),
-    visitToken: node => (`${tokenPrefix}${getTokenTypeString(node.type)}${tokenSuffix}`),
+    visitReturnStatement: (n, v) => (`return ${render(n.expression, v)}`),
+    visitToken: n => (`${tokenPrefix}${getTokenTypeString(n.type)}${tokenSuffix}`),
 
-    visitConstructor: (node, visitor) => {
-      const annotations = node.annotations ? `${render(node.annotations, visitor)}\n` : '';
-      const body = node.body ? `\n${render(node.body, visitor)}` : '';
-      const modifiers = node.modifiers.children.length > 0 ? `${render(node.modifiers, visitor)} ` : '';
+    visitConstructor: (n, v) => {
+      const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
+      const body = n.body ? `${render(n.body, v)}` : '{}';
+      const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
 
-      const owner = objectDecStack[objectDecStack.length - 1];
+      const owner = ctx.objectDecStack[ctx.objectDecStack.length - 1];
+      const parameters = render(n.parameters, v);
 
-      return `\n${annotations}${modifiers}${render(owner.name, visitor)}(${render(node.parameters, visitor)}) {${body}}\n\n`;
+      return `\n${annotations}${modifiers}${render(owner.name, v)}(${parameters})${body}\n`;
     },
-    visitConstructorParameterList: (node, visitor) => renderListWithWrapping(node.children, visitor),
+    visitConstructorParameterList: (n, v) => renderListWithWrapping(n.children, v),
     visitConstructorParameter: (n, v) => v.visitParameter(n, v),
 
     visitBlock: (n, visitor) => {
-      blockDepth++;
       const indentation = getIndentation(1);
       const blockContent = join(n.children.map(it => it.visit(visitor))).trim();
-      blockDepth--;
 
       const indentedContent = blockContent.replace(patternLineStart, indentation);
       if (n.enclosed) {
         if (n.compact) {
           return `{ ${indentedContent.trim()} }`;
         } else {
-          return `{ ${indentedContent} }\n`;
+          return `${renderOptions.blockPrefix ?? ''}{\n${indentedContent}\n}\n`;
         }
       } else {
-        return indentedContent + '\n';
+        return `${indentedContent}\n`;
       }
     },
 
-    visitClassDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'class', objectDecStack),
-    visitInterfaceDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'interface', objectDecStack),
-    visitEnumDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'enum', objectDecStack),
+    visitClassDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'class', ctx.objectDecStack),
+    visitInterfaceDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'interface', ctx.objectDecStack),
+    visitEnumDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'enum', ctx.objectDecStack),
 
     visitGenericTypeDeclaration(node, visitor) {
 
@@ -287,24 +298,34 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       return `<${genericTypes.join(', ')}>`;
     },
 
-    visitCommentBlock: (node, visitor) => {
+    visitComment: (node, visitor) => {
+
+      if (node.kind === CommentKind.SINGLE) {
+
+        const commentContent = join(node.text.visit(visitor))
+          .replaceAll('\r', '')
+          .replaceAll('\n', '\n// ')
+          .trim();
+
+        return `// ${commentContent}`;
+
+      } else if (node.kind === CommentKind.DOC) {
+
+        const text = join(node.text.visit(visitor))
+          .trim()
+          .replaceAll('\r', '')
+          .replaceAll('\n', '\n * ');
+
+        return `/**\n * ${text}\n */`;
+      }
 
       const text = join(node.text.visit(visitor))
         .trim()
-        .replaceAll('\r', '')
-        .replaceAll('\n', '\n * ');
+        // .replaceAll('\r', '')
+        // .replaceAll('\n', '\n  ')
+      ;
 
-      return `/**\n * ${text}\n */`;
-    },
-
-    visitComment: (node, visitor) => {
-
-      const commentContent = join(node.text.visit(visitor))
-        .replaceAll('\r', '')
-        .replaceAll('\n', '\n// ')
-        .trim();
-
-      return `// ${commentContent}`;
+      return `/* ${text} */`;
     },
 
     visitCompilationUnit: (node, visitor) => {
@@ -315,11 +336,30 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
         node.children.map(it => it.visit(visitor)),
       ]);
 
+      let unitName: string | undefined = node.name;
+      if (!unitName) {
+
+        // NOTE: This is quite ugly. There needs to be a better way to figure out the name/fileName of the unit.
+        const visitor = VisitorFactoryManager.create(root.createVisitor<string>(), {
+          visitObjectDeclaration: objNode => {
+            if (objNode.name.value) {
+              throw new AbortVisitingWithResult(objNode.name.value);
+            }
+          },
+        });
+
+        unitName = VisitResultFlattener.visitWithSingularResult(visitor, node, '');
+
+        if (!unitName) {
+          unitName = node.children[0].name.value;
+        }
+      }
+
       // This was a top-level class/interface, so we will output it as a compilation unit.
-      units.push({
+      ctx.units.push({
         content: content,
-        name: node.children[0].name.value,
-        fileName: `${node.children[0].name.value}.${renderOptions.fileExtension}`,
+        name: unitName,
+        fileName: `${unitName}.${renderOptions.fileExtension}`,
         directories: node.packageDeclaration.fqn.split('.'),
         node: node,
       });
@@ -356,14 +396,14 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       return undefined;
     },
 
-    visitImplementsDeclaration: (node, visitor) => render(node.types, visitor),
-    visitExtendsDeclaration: (node, visitor) => render(node.types, visitor),
+    visitImplementsDeclaration: (n, v) => render(n.types, v),
+    visitExtendsDeclaration: (n, v) => render(n.types, v),
 
-    visitEnumItem: (node, visitor) => {
+    visitEnumItem: (n, v) => {
 
-      const comment = node.comment ? `${render(node.comment, visitor)}\n` : '';
-      const key = render(node.identifier, visitor);
-      const value = render(node.value, visitor);
+      const comment = n.comment ? `${render(n.comment, v)}\n` : '';
+      const key = render(n.identifier, v);
+      const value = render(n.value, v);
       return [
         comment,
         `${key}(${value})`,
@@ -372,30 +412,30 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
 
     visitEnumItemList: (node, visitor) => `${node.children.map(it => render(it, visitor)).join(',\n')};\n`,
 
-    visitMethodDeclaration: (node, visitor) => {
-      const signature = render(node.signature, visitor);
-      const body = node.body ? render(node.body, visitor) : '';
+    visitMethodDeclaration: (n, v) => {
+      const signature = render(n.signature, v);
+      const body = n.body ? render(n.body, v) : '';
 
       return [
-        `${signature} {\n`,
+        `${signature}`,
         body,
-        '}\n\n',
+        '\n',
       ];
     },
 
-    visitMethodDeclarationSignature: (node, visitor) => {
-      const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
-      const annotations = (node.annotations && node.annotations.children.length > 0) ? `${render(node.annotations, visitor)}\n` : '';
-      const modifiers = render(node.modifiers, visitor);
-      const type = render(node.type, visitor);
-      const name = render(node.identifier, visitor);
-      const parameters = node.parameters ? render(node.parameters, visitor) : '';
-      const throws = node.throws ? ` throws ${render(node.throws, visitor)}` : '';
+    visitMethodDeclarationSignature: (n, v) => {
+      const comments = n.comments ? `${render(n.comments, v)}\n` : '';
+      const annotations = (n.annotations && n.annotations.children.length > 0) ? `${render(n.annotations, v)}\n` : '';
+      const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
+      const type = render(n.type, v);
+      const name = render(n.identifier, v);
+      const parameters = n.parameters ? render(n.parameters, v) : '';
+      const throws = n.throws ? ` throws ${render(n.throws, v)}` : '';
 
       return [
         comments,
         annotations,
-        `${modifiers} ${type} ${name}(${parameters})${throws}`,
+        `${modifiers}${type} ${name}(${parameters})${throws}`,
       ];
     },
 
@@ -408,15 +448,15 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     visitMethodCall: (node, visitor) => {
 
       const targetString = render(node.target, visitor);
-      const methodString = render(node.methodName, visitor);
+      // const methodString = render(node.methodName, visitor);
       const argumentsString = render(node.methodArguments, visitor);
 
-      if (insideDeclaration && (node.target instanceof Java.MethodCall)) {
-        const indentation = getIndentation(2);
-        return `${targetString}\n${indentation}.${methodString}(${argumentsString})`;
-      } else {
-        return `${targetString}.${methodString}(${argumentsString})`;
-      }
+      // if (ctx.insideDeclaration && (node.target instanceof Java.MethodCall)) {
+      //   const indentation = getIndentation(2);
+      //   return `${targetString}\n${indentation}.${methodString}(${argumentsString})`;
+      // } else {
+      return `${targetString}(${argumentsString})`;
+      // }
     },
 
     visitStatement: (node, visitor) => [
@@ -468,14 +508,10 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     visitField: (node, visitor) => {
       const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
       const annotations = node.annotations ? `${render(node.annotations, visitor)}\n` : '';
-      let modifiers = render(node.modifiers, visitor);
+      const modifiers = node.modifiers.children.length > 0 ? `${render(node.modifiers, visitor)} ` : '';
       const typeName = render(node.type, visitor);
       const initializer = node.initializer ? ` = ${render(node.initializer, visitor)}` : '';
       const identifier = render(node.identifier, visitor);
-
-      if (modifiers.length > 0) {
-        modifiers += ' ';
-      }
 
       return [
         comments,
@@ -515,7 +551,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       if (localName) {
         return localName;
       } else {
-        const path = objectDecStack.map(it => it.name.value).join(' -> ');
+        const path = ctx.objectDecStack.map(it => it.name.value).join(' -> ');
         throw new Error(`Local name must be set. Package name transformer not ran for ${OmniUtil.describe(node.omniType)} inside ${path}`);
       }
     },
@@ -581,7 +617,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     },
 
     visitSuperConstructorCall: (node, visitor) => `super(${render(node.arguments, visitor)})`,
-    visitIfStatement: (node, visitor) => `if (${render(node.predicate, visitor)}) {\n${render(node.body, visitor)}}\n`,
+    visitIfStatement: (node, visitor) => `if (${render(node.predicate, visitor)})${render(node.body, visitor)}`,
 
     visitPredicate(node, visitor) {
 
@@ -603,7 +639,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     visitIfElseStatement: (node, visitor) => {
 
       const ifs = node.ifStatements.map(it => render(it, visitor));
-      const el = node.elseBlock ? ` else {\n${render(node.elseBlock, visitor)}}\n` : '';
+      const el = node.elseBlock ? ` else ${render(node.elseBlock, visitor)}` : '';
 
       return `${ifs.join('else ').trim()}${el}`;
     },
@@ -638,7 +674,8 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
     visitCast: (node, visitor) => `((${render(node.toType, visitor)}) ${render(node.expression, visitor)})`,
     visitFreeText: node => replaceWithHtml(node.text),
     visitFreeTextHeader: (node, visitor) => `\n<h${node.level}>${join(node.child.visit(visitor))}</h${node.level}>\n`,
-    visitFreeTextParagraph: (node, visitor) => `<p>${join(node.child.visit(visitor))}</p>\n`,
+    visitFreeTextParagraph: (node, visitor) => `\n<p>${join(node.child.visit(visitor))}</p>\n`,
+    visitFreeTextRemark: (node, visitor) => `${join(node.content.visit(visitor))}`,
 
     visitFreeTextSection: (node, visitor) => {
       const indentation = getIndentation(1);
@@ -648,7 +685,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
 
       const indentedBlock = blockContent.replace(patternLineStart, indentation);
 
-      return `<section>\n${indentedBlock}\n</section>\n`;
+      return `<section>${indentedBlock}\n</section>\n`;
     },
 
     visitFreeTextLine: (node, visitor) => `${join(node.child.visit(visitor))}\n`,
@@ -683,5 +720,22 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
 
       return `<${tag}>\n${indent}<li>${lines}</li>\n</${tag}>`;
     },
+    visitFreeTextCode: (n, v) => `{@code ${render(n.content, v)}}`,
+    visitFreeTextExample: (n, v) => `{@code ${render(n.content, v)}}`,
+    visitFreeTextSummary: (n, v) => `${render(n.content, v)}`,
+
+    visitNamespace: (n, v) => {
+      return `package ${join(n.name.visit(v))};\n${join(n.block.visit(v))}`;
+    },
+    visitNamespaceBlock: (n, v) => n.block.children.map(it => it.visit(v)),
+
+    visitDelegate: () => {
+      throw new Error(`Should have been replaced with a generic type`);
+    },
+    visitDelegateCall: () => {
+      throw new Error(`Should have been replaced with a method call`);
+    },
+
+    visitMemberAccess: (n, v) => `${n.owner.visit(v)}.${n.member.visit(v)}`,
   };
 };

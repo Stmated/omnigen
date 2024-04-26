@@ -1,15 +1,17 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {Java, JavaUtil} from '../';
 import {AssignExpression, Block, DeclarationReference, EdgeType, Identifier, MethodDeclarationSignature, Parameter, ParameterList, ReturnStatement, Statement} from '../ast';
 import {OmniTypeKind} from '@omnigen/core';
 
+/**
+ * Replace generic things like "getter" and "setter" into specific nodes for Java (such as methods)
+ */
 export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
-      ...defaultReducer,
+      ...args.root.createReducer(),
       reduceFieldBackedGetter: (n, r) => {
 
         const field = args.root.resolveNodeRef(n.fieldRef);

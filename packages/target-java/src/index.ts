@@ -1,4 +1,4 @@
-import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
+import {OMNI_GENERIC_FEATURES, StaticInnerTypeKind, TargetFeatures} from '@omnigen/core';
 
 export * from './visit';
 export * from './transform';
@@ -19,5 +19,6 @@ export const JAVA_FEATURES: TargetFeatures = {
   nestedDeclarations: true,
   relativeImports: false,
   forcedImports: false,
+  staticInnerTypes: StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE,
 };
 

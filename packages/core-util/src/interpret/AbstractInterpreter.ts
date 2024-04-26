@@ -1,19 +1,4 @@
-import {
-  AstNode,
-  AstTransformer,
-  AstTransformerArguments,
-  AstVisitor,
-  ExternalSyntaxTree,
-  Interpreter,
-  OmniModel,
-  Reducer,
-  ReducerResult,
-  Reference,
-  RootAstNode,
-  TargetFeatures,
-  TargetOptions,
-  VisitResult,
-} from '@omnigen/core';
+import {AstNode, AstTransformer, AstTransformerArguments, ExternalSyntaxTree, Interpreter, OmniModel, RootAstNode, TargetFeatures, TargetOptions} from '@omnigen/core';
 import {ReferenceNodeNotFoundError} from '../ast';
 
 export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements Interpreter<TOpt> {
@@ -26,7 +11,7 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
     this.features = features;
   }
 
-  protected abstract getTransformers(options: TOpt): IterableIterator<AstTransformer<AstNode, TOpt>>;
+  protected abstract getTransformers(options: TOpt): IterableIterator<AstTransformer<RootAstNode, TOpt>>;
 
   abstract newRootNode(): RootAstNode;
 
@@ -73,7 +58,7 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
           throw error;
 
         } else {
-          throw new Error(`Error when running ${transformer}`, {cause: error});
+          throw new Error(`Error when running ${transformer}: ${error}`, {cause: error});
         }
       }
     }
@@ -82,31 +67,31 @@ export abstract class AbstractInterpreter<TOpt extends TargetOptions> implements
   }
 }
 
-class EmulatedReference implements Reference<AstNode> {
-  readonly id = -1;
-  readonly targetId: number;
-
-  constructor(targetId: number) {
-    this.targetId = targetId;
-  }
-
-  resolve(root: RootAstNode): AstNode {
-    return root.resolveNodeRef(this);
-  }
-
-  setId(id: number): this {
-    throw new Error(`Emulated`);
-  }
-
-  withIdFrom(node: AstNode): this {
-    throw new Error(`Emulated`);
-  }
-
-  visit<R>(visitor: AstVisitor<R>): VisitResult<R> {
-    throw new Error(`Emulated`);
-  }
-
-  reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode> {
-    throw new Error(`Emulated`);
-  }
-}
+// class EmulatedReference implements Reference<AstNode> {
+//   readonly id = -1;
+//   readonly targetId: number;
+//
+//   constructor(targetId: number) {
+//     this.targetId = targetId;
+//   }
+//
+//   resolve(root: RootAstNode): AstNode {
+//     return root.resolveNodeRef(this);
+//   }
+//
+//   setId(id: number): this {
+//     throw new Error(`Emulated`);
+//   }
+//
+//   withIdFrom(node: AstNode): this {
+//     throw new Error(`Emulated`);
+//   }
+//
+//   visit<R>(visitor: AstVisitor<R>): VisitResult<R> {
+//     throw new Error(`Emulated`);
+//   }
+//
+//   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode> {
+//     throw new Error(`Emulated`);
+//   }
+// }

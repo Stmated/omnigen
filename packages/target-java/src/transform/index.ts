@@ -24,4 +24,7 @@ export * from './PatternPropertiesToMapJavaAstTransformer.ts';
 export * from './FlattenSuperfluousNodesAstTransformer.ts';
 export * from './ResolveGenericSourceIdentifiersAstTransformer.ts';
 export * from './RemoveConstantParametersAstTransformer.ts';
+export * from './GenericNodesToSpecificJavaAstTransformer.ts';
+export * from './DelegatesToJavaAstTransformer.ts';
+export * from './ToConstructorBodySuperCallAstTransformer.ts';
 export * from './JavaAstUtils.ts';

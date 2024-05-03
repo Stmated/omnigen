@@ -23,10 +23,12 @@ import {
   ParserOptions,
   TargetOptions,
   ZodAstNodeContext,
+  ZodPackageOptions,
   ZodParserOptions,
+  ZodTargetOptions,
 } from '@omnigen/core';
 import {z} from 'zod';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {createCSharpRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -41,8 +43,8 @@ import {
   AddThrowsForKnownMethodsAstTransformer,
   DEFAULT_JAVA_OPTIONS,
   DeleteUnnecessaryCompositionsJavaModelTransformer,
-  GenericNodesToSpecificJavaAstTransformer,
-  InnerTypeCompressionAstTransformer, InterfaceJavaModelTransformer,
+  GenericNodesToSpecificJavaAstTransformer, InnerTypeCompressionAstTransformer,
+  InterfaceJavaModelTransformer,
   Java,
   JavaAndTargetOptions,
   JavaOptions,
@@ -52,6 +54,7 @@ import {
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
   SerializationLibrary,
+  SiblingTypeCompressionAstTransformer,
   SimplifyGenericsAstTransformer,
   SortVisitorRegistry,
   ZodJavaOptions,
@@ -66,6 +69,7 @@ import {NamespaceWrapperAstTransformer} from './ast/NamespaceWrapperAstTransform
 import {DelegatesToCSharpAstTransformer} from './ast/DelegatesToCSharpAstTransformer.ts';
 import {NonNumericEnumToConstClassAstTransformer} from './ast/NonNumericEnumToConstClassAstTransformer.ts';
 import {ToCSharpModifiersAstTransformer} from './ast/ToCSharpModifiersAstTransformer.ts';
+import {NamespaceCompressionAstTransformer} from './ast/NamespaceCompressionAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -207,6 +211,7 @@ export const CSharpPlugin = createPlugin(
     const transformers2: OmniModel2ndPassTransformer<TOpt>[] = [
       // new StrictUndefinedTypeScriptModelTransformer(),
       // new RemoveWildcardGenericParamTypeScriptModelTransformer(),
+      new SpreadResolvedWildcardGenericsModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -222,16 +227,21 @@ export const CSharpPlugin = createPlugin(
       new NonNumericEnumToConstClassAstTransformer(),
       // // new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
+      new AddCompositionMembersJavaAstTransformer(),
       new AddConstructorJavaAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
       new AddSubTypeHintsAstTransformer(),
+      new NamespaceWrapperAstTransformer(),
+      // new SiblingTypeCompressionAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
+      new NamespaceCompressionAstTransformer(),
+
       new AddThrowsForKnownMethodsAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
       // new CompositionTypeScriptAstTransformer(),
-      new AddCompositionMembersJavaAstTransformer(),
+
       new MethodToGetterTypeScriptAstTransformer(),
       // new RemoveSuperfluousGetterTypeScriptAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
@@ -244,7 +254,7 @@ export const CSharpPlugin = createPlugin(
       new ToCSharpModifiersAstTransformer(),
       new GenericNodesToSpecificJavaAstTransformer(),
       new DelegatesToCSharpAstTransformer(),
-      new NamespaceWrapperAstTransformer(),
+
       new PackageResolverAstTransformer(),
       new ReorderMembersAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
@@ -277,12 +287,22 @@ export const CSharpPlugin = createPlugin(
   },
 );
 
-export const CSharpRendererCtxIn = ZodModelContext
+export const CSharpRendererCtxInBase = ZodModelContext
   .merge(ZodAstNodeContext)
   .merge(ZodCSharpOptionsContext)
   .merge(ZodCSharpTargetContext);
 
-export const CSharpRendererCtxOut = CSharpRendererCtxIn
+export const ZodOptionalOptionsContext = z.object({
+  javaOptions: ZodJavaOptions.partial().optional(),
+  packageOptions: ZodPackageOptions.partial().optional(),
+  targetOptions: ZodTargetOptions.partial().optional(),
+});
+
+export const CSharpRendererCtxIn = CSharpRendererCtxInBase
+  .merge(ZodOptionalOptionsContext)
+;
+
+export const CSharpRendererCtxOut = CSharpRendererCtxInBase
   .merge(ZodAstNodeContext)
   .merge(ZodRenderersContext)
   .merge(ZodCompilationUnitsContext);
@@ -293,12 +313,18 @@ export const CSharpRendererPlugin = createPlugin(
 
     const rootTsNode = ctx.astNode as CSharpRootNode;
 
-    const renderer = createCSharpRenderer(rootTsNode, {
+    const options: PackageOptions & TargetOptions & JavaOptions & CSharpOptions = {
       ...DEFAULT_JAVA_OPTIONS,
       ...DEFAULT_PACKAGE_OPTIONS,
       ...DEFAULT_TARGET_OPTIONS,
       ...ctx.csOptions,
-    });
+    };
+
+    copyDefinedProperties(ctx.javaOptions, options);
+    copyDefinedProperties(ctx.packageOptions, options);
+    copyDefinedProperties(ctx.targetOptions, options);
+
+    const renderer = createCSharpRenderer(rootTsNode, options);
     const rendered = renderer.executeRender(ctx.astNode, renderer);
 
     return {
@@ -308,6 +334,22 @@ export const CSharpRendererPlugin = createPlugin(
     };
   },
 );
+
+function copyDefinedProperties(source: any, target: any) {
+
+  if (source) {
+    for (const key in source) {
+      if (!Object.prototype.hasOwnProperty.call(source, key)) {
+        continue;
+      }
+
+      const value = source[key];
+      if (value !== undefined) {
+        target[key] = value;
+      }
+    }
+  }
+}
 
 logger.info(`Registering csharp plugins`);
 export default PluginAutoRegistry.register([CSharpPluginInit, CSharpPlugin, CSharpRendererPlugin]);

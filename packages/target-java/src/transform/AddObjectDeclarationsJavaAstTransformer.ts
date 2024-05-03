@@ -375,9 +375,6 @@ export class AddObjectDeclarationsJavaAstTransformer extends AbstractJavaAstTran
     const javaClassName = JavaUtil.getClassName(originalType || type, options);
     const javaType = root.getAstUtils().createTypeNode(type);
     const javaClassIdentifier = new Java.Identifier(javaClassName);
-    if (OmniUtil.isIdentifiable(type) && !type.name) {
-      javaClassIdentifier.implicit = true;
-    }
 
     if (genericSourceIdentifiers) {
 

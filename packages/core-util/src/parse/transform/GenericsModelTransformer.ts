@@ -17,14 +17,11 @@ import {
   OmniTypeKind,
   ParserOptions,
   PropertiesInformation,
-  PropertyDifference,
   PropertyInformation,
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniUtil} from '../OmniUtil.ts';
-import {EqualityFinder} from '../../equality';
-import {Naming} from '../Naming.ts';
 import {Case, Sorters} from '../../util';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -98,7 +95,6 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     };
 
     const ownerToGenericTargetMap = new Map<OmniPropertyOwner, OmniGenericTargetType>();
-    const propertyNameExpansions = new Map<string, OmniGenericSourceIdentifierType[]>();
     for (const propertyName in commonProperties.byPropertyName) {
       if (!(propertyName in commonProperties.byPropertyName)) {
         continue;
@@ -118,7 +114,6 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         commonProperties,
         info,
         ownerToGenericTargetMap,
-        propertyNameExpansions,
         sourceToTargets,
         model,
         options,
@@ -132,7 +127,6 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     commonProperties: PropertiesInformation,
     info: PropertyInformation,
     ownerToGenericTargetMap: Map<OmniPropertyOwner, OmniGenericTargetType>,
-    propertyNameExpansions: Map<string, OmniGenericSourceIdentifierType[]>,
     sourceToTargets: Map<OmniGenericSourceType, OmniGenericTargetType[]>,
     model: OmniModel,
     options: ModelTransformOptions,

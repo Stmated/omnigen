@@ -48,10 +48,16 @@ export const createCSharpAstReducer = (partial?: Partial<Reducer<JavaVisitor<unk
     reducePropertyReference: (n, r) => {
       return new Cs.PropertyReference(n.targetId).withIdFrom(n);
     },
-    reduceNamespace: (n, r) => new Java.Namespace(
-      assertDefined(n.name.reduce(r)),
-      assertDefined(n.block.reduce(r)),
-    ).withIdFrom(n),
+    reduceNamespace: (n, r) => {
+      const block = n.block.reduce(r);
+      if (!block) {
+        return undefined;
+      }
+      return new Java.Namespace(
+        assertDefined(n.name.reduce(r)),
+        block,
+      ).withIdFrom(n);
+    },
   };
 };
 

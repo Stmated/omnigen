@@ -39,6 +39,10 @@ logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
 
   // TODO: Maybe possible to make plugin able to register their arguments?
   //        And prepend them with something? Or should design rely on their being no duplicate keys allowed?
+
+  console.log(`Args:`);
+  console.log(options.args);
+
   const args: Record<string, string> = {};
   for (const [key, value] of (options.args ?? []).map(it => it.split('='))) {
     args[key] = value;
@@ -62,6 +66,8 @@ logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
   if (options.output) {
     args['outputFiles'] = 'true';
   }
+
+  console.log(args);
 
   const startTime = new Date();
   const runOptions: BaseContext & FileContext = {

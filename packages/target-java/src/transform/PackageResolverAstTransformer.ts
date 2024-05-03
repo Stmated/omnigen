@@ -341,7 +341,7 @@ export class PackageResolverAstTransformer extends AbstractJavaAstTransformer {
           const existing = typeNameMap.get(omniType)!;
           const newPath = outerTypes.map(it => it.name.value).join('.');
           const existingPath = existing.outerTypes.map(it => it.name.value).join('.');
-          throw new Error(`Has encountered duplicate declaration of '${OmniUtil.describe(omniType)}', new at '${newPath}', existing at ${existingPath}`);
+          throw new Error(`Has encountered duplicate declaration\nof: ${OmniUtil.describe(omniType)}'\nnew at: '${newPath}'\nexisting at: ${existingPath}`);
         }
 
         if (targetOptions.shortenNestedTypeNames && objectStack.length > 0) {

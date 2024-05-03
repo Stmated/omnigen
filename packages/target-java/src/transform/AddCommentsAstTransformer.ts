@@ -5,7 +5,7 @@ import * as Java from '../ast';
 import {JavaUtil} from '../util';
 import {OmniUtil, Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
-import {FreeTextUtils} from '../util/FreeTextUtils.ts';
+import {FreeTextUtils} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -22,12 +22,6 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
           const comments = AddCommentsAstTransformer.getCommentsForType(n.type.omniType, args.model, args.options);
           if (comments) {
             n.comments = new Java.Comment(FreeTextUtils.add(n.comments?.text, comments), n.comments?.kind);
-
-            // if (!n.comments) {
-            //   n.comments = new Java.Comment(comments);
-            // } else {
-            //   n.comments = new Java.Comment(new Java.FreeTexts(new Java.FreeTextLine(n.comments.text), comments), n.comments.kind);
-            // }
           }
         }
 
@@ -45,12 +39,6 @@ export class AddCommentsAstTransformer extends AbstractJavaAstTransformer {
             const comments = this.getCommentsList(n.property, args.model, args.options);
             if (comments) {
               n.comments = new Java.Comment(FreeTextUtils.add(n.comments?.text, comments), n.comments?.kind);
-
-              // if (!n.comments) {
-              //   n.comments = new Java.Comment(comments);
-              // } else {
-              //   n.comments = new Java.Comment(new Java.FreeTexts(new Java.FreeTextLine(n.comments.text), comments), n.comments.kind);
-              // }
             }
           }
         }

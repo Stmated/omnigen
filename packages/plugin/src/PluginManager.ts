@@ -75,11 +75,6 @@ export class PluginManager {
       logger.info(process.cwd());
       logger.info(`Importing ${qualifier.packageName}`);
       const packageContents = await import(`@omnigen/${qualifier.packageName}`)
-        // .catch(e => {
-        //   logger.info(process.cwd());
-        //   logger.info(`0: @omnigen/${qualifier.packageName} (${e})`);
-        //   return import(`@omnigen/${qualifier.packageName}`);
-        // })
         .catch(e => {
           logger.info(process.cwd());
           const resolved = ioPath.resolve(`../../packages/${qualifier.packageName}/src/index.ts`);
@@ -98,18 +93,6 @@ export class PluginManager {
           logger.info(`3: ${qualifier.packageName}} ${resolved} (${e})`);
           return import(resolved);
         })
-        // .catch(() => {
-        //   logger.info(`4: ${qualifier.packageName}`);
-        //   return import(`./plugins/${qualifier.packageName}/src/index.ts`);
-        // })
-        // .catch(() => {
-        //   logger.info(`5: ${qualifier.packageName}`);
-        //   return import(`./plugins/parser-${qualifier.packageName}/src/index.ts`);
-        // })
-        // .catch(() => {
-        //   logger.info(`6: ${qualifier.packageName}`);
-        //   return import(`./plugins/target-${qualifier.packageName}/src/index.ts`);
-        // })
       ;
 
       // TODO: Check if "default" exists and if it is an init function -- then use that.
@@ -253,7 +236,6 @@ export class PluginManager {
     if ('plugin' in args.item) {
 
       const pathItem = args.item;
-
       const needsEvaluation = PluginManager.needsEvaluation(pathItem);
       if (needsEvaluation) {
 
@@ -464,23 +446,6 @@ export class PluginManager {
         item.score = plugin.score + item.next[0].score;
       }
     }
-
-    // let i = 0;
-    // while (i < item.next.length && PluginManager.needsEvaluation(item.next[i])) {
-    //   i++;
-    // }
-    //
-    // i++;
-    // for (; i < item.next.length; i++) {
-    //   if (!PluginManager.needsEvaluation(item.next[i])) {
-    //
-    //     // If this does not need evaluation and is after at least one other that does not need evaluation...
-    //     // Then we can remove it, because it will never be ran.
-    //     item.next = item.next.slice(0, i);
-    //
-    //     return;
-    //   }
-    // }
   }
 
   private static needsEvaluation(it: PluginPathItem) {

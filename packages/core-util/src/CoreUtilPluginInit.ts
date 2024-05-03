@@ -65,6 +65,7 @@ export const CorePlugin = createPlugin(
     const packageOptions = ZodPackageOptions.parse(ctx.arguments);
     const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
     const parserOptions = ZodParserOptions.parse(ctx.arguments);
+    const targetOptions = ZodTargetOptions.parse(ctx.arguments);
 
     return {
       ...ctx,
@@ -72,7 +73,7 @@ export const CorePlugin = createPlugin(
       schemaFile: new SchemaFile(ctx.file, ctx.file),
       parserOptions: parserOptions,
       modelTransformOptions: ZodModelTransformOptions.parse(ctx.arguments),
-      targetOptions: ZodTargetOptions.parse(ctx.arguments),
+      targetOptions: targetOptions,
       packageOptions: packageOptions,
       fileWriteOptions: fileWriteOptions,
       types: new DefaultOmniTypeLibrary(),
@@ -141,7 +142,6 @@ const FileWriterIn = ZodArgumentsContext
   .merge(ZodCompilationUnitsContext);
 
 const FileWriterOut = FileWriterIn
-  // .merge(ZodFileWriteOptionsContext)
   .merge(ZodWrittenFilesContext);
 
 export const fileWriter = createPlugin(

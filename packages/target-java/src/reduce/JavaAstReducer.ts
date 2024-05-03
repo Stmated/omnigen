@@ -347,11 +347,17 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
 
       return new Java.AssignExpression(left, right).withIdFrom(n);
     },
-    reduceCompilationUnit: (n, reducer) => new Java.CompilationUnit(
-      assertDefined(n.packageDeclaration.reduce(reducer)),
-      assertDefined(n.imports.reduce(reducer)),
-      ...n.children.map(it => it.reduce(reducer)).filter(isDefined),
-    ).withIdFrom(n),
+    reduceCompilationUnit: (n, reducer) => {
+      const children = n.children.map(it => it.reduce(reducer)).filter(isDefined);
+      if (children.length == 0) {
+        return undefined;
+      }
+      return new Java.CompilationUnit(
+        assertDefined(n.packageDeclaration.reduce(reducer)),
+        assertDefined(n.imports.reduce(reducer)),
+        ...children,
+      ).withIdFrom(n);
+    },
     reduceConstructor: (n, r) => {
 
       const dec = new Java.ConstructorDeclaration(
@@ -417,9 +423,18 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
       assertDefined(n.name.reduce(r)),
       assertDefined(n.block.reduce(r)),
     ).withIdFrom(n),
-    reduceNamespaceBlock: (n, r) => new Java.NamespaceBlock(
-      assertDefined(n.block.reduce(r)),
-    ).withIdFrom(n),
+    reduceNamespaceBlock: (n, r) => {
+
+      const reduced = new Java.NamespaceBlock(
+        assertDefined(n.block.reduce(r)),
+      ).withIdFrom(n);
+
+      if (reduced.block.children.length == 0) {
+        return undefined;
+      }
+
+      return reduced;
+    },
 
     reduceTypeNamespace: (n, r) => new Java.TypePath(
       n.parts.map(it => it.reduce(r)).filter(isDefined),

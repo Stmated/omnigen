@@ -103,7 +103,6 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
   private addSuperConstructorCall(
     root: RootAstNode,
     superConstructorParameters: Java.ConstructorParameter[],
-    // blockExpressions: Java.AbstractJavaNode[],
   ): [Java.ConstructorParameter[], Java.SuperConstructorCall | undefined] {
 
     if (superConstructorParameters.length == 0) {
@@ -117,7 +116,7 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
       const type = superParameter.type.omniType;
 
       // Create a new node instance from the given type.
-      const typeNode = root.getAstUtils().createTypeNode(superParameter.type.omniType);
+      const typeNode = superParameter.type; // root.getAstUtils().createTypeNode(superParameter.type.omniType);
 
       if (OmniUtil.isPrimitive(type) && type.literal) {
         const literalValue = type.value ?? null;
@@ -138,14 +137,6 @@ export class AddConstructorJavaAstTransformer extends AbstractJavaAstTransformer
     const superCall = (superConstructorArguments.length > 0)
     ? new Java.SuperConstructorCall(new Java.ArgumentList(...superConstructorArguments))
       : undefined;
-
-    // if (superConstructorArguments.length > 0) {
-    //   return ;
-    //
-    //   // blockExpressions.push(
-    //   //
-    //   // );
-    // }
 
     return [requiredSuperArguments, superCall];
   }

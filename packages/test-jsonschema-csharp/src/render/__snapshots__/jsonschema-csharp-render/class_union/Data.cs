@@ -8,6 +8,12 @@ namespace generated.omnigen
     private readonly dynamic _raw;
     private AbortData _abortData;
     private DefaultData _defaultData;
+
+    public Data(dynamic raw)
+    {
+      this._raw = raw;
+    }
+    
     public AbortData getAbortData(Func<dynamic, AbortData> transformer)
     {
       if (this._abortData != null)

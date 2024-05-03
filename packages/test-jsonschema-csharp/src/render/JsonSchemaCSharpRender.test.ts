@@ -38,10 +38,6 @@ describe('jsonschema-csharp-render', () => {
     const rendered = await JsonSchemaToCSharpTestUtil.render(
       Util.getPathFromRoot('./packages/parser-jsonschema/examples/decorated_types.json'),
       {
-        // ...ZodJavaOptions.parse({}),
-        // commentsOnFields: false,
-        // commentsOnGetters: true,
-        // serializationLibrary: SerializationLibrary.POJO,
         compressSoloReferencedTypes: false,
       },
     );

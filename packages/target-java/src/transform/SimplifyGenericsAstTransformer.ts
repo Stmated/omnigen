@@ -1,7 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import {
-  OmniGenericSourceIdentifierType,
-  OmniGenericTargetSourcePropertyType,
+  OmniGenericSourceIdentifierType, OmniGenericSourceType,
   OmniType,
   OmniTypeKind,
   TypeDiffKind,
@@ -20,7 +19,7 @@ export class SimplifyGenericsAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    type TargetInfo = { source: OmniGenericTargetSourcePropertyType, targetTypes: Set<OmniType> };
+    type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<OmniType> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 
     const defaultVisitor = args.root.createVisitor();

@@ -404,8 +404,8 @@ export interface OmniGenericSourceIdentifierType<
 > extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE_IDENTIFIER> {
 
   placeholderName: string;
-  lowerBound?: Lower;
-  upperBound?: Upper;
+  lowerBound?: Lower | undefined;
+  upperBound?: Upper | undefined;
 
   /**
    * List of distinct known types used as bounds for the generic source.
@@ -424,20 +424,14 @@ export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> 
   type: T;
 }
 
-/**
- * TODO: Rename this into a GenericDeclaration?
- */
 export interface OmniGenericSourceType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE>, OmniTypeWithInnerType<T> {
-
   sourceIdentifiers: OmniGenericSourceIdentifierType[];
 }
 
-export type OmniGenericTargetSourcePropertyType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> =
-  OmniGenericSourceType<T>
-  | OmniExternalModelReferenceType<OmniGenericSourceType<T>>;
+// export type OmniGenericTargetSourcePropertyType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> = OmniGenericSourceType<T>;
 
 export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_TARGET> {
-  source: OmniGenericTargetSourcePropertyType<T>;
+  source: OmniGenericSourceType<T>;
   targetIdentifiers: OmniGenericTargetIdentifierType[];
 }
 

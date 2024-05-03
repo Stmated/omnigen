@@ -12,7 +12,7 @@ import {
   OmniType,
   OmniTypeKind,
   Reference,
-  RootAstNode,
+  RootAstNode, TypeName,
   TypeNode,
   UnknownKind,
 } from '@omnigen/core';
@@ -130,14 +130,15 @@ export class JavaAstUtils implements AstTargetFunctions {
     }
 
     const fieldType = args.root.getAstUtils().createTypeNode(args.property.type);
-    let originalName = OmniUtil.getPropertyName(args.property.name);
+    let originalName: TypeName | undefined = OmniUtil.getPropertyName(args.property.name);
     if (!originalName) {
       if (OmniUtil.isPatternPropertyName(args.property.name)) {
 
         // The field's property does not have a name per se.
         // But the field needs a name until it can be replaced by something better at later stages.
-        // So we set a (hopefully) temporary field name, which likely will not compile since it contains the regex.
-        originalName = `additionalProperties=${OmniUtil.getPropertyName(args.property.name, true)}`;
+        // If the target supports several index accessors, there might be several of these.
+        // But if the target only supports a regular map or similar, then this will likely be the only one.
+        originalName = `additionalProperties`;
 
       } else {
         return;
@@ -329,7 +330,7 @@ export class JavaAstUtils implements AstTargetFunctions {
     }
 
     const fieldsWithSetters = setters.map(setter => root.resolveNodeRef(setter.fieldRef));
-    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type === Java.ModifierType.FINAL));
+    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type === Java.ModifierType.FINAL || m.type === Java.ModifierType.READONLY));
     const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
     const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer === undefined);
 

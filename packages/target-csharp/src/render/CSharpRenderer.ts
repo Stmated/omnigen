@@ -4,6 +4,7 @@ import {createCSharpVisitor, CSharpVisitor} from '../visit';
 import {createJavaRenderer, Java, JavaOptions, JavaRenderContext, JavaRendererOptions, join, render} from '@omnigen/target-java';
 import {CSharpRootNode} from '../ast';
 import {Case, OmniUtil} from '@omnigen/core-util';
+import {CSharpUtil} from '../util/CSharpUtil.ts';
 
 export type CSharpRenderer = CSharpVisitor<string> & Renderer;
 
@@ -132,6 +133,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
         ctx.objectDecStack.push(n);
         const modifiers = render(n.modifiers, v);
         const name = render(n.name, v);
+        const genericsString = n.genericParameterList?.types.length ? render(n.genericParameterList, v) : '';
         const classExtension = n.extends ? `${render(n.extends, v)}` : '';
         const classImplementations = n.implements ? `${render(n.implements, v)}` : '';
 
@@ -149,6 +151,20 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
           superTypes = ` : ${superTypes}`;
         }
 
+        const genericPredicates: string[] = [];
+        if (n.genericParameterList) {
+
+          for (const gen of n.genericParameterList.types) {
+            if (gen.upperBounds) {
+              genericPredicates.push(`where ${gen.name.visit(v)} : ${render(gen.upperBounds, v)}`);
+            }
+          }
+        }
+
+        const genericPredicatesString = (genericPredicates.length > 0)
+          ? `\n  ${genericPredicates.join('\n  ')}`
+          : '';
+
         const typeDeclarationContent: VisitResult<string>[] = [];
 
         if (n.comments) {
@@ -160,12 +176,25 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
           typeDeclarationContent.push('\n');
         }
 
-        typeDeclarationContent.push(`${modifiers} class ${name}${superTypes}`);
+        typeDeclarationContent.push(`${modifiers} class ${name}${genericsString}${superTypes}${genericPredicatesString}`);
         typeDeclarationContent.push(v.visitObjectDeclarationBody(n, v));
 
         return typeDeclarationContent;
       } finally {
         ctx.objectDecStack.pop();
+      }
+    },
+
+    visitGenericTypeDeclaration(n, v) {
+      return render(n.name, v);
+    },
+
+    visitGenericType(n, v) {
+
+      if (options.debug) {
+        return parent.visitGenericType(n, v) + ` /* ${OmniUtil.describe(n.omniType)} */`;
+      } else {
+        return parent.visitGenericType(n, v);
       }
     },
 
@@ -194,9 +223,14 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
     visitEdgeType: (n, v) => {
 
-      if (n.omniType.kind === OmniTypeKind.STRING) {
+      const t = n.omniType;
+      if (t.kind === OmniTypeKind.STRING) {
         // TODO: This should not be needed; the renderer should be able to more easily replace primitive types; should not be calculated by something else.
         return `string`;
+      } else if (OmniUtil.isPrimitive(t)) {
+        return CSharpUtil.toPrimitiveTypeName(t);
+      } else if (OmniUtil.isEmptyType(t) && t.kind === OmniTypeKind.OBJECT && t.properties.length == 0 && !t.name && !t.extendedBy) {
+        return 'object';
       }
 
       return parent.visitEdgeType(n, v);
@@ -209,9 +243,10 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
     visitWildcardType: (n, v) => {
 
-      if (n.omniType.unknownKind === UnknownKind.OBJECT) {
+      const kind = n.omniType.unknownKind ?? options.unknownType;
+      if (kind === UnknownKind.OBJECT) {
         return 'object';
-      } else if (n.omniType.unknownKind == UnknownKind.ANY) {
+      } else if (kind == UnknownKind.ANY) {
         return 'dynamic';
       }
 

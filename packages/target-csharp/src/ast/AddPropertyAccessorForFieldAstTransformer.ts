@@ -26,7 +26,8 @@ export class AddPropertyAccessorForFieldAstTransformer implements AstTransformer
       },
     });
 
-    const newRoot = args.root.reduce({
+    // Step1, replace fields with properties
+    const root1 = args.root.reduce({
       ...args.root.createReducer(),
       reduceField: (n, r) => {
 
@@ -69,6 +70,15 @@ export class AddPropertyAccessorForFieldAstTransformer implements AstTransformer
 
         return n;
       },
+    });
+
+    if (!root1) {
+      return;
+    }
+
+    // Step2, replace field references with property references.
+    const root2 = root1.reduce({
+      ...root1.createReducer(),
       reduceFieldReference: (n, r) => {
 
         if (fieldsToReplace.includes(n.targetId)) {
@@ -76,7 +86,7 @@ export class AddPropertyAccessorForFieldAstTransformer implements AstTransformer
           // Replace the field reference with a property reference.
           const propertyNodeId = fieldIdToPropertyId.get(n.targetId);
           if (propertyNodeId === undefined) {
-            throw new Error(`Could not find the property node for field id ${n.targetId}`);
+            return n;
           }
 
           return new Cs.PropertyReference(propertyNodeId);
@@ -86,8 +96,8 @@ export class AddPropertyAccessorForFieldAstTransformer implements AstTransformer
       },
     });
 
-    if (newRoot) {
-      args.root = newRoot;
+    if (root2) {
+      args.root = root2;
     }
   }
 }

@@ -2,12 +2,14 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {AstNode, AstTransformer, AstTransformerArguments, OmniEnumType, OmniPrimitiveType, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
 import {CSharpRootNode} from '../ast';
 import {OmniUtil} from '@omnigen/core-util';
-import {FreeTextUtils, Java, JavaAstUtils} from '@omnigen/target-java';
+import {FreeTextUtils, Java} from '@omnigen/target-java';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Replaces any enum that has non-numeric item values with a class with static members, since languages like C# does not support non-numeric enums.
+ *
+ * TODO: Implement as alternative: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/enumeration-classes-over-enum-types
  */
 export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<CSharpRootNode> {
 
@@ -18,7 +20,7 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
 
     args.root.visit({
       ...args.root.createVisitor(),
-      visitEnumDeclaration: (n, v) => {
+      visitEnumDeclaration: n => {
         if (!OmniUtil.isNumericKind(n.type.omniType.itemKind)) {
           enumsToReplace.push(n.type.omniType);
         }
@@ -26,7 +28,7 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
     });
 
     const defaultReducer = args.root.createReducer();
-    const newRoot = args.root.reduce({
+    let newRoot = args.root.reduce({
       ...defaultReducer,
       reduceEnumDeclaration: (n, r) => {
 
@@ -91,10 +93,16 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
 
         return defaultReducer.reduceEnumDeclaration(n, r);
       },
-      reduceStaticMemberReference: (n, r) => {
-        return defaultReducer.reduceStaticMemberReference(n, r);
-      },
-      reduceField: (n, r) => {
+    });
+
+    if (!newRoot) {
+      return undefined;
+    }
+
+    // 2 passes, since we need to have replaced the ENUMs first.
+    newRoot = newRoot.reduce({
+      ...defaultReducer,
+      reduceField(n, r) {
 
         const reduced = defaultReducer.reduceField(n, r);
 
@@ -106,26 +114,22 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
           if (node) {
             const newComment = new Java.FreeTextTypeLink(node);
             reduced.comments = new Java.Comment(FreeTextUtils.add(reduced.comments?.text, newComment), reduced.comments?.kind);
-
-            // if (reduced.comments) {
-            //   // TODO: Wrong. Merge the comments.
-            //   reduced.comments = new Java.Comment(newComment);
-            // } else {
-            //   reduced.comments = new Java.Comment(newComment);
-            // }
           }
         }
 
         return reduced;
       },
-      reduceEdgeType: (n, r) => {
+      reduceEdgeType(n, r) {
 
         // Likely not the best comparison since the omni type might be wrapped or transformed. But will do for now.
-        if (n.omniType.kind === OmniTypeKind.ENUM && enumsToReplace.some(it => it === n.omniType)) {
+        const actualType = OmniUtil.getUnwrappedType(n.omniType);
+        if (actualType.kind === OmniTypeKind.ENUM && enumsToReplace.some(it => it === actualType)) {
 
           const itemType: OmniPrimitiveType = {
-            kind: n.omniType.itemKind,
+            kind: actualType.itemKind,
           };
+
+          OmniUtil.copyTypeMeta(n.omniType, itemType);
 
           return args.root.getAstUtils().createTypeNode(itemType);
         }

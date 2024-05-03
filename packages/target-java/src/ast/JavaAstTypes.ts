@@ -72,10 +72,21 @@ export abstract class AbstractJavaNode implements AstNode {
     return this;
   }
 
+  hasId(id: number | undefined): boolean {
+    if (id === undefined) {
+      return false;
+    }
+    return this._id === id;
+  }
+
   public withIdFrom(node: AstNode): this {
 
-    const copiedId = node.id;
-    return this.setId(copiedId);
+    const copiedId = (node instanceof AbstractJavaNode) ? node._id : node.id;
+    if (copiedId !== undefined) {
+      return this.setId(copiedId);
+    } else {
+      return this;
+    }
   }
 
   abstract visit<R>(visitor: JavaVisitor<R>): VisitResult<R>;
@@ -245,7 +256,6 @@ export class GenericType<
 export class Identifier extends AbstractJavaNode {
   value: string;
   original?: string | undefined;
-  implicit?: boolean;
 
   constructor(name: string, original?: string) {
     super();
@@ -691,7 +701,7 @@ export class FreeText extends AbstractFreeText {
 }
 
 export class FreeTexts extends AbstractFreeText implements AstNodeWithChildren<AnyFreeText> {
-  readonly children: ReadonlyArray<AnyFreeText>;
+  readonly children: Array<AnyFreeText>;
 
   constructor(...children: FriendlyFreeTextIn[]) {
     super();
@@ -1631,7 +1641,6 @@ export class Statement extends AbstractJavaNode {
 export class SuperConstructorCall extends AbstractJavaNode {
   arguments: ArgumentList;
 
-
   constructor(parameters: ArgumentList) {
     super();
     this.arguments = parameters;
@@ -1648,13 +1657,11 @@ export class SuperConstructorCall extends AbstractJavaNode {
 
 export class MethodCall extends AbstractJavaNode {
   target: AbstractJavaExpression;
-  // methodName: Identifier;
   methodArguments?: ArgumentList;
 
   constructor(target: AbstractJavaExpression, methodArguments: ArgumentList) {
     super();
     this.target = target;
-    // this.methodName = methodName;
     this.methodArguments = methodArguments;
   }
 

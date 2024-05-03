@@ -3,7 +3,7 @@ import {
   createPlugin,
   LATER_IS_BETTER,
   PluginAutoRegistry,
-  PluginScoreKind,
+  PluginScoreKind, ZodBaseContext,
   ZodModelContext,
   ZodModelTransformOptionsContext,
   ZodPackageOptionsContext,
@@ -14,7 +14,7 @@ import {
 import {JavaInterpreter} from './interpret';
 import {CompositionGenericTargetToObjectJavaModelTransformer, InterfaceJavaModelTransformer} from './parse';
 import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from '.';
-import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions} from '@omnigen/core';
+import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodPackageOptions, ZodParserOptions, ZodTargetOptions} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {DeleteUnnecessaryCompositionsJavaModelTransformer} from './parse/transform/DeleteUnnecessaryCompositionsJavaModelTransformer.ts';

@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`jsonschema-csharp-render > class_union 1`] = `
+[
+  "AbortData.cs",
+  "Data.cs",
+  "DefaultData.cs",
+  "StringBoolean.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > decorated_types 1`] = `
+[
+  "Order.cs",
+  "Shop.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > discriminator 1`] = `
+[
+  "ResponseData.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > enum_inheritance 1`] = `
+[
+  "Kind1.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > enum_string_composition 1`] = `
+[
+  "DataEntry.cs",
+  "TransferState.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > inline_boolean 1`] = `
+[
+  "AccountNotificationData.cs",
+  "StringBoolean.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > interface_order 1`] = `
+[
+  "AbstractRequestData.cs",
+  "BalanceRequestData.cs",
+  "CancelChargeRequestData.cs",
+  "CancelChargeRequestDataBase.cs",
+  "ICancelChargeRequestDataBase.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > one_of_same_type 1`] = `
+[
+  "RequestData.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > string_union 1`] = `
+[
+  "Container.cs",
+]
+`;
+
+exports[`jsonschema-csharp-render > x-enum-varnames 1`] = `
+[
+  "SomeEnum.cs",
+]
+`;

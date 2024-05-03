@@ -3,7 +3,8 @@ import {OmniType, OmniTypeKind, StaticInnerTypeKind, TargetFeatures, TargetOptio
 import * as Java from '../ast';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaUtil} from '../util';
-import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {JavaVisitor} from '../visit';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -11,9 +12,13 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    if ((!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes) || !args.features.nestedDeclarations) {
+    if ((!args.options.compressSoloReferencedTypes && !args.options.compressUnreferencedSubTypes)) {
 
-      // The option for compressing types is disabled.
+      // Option for compressing types is disabled.
+      return;
+    } else if (!args.features.nestedDeclarations) {
+
+      // Nested declarations is not supported.
       return;
     }
 
@@ -24,20 +29,20 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
 
     const typeUsedInCus = this.flipMultiMap(objectDecUsedInTypes);
 
-    for (const [type, usedIn] of typeUsedInCus.entries()) {
+    for (const [type, usedInObjDec] of typeUsedInCus.entries()) {
 
-      logger.silent(`${OmniUtil.describe(type)} used in ${usedIn.map(it => OmniUtil.describe(it.type.omniType))}`);
+      logger.silent(`${OmniUtil.describe(type)} used in ${usedInObjDec.map(it => OmniUtil.describe(it.type.omniType))}`);
 
-      if (usedIn.length != 1) {
+      if (usedInObjDec.length != 1) {
         continue;
       }
 
-      const singleUseInUnit = usedIn[0];
+      const singleUseInObjDec = usedInObjDec[0];
 
       // Check for supertype interference. Don't want a superclass to be inside a subclass.
       let typeUsedInSuperType = false;
       if (JavaUtil.asSuperType(type)) {
-        const singleUseType = singleUseInUnit.type.omniType; // .children.type.omniType;
+        const singleUseType = singleUseInObjDec.omniType;
         const singleUseIsSubType = JavaUtil.asSubType(singleUseType);
         const singleUseHierarchy = JavaUtil.getSuperClassHierarchy(args.model, singleUseIsSubType ? singleUseType : undefined);
         typeUsedInSuperType = singleUseHierarchy.includes(type);
@@ -66,7 +71,8 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
             throw new Error(`Could not find the CompilationUnit source where '${OmniUtil.describe(type)}' is defined`);
           }
 
-          this.moveUnit(definedInUnit, definedInObjectDec, singleUseInUnit, type, args.root, args.features);
+          const targetUnit = typeToUnit.get(singleUseInObjDec.omniType);
+          this.moveUnit(definedInUnit, definedInObjectDec, singleUseInObjDec, targetUnit, type, args.root, args.features);
         }
       }
     }
@@ -96,7 +102,7 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
     typeToObjectDec: Map<OmniType, Java.AbstractObjectDeclaration>,
     root: Java.JavaAstRootNode,
     options: TargetOptions,
-  ) {
+  ): void {
 
     const cuInfoStack: Java.CompilationUnit[] = [];
     const objectDecStack: Java.AbstractObjectDeclaration[] = [];
@@ -209,7 +215,8 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
   private moveUnit(
     sourceUnit: Java.CompilationUnit,
     sourceObject: Java.AbstractObjectDeclaration,
-    targetChild: Java.Identifiable | undefined,
+    targetChild: Java.AbstractObjectDeclaration | undefined,
+    targetUnit: Java.CompilationUnit | undefined,
     type: OmniType,
     root: Java.JavaAstRootNode,
     features: TargetFeatures,
@@ -219,39 +226,54 @@ export class InnerTypeCompressionAstTransformer extends AbstractJavaAstTransform
       throw new Error(`Could not find the CompilationUnit target where '${OmniUtil.describe(type)}' is defined`);
     }
 
-    if (!(targetChild instanceof Java.AbstractObjectDeclaration)) {
-      return;
-    }
+    const namespace = targetUnit?.children.find(it => it instanceof Java.Namespace);
+    if (namespace) {
 
-    if (!sourceObject.modifiers.children.find(it => it.type == Java.ModifierType.STATIC)) {
+      // There is a wrapping namespace inside the unit. We will use that instead to collect nodes inside.
+      namespace.block.block.children.push(
+        sourceObject,
+      );
 
-      if (features.staticInnerTypes === StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE) {
+    } else {
+
+      if (!sourceObject.modifiers.children.find(it => it.type == Java.ModifierType.STATIC) && features.staticInnerTypes === StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE) {
 
         // Add the static modifier if it is not already added.
         sourceObject.modifiers.children.push(
           new Java.Modifier(Java.ModifierType.STATIC),
         );
       }
+
+      targetChild.body.children.push(
+        sourceObject,
+      );
     }
 
-    targetChild.body.children.push(
-      sourceObject,
-    );
+    const base = root.createVisitor<boolean>();
+    const visitor: JavaVisitor<boolean> = {
+      ...base,
+      visitCompilationUnit: (n, v) => {
+        const idx = n.children.indexOf(sourceObject);
+        if (idx !== -1) {
+          n.children.splice(idx, 1);
+          return true;
+        }
+        return base.visitCompilationUnit(n, v);
+      },
+      visitBlock: (n, v) => {
+        const idx = n.children.indexOf(sourceObject);
+        if (idx !== -1) {
+          n.children.splice(idx, 1);
+          return true;
+        }
+        return base.visitBlock(n, v);
+      },
+    };
 
-    const rootCuIndex = sourceUnit.children.indexOf(sourceObject);
-    if (rootCuIndex != -1) {
-      sourceUnit.children.splice(rootCuIndex, 1);
-    } else {
-      throw new Error(`Unit for '${sourceObject.name.value}' was not found in source unit '${sourceUnit}'`);
-    }
+    const found = VisitResultFlattener.visitWithSingularResult(visitor, sourceUnit, false);
 
-    if (sourceUnit.children.length == 0) {
-      const unitIndex = root.children.indexOf(sourceUnit);
-      if (unitIndex != -1) {
-        root.children.splice(unitIndex, 1);
-      } else {
-        throw new Error(`Could not find unit '${sourceUnit}' inside root node`);
-      }
+    if (!found) {
+      throw new Error(`Unit for '${sourceObject.name.value}' was not found in source unit '${sourceUnit.name ?? sourceUnit}'`);
     }
   }
 }

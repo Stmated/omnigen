@@ -23,8 +23,6 @@ export class OpenRpcTypeScriptTestUtils {
       OpenRpcPlugins.default,
     ];
 
-    // const referenced_so_plugin_is_registered = TypeScriptPlugins.default;
-
     const filePath = Util.getPathFromRoot(`./packages/parser-${source}/examples/${fileName}`);
 
     const ctx: BaseContext & FileContext & TargetContext = {

@@ -208,9 +208,9 @@ export class ZodUtils {
       (intersection as any)._cached_merge = merge;
 
       return merge;
-    } else {
-      throw new Error(`Do not know how to flatten ${left._def.typeName} with ${right._def.typeName} at ${path}`);
     }
+
+    throw new Error(`Do not know how to flatten ${left._def.typeName} with ${right._def.typeName} at ${path}`);
   }
 
   private static isRecordCompatibleWith(expected: ZodRecord, actual: ZodRecord): CompatResult {

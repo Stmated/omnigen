@@ -78,19 +78,7 @@ export const OmniTypeKind = {
 
   ...OmniKindGeneric,
   ...OmniKindComposition,
-  NUMBER: 'NUMBER',
-  INTEGER: 'INTEGER',
-  INTEGER_SMALL: 'INTEGER_SMALL',
-  DECIMAL: 'DECIMAL',
-  DOUBLE: 'DOUBLE',
-  FLOAT: 'FLOAT',
-  LONG: 'LONG',
-  STRING: 'STRING',
-  CHAR: 'CHAR',
-  BOOL: 'BOOL',
-  VOID: 'VOID',
-  NULL: 'NULL',
-  UNDEFINED: 'UNDEFINED',
+  ...OmniKindPrimitive,
 
 } as const;
 

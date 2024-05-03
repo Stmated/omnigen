@@ -42,7 +42,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
       return;
     }
 
-    logger.debug(`Language does not support primitive inheritance, so will look for replacements. Looking inside '${args.model.name}'`);
+    logger.trace(`Language does not support primitive inheritance, so will look for replacements. Looking inside '${args.model.name}'`);
 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
       if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && OmniUtil.isPrimitive(ctx.type.extendedBy)) {

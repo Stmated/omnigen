@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OpenRpc+CSharp Rendering > additional-properties 1`] = `
+[
+  "JsonRpcRequest.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > compressable-types 1`] = `
+[
+  "JsonRpcRequest.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > enum 1`] = `
+[
+  "JsonRpcRequest.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > method-in-response 1`] = `
+[
+  "DepositRequest.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > multiple-inheritance 1`] = `
+[
+  "GiveInGetOutRequest.cs",
+]
+`;

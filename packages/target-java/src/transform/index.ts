@@ -4,6 +4,7 @@ export * from './AddObjectDeclarationsJavaAstTransformer.ts';
 export * from './AddConstructorJavaAstTransformer.ts';
 export * from './AddAdditionalPropertiesInterfaceAstTransformer.ts';
 export * from './InnerTypeCompressionAstTransformer.ts';
+export * from './SiblingTypeCompressionAstTransformer.ts';
 export * from './PackageResolverAstTransformer.ts';
 export * from './AddJakartaValidationAstTransformer.ts';
 export * from './ToHardCodedTypeJavaAstTransformer.ts';

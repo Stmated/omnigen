@@ -24,7 +24,7 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
       const parent = args.owner;
       const type = args.type;
 
-      if (parent && 'kind' in parent && parent.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
+      if (parent && 'kind' in parent && parent.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
 
         let newType: OmniType | undefined = map.get(type);
         if (!newType) {
@@ -39,7 +39,7 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
   private createNewConcreteObjectFromComposition(parent: OmniType, type: OmniCompositionType): OmniType {
 
-    if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
+    if (type.kind === OmniTypeKind.EXCLUSIVE_UNION) {
 
       // If it is an XOR composition, then return it as-is, since it will be its own object in Java.
       // Someday this whole XOR composition stuff needs to be overhauled, because it is brittle and too hard-coded.

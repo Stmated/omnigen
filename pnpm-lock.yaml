@@ -931,6 +931,58 @@ importers:
         specifier: ^5.5.0-beta
         version: 5.5.0-dev.20240426
 
+  packages/test-openrpc-csharp:
+    dependencies:
+      '@omnigen/core':
+        specifier: workspace:*
+        version: link:../core
+      '@omnigen/core-log':
+        specifier: workspace:*
+        version: link:../core-log
+      '@omnigen/core-plugin':
+        specifier: workspace:*
+        version: link:../core-plugin
+      '@omnigen/core-util':
+        specifier: workspace:*
+        version: link:../core-util
+      '@omnigen/parser-jsonschema':
+        specifier: workspace:*
+        version: link:../parser-jsonschema
+      '@omnigen/parser-openrpc':
+        specifier: workspace:*
+        version: link:../parser-openrpc
+      '@omnigen/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+      '@omnigen/target-csharp':
+        specifier: workspace:*
+        version: link:../target-csharp
+      '@omnigen/target-java':
+        specifier: workspace:*
+        version: link:../target-java
+      '@omnigen/target-typescript':
+        specifier: workspace:*
+        version: link:../target-typescript
+      zod:
+        specifier: ^3.22.4
+        version: 3.22.4
+    devDependencies:
+      '@omnigen/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@omnigen/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@omnigen/utils-test':
+        specifier: workspace:*
+        version: link:../utils-test
+      java-parser:
+        specifier: ^2.3.0
+        version: 2.3.0
+      typescript:
+        specifier: ^5.5.0-beta
+        version: 5.5.0-dev.20240426
+
   packages/test-openrpc-java:
     dependencies:
       '@omnigen/core':

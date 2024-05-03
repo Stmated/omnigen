@@ -4,24 +4,28 @@ import {
   OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
-  OmniArrayType, OmniDecoratingType,
+  OmniArrayType,
+  OmniDecoratingType,
   OmniDictionaryType,
   OmniEnumType,
   OmniExternalModelReferenceType,
-  OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
-  OmniInput, OmniKindComposition,
+  OmniInput,
+  OmniKindComposition,
   OmniModel,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniOutput,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKinds,
-  OmniPrimitiveNull, OmniPrimitiveNumericType,
+  OmniPrimitiveNull,
+  OmniPrimitiveNumericType,
   OmniPrimitiveType,
-  OmniProperty, OmniPropertyName, OmniPropertyNamePattern,
+  OmniProperty,
+  OmniPropertyName,
+  OmniPropertyNamePattern,
   OmniPropertyOwner,
   OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
@@ -42,8 +46,8 @@ import {PropertyUtil} from './PropertyUtil.ts';
 import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.ts';
 import {Naming} from './Naming.ts';
 import {util} from 'zod';
-import assertNever = util.assertNever;
 import {assertUnreachable, Case} from '../util';
+import assertNever = util.assertNever;
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -596,12 +600,25 @@ export class OmniUtil {
     }
 
     if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-      return `[${type.placeholderName}: lower(${OmniUtil.describe(type.lowerBound)}),  upper(${OmniUtil.describe(type.upperBound)})]`;
+      const parts: string[] = [];
+      if (type.upperBound) {
+        parts.push(`upper=${OmniUtil.describe(type.upperBound)}`);
+      }
+      if (type.lowerBound) {
+        parts.push(`lower=${OmniUtil.describe(type.lowerBound)}`);
+      }
+
+      if (parts.length > 0) {
+        return `${type.placeholderName}: ${parts.join(', ')}`;
+      } else {
+        return type.placeholderName;
+      }
+
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
       if (type.placeholderName) {
-        return `[${OmniUtil.describe(type.type)} as ${type.placeholderName} for ${type.sourceIdentifier.placeholderName}]`;
+        return `[${OmniUtil.describe(type.type)} as ${type.placeholderName} -> ${type.sourceIdentifier.placeholderName}]`;
       } else {
-        return `[${OmniUtil.describe(type.type)} as ${type.sourceIdentifier.placeholderName}]`;
+        return `[${OmniUtil.describe(type.type)} -> ${type.sourceIdentifier.placeholderName}]`;
       }
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
       return `${OmniUtil.getTypeName(type)}<${type.targetIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
@@ -633,11 +650,14 @@ export class OmniUtil {
         suffix = `=${resolvedString}`;
       }
 
-      if (type.nullable) {
-        return `${baseName} [${type.kind} - nullable${suffix}]`;
-      } else if (!type.nullable) {
-        return `${baseName} [${type.kind} - non-nullable${suffix}]`;
+      let prefix = '';
+      if (type.nullable === true) {
+        prefix = '?';
+      } else if (type.nullable === false) {
+        prefix = '!';
       }
+
+      return `${baseName} [${type.kind}${prefix} ${suffix}]`;
     }
 
     return `${baseName} [${type.kind}]`;
@@ -673,7 +693,7 @@ export class OmniUtil {
     return undefined;
   }
 
-  public static isNullableType(type: OmniType): type is ((OmniPrimitiveType & {nullable: true}) | OmniPrimitiveNull) {
+  public static isNullableType(type: OmniType): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
 
     if (OmniUtil.isPrimitive(type)) {
       if (type.kind == OmniTypeKind.STRING || type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
@@ -983,8 +1003,6 @@ export class OmniUtil {
         if (found) {
           if (found.kind == OmniTypeKind.GENERIC_SOURCE) {
             parent.source = found;
-          } else if (found.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE && found.of.kind == OmniTypeKind.GENERIC_SOURCE) {
-            parent.source = found as OmniExternalModelReferenceType<OmniGenericSourceType>;
           } else {
             throw new Error(`Cannot replace, since '${OmniUtil.describe(found)}' must be a generic source`);
           }
@@ -1203,7 +1221,7 @@ export class OmniUtil {
     return diffAmount > 0;
   }
 
-  public static getCommonDenominator(options: TargetFeatures | {features: TargetFeatures, create?: boolean}, ...types: OmniType[]): CommonDenominatorType | undefined {
+  public static getCommonDenominator(options: TargetFeatures | { features: TargetFeatures, create?: boolean }, ...types: OmniType[]): CommonDenominatorType | undefined {
 
     if (types.length == 1) {
       return {
@@ -1921,12 +1939,24 @@ export class OmniUtil {
 
   public static copyTypeMeta(from: OmniType, to: OmniType): void {
 
-    to.description = from.description ?? to.description;
-    to.summary = from.summary ?? to.summary;
-    to.accessLevel = from.accessLevel ?? to.accessLevel;
-    to.debug = from.debug ?? to.debug;
-    to.title = from.title ?? to.title;
-    to.absoluteUri = from.absoluteUri ?? to.absoluteUri;
+    if (from.description) {
+      to.description = from.description ?? to.description;
+    }
+    if (from.summary) {
+      to.summary = from.summary ?? to.summary;
+    }
+    if (from.accessLevel) {
+      to.accessLevel = from.accessLevel ?? to.accessLevel;
+    }
+    if (from.debug) {
+      to.debug = from.debug ?? to.debug;
+    }
+    if (from.title) {
+      to.title = from.title ?? to.title;
+    }
+    if (from.absoluteUri) {
+      to.absoluteUri = from.absoluteUri ?? to.absoluteUri;
+    }
   }
 
   public static getDiff(baseline: OmniType, other: OmniType, features: TargetFeatures): Diff[] {

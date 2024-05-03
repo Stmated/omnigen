@@ -45,6 +45,9 @@ export const ZodTargetOptions = ZodOptions.extend({
   allowCompressInterfaceToInner: ZodCoercedBoolean.default('true'),
 
   shortenNestedTypeNames: ZodCoercedBoolean.default('true'),
+
+  debug: ZodCoercedBoolean.default('false'),
+  // debugPlugin: z.string().optional(),
 });
 
 export type IncomingTargetOptions = z.input<typeof ZodTargetOptions>;

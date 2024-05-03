@@ -209,7 +209,6 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     target.children.push(untypedGetter);
 
     const handled: OmniType[] = [];
-    const typedPairs: TypedPair[] = [];
 
     for (const type of types) {
 
@@ -223,7 +222,6 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
       handled.push(type);
 
       const pair = this.createdTypedPair(root, untypedField, type, options, features);
-      typedPairs.push(pair);
 
       target.children.push(pair.field);
       target.children.push(pair.method);
@@ -442,7 +440,7 @@ export class AddCompositionMembersJavaAstTransformer extends AbstractJavaAstTran
     );
 
     const singletonMethodAnnotations = new Java.AnnotationList();
-    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+    if (options.serializationLibrary === SerializationLibrary.JACKSON) {
 
       singletonMethodAnnotations.children.push(new Java.Annotation(
         // TODO: Too specific to fasterxml, should be moved somewhere else/use a generalized annotation type

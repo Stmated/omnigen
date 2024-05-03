@@ -126,7 +126,7 @@ const visitCommonTypeDeclaration = (
 
     const modifiers = render(node.modifiers, visitor);
     const name = render(node.name, visitor);
-    const genericsString = node.genericParameterList ? render(node.genericParameterList, visitor) : '';
+    const genericsString = node.genericParameterList && node.genericParameterList.types.length > 0 ? render(node.genericParameterList, visitor) : '';
     const classExtension = node.extends ? ` extends ${render(node.extends, visitor)}` : '';
     const classImplementations = node.implements ? ` implements ${render(node.implements, visitor)}` : '';
 
@@ -269,49 +269,43 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       }
     },
 
-    visitClassDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'class', ctx.objectDecStack),
-    visitInterfaceDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'interface', ctx.objectDecStack),
-    visitEnumDeclaration: (node, visitor) => visitCommonTypeDeclaration(visitor, node, 'enum', ctx.objectDecStack),
+    visitClassDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'class', ctx.objectDecStack),
+    visitInterfaceDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'interface', ctx.objectDecStack),
+    visitEnumDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'enum', ctx.objectDecStack),
 
-    visitGenericTypeDeclaration(node, visitor) {
+    visitGenericTypeDeclaration(n, v) {
 
-      let str = render(node.name, visitor);
-      if (node.upperBounds) {
-        str += ` extends ${render(node.upperBounds, visitor)}`;
+      let str = render(n.name, v);
+      if (n.upperBounds) {
+        str += ` extends ${render(n.upperBounds, v)}`;
       }
 
-      if (node.lowerBounds) {
-        str += ` super ${render(node.lowerBounds, visitor)}`;
+      if (n.lowerBounds) {
+        str += ` super ${render(n.lowerBounds, v)}`;
       }
 
       return str;
     },
 
-    visitGenericTypeDeclarationList: (node, visitor) => {
-
-      const genericTypes = node.types.map(it => render(it, visitor));
-      if (genericTypes.length == 0) {
-        // TODO: This should not happen. Fix the location that puts in the empty generics.
-        return '';
-      }
-
+    visitGenericTypeDeclarationList: (n, v) => {
+      const genericTypes = n.types.map(it => render(it, v));
       return `<${genericTypes.join(', ')}>`;
     },
 
-    visitComment: (node, visitor) => {
+    visitComment: (n, v) => {
 
-      if (node.kind === CommentKind.SINGLE) {
+      if (n.kind === CommentKind.SINGLE) {
 
-        const commentContent = join(node.text.visit(visitor))
+        const commentContent = join(n.text.visit(v))
           .replaceAll('\r', '')
           .replaceAll('\n', '\n// ')
           .trim();
 
         return `// ${commentContent}`;
 
-      } else if (node.kind === CommentKind.DOC) {
+      } else if (n.kind === CommentKind.DOC) {
 
-        const text = join(node.text.visit(visitor))
+        const text = join(n.text.visit(v))
           .trim()
           .replaceAll('\r', '')
           .replaceAll('\n', '\n * ');
@@ -319,7 +313,7 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
         return `/**\n * ${text}\n */`;
       }
 
-      const text = join(node.text.visit(visitor))
+      const text = join(n.text.visit(v))
         .trim()
         // .replaceAll('\r', '')
         // .replaceAll('\n', '\n  ')
@@ -328,15 +322,15 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
       return `/* ${text} */`;
     },
 
-    visitCompilationUnit: (node, visitor) => {
+    visitCompilationUnit: (n, v) => {
 
       const content = join([
-        node.packageDeclaration.visit(visitor),
-        node.imports.visit(visitor),
-        node.children.map(it => it.visit(visitor)),
+        n.packageDeclaration.visit(v),
+        n.imports.visit(v),
+        n.children.map(it => it.visit(v)),
       ]);
 
-      let unitName: string | undefined = node.name;
+      let unitName: string | undefined = n.name;
       if (!unitName) {
 
         // NOTE: This is quite ugly. There needs to be a better way to figure out the name/fileName of the unit.
@@ -348,10 +342,10 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
           },
         });
 
-        unitName = VisitResultFlattener.visitWithSingularResult(visitor, node, '');
+        unitName = VisitResultFlattener.visitWithSingularResult(visitor, n, '');
 
         if (!unitName) {
-          unitName = node.children[0].name.value;
+          unitName = n.children[0].name.value;
         }
       }
 
@@ -360,8 +354,8 @@ export const createJavaRenderer = (root: JavaAstRootNode, options: JavaOptions, 
         content: content,
         name: unitName,
         fileName: `${unitName}.${renderOptions.fileExtension}`,
-        directories: node.packageDeclaration.fqn.split('.'),
-        node: node,
+        directories: n.packageDeclaration.fqn.split('.'),
+        node: n,
       });
 
       return content;

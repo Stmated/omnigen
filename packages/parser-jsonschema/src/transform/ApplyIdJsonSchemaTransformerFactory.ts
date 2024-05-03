@@ -94,7 +94,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       if (changed) {
 
         const allParts = parts.concat(tags);
-        const part = allParts.toReversed().join('/');
+        const part = [...allParts].reverse().join('/');
         const suffixes = this.getSuffixes(i);
 
         for (const suffix of suffixes) {

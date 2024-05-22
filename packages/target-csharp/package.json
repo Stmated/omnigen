@@ -23,8 +23,7 @@
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",
-    "@omnigen/target-java": "workspace:*",
-    "@omnigen/target-typescript": "workspace:*",
+    "@omnigen/target-code": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

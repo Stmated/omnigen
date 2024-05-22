@@ -1,12 +1,12 @@
 import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
 import {Java, JavaPlugins} from '@omnigen/target-java';
-import {ZodImplementationOptions} from './ImplementationOptions.ts';
+import {ZodImplementationOptions} from './ImplementationOptions';
 import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/core';
-import {JavaHttpImplementationGenerator} from './JavaHttpImplementationGenerator.ts';
+import {JavaHttpImplementationGenerator} from './JavaHttpImplementationGenerator';
 import {z} from 'zod';
 
-export * from './ImplementationOptions.js';
-export * from './JavaHttpImplementationGenerator.js';
+export * from './ImplementationOptions';
+export * from './JavaHttpImplementationGenerator';
 
 export const ZodImplementationOptionsContext = z.object({
   implementationOptions: ZodImplementationOptions,

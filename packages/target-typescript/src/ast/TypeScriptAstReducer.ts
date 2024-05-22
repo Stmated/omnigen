@@ -1,15 +1,15 @@
 import {TypeScriptVisitor} from '../visit';
 import {Ts} from '../ast';
 import {Reducer} from '@omnigen/core';
-import {createJavaReducer, JavaVisitor} from '@omnigen/target-java';
 import {assertDefined, isDefined} from '@omnigen/core-util';
+import {createCodeReducer} from '@omnigen/target-code';
 
 export type TypeScriptAstReducer = Reducer<TypeScriptVisitor<unknown>>
 
-export const createTypeScriptAstReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>>>): TypeScriptAstReducer => {
+export const createTypeScriptAstReducer = (partial?: Partial<Reducer<TypeScriptVisitor<unknown>>>): TypeScriptAstReducer => {
 
   return {
-    ...createJavaReducer(partial),
+    ...createCodeReducer(partial),
     reduceCompositionType: (node, reducer) => new Ts.CompositionType(
       node.omniType,
       node.typeNodes.map(it => it.reduce(reducer)).filter(isDefined),

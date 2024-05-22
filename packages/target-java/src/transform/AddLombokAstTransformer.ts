@@ -3,8 +3,7 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import * as Java from '../ast';
-import {AnnotationList, ModifierType} from '../ast';
+import * as Java from '../ast/JavaAst';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
 import {JavaVisitor} from '../visit';
@@ -62,7 +61,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
           }
 
           if (info) {
-            if (node.modifiers.children.find(it => it.type == ModifierType.FINAL)) {
+            if (node.modifiers.children.find(it => it.type == Java.ModifierType.FINAL)) {
               // TODO: Remove the final modifier if all are final? lombok might complain but work anyway?
               info.finalFields++;
             } else {
@@ -109,11 +108,11 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       return;
     }
 
-    let annotations: AnnotationList;
+    let annotations: Java.AnnotationList;
     if (dec.annotations) {
       annotations = dec.annotations;
     } else {
-      annotations = new AnnotationList(...[]);
+      annotations = new Java.AnnotationList(...[]);
       dec.annotations = annotations;
     }
 
@@ -138,7 +137,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
     for (const field of info.fieldsToPrivatize) {
       // Filter away PRIVATE and FINAL
       field.modifiers.children = field.modifiers.children.filter(it => {
-        return !(it.type == ModifierType.PRIVATE || it.type == ModifierType.FINAL);
+        return !(it.type == Java.ModifierType.PRIVATE || it.type == Java.ModifierType.FINAL);
       });
     }
 

@@ -18,18 +18,18 @@ public class UnionOfAB {
     this._raw = raw;
   }
 
-  public A getA(ObjectMapper objectMapper) {
+  public A getA(ObjectMapper transformer) {
     if (this._a != null) {
       return this._a;
     }
-    return this._a = objectMapper.convertValue(this._raw, A.class);
+    return this._a = transformer.convertValue(this._raw, A.class);
   }
 
-  public B getB(ObjectMapper objectMapper) {
+  public B getB(ObjectMapper transformer) {
     if (this._b != null) {
       return this._b;
     }
-    return this._b = objectMapper.convertValue(this._raw, B.class);
+    return this._b = transformer.convertValue(this._raw, B.class);
   }
 
   public JsonNode getRaw() {

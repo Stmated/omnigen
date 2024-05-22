@@ -1,19 +1,20 @@
-import {createJavaVisitor, JavaVisitor} from '@omnigen/target-java';
+// import {createJavaVisitor, JavaVisitor} from '@omnigen/target-java';
 import {AstNode, VisitFn} from '@omnigen/core';
 import {Ts} from '../ast';
+import {CodeVisitor, createCodeVisitor} from '@omnigen/target-code';
 
 export type TypeScriptVisitFn<N extends AstNode, R> = VisitFn<N, R, TypeScriptVisitor<R>>;
 
-export interface TypeScriptVisitor<R> extends JavaVisitor<R> {
+export interface TypeScriptVisitor<R> extends CodeVisitor<R> {
 
   visitCompositionType: TypeScriptVisitFn<Ts.CompositionType, R>;
   visitTypeAliasDeclaration: TypeScriptVisitFn<Ts.TypeAliasDeclaration, R>;
 }
 
-export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R>>, java?: Partial<JavaVisitor<R>>, noop?: R | undefined): Readonly<TypeScriptVisitor<R>> => {
+export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R>>, java?: Partial<CodeVisitor<R>>, noop?: R | undefined): Readonly<TypeScriptVisitor<R>> => {
 
   return {
-    ...createJavaVisitor(java, noop),
+    ...createCodeVisitor(java, noop),
     visitCompositionType: (node, visitor) => node.typeNodes.map(it => it.visit(visitor)),
     visitTypeAliasDeclaration: (node, visitor) => [
       node.modifiers?.visit(visitor),

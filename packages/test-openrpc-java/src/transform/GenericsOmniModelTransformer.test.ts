@@ -1,16 +1,17 @@
 import {TestUtils} from '@omnigen/utils-test';
-import {JavaUtil} from '@omnigen/target-java';
+import {JavaObjectNameResolver, JavaUtil} from '@omnigen/target-java';
 import {
   type OmniModel,
   OmniTypeKind,
   DEFAULT_PARSER_OPTIONS,
-  DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS, NameParts, DEFAULT_PACKAGE_OPTIONS, DEFAULT_TARGET_OPTIONS,
 } from '@omnigen/core';
 import {
   GenericsModelTransformer,
   OmniUtil,
 } from '@omnigen/core-util';
 import {expect, test, describe} from 'vitest';
+import {DEFAULT_TEST_JAVA_OPTIONS} from '../util';
 
 describe('Test CompositionDependencyUtil', () => {
 
@@ -42,7 +43,10 @@ describe('Test CompositionDependencyUtil', () => {
 
     const type = model.types[0];
 
-    expect(JavaUtil.getClassName(type)).toEqual('A');
+    const nameResolver = new JavaObjectNameResolver();
+    const nameOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TARGET_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
+
+    expect(nameResolver.build({name: nameResolver.investigate({type: type, options: nameOptions}), with: NameParts.NAME})).toEqual('A');
     if (type.kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
 
     expect(type.properties).toEqual([]);
@@ -97,8 +101,11 @@ describe('Test CompositionDependencyUtil', () => {
     if (model.types[1].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object not ${OmniUtil.describe(model.types[1])}`);
     if (model.types[2].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object not ${OmniUtil.describe(model.types[2])}`);
 
-    expect(JavaUtil.getClassName(model.types[0])).toEqual('A');
-    expect(JavaUtil.getClassName(model.types[0].of)).toEqual('A');
+    const nameResolver = new JavaObjectNameResolver();
+    const nameOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TARGET_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
+
+    expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0], options: nameOptions}), with: NameParts.NAME})).toEqual('A');
+    expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0].of, options: nameOptions}), with: NameParts.NAME})).toEqual('A');
     expect(model.types[0].of).toEqual(a);
 
     if (model.types[1].extendedBy?.kind != OmniTypeKind.GENERIC_TARGET) throw new Error(`Wrong kind`);

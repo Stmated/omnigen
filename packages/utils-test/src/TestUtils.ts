@@ -68,9 +68,9 @@ export class TestUtils {
     if (Array.isArray(result)) {
       for (const item of result) {
         if (item) {
-          const result = TestUtils.flatten(item);
-          if (result) {
-            return result;
+          const flattened = TestUtils.flatten(item);
+          if (flattened) {
+            return flattened as T;
           }
         }
       }

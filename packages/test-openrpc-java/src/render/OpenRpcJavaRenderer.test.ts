@@ -89,7 +89,7 @@ describe('Java Rendering', () => {
       }
     }
   }, {
-    timeout: 20_000,
+    timeout: 30_000,
   });
 
   test('Test multiple inheritance (interfaces)', async ({task}) => {

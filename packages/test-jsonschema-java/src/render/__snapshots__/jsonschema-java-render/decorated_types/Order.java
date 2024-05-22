@@ -15,6 +15,13 @@ public class Order {
   }
 
   /**
+   * If true, then the order is still active, otherwise it is cancelled
+   */
+  public boolean isActive() {
+    return this.active;
+  }
+
+  /**
    * Unique Order Id
    */
   public int getId() {
@@ -26,12 +33,5 @@ public class Order {
    */
   public int getPercentage() {
     return this.percentage;
-  }
-
-  /**
-   * If true, then the order is still active, otherwise it is cancelled
-   */
-  public boolean isActive() {
-    return this.active;
   }
 }

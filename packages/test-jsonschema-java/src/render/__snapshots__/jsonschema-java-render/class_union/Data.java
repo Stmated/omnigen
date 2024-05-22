@@ -18,18 +18,18 @@ public class Data {
     this._raw = raw;
   }
 
-  public AbortData getAbortData(ObjectMapper objectMapper) {
+  public AbortData getAbortData(ObjectMapper transformer) {
     if (this._abortData != null) {
       return this._abortData;
     }
-    return this._abortData = objectMapper.convertValue(this._raw, AbortData.class);
+    return this._abortData = transformer.convertValue(this._raw, AbortData.class);
   }
 
-  public DefaultData getDefaultData(ObjectMapper objectMapper) {
+  public DefaultData getDefaultData(ObjectMapper transformer) {
     if (this._defaultData != null) {
       return this._defaultData;
     }
-    return this._defaultData = objectMapper.convertValue(this._raw, DefaultData.class);
+    return this._defaultData = transformer.convertValue(this._raw, DefaultData.class);
   }
 
   public JsonNode getRaw() {

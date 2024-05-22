@@ -1,13 +1,16 @@
-import {AbstractJavaAstTransformer, Java, JavaAstTransformerArgs, JavaUtil} from '@omnigen/target-java';
-import {OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TypeNode} from '@omnigen/core';
+import {Code, CodeUtil} from '@omnigen/target-code';
+import {AstTransformer, OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TargetOptions, TypeNode} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
+import {CSharpRootNode} from './CSharpRootNode.ts';
+import {CSharpOptions} from '../options';
+import {CSharpAstTransformerArguments} from './index.ts';
 
 /**
  * Replace higher level "delegate" with C#-specific interfaces and call-sites.
  */
-export class DelegatesToCSharpAstTransformer extends AbstractJavaAstTransformer {
+export class DelegatesToCSharpAstTransformer implements AstTransformer<CSharpRootNode, TargetOptions & CSharpOptions> {
 
-  transformAst(args: JavaAstTransformerArgs): void {
+  transformAst(args: CSharpAstTransformerArguments): void {
 
     const newRoot = args.root.reduce({
       ...args.root.createReducer(),
@@ -35,13 +38,10 @@ export class DelegatesToCSharpAstTransformer extends AbstractJavaAstTransformer 
         const genericArguments = n.parameterTypes.map(it => this.asGenericCompatibleTypeNode(args.root, it, args.features));
         genericArguments.push(...extraGenericArgs);
 
-        return new Java.GenericType(hardType, new Java.EdgeType(hardType), genericArguments);
+        return new Code.GenericType(hardType, new Code.EdgeType(hardType), genericArguments);
       },
       reduceDelegateCall: n => {
-        // const methodName = delegateToMethodName.get(n.delegateRef.targetId) ?? 'apply';
-        // const target = new Java.
-
-        return new Java.MethodCall(n.target, n.args);
+        return new Code.MethodCall(n.target, n.args);
       },
     });
 
@@ -58,7 +58,7 @@ export class DelegatesToCSharpAstTransformer extends AbstractJavaAstTransformer 
 
     const omniType = typeNode.omniType;
     if (OmniUtil.isPrimitive(omniType)) {
-      return root.getAstUtils().createTypeNode(JavaUtil.getGenericCompatibleType(omniType));
+      return root.getAstUtils().createTypeNode(CodeUtil.getGenericCompatibleType(omniType));
     }
 
     return typeNode;

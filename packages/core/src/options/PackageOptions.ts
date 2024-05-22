@@ -11,8 +11,6 @@ export const ZodPackageOptions = ZodOptions.extend({
     }),
 });
 
-export type IncomingPackageOptions = z.input<typeof ZodPackageOptions>;
-export type UnknownPackageOptions = z.input<typeof ZodPackageOptions> | z.infer<typeof ZodPackageOptions>;
 export type PackageOptions = z.infer<typeof ZodPackageOptions>;
 
 export const DEFAULT_PACKAGE_OPTIONS: Readonly<PackageOptions> = ZodPackageOptions.readonly().parse({});

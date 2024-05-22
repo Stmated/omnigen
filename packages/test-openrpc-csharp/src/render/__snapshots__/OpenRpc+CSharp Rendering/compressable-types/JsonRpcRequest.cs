@@ -11,7 +11,7 @@ namespace generated.omnigen
       this.Id = id;
     }
 
-    public abstract string getMethod();
+    public abstract string Method { get; }
     public string Id { get; }
     public string Jsonrpc { get; } = "2.0";
   }

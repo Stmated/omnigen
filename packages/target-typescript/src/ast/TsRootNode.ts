@@ -1,13 +1,17 @@
-import {AstNode, AstNodeWithChildren, AstTargetFunctions, ReducerResult, RootAstNode, VisitResult} from '@omnigen/core';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/core';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {isDefined} from '@omnigen/core-util';
 import {DefaultTypeScriptAstReducer, TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
-import {Java} from '@omnigen/target-java';
 import {TsAstUtils} from './TsAstUtils.ts';
+import {Code} from '@omnigen/target-code';
+import {TypeScriptObjectNameResolver} from './TypeScriptObjectNameResolver.ts';
+import {TsModelFunctions} from '../parse/TsModelFunctions.ts';
 
-export class TsRootNode extends Java.JavaAstRootNode implements RootAstNode, AstNodeWithChildren {
+export class TsRootNode extends Code.CodeRootAstNode implements RootAstNode, AstNodeWithChildren {
 
   private static readonly _TS_AST_UTILS = new TsAstUtils();
+  private static readonly _TS_NAME_RESOLVER = new TypeScriptObjectNameResolver();
+  private static readonly _TS_MODEL_FUNCTIONS = new TsModelFunctions();
 
   constructor(children: AstNode[]) {
     super();
@@ -23,7 +27,15 @@ export class TsRootNode extends Java.JavaAstRootNode implements RootAstNode, Ast
   }
 
   getAstUtils(): AstTargetFunctions {
-    return TsRootNode._TS_AST_UTILS;
+    return TsRootNode._TS_AST_UTILS; // TsRootNode._TS_AST_UTILS;
+  }
+
+  getFunctions(): TargetFunctions {
+    return TsRootNode._TS_MODEL_FUNCTIONS;
+  }
+
+  getNameResolver(): ObjectNameResolver {
+    return TsRootNode._TS_NAME_RESOLVER;
   }
 
   visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {

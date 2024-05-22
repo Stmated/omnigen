@@ -1,5 +1,6 @@
 import {getEnumValues, OmniTypeKind, OmniKindPrimitive, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
 import {z} from 'zod';
+import {ZodCodeOptions} from '@omnigen/target-code';
 
 export const FieldAccessorMode = {
   NONE: 'NONE',
@@ -34,34 +35,19 @@ export const SerializationConstructorAnnotationMode = {
 } as const;
 export type SerializationConstructorAnnotationMode = ToEnum<typeof SerializationConstructorAnnotationMode>;
 
-export const IncludeExampleCommentsMode = {
-  ALWAYS: 'ALWAYS',
-  SKIP: 'SKIP',
-} as const;
-export type IncludeExampleCommentMode = ToEnum<typeof IncludeExampleCommentsMode>;
-
 export const JavaAnnotationLibrary = {
   JAKARTA: 'JAKARTA',
   JAVAX: 'JAVAX',
 } as const;
 export type JavaAnnotationLibrary = ToEnum<typeof JavaAnnotationLibrary>;
 
-export const ZodJavaOptions = ZodOptions.extend({
+export const ZodJavaOptions = ZodCodeOptions.extend({
   immutableModels: ZodCoercedBoolean.default('true'),
-  includeAlwaysNullProperties: ZodCoercedBoolean.default('false'),
-  unknownType: z.enum(getEnumValues(UnknownKind)).default(UnknownKind.ANY),
-  includeLinksOnType: ZodCoercedBoolean.default('false'),
-  includeLinksOnProperty: ZodCoercedBoolean.default('true'),
+
   interfaceNamePrefix: z.string().default('I'),
   interfaceNameSuffix: z.string().default(''),
   fieldAccessorMode: z.enum(getEnumValues(FieldAccessorMode)).default(FieldAccessorMode.POJO),
-  commentsOnTypes: ZodCoercedBoolean.default('true'),
-  commentsOnFields: ZodCoercedBoolean.default('false'),
-  commentsOnGetters: ZodCoercedBoolean.default('true'),
-  commentsOnConstructors: ZodCoercedBoolean.default('true'),
-  includeExampleCommentsMode: z.enum(getEnumValues(IncludeExampleCommentsMode)).default(IncludeExampleCommentsMode.ALWAYS),
-  preferVar: ZodCoercedBoolean.default('true'),
-  includeGenerated: ZodCoercedBoolean.default('true'),
+
   preferNumberType: z.enum(getEnumValues(OmniKindPrimitive)).default(OmniKindPrimitive.INTEGER),
   serializationLibrary: z.enum(getEnumValues(SerializationLibrary)).default(SerializationLibrary.JACKSON),
   javaAnnotationLibrary: z.enum(getEnumValues(JavaAnnotationLibrary)).default(JavaAnnotationLibrary.JAKARTA),
@@ -71,7 +57,6 @@ export const ZodJavaOptions = ZodOptions.extend({
   serializationEnsureRequiredFieldExistence: ZodCoercedBoolean.default('true'),
 });
 
-export type IncomingJavaOptions = z.input<typeof ZodJavaOptions>;
 export type JavaOptions = z.infer<typeof ZodJavaOptions>;
 
 export const DEFAULT_JAVA_OPTIONS: Readonly<JavaOptions> = ZodJavaOptions.parse({});

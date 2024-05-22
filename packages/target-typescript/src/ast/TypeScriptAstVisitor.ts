@@ -1,6 +1,5 @@
-import {AstTransformerArguments} from '@omnigen/core';
-import {JavaAndTargetOptions} from '@omnigen/target-java';
+import {AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptOptions} from '../options';
 
-export type TypeScriptAstTransformerArgs = AstTransformerArguments<TsRootNode, TypeScriptOptions & JavaAndTargetOptions>;
+export type TypeScriptAstTransformerArgs = AstTransformerArguments<TsRootNode, PackageOptions & TargetOptions & TypeScriptOptions>;

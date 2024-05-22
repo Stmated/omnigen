@@ -1,13 +1,17 @@
-import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ReducerResult, RootAstNode, VisitResult} from '@omnigen/core';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/core';
 import {createCSharpVisitor, CSharpVisitor} from '../visit';
 import {isDefined} from '@omnigen/core-util';
-import {Java} from '@omnigen/target-java';
-import {CSharpAstReducer, DefaultCSharpAstReducer} from './CSharpAstReducer.ts';
-import {CsAstUtils} from './CsAstUtils.ts';
+import {Code} from '@omnigen/target-code';
+import {CSharpAstReducer, DefaultCSharpAstReducer} from './CSharpAstReducer';
+import {CsAstUtils} from './CsAstUtils';
+import {CSharpObjectNameResolver} from './CSharpObjectNameResolver.ts';
+import {CSharpModelFunctions} from '../parse';
 
-export class CSharpRootNode extends Java.JavaAstRootNode implements RootAstNode, AstNodeWithChildren {
+export class CSharpRootNode extends Code.CodeRootAstNode implements RootAstNode, AstNodeWithChildren {
 
   private static readonly _TS_AST_UTILS = new CsAstUtils();
+  private static readonly _TS_NAME_RESOLVER = new CSharpObjectNameResolver();
+  private static readonly _TS_MODEL_FUNCTIONS = new CSharpModelFunctions();
 
   constructor(children: AstNode[]) {
     super();
@@ -24,6 +28,14 @@ export class CSharpRootNode extends Java.JavaAstRootNode implements RootAstNode,
 
   getAstUtils(): AstTargetFunctions {
     return CSharpRootNode._TS_AST_UTILS;
+  }
+
+  getNameResolver(): ObjectNameResolver {
+    return CSharpRootNode._TS_NAME_RESOLVER;
+  }
+
+  getFunctions(): TargetFunctions {
+    return CSharpRootNode._TS_MODEL_FUNCTIONS;
   }
 
   visit<R>(visitor: CSharpVisitor<R>): VisitResult<R> {

@@ -25,18 +25,18 @@ public class ResponseData {
     return this._raw;
   }
 
-  public WithReject getResponseDataWithReject(ObjectMapper objectMapper) {
+  public WithReject getResponseDataWithReject(ObjectMapper transformer) {
     if (this._responseDataWithReject != null) {
       return this._responseDataWithReject;
     }
-    return this._responseDataWithReject = objectMapper.convertValue(this._raw, WithReject.class);
+    return this._responseDataWithReject = transformer.convertValue(this._raw, WithReject.class);
   }
 
-  public WithResult getResponseDataWithResult(ObjectMapper objectMapper) {
+  public WithResult getResponseDataWithResult(ObjectMapper transformer) {
     if (this._responseDataWithResult != null) {
       return this._responseDataWithResult;
     }
-    return this._responseDataWithResult = objectMapper.convertValue(this._raw, WithResult.class);
+    return this._responseDataWithResult = transformer.convertValue(this._raw, WithResult.class);
   }
 
   public static class WithReject {

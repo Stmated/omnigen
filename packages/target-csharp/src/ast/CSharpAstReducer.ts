@@ -1,15 +1,15 @@
 import {CSharpVisitor} from '../visit';
 import {Cs} from '../ast';
 import {Reducer} from '@omnigen/core';
-import {Java, createJavaReducer, JavaVisitor} from '@omnigen/target-java';
 import {assertDefined} from '@omnigen/core-util';
+import {Code, CodeVisitor, createCodeReducer} from '@omnigen/target-code';
 
 export type CSharpAstReducer = Reducer<CSharpVisitor<unknown>>
 
-export const createCSharpAstReducer = (partial?: Partial<Reducer<JavaVisitor<unknown>>>): CSharpAstReducer => {
+export const createCSharpAstReducer = (partial?: Partial<Reducer<CodeVisitor<unknown>>>): CSharpAstReducer => {
 
   return {
-    ...createJavaReducer(partial),
+    ...createCodeReducer(partial),
 
     reduceProperty: (n, r) => {
 
@@ -53,7 +53,7 @@ export const createCSharpAstReducer = (partial?: Partial<Reducer<JavaVisitor<unk
       if (!block) {
         return undefined;
       }
-      return new Java.Namespace(
+      return new Code.Namespace(
         assertDefined(n.name.reduce(r)),
         block,
       ).withIdFrom(n);

@@ -1,15 +1,14 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/core';
-import {Java, JavaAstUtils} from '@omnigen/target-java';
+import {Code, CodeAstUtils} from '@omnigen/target-code';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
 import {Case, OmniUtil} from '@omnigen/core-util';
-import {TsAstUtils} from './TsAstUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-const IGNORED_MODIFIERS = [Java.ModifierType.PRIVATE, Java.ModifierType.PUBLIC, Java.ModifierType.ABSTRACT];
-const IGNORED_INTERFACE_MODIFIERS = [Java.ModifierType.ABSTRACT];
+const IGNORED_MODIFIERS = [Code.ModifierType.PRIVATE, Code.ModifierType.PUBLIC, Code.ModifierType.ABSTRACT];
+const IGNORED_INTERFACE_MODIFIERS = [Code.ModifierType.ABSTRACT];
 
 /**
  * TODO: Perhaps move this into an earlier 2nd stage model transformer
@@ -33,14 +32,14 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
       reduceClassDeclaration: (n, r) => {
         try {
           fieldNamesStack.push([]);
-          const body = n.body.reduce(r) ?? new Java.Block();
+          const body = n.body.reduce(r) ?? new Code.Block();
 
           const modifiers = n.modifiers.children.filter(it => !IGNORED_INTERFACE_MODIFIERS.includes(it.type));
 
           // TODO: Add support for generic parameters
           // TODO: Add support for better "implements", which actually targets an existing type node
 
-          const newInterface = new Java.InterfaceDeclaration(n.type, n.name, body, new Java.ModifierList(...modifiers)).setId(n.id);
+          const newInterface = new Code.InterfaceDeclaration(n.type, n.name, body, new Code.ModifierList(...modifiers)).setId(n.id);
 
           // TODO: Need to be able to just copy these over -- should be the same as the class one, no?
           // TODO: Need to properly convert the nested generic parameters into the interface versions
@@ -107,7 +106,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
           }
 
           if (interfaces.length > 0) {
-            newInterface.extends = new Java.ExtendsDeclaration(new Java.TypeList(interfaces));
+            newInterface.extends = new Code.ExtendsDeclaration(new Code.TypeList(interfaces));
           }
 
           return newInterface;
@@ -131,7 +130,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
         if (reducedField && reducedField.property) {
           const propertyName = OmniUtil.getPropertyName(reducedField.property.name);
           if (propertyName) {
-            reducedField.identifier = new Java.Identifier(propertyName);
+            reducedField.identifier = new Code.Identifier(propertyName);
           }
         }
 
@@ -144,30 +143,36 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
     }
   }
 
-  private methodSignatureToField(root: RootAstNode, method: Java.MethodDeclaration, fieldNames: string[]): Java.Field | undefined {
+  private methodSignatureToField(root: RootAstNode, method: Code.MethodDeclaration, fieldNames: string[]): Code.Field | undefined {
 
-    const getterField = JavaAstUtils.getGetterField(root, method);
+    const getterField = CodeAstUtils.getGetterField(root, method);
     if (getterField) {
       return this.toUniqueField(getterField, fieldNames);
     }
 
-    const soloReturnExpression = JavaAstUtils.getSoloReturn(method);
+    const soloReturnExpression = CodeAstUtils.getSoloReturn(method);
     if (soloReturnExpression) {
 
       const currentName = method.signature.identifier;
-      const match = currentName.value.match(/[sg]et([A-Z]\w+)/);
-
-      let fieldName: Java.Identifier;
-      if (match) {
-
-        const baseName = Case.camel(match[1]);
-        fieldName = new Java.Identifier(baseName, currentName.original);
-
+      let fieldName: Code.Identifier;
+      if (currentName instanceof Code.GetterIdentifier || currentName instanceof Code.SetterIdentifier) {
+        fieldName = currentName.identifier;
       } else {
-        fieldName = currentName;
+
+        // TODO: Likely this can be removed since if it is not a Getter-/SetterIdentifier, then it is not a property?
+        const match = currentName.value.match(/[sg]et([A-Z]\w+)/);
+
+        if (match) {
+
+          const baseName = Case.camel(match[1]);
+          fieldName = new Code.Identifier(baseName, currentName.original);
+
+        } else {
+          fieldName = currentName;
+        }
       }
 
-      const newField = new Java.Field(
+      const newField = new Code.Field(
         method.signature.type,
         fieldName,
         method.signature.modifiers,
@@ -187,7 +192,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
   /**
    * A field might come from different places, like an actual field or a getter method. We only want it once.
    */
-  private toUniqueField(field: Java.Field, fieldNames: string[]): Java.Field | undefined {
+  private toUniqueField(field: Code.Field, fieldNames: string[]): Code.Field | undefined {
 
     const propertyName = (field.property ? OmniUtil.getPropertyName(field.property.name) : field.identifier.original) ?? field.identifier.value;
     if (fieldNames.includes(propertyName)) {
@@ -202,7 +207,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
     return this.stripModifiers(field);
   }
 
-  private stripModifiers(n: Java.MethodDeclarationSignature | Java.Field): typeof n {
+  private stripModifiers<N extends Code.MethodDeclarationSignature | Code.Field>(n: N): N {
 
     const newModifiers = n.modifiers.children.filter(it => !IGNORED_MODIFIERS.includes(it.type));
     if (newModifiers.length != n.modifiers.children.length) {

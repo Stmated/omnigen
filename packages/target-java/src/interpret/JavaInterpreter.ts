@@ -2,45 +2,50 @@ import {AstTransformer, RootAstNode} from '@omnigen/core';
 import {AbstractInterpreter} from '@omnigen/core-util';
 import {FieldAccessorMode} from '../options';
 import {
+  AddGeneratedAnnotationJavaAstTransformer,
+  AddJakartaValidationAstTransformer,
+  AddLombokAstTransformer,
+  AddSubTypeHintsAstTransformer,
+  AddThrowsForKnownMethodsAstTransformer,
+  DelegatesToJavaAstTransformer,
+  SimplifyAndCleanAstTransformer,
+  GenericNodesToSpecificJavaAstTransformer,
+  GroupExampleTextsToSectionAstTransformer,
+  JacksonJavaAstTransformer,
+  JavaAndTargetOptions,
+  PatternPropertiesToMapJavaAstTransformer,
+  ToHardCodedTypeJavaAstTransformer,
+} from '../transform';
+import * as Java from '../ast/JavaAst';
+import {LoggerFactory} from '@omnigen/core-log';
+import {ToJavaAstTransformer} from '../transform/ToJavaAstTransformer';
+import {
   AddAbstractAccessorsAstTransformer,
   AddAccessorsForFieldsAstTransformer,
   AddAdditionalPropertiesInterfaceAstTransformer,
   AddCommentsAstTransformer,
-  AddCompositionMembersJavaAstTransformer,
-  AddConstructorJavaAstTransformer,
+  AddCompositionMembersCodeAstTransformer,
+  AddConstructorCodeAstTransformer,
   AddFieldsAstTransformer,
-  AddGeneratedAnnotationJavaAstTransformer,
-  AddJakartaValidationAstTransformer,
-  AddLombokAstTransformer,
-  AddObjectDeclarationsJavaAstTransformer,
-  AddSubTypeHintsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer,
-  DelegatesToJavaAstTransformer,
-  FlattenSuperfluousNodesAstTransformer,
-  GenericNodesToSpecificJavaAstTransformer,
+  AddObjectDeclarationsCodeAstTransformer,
   InnerTypeCompressionAstTransformer,
-  JacksonJavaAstTransformer,
-  JavaAndTargetOptions,
   PackageResolverAstTransformer,
-  PatternPropertiesToMapJavaAstTransformer,
   RemoveConstantParametersAstTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
-  SimplifyGenericsAstTransformer, ToConstructorBodySuperCallAstTransformer,
-  ToHardCodedTypeJavaAstTransformer,
-} from '../transform';
-import * as Java from '../ast';
-import {LoggerFactory} from '@omnigen/core-log';
-import {GroupExampleTextsToSectionAstTransformer} from '../transform/GroupExampleTextsToSectionAstTransformer.ts';
-import {ToJavaAstTransformer} from '../transform/ToJavaAstTransformer.ts';
+  SimplifyGenericsAstTransformer,
+  ToConstructorBodySuperCallAstTransformer,
+} from '@omnigen/target-code';
+import {JavaAstRootNode} from '../ast/JavaAstRootNode';
+import {SimplifyTypePathsJavaAstTransformer} from '../transform/SimplifyTypePathsJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
 
-  * getTransformers(options: JavaAndTargetOptions): Generator<AstTransformer<RootAstNode, JavaAndTargetOptions>> {
+  * getTransformers(options: JavaAndTargetOptions): Generator<AstTransformer<JavaAstRootNode, JavaAndTargetOptions>> {
 
-    yield new AddObjectDeclarationsJavaAstTransformer();
+    yield new AddObjectDeclarationsCodeAstTransformer();
 
     yield new AddFieldsAstTransformer();
     switch (options.fieldAccessorMode) {
@@ -57,10 +62,17 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
         throw new Error(`Do not know how to handle field accessor mode ${options.fieldAccessorMode}`);
     }
 
-    yield new AddCompositionMembersJavaAstTransformer();
+    yield new AddCompositionMembersCodeAstTransformer();
 
     yield new AddAbstractAccessorsAstTransformer();
-    yield new AddConstructorJavaAstTransformer(); // Move to much later, so things like generic normalization/simplification has been done?
+
+    if (options.fieldAccessorMode !== FieldAccessorMode.LOMBOK) {
+
+      // If the fields are managed by lombok, then we add no constructor.
+      // TODO: Move to much later, so things like generic normalization/simplification has been done?
+      yield new AddConstructorCodeAstTransformer();
+    }
+
     yield new AddAdditionalPropertiesInterfaceAstTransformer();
 
     yield new AddJakartaValidationAstTransformer();
@@ -81,7 +93,8 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new DelegatesToJavaAstTransformer();
     yield new AddGeneratedAnnotationJavaAstTransformer();
     yield new PackageResolverAstTransformer();
-    yield new FlattenSuperfluousNodesAstTransformer();
+    yield new SimplifyTypePathsJavaAstTransformer();
+    yield new SimplifyAndCleanAstTransformer();
     yield new ReorderMembersAstTransformer();
   }
 

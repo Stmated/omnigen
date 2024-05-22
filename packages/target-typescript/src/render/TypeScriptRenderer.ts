@@ -1,27 +1,28 @@
 import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
-import {createJavaRenderer, DefaultJavaRendererOptions, Java, JavaOptions, JavaRendererOptions, render} from '@omnigen/target-java';
+// import {createJavaRenderer, DefaultJavaRendererOptions, Java, JavaOptions, JavaRendererOptions, render} from '@omnigen/target-java';
 import {OmniUtil} from '@omnigen/core-util';
 import {TsRootNode} from '../ast';
+import {Code, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, render} from '@omnigen/target-code';
 
 export type TypeScriptRenderer = TypeScriptVisitor<string> & Renderer;
 
-export const DefaultTypeScriptRendererOptions: JavaRendererOptions = {
-  ...DefaultJavaRendererOptions,
+export const DefaultTypeScriptRendererOptions: CodeRendererOptions = {
+  ...DefaultCodeRendererOptions,
   fileExtension: 'ts',
 };
 
 // TODO:
 //  * extend modifiers so there is 'export' to differentiate it from 'public'
 
-export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptions & TargetOptions & JavaOptions & TypeScriptOptions): TypeScriptRenderer => {
+export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptions & TargetOptions & TypeScriptOptions): TypeScriptRenderer => {
 
   let bodyDepth = 0;
 
   const parentRenderer = {
     ...createTypeScriptVisitor(),
-    ...createJavaRenderer(root, options, DefaultTypeScriptRendererOptions),
+    ...createCodeRenderer(root, options, DefaultTypeScriptRendererOptions),
   } satisfies TypeScriptVisitor<string>;
 
   return {
@@ -146,7 +147,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
       //        So the `visitImportStatement` here and in `JavaRenderer` will be different implementation types.
       //        So there is also a need for separate `PackageResolverAstTransformer` -- but likely a lot of that code can be reused.
 
-      if (n.type instanceof Java.EdgeType) {
+      if (n.type instanceof Code.EdgeType) {
         const importName = n.type.getImportName();
         if (!importName) {
           throw new Error(`Import name is not set for '${OmniUtil.describe(n.type.omniType)}'`);
@@ -167,13 +168,13 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
 
     visitModifier: (node, visitor) => {
 
-      if (bodyDepth == 0 && node.type == Java.ModifierType.PUBLIC) {
+      if (bodyDepth == 0 && node.type == Code.ModifierType.PUBLIC) {
 
         // TODO: Wrong -- used one way for making object declarations public, and another for members inside the objects -- need to separate them or make it context sensitive
         return 'export';
       }
 
-      if (node.type == Java.ModifierType.FINAL) {
+      if (node.type == Code.ModifierType.FINAL) {
         return 'readonly';
       }
 
@@ -200,7 +201,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
               return 'void';
             }
           } else {
-            return new Java.Literal(n.omniType.value, n.omniType.kind).visit(v);
+            return new Code.Literal(n.omniType.value, n.omniType.kind).visit(v);
           }
         }
 

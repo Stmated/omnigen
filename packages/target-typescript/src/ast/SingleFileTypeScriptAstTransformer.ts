@@ -1,6 +1,6 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Java} from '@omnigen/target-java';
+import {Code} from '@omnigen/target-code';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptOptions} from '../options';
 
@@ -19,7 +19,7 @@ export class SingleFileTypeScriptAstTransformer implements AstTransformer<TsRoot
 
     const defaultReducer = args.root.createReducer();
 
-    let firstUnit: Java.CompilationUnit | undefined = undefined;
+    let firstUnit: Code.CompilationUnit | undefined = undefined;
 
     const newRoot = args.root.reduce({
       ...defaultReducer,

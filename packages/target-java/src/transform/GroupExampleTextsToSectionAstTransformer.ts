@@ -1,5 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import * as Java from '../ast';
+import * as Java from '../ast/JavaAst';
 
 /**
  * Group any free-ranging example texts into one example group with a section header.

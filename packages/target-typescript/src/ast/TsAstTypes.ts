@@ -1,8 +1,10 @@
 import {AstNode, OmniType, Reducer, ReducerResult, TypeNode, VisitResult} from '@omnigen/core';
 import {TypeScriptVisitor} from '../visit';
-import {Java} from '@omnigen/target-java';
+import {Code} from '@omnigen/target-code';
 
-export abstract class AbstractTypeScriptNode extends Java.AbstractJavaNode implements AstNode {
+export * from '@omnigen/target-code/ast';
+
+export abstract class AbstractTypeScriptNode extends Code.AbstractCodeNode implements AstNode {
 
   abstract visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R>;
 
@@ -29,17 +31,17 @@ export class CompositionType extends AbstractTypeScriptNode implements TypeNode 
   }
 }
 
-export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Java.Identifiable, Java.Typed {
+export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Code.Identifiable, Code.Typed {
 
-  readonly name: Java.Identifier;
+  readonly name: Code.Identifier;
   readonly of: TypeNode;
-  readonly modifiers?: Java.ModifierList | undefined;
+  readonly modifiers?: Code.ModifierList | undefined;
 
   get omniType() {
     return this.of.omniType;
   }
 
-  constructor(identifier: Java.Identifier, of: TypeNode, modifiers?: Java.ModifierList) {
+  constructor(identifier: Code.Identifier, of: TypeNode, modifiers?: Code.ModifierList) {
     super();
     this.name = identifier;
     this.of = of;

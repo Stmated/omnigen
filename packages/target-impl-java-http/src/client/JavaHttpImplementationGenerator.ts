@@ -1,20 +1,5 @@
 import {ImplementationGenerator} from './ImplementationGenerator';
-import {
-  AddAbstractAccessorsAstTransformer,
-  AddAccessorsForFieldsAstTransformer,
-  AddCompositionMembersJavaAstTransformer,
-  AddConstructorJavaAstTransformer,
-  AddFieldsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer,
-  JacksonJavaAstTransformer,
-  Java,
-  JAVA_FEATURES,
-  JavaAndTargetOptions,
-  JavaOptions,
-  PackageResolverAstTransformer, RemoveConstantParametersAstTransformer,
-  ReorderMembersAstTransformer,
-  ResolveGenericSourceIdentifiersAstTransformer,
-} from '@omnigen/target-java';
+import {AddThrowsForKnownMethodsAstTransformer, JacksonJavaAstTransformer, Java, JAVA_FEATURES, JavaAndTargetOptions, JavaOptions} from '@omnigen/target-java';
 import {type ImplementationArgs} from './ImplementationArgs';
 import {
   AstNode,
@@ -25,7 +10,7 @@ import {
   OmniObjectType,
   OmniOutput,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, PackageOptions,
   RootAstNode,
   TargetOptions,
   TypeNode,
@@ -34,6 +19,17 @@ import {
 import {ImplementationOptions} from './ImplementationOptions';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, Naming, OmniUtil} from '@omnigen/core-util';
+import {
+  AddAbstractAccessorsAstTransformer,
+  AddAccessorsForFieldsAstTransformer,
+  AddCompositionMembersCodeAstTransformer,
+  AddConstructorCodeAstTransformer,
+  AddFieldsAstTransformer, Code,
+  PackageResolverAstTransformer,
+  RemoveConstantParametersAstTransformer,
+  ReorderMembersAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer,
+} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -114,11 +110,11 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       package: args.implOptions.clientPackage,
     };
 
-    const transformers: AstTransformer<RootAstNode, TargetOptions & JavaOptions>[] = [
+    const transformers: AstTransformer<Code.CodeRootAstNode, PackageOptions & TargetOptions & JavaOptions>[] = [
       // new ElevateAsAbstractMembersAstTransformer(),
-      new AddCompositionMembersJavaAstTransformer(),
+      new AddCompositionMembersCodeAstTransformer(),
       new AddFieldsAstTransformer(),
-      new AddConstructorJavaAstTransformer(),
+      new AddConstructorCodeAstTransformer(),
       new AddAccessorsForFieldsAstTransformer([objectMapperField.identifier]),
       new AddAbstractAccessorsAstTransformer(),
       new AddThrowsForKnownMethodsAstTransformer(),

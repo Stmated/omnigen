@@ -1,11 +1,11 @@
-import {AstTransformer, AstTransformerArguments, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Java} from '@omnigen/target-java';
+import {AstTransformer, AstTransformerArguments, OmniTypeKind, TargetOptions} from '@omnigen/core';
 import {TsRootNode} from '../ast';
 import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
+import {Code} from '@omnigen/target-code';
 
-export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<Java.JavaAstRootNode> {
+export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<TsRootNode> {
 
-  transformAst(args: AstTransformerArguments<TsRootNode, PackageOptions & TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<TsRootNode, TargetOptions>): void {
 
     const defaultReducer = args.root.createReducer();
     const reducer: TypeScriptAstReducer = {
@@ -17,11 +17,11 @@ export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<J
 
             const type = n.omniType;
             // const dictionaryClass = ;
-            const dictionaryType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'Record'});
+            const dictionaryType = new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'Record'});
             const keyType = args.root.getAstUtils().createTypeNode(type.keyType, true);
             const valueType = args.root.getAstUtils().createTypeNode(type.valueType, true);
 
-            return new Java.GenericType(type, dictionaryType, [keyType, valueType]);
+            return new Code.GenericType(type, dictionaryType, [keyType, valueType]);
 
           } else {
             return defaultReducer.reduceEdgeType(n, r);

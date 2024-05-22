@@ -1,11 +1,9 @@
-import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {OmniDictionaryType, OmniInterfaceType, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/core';
-import * as Java from '../ast';
+import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
+import {NameParts, OmniDictionaryType, OmniInterfaceType, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind, RootAstNode, TypeNode, TypeUseKind} from '@omnigen/core';
+import * as Java from '../ast/JavaAst';
 import {OmniUtil} from '@omnigen/core-util';
 import {JavaOptions, SerializationLibrary} from '../options';
-import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER} from './JacksonJavaAstTransformer.ts';
-import {JavaUtil} from '../util';
-import {AbstractObjectDeclaration} from '../ast';
+import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER} from './JacksonJavaAstTransformer';
 
 const METHOD_GETTER_NAME = 'getAdditionalProperties';
 const METHOD_ADDER_NAME = 'addAdditionalProperty';
@@ -14,7 +12,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
   transformAst(args: JavaAstTransformerArgs): void {
 
-    const replacedProperties = new Map<OmniProperty, Java.Nodes>();
+    const replacedProperties = new Map<OmniProperty, Java.AbstractCodeNode>();
     const replacedFieldIds: number[] = [];
     const classDeclarationStack: Java.ClassDeclaration[] = [];
     const decWithDictionary = new Map<number, OmniDictionaryType[]>();
@@ -72,7 +70,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
         return reduced;
       },
-      reduceField: (n, r) => {
+      reduceField: n => {
         return n.property && replacedProperties.has(n.property) ? replacedProperties.get(n.property) : n;
       },
       reduceFieldReference: n => {
@@ -135,11 +133,15 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
         }
       }
 
-      const typeName = JavaUtil.getClassName(newInterfaceDec.type.omniType, args.options);
-      const packageName = JavaUtil.getPackageName(newInterfaceDec.type.omniType, typeName, args.options);
+      const nameResolver = args.root.getNameResolver();
+      const resolved = nameResolver.investigate({type: newInterfaceDec.type.omniType, options: args.options});
+      const namespaceString = nameResolver.build({name: resolved, with: NameParts.NAMESPACE, use: TypeUseKind.NAMESPACE_DECLARATION});
+
+      // const typeName = JavaUtil.getClassName(newInterfaceDec.type.omniType, args.options);
+      // const packageName = JavaUtil.getPackageName(newInterfaceDec.type.omniType, typeName, args.options);
 
       args.root.children.push(new Java.CompilationUnit(
-        new Java.PackageDeclaration(packageName),
+        new Java.PackageDeclaration(namespaceString),
         new Java.ImportList([]),
         newInterfaceDec,
       ));

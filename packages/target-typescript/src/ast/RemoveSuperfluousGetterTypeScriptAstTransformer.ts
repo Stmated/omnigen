@@ -1,19 +1,19 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Java} from '@omnigen/target-java';
+import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
+import {Ts, TsRootNode} from '../';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * If field original name is same as current name, then remove the getter
  */
-export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTransformer<Java.JavaAstRootNode> {
+export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTransformer<TsRootNode> {
 
-  transformAst(args: AstTransformerArguments<Java.JavaAstRootNode, PackageOptions & TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<TsRootNode, TargetOptions>): void {
 
-    const gettersToRemove: Java.FieldBackedGetter[] = [];
-    const fieldsToMakePublic: Java.Field[] = [];
+    const gettersToRemove: Ts.FieldBackedGetter[] = [];
+    const fieldsToMakePublic: Ts.Field[] = [];
 
     args.root.visit({
       ...args.root.createVisitor(),
@@ -51,8 +51,8 @@ export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTrans
         if (fieldsToMakePublic.includes(n)) {
 
           // NOTE: This should not be allowed later on; everything should be read-only and need to be fully re-created. No assignments like below.
-          const newModifiers = n.modifiers.children.filter(it => it.type !== Java.ModifierType.PRIVATE);
-          n.modifiers = new Java.ModifierList(...newModifiers).withIdFrom(n.modifiers);
+          const newModifiers = n.modifiers.children.filter(it => it.type !== Ts.ModifierType.PRIVATE);
+          n.modifiers = new Ts.ModifierList(...newModifiers).withIdFrom(n.modifiers);
 
           return n;
         }

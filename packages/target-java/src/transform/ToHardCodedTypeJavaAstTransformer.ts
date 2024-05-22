@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {OmniTypeKind, UnknownKind} from '@omnigen/core';
-import {Java} from '../';
+import * as Java from '../ast/JavaAst';
 import {assertDefined} from '@omnigen/core-util';
 
 export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransformer {

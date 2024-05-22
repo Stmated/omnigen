@@ -3,7 +3,7 @@ import {
   createPlugin,
   LATER_IS_BETTER,
   PluginAutoRegistry,
-  PluginScoreKind, ZodBaseContext,
+  PluginScoreKind,
   ZodModelContext,
   ZodModelTransformOptionsContext,
   ZodPackageOptionsContext,
@@ -12,14 +12,14 @@ import {
   ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
 import {JavaInterpreter} from './interpret';
-import {CompositionGenericTargetToObjectJavaModelTransformer, InterfaceJavaModelTransformer} from './parse';
+import {CompositionGenericTargetToObjectJavaModelTransformer} from './parse';
 import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from '.';
-import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodPackageOptions, ZodParserOptions, ZodTargetOptions} from '@omnigen/core';
+import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions} from '@omnigen/core';
 import {z} from 'zod';
 import {ZodCompilationUnitsContext} from '@omnigen/core-util';
-import {DeleteUnnecessaryCompositionsJavaModelTransformer} from './parse/transform/DeleteUnnecessaryCompositionsJavaModelTransformer.ts';
-import {JavaAstRootNode} from './ast';
+import * as Java from './ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
+import {DeleteUnnecessaryCompositionsJavaModelTransformer, InterfaceExtractorModelTransformer} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -96,7 +96,7 @@ export const JavaPlugin = createPlugin(
 
     const transformers = [
       new CompositionGenericTargetToObjectJavaModelTransformer(),
-      new InterfaceJavaModelTransformer(),
+      new InterfaceExtractorModelTransformer(),
       new DeleteUnnecessaryCompositionsJavaModelTransformer(),
     ];
 
@@ -132,7 +132,7 @@ export const JavaRendererPlugin = createPlugin(
   {name: 'java-render', in: JavaRendererCtxIn, out: JavaRendererCtxOut, score: PluginScoreKind.IMPORTANT},
   async ctx => {
 
-    const javaRootNode = ctx.astNode as JavaAstRootNode;
+    const javaRootNode = ctx.astNode as Java.JavaAstRootNode;
     const renderer = createJavaRenderer(javaRootNode, ctx.javaOptions);
     const rendered = renderer.executeRender(ctx.astNode, renderer);
 

@@ -1,6 +1,6 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Java} from '@omnigen/target-java';
+import {Code} from '@omnigen/target-code';
 import {CSharpRootNode} from '../ast';
 import {CSharpOptions} from '../options';
 
@@ -19,8 +19,8 @@ export class NamespaceCompressionAstTransformer implements AstTransformer<CSharp
       return;
     }
 
-    const namespaceNameToMainId = new Map<string, Java.Namespace>();
-    const namespaceRedirect = new Map<Java.Namespace, Java.Namespace>();
+    const namespaceNameToMainId = new Map<string, Code.Namespace>();
+    const namespaceRedirect = new Map<Code.Namespace, Code.Namespace>();
 
     const defaultVisitor = args.root.createVisitor();
     args.root.visit({

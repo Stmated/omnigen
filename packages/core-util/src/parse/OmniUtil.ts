@@ -42,12 +42,10 @@ import {
   UnknownKind,
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import {PropertyUtil} from './PropertyUtil.ts';
-import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor.ts';
-import {Naming} from './Naming.ts';
-import {util} from 'zod';
+import {PropertyUtil} from './PropertyUtil';
+import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
+import {Naming} from './Naming';
 import {assertUnreachable, Case} from '../util';
-import assertNever = util.assertNever;
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -59,8 +57,6 @@ export interface TypeCollection {
 }
 
 type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType };
-
-// NOTE: Perhaps the TraverseInput and TraverseParent should be able to be OmniModel (etc) as well?
 
 export class OmniUtil {
 
@@ -505,7 +501,7 @@ export class OmniUtil {
       throw new Error(`Need to implement what should happen if given an object literal`);
     }
 
-    assertNever(value);
+    assertUnreachable(value);
   }
 
   /**

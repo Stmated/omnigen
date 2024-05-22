@@ -1,4 +1,4 @@
-import * as Java from '../ast';
+import * as Java from '../ast/JavaAst';
 import {OmniType, TargetOptions} from '@omnigen/core';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 
@@ -50,7 +50,7 @@ export class DependencyGraphAstUtils {
       },
       visitFreeTextTypeLink: () => {
       },
-      visitFreeTextMethodLink: () => {
+      visitFreeTextMemberLink: () => {
       },
       visitFreeTextPropertyLink: () => {
       },

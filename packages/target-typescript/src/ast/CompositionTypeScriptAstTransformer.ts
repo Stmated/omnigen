@@ -1,18 +1,19 @@
-import {AstTransformer, AstTransformerArguments, OmniType, PackageOptions, TargetOptions, TypeNode} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, NameParts, OmniType, PackageOptions, TargetOptions, TypeNode} from '@omnigen/core';
 import {TsRootNode} from './TsRootNode.ts';
 import {DefaultTypeScriptVisitor} from '../visit';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '@omnigen/core-util';
-import {Ts, TsAstUtils} from '../ast';
-import {Java, JavaUtil} from '@omnigen/target-java';
+import {Ts} from '../ast';
+import {Code} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRootNode> {
+export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRootNode, PackageOptions & TargetOptions> {
 
   transformAst(args: AstTransformerArguments<TsRootNode, PackageOptions & TargetOptions>): void {
 
     const typesToReplace = new Map<TypeNode, TypeNode>();
+    const nameResolver = args.root.getNameResolver();
 
     args.root.visit({
       ...DefaultTypeScriptVisitor,
@@ -31,13 +32,17 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
             inline: true,
           };
           const aliasRhsTypeNode = args.root.getAstUtils().createTypeNode(inlinedType);
-          const replacementAliasTargetNode = new Java.EdgeType(n.type.omniType, false);
+          const replacementAliasTargetNode = new Code.EdgeType(n.type.omniType, false);
 
           // TODO: Add this to an existing suitable CompilationUnit instead? Make it an option to move it elsewhere? Maybe to where it is used the most?
-          const typeAlias = new Ts.TypeAliasDeclaration(n.name, aliasRhsTypeNode, new Java.ModifierList(new Java.Modifier(Java.ModifierType.PUBLIC)));
-          args.root.children.push(new Java.CompilationUnit(
-            new Java.PackageDeclaration(JavaUtil.getPackageName(n.type.omniType, n.name.value, args.options)),
-            new Java.ImportList([]),
+          const typeAlias = new Ts.TypeAliasDeclaration(n.name, aliasRhsTypeNode, new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC)));
+          const investigatedName = nameResolver.investigate({type: n.type.omniType, customName: n.name.value, options: args.options});
+          const absolutePackageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
+          // JavaUtil.getPackageName(n.type.omniType, n.name.value, args.options)),
+
+          args.root.children.push(new Code.CompilationUnit(
+            new Code.PackageDeclaration(absolutePackageName),
+            new Code.ImportList([]),
             typeAlias,
           ));
 

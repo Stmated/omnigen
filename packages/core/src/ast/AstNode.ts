@@ -1,6 +1,9 @@
 import {AstVisitor, VisitResult} from '../visit';
 import {Reducer, ReducerResult} from '../reduce';
-import {AstTargetFunctions} from './AstTargetFunctions.ts';
+import {AstTargetFunctions} from './AstTargetFunctions';
+import {AstNodeWithChildren} from './AstNodeWithChildren';
+import {ObjectNameResolver} from './ObjectNameResolver.ts';
+import {TargetFunctions} from '../parse';
 
 /**
  * This is an abstract general ST (Syntax Tree) Node.
@@ -36,7 +39,7 @@ export interface NodeResolveCtx<R, V extends AstVisitor<R>> {
   visitor: V;
 }
 
-export interface RootAstNode extends AstNode {
+export interface RootAstNode extends AstNode, AstNodeWithChildren {
 
   createVisitor<R>(): AstVisitor<R>;
   createReducer(): Reducer<AstVisitor<unknown>>;
@@ -47,6 +50,8 @@ export interface RootAstNode extends AstNode {
    * TODO: Should likely be removed in favor of making type nodes more specific and then adding an AST transformer per target to rewrite them into a suitable form for that target
    */
   getAstUtils(): AstTargetFunctions;
+  getNameResolver(): ObjectNameResolver;
+  getFunctions(): TargetFunctions;
 }
 
 export interface Reference<T extends AstNode> extends AstNode {

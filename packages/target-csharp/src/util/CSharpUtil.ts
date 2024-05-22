@@ -1,18 +1,7 @@
 import {OmniPrimitiveType, OmniTypeKind} from '@omnigen/core';
 import {assertUnreachable} from '@omnigen/core-util';
 
-const CSHARP_RESERVED_WORDS = [
-  'abstract', 'as', 'base', 'bool', 'break', 'byte', 'case', 'catch', 'char', 'checked', 'class', 'const', 'continue', 'decimal', 'default', 'delegate', 'do',
-  'double', 'else', 'enum', 'event', 'explicit', 'extern', 'false', 'finally', 'fixed', 'float', 'for', 'foreach', 'goto', 'if', 'implicit', 'in', 'int', 'interface', 'internal', 'is', 'lock',
-  'long', 'namespace', 'new', 'null', 'object', 'operator', 'out', 'override', 'params', 'private', 'protected', 'public', 'readonly', 'ref', 'return', 'sbyte', 'sealed', 'short', 'sizeof',
-  'stackalloc', 'static', 'string', 'struct', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'uint', 'ulong', 'unchecked', 'unsafe', 'ushort', 'using', 'virtual', 'void', 'volatile', 'while',
-];
-
 export class CSharpUtil {
-
-  public static isReservedWord(word: string): boolean {
-    return CSHARP_RESERVED_WORDS.includes(word);
-  }
 
   public static toPrimitiveTypeName(type: OmniPrimitiveType): string {
 
@@ -55,5 +44,20 @@ export class CSharpUtil {
     }
 
     assertUnreachable(type);
+  }
+
+  public static isPrimitiveBoxed(type: OmniPrimitiveType): boolean {
+
+    if (type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
+      return false;
+    }
+
+    if (type.kind == OmniTypeKind.STRING) {
+
+      // If it's a string it's not boxed, it it always the same.
+      return false;
+    }
+
+    return type.nullable === true;
   }
 }

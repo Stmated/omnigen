@@ -8,5 +8,4 @@ export * from './transform';
 export * from './visit';
 export * from './write';
 export * from './equality';
-export * from './input';
 export * from './reduce';

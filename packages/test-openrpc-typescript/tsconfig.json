@@ -4,5 +4,8 @@
   "compilerOptions": {
     "rootDir": "./src",
     "baseUrl": "./src"
-  }
+  },
+  "exclude": [
+    "**/__snapshots__/**"
+  ]
 }

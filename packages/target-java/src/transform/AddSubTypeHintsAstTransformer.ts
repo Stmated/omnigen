@@ -1,17 +1,10 @@
-import {
-  OmniTypeKind,
-} from '@omnigen/core';
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
-import * as Java from '../ast';
+import {AstTransformer, AstTransformerArguments, OmniTypeKind} from '@omnigen/core';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {Code} from '@omnigen/target-code';
 
-export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
+export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRootAstNode> {
 
-  transformAst(args: JavaAstTransformerArgs): void {
-
-    if (!args.options.includeGenerated) {
-      return;
-    }
+  transformAst(args: AstTransformerArguments<Code.CodeRootAstNode>): void {
 
     const defaultVisitor = args.root.createVisitor();
     args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
@@ -34,66 +27,66 @@ export class AddSubTypeHintsAstTransformer extends AbstractJavaAstTransformer {
           //         What to do if that is not possible? Need to make it work as if "In" also has properties!
 
           node.annotations?.children.push(
-            new Java.Annotation(
-              new Java.EdgeType({
+            new Code.Annotation(
+              new Code.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
                 fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
               }),
-              new Java.AnnotationKeyValuePairList(
-                new Java.AnnotationKeyValuePair(
-                  new Java.Identifier('use'),
-                  new Java.StaticMemberReference(
-                    new Java.ClassName(
-                      new Java.EdgeType({
+              new Code.AnnotationKeyValuePairList(
+                new Code.AnnotationKeyValuePair(
+                  new Code.Identifier('use'),
+                  new Code.StaticMemberReference(
+                    new Code.ClassName(
+                      new Code.EdgeType({
                         kind: OmniTypeKind.HARDCODED_REFERENCE,
                         fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
                       }),
                     ),
-                    new Java.Identifier(
+                    new Code.Identifier(
                       'NAME',
                     ),
                   ),
                 ),
-                new Java.AnnotationKeyValuePair(
-                  new Java.Identifier('property'),
-                  new Java.Literal(propertyName),
+                new Code.AnnotationKeyValuePair(
+                  new Code.Identifier('property'),
+                  new Code.Literal(propertyName),
                 ),
               ),
             ),
           );
 
-          const subTypes: Java.Annotation[] = [];
+          const subTypes: Code.Annotation[] = [];
           for (const subTypeHint of node.type.omniType.subTypeHints) {
 
             const qualifier = subTypeHint.qualifiers[0];
-            subTypes.push(new Java.Annotation(
-              new Java.EdgeType({
+            subTypes.push(new Code.Annotation(
+              new Code.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
                 fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
               }),
-              new Java.AnnotationKeyValuePairList(
-                new Java.AnnotationKeyValuePair(
-                  new Java.Identifier('name'),
-                  new Java.Literal(OmniUtil.toLiteralValue(qualifier.value)),
+              new Code.AnnotationKeyValuePairList(
+                new Code.AnnotationKeyValuePair(
+                  new Code.Identifier('name'),
+                  new Code.Literal(OmniUtil.toLiteralValue(qualifier.value)),
                 ),
-                new Java.AnnotationKeyValuePair(
-                  new Java.Identifier('value'),
-                  new Java.ClassReference(new Java.ClassName(args.root.getAstUtils().createTypeNode(subTypeHint.type))),
+                new Code.AnnotationKeyValuePair(
+                  new Code.Identifier('value'),
+                  new Code.ClassReference(new Code.ClassName(args.root.getAstUtils().createTypeNode(subTypeHint.type))),
                 ),
               ),
             ));
           }
 
           node.annotations?.children.push(
-            new Java.Annotation(
-              new Java.EdgeType({
+            new Code.Annotation(
+              new Code.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
                 fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
               }),
-              new Java.AnnotationKeyValuePairList(
-                new Java.AnnotationKeyValuePair(
+              new Code.AnnotationKeyValuePairList(
+                new Code.AnnotationKeyValuePair(
                   undefined,
-                  new Java.ArrayInitializer<Java.Annotation>(
+                  new Code.ArrayInitializer<Code.Annotation>(
                     ...subTypes,
                   ),
                 ),

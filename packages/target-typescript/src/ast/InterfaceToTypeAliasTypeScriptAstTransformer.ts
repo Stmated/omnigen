@@ -1,26 +1,13 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {
-  AstTransformer,
-  AstTransformerArguments,
-  OmniInterfaceType,
-  OmniIntersectionType,
-  OmniSubTypeCapableType,
-  OmniType,
-  OmniTypeKind,
-  PackageOptions,
-  TargetOptions,
-  TypeNode,
-  UnknownKind,
-} from '@omnigen/core';
-import {Java} from '@omnigen/target-java';
-import {Ts} from '.';
+import {AstTransformer, AstTransformerArguments, OmniIntersectionType, OmniType, OmniTypeKind, PackageOptions, TargetOptions, TypeNode, UnknownKind} from '@omnigen/core';
+import {Ts, TsRootNode} from '.';
 import {OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransformer<Java.JavaAstRootNode> {
+export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransformer<TsRootNode> {
 
-  transformAst(args: AstTransformerArguments<Java.JavaAstRootNode, PackageOptions & TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<TsRootNode, TargetOptions>): void {
 
     const defaultReducer = args.root.createReducer();
 
@@ -97,7 +84,7 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
     }
   }
 
-  private getInlinedIfNeededTypeNode(originalType: OmniType, originalTypeNode: TypeNode, args: AstTransformerArguments<Java.JavaAstRootNode, PackageOptions & TargetOptions>): TypeNode {
+  private getInlinedIfNeededTypeNode(originalType: OmniType, originalTypeNode: TypeNode, args: AstTransformerArguments<TsRootNode, TargetOptions>): TypeNode {
 
     if (originalType.inline) {
       return originalTypeNode;

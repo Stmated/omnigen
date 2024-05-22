@@ -1,8 +1,10 @@
 import {CSharpVisitor} from '../visit';
 import {AstNode, OmniProperty, Reducer, ReducerResult, Reference, RootAstNode, TypeNode, VisitResult} from '@omnigen/core';
-import {Java} from '@omnigen/target-java';
+import {Code} from '@omnigen/target-code';
 
-export abstract class AbstractCSharpNode extends Java.AbstractJavaNode implements AstNode {
+export * from '@omnigen/target-code/ast';
+
+export abstract class AbstractCSharpNode extends Code.AbstractCodeNode implements AstNode {
 
   abstract visit<R>(visitor: CSharpVisitor<R>): VisitResult<R>;
 
@@ -11,9 +13,9 @@ export abstract class AbstractCSharpNode extends Java.AbstractJavaNode implement
 
 export class PropertyIdentifier extends AbstractCSharpNode {
 
-  identifier: Java.Identifier;
+  identifier: Code.Identifier;
 
-  constructor(identifier: Java.Identifier) {
+  constructor(identifier: Code.Identifier) {
     super();
     this.identifier = identifier;
   }
@@ -35,13 +37,13 @@ export class PropertyNode extends AbstractCSharpNode {
   readonly typeNode: TypeNode;
   readonly identifier: PropertyIdentifier;
   property?: OmniProperty | undefined;
-  modifiers?: Java.ModifierList | undefined;
-  getModifiers?: Java.ModifierList | undefined;
-  setModifiers?: Java.ModifierList | undefined;
+  modifiers?: Code.ModifierList | undefined;
+  getModifiers?: Code.ModifierList | undefined;
+  setModifiers?: Code.ModifierList | undefined;
   // getBody?: AstNode | undefined;
   // setBody?: AstNode | undefined;
   initializer?: AstNode | undefined;
-  comments?: Java.Comment | undefined;
+  comments?: Code.Comment | undefined;
   immutable?: boolean | undefined;
 
   constructor(typeNode: TypeNode, identifier: PropertyIdentifier) {

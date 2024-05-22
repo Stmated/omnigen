@@ -1,7 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {Java, JavaUtil} from '../';
-import {AssignExpression, Block, DeclarationReference, EdgeType, Identifier, MethodDeclarationSignature, Parameter, ParameterList, ReturnStatement, Statement} from '../ast';
+import * as Java from '../ast/JavaAst';
 import {OmniTypeKind} from '@omnigen/core';
+import {JavaUtil} from '../util';
 
 /**
  * Replace generic things like "getter" and "setter" into specific nodes for Java (such as methods)
@@ -16,16 +16,16 @@ export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTra
 
         const field = args.root.resolveNodeRef(n.fieldRef);
         return new Java.MethodDeclaration(
-          new MethodDeclarationSignature(
-            n.getterName ?? new Identifier(JavaUtil.getGetterName(field.identifier.value, field.type.omniType)),
+          new Java.MethodDeclarationSignature(
+            n.getterName ?? new Java.Identifier(JavaUtil.getGetterName(field.identifier.value, field.type.omniType)),
             field.type,
             undefined,
             undefined,
             n.annotations,
             n.comments,
           ),
-          new Block(
-            new Statement(new ReturnStatement(n.fieldRef)),
+          new Java.Block(
+            new Java.Statement(new Java.ReturnStatement(n.fieldRef)),
           ),
         );
       },
@@ -33,28 +33,28 @@ export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTra
 
         const field = args.root.resolveNodeRef(n.fieldRef);
 
-        const parameter = new Parameter(
+        const parameter = new Java.Parameter(
           field.type,
           field.identifier,
         );
 
         return new Java.MethodDeclaration(
-          new MethodDeclarationSignature(
-            new Identifier(JavaUtil.getSetterName(field.identifier.value)),
-            new EdgeType({
+          new Java.MethodDeclarationSignature(
+            new Java.Identifier(JavaUtil.getSetterName(field.identifier.value)),
+            new Java.EdgeType({
               kind: OmniTypeKind.VOID,
               nullable: true,
             }),
-            new ParameterList(parameter),
+            new Java.ParameterList(parameter),
             undefined,
             n.annotations,
             n.comments,
           ),
-          new Block(
-            new Statement(
-              new AssignExpression(
+          new Java.Block(
+            new Java.Statement(
+              new Java.AssignExpression(
                 n.fieldRef,
-                new DeclarationReference(parameter),
+                new Java.DeclarationReference(parameter),
               ),
             ),
           ),
@@ -66,5 +66,4 @@ export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTra
       args.root = newRoot;
     }
   }
-
 }

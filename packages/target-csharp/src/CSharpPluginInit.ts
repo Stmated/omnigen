@@ -12,6 +12,7 @@ import {
   ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
 import {
+  AstTransformer,
   AstTransformerArguments,
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
@@ -30,50 +31,42 @@ import {
 import {z} from 'zod';
 import {SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {createCSharpRenderer} from './render';
-import {
-  AddAbstractAccessorsAstTransformer,
-  AddAdditionalPropertiesInterfaceAstTransformer,
-  AddCommentsAstTransformer,
-  AddCompositionMembersJavaAstTransformer,
-  AddConstructorJavaAstTransformer,
-  AddFieldsAstTransformer,
-  AddGeneratedCommentAstTransformer,
-  AddObjectDeclarationsJavaAstTransformer,
-  AddSubTypeHintsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer,
-  DEFAULT_JAVA_OPTIONS,
-  DeleteUnnecessaryCompositionsJavaModelTransformer,
-  GenericNodesToSpecificJavaAstTransformer, InnerTypeCompressionAstTransformer,
-  InterfaceJavaModelTransformer,
-  Java,
-  JavaAndTargetOptions,
-  JavaOptions,
-  JavaPlugins,
-  PackageResolverAstTransformer,
-  RemoveConstantParametersAstTransformer,
-  ReorderMembersAstTransformer,
-  ResolveGenericSourceIdentifiersAstTransformer,
-  SerializationLibrary,
-  SiblingTypeCompressionAstTransformer,
-  SimplifyGenericsAstTransformer,
-  SortVisitorRegistry,
-  ZodJavaOptions,
-} from '@omnigen/target-java';
 import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';
 import {CSHARP_FEATURES} from './features';
 import {Cs, CSharpRootNode} from './ast';
-import {MethodToGetterTypeScriptAstTransformer, RemoveEnumFieldsTypeScriptAstTransformer} from '@omnigen/target-typescript';
-import {AddPropertyAccessorForFieldAstTransformer} from './ast/AddPropertyAccessorForFieldAstTransformer.ts';
+import {AddPropertyAccessorCSharpAstTransformer} from './ast/AddPropertyAccessorCSharpAstTransformer.ts';
 import {NamespaceWrapperAstTransformer} from './ast/NamespaceWrapperAstTransformer.ts';
 import {DelegatesToCSharpAstTransformer} from './ast/DelegatesToCSharpAstTransformer.ts';
 import {NonNumericEnumToConstClassAstTransformer} from './ast/NonNumericEnumToConstClassAstTransformer.ts';
 import {ToCSharpModifiersAstTransformer} from './ast/ToCSharpModifiersAstTransformer.ts';
 import {NamespaceCompressionAstTransformer} from './ast/NamespaceCompressionAstTransformer.ts';
+import {
+  AddAbstractAccessorsAstTransformer,
+  AddAdditionalPropertiesInterfaceAstTransformer,
+  AddCommentsAstTransformer,
+  AddCompositionMembersCodeAstTransformer,
+  AddConstructorCodeAstTransformer,
+  AddFieldsAstTransformer,
+  AddGeneratedCommentAstTransformer,
+  AddObjectDeclarationsCodeAstTransformer,
+  DeleteUnnecessaryCompositionsJavaModelTransformer,
+  InnerTypeCompressionAstTransformer,
+  InterfaceExtractorModelTransformer,
+  MethodToGetterCodeAstTransformer,
+  PackageResolverAstTransformer,
+  RemoveConstantParametersAstTransformer,
+  RemoveEnumFieldsCodeAstTransformer,
+  ReorderMembersAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer,
+  SimplifyGenericsAstTransformer,
+  SortVisitorRegistry,
+} from '@omnigen/target-code';
+import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export type CSharpAstTransformerArgs = AstTransformerArguments<CSharpRootNode, CSharpOptions & JavaAndTargetOptions>;
+export type CSharpAstTransformerArgs = AstTransformerArguments<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>;
 
 export const ZodParserOptionsContext = z.object({
   parserOptions: ZodParserOptions,
@@ -94,17 +87,16 @@ export const ZodCSharpInitContextIn = ZodModelContext.extend({
 
 export const ZodCSharpInitContextOut = ZodModelContext
   .merge(ZodCSharpOptionsContext)
-  .merge(JavaPlugins.ZodJavaOptionsContext)
   .merge(ZodCSharpTargetContext);
 
 export const ZodCSharpContextIn = ZodModelContext
-  .merge(ZodParserOptionsContext)
-  .merge(ZodPackageOptionsContext)
-  .merge(ZodTargetOptionsContext)
-  .merge(ZodModelTransformOptionsContext)
-  .merge(ZodCSharpOptionsContext)
-  .merge(ZodCSharpTargetContext)
-  .merge(JavaPlugins.ZodJavaOptionsContext);
+    .merge(ZodParserOptionsContext)
+    .merge(ZodPackageOptionsContext)
+    .merge(ZodTargetOptionsContext)
+    .merge(ZodModelTransformOptionsContext)
+    .merge(ZodCSharpOptionsContext)
+    .merge(ZodCSharpTargetContext)
+;
 
 export const ZodCSharpContextOut = ZodCSharpContextIn
   .merge(ZodAstNodeContext);
@@ -128,14 +120,9 @@ export const CSharpPluginInit = createPlugin(
       return csharpOptions.error;
     }
 
-    const javaOptions = ZodJavaOptions.safeParse(ctx.arguments);
-    if (!javaOptions.success) {
-      return javaOptions.error;
-    }
-
     const order = [
       Cs.PropertyNode,
-      Java.ConstructorDeclaration,
+      Cs.ConstructorDeclaration,
     ];
 
     SortVisitorRegistry.INSTANCE.register(
@@ -160,7 +147,6 @@ export const CSharpPluginInit = createPlugin(
       ...ctx,
       target: 'csharp',
       csOptions: csharpOptions.data,
-      javaOptions: javaOptions.data,
       targetFeatures: CSHARP_FEATURES,
     } as const;
   },
@@ -176,8 +162,7 @@ export const CSharpPlugin = createPlugin(
     };
 
     const transformers: OmniModelTransformer[] = [
-      // new CompositionGenericTargetToObjectJavaModelTransformer(),
-      new InterfaceJavaModelTransformer(),
+      new InterfaceExtractorModelTransformer(),
       new DeleteUnnecessaryCompositionsJavaModelTransformer(),
     ];
 
@@ -187,13 +172,7 @@ export const CSharpPlugin = createPlugin(
 
     // Then do 2nd pass transforming
 
-    type TOpt = ParserOptions & TargetOptions & JavaOptions & CSharpOptions;
-
-    // TODO: Quite ugly, a bit confusing to override options hard-coded this way, it will override what the user told us
-    const overridingJavaOptions: Partial<JavaOptions> = {
-      commentsOnFields: true,
-      serializationLibrary: SerializationLibrary.POJO,
-    };
+    type TOpt = ParserOptions & TargetOptions & CSharpOptions;
 
     const modelTransformer2Args: OmniModelTransformer2ndPassArgs<TOpt> = {
       model: ctx.model,
@@ -201,8 +180,6 @@ export const CSharpPlugin = createPlugin(
         ...ctx.parserOptions,
         ...ctx.modelTransformOptions,
         ...ctx.targetOptions,
-        ...ctx.javaOptions,
-        ...overridingJavaOptions,
         ...ctx.csOptions,
       },
       targetFeatures: CSHARP_FEATURES,
@@ -221,50 +198,49 @@ export const CSharpPlugin = createPlugin(
 
     const astNode = new CSharpRootNode([]);
 
-    const astTransformers = [
-      new AddObjectDeclarationsJavaAstTransformer(),
+    const astTransformers: AstTransformer<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>[] = [
+      new AddObjectDeclarationsCodeAstTransformer(),
       new AddFieldsAstTransformer(),
       new NonNumericEnumToConstClassAstTransformer(),
       // // new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
-      new AddCompositionMembersJavaAstTransformer(),
-      new AddConstructorJavaAstTransformer(),
+      new AddCompositionMembersCodeAstTransformer(),
+      new AddConstructorCodeAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
-      new AddSubTypeHintsAstTransformer(),
+      // new AddSubTypeHintsAstTransformer(),
       new NamespaceWrapperAstTransformer(),
       // new SiblingTypeCompressionAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
       new NamespaceCompressionAstTransformer(),
 
-      new AddThrowsForKnownMethodsAstTransformer(),
+      // new AddThrowsForKnownMethodsAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
       // new CompositionTypeScriptAstTransformer(),
 
-      new MethodToGetterTypeScriptAstTransformer(),
+      new MethodToGetterCodeAstTransformer(),
       // new RemoveSuperfluousGetterTypeScriptAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
-      // new ClassToInterfaceTypeScriptAstTransformer(),
       // new InterfaceToTypeAliasTypeScriptAstTransformer(),
       // new ToHardCodedTypeTypeScriptAstTransformer(),
       // new SingleFileTypeScriptAstTransformer(),
-      new RemoveEnumFieldsTypeScriptAstTransformer(),
-      new AddPropertyAccessorForFieldAstTransformer(),
+      new RemoveEnumFieldsCodeAstTransformer(),
+      new AddPropertyAccessorCSharpAstTransformer(),
       new ToCSharpModifiersAstTransformer(),
-      new GenericNodesToSpecificJavaAstTransformer(),
+      // new GenericNodesToSpecificJavaAstTransformer(), // TODO: Add back in again?
       new DelegatesToCSharpAstTransformer(),
 
       new PackageResolverAstTransformer(),
+      new SimplifyTypePathsCSharpAstTransformer(),
+      new NonNumericEnumToConstClassAstTransformer(),
       new ReorderMembersAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
     ] as const;
 
-    const options: CSharpOptions & JavaOptions & TargetOptions & PackageOptions = {
+    const options: CSharpOptions & TargetOptions & PackageOptions = {
       ...ctx.targetOptions,
       ...ctx.packageOptions,
-      ...ctx.javaOptions,
-      ...overridingJavaOptions,
       ...ctx.csOptions,
     };
 
@@ -293,7 +269,6 @@ export const CSharpRendererCtxInBase = ZodModelContext
   .merge(ZodCSharpTargetContext);
 
 export const ZodOptionalOptionsContext = z.object({
-  javaOptions: ZodJavaOptions.partial().optional(),
   packageOptions: ZodPackageOptions.partial().optional(),
   targetOptions: ZodTargetOptions.partial().optional(),
 });
@@ -313,14 +288,12 @@ export const CSharpRendererPlugin = createPlugin(
 
     const rootTsNode = ctx.astNode as CSharpRootNode;
 
-    const options: PackageOptions & TargetOptions & JavaOptions & CSharpOptions = {
-      ...DEFAULT_JAVA_OPTIONS,
+    const options: PackageOptions & TargetOptions & CSharpOptions = {
       ...DEFAULT_PACKAGE_OPTIONS,
       ...DEFAULT_TARGET_OPTIONS,
       ...ctx.csOptions,
     };
 
-    copyDefinedProperties(ctx.javaOptions, options);
     copyDefinedProperties(ctx.packageOptions, options);
     copyDefinedProperties(ctx.targetOptions, options);
 
@@ -351,5 +324,5 @@ function copyDefinedProperties(source: any, target: any) {
   }
 }
 
-logger.info(`Registering csharp plugins`);
+logger.info(`Registering CSharp plugins`);
 export default PluginAutoRegistry.register([CSharpPluginInit, CSharpPlugin, CSharpRendererPlugin]);

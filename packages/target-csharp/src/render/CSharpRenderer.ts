@@ -1,14 +1,14 @@
 import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind, VisitResult} from '@omnigen/core';
 import {CSharpOptions, ReadonlyPropertyMode} from '../options';
 import {createCSharpVisitor, CSharpVisitor} from '../visit';
-import {createJavaRenderer, Java, JavaOptions, JavaRenderContext, JavaRendererOptions, join, render} from '@omnigen/target-java';
+import {Code, CodeRenderContext, CodeRendererOptions, createCodeRenderer, join, render} from '@omnigen/target-code';
 import {CSharpRootNode} from '../ast';
 import {Case, OmniUtil} from '@omnigen/core-util';
 import {CSharpUtil} from '../util/CSharpUtil.ts';
 
 export type CSharpRenderer = CSharpVisitor<string> & Renderer;
 
-export const DefaultCSharpRendererOptions: JavaRendererOptions = {
+export const DefaultCSharpRendererOptions: CodeRendererOptions = {
   fileExtension: 'cs',
   blockPrefix: '\n',
 };
@@ -16,11 +16,11 @@ export const DefaultCSharpRendererOptions: JavaRendererOptions = {
 // TODO:
 //  * Need a way to more easily differentiate a field modifier from a class and/or method modifier -- there should be more specific visitors for those, which call the more generic function
 
-export interface CSharpRenderContext extends JavaRenderContext {
+export interface CSharpRenderContext extends CodeRenderContext {
   fieldDepth: number;
 }
 
-export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptions & TargetOptions & JavaOptions & CSharpOptions): CSharpRenderer => {
+export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptions & TargetOptions & CSharpOptions): CSharpRenderer => {
 
   let fieldDepth = 0;
   const ctx: CSharpRenderContext = {
@@ -31,7 +31,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
   const parent = {
     ...createCSharpVisitor(),
-    ...createJavaRenderer(root, options, DefaultCSharpRendererOptions, ctx),
+    ...createCodeRenderer(root, options, DefaultCSharpRendererOptions, ctx),
   } satisfies CSharpVisitor<string>;
 
   return {
@@ -56,14 +56,14 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
     visitModifier: (n, v) => {
 
       switch (n.type) {
-        case Java.ModifierType.FINAL: {
+        case Code.ModifierType.FINAL: {
           if (fieldDepth > 0) {
             return 'readonly';
           } else {
             return 'sealed';
           }
         }
-        case Java.ModifierType.CONST: {
+        case Code.ModifierType.CONST: {
           return 'const';
         }
       }
@@ -77,7 +77,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
     visitImportStatement: (n, v) => {
 
       // if (n.type instanceof Java.TypePath)
-      if (n.type instanceof Java.EdgeType) {
+      if (n.type instanceof Code.EdgeType) {
 
         const importName = n.type.getImportName();
         if (!importName) {
@@ -105,14 +105,12 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       let setter: string;
       if (n.immutable && options.csharpReadonlyPropertySetterMode === ReadonlyPropertyMode.INIT) {
         setter = 'init; ';
-      } else if (n.immutable) { // } && options.csharpReadonlyPropertySetterMode === ReadonlyPropertyMode.NO_SETTER) {
+      } else if (n.immutable) {
         setter = '';
       } else {
         setter = `${setModifiers}set; `;
       }
 
-      // const getterBody = n.getBody ? `${n.getBody.visit(v)}` : '; ';
-      // const setterBody = setter && n.setBody ? `${n.setBody.visit(v)} ` : '; ';
       const initializer = n.initializer ? ` = ${n.initializer.visit(v)};` : '';
 
       return `${comments}${modifiers}${type} ${n.identifier.visit(v)} { ${getModifiers}get; ${setter}}${initializer}\n`;
@@ -255,7 +253,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
     visitComment: (n, v) => {
 
-      if (n.kind === Java.CommentKind.DOC) {
+      if (n.kind === Code.CommentKind.DOC) {
 
         const text = join(n.text.visit(v))
           .trim()

@@ -1,8 +1,8 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstNode, AstTransformer, AstTransformerArguments, OmniEnumType, OmniPrimitiveType, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstNode, AstTransformer, AstTransformerArguments, OmniEnumType, OmniPrimitiveType, OmniType, OmniTypeKind, TargetOptions} from '@omnigen/core';
 import {CSharpRootNode} from '../ast';
 import {OmniUtil} from '@omnigen/core-util';
-import {FreeTextUtils, Java} from '@omnigen/target-java';
+import {Code, FreeTextUtils} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -13,7 +13,7 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<CSharpRootNode> {
 
-  transformAst(args: AstTransformerArguments<CSharpRootNode, PackageOptions & TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<CSharpRootNode, TargetOptions>): void {
 
     const enumsToReplace: OmniEnumType[] = [];
     const enumToNode = new Map<OmniType, AstNode>();
@@ -35,11 +35,11 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
         const t = n.omniType;
         if (enumsToReplace.includes(t)) {
 
-          const newBlock = new Java.Block();
+          const newBlock = new Code.Block();
 
           for (const child of n.body.children) {
 
-            if (child instanceof Java.EnumItemList) {
+            if (child instanceof Code.EnumItemList) {
 
               for (const item of child.children) {
 
@@ -50,13 +50,13 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
                 };
 
                 const fieldTypeNode = args.root.getAstUtils().createTypeNode(itemType, false);
-                const field = new Java.Field(
+                const field = new Code.Field(
                   fieldTypeNode,
                   item.identifier,
-                  new Java.ModifierList(
-                    new Java.Modifier(Java.ModifierType.PUBLIC),
-                    new Java.Modifier(Java.ModifierType.STATIC),
-                    new Java.Modifier(Java.ModifierType.FINAL),
+                  new Code.ModifierList(
+                    new Code.Modifier(Code.ModifierType.PUBLIC),
+                    new Code.Modifier(Code.ModifierType.STATIC),
+                    new Code.Modifier(Code.ModifierType.FINAL),
                   ),
                 );
 
@@ -67,7 +67,7 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
             }
           }
 
-          const newClass = new Java.ClassDeclaration(
+          const newClass = new Code.ClassDeclaration(
             n.type,
             n.name,
             newBlock,
@@ -75,11 +75,11 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
             n.genericParameterList,
           );
 
-          if (!newClass.modifiers.children.some(it => it.type === Java.ModifierType.STATIC)) {
-            newClass.modifiers.children.push(new Java.Modifier(Java.ModifierType.STATIC));
+          if (!newClass.modifiers.children.some(it => it.type === Code.ModifierType.STATIC)) {
+            newClass.modifiers.children.push(new Code.Modifier(Code.ModifierType.STATIC));
           }
 
-          enumToNode.set(n.type.omniType, new Java.ClassName(n.type));
+          enumToNode.set(n.type.omniType, new Code.ClassName(n.type));
 
           newClass.comments = n.comments;
           newClass.annotations = n.annotations;
@@ -106,14 +106,14 @@ export class NonNumericEnumToConstClassAstTransformer implements AstTransformer<
 
         const reduced = defaultReducer.reduceField(n, r);
 
-        if (reduced && reduced instanceof Java.Field) {
+        if (reduced && reduced instanceof Code.Field) {
 
           const actualType = OmniUtil.getUnwrappedType(n.type.omniType);
           const node = enumToNode.get(actualType);
 
           if (node) {
-            const newComment = new Java.FreeTextTypeLink(node);
-            reduced.comments = new Java.Comment(FreeTextUtils.add(reduced.comments?.text, newComment), reduced.comments?.kind);
+            const newComment = new Code.FreeTextTypeLink(node);
+            reduced.comments = new Code.Comment(FreeTextUtils.add(reduced.comments?.text, newComment), reduced.comments?.kind);
           }
         }
 

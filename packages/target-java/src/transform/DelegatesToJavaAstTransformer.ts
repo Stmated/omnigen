@@ -1,8 +1,8 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {Java, JavaUtil} from '../';
-import {EdgeType, GenericType, Identifier} from '../ast';
+import {JavaUtil} from '../util';
 import {OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TypeNode} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
+import * as Java from '../ast/JavaAst';
 
 /**
  * Replace higher level "delegate" with Java-specific interfaces and call-sites.
@@ -63,23 +63,32 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
           }
         }
 
-        if (!hardType && n.returnType && n.parameterTypes.length == 1) {
+        const parameterTypes = [...n.parameterTypes];
 
-          const sourceType = n.parameterTypes[0].omniType;
-          const common = OmniUtil.getCommonDenominatorBetween(sourceType, n.returnType.omniType, args.features);
-          if (common && common.type == sourceType) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.UnaryOperator'};
-          }
-        }
-
-        if (!hardType) {
+        if (!hardType && n.returnType) {
 
           if (n.parameterTypes.length == 1) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Function'};
+            const sourceType = n.parameterTypes[0].omniType;
+            const common = OmniUtil.getCommonDenominatorBetween(sourceType, n.returnType.omniType, args.features);
+            if (common && common.type == sourceType) {
+              hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.UnaryOperator'};
+            } else {
+              hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Function'};
+              parameterTypes.push(n.returnType);
+            }
           } else if (n.parameterTypes.length == 2) {
             hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.BiFunction'};
+            parameterTypes.push(n.returnType);
           }
         }
+
+        // if (!hardType) {
+        //   if (n.parameterTypes.length == 1) {
+        //     hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Function'};
+        //   } else if (n.parameterTypes.length == 2) {
+        //     hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.BiFunction'};
+        //   }
+        // }
 
         if (!hardType) {
           throw new Error(`Do not know how to convert delegate '${n}' into a Java FunctionalInterface`);
@@ -89,14 +98,14 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
           delegateToMethodName.set(n.id, methodName);
         }
 
-        return new GenericType(hardType, new EdgeType(hardType),
-          n.parameterTypes.map(it => this.asGenericCompatibleTypeNode(args.root, it, args.features)),
+        return new Java.GenericType(hardType, new Java.EdgeType(hardType),
+          parameterTypes.map(it => this.asGenericCompatibleTypeNode(args.root, it, args.features)),
         );
       },
       reduceDelegateCall: n => {
 
         const methodName = delegateToMethodName.get(n.delegateRef.targetId) ?? 'apply';
-        return new Java.MethodCall(new Java.MemberAccess(n.target, new Identifier(methodName)), n.args);
+        return new Java.MethodCall(new Java.MemberAccess(n.target, new Java.Identifier(methodName)), n.args);
       },
     });
 

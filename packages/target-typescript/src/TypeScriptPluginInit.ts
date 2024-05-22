@@ -13,10 +13,19 @@ import {
 } from '@omnigen/core-plugin';
 import * as Ts from './ast';
 import {
+  ClassToInterfaceTypeScriptAstTransformer,
+  CompositionTypeScriptAstTransformer,
+  InterfaceToTypeAliasTypeScriptAstTransformer,
+  RemoveSuperfluousGetterTypeScriptAstTransformer,
+  SingleFileTypeScriptAstTransformer,
+  ToHardCodedTypeTypeScriptAstTransformer,
+  TsRootNode,
+} from './ast';
+import {
+  AstTransformer,
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
-  OmniModelTransformer, OmniModelTransformer2ndPassArgs,
-  OmniModelTransformerArgs,
+  OmniModelTransformer2ndPassArgs,
   PackageOptions,
   ParserOptions,
   TargetOptions,
@@ -31,35 +40,23 @@ import {
   AddAccessorsForFieldsAstTransformer,
   AddAdditionalPropertiesInterfaceAstTransformer,
   AddCommentsAstTransformer,
-  AddConstructorJavaAstTransformer,
+  AddConstructorCodeAstTransformer,
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
-  AddObjectDeclarationsJavaAstTransformer,
-  AddSubTypeHintsAstTransformer,
-  AddThrowsForKnownMethodsAstTransformer,
-  DEFAULT_JAVA_OPTIONS,
-  InnerTypeCompressionAstTransformer,
-  JavaOptions,
+  AddObjectDeclarationsCodeAstTransformer,
+  InnerTypeCompressionAstTransformer, MethodToGetterCodeAstTransformer,
   PackageResolverAstTransformer,
+  RemoveConstantParametersAstTransformer, RemoveEnumFieldsCodeAstTransformer,
   ReorderMembersAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyGenericsAstTransformer,
-  ZodJavaOptions,
-  JavaPlugins, ResolveGenericSourceIdentifiersAstTransformer, RemoveConstantParametersAstTransformer, ToConstructorBodySuperCallAstTransformer,
-} from '@omnigen/target-java';
+  ToConstructorBodySuperCallAstTransformer,
+} from '@omnigen/target-code';
 import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
 import {TYPESCRIPT_FEATURES} from './features';
-import {CompositionTypeScriptAstTransformer} from './ast/CompositionTypeScriptAstTransformer.ts';
-import {TypeScriptAstTransformerArgs} from './ast/TypeScriptAstVisitor.ts';
-import {MethodToGetterTypeScriptAstTransformer} from './ast/MethodToGetterTypeScriptAstTransformer.ts';
-import {ClassToInterfaceTypeScriptAstTransformer} from './ast/ClassToInterfaceTypeScriptAstTransformer.ts';
-import {ToHardCodedTypeTypeScriptAstTransformer} from './ast/ToHardCodedTypeTypeScriptAstTransformer.ts';
-import {SingleFileTypeScriptAstTransformer} from './ast/SingleFileTypeScriptAstTransformer.ts';
-import {RemoveEnumFieldsTypeScriptAstTransformer} from './ast/RemoveEnumFieldsTypeScriptAstTransformer.ts';
+import {TypeScriptAstTransformerArgs} from './ast/TypeScriptAstVisitor';
 import {RemoveWildcardGenericParamTypeScriptModelTransformer, StrictUndefinedTypeScriptModelTransformer} from './parse';
-import {TsRootNode} from './ast';
 import {LoggerFactory} from '@omnigen/core-log';
-import {RemoveSuperfluousGetterTypeScriptAstTransformer} from './ast/RemoveSuperfluousGetterTypeScriptAstTransformer.ts';
-import {InterfaceToTypeAliasTypeScriptAstTransformer} from './ast/InterfaceToTypeAliasTypeScriptAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -82,17 +79,18 @@ export const ZodTypeScriptInitContextIn = ZodModelContext.extend({
 
 export const ZodTypeScriptInitContextOut = ZodModelContext
   .merge(ZodTypeScriptOptionsContext)
-  .merge(JavaPlugins.ZodJavaOptionsContext)
+  // .merge(JavaPlugins.ZodJavaOptionsContext)
   .merge(ZodTypeScriptTargetContext);
 
 export const ZodTypeScriptContextIn = ZodModelContext
-  .merge(ZodParserOptionsContext)
-  .merge(ZodPackageOptionsContext)
-  .merge(ZodTargetOptionsContext)
-  .merge(ZodModelTransformOptionsContext)
-  .merge(ZodTypeScriptOptionsContext)
-  .merge(ZodTypeScriptTargetContext)
-  .merge(JavaPlugins.ZodJavaOptionsContext);
+    .merge(ZodParserOptionsContext)
+    .merge(ZodPackageOptionsContext)
+    .merge(ZodTargetOptionsContext)
+    .merge(ZodModelTransformOptionsContext)
+    .merge(ZodTypeScriptOptionsContext)
+    .merge(ZodTypeScriptTargetContext)
+  // .merge(JavaPlugins.ZodJavaOptionsContext)
+;
 
 export const ZodTypeScriptContextOut = ZodTypeScriptContextIn
   .merge(ZodAstNodeContext);
@@ -116,16 +114,16 @@ export const TypeScriptPluginInit = createPlugin(
       return typescriptOptions.error;
     }
 
-    const javaOptions = ZodJavaOptions.safeParse(ctx.arguments);
-    if (!javaOptions.success) {
-      return javaOptions.error;
-    }
+    // const javaOptions = ZodJavaOptions.safeParse(ctx.arguments);
+    // if (!javaOptions.success) {
+    //   return javaOptions.error;
+    // }
 
     return {
       ...ctx,
       target: 'typescript',
       tsOptions: typescriptOptions.data,
-      javaOptions: javaOptions.data,
+      // javaOptions: javaOptions.data,
       targetFeatures: TYPESCRIPT_FEATURES,
     } as const;
   },
@@ -154,9 +152,9 @@ export const TypeScriptPlugin = createPlugin(
 
     // Then do 2nd pass transforming
 
-    const modelTransformer2Args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & JavaOptions & TypeScriptOptions> = {
+    const modelTransformer2Args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions> = {
       model: ctx.model,
-      options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.javaOptions, ...ctx.tsOptions},
+      options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.tsOptions},
       targetFeatures: TYPESCRIPT_FEATURES,
     };
 
@@ -173,36 +171,36 @@ export const TypeScriptPlugin = createPlugin(
 
     const astNode = new Ts.TsRootNode([]);
 
-    const astTransformers = [
-      new AddObjectDeclarationsJavaAstTransformer(),
+    const astTransformers: AstTransformer<TsRootNode, PackageOptions & TargetOptions & TypeScriptOptions>[] = [
+      new AddObjectDeclarationsCodeAstTransformer(),
       new AddFieldsAstTransformer(),
       new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
-      new AddConstructorJavaAstTransformer(),
+      new AddConstructorCodeAstTransformer(),
       new ToConstructorBodySuperCallAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
-      new AddSubTypeHintsAstTransformer(),
+      // new AddSubTypeHintsAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
-      new AddThrowsForKnownMethodsAstTransformer(),
+      // new AddThrowsForKnownMethodsAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
       new CompositionTypeScriptAstTransformer(),
-      new MethodToGetterTypeScriptAstTransformer(),
+      new MethodToGetterCodeAstTransformer(),
       new RemoveSuperfluousGetterTypeScriptAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
       new ClassToInterfaceTypeScriptAstTransformer(),
       new InterfaceToTypeAliasTypeScriptAstTransformer(),
       new ToHardCodedTypeTypeScriptAstTransformer(),
       new SingleFileTypeScriptAstTransformer(),
-      new RemoveEnumFieldsTypeScriptAstTransformer(),
+      new RemoveEnumFieldsCodeAstTransformer(),
       new PackageResolverAstTransformer(),
       new ReorderMembersAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
     ] as const;
 
-    const options: TypeScriptOptions & JavaOptions & TargetOptions & PackageOptions = {
-      ...ctx.javaOptions,
+    const options: PackageOptions & TargetOptions & TypeScriptOptions = {
+      // ...ctx.javaOptions,
       ...ctx.tsOptions,
       ...ctx.targetOptions,
       ...ctx.packageOptions,
@@ -246,7 +244,7 @@ export const TypeScriptRendererPlugin = createPlugin(
     logger.info(`Root node: ${rootTsNode.children.length}`);
 
     const renderer = createTypeScriptRenderer(rootTsNode, {
-      ...DEFAULT_JAVA_OPTIONS,
+      // ...DEFAULT_JAVA_OPTIONS,
       ...DEFAULT_PACKAGE_OPTIONS,
       ...DEFAULT_TARGET_OPTIONS,
       ...ctx.tsOptions,

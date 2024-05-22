@@ -50,7 +50,6 @@ export const ZodTargetOptions = ZodOptions.extend({
   // debugPlugin: z.string().optional(),
 });
 
-export type IncomingTargetOptions = z.input<typeof ZodTargetOptions>;
 export type TargetOptions = z.infer<typeof ZodTargetOptions>;
 
 export const DEFAULT_TARGET_OPTIONS = ZodTargetOptions.parse({});

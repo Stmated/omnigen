@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {OmniHardcodedReferenceType, OmniType, OmniTypeKind, RootAstNode} from '@omnigen/core';
-import * as Java from '../ast';
+import * as Java from '../ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
 import {VisitorFactoryManager} from '@omnigen/core-util';
 
@@ -131,7 +131,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     return false;
   }
 
-  private resolveTargetType(root: RootAstNode, exp: Java.AbstractJavaExpression | undefined): OmniType | undefined {
+  private resolveTargetType(root: RootAstNode, exp: AbstractCodeNode | undefined): OmniType | undefined {
 
     if (exp instanceof Java.EdgeType) {
       return exp.omniType;
@@ -139,7 +139,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
       return exp.omniType;
     } else if (exp instanceof Java.FieldReference) {
       const resolved = root.resolveNodeRef(exp);
-      if (resolved instanceof Java.AbstractJavaExpression) {
+      if (resolved instanceof AbstractCodeNode) {
         return this.resolveTargetType(root, resolved);
       } else {
         throw new Error(`Do not know how to resolve the type of reference to '${resolved}'`);

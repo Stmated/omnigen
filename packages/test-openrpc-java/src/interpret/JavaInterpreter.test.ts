@@ -1,15 +1,6 @@
-import {
-  DEFAULT_TEST_JAVA_OPTIONS,
-  DEFAULT_TEST_TARGET_OPTIONS,
-  JavaTestUtils,
-  OpenRpcTestUtils,
-} from '../util';
-import {Java, JAVA_FEATURES, JavaInterpreter, JavaUtil} from '@omnigen/target-java';
-import {
-  DEFAULT_MODEL_TRANSFORM_OPTIONS,
-  DEFAULT_PACKAGE_OPTIONS,
-  OmniTypeKind,
-} from '@omnigen/core';
+import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils, OpenRpcTestUtils} from '../util';
+import {Java, JAVA_FEATURES, JavaInterpreter, JavaObjectNameResolver} from '@omnigen/target-java';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PACKAGE_OPTIONS, NameParts, OmniTypeKind} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
 import {describe, expect, test} from 'vitest';
 
@@ -78,7 +69,9 @@ describe('JavaInterpreter', () => {
     const type = asObject(giveIntGetDoubleRequestParams.children[0]).extends?.types.children[0].omniType;
     if (type?.kind != OmniTypeKind.GENERIC_TARGET) throw Error(`Wrong kind: ${OmniUtil.describe(type)}`);
 
-    expect(JavaUtil.getClassName(type.source.of)).toEqual('JsonRpcRequestParams');
+    const nameResolver = new JavaObjectNameResolver();
+
+    expect(nameResolver.build({name: nameResolver.investigate({type: type.source.of, options: DEFAULT_JAVA_TARGET_OPT}), with: NameParts.NAME})).toEqual('JsonRpcRequestParams');
     expect(type.targetIdentifiers).toHaveLength(1);
     expect(OmniUtil.isPrimitive(type.targetIdentifiers[0].type)).toEqual(true);
   });

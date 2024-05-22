@@ -1,20 +1,20 @@
-import {createJavaVisitor, JavaVisitor} from '@omnigen/target-java';
 import {AstNode, VisitFn} from '@omnigen/core';
 import {Cs} from '../ast';
+import {createCodeVisitor, CodeVisitor} from '@omnigen/target-code';
 
 export type CSharpVisitFn<N extends AstNode, R> = VisitFn<N, R, CSharpVisitor<R>>;
 
-export interface CSharpVisitor<R> extends JavaVisitor<R> {
+export interface CSharpVisitor<R> extends CodeVisitor<R> {
 
   visitProperty: CSharpVisitFn<Cs.PropertyNode, R>;
   visitPropertyIdentifier: CSharpVisitFn<Cs.PropertyIdentifier, R>;
   visitPropertyReference: CSharpVisitFn<Cs.PropertyReference, R>;
 }
 
-export const createCSharpVisitor = <R>(partial?: Partial<CSharpVisitor<R>>, java?: Partial<JavaVisitor<R>>, noop?: R | undefined): Readonly<CSharpVisitor<R>> => {
+export const createCSharpVisitor = <R>(partial?: Partial<CSharpVisitor<R>>, java?: Partial<CodeVisitor<R>>, noop?: R | undefined): Readonly<CSharpVisitor<R>> => {
 
   return {
-    ...createJavaVisitor(java, noop),
+    ...createCodeVisitor(java, noop),
 
     visitProperty: (n, v) => [
       n.comments?.visit(v),

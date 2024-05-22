@@ -1,5 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import * as Java from '../ast';
+import * as Java from '../ast/JavaAst';
 
 /**
  * For fixing or replacing some more generic AST-structures into Java-specific ones.
@@ -15,7 +15,7 @@ export class ToJavaAstTransformer extends AbstractJavaAstTransformer {
     const newRoot = args.root.reduce({
       ...baseReducer,
 
-      reduceModifierList: (n, r) => {
+      reduceModifierList: n => {
 
         const constIndex = n.children.findIndex(it => it.type === Java.ModifierType.CONST);
         if (constIndex !== -1) {

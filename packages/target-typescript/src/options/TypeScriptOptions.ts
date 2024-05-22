@@ -1,7 +1,8 @@
-import {ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {ZodCoercedBoolean} from '@omnigen/core';
 import {z} from 'zod';
+import {ZodCodeOptions} from '@omnigen/target-code';
 
-export const ZodTypeScriptOptions = ZodOptions.extend({
+export const ZodTypeScriptOptions = ZodCodeOptions.extend({
 
   tsStrict: ZodCoercedBoolean.default('t'),
   preferSingleQuoteStrings: ZodCoercedBoolean.default('t'),

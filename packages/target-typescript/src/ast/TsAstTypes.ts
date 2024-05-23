@@ -1,6 +1,7 @@
 import {AstNode, OmniType, Reducer, ReducerResult, TypeNode, VisitResult} from '@omnigen/core';
 import {TypeScriptVisitor} from '../visit';
 import {Code} from '@omnigen/target-code';
+import {GetterIdentifier, Identifier, SetterIdentifier} from '@omnigen/target-code/ast';
 
 export * from '@omnigen/target-code/ast';
 
@@ -58,5 +59,59 @@ export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Code
 
   reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<TypeAliasDeclaration> {
     return reducer.reduceTypeAliasDeclaration(this, reducer);
+  }
+}
+
+/**
+ * TODO: This should replace the other FieldBackedGetter -- since this is more general
+ */
+export class Getter extends AbstractTypeScriptNode {
+
+  readonly identifier: GetterIdentifier;
+  readonly target: AstNode;
+  readonly returnType: TypeNode;
+  readonly modifiers: Code.ModifierList;
+
+  constructor(identifier: GetterIdentifier, target: AstNode, returnType: TypeNode, modifiers: Code.ModifierList) {
+    super();
+    this.identifier = identifier;
+    this.target = target;
+    this.returnType = returnType;
+    this.modifiers = modifiers;
+  }
+
+  visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {
+    return visitor.visitGetter(this, visitor);
+  }
+
+  reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<AstNode> {
+    return reducer.reduceGetter(this, reducer);
+  }
+}
+
+/**
+ * TODO: This should replace the other FieldBackedSetter -- since this is more general
+ */
+export class Setter extends AbstractTypeScriptNode {
+
+  readonly identifier: SetterIdentifier;
+  readonly target: AstNode;
+  readonly targetType: TypeNode;
+  readonly modifiers: Code.ModifierList;
+
+  constructor(identifier: SetterIdentifier, targetType: TypeNode, target: AstNode, modifiers: Code.ModifierList) {
+    super();
+    this.identifier = identifier;
+    this.targetType = targetType;
+    this.target = target;
+    this.modifiers = modifiers;
+  }
+
+  visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {
+    return visitor.visitSetter(this, visitor);
+  }
+
+  reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<AstNode> {
+    return reducer.reduceSetter(this, reducer);
   }
 }

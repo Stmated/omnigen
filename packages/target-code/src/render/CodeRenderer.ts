@@ -195,25 +195,13 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     },
 
     visitFieldReference: (node, visitor) => {
-
       const resolved = root.resolveNodeRef(node);
-      if (resolved instanceof Code.Field) {
-        return `this.${render(resolved.identifier, visitor)}`;
-      } else {
-        // ???
-        return `${render(resolved, visitor)}`;
-      }
+      return `this.${render(resolved.identifier, visitor)}`;
     },
 
     visitDeclarationReference: (n, v) => {
-
       const resolved = root.resolveNodeRef(n);
-      if (resolved) {
-        return `${render(resolved.identifier, v)}`;
-      } else {
-        // ???
-        return `${render(resolved, v)}`;
-      }
+      return `${render(resolved.identifier, v)}`;
     },
 
     /**
@@ -540,12 +528,6 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
         throw new Error(`Local name must be set. Package name transformer not ran for ${OmniUtil.describe(n.omniType)} inside ${path}`);
       }
     },
-
-    // visitWildcardType: n => {
-    //
-    //   const unknownKind = n.omniType.unknownKind ?? options.unknownType;
-    //   return JavaUtil.getUnknownTypeString(unknownKind, options);
-    // },
 
     visitBoundedType: (n, v) => {
 

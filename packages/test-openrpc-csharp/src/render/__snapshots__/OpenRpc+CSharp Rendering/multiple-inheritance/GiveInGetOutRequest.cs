@@ -173,23 +173,22 @@ namespace generated.omnigen
   }
   public interface IB
   {
-    string Bar { get; };
+    string Bar { get; }
   }
 
   public interface IC
   {
-    string Xyz { get; };
+    string Xyz { get; }
   }
 
   public class UnionOfAB
   {
-    private readonly dynamic _raw;
     private A _a;
     private B _b;
 
     public UnionOfAB(dynamic raw)
     {
-      this._raw = raw;
+      this.Raw = raw;
     }
 
     public A getA(Func<dynamic, A> transformer)
@@ -198,7 +197,7 @@ namespace generated.omnigen
       {
         return this._a;
       }
-      return this._a = transformer(this._raw);
+      return this._a = transformer(this.Raw);
     }
 
     public B getB(Func<dynamic, B> transformer)
@@ -207,13 +206,10 @@ namespace generated.omnigen
       {
         return this._b;
       }
-      return this._b = transformer(this._raw);
+      return this._b = transformer(this.Raw);
     }
 
-    public dynamic getRaw()
-    {
-      return this._raw;
-    }
+    public dynamic Raw { get; }
   }
   public class B : Abs, IB
   {

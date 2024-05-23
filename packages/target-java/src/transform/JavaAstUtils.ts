@@ -109,7 +109,7 @@ export class JavaAstUtils extends CodeAstUtils {
   }
 
   public static getSoloReturn(method: Java.MethodDeclaration): AstNode | undefined {
-    return CodeAstUtils.getSoloReturn(method);
+    return CodeAstUtils.getSoloReturnOfNoArgsMethod(method);
   }
 
   public static getGetterFieldReference(root: RootAstNode, method: Java.MethodDeclaration): Reference<Java.Field> | undefined {

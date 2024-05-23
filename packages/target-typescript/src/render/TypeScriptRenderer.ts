@@ -1,10 +1,9 @@
 import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
-// import {createJavaRenderer, DefaultJavaRendererOptions, Java, JavaOptions, JavaRendererOptions, render} from '@omnigen/target-java';
 import {OmniUtil} from '@omnigen/core-util';
-import {TsRootNode} from '../ast';
 import {Code, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, render} from '@omnigen/target-code';
+import {Ts} from '../ast';
 
 export type TypeScriptRenderer = TypeScriptVisitor<string> & Renderer;
 
@@ -16,7 +15,7 @@ export const DefaultTypeScriptRendererOptions: CodeRendererOptions = {
 // TODO:
 //  * extend modifiers so there is 'export' to differentiate it from 'public'
 
-export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptions & TargetOptions & TypeScriptOptions): TypeScriptRenderer => {
+export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOptions & TargetOptions & TypeScriptOptions): TypeScriptRenderer => {
 
   let bodyDepth = 0;
 
@@ -127,7 +126,7 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
      */
     visitFieldBackedGetter: (n, v) => {
       const field = root.resolveNodeRef(n.fieldRef);
-      return `get ${field.identifier.value}() { return this.${field.identifier.value}}\n`;
+      return `get ${field.identifier.value}() { return this.${field.identifier.value}; }\n`;
     },
 
     /**
@@ -136,16 +135,19 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
     visitFieldBackedSetter: (n, v) => {
       const field = root.resolveNodeRef(n.fieldRef);
       const type = render(field.type, v);
-      return `set ${field.identifier.value}(value: ${type}) { this.${field.identifier.value} = value;}\n`;
+      return `set ${field.identifier.value}(value: ${type}) { this.${field.identifier.value} = value; }\n`;
+    },
+
+    visitGetter: (n, v) => {
+      return `${render(n.modifiers, v)} get ${n.identifier.visit(v)}() { return ${n.target.visit(v)}; }\n`.trimStart();
+    },
+
+    visitSetter: (n, v) => {
+      return `${render(n.modifiers, v)} set ${render(n.identifier, v)}(value: ${render(n.targetType, v)}) { ${render(n.target, v)} = value; }\n`.trimStart();
     },
 
     visitPackage: () => undefined,
     visitImportStatement: n => {
-
-      // TODO: This is all wrong, but just done this way as a starter.
-      //        There needs to specific Java and TypeScript import AST Nodes -- which only inherit from a common `ImportStatement` interface, which then handle the specifics
-      //        So the `visitImportStatement` here and in `JavaRenderer` will be different implementation types.
-      //        So there is also a need for separate `PackageResolverAstTransformer` -- but likely a lot of that code can be reused.
 
       if (n.type instanceof Code.EdgeType) {
         const importName = n.type.getImportName();
@@ -153,17 +155,16 @@ export const createTypeScriptRenderer = (root: TsRootNode, options: PackageOptio
           throw new Error(`Import name is not set for '${OmniUtil.describe(n.type.omniType)}'`);
         }
 
-        const parts = importName.split('.');
+        const parts = importName.split('/');
         const packageName = parts.slice(0, -1).join('/');
         const objectName = parts[parts.length - 1];
         const fileExt = options.importWithExtension ? `.${options.importWithExtension}` : '';
         const fileName = packageName ? `/${objectName}` : `${objectName}`;
 
         return `import { ${objectName} } from './${packageName}${fileName}${fileExt}';`;
-      } else {
-
-        return `// ERROR: How should ${OmniUtil.describe(n.type.omniType)} be imported?`;
       }
+
+      return `// ERROR: How should ${OmniUtil.describe(n.type.omniType)} be imported?`;
     },
 
     visitModifier: (node, visitor) => {

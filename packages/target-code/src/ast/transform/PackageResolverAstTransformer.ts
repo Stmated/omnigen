@@ -1,4 +1,4 @@
-import {AstTransformer, AstTransformerArguments, ExternalSyntaxTree, NameParts, Namespace, OmniType, PackageOptions, TargetFeatures, TargetOptions, TypeUseKind} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, ExternalSyntaxTree, NameParts, Namespace, ObjectName, OmniType, PackageOptions, TargetFeatures, TargetOptions, TypeUseKind} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {CodeRootAstNode} from '../CodeRootAstNode';
@@ -11,13 +11,13 @@ const logger = LoggerFactory.create(import.meta.url);
 
 interface CompilationUnitInfo {
   unit: Code.CompilationUnit;
-  packageName: string;
+  packageName: Namespace;
   handledTypeNodes: Code.EdgeType[];
   importNameMap: Map<OmniType, string>;
 }
 
 export interface TypeInfo {
-  packageName: string | undefined;
+  packageName: Namespace | undefined;
   className: string;
   outerTypes: Code.AbstractObjectDeclaration[];
   unit: Code.CompilationUnit;
@@ -67,20 +67,21 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
       visitCompilationUnit: (node, visitor) => {
 
-        const cuPackage = this.getUnitPackageName(args, namespaceStack, node);
-
+        const cuNamespace = this.getUnitPackageName(args, namespaceStack, node);
         const cuInfo: CompilationUnitInfo = {
           unit: node,
-          packageName: cuPackage,
+          packageName: cuNamespace,
           handledTypeNodes: [],
           importNameMap: new Map<OmniType, string>(),
         };
 
         try {
+          namespaceStack.push(cuNamespace);
           unitStack.push(cuInfo);
           defaultVisitor.visitCompilationUnit(node, visitor);
         } finally {
           unitStack.pop();
+          namespaceStack.pop();
         }
 
         // After the visitation is done, all imports should have been found
@@ -116,14 +117,15 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     args: AstTransformerArguments<CodeRootAstNode, TargetOptions & PackageOptions & CodeOptions>,
     namespaceStack: Namespace[],
     node: Code.CompilationUnit,
-  ): string {
+  ): Namespace {
 
-    const nameResolver = args.root.getNameResolver();
     const cuNamespace = namespaceStack.length > 0 ? namespaceStack[namespaceStack.length - 1] : undefined;
     if (cuNamespace) {
-      return nameResolver.build({name: cuNamespace, with: NameParts.NAMESPACE});
+      return cuNamespace;
+      // nameResolver.build({name: cuNamespace, with: NameParts.NAMESPACE});
     }
 
+    const nameResolver = args.root.getNameResolver();
     let firstTypedChild: OmniType | undefined = undefined;
     if (!cuNamespace) {
       for (const child of node.children) {
@@ -131,7 +133,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
           // NOTE: Maybe restructure somehow, so that we do not end up inside the compilation unit content until *after* we've entered a namespace.
           //        Do not know yet how that would be done though. As things are right now it would break if there are multiple namespaces inside the same unit.
-          return child.name.value;
+          return nameResolver.parseNamespace(child.name.value);
 
         } else {
           firstTypedChild = CodeAstUtils.getOmniType(child);
@@ -144,8 +146,8 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
     if (!cuNamespace && firstTypedChild) {
 
-      const investigatedName = nameResolver.investigate({type: firstTypedChild, options: args.options});
-      return nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
+      return nameResolver.investigate({type: firstTypedChild, options: args.options}).namespace;
+      // return nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
     } else {
       const name = node.name || `Owner of ${node.children.map(it => it.name.value).join(', ')}`;
       throw new Error(`No named object declaration found inside ${name}`);
@@ -201,9 +203,9 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
     if (nodeImportName && nodeImportName.indexOf('.') !== -1) {
 
-      const nodePackage = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE, use: TypeUseKind.NAMESPACE_DECLARATION});
+      // const nodePackage = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE, use: TypeUseKind.NAMESPACE_DECLARATION});
 
-      if (nodePackage != insideUnit.packageName) {
+      if (!nameResolver.isEqualNamespace(investigatedName.namespace, insideUnit.packageName)) {
         this.addImportIfUnique(root, objectStack, insideUnit, namespaceParts, options, nodeImportName, node);
       }
     }
@@ -215,21 +217,21 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     omniType: OmniType,
     typeNodeToResolve: Code.EdgeType,
     objectStack: Code.AbstractObjectDeclaration[],
-    namespaceParts: Namespace,
+    namespaceParts: Namespace | undefined,
     insideUnit: CompilationUnitInfo,
     options: PackageOptions & TargetOptions & CodeOptions,
     features: TargetFeatures,
   ): void {
 
     // We already have this type's name resolved. Perhaps as a regular type, or as a nested type.
-    const inDifferentPackage = (typeNameToResolve.packageName != insideUnit.packageName);
+    const nameResolver = root.getNameResolver();
+    const inDifferentPackage = !nameResolver.isEqualNamespace(typeNameToResolve.packageName, insideUnit.packageName);
     const inDifferentUnit = insideUnit.unit != typeNameToResolve.unit;
 
     if (inDifferentPackage || features.forcedImports) {
 
-      const nameResolver = root.getNameResolver();
       const name = nameResolver.investigate({type: omniType, options: options});
-      const nodeImportName = nameResolver.build({name: name, with: NameParts.FULL, use: TypeUseKind.NAMESPACE_DECLARATION, relativeTo: namespaceParts});
+      const nodeImportName = nameResolver.build({name: name, with: NameParts.FULL, use: TypeUseKind.IMPORT, relativeTo: namespaceParts});
 
       if (inDifferentUnit) {
         this.addImportIfUnique(root, objectStack, insideUnit, namespaceParts, options, nodeImportName, typeNodeToResolve);
@@ -264,7 +266,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     root: CodeRootAstNode,
     objectStack: Code.AbstractObjectDeclaration[],
     insideUnit: CompilationUnitInfo,
-    namespace: Namespace,
+    namespace: Namespace | undefined,
     options: PackageOptions & TargetOptions & CodeOptions,
     nodeImportName: string,
     node: Code.EdgeType,
@@ -343,7 +345,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
         const resolvedName = nameResolver.investigate({type: omniType, options: external.options});
 
         let className = nameResolver.build({name: resolvedName, with: NameParts.NAME, use: TypeUseKind.DECLARED});
-        const packageName = nameResolver.build({name: resolvedName, with: NameParts.NAMESPACE});
+        // const packageName = nameResolver.build({name: resolvedName, with: NameParts.NAMESPACE});
         // let className = JavaUtil.getClassName(omniType, external.options);
         // const packageName = JavaUtil.getPackageName(omniType, className, external.options);
 
@@ -381,7 +383,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
         }
 
         typeNameMap.set(omniType, {
-          packageName: packageName,
+          packageName: resolvedName.namespace,
           className: className,
           outerTypes: outerTypes,
           unit: unitStack[unitStack.length - 1],

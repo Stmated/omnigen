@@ -1,23 +1,23 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
-import {Ts, TsRootNode} from '../';
+import {Ts} from '../';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * If field original name is same as current name, then remove the getter
  */
-export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTransformer<TsRootNode> {
+export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode> {
 
-  transformAst(args: AstTransformerArguments<TsRootNode, TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<Ts.TsRootNode, TargetOptions>): void {
 
     const gettersToRemove: Ts.FieldBackedGetter[] = [];
     const fieldsToMakePublic: Ts.Field[] = [];
 
     args.root.visit({
       ...args.root.createVisitor(),
-      visitFieldBackedGetter: (n, v) => {
+      visitFieldBackedGetter: n => {
         const field = args.root.resolveNodeRef(n.fieldRef);
         if (field) {
 

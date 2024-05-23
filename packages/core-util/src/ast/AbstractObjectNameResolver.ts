@@ -33,7 +33,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
 
   protected abstract getPrimitiveName(type: OmniPrimitiveType, kind: OmniPrimitiveKinds, boxed: boolean | undefined, options: TOpt): ObjectName;
 
-  protected toAstName(type: OmniType, edgeName: string, options: PackageOptions): ObjectName {
+  protected toObjectName(type: OmniType, edgeName: string, options: PackageOptions): ObjectName {
 
     let packageName: string;
     if (options.packageResolver) {
@@ -66,13 +66,13 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
         return this.investigate({...args, type: args.type.source});
       case OmniTypeKind.GENERIC_SOURCE_IDENTIFIER:
         // The local name of a generic type is always just the generic type name.
-        return this.toAstName(args.type, args.type.placeholderName, args.options);
+        return this.toObjectName(args.type, args.type.placeholderName, args.options);
       case OmniTypeKind.GENERIC_TARGET_IDENTIFIER:
-        return this.toAstName(args.type, args.type.placeholderName || args.type.sourceIdentifier.placeholderName, args.options);
+        return this.toObjectName(args.type, args.type.placeholderName || args.type.sourceIdentifier.placeholderName, args.options);
       case OmniTypeKind.ARRAY: {
         const itemName = this.investigate({...args, type: args.type.of});
         const name = `ArrayOf${itemName}`;
-        return this.toAstName(args.type, name, args.options);
+        return this.toObjectName(args.type, name, args.options);
       }
       case OmniTypeKind.TUPLE: {
         // TODO: `[String, String, String]` should be `StringTriplet` and `[Integer, Integer, String]` should be `IntegerPairThenString`
@@ -86,12 +86,12 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION: {
         const itemNames = args.type.properties.map(it => OmniUtil.getPropertyName(it.name, true) ?? 'ERROR');
         const name = `PositionalOf${itemNames.map(it => Case.pascal(it)).join('')}`;
-        return this.toAstName(args.type, name, args.options);
+        return this.toObjectName(args.type, name, args.options);
       }
       case OmniTypeKind.UNKNOWN: {
         const unknownType = this.getUnknownKind(args.type, args.options);
         const unknownName = AbstractObjectNameResolver.getUnknownTypeString(unknownType);
-        return this.toAstName(args.type, unknownName, args.options);
+        return this.toObjectName(args.type, unknownName, args.options);
       }
       case OmniTypeKind.DICTIONARY:
         throw new Error(`Name resolver can only resolve edge types, and not dictionary types (that is up to the renderer)`);
@@ -103,7 +103,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       case OmniTypeKind.INTERFACE:
         if (args.type.name) {
           const interfaceName = Naming.unwrap(args.type.name);
-          return this.toAstName(args.type, interfaceName, args.options);
+          return this.toObjectName(args.type, interfaceName, args.options);
         } else {
 
           const innerName = this.investigate({...args, type: args.type.of});
@@ -121,7 +121,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       case OmniTypeKind.ENUM:
       case OmniTypeKind.OBJECT: {
         const name = Naming.unwrap(args.type.name);
-        return this.toAstName(args.type, name, args.options);
+        return this.toObjectName(args.type, name, args.options);
       }
       case OmniTypeKind.UNION:
       case OmniTypeKind.EXCLUSIVE_UNION:
@@ -129,7 +129,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       case OmniTypeKind.NEGATION: {
         const compositionName = this.getCompositionClassName(args.type, args);
         const unwrappedCompositionName = Naming.unwrap(compositionName);
-        return this.toAstName(args.type, unwrappedCompositionName, args.options);
+        return this.toObjectName(args.type, unwrappedCompositionName, args.options);
       }
       case OmniTypeKind.GENERIC_SOURCE:
         return this.investigate({...args, type: args.type.of});
@@ -142,7 +142,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
           const name = Naming.unwrap(args.type.name);
           const commonOptions = args.type.model.options as TOpt || args.options;
           // return JavaUtil.getClassNameWithPackageName(args.type, name, commonOptions, args.withPackage);
-          return this.toAstName(args.type, name, commonOptions);
+          return this.toObjectName(args.type, name, commonOptions);
         }
 
         if (args.type.model.options) {
@@ -163,23 +163,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     if (args.with === NameParts.NAMESPACE || args.with === NameParts.FULL) {
 
       const namespaceParts = Array.isArray(args.name) ? args.name : args.name.namespace;
-
-      if (args.relativeTo) {
-
-        const divergent = this.getDivergentNamespaceIndex(namespaceParts, args.relativeTo);
-        if (divergent === -1) {
-          // There is no difference. So we can just skip the namespace.
-          ns = '';
-        } else {
-
-          // There is a difference. Java does not have relative namespace paths. So we use the full one.
-          ns = namespaceParts.map(it => (typeof it === 'string') ? it : it.name).join(this.namespaceSeparator);
-        }
-      } else {
-
-        // We do not want a relative path.
-        ns = namespaceParts.map(it => (typeof it === 'string') ? it : it.name).join(this.namespaceSeparator);
-      }
+      ns = this.relativize(namespaceParts, args.relativeTo, args.with, args.use);
 
     } else {
       ns = undefined;
@@ -205,8 +189,54 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     throw new Error(`Could not get any name for ${JSON.stringify(args)}`);
   }
 
+  protected relativize(namespaceParts: Namespace, relativeTo: Namespace | undefined, w: NameParts, u: TypeUseKind | undefined): string {
+
+    // TODO: Make this work properly for TypeScript -- it should not always do relative paths just because given a `relativeTo`, it is up to the target language and how it is used
+
+    if (relativeTo) {
+      const divergent = this.getDivergentNamespaceIndex(namespaceParts, relativeTo);
+      if (divergent === -1) {
+        // There is no difference. So we can just skip the namespace.
+        return '';
+      } else {
+
+        // There is a difference. Java does not have relative namespace paths. So we use the full one.
+        return namespaceParts.map(it => (typeof it === 'string') ? it : it.name).join(this.namespaceSeparator);
+      }
+    } else {
+      // We do not want a relative path.
+      return namespaceParts.map(it => (typeof it === 'string') ? it : it.name).join(this.namespaceSeparator);
+    }
+  }
+
   public parseNamespace(namespace: string): Namespace {
     return namespace.split(this.namespaceSeparator);
+  }
+
+  public isEqualNamespace(a: Namespace | undefined, b: Namespace | undefined): boolean {
+
+    if (a === b) {
+      return true;
+    }
+
+    if ((a && !b) || (!a && b)) {
+      return false;
+    }
+
+    if (a && b) {
+
+      if (a.length !== b.length) {
+        return false;
+      }
+
+      for (let i = 0; i < a.length; i++) {
+        if (AbstractObjectNameResolver.resolveNamespacePart(a[i]) !== AbstractObjectNameResolver.resolveNamespacePart(b[i])) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   protected getDivergentNamespaceIndex(base: Namespace, other: Namespace): number {

@@ -10,15 +10,34 @@ export const createTypeScriptAstReducer = (partial?: Partial<Reducer<TypeScriptV
 
   return {
     ...createCodeReducer(partial),
-    reduceCompositionType: (node, reducer) => new Ts.CompositionType(
-      node.omniType,
-      node.typeNodes.map(it => it.reduce(reducer)).filter(isDefined),
+    reduceCompositionType: (n, r) => new Ts.CompositionType(
+      n.omniType,
+      n.typeNodes.map(it => it.reduce(r)).filter(isDefined),
     ),
-    reduceTypeAliasDeclaration: (node, reducer) => new Ts.TypeAliasDeclaration(
-      assertDefined(node.name.reduce(reducer)),
-      assertDefined(node.of.reduce(reducer)),
-      node.modifiers?.reduce(reducer),
+    reduceTypeAliasDeclaration: (n, r) => new Ts.TypeAliasDeclaration(
+      assertDefined(n.name.reduce(r)),
+      assertDefined(n.of.reduce(r)),
+      n.modifiers?.reduce(r),
     ),
+    reduceGetter: (n, r) => new Ts.Getter(
+      assertDefined(n.identifier.reduce(r)),
+      assertDefined(n.target.reduce(r)),
+      assertDefined(n.returnType.reduce(r)),
+      assertDefined(n.modifiers.reduce(r)),
+    ),
+    reduceSetter: (n, r) => {
+      const identifier = assertDefined(n.identifier.reduce(r));
+      if (!(identifier instanceof Ts.SetterIdentifier)) {
+        throw new Error(`The setter must have a SetterIdentifier`);
+      }
+
+      return new Ts.Setter(
+        identifier,
+        assertDefined(n.targetType.reduce(r)),
+        assertDefined(n.target.reduce(r)),
+        assertDefined(n.modifiers.reduce(r)),
+      );
+    },
   };
 };
 

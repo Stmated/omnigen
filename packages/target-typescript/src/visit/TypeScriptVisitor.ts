@@ -1,4 +1,3 @@
-// import {createJavaVisitor, JavaVisitor} from '@omnigen/target-java';
 import {AstNode, VisitFn} from '@omnigen/core';
 import {Ts} from '../ast';
 import {CodeVisitor, createCodeVisitor} from '@omnigen/target-code';
@@ -9,6 +8,8 @@ export interface TypeScriptVisitor<R> extends CodeVisitor<R> {
 
   visitCompositionType: TypeScriptVisitFn<Ts.CompositionType, R>;
   visitTypeAliasDeclaration: TypeScriptVisitFn<Ts.TypeAliasDeclaration, R>;
+  visitGetter: TypeScriptVisitFn<Ts.Getter, R>;
+  visitSetter: TypeScriptVisitFn<Ts.Setter, R>;
 }
 
 export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R>>, java?: Partial<CodeVisitor<R>>, noop?: R | undefined): Readonly<TypeScriptVisitor<R>> => {
@@ -20,6 +21,8 @@ export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R
       node.modifiers?.visit(visitor),
       node.of.visit(visitor),
     ],
+    visitGetter: (n, v) => [n.modifiers.visit(v), n.identifier.visit(v), n.target.visit(v), n.returnType.visit(v)],
+    visitSetter: (n, v) => [n.identifier.visit(v), n.targetType.visit(v), n.target.visit(v)],
   };
 };
 

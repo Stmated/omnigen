@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/core';
+import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode, UnknownKind} from '@omnigen/core';
 import {Code, CodeAstUtils} from '@omnigen/target-code';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
@@ -25,7 +25,6 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
     const fieldNamesStack: string[][] = [];
 
     const classToInterfaceMap = new Map<TypeNode, TypeNode>();
-    const newInterfaces: TypeNode[] = [];
 
     const newRoot = args.root.reduce({
       ...defaultReducer,
@@ -124,6 +123,16 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
           return n;
         }
       },
+      reduceGetter: n => {
+
+        return new Code.Field(
+          n.returnType,
+          n.identifier.identifier,
+          new Code.ModifierList(),
+          undefined,
+          undefined,
+        );
+      },
       reduceField: n => {
 
         const reducedField = fieldNamesStack.length > 0 ? this.toUniqueField(n, fieldNamesStack[fieldNamesStack.length - 1]) : n;
@@ -150,7 +159,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
       return this.toUniqueField(getterField, fieldNames);
     }
 
-    const soloReturnExpression = CodeAstUtils.getSoloReturn(method);
+    const soloReturnExpression = CodeAstUtils.getSoloReturnOfNoArgsMethod(method);
     if (soloReturnExpression) {
 
       const currentName = method.signature.identifier;

@@ -24,11 +24,17 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
           fieldsToReplace.push(n.id);
         }
       },
+      visitFieldBackedSetter: n => {
+        // NOTE: These two getter/setter might not be properly translated, since it does not check any readable+writable flags. Not needed yet, but will need to be done eventually.
+        fieldsToReplace.push(n.fieldRef.targetId);
+      },
+      visitFieldBackedGetter: n => {
+        fieldsToReplace.push(n.fieldRef.targetId);
+      },
     });
 
-    // TODO: If we add a property node for a field, then if there is an interface with a getter for that field, then we need to replace it as well!
-
     let interfaceDepth = 0;
+    // let abstractDepth = 0;
 
     // Step1, replace fields with properties
     const defaultReducer = args.root.createReducer();
@@ -42,19 +48,52 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
           interfaceDepth--;
         }
       },
-      reduceAbstractMethodDeclaration: (n, r) => {
+      // reduceClassDeclaration: (n, r) => {
+      //
+      //   if (n.modifiers.children.some(it => it.type === Code.ModifierType.ABSTRACT)) {
+      //     try {
+      //       abstractDepth++;
+      //       return defaultReducer.reduceClassDeclaration(n, r);
+      //     } finally {
+      //       abstractDepth--;
+      //     }
+      //   }
+      //
+      //   return defaultReducer.reduceClassDeclaration(n, r);
+      // },
+      reduceMethodDeclaration: (n, r) => {
+        // if
+        return n;
+      },
+      reduceAbstractMethodDeclaration: n => {
 
-        if (interfaceDepth > 0 && n.signature.identifier instanceof Code.GetterIdentifier) {
+        if (/* interfaceDepth > 0 &&*/ n.signature.identifier instanceof Code.GetterIdentifier) {
 
           const propertyNode = this.createPropertyNode(args, n.signature.type, n.signature.identifier.identifier, undefined, n.signature.comments, undefined);
 
           // Remove any modifiers, since we're inside an interface.
-          propertyNode.modifiers = new Code.ModifierList();
+          if (interfaceDepth > 0) {
+            propertyNode.modifiers = new Code.ModifierList();
+          } else {
+            if (!propertyNode.modifiers) {
+              propertyNode.modifiers = new Code.ModifierList();
+            }
+            if (!propertyNode.modifiers.children.some(it => it.type === Code.ModifierType.ABSTRACT)) {
+              propertyNode.modifiers.children.push(new Code.Modifier(Code.ModifierType.ABSTRACT));
+            }
+          }
 
           return propertyNode;
         }
 
         return n;
+      },
+      reduceFieldBackedGetter: () => {
+        // NOTE: These two removals are too simple. They do not transform any references to them. Not needed yet, but will need to be done eventually.
+        return undefined;
+      },
+      reduceFieldBackedSetter: () => {
+        return undefined;
       },
       reduceField: n => {
 
@@ -136,6 +175,7 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
         propertyNode.immutable = true;
       }
     }
+
     return propertyNode;
   }
 }

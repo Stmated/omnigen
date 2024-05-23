@@ -117,7 +117,7 @@ export class CodeAstUtils implements AstTargetFunctions {
 
   public static getGetterFieldReference(root: RootAstNode, method: Code.MethodDeclaration): Reference<Code.Field> | undefined {
 
-    const fieldRef = CodeAstUtils.getSoloReturn(method);
+    const fieldRef = CodeAstUtils.getSoloReturnOfNoArgsMethod(method);
     if (!(fieldRef instanceof Code.FieldReference)) {
       return undefined;
     }
@@ -135,7 +135,7 @@ export class CodeAstUtils implements AstTargetFunctions {
     return root.resolveNodeRef<Code.Field>(fieldId);
   }
 
-  public static getSoloReturn(method: Code.MethodDeclaration): AstNode | undefined {
+  public static getSoloReturnOfNoArgsMethod(method: Code.MethodDeclaration): AstNode | undefined {
 
     if (method.signature.parameters && method.signature.parameters.children.length > 0) {
       return undefined;

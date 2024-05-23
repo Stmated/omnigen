@@ -11,7 +11,6 @@ import {
   ZodTargetFeaturesContext,
   ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
-import * as Ts from './ast';
 import {
   ClassToInterfaceTypeScriptAstTransformer,
   CompositionTypeScriptAstTransformer,
@@ -19,7 +18,7 @@ import {
   RemoveSuperfluousGetterTypeScriptAstTransformer,
   SingleFileTypeScriptAstTransformer,
   ToHardCodedTypeTypeScriptAstTransformer,
-  TsRootNode,
+  Ts,
 } from './ast';
 import {
   AstTransformer,
@@ -57,6 +56,7 @@ import {TYPESCRIPT_FEATURES} from './features';
 import {TypeScriptAstTransformerArgs} from './ast/TypeScriptAstVisitor';
 import {RemoveWildcardGenericParamTypeScriptModelTransformer, StrictUndefinedTypeScriptModelTransformer} from './parse';
 import {LoggerFactory} from '@omnigen/core-log';
+import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -114,11 +114,6 @@ export const TypeScriptPluginInit = createPlugin(
       return typescriptOptions.error;
     }
 
-    // const javaOptions = ZodJavaOptions.safeParse(ctx.arguments);
-    // if (!javaOptions.success) {
-    //   return javaOptions.error;
-    // }
-
     return {
       ...ctx,
       target: 'typescript',
@@ -132,23 +127,6 @@ export const TypeScriptPluginInit = createPlugin(
 export const TypeScriptPlugin = createPlugin(
   {name: 'ts', in: ZodTypeScriptContextIn, out: ZodTypeScriptContextOut, score: PluginScoreKind.REQUIRED},
   async ctx => {
-
-    // const modelTransformerArgs: OmniModelTransformerArgs<ParserOptions> = {
-    //   model: ctx.model,
-    //   options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
-    // };
-    //
-    // const transformers: OmniModelTransformer[] = [
-    //   // new CompositionGenericTargetToObjectJavaModelTransformer(),
-    //   // new InterfaceJavaModelTransformer(),
-    //   // new DeleteUnnecessaryXorJavaModelTransformer(),
-    // ];
-    //
-    // logger.info(`${modelTransformerArgs.model.types.length}`);
-    //
-    // for (const transformer of transformers) {
-    //   transformer.transformModel(modelTransformerArgs);
-    // }
 
     // Then do 2nd pass transforming
 
@@ -171,7 +149,7 @@ export const TypeScriptPlugin = createPlugin(
 
     const astNode = new Ts.TsRootNode([]);
 
-    const astTransformers: AstTransformer<TsRootNode, PackageOptions & TargetOptions & TypeScriptOptions>[] = [
+    const astTransformers: AstTransformer<Ts.TsRootNode, PackageOptions & TargetOptions & TypeScriptOptions>[] = [
       new AddObjectDeclarationsCodeAstTransformer(),
       new AddFieldsAstTransformer(),
       new AddAccessorsForFieldsAstTransformer(),
@@ -186,6 +164,7 @@ export const TypeScriptPlugin = createPlugin(
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
       new CompositionTypeScriptAstTransformer(),
+      new AccessorTypeScriptAstTransformer(),
       new MethodToGetterCodeAstTransformer(),
       new RemoveSuperfluousGetterTypeScriptAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
@@ -200,7 +179,6 @@ export const TypeScriptPlugin = createPlugin(
     ] as const;
 
     const options: PackageOptions & TargetOptions & TypeScriptOptions = {
-      // ...ctx.javaOptions,
       ...ctx.tsOptions,
       ...ctx.targetOptions,
       ...ctx.packageOptions,
@@ -239,7 +217,7 @@ export const TypeScriptRendererPlugin = createPlugin(
   {name: 'ts-render', in: TypeScriptRendererCtxIn, out: TypeScriptRendererCtxOut, score: PluginScoreKind.IMPORTANT},
   async ctx => {
 
-    const rootTsNode = ctx.astNode as TsRootNode;
+    const rootTsNode = ctx.astNode as Ts.TsRootNode;
 
     logger.info(`Root node: ${rootTsNode.children.length}`);
 

@@ -1,4 +1,4 @@
-import {ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, UnknownKind} from '@omnigen/core';
+import {ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, UnknownKind} from '@omnigen/core';
 import {AbstractObjectNameResolver} from '@omnigen/core-util';
 import {TypeScriptOptions} from '../options';
 
@@ -12,6 +12,23 @@ export class TypeScriptObjectNameResolver extends AbstractObjectNameResolver<Pac
 
   parse(fqn: string): ObjectName {
     throw new Error('Method not implemented.');
+  }
+
+  protected toObjectName(type: OmniType, edgeName: string, options: PackageOptions): ObjectName {
+
+    const objectName = super.toObjectName(type, edgeName, options);
+    if (objectName.namespace.length === 1 && typeof objectName.namespace[0] === 'string') {
+
+      const ns = objectName.namespace[0];
+      if (ns.includes('.') && !ns.includes('/')) {
+        return {
+          edgeName: objectName.edgeName,
+          namespace: ns.split('.'),
+        };
+      }
+    }
+
+    return objectName;
   }
 
   protected createInterfaceName(innerEdgeName: string, options: PackageOptions & TargetOptions & TypeScriptOptions): string {

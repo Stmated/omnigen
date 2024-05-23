@@ -1,7 +1,5 @@
 
-export * from './TsRootNode.ts';
-export * from './TsAstUtils.ts';
-export * as Ts from './TsAstTypes.ts';
+export * as Ts from './Ts';
 
 export * from './ClassToInterfaceTypeScriptAstTransformer.ts';
 export * from './ToHardCodedTypeTypeScriptAstTransformer.ts';

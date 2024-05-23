@@ -141,9 +141,7 @@ export class JsonRpcRequest<TParams extends JsonRpcRequestParams<any>, TMethod e
     this.method = method;
   }
 
-  public getJsonrpc() {
-    return '2.0';
-  }
+  public get jsonrpc() { return '2.0'; }
 }
 
 /**

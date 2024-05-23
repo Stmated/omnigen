@@ -3,11 +3,18 @@ import {PackageOptions} from '../options';
 import {TargetOptions} from '../interpret';
 
 /**
+ * Implementations of this interface deals with creating object names for OmniType.
+ *
+ * The names are *not* necessarily the names to use for the class or interface, and they are *not* necessarily the rendered form of for example a generic type `Foo<Bar, Baz>`.
+ *
+ * Instead the created names should be regarded as `"If I wanted to create a type alias for a certain type or collection of types, what should it be called?"`
+ *
  * TODO:
- * - Make use of the existing `TypeName` so we work with only one way of naming things (easier to make more flexible later)
+ *   Make use of the existing `TypeName` so we work with only one way of naming things (easier to make more flexible later)
  */
 export interface ObjectNameResolver<TOpt extends PackageOptions & TargetOptions = PackageOptions & TargetOptions> {
   isReservedWord(word: string): boolean;
+  isEqualNamespace(a: Namespace | undefined, b: Namespace | undefined): boolean;
 
   investigate(args: ObjectNameResolveArgs<TOpt>): ObjectName;
   parse(fqn: string): ObjectName;
@@ -28,7 +35,7 @@ export type AstNameBuildArgs =
   {
     name: ObjectName | Namespace,
     with: NameParts.NAMESPACE,
-    relativeTo?: Namespace,
+    relativeTo?: Namespace | undefined,
     use?: TypeUseKind.NAMESPACE_DECLARATION | TypeUseKind.IMPORT,
   }
   |
@@ -41,7 +48,7 @@ export type AstNameBuildArgs =
   {
     name: ObjectName,
     with: NameParts.FULL,
-    relativeTo?: Namespace;
+    relativeTo?: Namespace | undefined;
     use?: TypeUseKind,
   };
 

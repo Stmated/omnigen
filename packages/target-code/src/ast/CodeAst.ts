@@ -784,7 +784,7 @@ export class MethodDeclaration extends AbstractCodeNode {
     return visitor.visitMethodDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<MethodDeclaration | MethodDeclarationSignature | Statement | Field | FieldBackedGetter> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceMethodDeclaration(this, reducer);
   }
 }
@@ -915,7 +915,7 @@ export class FieldBackedGetter extends AbstractCodeNode {
     return visitor.visitFieldBackedGetter(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<FieldBackedGetter | MethodDeclarationSignature | Statement | Field | MethodDeclaration> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceFieldBackedGetter(this, reducer);
   }
 }
@@ -937,7 +937,7 @@ export class FieldBackedSetter extends AbstractCodeNode {
     return visitor.visitFieldBackedSetter(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<FieldBackedSetter | MethodDeclaration> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceFieldBackedSetter(this, reducer);
   }
 }

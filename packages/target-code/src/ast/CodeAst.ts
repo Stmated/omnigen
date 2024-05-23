@@ -25,7 +25,7 @@ import {AnyFreeText, FriendlyFreeTextIn} from './FreeText';
 import {CodeVisitor} from '../visitor/CodeVisitor';
 import {FreeTextUtils} from '../util/FreeTextUtils';
 import {AbstractCodeNode} from './AbstractCodeNode.ts';
-import {GeneralAnnotation, GeneralAnnotationNode} from './GeneralAnnotationNode.ts';
+import {VirtualAnnotation, VirtualAnnotationNode} from './VirtualAnnotationNode.ts';
 
 export enum TokenKind {
   ASSIGN,
@@ -328,11 +328,11 @@ export class Annotation extends AbstractCodeNode {
   }
 }
 
-export class AnnotationList extends AbstractCodeNode implements AstNodeWithChildren<Annotation | GeneralAnnotationNode> {
-  children: Array<Annotation | GeneralAnnotationNode>;
+export class AnnotationList extends AbstractCodeNode implements AstNodeWithChildren<Annotation | VirtualAnnotationNode> {
+  children: Array<Annotation | VirtualAnnotationNode>;
   multiline = true;
 
-  constructor(...children: Array<Annotation | GeneralAnnotationNode>) {
+  constructor(...children: Array<Annotation | VirtualAnnotationNode>) {
     super();
     this.children = children;
   }
@@ -765,7 +765,7 @@ export class AbstractMethodDeclaration extends AbstractCodeNode {
     return visitor.visitAbstractMethodDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AbstractMethodDeclaration> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceAbstractMethodDeclaration(this, reducer);
   }
 }

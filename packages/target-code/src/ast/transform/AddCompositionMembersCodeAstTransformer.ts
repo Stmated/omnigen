@@ -23,7 +23,7 @@ import {CodeAstUtils, CodeOptions, CodeUtil} from '../../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 import * as Code from '../Code';
-import {DelegateKind, GeneralAnnotationKind} from '../Code';
+import {DelegateKind, VirtualAnnotationKind} from '../Code';
 import {AbstractCodeNode} from '../AbstractCodeNode.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -159,7 +159,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
   ) {
 
     const fieldAnnotations = new Code.AnnotationList();
-    fieldAnnotations.children.push(new Code.GeneralAnnotationNode({kind: GeneralAnnotationKind.SERIALIZATION_VALUE}));
+    fieldAnnotations.children.push(new Code.VirtualAnnotationNode({kind: VirtualAnnotationKind.SERIALIZATION_VALUE}));
 
     const untypedFieldType: OmniUnknownType = {
       kind: OmniTypeKind.UNKNOWN,
@@ -227,7 +227,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     });
 
     const fieldAnnotations = new Code.AnnotationList();
-    fieldAnnotations.children.push(new Code.GeneralAnnotationNode({kind: GeneralAnnotationKind.SERIALIZATION_VALUE}));
+    fieldAnnotations.children.push(new Code.VirtualAnnotationNode({kind: VirtualAnnotationKind.SERIALIZATION_VALUE}));
 
     const fieldValue = new Code.Field(
       fieldValueType,
@@ -404,7 +404,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     );
 
     const singletonMethodAnnotations = new Code.AnnotationList();
-    singletonMethodAnnotations.children.push(new Code.GeneralAnnotationNode({kind: GeneralAnnotationKind.DESERIALIZATION_CREATOR}));
+    singletonMethodAnnotations.children.push(new Code.VirtualAnnotationNode({kind: VirtualAnnotationKind.DESERIALIZATION_CREATOR}));
 
     const singletonFactory = new Code.MethodDeclaration(
       new Code.MethodDeclarationSignature(

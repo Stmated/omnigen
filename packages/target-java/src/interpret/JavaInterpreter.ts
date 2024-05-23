@@ -8,7 +8,6 @@ import {
   AddSubTypeHintsAstTransformer,
   AddThrowsForKnownMethodsAstTransformer,
   DelegatesToJavaAstTransformer,
-  SimplifyAndCleanAstTransformer,
   GenericNodesToSpecificJavaAstTransformer,
   GroupExampleTextsToSectionAstTransformer,
   JacksonJavaAstTransformer,
@@ -35,6 +34,7 @@ import {
   ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyGenericsAstTransformer,
   ToConstructorBodySuperCallAstTransformer,
+  SimplifyAndCleanAstTransformer,
 } from '@omnigen/target-code';
 import {JavaAstRootNode} from '../ast/JavaAstRootNode';
 import {SimplifyTypePathsJavaAstTransformer} from '../transform/SimplifyTypePathsJavaAstTransformer.ts';

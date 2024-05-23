@@ -257,7 +257,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       n.key?.reduce(r),
       assertDefined(n.value.reduce(r)),
     ).withIdFrom(n),
-    reduceGeneralAnnotationNode: n => n,
+    reduceVirtualAnnotationNode: n => n,
 
     reduceHardCoded: n => n,
     reduceBlock: (n, reducer) => {

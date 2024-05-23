@@ -5,6 +5,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {createJavaVisitor, JavaVisitor} from '../visit';
 import {JavaUtil} from '../util';
 import {CodeRenderContext, CodeRendererOptions, createCodeRenderer, render} from '@omnigen/target-code';
+import {ToHardCodedTypeJavaAstTransformer} from '../transform';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -23,8 +24,9 @@ export const createJavaRenderer = (root: Java.JavaAstRootNode, options: JavaOpti
 
     visitWildcardType: n => {
 
+      // Likely never called since it is replaced by ToHardCodedTypeJavaAstTransformer.
       const unknownKind = n.omniType.unknownKind ?? options.unknownType;
-      return JavaUtil.getUnknownTypeString(unknownKind, options);
+      return ToHardCodedTypeJavaAstTransformer.getUnknownClassName(unknownKind);
     },
 
     visitGetterIdentifier: (n, v) => {

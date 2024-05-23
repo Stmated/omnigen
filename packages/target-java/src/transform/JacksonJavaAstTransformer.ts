@@ -2,7 +2,7 @@ import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs
 import {Direction, OmniHardcodedReferenceType, OmniProperty, OmniPropertyName, OmniType, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/core';
 import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast/JavaAst';
-import {DelegateKind, GeneralAnnotationKind} from '../ast/JavaAst';
+import {DelegateKind, VirtualAnnotationKind} from '../ast/JavaAst';
 import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '@omnigen/target-code/ast';
@@ -168,15 +168,15 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
         return defaultReducer.reduceEdgeType(n, r);
       },
-      reduceGeneralAnnotationNode: n => {
+      reduceVirtualAnnotationNode: n => {
 
-        if (n.value.kind === GeneralAnnotationKind.SERIALIZATION_VALUE) {
+        if (n.value.kind === VirtualAnnotationKind.SERIALIZATION_VALUE) {
           return new Java.Annotation(
             new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
           );
         }
 
-        if (n.value.kind === GeneralAnnotationKind.DESERIALIZATION_CREATOR) {
+        if (n.value.kind === VirtualAnnotationKind.DESERIALIZATION_CREATOR) {
           return new Java.Annotation(
             new Java.EdgeType({
               kind: OmniTypeKind.HARDCODED_REFERENCE,
@@ -278,10 +278,10 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       //     }
       //   }
       // },
-      visitGeneralAnnotationNode: n => {
-        if (n.value.kind === GeneralAnnotationKind.SERIALIZATION_VALUE) {
+      visitVirtualAnnotationNode: n => {
+        if (n.value.kind === VirtualAnnotationKind.SERIALIZATION_VALUE) {
           hasJsonValue = true;
-        } else if (n.value.kind === GeneralAnnotationKind.DESERIALIZATION_CREATOR) {
+        } else if (n.value.kind === VirtualAnnotationKind.DESERIALIZATION_CREATOR) {
           throw new AbortVisitingWithResult(true); // Abort right away
         }
       },

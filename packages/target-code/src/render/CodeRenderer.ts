@@ -430,7 +430,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     },
 
     visitAbstractMethodDeclaration: (n, v) => {
-      return n.signature.visit(v);
+      return [n.signature.visit(v), ';\n'];
     },
 
     visitMethodCall: (node, visitor) => {
@@ -461,7 +461,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       return (`${key}${render(node.value, visitor)}`);
     },
 
-    visitGeneralAnnotationNode: n => `[General annotation node ${JSON.stringify(n.value)} must be replaced with something target-specific or be removed]`,
+    visitVirtualAnnotationNode: n => `[General annotation node ${JSON.stringify(n.value)} must be replaced with something target-specific or be removed]`,
 
     visitLiteral: node => {
       if (typeof node.value === 'string') {

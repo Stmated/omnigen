@@ -96,7 +96,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
     },
 
     visitProperty: (n, v) => {
-      const type = n.typeNode.visit(v);
+      const type = n.type.visit(v);
       const modifiers = n.modifiers ? `${n.modifiers.visit(v)} ` : '';
       const getModifiers = n.getModifiers ? `${n.getModifiers.visit(v) || ''} ` : '';
       const setModifiers = n.setModifiers ? `${n.setModifiers.visit(v) || ''} ` : '';
@@ -267,7 +267,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       return parent.visitComment(n, v);
     },
 
-    visitFreeTextTypeLink: (n, v) => `\n<see cref="${render(n.type, v)}" />`,
+    visitFreeTextTypeLink: (n, v) => `\n<see cref="${render(n.type, v)}" />\n`,
     visitFreeTextCode: (n, v) => `<code>${render(n.content, v)}</code>`,
     visitFreeTextExample: (n, v) => `\n<example>${render(n.content, v)}</example>`,
     visitFreeTextSummary: (n, v) => `<summary>\n${render(n.content, v).trim()}\n</summary>`,

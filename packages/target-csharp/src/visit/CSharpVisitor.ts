@@ -19,7 +19,7 @@ export const createCSharpVisitor = <R>(partial?: Partial<CSharpVisitor<R>>, java
     visitProperty: (n, v) => [
       n.comments?.visit(v),
       n.modifiers?.visit(v),
-      n.typeNode.visit(v),
+      n.type.visit(v),
       n.identifier.visit(v),
       n.getModifiers?.visit(v),
       // n.getBody?.visit(v),

@@ -283,14 +283,12 @@ export class CodeAstUtils implements AstTargetFunctions {
       }
 
       body.children.push(
-        new Code.Statement(
-          new Code.AbstractMethodDeclaration(
-            new Code.MethodDeclarationSignature(
-              new Code.GetterIdentifier(new Code.Identifier(accessorName), root.getAstUtils().createTypeNode(property.type)),
-              root.getAstUtils().createTypeNode(property.type, false),
-              undefined,
-              new Code.ModifierList(),
-            ),
+        new Code.AbstractMethodDeclaration(
+          new Code.MethodDeclarationSignature(
+            new Code.GetterIdentifier(new Code.Identifier(accessorName), root.getAstUtils().createTypeNode(property.type)),
+            root.getAstUtils().createTypeNode(property.type, false),
+            undefined,
+            new Code.ModifierList(),
           ),
         ),
       );

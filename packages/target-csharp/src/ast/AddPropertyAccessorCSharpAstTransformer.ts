@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, OmniProperty, PackageOptions, TargetOptions} from '@omnigen/core';
 import {Cs, CSharpRootNode} from '../ast';
 import {CSharpOptions, ReadonlyPropertyMode} from '../options';
 import {OmniUtil} from '@omnigen/core-util';
@@ -28,45 +28,41 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
 
     // TODO: If we add a property node for a field, then if there is an interface with a getter for that field, then we need to replace it as well!
 
+    let interfaceDepth = 0;
+
     // Step1, replace fields with properties
+    const defaultReducer = args.root.createReducer();
     const root1 = args.root.reduce({
-      ...args.root.createReducer(),
+      ...defaultReducer,
+      reduceInterfaceDeclaration: (n, r) => {
+        try {
+          interfaceDepth++;
+          return defaultReducer.reduceInterfaceDeclaration(n, r);
+        } finally {
+          interfaceDepth--;
+        }
+      },
+      reduceAbstractMethodDeclaration: (n, r) => {
+
+        if (interfaceDepth > 0 && n.signature.identifier instanceof Code.GetterIdentifier) {
+
+          const propertyNode = this.createPropertyNode(args, n.signature.type, n.signature.identifier.identifier, undefined, n.signature.comments, undefined);
+
+          // Remove any modifiers, since we're inside an interface.
+          propertyNode.modifiers = new Code.ModifierList();
+
+          return propertyNode;
+        }
+
+        return n;
+      },
       reduceField: n => {
 
         if (!fieldsToReplace.includes(n.id)) {
           return n;
         }
 
-        const propertyNode = new Cs.PropertyNode(n.type, new Cs.PropertyIdentifier(n.identifier));
-        propertyNode.modifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC));
-        propertyNode.property = n.property;
-        propertyNode.comments = n.comments;
-
-        // C# 6.0: public object MyProperty { get; }
-        // C# 9.0: public string Orderid { get; init; } -- NOTE: could be used to skip constructor
-
-        if ((n.property && n.property.readOnly) || args.options.immutableModels) {
-
-          if (!args.options.immutableModels && args.options.csharpReadonlyPropertySetterMode === ReadonlyPropertyMode.PRIVATE) {
-            propertyNode.setModifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PRIVATE));
-          }
-
-          propertyNode.immutable = true;
-        }
-
-        if (n.initializer) {
-
-          // C# 6.0:
-          // { get; set; } = initializer
-          propertyNode.initializer = n.initializer;
-
-          if (!propertyNode.immutable && OmniUtil.isPrimitive(n.type.omniType) && n.type.omniType.literal) {
-
-            // If the property is not immutable, but the value is a const/literal, then just make it immutable for clarity.
-            propertyNode.immutable = true;
-          }
-        }
-
+        const propertyNode = this.createPropertyNode(args, n.type, n.identifier, n.property, n.comments, n.initializer);
         fieldIdToPropertyId.set(n.id, propertyNode.id);
 
         return propertyNode;
@@ -100,5 +96,46 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
     if (root2) {
       args.root = root2;
     }
+  }
+
+  private createPropertyNode(
+    args: AstTransformerArguments<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>,
+    type: Code.TypeNode,
+    identifier: Code.Identifier,
+    property: OmniProperty | undefined,
+    comments: Code.Comment | undefined,
+    initializer: Code.AbstractCodeNode | undefined,
+  ) {
+
+    const propertyNode = new Cs.PropertyNode(type, new Cs.PropertyIdentifier(identifier));
+    propertyNode.modifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC));
+    propertyNode.property = property;
+    propertyNode.comments = comments;
+
+    // C# 6.0: public object MyProperty { get; }
+    // C# 9.0: public string Orderid { get; init; } -- NOTE: could be used to skip constructor
+
+    if ((property && property.readOnly) || args.options.immutableModels) {
+
+      if (!args.options.immutableModels && args.options.csharpReadonlyPropertySetterMode === ReadonlyPropertyMode.PRIVATE) {
+        propertyNode.setModifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PRIVATE));
+      }
+
+      propertyNode.immutable = true;
+    }
+
+    if (initializer) {
+
+      // C# 6.0:
+      // { get; set; } = initializer
+      propertyNode.initializer = initializer;
+
+      if (!propertyNode.immutable && OmniUtil.isPrimitive(type.omniType) && type.omniType.literal) {
+
+        // If the property is not immutable, but the value is a const/literal, then just make it immutable for clarity.
+        propertyNode.immutable = true;
+      }
+    }
+    return propertyNode;
   }
 }

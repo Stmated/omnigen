@@ -92,7 +92,7 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
 
   visitGenericRef: <C extends AstNode>(n: Code.GenericRef<C>, v: CodeVisitor<R>) => VisitResult<R>;
 
-  visitGeneralAnnotationNode: CodeVisitFn<Code.GeneralAnnotationNode, R>;
+  visitVirtualAnnotationNode: CodeVisitFn<Code.VirtualAnnotationNode, R>;
 }
 
 export const createCodeVisitor = <R>(partial?: Partial<CodeVisitor<R>>, noop?: R | undefined): Readonly<CodeVisitor<R>> => {
@@ -229,7 +229,7 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     visitAnnotationKeyValuePair: (n, v) => n.key
       ? [n.key.visit(v), n.value.visit(v)]
       : n.value.visit(v),
-    visitGeneralAnnotationNode: () => noop,
+    visitVirtualAnnotationNode: () => noop,
     visitHardCoded: () => noop,
     visitBlock: (n, v) => n.children.map(it => it.visit(v)),
     visitPackage: () => noop,

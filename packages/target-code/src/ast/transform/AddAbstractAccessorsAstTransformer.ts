@@ -40,7 +40,7 @@ export class AddAbstractAccessorsAstTransformer implements AstTransformer<CodeRo
             ),
           );
 
-          node.body.children.push(new Code.Statement(literalMethod));
+          node.body.children.push(literalMethod);
 
           if (!node.modifiers.children.some(it => it.type === Code.ModifierType.ABSTRACT)) {
 

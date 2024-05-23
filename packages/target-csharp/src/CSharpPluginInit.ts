@@ -58,11 +58,12 @@ import {
   RemoveConstantParametersAstTransformer,
   RemoveEnumFieldsCodeAstTransformer,
   ReorderMembersAstTransformer,
-  ResolveGenericSourceIdentifiersAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer, SimplifyAndCleanAstTransformer,
   SimplifyGenericsAstTransformer,
   SortVisitorRegistry,
 } from '@omnigen/target-code';
 import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer.ts';
+import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -230,17 +231,19 @@ export const CSharpPlugin = createPlugin(
       new ToCSharpModifiersAstTransformer(),
       // new GenericNodesToSpecificJavaAstTransformer(), // TODO: Add back in again?
       new DelegatesToCSharpAstTransformer(),
+      new AddCommentsCSharpAstTransformer(),
 
       new PackageResolverAstTransformer(),
       new SimplifyTypePathsCSharpAstTransformer(),
       new NonNumericEnumToConstClassAstTransformer(),
       new ReorderMembersAstTransformer(),
+      new SimplifyAndCleanAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
     ] as const;
 
-    const options: CSharpOptions & TargetOptions & PackageOptions = {
-      ...ctx.targetOptions,
+    const options: PackageOptions & TargetOptions & CSharpOptions = {
       ...ctx.packageOptions,
+      ...ctx.targetOptions,
       ...ctx.csOptions,
     };
 

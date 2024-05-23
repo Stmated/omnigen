@@ -38,6 +38,7 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-typescript/src/render/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-csharp/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-csharp/src/render/__snapshots__" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

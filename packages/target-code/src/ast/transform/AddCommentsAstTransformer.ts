@@ -10,7 +10,7 @@ import {
   OmniType,
   OmniTypeKind,
   PackageOptions,
-  TargetOptions,
+  TargetOptions, TypeNode,
 } from '@omnigen/core';
 import {OmniUtil, Util, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -42,14 +42,17 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
       visitField: n => {
 
-        if (args.options.commentsOnFields || (args.options.commentsOnGetters && n.property)) {
-          AddCommentsAstTransformer.addToCommentsOwner(n, args);
+        if (args.options.commentsOnFields) { // } || (args.options.commentsOnGetters && n.property)) {
+          const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n, args);
+          if (ownerCommentsText) {
+            n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
+          }
 
           if (n.property) {
 
-            const comments = this.getCommentsList(args.root, n.property, args.model, args.options);
-            if (comments) {
-              n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, comments), n.comments?.kind);
+            const commentsText = AddCommentsAstTransformer.getCommentsList(args.root, n.property, args.model, args.options);
+            if (commentsText) {
+              n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, commentsText), n.comments?.kind);
             }
           }
         }
@@ -61,7 +64,10 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           if (!n.signature.parameters || n.signature.parameters.children.length == 0) {
             const type = n.signature.type.omniType;
             if (!OmniUtil.isPrimitive(type) || type.kind != OmniTypeKind.VOID) {
-              AddCommentsAstTransformer.addToCommentsOwner(n.signature, args);
+              const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.signature, args);
+              if (ownerCommentsText) {
+                n.signature.comments = new Code.Comment(FreeTextUtils.add(n.signature.comments?.text, ownerCommentsText), n.signature.comments?.kind);
+              }
             }
           }
         }
@@ -72,15 +78,12 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     }));
   }
 
-  private static addToCommentsOwner(
-    node: Code.Field | Code.MethodDeclarationSignature,
+  public static getOwnerComments(
+    node: {type: TypeNode, comments?: Code.Comment | undefined},
     args: AstTransformerArguments<Code.CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>,
-  ): void {
+  ): FreeText.FriendlyFreeTextIn | undefined {
 
-    const comments = AddCommentsAstTransformer.getCommentsForType(args.root, node.type.omniType, args.model, args.options);
-    if (comments) {
-      node.comments = new Code.Comment(FreeTextUtils.add(node.comments?.text, comments), node.comments?.kind);
-    }
+    return AddCommentsAstTransformer.getCommentsForType(args.root, node.type.omniType, args.model, args.options);
   }
 
   public static getCommentsForType(
@@ -404,7 +407,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     }
   }
 
-  private getCommentsList(
+  public static getCommentsList(
     root: Code.CodeRootAstNode,
     property: OmniProperty,
     model: OmniModel,
@@ -416,16 +419,16 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     if (property.description && !this.hasComment(property.description, comments)) {
 
       // Sometimes a description can be set both to the property itself and its type.
-      this.addComment(new FreeText.FreeTextSummary(property.description), comments);
+      AddCommentsAstTransformer.addComment(new FreeText.FreeTextSummary(property.description), comments);
     }
 
     if (property.summary && !this.hasComment(property.summary, comments)) {
-      this.addComment(new FreeText.FreeTextSummary(property.summary), comments);
+      AddCommentsAstTransformer.addComment(new FreeText.FreeTextSummary(property.summary), comments);
     }
 
     if (property.deprecated) {
       // TODO: Move to a specific FreeText class, so different targets can render it differently
-      this.addComment(new FreeText.FreeTextLine('@deprecated'), comments);
+      AddCommentsAstTransformer.addComment(new FreeText.FreeTextLine('@deprecated'), comments);
     }
 
     if (property.type.kind != OmniTypeKind.OBJECT) {
@@ -435,7 +438,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       const typeComment = AddCommentsAstTransformer.getCommentsForType(root, property.type, model, options);
 
       if (typeComment) {
-        this.addComment(typeComment, comments);
+        AddCommentsAstTransformer.addComment(typeComment, comments);
       }
 
       if (property.type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
@@ -457,17 +460,17 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       }
     }
 
-    for (const linkComment of this.getLinkCommentsForProperty(root, property, model, options)) {
+    for (const linkComment of AddCommentsAstTransformer.getLinkCommentsForProperty(root, property, model, options)) {
       this.addComment(linkComment, comments);
     }
 
     return (comments.length > 0) ? comments : undefined;
   }
 
-  private addComment(comment: FreeText.FriendlyFreeTextIn, comments: FreeText.FriendlyFreeTextIn[]): boolean {
+  private static addComment(comment: FreeText.FriendlyFreeTextIn, comments: FreeText.FriendlyFreeTextIn[]): boolean {
 
-    const commentText = this.getText(comment);
-    if (!commentText || this.hasComment(commentText, comments)) {
+    const commentText = AddCommentsAstTransformer.getText(comment);
+    if (!commentText || AddCommentsAstTransformer.hasComment(commentText, comments)) {
       return false;
     } else {
       comments.push(comment);
@@ -475,7 +478,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     }
   }
 
-  private getText(text: FreeText.FriendlyFreeTextIn): string | undefined {
+  private static getText(text: FreeText.FriendlyFreeTextIn): string | undefined {
 
     if (typeof text == 'string') {
       return text;
@@ -488,7 +491,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     return undefined;
   }
 
-  private hasComment(needle: string, freeTexts: FreeText.FriendlyFreeTextIn[]): boolean {
+  private static hasComment(needle: string, freeTexts: FreeText.FriendlyFreeTextIn[]): boolean {
 
     for (const freeText of freeTexts) {
 
@@ -519,7 +522,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     return false;
   }
 
-  private getLinkCommentsForProperty(
+  private static getLinkCommentsForProperty(
     root: Code.CodeRootAstNode,
     property: OmniProperty,
     model: OmniModel,

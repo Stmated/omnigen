@@ -39,20 +39,32 @@ export class FreeTextUtils {
     } else {
       // TODO: If adding a "summary" and there already is a summary, then add it to the existing summary as a paragraph (the first one should not be a paragraph)
 
+      const original = existing;
       if (!(existing instanceof FreeText.FreeTexts)) {
         existing = new FreeText.FreeTexts(existing);
       }
 
-      const order = [
-        FreeText.FreeTextSummary,
-        FreeText.FreeTextLine,
-        FreeText.FreeTextExample,
-        FreeText.FreeTextTypeLink,
-        FreeText.FreeTextMemberLink,
-        FreeText.FreeTextPropertyLink,
-      ];
-
       // NOTE: Perhaps this should be added as different types of freetext depending on what the already existing one is.
+
+      if (add instanceof FreeText.FreeTextTypeLink) {
+        for (const existingChild of existing.children) {
+          if (existingChild instanceof FreeText.FreeTextTypeLink) {
+            if (existingChild.type == add.type) {
+              return original;
+            }
+          }
+        }
+      }
+
+      if (add instanceof FreeText.FreeTextExample) {
+        for (const existingChild of existing.children) {
+          if (existingChild instanceof FreeText.FreeTextExample) {
+            if (existingChild.content == add.content) {
+              return original;
+            }
+          }
+        }
+      }
 
       if (add instanceof FreeText.FreeTextSummary) {
         for (const existingChild of existing.children) {
@@ -72,6 +84,15 @@ export class FreeTextUtils {
       const newChildren: FreeText.AnyFreeText[] = [...existing.children];
 
       newChildren.push(FreeTextUtils.fromFriendlyFreeText(add));
+
+      const order = [
+        FreeText.FreeTextSummary,
+        FreeText.FreeTextLine,
+        FreeText.FreeTextExample,
+        FreeText.FreeTextTypeLink,
+        FreeText.FreeTextMemberLink,
+        FreeText.FreeTextPropertyLink,
+      ];
       newChildren.sort((a, b) => {
 
         const aIndex = order.findIndex(it => a instanceof it || (a instanceof FreeText.FreeTextLine ? a.child instanceof it : false));
@@ -87,7 +108,7 @@ export class FreeTextUtils {
         return 0;
       });
 
-      return new FreeText.FreeTexts(newChildren);
+      return FreeTextUtils.simplify(new FreeText.FreeTexts(newChildren));
     }
   }
 

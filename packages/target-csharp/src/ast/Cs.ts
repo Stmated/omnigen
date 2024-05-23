@@ -34,7 +34,7 @@ export class PropertyIdentifier extends AbstractCSharpNode {
  */
 export class PropertyNode extends AbstractCSharpNode {
 
-  readonly typeNode: TypeNode;
+  readonly type: TypeNode;
   readonly identifier: PropertyIdentifier;
   property?: OmniProperty | undefined;
   modifiers?: Code.ModifierList | undefined;
@@ -48,7 +48,7 @@ export class PropertyNode extends AbstractCSharpNode {
 
   constructor(typeNode: TypeNode, identifier: PropertyIdentifier) {
     super();
-    this.typeNode = typeNode;
+    this.type = typeNode;
     this.identifier = identifier;
   }
 

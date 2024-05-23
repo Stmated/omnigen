@@ -25,7 +25,7 @@ export class NamespaceCompressionAstTransformer implements AstTransformer<CSharp
     const defaultVisitor = args.root.createVisitor();
     args.root.visit({
       ...defaultVisitor,
-      visitNamespace: (n, r) => {
+      visitNamespace: n => {
 
         const namespaceName = n.name.value;
         let targetNamespace = namespaceNameToMainId.get(namespaceName);
@@ -41,7 +41,7 @@ export class NamespaceCompressionAstTransformer implements AstTransformer<CSharp
     const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
       ...defaultReducer,
-      reduceNamespace: (n, r) => {
+      reduceNamespace: n => {
 
         const targetNamespace = namespaceRedirect.get(n);
         if (targetNamespace === undefined) {

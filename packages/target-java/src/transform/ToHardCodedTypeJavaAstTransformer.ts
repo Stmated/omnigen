@@ -12,7 +12,7 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
     const newRoot = args.root.reduce({
       ...defaultReducer,
       reduceWildcardType: n => {
-        const className = this.getUnknownClassName(n.omniType.unknownKind ?? args.options.unknownType);
+        const className = ToHardCodedTypeJavaAstTransformer.getUnknownClassName(n.omniType.unknownKind ?? args.options.unknownType);
         return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: className}, n.implementation).setId(n.id);
       },
       reduceEdgeType: (n, r) => {
@@ -39,7 +39,7 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
     }
   }
 
-  private getUnknownClassName(unknownKind: UnknownKind): string {
+  public static getUnknownClassName(unknownKind: UnknownKind): string {
 
     switch (unknownKind) {
       case UnknownKind.MUTABLE_OBJECT:

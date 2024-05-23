@@ -14,7 +14,7 @@ export const createCSharpAstReducer = (partial?: Partial<Reducer<CodeVisitor<unk
     reduceProperty: (n, r) => {
 
       const pn = new Cs.PropertyNode(
-        assertDefined(n.typeNode.reduce(r)),
+        assertDefined(n.type.reduce(r)),
         assertDefined(n.identifier.reduce(r)),
       ).withIdFrom(n);
 

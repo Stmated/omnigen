@@ -21,6 +21,7 @@ export * from './ast/transform/ToConstructorBodySuperCallAstTransformer';
 export * from './ast/transform/RemoveEnumFieldsCodeAstTransformer.ts';
 export * from './ast/transform/MethodToGetterCodeAstTransformer.ts';
 export * from './ast/transform/AddCompositionMembersCodeAstTransformer.ts';
+export * from './ast/transform/SimplifyAndCleanAstTransformer.ts';
 
 export * from './visitor/CodeVisitor';
 export * from './visitor/FreeTextVisitor';

@@ -163,10 +163,14 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
 
         // NOTE: Is this the expected order? Sorting by the full import name?
         n.children.sort((a, b) => {
-          const aName = a.type.getImportName() || a.type.getLocalName() || OmniUtil.describe(a.type.omniType);
-          const bName = b.type.getImportName() || b.type.getLocalName() || OmniUtil.describe(b.type.omniType);
+          if (a instanceof Code.Annotation && b instanceof Code.Annotation) {
+            const aName = a.type.getImportName() || a.type.getLocalName() || OmniUtil.describe(a.type.omniType);
+            const bName = b.type.getImportName() || b.type.getLocalName() || OmniUtil.describe(b.type.omniType);
 
-          return aName.localeCompare(bName);
+            return aName.localeCompare(bName);
+          }
+
+          return 0;
         });
       },
 

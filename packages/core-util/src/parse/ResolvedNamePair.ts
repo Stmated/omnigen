@@ -1,2 +1,2 @@
 
-export type ResolvedNamePair<T> = { owner: T, name: string };
+export type ResolvedNamePair<T, R> = { owner: T, name: R };

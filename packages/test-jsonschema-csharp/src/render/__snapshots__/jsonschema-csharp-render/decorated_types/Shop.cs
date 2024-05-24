@@ -1,3 +1,6 @@
+using Newtonsoft.Json.JsonPropertyAttribute;
+using Newtonsoft.Json.Required;
+
 namespace generated.omnigen
 {
   /// <summary>
@@ -9,12 +12,16 @@ namespace generated.omnigen
     /// <summary>
     /// Unique Shop Id
     /// </summary>
+    [JsonProperty("id", Required = Required.Always)]
     public int Id { get; }
+    [JsonProperty("name", Required = Required.Always)]
     public string Name { get; }
     /// <summary>
     /// List of orders currently in this shop
     /// </summary>
+    [JsonProperty("orders")]
     public Order[] Orders { get; }
+    [JsonProperty("tag")]
     public string Tag { get; }
 
     public Shop(int id, Order[] orders, string name, string tag)

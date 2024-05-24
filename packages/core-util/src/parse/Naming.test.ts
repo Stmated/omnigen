@@ -1,5 +1,5 @@
 import {Naming} from './Naming';
-import {describe, test, expect} from 'vitest';
+import {test, expect} from 'vitest';
 
 const obj1 = {};
 const obj2 = {};
@@ -12,13 +12,15 @@ const obj7 = {};
 test('Single', async () => {
 
   expect(Naming.unwrap('a')).toEqual('A');
-  expect(Naming.unwrap([])).toEqual(undefined);
+  expect(() => Naming.unwrap([])).toThrowError();
+
+  // expect(Naming.unwrap([])).toEqual(undefined);
   expect(Naming.unwrap(['a', 'b'])).toEqual('A');
   expect(Naming.unwrap(['b', 'a', 'c'])).toEqual('B');
 });
 
 test('Fallback', async () => {
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a', 'b']},
     {owner: obj2, name: ['a', 'b']},
   ])).toEqual([
@@ -30,7 +32,7 @@ test('Fallback', async () => {
 
 // We also test that the owner has no impact on what names we get.
 test('Owner-No-Impact', async () => {
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
     {owner: obj1, name: ['b']},
   ])).toEqual([
@@ -40,7 +42,7 @@ test('Owner-No-Impact', async () => {
 });
 
 test('Indexed', async () => {
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
     {owner: obj2, name: ['a']},
   ])).toEqual([
@@ -51,7 +53,7 @@ test('Indexed', async () => {
 
 test('Indexed-Many', async () => {
 
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
     {owner: obj2, name: ['a']},
     {owner: obj3, name: ['a']},
@@ -70,7 +72,7 @@ test('Indexed-Many', async () => {
 
 test('Indexed-Overflow', async () => {
 
-  const overflow = Naming.unwrap([
+  const overflow = Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
     {owner: obj2, name: ['a']},
     {owner: obj3, name: ['a']},
@@ -87,7 +89,7 @@ test('Indexed-Overflow', async () => {
 test('Prefix', async () => {
 
   expect(Naming.unwrap({prefix: 'PRE', name: 'a'})).toEqual('PREa');
-  expect(Naming.unwrap({prefix: 'PRE', name: []})).toEqual(undefined);
+  expect(() => Naming.unwrap({prefix: 'PRE', name: []})).toThrowError();
   expect(Naming.unwrap({prefix: 'PRE', name: ['a', 'b']})).toEqual('PREa');
   expect(Naming.unwrap({prefix: 'PRE', name: ['b', 'a', 'c']})).toEqual('PREb');
 });
@@ -95,7 +97,7 @@ test('Prefix', async () => {
 test('Suffix', async () => {
 
   expect(Naming.unwrap({suffix: 'SUF', name: 'a'})).toEqual('ASUF');
-  expect(Naming.unwrap({suffix: 'SUF', name: []})).toEqual(undefined);
+  expect(() => Naming.unwrap({suffix: 'SUF', name: []})).toThrowError();
   expect(Naming.unwrap({suffix: 'SUF', name: ['a', 'b']})).toEqual('ASUF');
   expect(Naming.unwrap({suffix: 'SUF', name: ['b', 'a', 'c']})).toEqual('BSUF');
 });
@@ -103,14 +105,14 @@ test('Suffix', async () => {
 test('Prefix+Suffix', async () => {
 
   expect(Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: 'a'})).toEqual('PREaSUF');
-  expect(Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: []})).toEqual(undefined);
+  expect(() => Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: []})).toThrowError();
   expect(Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: ['a', 'b']})).toEqual('PREaSUF');
   expect(Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: ['b', 'a', 'c']})).toEqual('PREbSUF');
 });
 
 test('Slashes', async () => {
 
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: ['components/a']},
     {owner: obj2, name: ['schemas/a']},
     {owner: obj3, name: ['b']},
@@ -123,7 +125,7 @@ test('Slashes', async () => {
 
 test('Slashes With Case-Insensitivity', async () => {
 
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: ['components/a']},
     {owner: obj2, name: ['schemas/a']},
     {owner: obj3, name: ['A']},
@@ -136,7 +138,7 @@ test('Slashes With Case-Insensitivity', async () => {
 
 test('Prefix-Different', async () => {
 
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: {prefix: 'a', name: ['a']}},
     {owner: obj2, name: {prefix: 'b', name: ['a']}},
     {owner: obj3, name: {prefix: 'c', name: ['a']}},
@@ -156,7 +158,7 @@ test('Prefix-Different', async () => {
 test('Prefix-Multi', async () => {
 
   // Test that the fallback is properly ordered if we have multiple prefixes.
-  expect(Naming.unwrap([
+  expect(Naming.unwrapPairs([
     {owner: obj1, name: {prefix: ['a', 'b', 'c', 'd', 'e', 'f'], name: ['a']}},
     {owner: obj1, name: {prefix: ['a', 'b', 'c', 'd', 'e', 'f'], name: ['a']}},
     {owner: obj1, name: {prefix: ['a', 'b', 'c', 'd', 'e', 'f'], name: ['a']}},

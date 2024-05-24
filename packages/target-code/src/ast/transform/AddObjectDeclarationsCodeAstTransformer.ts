@@ -86,7 +86,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     });
 
     if (namePairs.length > 0) {
-      const resolved = Naming.unwrap(namePairs);
+      const resolved = Naming.unwrapPairs(namePairs);
       for (const pair of resolved) {
         pair.owner.name = CodeUtil.getSafeIdentifierName(Naming.prefixedPascalCase(pair.name));
       }

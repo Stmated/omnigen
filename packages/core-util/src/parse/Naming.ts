@@ -5,7 +5,7 @@ import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
 import {Case} from '../util';
 
-const DEF_UNWRAP_CALLBACK: NameCallback = (name, parts, keepPunctuation) => {
+const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation) => {
   if (keepPunctuation) {
     if (parts && parts.length > 0) {
       return `${parts.join('')}${name}`;
@@ -23,17 +23,29 @@ const DEF_UNWRAP_CALLBACK: NameCallback = (name, parts, keepPunctuation) => {
 
 export class Naming {
 
-  public static unwrap(name: TypeName, callback?: NameCallback): string;
-  public static unwrap<T>(pairs: NamePair<T>[], callback?: NameCallback): ResolvedNamePair<T>[];
-  public static unwrap(name: undefined): undefined;
-  public static unwrap<T>(
-    input: TypeName | NamePair<T>[] | undefined,
-    callback: NameCallback = DEF_UNWRAP_CALLBACK,
-  ): string | ResolvedNamePair<T>[] | undefined {
+  public static unwrap(name: TypeName): string {
+
+    const unwrapped = Naming.unwrapWithCallback(name, DEF_UNWRAP_CALLBACK);
+    if (unwrapped === undefined) {
+      throw new Error(`Given an empty name`);
+    }
+
+    return unwrapped;
+  }
+
+  // public static unwrap(name: TypeName | undefined): string;
+  // public static unwrap<T, R>(pairs: NamePair<T>[], callback?: NameCallback<R>): ResolvedNamePair<T, R>[];
+  // public static unwrap(name: undefined): undefined;
+  public static unwrapWithCallback<R>(
+    input: TypeName,
+    callback: NameCallback<R>, // = DEF_UNWRAP_CALLBACK,
+  ): R | undefined {
 
     if (input == undefined) {
       return input;
-    } else if (typeof input == 'string') {
+    }
+
+    if (typeof input == 'string') {
 
       // The type name contains a slash, which means it is probably a ref name.
       const nameParts = input.split('/');
@@ -53,21 +65,21 @@ export class Naming {
       } else {
         return callback(input) || undefined;
       }
-    } else if (Array.isArray(input)) {
+    }
+
+    if (Array.isArray(input)) {
 
       if (input.length > 0) {
-        if (typeof input[0] == 'object' && 'owner' in input[0]) {
-          return this.unwrapPairs(input as NamePair<T>[], callback);
-        } else {
-          return this.unwrapArray(input, callback);
-        }
+        return this.unwrapArray(input, callback);
       }
 
       return undefined;
-    } else if (typeof input == 'object') {
-      return Naming.unwrap(input.name, (name, parts) => {
-        return Naming.unwrap(input.prefix || '', (prefix, _prefixParts) => {
-          return Naming.unwrap(input.suffix || '', (suffix, _suffixParts) => {
+    }
+
+    if (typeof input == 'object') {
+      return Naming.unwrapWithCallback(input.name, (name, parts) => {
+        return Naming.unwrapWithCallback(input.prefix || '', (prefix, _prefixParts) => {
+          return Naming.unwrapWithCallback(input.suffix || '', (suffix, _suffixParts) => {
 
             // NOTE: Do we ever need to care about the prefix and suffix parts?
             const modifiedName = `${prefix}${name}${suffix}`;
@@ -80,10 +92,10 @@ export class Naming {
     return undefined;
   }
 
-  private static unwrapArray(input: Array<TypeName>, callback: NameCallback): string | undefined {
+  private static unwrapArray<R>(input: Array<TypeName>, callback: NameCallback<R>): R | undefined {
 
     for (const entry of input) {
-      const result = Naming.unwrap(entry, (name, parts) => {
+      const result = Naming.unwrapWithCallback(entry, (name, parts) => {
         return callback(name, parts);
       });
 
@@ -95,16 +107,17 @@ export class Naming {
     return undefined;
   }
 
-  private static unwrapPairs<T>(pairs: NamePair<T>[], callback: NameCallback): ResolvedNamePair<T>[] {
+  // public static unwrapPairs<T>(pairs: NamePair<T>[]): ResolvedNamePair<T, string>[];
+  public static unwrapPairs<T>(pairs: NamePair<T>[], callback: NameCallback<string> = DEF_UNWRAP_CALLBACK): ResolvedNamePair<T, string>[] {
 
     // This is a pair. We should resolve the actual name and replace it with a resolved pair.
-    const result: ResolvedNamePair<T>[] = [];
+    const result: ResolvedNamePair<T, string>[] = [];
 
     const encountered: string[] = [];
     for (const pair of pairs) {
 
       const pairNames: string[] = [];
-      let foundName = Naming.unwrap(pair.name, (name, parts) => {
+      let foundName = Naming.unwrapWithCallback(pair.name, (name, parts) => {
 
         // TODO: This is ugly and bad and wrong. Should be able to avoid all this string manipulation
         //        Is this even correct? Should we not call the callback first?

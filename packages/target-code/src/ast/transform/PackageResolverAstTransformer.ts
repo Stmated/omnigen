@@ -1,4 +1,4 @@
-import {AstTransformer, AstTransformerArguments, ExternalSyntaxTree, NameParts, Namespace, ObjectName, OmniType, PackageOptions, TargetFeatures, TargetOptions, TypeUseKind} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, ExternalSyntaxTree, NameParts, Namespace, OmniType, PackageOptions, TargetFeatures, TargetOptions, TypeUseKind} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {CodeRootAstNode} from '../CodeRootAstNode';
@@ -197,13 +197,11 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     const nameResolver = root.getNameResolver();
     const investigatedName = nameResolver.investigate({type: node.omniType, options: options});
     const relativeLocalName = nameResolver.build({name: investigatedName, with: NameParts.NAME, use: node.implementation ? TypeUseKind.CONCRETE : TypeUseKind.DECLARED});
-    const nodeImportName = nameResolver.build({name: investigatedName, with: NameParts.FULL, relativeTo: namespaceParts});
+    const nodeImportName = nameResolver.build({name: investigatedName, with: NameParts.FULL, use: TypeUseKind.IMPORT, relativeTo: namespaceParts});
 
     node.setLocalName(relativeLocalName);
 
     if (nodeImportName && nodeImportName.indexOf('.') !== -1) {
-
-      // const nodePackage = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE, use: TypeUseKind.NAMESPACE_DECLARATION});
 
       if (!nameResolver.isEqualNamespace(investigatedName.namespace, insideUnit.packageName)) {
         this.addImportIfUnique(root, objectStack, insideUnit, namespaceParts, options, nodeImportName, node);

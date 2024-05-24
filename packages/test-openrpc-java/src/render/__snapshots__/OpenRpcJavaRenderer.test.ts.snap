@@ -114,6 +114,32 @@ exports[`Java Rendering > description-inheritance 1`] = `
 ]
 `;
 
+exports[`Java Rendering > description-inheritance 2`] = `
+[
+  "AbstractOne.java",
+  "AbstractOneSchema.java",
+  "AbstractOther.java",
+  "AbstractOtherSchema.java",
+  "ErrorUnknown.java",
+  "ErrorUnknownError.java",
+  "IAbstractOtherSchema.java",
+  "IResultSchemaSchema.java",
+  "JsonRpcError.java",
+  "JsonRpcErrorResponse.java",
+  "JsonRpcRequest.java",
+  "JsonRpcRequestParams.java",
+  "JsonRpcResponse.java",
+  "MethodRequest.java",
+  "MethodRequestParams.java",
+  "MethodResponse.java",
+  "RequestParamDescriptor.java",
+  "RequestParamSchema.java",
+  "ResultDescriptor.java",
+  "ResultSchema.java",
+  "ResultSchemaSchema.java",
+]
+`;
+
 exports[`Java Rendering > generic_params 1`] = `
 [
   "AbstractRequestData.java",

@@ -76,7 +76,6 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
      */
     visitImportStatement: (n, v) => {
 
-      // if (n.type instanceof Java.TypePath)
       if (n.type instanceof Code.EdgeType) {
 
         const importName = n.type.getImportName();
@@ -84,12 +83,13 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
           throw new Error(`Import name is not set for '${OmniUtil.describe(n.type.omniType)}'`);
         }
 
-        const lastDotIndex = importName.lastIndexOf('.');
-        if (lastDotIndex !== -1) {
-          return `using ${importName.substring(0, lastDotIndex)};`;
-        } else {
-          return `using ${importName};`;
-        }
+        // const lastDotIndex = importName.lastIndexOf('.');
+        // if (lastDotIndex !== -1) {
+        //   return `using ${importName.substring(0, lastDotIndex)};`;
+        // } else {
+        //
+        // }
+        return `using ${importName};`;
       }
 
       return undefined;
@@ -97,6 +97,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
     visitProperty: (n, v) => {
       const type = n.type.visit(v);
+      const annotations = (n.annotations && n.annotations.children.length > 0) ? `${n.annotations.visit(v)}\n` : '';
       const modifiers = n.modifiers ? `${n.modifiers.visit(v)} ` : '';
       const getModifiers = n.getModifiers ? `${n.getModifiers.visit(v) || ''} ` : '';
       const setModifiers = n.setModifiers ? `${n.setModifiers.visit(v) || ''} ` : '';
@@ -113,7 +114,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
       const initializer = n.initializer ? ` = ${n.initializer.visit(v)};` : '';
 
-      return `${comments}${modifiers}${type} ${n.identifier.visit(v)} { ${getModifiers}get; ${setter}}${initializer}\n`;
+      return `${comments}${annotations}${modifiers}${type} ${n.identifier.visit(v)} { ${getModifiers}get; ${setter}}${initializer}\n`;
     },
     // NOTE: Is the "Case.pascal" really needed here?
     visitPropertyIdentifier: (n, v) => Case.pascal(`${n.identifier.visit(v)}`),
@@ -196,6 +197,12 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       }
     },
 
+    visitAnnotation: (n, v) => {
+
+      const pairs = n.pairs ? `(${render(n.pairs, v)})` : '';
+      return (`[${render(n.type, v)}${pairs}]`);
+    },
+
     /**
      * TODO: Should be replaced by something else which can re-use almost all parts of visitMethodDeclaration -- should not need to repeat things here!
      *        Perhaps have a ref to the owner class for the constructor node, and otherwise it has all the same parts as the method declaration?
@@ -232,11 +239,6 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       }
 
       return parent.visitEdgeType(n, v);
-    },
-
-    visitHardCoded: (n, v) => {
-
-      return parent.visitHardCoded(n, v);
     },
 
     visitWildcardType: (n, v) => {

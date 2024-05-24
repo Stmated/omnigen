@@ -1,5 +1,4 @@
 import {Code} from '@omnigen/target-code';
-import {CSharpUtil} from '../util/CSharpUtil.ts';
 import {AstTransformer, OmniTypeKind, TargetOptions, UnknownKind} from '@omnigen/core';
 import {CSharpAstTransformerArguments, CSharpRootNode} from './index.ts';
 import {CSharpOptions} from '../options';
@@ -53,7 +52,7 @@ export class ToCSharpModifiersAstTransformer implements AstTransformer<CSharpRoo
             // NOTE: This might require deletion later, if decide to move away from `dynamic`
             alteredArgumentCount++;
             const castedArgument = new Code.Cast(
-              args.root.getAstUtils().createTypeNode({kind: OmniTypeKind.OBJECT, properties: [], name: ''}),
+              args.root.getAstUtils().createTypeNode({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'object'}}),
               argument,
             );
 

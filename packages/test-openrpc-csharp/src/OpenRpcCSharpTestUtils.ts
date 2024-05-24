@@ -5,12 +5,11 @@ import {PluginManager} from '@omnigen/plugin';
 import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 import {CSharpOptions, CSharpPlugins} from '@omnigen/target-csharp';
 import {LoggerFactory} from '@omnigen/core-log';
-import {JavaOptions} from '@omnigen/target-java';
 import {ModelTransformOptions, PackageOptions, ParserOptions, TargetOptions} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export type AllCSharpOptions = ParserOptions & ModelTransformOptions & PackageOptions & TargetOptions & JavaOptions & CSharpOptions;
+export type AllCSharpOptions = ParserOptions & ModelTransformOptions & PackageOptions & TargetOptions & CSharpOptions;
 
 export class OpenRpcCSharpTestUtils {
 

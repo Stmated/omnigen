@@ -1,17 +1,19 @@
 import {
-  ObjectName,
   AstNameBuildArgs,
-  ObjectNameResolveArgs,
-  ObjectNameResolver, NameParts,
+  NameParts,
   Namespace,
-  NamespaceArrayItem,
+  ObjectName,
+  ObjectNameResolveArgs,
+  ObjectNameResolver,
   OmniCompositionType,
   OmniPrimitiveKinds,
   OmniPrimitiveType,
   OmniType,
   OmniTypeKind,
   OmniUnknownType,
-  Options, PackageOptions, TargetOptions,
+  Options,
+  PackageOptions,
+  TargetOptions,
   TypeName,
   TypeUseKind,
   UnknownKind,
@@ -54,8 +56,6 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
 
   public investigate(args: ObjectNameResolveArgs<TOpt>): ObjectName {
 
-    // TODO: Rewrite this, so we do not have any of the code inside JavaUtil, instead moved into here
-
     if (OmniUtil.isPrimitive(args.type)) {
       return this.getPrimitiveName(args.type, args.type.kind, args.boxed, args.options);
     }
@@ -96,10 +96,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       case OmniTypeKind.DICTIONARY:
         throw new Error(`Name resolver can only resolve edge types, and not dictionary types (that is up to the renderer)`);
       case OmniTypeKind.HARDCODED_REFERENCE:
-        return {
-          edgeName: this.cleanClassName(args.type.fqn, false),
-          namespace: this.getPackageNameFromFqn(args.type.fqn),
-        };
+        return args.type.fqn;
       case OmniTypeKind.INTERFACE:
         if (args.type.name) {
           const interfaceName = Naming.unwrap(args.type.name);
@@ -107,9 +104,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
         } else {
 
           const innerName = this.investigate({...args, type: args.type.of});
-          const innerEdgeName = innerName.edgeName;
-
-
+          const innerEdgeName = OmniUtil.resolveObjectEdgeName(innerName.edgeName, args.use);
           const interfaceName = this.createInterfaceName(innerEdgeName, args.options);
           return {
             ...innerName,
@@ -171,7 +166,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
 
     let name: string | undefined;
     if (args.with === NameParts.NAME || args.with === NameParts.FULL) {
-      name = args.name.edgeName ?? '_';
+      name = OmniUtil.resolveObjectEdgeName(args.name.edgeName, args.use); // edgeName ?? '_';
     } else {
       name = undefined;
     }
@@ -194,7 +189,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     // TODO: Make this work properly for TypeScript -- it should not always do relative paths just because given a `relativeTo`, it is up to the target language and how it is used
 
     if (relativeTo) {
-      const divergent = this.getDivergentNamespaceIndex(namespaceParts, relativeTo);
+      const divergent = AbstractObjectNameResolver.getDivergentNamespaceIndex(namespaceParts, relativeTo);
       if (divergent === -1) {
         // There is no difference. So we can just skip the namespace.
         return '';
@@ -213,37 +208,23 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     return namespace.split(this.namespaceSeparator);
   }
 
-  public isEqualNamespace(a: Namespace | undefined, b: Namespace | undefined): boolean {
-
-    if (a === b) {
-      return true;
-    }
-
-    if ((a && !b) || (!a && b)) {
-      return false;
-    }
-
-    if (a && b) {
-
-      if (a.length !== b.length) {
-        return false;
-      }
-
-      for (let i = 0; i < a.length; i++) {
-        if (AbstractObjectNameResolver.resolveNamespacePart(a[i]) !== AbstractObjectNameResolver.resolveNamespacePart(b[i])) {
-          return false;
-        }
-      }
-    }
-
-    return true;
+  isEqual(a: ObjectName | undefined, b: ObjectName | undefined): boolean {
+    return OmniUtil.isEqualObjectName(a, b);
   }
 
-  protected getDivergentNamespaceIndex(base: Namespace, other: Namespace): number {
+  public isEqualNamespace(a: Namespace | undefined, b: Namespace | undefined): boolean {
+    return OmniUtil.isEqualNamespace(a, b);
+  }
+
+  public startsWithNamespace(ns: ObjectName | Namespace | undefined, comparedTo: ObjectName | Namespace | undefined): boolean {
+    return OmniUtil.startsWithNamespace(ns, comparedTo);
+  }
+
+  protected static getDivergentNamespaceIndex(base: Namespace, other: Namespace): number {
 
     let i = 0;
     for (; i < base.length && i < other.length; i++) {
-      if (AbstractObjectNameResolver.resolveNamespacePart(base[i]) !== AbstractObjectNameResolver.resolveNamespacePart(other[i])) {
+      if (OmniUtil.resolveNamespacePart(base[i]) !== OmniUtil.resolveNamespacePart(other[i])) {
         return i;
       }
     }
@@ -255,13 +236,6 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     return -1;
   }
 
-  protected static resolveNamespacePart(item: NamespaceArrayItem): string {
-    return (typeof item === 'string') ? item : item.name;
-  }
-
-  /**
-   * TODO: REMOVE! Should be handled by the later JavaRenderer, specific nodes for specific type
-   */
   protected static getUnknownTypeString(unknownKind: UnknownKind): string {
     switch (unknownKind) {
       case UnknownKind.MUTABLE_OBJECT:
@@ -319,55 +293,55 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     for (let i = 0; i < uniqueNames.length; i++) {
       name = {
         prefix: name,
-        name: uniqueNames[i],
+        name: OmniUtil.resolveObjectEdgeName(uniqueNames[i], args.use),
       };
     }
 
     return name;
   }
 
-  protected cleanClassName(fqn: string, withSuffix = true): string {
-
-    const genericIdx = fqn.indexOf('<');
-    if (!withSuffix) {
-      if (genericIdx !== -1) {
-        fqn = fqn.substring(0, genericIdx);
-      }
-
-      const idx = fqn.lastIndexOf(this.namespaceSeparator);
-      if (idx == -1) {
-        return fqn;
-      } else {
-        return fqn.substring(idx + 1);
-      }
-    } else {
-
-      let suffix = '';
-      if (genericIdx !== -1) {
-        suffix = fqn.substring(genericIdx);
-        fqn = fqn.substring(0, genericIdx);
-      }
-
-      const idx = fqn.lastIndexOf(this.namespaceSeparator);
-      if (idx == -1) {
-        return fqn + suffix;
-      } else {
-        return fqn.substring(idx + 1) + suffix;
-      }
-    }
-  }
-
-  protected getPackageNameFromFqn(fqn: string): string[] {
-    const genericIdx = fqn.indexOf('<');
-    if (genericIdx !== -1) {
-      fqn = fqn.substring(0, genericIdx);
-    }
-
-    const idx = fqn.lastIndexOf(this.namespaceSeparator);
-    if (idx !== -1) {
-      return fqn.substring(0, idx).split(this.namespaceSeparator);
-    }
-
-    return [];
-  }
+  // protected cleanClassName(fqn: string, withSuffix = true): string {
+  //
+  //   const genericIdx = fqn.indexOf('<');
+  //   if (!withSuffix) {
+  //     if (genericIdx !== -1) {
+  //       fqn = fqn.substring(0, genericIdx);
+  //     }
+  //
+  //     const idx = fqn.lastIndexOf(this.namespaceSeparator);
+  //     if (idx == -1) {
+  //       return fqn;
+  //     } else {
+  //       return fqn.substring(idx + 1);
+  //     }
+  //   } else {
+  //
+  //     let suffix = '';
+  //     if (genericIdx !== -1) {
+  //       suffix = fqn.substring(genericIdx);
+  //       fqn = fqn.substring(0, genericIdx);
+  //     }
+  //
+  //     const idx = fqn.lastIndexOf(this.namespaceSeparator);
+  //     if (idx == -1) {
+  //       return fqn + suffix;
+  //     } else {
+  //       return fqn.substring(idx + 1) + suffix;
+  //     }
+  //   }
+  // }
+  //
+  // protected getPackageNameFromFqn(fqn: string): string[] {
+  //   const genericIdx = fqn.indexOf('<');
+  //   if (genericIdx !== -1) {
+  //     fqn = fqn.substring(0, genericIdx);
+  //   }
+  //
+  //   const idx = fqn.lastIndexOf(this.namespaceSeparator);
+  //   if (idx !== -1) {
+  //     return fqn.substring(0, idx).split(this.namespaceSeparator);
+  //   }
+  //
+  //   return [];
+  // }
 }

@@ -48,28 +48,11 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
           interfaceDepth--;
         }
       },
-      // reduceClassDeclaration: (n, r) => {
-      //
-      //   if (n.modifiers.children.some(it => it.type === Code.ModifierType.ABSTRACT)) {
-      //     try {
-      //       abstractDepth++;
-      //       return defaultReducer.reduceClassDeclaration(n, r);
-      //     } finally {
-      //       abstractDepth--;
-      //     }
-      //   }
-      //
-      //   return defaultReducer.reduceClassDeclaration(n, r);
-      // },
-      reduceMethodDeclaration: (n, r) => {
-        // if
-        return n;
-      },
       reduceAbstractMethodDeclaration: n => {
 
-        if (/* interfaceDepth > 0 &&*/ n.signature.identifier instanceof Code.GetterIdentifier) {
+        if (n.signature.identifier instanceof Code.GetterIdentifier) {
 
-          const propertyNode = this.createPropertyNode(args, n.signature.type, n.signature.identifier.identifier, undefined, n.signature.comments, undefined);
+          const propertyNode = this.createPropertyNode(args, n.signature.type, n.signature.identifier.identifier, undefined, n.signature.comments, undefined, n.signature.annotations);
 
           // Remove any modifiers, since we're inside an interface.
           if (interfaceDepth > 0) {
@@ -101,7 +84,7 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
           return n;
         }
 
-        const propertyNode = this.createPropertyNode(args, n.type, n.identifier, n.property, n.comments, n.initializer);
+        const propertyNode = this.createPropertyNode(args, n.type, n.identifier, n.property, n.comments, n.initializer, n.annotations);
         fieldIdToPropertyId.set(n.id, propertyNode.id);
 
         return propertyNode;
@@ -144,12 +127,14 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
     property: OmniProperty | undefined,
     comments: Code.Comment | undefined,
     initializer: Code.AbstractCodeNode | undefined,
+    annotations: Code.AnnotationList | undefined,
   ) {
 
     const propertyNode = new Cs.PropertyNode(type, new Cs.PropertyIdentifier(identifier));
     propertyNode.modifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC));
     propertyNode.property = property;
     propertyNode.comments = comments;
+    propertyNode.annotations = annotations;
 
     // C# 6.0: public object MyProperty { get; }
     // C# 9.0: public string Orderid { get; init; } -- NOTE: could be used to skip constructor

@@ -14,7 +14,9 @@ import {TargetOptions} from '../interpret';
  */
 export interface ObjectNameResolver<TOpt extends PackageOptions & TargetOptions = PackageOptions & TargetOptions> {
   isReservedWord(word: string): boolean;
+  isEqual(a: ObjectName | undefined, b: ObjectName | undefined): boolean;
   isEqualNamespace(a: Namespace | undefined, b: Namespace | undefined): boolean;
+  startsWithNamespace(ns: ObjectName | Namespace | undefined, comparedTo: ObjectName | Namespace | undefined): boolean;
 
   investigate(args: ObjectNameResolveArgs<TOpt>): ObjectName;
   parse(fqn: string): ObjectName;
@@ -95,7 +97,21 @@ export interface NamespacePart {
 export type NamespaceArrayItem = NamespacePart | string;
 export type Namespace = Array<NamespaceArrayItem>;
 
+// export interface ObjectEdgeNameFull
+
+export type ObjectEdgeName =
+  string
+  | {onUse: string; onImport: string;}
+  // | (Partial<ObjectEdgeNameFull> & Pick<ObjectEdgeNameFull, 'onUse'>)
+  // | (Partial<ObjectEdgeNameFull> & Pick<ObjectEdgeNameFull, 'onImport'>)
+  ;
+
+// const n: ObjectEdgeName = {
+//   onImport: '',
+//   onUse: '',
+// };
+
 export interface ObjectName {
   namespace: Namespace;
-  edgeName: string;
+  edgeName: ObjectEdgeName;
 }

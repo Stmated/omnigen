@@ -22,11 +22,13 @@ export const createJavaRenderer = (root: Java.JavaAstRootNode, options: JavaOpti
     ...createJavaVisitor(),
     ...createCodeRenderer(root, options, renderOptions, ctxIn),
 
-    visitWildcardType: n => {
+    visitWildcardType: (n, v) => {
 
       // Likely never called since it is replaced by ToHardCodedTypeJavaAstTransformer.
       const unknownKind = n.omniType.unknownKind ?? options.unknownType;
-      return ToHardCodedTypeJavaAstTransformer.getUnknownClassName(unknownKind);
+      const unknownTypeNode = ToHardCodedTypeJavaAstTransformer.getUnknownClassName(unknownKind, n.implementation, root.getAstUtils());
+
+      return unknownTypeNode.visit(v);
     },
 
     visitGetterIdentifier: (n, v) => {

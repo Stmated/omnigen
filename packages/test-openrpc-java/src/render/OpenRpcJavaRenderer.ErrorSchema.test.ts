@@ -1,7 +1,8 @@
 import {JavaTestUtils} from '../util';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
 import {expect, test, describe, vi} from 'vitest';
-import {DEFAULT_JAVA_OPTIONS, SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
+import {DEFAULT_JAVA_OPTIONS, SerializationLibrary} from '@omnigen/target-java';
+import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
 describe('Error-Schema', () => {
 

@@ -51,8 +51,8 @@ export class CsAstUtils implements AstTargetFunctions {
     implementation: boolean | undefined,
   ): Code.GenericType {
 
-    const mapClass = implementation == false ? 'Map' : 'Map';
-    const mapType = new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: mapClass});
+    const mapClass = implementation == false ? 'Dictionary' : 'IDictionary';
+    const mapType = new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['System', 'Collections', 'Generic'], edgeName: mapClass}});
     const keyType = this.createTypeNode(type.keyType, true);
     const valueType = this.createTypeNode(type.valueType, true);
 

@@ -1,27 +1,32 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {Direction, OmniHardcodedReferenceType, OmniProperty, OmniPropertyName, OmniType, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/core';
+import {Direction, ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniProperty, OmniPropertyName, OmniType, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/core';
 import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast/JavaAst';
 import {DelegateKind, VirtualAnnotationKind} from '../ast/JavaAst';
-import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary, SerializationPropertyNameMode} from '../options';
+import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '@omnigen/target-code/ast';
+import {SerializationPropertyNameMode} from '@omnigen/target-code';
+import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-const JACKSON_JSON_PROPERTY = 'com.fasterxml.jackson.annotation.JsonProperty';
-export const JACKSON_JSON_VALUE = 'com.fasterxml.jackson.annotation.JsonValue';
-export const JACKSON_JSON_CREATOR = 'com.fasterxml.jackson.annotation.JsonCreator';
-const JACKSON_JSON_INCLUDE = 'com.fasterxml.jackson.annotation.JsonInclude';
-export const JACKSON_JSON_ANY_GETTER = 'com.fasterxml.jackson.annotation.JsonAnyGetter';
-export const JACKSON_JSON_ANY_SETTER = 'com.fasterxml.jackson.annotation.JsonAnySetter';
-const JACKSON_JSON_NODE = 'com.fasterxml.jackson.databind.JsonNode';
-const JACKSON_JSON_OBJECT = 'com.fasterxml.jackson.databind.node.ObjectNode';
-const JACKSON_JSON_NODE_FACTORY = 'com.fasterxml.jackson.databind.node.JsonNodeFactory';
+const JACKSON_JSON_PROPERTY: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonProperty'};
+export const JACKSON_JSON_VALUE: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonValue'};
+const JACKSON_JSON_CREATOR: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonCreator'};
+const JACKSON_JSON_INCLUDE: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonInclude'};
+export const JACKSON_JSON_ANY_GETTER: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonAnyGetter'};
+export const JACKSON_JSON_ANY_SETTER: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonAnySetter'};
+export const JACKSON_JSON_NODE: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'databind'], edgeName: 'JsonNode'};
+const JACKSON_JSON_OBJECT: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'databind', 'node'], edgeName: 'ObjectNode'};
+const JACKSON_JSON_NODE_FACTORY: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'databind', 'node'], edgeName: 'JsonNodeFactory'};
 
-export const JACKSON_OBJECT_MAPPER = 'com.fasterxml.jackson.databind.ObjectMapper';
+export const JACKSON_OBJECT_MAPPER: ObjectName = {namespace: ['com', 'fasterxml', 'jackson', 'databind'], edgeName: 'ObjectMapper'};
 
 export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
+
+  private static readonly _JAVA_NAME_RESOLVER = new JavaObjectNameResolver();
+  private static readonly _NS_DATABIND = JacksonJavaAstTransformer._JAVA_NAME_RESOLVER.parseNamespace('com.fasterxml.jackson.databind');
 
   transformAst(args: JavaAstTransformerArgs): void {
 
@@ -36,6 +41,8 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     const objectDecStack: Java.AbstractObjectDeclaration[] = [];
 
     const delegateToObjectMapperNode = new Map<number, Java.TypeNode>();
+
+    const nameResolver = args.root.getNameResolver();
 
     const defaultVisitor = args.root.createVisitor();
     const visitor = VisitorFactoryManager.create(defaultVisitor, {
@@ -81,7 +88,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
         // A JsonValue field should not have any JsonProperty added to it.
         const jsonValueAnnotation = node.annotations?.children.find(
-          it => (it instanceof Java.Annotation) && (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) && (it.type.omniType.fqn == JACKSON_JSON_VALUE),
+          it => (it instanceof Java.Annotation) && (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) && nameResolver.isEqual(it.type.omniType.fqn, JACKSON_JSON_VALUE),
         );
 
         if (!jsonValueAnnotation && this.shouldAddJsonPropertyAnnotation(node.identifier.value, node.identifier.original, args.options)) {
@@ -119,7 +126,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
       visitDelegate: n => {
 
-        if (n.kind === DelegateKind.CONVERTER && n.returnType && n.parameterTypes.length == 1 && this.isJacksonNodeType(n.parameterTypes[0], args.options)) {
+        if (n.kind === DelegateKind.CONVERTER && n.returnType && n.parameterTypes.length == 1 && this.isJacksonNodeType(n.parameterTypes[0], args.options, nameResolver)) {
 
           const objectMapperTypeNode = new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_OBJECT_MAPPER});
           delegateToObjectMapperNode.set(n.id, objectMapperTypeNode);
@@ -159,7 +166,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
               const type = n.omniType;
               const mapClassOrInterface = n.implementation ? 'HashMap' : 'Map';
-              const mapType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: `java.util.${mapClassOrInterface}`});
+              const mapType = new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JacksonJavaAstTransformer._JAVA_NAME_RESOLVER.parse(`java.util.${mapClassOrInterface}`)});
 
               return new Java.GenericType(type, mapType, [keyType, valueType]);
             }
@@ -235,11 +242,11 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     return undefined;
   }
 
-  private isJacksonNodeType(n: Java.TypeNode, options: JavaAndTargetOptions): boolean {
+  private isJacksonNodeType(n: Java.TypeNode, options: JavaAndTargetOptions, nameResolver: ObjectNameResolver): boolean {
 
     if (n.omniType.kind === OmniTypeKind.HARDCODED_REFERENCE) {
       // Either it already is a Jackson node.
-      if (n.omniType.fqn.startsWith('com.fasterxml.jackson.databind')) {
+      if (nameResolver.startsWithNamespace(n.omniType.fqn, JacksonJavaAstTransformer._NS_DATABIND)) {
         return true;
       }
     } else if (n.omniType.kind === OmniTypeKind.UNKNOWN) {
@@ -408,7 +415,11 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
           new Java.AnnotationKeyValuePair(
             undefined,
             new Java.StaticMemberReference(
-              new Java.ClassName(new Java.EdgeType({kind: 'HARDCODED_REFERENCE', fqn: `${JACKSON_JSON_INCLUDE}.Include`})),
+              new Java.ClassName(
+                new Java.EdgeType({
+                  kind: OmniTypeKind.HARDCODED_REFERENCE,
+                  fqn: {namespace: ['com', 'fasterxml', 'jackson', 'annotation', {name: 'JsonInclude', nested: true}], edgeName: 'Include'},
+                })),
               new Java.Identifier('ALWAYS'),
             ),
           ),

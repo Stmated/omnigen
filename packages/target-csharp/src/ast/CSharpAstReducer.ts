@@ -27,12 +27,10 @@ export const createCSharpAstReducer = (partial?: Partial<Reducer<CodeVisitor<unk
       pn.getModifiers = n.getModifiers?.reduce(r);
       pn.setModifiers = n.setModifiers?.reduce(r);
 
-      // pn.getBody = n.getBody?.reduce(r);
-      // pn.setBody = n.setBody?.reduce(r);
-
       pn.initializer = n.initializer?.reduce(r);
 
       pn.comments = n.comments?.reduce(r);
+      pn.annotations = n.annotations?.reduce(r);
       pn.immutable = n.immutable;
 
       return pn;

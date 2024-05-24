@@ -1,4 +1,4 @@
-import {OmniTypeKind} from '@omnigen/core';
+import {ObjectName, OmniTypeKind} from '@omnigen/core';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 import * as Java from '../ast/JavaAst';
 import {VisitorFactoryManager} from '@omnigen/core-util';
@@ -21,13 +21,13 @@ export class AddGeneratedAnnotationJavaAstTransformer extends AbstractJavaAstTra
           node.annotations = new Java.AnnotationList(...[]);
         }
 
-        let annotationFqn: string;
+        let annotationFqn: ObjectName;
         switch (args.options.javaAnnotationLibrary) {
           case JavaAnnotationLibrary.JAKARTA:
-            annotationFqn = 'jakarta.annotation.Generated';
+            annotationFqn = args.root.getNameResolver().parse('jakarta.annotation.Generated');
             break;
           case JavaAnnotationLibrary.JAVAX:
-            annotationFqn = 'javax.annotation.Generated';
+            annotationFqn = args.root.getNameResolver().parse('javax.annotation.Generated');
             break;
         }
 

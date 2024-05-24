@@ -24,6 +24,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
   transformAst(args: JavaAstTransformerArgs): void {
 
     const cuStack: StackInfo[] = [];
+    const nameResolver = args.root.getNameResolver();
 
     const defaultVisitor = args.root.createVisitor();
     args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
@@ -39,9 +40,11 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
         const annotations = node.annotations || new Java.AnnotationList();
         const hasSingularJsonValue = annotations.children.find(it => {
 
-          if (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-            // TODO: This is locked to Jackson, and needs to be abstracted somehow
-            return it.type.omniType.fqn == JACKSON_JSON_VALUE;
+          if (it instanceof Java.Annotation) {
+            if (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
+              // TODO: This is locked to Jackson, and needs to be abstracted somehow
+              return nameResolver.isEqual(it.type.omniType.fqn, JACKSON_JSON_VALUE);
+            }
           }
 
           return false;
@@ -75,7 +78,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
         if (!hasSingularJsonValue) {
 
           annotations.children.push(new Java.Annotation(
-            new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Default'}),
+            new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'Default'}}),
           ));
 
           if (!node.initializer) {
@@ -143,19 +146,19 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
 
     if (info.finalFields > 0 && info.normalFields == 0) {
       annotations.children.push(new Java.Annotation(
-        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Value'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'Value'}}),
       ));
       annotations.children.push(new Java.Annotation(
-        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.With'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'With'}}),
       ));
     } else {
       annotations.children.push(new Java.Annotation(
-        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.Data'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'Data'}}),
       ));
     }
 
     annotations.children.push(new Java.Annotation(
-      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.AllArgsConstructor'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'AllArgsConstructor'}}),
       new Java.AnnotationKeyValuePairList(
         new Java.AnnotationKeyValuePair(
           new Java.Identifier('access'),
@@ -164,7 +167,7 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       ),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.RequiredArgsConstructor'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'RequiredArgsConstructor'}}),
       new Java.AnnotationKeyValuePairList(
         new Java.AnnotationKeyValuePair(
           new Java.Identifier('access'),
@@ -173,13 +176,13 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       ),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.NoArgsConstructor'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'NoArgsConstructor'}}),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.NonFinal'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'experimental'], edgeName: 'NonFinal'}}),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.experimental.SuperBuilder'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'experimental'], edgeName: 'SuperBuilder'}}),
       new Java.AnnotationKeyValuePairList(
         new Java.AnnotationKeyValuePair(
           new Java.Identifier('toBuilder'),
@@ -188,14 +191,14 @@ export class AddLombokAstTransformer extends AbstractJavaAstTransformer {
       ),
     ));
     annotations.children.push(new Java.Annotation(
-      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.extern.jackson.Jacksonized'}),
+      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'extern', 'jackson'], edgeName: 'Jacksonized'}}),
     ));
 
     if (dec.extends) {
 
       // If we extend from something, then we add to callSuper for Equald and HashCode.
       annotations.children.push(new Java.Annotation(
-        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'lombok.EqualsAndHashCode'}),
+        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'EqualsAndHashCode'}}),
         new Java.AnnotationKeyValuePairList(
           new Java.AnnotationKeyValuePair(
             new Java.Identifier('callSuper'),

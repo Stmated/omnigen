@@ -13,6 +13,7 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
 
     // TODO: Replace the hardcoded "java.util.etc.etc" into a type path -- for easier handling of rendering/handling of the path
     const delegateToMethodName = new Map<number, string>();
+    const nameResolver = args.root.getNameResolver();
 
     const newRoot = args.root.reduce({
       ...args.root.createReducer(),
@@ -23,13 +24,13 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
         if (n.returnType.omniType.kind === OmniTypeKind.VOID) {
 
           if (n.parameterTypes.length == 0) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.lang.Runnable'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.lang.Runnable')};
             methodName = 'run';
           } else if (n.parameterTypes.length == 1) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Consumer'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.Consumer')};
             methodName = 'accept';
           } else if (n.parameterTypes.length == 2) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.BiConsumer'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.BiConsumer')};
             methodName = 'accept';
           } else {
             throw new Error(`Do not know how to convert delegate '${n}' into a consumer`);
@@ -38,13 +39,13 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
         } else if (n.returnType.omniType.kind === OmniTypeKind.BOOL) {
 
           if (n.parameterTypes.length == 0) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Supplier'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.Supplier')};
             methodName = 'get';
           } else if (n.parameterTypes.length == 1) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Predicate'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.Predicate')};
             methodName = 'test';
           } else if (n.parameterTypes.length == 2) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.BiPredicate'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.BiPredicate')};
             methodName = 'test';
           } else {
             throw new Error(`Do not know how to convert delegate '${n}' into a predicate`);
@@ -52,13 +53,13 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
         } else if (!OmniUtil.isNullableType(n.returnType.omniType)) {
 
           if (n.returnType.omniType.kind === OmniTypeKind.INTEGER || n.returnType.omniType.kind === OmniTypeKind.INTEGER_SMALL) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.ToIntFunction'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.ToIntFunction')};
             methodName = 'applyAsInt';
           } else if (n.returnType.omniType.kind === OmniTypeKind.DOUBLE) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.ToDoubleFunction'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.ToDoubleFunction')};
             methodName = 'applyAsDouble';
           } else if (n.returnType.omniType.kind === OmniTypeKind.LONG) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.ToLongFunction'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.ToLongFunction')};
             methodName = 'applyAsLong';
           }
         }
@@ -71,13 +72,13 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
             const sourceType = n.parameterTypes[0].omniType;
             const common = OmniUtil.getCommonDenominatorBetween(sourceType, n.returnType.omniType, args.features);
             if (common && common.type == sourceType) {
-              hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.UnaryOperator'};
+              hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.UnaryOperator')};
             } else {
-              hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Function'};
+              hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.Function')};
               parameterTypes.push(n.returnType);
             }
           } else if (n.parameterTypes.length == 2) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.BiFunction'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.BiFunction')};
             parameterTypes.push(n.returnType);
           }
         }

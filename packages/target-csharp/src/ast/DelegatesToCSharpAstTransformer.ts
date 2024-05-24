@@ -19,19 +19,19 @@ export class DelegatesToCSharpAstTransformer implements AstTransformer<CSharpRoo
         let hardType: OmniHardcodedReferenceType;
         const extraGenericArgs: TypeNode[] = [];
         if (n.returnType.omniType.kind === OmniTypeKind.VOID) {
-          hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'System.Action'};
+          hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['System'], edgeName: 'Action'}};
         } else if (n.returnType.omniType.kind === OmniTypeKind.BOOL) {
 
           if (n.parameterTypes.length == 1) {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'System.Predicate'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['System'], edgeName: 'Predicate'}};
           } else {
-            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'System.Func'};
+            hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['System'], edgeName: 'Func'}};
             extraGenericArgs.push(n.returnType);
           }
 
         } else {
 
-          hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'System.Func'};
+          hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['System'], edgeName: 'Func'}};
           extraGenericArgs.push(n.returnType);
         }
 

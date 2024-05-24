@@ -421,68 +421,68 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       return [n.signature.visit(v), ';\n'];
     },
 
-    visitMethodCall: (node, visitor) => {
+    visitMethodCall: (n, v) => {
 
-      const targetString = render(node.target, visitor);
-      const argumentsString = render(node.methodArguments, visitor);
+      const targetString = render(n.target, v);
+      const argumentsString = render(n.methodArguments, v);
       return `${targetString}(${argumentsString})`;
     },
 
-    visitStatement: (node, visitor) => [
-      node.child.visit(visitor),
+    visitStatement: (n, v) => [
+      n.child.visit(v),
       ';\n',
     ],
 
     // TODO: The "multiline" should be contextual and automatic
     //        There should be different methods:
     //        visitClassAnnotationList, visitFieldAnnotationList, visitMethodAnnotationList, visitParameterAnnotationList
-    visitAnnotationList: (node, visitor) => (node.children.map(it => render(it, visitor)).join(node.multiline ? '\n' : ' ')),
+    visitAnnotationList: (n, v) => (n.children.map(it => render(it, v)).join(n.multiline ? '\n' : ' ')),
 
-    visitAnnotation: (node, visitor) => {
-      const pairs = node.pairs ? `(${render(node.pairs, visitor)})` : '';
-      return (`@${render(node.type, visitor)}${pairs}`);
+    visitAnnotation: (n, visitor) => {
+      const pairs = n.pairs ? `(${render(n.pairs, visitor)})` : '';
+      return (`@${render(n.type, visitor)}${pairs}`);
     },
 
-    visitAnnotationKeyValuePairList: (node, visitor) => (node.children.map(it => render(it, visitor)).join(', ')),
-    visitAnnotationKeyValuePair: (node, visitor) => {
-      const key = node.key ? `${render(node.key, visitor)} = ` : '';
-      return (`${key}${render(node.value, visitor)}`);
+    visitAnnotationKeyValuePairList: (n, v) => (n.children.map(it => render(it, v)).join(', ')),
+    visitAnnotationKeyValuePair: (n, v) => {
+      const key = n.key ? `${render(n.key, v)} = ` : '';
+      return (`${key}${render(n.value, v)}`);
     },
 
     visitVirtualAnnotationNode: n => `[General annotation node ${JSON.stringify(n.value)} must be replaced with something target-specific or be removed]`,
 
-    visitLiteral: node => {
-      if (typeof node.value === 'string') {
-        return (`"${node.value}"`);
-      } else if (typeof node.value == 'boolean') {
-        return (`${node.value ? 'true' : 'false'}`);
-      } else if (node.value === null) {
+    visitLiteral: n => {
+      if (typeof n.value === 'string') {
+        return (`"${n.value}"`);
+      } else if (typeof n.value == 'boolean') {
+        return (`${n.value ? 'true' : 'false'}`);
+      } else if (n.value === null) {
         return (`null`);
       } else {
-        if (node.primitiveKind !== undefined) {
-          if (node.primitiveKind == OmniTypeKind.DOUBLE) {
-            return (`${node.value}d`);
-          } else if (node.primitiveKind == OmniTypeKind.FLOAT) {
-            return (`${node.value}f`);
-          } else if (node.primitiveKind == OmniTypeKind.LONG) {
-            return (`${node.value}L`);
-          } else if (node.primitiveKind == OmniTypeKind.INTEGER) {
-            return (`${node.value}`);
-          } else if (node.primitiveKind == OmniTypeKind.NUMBER) {
+        if (n.primitiveKind !== undefined) {
+          if (n.primitiveKind == OmniTypeKind.DOUBLE) {
+            return (`${n.value}d`);
+          } else if (n.primitiveKind == OmniTypeKind.FLOAT) {
+            return (`${n.value}f`);
+          } else if (n.primitiveKind == OmniTypeKind.LONG) {
+            return (`${n.value}L`);
+          } else if (n.primitiveKind == OmniTypeKind.INTEGER) {
+            return (`${n.value}`);
+          } else if (n.primitiveKind == OmniTypeKind.NUMBER) {
             // If the type is just 'number' we will have to hope type inference is good enough.
           }
         }
-        return (`${node.value}`);
+        return (`${n.value}`);
       }
     },
 
-    visitField: (node, visitor) => {
-      const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
-      const annotations = node.annotations ? `${render(node.annotations, visitor)}\n` : '';
-      const modifiers = node.modifiers.children.length > 0 ? `${render(node.modifiers, visitor)} ` : '';
-      const typeName = render(node.type, visitor);
-      const initializer = node.initializer ? ` = ${render(node.initializer, visitor)}` : '';
-      const identifier = render(node.identifier, visitor);
+    visitField: (n, v) => {
+      const comments = n.comments ? `${render(n.comments, v)}\n` : '';
+      const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
+      const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
+      const typeName = render(n.type, v);
+      const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
+      const identifier = render(n.identifier, v);
 
       return [
         comments,

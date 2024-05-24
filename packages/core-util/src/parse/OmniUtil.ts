@@ -1,6 +1,10 @@
 import {
   CommonDenominatorType,
   LiteralValue,
+  Namespace,
+  NamespaceArrayItem,
+  ObjectEdgeName,
+  ObjectName,
   OMNI_GENERIC_FEATURES,
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
@@ -39,6 +43,7 @@ import {
   TypeDiffKind,
   TypeName,
   TypeOwner,
+  TypeUseKind,
   UnknownKind,
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -622,7 +627,7 @@ export class OmniUtil {
       return `${OmniUtil.getTypeName(type)}<${type.sourceIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
     }
 
-    const baseName = Naming.unwrap(OmniUtil.getVirtualTypeName(type), (name, parts) => {
+    const baseName = Naming.unwrapWithCallback(OmniUtil.getVirtualTypeName(type), (name, parts) => {
       if (parts && parts.length > 0) {
         return `${parts.join('')}${name}`;
       } else {
@@ -809,7 +814,8 @@ export class OmniUtil {
         suffix: ']',
       };
     } else if (type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-      return type.fqn;
+      // NOTE: Perhaps use another path delimiter character to differentiate it from things some target languages
+      return `${type.fqn.namespace.map(it => OmniUtil.resolveNamespacePart(it)).join('.')}.${type.fqn.edgeName}`;
     } else if (OmniUtil.isComposition(type)) {
 
       let prefix: TypeName;
@@ -1263,7 +1269,7 @@ export class OmniUtil {
     b: OmniType,
     targetFeatures: TargetFeatures,
     create?: boolean,
-  ): CommonDenominatorType<OmniType> | undefined {
+  ): CommonDenominatorType | undefined {
 
     if (a == b) {
       return {type: a};
@@ -1844,17 +1850,20 @@ export class OmniUtil {
     }
 
     // TODO: This needs improvement, since the names should not be resolved here already. Could lead to weird results.
-    const aNames: string[] = [];
-    Naming.unwrap(a.name, name => {
-      aNames.push(name);
+    const aNames = new Set<string>();
+    Naming.unwrapWithCallback(a.name, name => {
+      aNames.add(name);
+      return undefined;
     });
 
-    const bNames: string[] = [];
-    Naming.unwrap(b.name, name => {
-      bNames.push(name);
+    const found = Naming.unwrapWithCallback(b.name, name => {
+      if (aNames.has(name)) {
+        return 'found';
+      }
+      return undefined;
     });
 
-    if (!aNames.find(aName => bNames.includes(aName))) {
+    if (!found) {
       return undefined;
     }
 
@@ -1867,15 +1876,102 @@ export class OmniUtil {
   private static getCommonDenominatorBetweenHardcodedReferences(
     a: OmniHardcodedReferenceType,
     b: OmniHardcodedReferenceType,
-  ): CommonDenominatorType<OmniType> | undefined {
+  ): CommonDenominatorType | undefined {
+    return OmniUtil.isEqualObjectName(a.fqn, b.fqn) ? {type: a} : undefined;
+  }
 
-    return a.fqn === b.fqn ? {type: a} : undefined;
+  public static isEqualObjectName(a: ObjectName | undefined, b: ObjectName | undefined): boolean {
+
+    if (!OmniUtil.isEqualNamespace(a?.namespace, b?.namespace)) {
+      return false;
+    }
+
+    return a?.edgeName === b?.edgeName;
+  }
+
+  public static isEqualNamespace(a: Namespace | undefined, b: Namespace | undefined): boolean {
+
+    if (a === b) {
+      return true;
+    }
+
+    if ((a && !b) || (!a && b)) {
+      return false;
+    }
+
+    if (a && b) {
+
+      if (a.length !== b.length) {
+        return false;
+      }
+
+      for (let i = 0; i < a.length; i++) {
+        if (OmniUtil.resolveNamespacePart(a[i]) !== OmniUtil.resolveNamespacePart(b[i])) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  public static startsWithNamespace(ns: ObjectName | Namespace | undefined, comparedTo: ObjectName | Namespace | undefined): boolean {
+
+    if (ns && 'edgeName' in ns) {
+      ns = ns.namespace;
+    }
+
+    if (comparedTo && 'edgeName' in comparedTo) {
+      comparedTo = comparedTo.namespace;
+    }
+
+    if (ns === comparedTo) {
+      return true;
+    }
+
+    if ((comparedTo?.length ?? 0) < (ns?.length ?? 0)) {
+      return false;
+    }
+
+    if (comparedTo) {
+
+      if (!ns) {
+        return false;
+      }
+
+      for (let i = 0; i < comparedTo.length; i++) {
+        if (OmniUtil.resolveNamespacePart(ns[i]) !== OmniUtil.resolveNamespacePart(comparedTo[i])) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  public static resolveNamespacePart(item: NamespaceArrayItem): string {
+    return (typeof item === 'string') ? item : item.name;
+  }
+
+  public static resolveObjectEdgeName(name: ObjectEdgeName, use: TypeUseKind | undefined): string {
+
+    if (typeof name === 'string') {
+      return name;
+    }
+
+    if (name === undefined) {
+      const i = 0;
+    }
+
+    return (use === TypeUseKind.IMPORT) ? name.onImport : name.onUse;
   }
 
   private static getCommonDenominatorBetweenEnums(
     a: OmniEnumType,
     b: OmniEnumType,
-  ): CommonDenominatorType<OmniType> | undefined {
+  ): CommonDenominatorType | undefined {
 
     return Naming.unwrap(a.name) == Naming.unwrap(b.name) ? {type: a} : undefined;
   }

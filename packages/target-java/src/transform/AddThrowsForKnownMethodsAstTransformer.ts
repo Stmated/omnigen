@@ -1,15 +1,21 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
-import {OmniHardcodedReferenceType, OmniType, OmniTypeKind, RootAstNode} from '@omnigen/core';
+import {ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniType, OmniTypeKind, RootAstNode} from '@omnigen/core';
 import * as Java from '../ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
 import {VisitorFactoryManager} from '@omnigen/core-util';
+import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver.ts';
+import {JACKSON_OBJECT_MAPPER} from './JacksonJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 interface MethodInfo {
   declaration: Java.MethodDeclaration;
-  exceptions: string[];
+  exceptions: ObjectName[];
+}
+
+interface SuperTypeMapping {
+  subType: ObjectName;
+  superTypes: ObjectName[];
 }
 
 /**
@@ -18,23 +24,45 @@ interface MethodInfo {
  */
 export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTransformer {
 
-  private static readonly _inheritances: {[key: string]: string[]} = {
-    'com.fasterxml.jackson.databind.JsonMappingException': [
-      'com.fasterxml.jackson.databind.DatabindException',
-    ],
-    'com.fasterxml.jackson.databind.DatabindException': [
-      'com.fasterxml.jackson.core.JsonProcessingException',
-    ],
-    'com.fasterxml.jackson.core.JsonProcessingException': [
-      'com.fasterxml.jackson.core.JacksonException',
-    ],
-    'com.fasterxml.jackson.core.JacksonException': [
-      'java.io.IOException',
-    ],
-  };
+  private static readonly _JSON_PROCESSING_EXCEPTION = JavaObjectNameResolver.internalParse('com.fasterxml.jackson.core.JsonProcessingException');
+  private static readonly _JSON_MAPPING_EXCEPTION = JavaObjectNameResolver.internalParse('com.fasterxml.jackson.databind.JsonMappingException');
+  private static readonly _JAVA_IO_EXCEPTION = JavaObjectNameResolver.internalParse('java.io.IOException');
+  private static readonly _JAVA_LANG_INTERRUPTED_EXCEPTION = JavaObjectNameResolver.internalParse('java.lang.InterruptedException');
+
+  private static readonly _JAVA_HTTP_CLIENT = JavaObjectNameResolver.internalParse('java.net.http.HttpClient');
+
+  private static readonly _SUPERTYPE_MAPPING: SuperTypeMapping[] = [
+    {
+      subType: AddThrowsForKnownMethodsAstTransformer._JSON_MAPPING_EXCEPTION,
+      superTypes: [
+        JavaObjectNameResolver.internalParse('com.fasterxml.jackson.databind.DatabindException'),
+      ],
+    },
+    {
+      subType: JavaObjectNameResolver.internalParse('com.fasterxml.jackson.databind.DatabindException'),
+      superTypes: [
+        AddThrowsForKnownMethodsAstTransformer._JSON_PROCESSING_EXCEPTION,
+      ],
+    },
+    {
+      subType: AddThrowsForKnownMethodsAstTransformer._JSON_PROCESSING_EXCEPTION,
+      superTypes: [
+        JavaObjectNameResolver.internalParse('com.fasterxml.jackson.core.JacksonException'),
+      ],
+    },
+    {
+      subType: JavaObjectNameResolver.internalParse('com.fasterxml.jackson.core.JacksonException'),
+      superTypes: [
+        AddThrowsForKnownMethodsAstTransformer._JAVA_IO_EXCEPTION,
+      ],
+    },
+  ];
+
+  private static readonly javaLangException = JavaObjectNameResolver.internalParse('java.lang.Exception');
 
   transformAst(args: JavaAstTransformerArgs): void {
 
+    const nameResolver = args.root.getNameResolver();
     const methodStack: MethodInfo[] = [];
 
     const defaultVisitor = args.root.createVisitor();
@@ -56,7 +84,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
 
         const filtered = info.exceptions.filter(it => {
 
-          if (this.hasSuperException(it, info.exceptions)) {
+          if (this.hasSuperException(it, info.exceptions, nameResolver)) {
             return false;
           }
 
@@ -89,7 +117,7 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
 
         if (targetType && targetType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
 
-          const exceptionClasses = this.getExceptionClasses(targetType, methodName);
+          const exceptionClasses = this.getExceptionClasses(targetType, methodName, nameResolver);
           if (exceptionClasses.length > 0) {
 
             const method = methodStack[methodStack.length - 1];
@@ -102,12 +130,12 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     }));
   }
 
-  private hasSuperException(ex: string, needle: string | string[]): boolean {
+  private hasSuperException(ex: ObjectName, needle: ObjectName | ObjectName[], nameResolver: ObjectNameResolver): boolean {
 
-    const stack: string[] = [ex];
+    const stack: ObjectName[] = [ex];
 
     // If we do not know of any super exceptions, we can at least be sure one of them is Exception.
-    stack.push('java.lang.Exception');
+    stack.push(AddThrowsForKnownMethodsAstTransformer.javaLangException);
 
     while (stack.length > 0) {
 
@@ -116,22 +144,24 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
         continue;
       }
 
-      if (current != ex) {
+      if (!nameResolver.isEqual(current, ex)) {
         if (Array.isArray(needle) ? needle.includes(current) : current == needle) {
           return true;
         }
       }
 
-      const supers = AddThrowsForKnownMethodsAstTransformer._inheritances[current];
-      if (supers) {
-        stack.push(...supers);
+      for (const mapping of AddThrowsForKnownMethodsAstTransformer._SUPERTYPE_MAPPING) {
+        if (nameResolver.isEqual(current, mapping.subType)) {
+          stack.push(...mapping.superTypes);
+          break;
+        }
       }
     }
 
     return false;
   }
 
-  private resolveTargetType(root: RootAstNode, exp: AbstractCodeNode | undefined): OmniType | undefined {
+  private resolveTargetType(root: RootAstNode, exp: Java.AbstractCodeNode | undefined): OmniType | undefined {
 
     if (exp instanceof Java.EdgeType) {
       return exp.omniType;
@@ -139,11 +169,11 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
       return exp.omniType;
     } else if (exp instanceof Java.FieldReference) {
       const resolved = root.resolveNodeRef(exp);
-      if (resolved instanceof AbstractCodeNode) {
-        return this.resolveTargetType(root, resolved);
-      } else {
-        throw new Error(`Do not know how to resolve the type of reference to '${resolved}'`);
-      }
+      // if (resolved instanceof Java.AbstractCodeNode) {
+      return this.resolveTargetType(root, resolved);
+      // } else {
+      //   throw new Error(`Do not know how to resolve the type of reference to '${resolved}'`);
+      // }
     } else if (exp instanceof Java.DeclarationReference) {
       const dec = exp.resolve(root);
       return this.resolveTargetType(root, dec);
@@ -158,28 +188,28 @@ export class AddThrowsForKnownMethodsAstTransformer extends AbstractJavaAstTrans
     return undefined;
   }
 
-  private getExceptionClasses(targetType: OmniHardcodedReferenceType, methodName: string | undefined): string[] {
-    switch (targetType.fqn) {
-      case 'com.fasterxml.jackson.databind.ObjectMapper':
-        switch (methodName) {
-          case 'writeValueAsString':
-            return ['com.fasterxml.jackson.core.JsonProcessingException'];
-          case 'readValue':
-            return [
-              'com.fasterxml.jackson.core.JsonProcessingException',
-              'com.fasterxml.jackson.databind.JsonMappingException',
-            ];
-        }
-        break;
-      case 'java.net.http.HttpClient':
-        switch (methodName) {
-          case 'send':
-            return [
-              'java.io.IOException',
-              'java.lang.InterruptedException',
-            ];
-        }
-        break;
+  private getExceptionClasses(targetType: OmniHardcodedReferenceType, methodName: string | undefined, nameResolver: ObjectNameResolver): ObjectName[] {
+
+    if (nameResolver.isEqual(targetType.fqn, JACKSON_OBJECT_MAPPER)) {
+      switch (methodName) {
+        case 'writeValueAsString':
+          return [AddThrowsForKnownMethodsAstTransformer._JSON_PROCESSING_EXCEPTION];
+        case 'readValue':
+          return [
+            AddThrowsForKnownMethodsAstTransformer._JSON_PROCESSING_EXCEPTION,
+            AddThrowsForKnownMethodsAstTransformer._JSON_MAPPING_EXCEPTION,
+          ];
+      }
+    }
+
+    if (nameResolver.isEqual(targetType.fqn, AddThrowsForKnownMethodsAstTransformer._JAVA_HTTP_CLIENT)) {
+      switch (methodName) {
+        case 'send':
+          return [
+            AddThrowsForKnownMethodsAstTransformer._JAVA_IO_EXCEPTION,
+            AddThrowsForKnownMethodsAstTransformer._JAVA_LANG_INTERRUPTED_EXCEPTION,
+          ];
+      }
     }
 
     return [];

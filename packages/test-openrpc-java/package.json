@@ -17,6 +17,7 @@
     "@omnigen/core-util": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
+    "@omnigen/target-code": "workspace:*",
     "@omnigen/target-java": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",

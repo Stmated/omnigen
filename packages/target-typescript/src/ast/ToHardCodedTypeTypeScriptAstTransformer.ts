@@ -1,11 +1,11 @@
 import {AstTransformer, AstTransformerArguments, OmniTypeKind, TargetOptions} from '@omnigen/core';
-import {TsRootNode} from '../ast';
+import {Ts} from '../ast';
 import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
 import {Code} from '@omnigen/target-code';
 
-export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<TsRootNode> {
+export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode> {
 
-  transformAst(args: AstTransformerArguments<TsRootNode, TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<Ts.TsRootNode, TargetOptions>): void {
 
     const defaultReducer = args.root.createReducer();
     const reducer: TypeScriptAstReducer = {
@@ -16,8 +16,7 @@ export class ToHardCodedTypeTypeScriptAstTransformer implements AstTransformer<T
           if (n.omniType.kind == OmniTypeKind.DICTIONARY) {
 
             const type = n.omniType;
-            // const dictionaryClass = ;
-            const dictionaryType = new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'Record'});
+            const dictionaryType = new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'Record'}});
             const keyType = args.root.getAstUtils().createTypeNode(type.keyType, true);
             const valueType = args.root.getAstUtils().createTypeNode(type.valueType, true);
 

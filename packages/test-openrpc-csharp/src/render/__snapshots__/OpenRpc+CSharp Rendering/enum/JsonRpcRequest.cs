@@ -1,3 +1,6 @@
+using Newtonsoft.Json.JsonPropertyAttribute;
+using Newtonsoft.Json.Required;
+
 namespace generated.omnigen
 {
   /// <summary>
@@ -5,9 +8,13 @@ namespace generated.omnigen
   /// </summary>
   public class JsonRpcRequest
   {
+    [JsonProperty("params")]
     public ListThingsRequestParams @params { get; }
+    [JsonProperty("id", Required = Required.Always)]
     public string Id { get; }
+    [JsonProperty("jsonrpc")]
     public string Jsonrpc { get; } = "2.0";
+    [JsonProperty("method")]
     public string Method { get; } = "list_things";
 
     public JsonRpcRequest(ListThingsRequestParams @params, string id)
@@ -31,8 +38,11 @@ namespace generated.omnigen
   /// </summary>
   public class JsonRpcResponse
   {
+    [JsonProperty("id")]
     public string Id { get; }
+    [JsonProperty("jsonrpc")]
     public string Jsonrpc { get; } = "2.0";
+    [JsonProperty("result")]
     public Thing[] Result { get; }
 
     public JsonRpcResponse(string id, Thing[] result)
@@ -97,8 +107,11 @@ namespace generated.omnigen
   public class JsonRpcErrorResponse<T>
     where T : JsonRpcError
   {
+    [JsonProperty("error", Required = Required.Always)]
     public T Error { get; }
+    [JsonProperty("id")]
     public string Id { get; }
+    [JsonProperty("jsonrpc")]
     public string Jsonrpc { get; } = "2.0";
 
     public JsonRpcErrorResponse(string id, T error)
@@ -109,10 +122,13 @@ namespace generated.omnigen
   }
   public class Thing
   {
+    [JsonProperty("id", Required = Required.Always)]
     public string Id { get; }
     /// <see cref="Tag" />
+    [JsonProperty("tag")]
     public string Tag { get; }
     /// <see cref="ThingType" />
+    [JsonProperty("type")]
     public string Type { get; }
 
     public Thing(string id, string type, string tag)
@@ -139,8 +155,11 @@ namespace generated.omnigen
   /// </summary>
   public class JsonRpcError
   {
+    [JsonProperty("code")]
     public int Code { get; }
+    [JsonProperty("data")]
     public dynamic Data { get; }
+    [JsonProperty("message")]
     public string Message { get; }
 
     public JsonRpcError(dynamic data, int code, string message)

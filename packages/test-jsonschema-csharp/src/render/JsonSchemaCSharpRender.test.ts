@@ -1,6 +1,8 @@
 import {describe, expect, test, vi} from 'vitest';
 import {JsonSchemaToCSharpTestUtil} from './JsonSchemaToCSharpTestUtil.ts';
 import {Util} from '@omnigen/core-util';
+import {SerializationLibrary} from '@omnigen/target-csharp';
+import {IncludeExampleCommentsMode} from '@omnigen/target-code';
 
 describe('jsonschema-csharp-render', () => {
 
@@ -70,7 +72,7 @@ describe('jsonschema-csharp-render', () => {
 
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/interface_order.json'), {
       compressSoloReferencedTypes: false,
-      // serializationLibrary: 'POJO',
+      serializationLibrary: SerializationLibrary.NONE,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -88,8 +90,8 @@ describe('jsonschema-csharp-render', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/inline_boolean.json'), {
-      // serializationLibrary: SerializationLibrary.POJO,
-      // includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
+      serializationLibrary: SerializationLibrary.NONE,
+      includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
     });
@@ -108,8 +110,8 @@ describe('jsonschema-csharp-render', () => {
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/class_union.json'), {
       compressSoloReferencedTypes: false,
       compressUnreferencedSubTypes: false,
-      // serializationLibrary: SerializationLibrary.JACKSON,
-      // includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
+      serializationLibrary: SerializationLibrary.NEWTONSOFT,
+      includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 

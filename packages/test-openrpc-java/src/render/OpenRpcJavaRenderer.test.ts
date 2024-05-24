@@ -6,7 +6,8 @@ import {describe, expect, test, vi} from 'vitest';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, OmniTypeKind} from '@omnigen/core';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
-import {SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
+import {SerializationLibrary} from '@omnigen/target-java';
+import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 

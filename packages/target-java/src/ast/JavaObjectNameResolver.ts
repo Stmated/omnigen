@@ -12,7 +12,17 @@ export class JavaObjectNameResolver extends AbstractObjectNameResolver<PackageOp
   }
 
   parse(fqn: string): ObjectName {
-    throw new Error('Method not implemented.');
+    return JavaObjectNameResolver.internalParse(fqn);
+  }
+
+  public static internalParse(fqn: string): ObjectName {
+
+    const parts = fqn.split('.');
+
+    return {
+      namespace: parts.slice(0, -1),
+      edgeName: parts[parts.length - 1],
+    };
   }
 
   protected getPrimitiveName(type: OmniPrimitiveType, kind: OmniPrimitiveKinds, boxed: boolean | undefined, options: JavaOptions): ObjectName {

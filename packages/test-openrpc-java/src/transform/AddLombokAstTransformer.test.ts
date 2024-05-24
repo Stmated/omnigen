@@ -1,7 +1,8 @@
-import {FieldAccessorMode, SerializationLibrary, SerializationPropertyNameMode} from '@omnigen/target-java';
+import {FieldAccessorMode, SerializationLibrary} from '@omnigen/target-java';
 import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '../util';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
 import {expect, test, vi} from 'vitest';
+import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
 test('lombok', async ({task}) => {
 

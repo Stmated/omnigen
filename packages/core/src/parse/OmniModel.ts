@@ -1,5 +1,6 @@
 import {TypeName} from './TypeName';
 import {OmniKindComposition, OmniKindPrimitive, OmniTypeKind} from './OmniTypeKind.ts';
+import {ObjectName} from '../ast';
 
 export interface OmniParameter {
   name: string;
@@ -129,6 +130,7 @@ export type OmniSuperGenericTypeCapableType =
   | OmniInterfaceType
   | OmniDecoratingType<OmniSuperTypeCapableType>
   | OmniExternalModelReferenceType<OmniSuperGenericTypeCapableType> // Needs to be unwrapped/resolved every time
+  | OmniHardcodedReferenceType
   ;
 
 export type OmniTypeComposition =
@@ -261,7 +263,7 @@ export interface OmniDictionaryType<K extends OmniType = OmniType, V extends Omn
 }
 
 export interface OmniHardcodedReferenceType extends OmniBaseType<typeof OmniTypeKind.HARDCODED_REFERENCE> {
-  fqn: string;
+  fqn: ObjectName;
 }
 
 export interface OmniExternalModelReferenceType<TType extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.EXTERNAL_MODEL_REFERENCE>, OmniNamedType, OmniTypeWithInnerType<TType> {
@@ -427,8 +429,6 @@ export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> 
 export interface OmniGenericSourceType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE>, OmniTypeWithInnerType<T> {
   sourceIdentifiers: OmniGenericSourceIdentifierType[];
 }
-
-// export type OmniGenericTargetSourcePropertyType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> = OmniGenericSourceType<T>;
 
 export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_TARGET> {
   source: OmniGenericSourceType<T>;

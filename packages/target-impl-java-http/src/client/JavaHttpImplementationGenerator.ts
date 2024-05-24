@@ -1,5 +1,14 @@
 import {ImplementationGenerator} from './ImplementationGenerator';
-import {AddThrowsForKnownMethodsAstTransformer, JacksonJavaAstTransformer, Java, JAVA_FEATURES, JavaAndTargetOptions, JavaOptions} from '@omnigen/target-java';
+import {
+  AddThrowsForKnownMethodsAstTransformer,
+  JACKSON_JSON_NODE,
+  JACKSON_OBJECT_MAPPER,
+  JacksonJavaAstTransformer,
+  Java,
+  JAVA_FEATURES,
+  JavaAndTargetOptions,
+  JavaOptions,
+} from '@omnigen/target-java';
 import {type ImplementationArgs} from './ImplementationArgs';
 import {
   AstNode,
@@ -95,7 +104,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const objectMapperField = new Java.Field(
       new Java.EdgeType({
         kind: OmniTypeKind.HARDCODED_REFERENCE,
-        fqn: 'com.fasterxml.jackson.databind.ObjectMapper',
+        fqn: JACKSON_OBJECT_MAPPER,
       }),
       new Java.Identifier('objectMapper'),
       new Java.ModifierList(new Java.Modifier(Java.ModifierType.PRIVATE), new Java.Modifier(Java.ModifierType.FINAL)),
@@ -231,7 +240,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
             new Java.ThrowStatement(
               new Java.NewStatement(
                 new Java.EdgeType(
-                  {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.lang.IllegalArgumentException'},
+                  {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'IllegalArgumentException'}},
                   true,
                 ),
                 new Java.ArgumentList(
@@ -286,7 +295,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
         new Java.MemberAccess(
           new Java.ClassName(new Java.EdgeType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'java.net.http.HttpClient',
+            fqn: {namespace: ['java', 'net', 'http'], edgeName: 'HttpClient'},
           })),
           new Java.Identifier('newBuilder'),
         ),
@@ -306,7 +315,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
         new Java.MemberAccess(
           new Java.ClassName(new Java.EdgeType({
             kind: OmniTypeKind.HARDCODED_REFERENCE,
-            fqn: 'java.net.http.HttpRequest',
+            fqn: {namespace: ['java', 'net', 'http'], edgeName: 'HttpRequest'},
           })),
           new Java.Identifier('newBuilder'),
         ),
@@ -315,7 +324,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
             new Java.MemberAccess(
               new Java.ClassName(new Java.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
-                fqn: 'java.net.URI',
+                fqn: {namespace: ['java', 'net'], edgeName: 'URI'},
               })),
               new Java.Identifier('create'),
             ),
@@ -348,7 +357,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
                 new Java.MemberAccess(
                   new Java.ClassName(new Java.EdgeType({
                     kind: OmniTypeKind.HARDCODED_REFERENCE,
-                    fqn: 'java.net.http.HttpRequest.BodyPublishers',
+                    fqn: {namespace: ['java', 'net', 'http', {name: 'HttpRequest', nested: true}], edgeName: 'BodyPublishers'},
                   })),
                   new Java.Identifier('ofString'),
                 ),
@@ -373,7 +382,10 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
         ),
         new Java.ArgumentList(),
       ),
-      new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.net.http.HttpClient'}),
+      new Java.EdgeType({
+        kind: OmniTypeKind.HARDCODED_REFERENCE,
+        fqn: {namespace: ['java', 'net', 'http'], edgeName: 'HttpClient'},
+      }),
       true,
     );
 
@@ -390,8 +402,8 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
             new Java.MemberAccess(
               new Java.ClassName(new Java.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
-                fqn: 'java.net.http.HttpResponse.BodyHandlers',
-              })),
+                fqn: {namespace: ['java', 'net', 'http', {name: 'HttpResponse', nested: true}], edgeName: 'BodyHandlers'},
+              } satisfies OmniHardcodedReferenceType)),
               new Java.Identifier('ofString'),
             ),
             new Java.ArgumentList(),
@@ -459,7 +471,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
                 ),
                 new Java.ClassReference(new Java.ClassName(new Java.EdgeType({
                   kind: OmniTypeKind.HARDCODED_REFERENCE,
-                  fqn: 'com.fasterxml.jackson.databind.JsonNode',
+                  fqn: JACKSON_JSON_NODE,
                 }))),
               ),
             ),
@@ -571,7 +583,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     fromValueDeclaration: Java.VariableDeclaration | Java.Parameter,
     type: OmniType,
     cuBody: Java.Block,
-    throws: Java.TypeList<OmniType>,
+    throws: Java.TypeList,
   ): Java.Statement[] {
 
     const result = this.createConverterMethodCall(args.root, converterField, fromValueDeclaration, type);
@@ -611,7 +623,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
     const exceptionType: OmniHardcodedReferenceType = {
       kind: OmniTypeKind.HARDCODED_REFERENCE,
-      fqn: 'java.lang.Exception',
+      fqn: {namespace: ['java', 'lang'], edgeName: 'Exception'},
     };
 
     const newExceptionType: OmniObjectType = {

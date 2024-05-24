@@ -64,6 +64,7 @@ import {
 } from '@omnigen/target-code';
 import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer.ts';
 import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer.ts';
+import {JsonCSharpAstTransformer} from './ast/JsonCSharpAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -228,6 +229,7 @@ export const CSharpPlugin = createPlugin(
       // new SingleFileTypeScriptAstTransformer(),
       new RemoveEnumFieldsCodeAstTransformer(),
       new AddPropertyAccessorCSharpAstTransformer(),
+      new JsonCSharpAstTransformer(),
       new ToCSharpModifiersAstTransformer(),
       // new GenericNodesToSpecificJavaAstTransformer(), // TODO: Add back in again?
       new DelegatesToCSharpAstTransformer(),

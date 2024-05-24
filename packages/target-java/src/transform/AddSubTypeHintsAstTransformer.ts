@@ -30,7 +30,7 @@ export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRo
             new Code.Annotation(
               new Code.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
-                fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo',
+                fqn: {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonTypeInfo'},
               }),
               new Code.AnnotationKeyValuePairList(
                 new Code.AnnotationKeyValuePair(
@@ -39,7 +39,7 @@ export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRo
                     new Code.ClassName(
                       new Code.EdgeType({
                         kind: OmniTypeKind.HARDCODED_REFERENCE,
-                        fqn: 'com.fasterxml.jackson.annotation.JsonTypeInfo.Id',
+                        fqn: {namespace: ['com', 'fasterxml', 'jackson', 'annotation', {name: 'JsonTypeInfo', nested: true}], edgeName: 'Id'},
                       }),
                     ),
                     new Code.Identifier(
@@ -62,7 +62,7 @@ export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRo
             subTypes.push(new Code.Annotation(
               new Code.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
-                fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes.Type',
+                fqn: {namespace: ['com', 'fasterxml', 'jackson', 'annotation', {name: 'JsonSubTypes', nested: true}], edgeName: 'Type'},
               }),
               new Code.AnnotationKeyValuePairList(
                 new Code.AnnotationKeyValuePair(
@@ -81,7 +81,7 @@ export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRo
             new Code.Annotation(
               new Code.EdgeType({
                 kind: OmniTypeKind.HARDCODED_REFERENCE,
-                fqn: 'com.fasterxml.jackson.annotation.JsonSubTypes',
+                fqn: {namespace: ['com', 'fasterxml', 'jackson', 'annotation'], edgeName: 'JsonSubTypes'},
               }),
               new Code.AnnotationKeyValuePairList(
                 new Code.AnnotationKeyValuePair(

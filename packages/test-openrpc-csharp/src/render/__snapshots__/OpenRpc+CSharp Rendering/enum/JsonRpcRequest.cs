@@ -1,5 +1,4 @@
-using Newtonsoft.Json.JsonPropertyAttribute;
-using Newtonsoft.Json.Required;
+using Newtonsoft.Json;
 
 namespace generated.omnigen
 {
@@ -28,10 +27,7 @@ namespace generated.omnigen
   /// </summary>
   public class ListThingsRequest : JsonRpcRequest
   {
-    public ListThingsRequest(ListThingsRequestParams @params, string id) : base(@params, id)
-    {
-
-    }
+    public ListThingsRequest(ListThingsRequestParams @params, string id) : base(@params, id) { }
   }
   /// <summary>
   /// Generic class to describe the JsonRpc response package
@@ -57,38 +53,23 @@ namespace generated.omnigen
   /// <p>As response: An array of things</p>
   public class ListThingsResponse : JsonRpcResponse
   {
-    public ListThingsResponse(string id, Thing[] result) : base(id, result)
-    {
-
-    }
+    public ListThingsResponse(string id, Thing[] result) : base(id, result) { }
   }
   public class ListThingsError100 : JsonRpcErrorResponse<ListThingsError100Error>
   {
-    public ListThingsError100(string id, ListThingsError100Error error) : base(id, error)
-    {
-
-    }
+    public ListThingsError100(string id, ListThingsError100Error error) : base(id, error) { }
   }
   public class ListThingsError100Error : JsonRpcError
   {
-    public ListThingsError100Error(dynamic data, string message) : base(((object) data), 100, ((message == null) ? "Server is busy" : message))
-    {
-
-    }
+    public ListThingsError100Error(dynamic data, string message) : base(((object) data), 100, message ?? "Server is busy") { }
   }
   public class ErrorUnknown : JsonRpcErrorResponse<ErrorUnknownError>
   {
-    public ErrorUnknown(string id, ErrorUnknownError error) : base(id, error)
-    {
-
-    }
+    public ErrorUnknown(string id, ErrorUnknownError error) : base(id, error) { }
   }
   public class ErrorUnknownError : JsonRpcError
   {
-    public ErrorUnknownError(dynamic data, int? code, string message) : base(((object) data), ((code == null) ? -1 : code), ((message == null) ? "Unknown Error" : message))
-    {
-
-    }
+    public ErrorUnknownError(dynamic data, int? code, string message) : base(((object) data), code ?? -1, message ?? "Unknown Error") { }
   }
   /// <summary>
   /// Generic class to describe the JsonRpc request params

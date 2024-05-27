@@ -1,4 +1,4 @@
-import {ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, UnknownKind} from '@omnigen/core';
+import {AstNameBuildArgs, NameParts, ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, TypeUseKind, UnknownKind} from '@omnigen/core';
 import {AbstractObjectNameResolver} from '@omnigen/core-util';
 import {CSharpOptions} from '../options';
 import {CSharpUtil} from '../util/CSharpUtil.ts';
@@ -17,6 +17,19 @@ export class CSharpObjectNameResolver extends AbstractObjectNameResolver<Package
 
   protected createInterfaceName(innerEdgeName: string, options: PackageOptions & TargetOptions & CSharpOptions): string {
     return `I${innerEdgeName}`;
+  }
+
+  build(args: AstNameBuildArgs): string {
+
+    if (args.use === TypeUseKind.IMPORT && args.with === NameParts.FULL) {
+
+      // In C# you import namespaces, and not the whole type path.
+      // In theory this could cause type conflicts, and in the future there might be a need to check for those and create type aliases.
+      const namespaceParts = Array.isArray(args.name) ? args.name : args.name.namespace;
+      return this.relativize(namespaceParts, args.relativeTo, args.with, args.use);
+    }
+
+    return super.build(args);
   }
 
   protected getPrimitiveName(type: OmniPrimitiveType, kind: OmniPrimitiveKinds, boxed: boolean | undefined, options: CSharpOptions): ObjectName {
@@ -48,8 +61,6 @@ export class CSharpObjectNameResolver extends AbstractObjectNameResolver<Package
         return boxed ? {namespace: ['System'], edgeName: 'Decimal'} : {namespace: [], edgeName: 'decimal'};
       case OmniTypeKind.DOUBLE:
         return boxed ? {namespace: ['System'], edgeName: 'Double'} : {namespace: [], edgeName: 'double'};
-      // case OmniTypeKind.NUMBER:
-      //   return boxed ? {namespace: ['java', 'lang'], edgeName: 'Number'} : {namespace: [], edgeName: 'double'};
       case OmniTypeKind.NULL:
       case OmniTypeKind.UNDEFINED:
         return {namespace: ['System'], edgeName: 'Object'};

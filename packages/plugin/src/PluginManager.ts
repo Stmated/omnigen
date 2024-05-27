@@ -3,6 +3,7 @@ import * as ioPath from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AnyZodObject, z, ZodError, ZodObject, ZodType} from 'zod';
 import {Compat, CompatResult, ZodUtils} from './ZodUtils.ts';
+import {PluginUtil} from './PluginUtil.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -156,7 +157,8 @@ export class PluginManager {
       skip: args.skip,
     });
 
-    logger.info(`Will execute ${rootPath.length - 1} plugins: ${[...new Set(this.getPluginNames(rootPath.path))].join(', ')}`);
+    const pluginsStr = [...new Set(this.getPluginNames(rootPath.path))].join(', ');
+    logger.info(`Will execute ${rootPath.length - 1} plugins: ${pluginsStr}`);
 
     const executed = await this.executeFromItemOnwards({
       inType: rootPath.inType,
@@ -173,7 +175,25 @@ export class PluginManager {
 
     if (args.stopAt) {
 
-      const parsedLastResult = args.stopAt.parse(lastResult.ctx) as z.output<typeof args.stopAt>;
+      type OutType = z.output<typeof args.stopAt>;
+      let parsedLastResult: OutType;
+      try {
+        parsedLastResult = args.stopAt.parse(lastResult.ctx) as OutType;
+      } catch (ex) {
+        const message = (ex instanceof Error) ? ex.message : `${ex}`;
+        const ctxString = PluginUtil.getShallowPayloadString(lastResult.ctx);
+        throw new Error(
+          `-- Told to stop at:
+${JSON.stringify(args.stopAt, undefined, '  ')}
+-- But did not match (because probably exited early):
+${ctxString}
+-- Because: ${message}
+-- Message: ${executed.message}
+-- Last Plugin: ${lastResult.plugin.name}
+-- Plugins: ${pluginsStr}`,
+          {cause: ex},
+        );
+      }
 
       return {
         results: executed.results,
@@ -261,8 +281,8 @@ export class PluginManager {
         const message = JSON.stringify(result.flatten().fieldErrors);
 
         if (needsEvaluation) {
-          logger.debug(`Skipping '${pathItem.plugin.name}' since runtime context did not match: ${message}`);
-          return {results: []};
+          logger.warn(`Skipping '${pathItem.plugin.name}' since runtime context did not match: ${message}`);
+          return {results: [], message: message};
         } else {
           throw new Error(`Invalid '${pathItem.plugin.name}' execution, because: ${message}`);
         }
@@ -276,6 +296,7 @@ export class PluginManager {
         ctx: mergedContext,
       };
 
+      const messages: string[] = [];
       for (let n = 0; n < pathItem.next.length; n++) {
 
         const next = pathItem.next[n];
@@ -288,11 +309,15 @@ export class PluginManager {
         });
 
         if (newExecution.results.length > 0 || newExecution.stoppedAt) {
-          return {results: [executionResult, ...newExecution.results], stoppedAt: newExecution.stoppedAt};
+          return {results: [executionResult, ...newExecution.results], stoppedAt: newExecution.stoppedAt, message: newExecution.message};
+        } else {
+          if (newExecution.message) {
+            messages.push(newExecution.message);
+          }
         }
       }
 
-      return {results: [executionResult]};
+      return {results: [executionResult], message: (messages.length > 0 ? messages.join(', ') : undefined)};
 
     } else {
 
@@ -533,6 +558,7 @@ export interface ExecItemResult<C extends any = any> {
 export interface ExecItemResults<S extends ZodObject<any>> {
   results: ExecItemResult[];
   stoppedAt?: ExecutePathArgs<S, z.infer<S>, ZodObject<any>> | undefined;
+  message?: string | undefined;
 }
 
 export interface ExecutePathArgs<Z extends ZodObject<any>, C extends z.infer<Z>, S extends ZodObject<any>> {

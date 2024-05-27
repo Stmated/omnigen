@@ -34,9 +34,15 @@ export abstract class AbstractCodeNode implements AstNode {
     return this;
   }
 
-  hasId(id: number | undefined): boolean {
-    if (id === undefined) {
+  hasId(id: number | number[] | Set<number> | undefined): boolean {
+    if (id === undefined || this._id === undefined) {
       return false;
+    }
+    if (Array.isArray(id)) {
+      return id.some(it => this._id === it);
+    }
+    if (id instanceof Set) {
+      return id.has(this._id);
     }
     return this._id === id;
   }

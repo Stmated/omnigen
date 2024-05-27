@@ -100,18 +100,6 @@ export class JavaAstUtils extends CodeAstUtils {
     });
   }
 
-  public static getConstructorRequirements(
-    root: Java.JavaAstRootNode,
-    node: Java.AbstractObjectDeclaration,
-    followSupertype = false,
-  ): { fields: Java.Field[], parameters: Java.ConstructorParameter[] } {
-    return CodeAstUtils.getConstructorRequirements(root, node, followSupertype);
-  }
-
-  public static getSoloReturn(method: Java.MethodDeclaration): AstNode | undefined {
-    return CodeAstUtils.getSoloReturnOfNoArgsMethod(method);
-  }
-
   public static getGetterFieldReference(root: RootAstNode, method: Java.MethodDeclaration): Reference<Java.Field> | undefined {
     return CodeAstUtils.getGetterFieldReference(root, method);
   }

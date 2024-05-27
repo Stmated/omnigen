@@ -62,11 +62,6 @@ export class NamespaceCompressionAstTransformer implements AstTransformer<CSharp
       },
     });
 
-    if (namespaceNameToMainId.size == 1) {
-
-      // TODO: Do something here to set a more suitable name to the Unit -- so the filename is the namespace, or something else general, like the contract name
-    }
-
     if (newRoot) {
       args.root = newRoot;
     }

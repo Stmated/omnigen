@@ -12,9 +12,27 @@ exports[`OpenRpc+CSharp Rendering > compressable-types 1`] = `
 ]
 `;
 
+exports[`OpenRpc+CSharp Rendering > compressable-types_init 1`] = `
+[
+  "JsonRpcRequest.cs",
+]
+`;
+
 exports[`OpenRpc+CSharp Rendering > enum 1`] = `
 [
   "JsonRpcRequest.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > inherited-construction 1`] = `
+[
+  "Method1Request.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > inherited-construction_no_init 1`] = `
+[
+  "Method1Request.cs",
 ]
 `;
 

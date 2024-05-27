@@ -156,17 +156,15 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
 
     let ns: string | undefined;
     if (args.with === NameParts.NAMESPACE || args.with === NameParts.FULL) {
-
       const namespaceParts = Array.isArray(args.name) ? args.name : args.name.namespace;
       ns = this.relativize(namespaceParts, args.relativeTo, args.with, args.use);
-
     } else {
       ns = undefined;
     }
 
     let name: string | undefined;
     if (args.with === NameParts.NAME || args.with === NameParts.FULL) {
-      name = OmniUtil.resolveObjectEdgeName(args.name.edgeName, args.use); // edgeName ?? '_';
+      name = OmniUtil.resolveObjectEdgeName(args.name.edgeName, args.use);
     } else {
       name = undefined;
     }

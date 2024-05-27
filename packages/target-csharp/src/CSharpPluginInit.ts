@@ -39,7 +39,7 @@ import {AddPropertyAccessorCSharpAstTransformer} from './ast/AddPropertyAccessor
 import {NamespaceWrapperAstTransformer} from './ast/NamespaceWrapperAstTransformer.ts';
 import {DelegatesToCSharpAstTransformer} from './ast/DelegatesToCSharpAstTransformer.ts';
 import {NonNumericEnumToConstClassAstTransformer} from './ast/NonNumericEnumToConstClassAstTransformer.ts';
-import {ToCSharpModifiersAstTransformer} from './ast/ToCSharpModifiersAstTransformer.ts';
+import {ToCSharpAstTransformer} from './ast/ToCSharpAstTransformer.ts';
 import {NamespaceCompressionAstTransformer} from './ast/NamespaceCompressionAstTransformer.ts';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -65,6 +65,7 @@ import {
 import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer.ts';
 import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer.ts';
 import {JsonCSharpAstTransformer} from './ast/JsonCSharpAstTransformer.ts';
+import {ConstructorRemovalOnPropertyInitCSharpAstTransformer} from './ast/ConstructorRemovalOnPropertyInitCSharpAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -230,10 +231,11 @@ export const CSharpPlugin = createPlugin(
       new RemoveEnumFieldsCodeAstTransformer(),
       new AddPropertyAccessorCSharpAstTransformer(),
       new JsonCSharpAstTransformer(),
-      new ToCSharpModifiersAstTransformer(),
+      new ToCSharpAstTransformer(),
       // new GenericNodesToSpecificJavaAstTransformer(), // TODO: Add back in again?
       new DelegatesToCSharpAstTransformer(),
       new AddCommentsCSharpAstTransformer(),
+      new ConstructorRemovalOnPropertyInitCSharpAstTransformer(),
 
       new PackageResolverAstTransformer(),
       new SimplifyTypePathsCSharpAstTransformer(),
@@ -305,6 +307,11 @@ export const CSharpRendererPlugin = createPlugin(
     const renderer = createCSharpRenderer(rootTsNode, options);
     const rendered = renderer.executeRender(ctx.astNode, renderer);
 
+    const singleFileName = ctx.csOptions.singleFileName;
+    if (rendered.length == 1 && singleFileName) {
+      rendered[0].fileName = singleFileName;
+    }
+
     return {
       ...ctx,
       renderers: [renderer],
@@ -329,5 +336,5 @@ function copyDefinedProperties(source: any, target: any) {
   }
 }
 
-logger.info(`Registering CSharp plugins`);
+logger.info(`Registering C# plugins`);
 export default PluginAutoRegistry.register([CSharpPluginInit, CSharpPlugin, CSharpRendererPlugin]);

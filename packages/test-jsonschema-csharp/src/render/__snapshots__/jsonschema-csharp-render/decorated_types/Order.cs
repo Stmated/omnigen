@@ -1,4 +1,4 @@
-using Newtonsoft.Json.JsonPropertyAttribute;
+using Newtonsoft.Json;
 
 namespace generated.omnigen
 {
@@ -9,7 +9,7 @@ namespace generated.omnigen
     /// If true, then the order is still active, otherwise it is cancelled
     /// </summary>
     [JsonProperty("active")]
-    public boolean Active { get; }
+    public bool Active { get; }
     /// <summary>
     /// Unique Order Id
     /// </summary>
@@ -21,7 +21,7 @@ namespace generated.omnigen
     [JsonProperty("percentage")]
     public int Percentage { get; }
 
-    public Order(int id, boolean active, int percentage)
+    public Order(int id, bool active, int percentage)
     {
       this.Id = id;
       this.Active = active;

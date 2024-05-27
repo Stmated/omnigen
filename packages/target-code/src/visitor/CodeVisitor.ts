@@ -62,7 +62,6 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitEnumDeclaration: CodeVisitFn<Code.EnumDeclaration, R>;
   visitEnumItem: CodeVisitFn<Code.EnumItem, R>;
   visitEnumItemList: CodeVisitFn<Code.EnumItemList, R>;
-  visitAssignExpression: CodeVisitFn<Code.AssignExpression, R>;
   visitCompilationUnit: CodeVisitFn<Code.CompilationUnit, R>;
   visitConstructor: CodeVisitFn<Code.ConstructorDeclaration, R>;
   visitConstructorParameterList: CodeVisitFn<Code.ConstructorParameterList, R>;
@@ -71,7 +70,7 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitSuperConstructorCall: CodeVisitFn<Code.SuperConstructorCall, R>;
   visitClassName: CodeVisitFn<Code.ClassName, R>;
   visitClassReference: CodeVisitFn<Code.ClassReference, R>;
-  visitArrayInitializer: CodeVisitFn<Code.ArrayInitializer<AbstractCodeNode>, R>;
+  visitArrayInitializer: CodeVisitFn<Code.ArrayInitializer, R>;
   visitStaticMemberReference: CodeVisitFn<Code.StaticMemberReference, R>;
   visitSelfReference: CodeVisitFn<Code.SelfReference, R>;
   visitNodes: CodeVisitFn<Code.Nodes, R>;
@@ -286,7 +285,6 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     ],
     visitEnumItemList: (n, v) => n.children.map(it => it.visit(v)),
     visitFieldReference: () => noop,
-    visitAssignExpression: (n, v) => v.visitBinaryExpression(n, v),
     visitCompilationUnit: (n, v) => [
       n.packageDeclaration.visit(v),
       n.imports.visit(v),

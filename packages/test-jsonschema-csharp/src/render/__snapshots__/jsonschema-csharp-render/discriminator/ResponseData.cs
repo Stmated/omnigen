@@ -1,5 +1,4 @@
-using Newtonsoft.Json.JsonPropertyAttribute;
-using Newtonsoft.Json.Required;
+using Newtonsoft.Json;
 
 namespace generated.omnigen
 {

@@ -30,7 +30,7 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
 
     for (const classDeclaration of classDeclarations) {
 
-      const requirements = CodeAstUtils.getConstructorRequirements(args.root, classDeclaration, true);
+      const requirements = AddConstructorCodeAstTransformer.getConstructorRequirements(args.root, classDeclaration, true);
 
       if (requirements.fields.length > 0 || requirements.parameters.length > 0) {
 
@@ -61,8 +61,9 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
       const parameter = this.createConstructorParameter(constructorFieldRef, constructorField.type, constructorField.identifier);
       parameters.push(parameter);
 
-      blockExpressions.push(new Code.Statement(new Code.AssignExpression(
+      blockExpressions.push(new Code.Statement(new Code.BinaryExpression(
         new Code.FieldReference(constructorField),
+        new Code.TokenNode(Code.TokenKind.ASSIGN),
         new Code.DeclarationReference(parameter),
       )));
     }
@@ -151,5 +152,95 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
     }
 
     return new Code.ConstructorParameter(fieldRef, type, usedIdentifier);
+  }
+
+  private static getConstructorRequirements(
+    root: CodeRootAstNode,
+    node: Code.AbstractObjectDeclaration,
+    followSupertype = false,
+  ): { fields: Code.Field[], parameters: Code.ConstructorParameter[] } {
+
+    const constructors: Code.ConstructorDeclaration[] = [];
+    const fields: Code.Field[] = [];
+    const setters: Code.FieldBackedSetter[] = [];
+
+    const voidVisitor = root.createVisitor<void>();
+    const fieldVisitor: typeof voidVisitor = {
+      ...voidVisitor,
+      visitConstructor: n => {
+        constructors.push(n);
+      },
+      visitObjectDeclaration: () => {
+        // Do not go into any nested objects.
+      },
+      visitField: n => {
+        fields.push(n);
+      },
+      visitFieldBackedSetter: n => {
+        setters.push(n);
+      },
+    };
+
+    node.body.visit(fieldVisitor);
+
+    if (constructors.length > 0) {
+
+      // This class already has a constructor, so we will trust that it is correct.
+      // NOTE: In this future this could be improved into modifying the existing constructor as-needed.
+      return {fields: [], parameters: []};
+    }
+
+    const fieldsWithSetters = setters.map(setter => root.resolveNodeRef(setter.fieldRef));
+    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type === Code.ModifierType.FINAL || m.type === Code.ModifierType.READONLY));
+    const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
+    const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer === undefined);
+
+    const immediateRequired = fields.filter(field => {
+      return fieldsWithoutInitializer.includes(field) && (fieldsWithSetters.includes(field) || fieldsWithFinal.includes(field));
+    });
+
+    if (followSupertype && node.extends) {
+
+      const supertypeArguments: Code.ConstructorParameter[] = [];
+      for (const extendChild of node.extends.types.children) {
+        const extendedBy = CodeUtil.getClassDeclaration(root, extendChild.omniType);
+        if (extendedBy) {
+
+          let depth = 0;
+          const defaultVisitor = root.createVisitor();
+          extendedBy.visit(VisitorFactoryManager.create(defaultVisitor, {
+            visitConstructor: n => {
+              if (n.parameters) {
+                supertypeArguments.push(...n.parameters.children);
+              }
+            },
+            visitObjectDeclarationBody: (n, v) => {
+              if (depth > 0) {
+                // We only check one level of object declaration, or we will find nested ones.
+                return;
+              }
+
+              try {
+                depth++;
+                defaultVisitor.visitObjectDeclarationBody(n, v);
+              } finally {
+                depth--;
+              }
+            },
+          }));
+        }
+      }
+
+      return {
+        fields: immediateRequired,
+        parameters: supertypeArguments,
+      };
+
+    } else {
+      return {
+        fields: immediateRequired,
+        parameters: [],
+      };
+    }
   }
 }

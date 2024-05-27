@@ -88,8 +88,6 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
     const commonDenominator = OmniUtil.getCommonDenominator(features, ...type.types);
     if (commonDenominator) {
 
-      logger.info(JSON.stringify(type));
-
       if (descriptions.length > 0) {
         const str = descriptions.join(', ');
         commonDenominator.type.description = `${commonDenominator.type.description ?? ''}${str}`;

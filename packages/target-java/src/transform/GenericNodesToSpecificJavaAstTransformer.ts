@@ -52,8 +52,9 @@ export class GenericNodesToSpecificJavaAstTransformer extends AbstractJavaAstTra
           ),
           new Java.Block(
             new Java.Statement(
-              new Java.AssignExpression(
+              new Java.BinaryExpression(
                 n.fieldRef,
+                new Java.TokenNode(Java.TokenKind.ASSIGN),
                 new Java.DeclarationReference(parameter),
               ),
             ),

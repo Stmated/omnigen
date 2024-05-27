@@ -151,11 +151,26 @@ export const fileWriter = createPlugin(
     const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
     const filesWritten: string[] = [];
 
-    logger.info(`Will start writing '${ctx.compilationUnits.length}' files`);
+    logger.info(`Will start writing '${ctx.compilationUnits.length}' files: ${ctx.compilationUnits.map(it => it.fileName)}`);
 
     if (fileWriteOptions.outputFiles) {
 
       const fileWriter = new FileWriter(fileWriteOptions.outputDirBase);
+
+      const parts = ctx.fileWriteOptions.outputDirBase.split('/');
+      const fileName = parts[parts.length - 1];
+      const isFileName = fileName.match(/\w+\.\w{1,3}/);
+
+      if (isFileName) {
+        if (ctx.compilationUnits.length == 1) {
+
+          // We are only outputting one file, and the output path is a file name, so we will just remove the filename and the directory will be the filename.
+          logger.info(`Skipping filename ${ctx.compilationUnits[0].fileName} since output path is a filepath ${fileWriteOptions.outputDirBase}`);
+          ctx.compilationUnits[0].fileName = '';
+        } else {
+          throw new Error(`The output path is a filepath, but there are several compilation units`);
+        }
+      }
 
       for (const rcu of ctx.compilationUnits) {
 

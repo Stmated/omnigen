@@ -1,0 +1,115 @@
+{
+  "openrpc": "1.0.0-rc1",
+  "info": {
+    "title": "inherited_construction",
+    "version": "2.0.0"
+  },
+  "methods": [
+    {
+      "name": "Method1",
+      "params": [
+        {
+          "name": "in",
+          "schema": {
+            "$ref": "#/components/schemas/In1"
+          }
+        }
+      ],
+      "result": {
+        "name": "Method1_out",
+        "schema": {
+          "$ref": "#/components/schemas/Out"
+        }
+      }
+    },
+    {
+      "name": "Method2",
+      "params": [
+        {
+          "name": "in",
+          "schema": {"$ref": "#/components/schemas/In2"}
+        }
+      ],
+      "result": {
+        "name": "Method2_out",
+        "schema": {"$ref": "#/components/schemas/Out"}
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "In1": {
+        "type": "object",
+        "properties": {
+          "data": {"$ref": "#/components/schemas/Object1"}
+        }
+      },
+      "In2": {
+        "type": "object",
+        "properties": {
+          "data": {"$ref": "#/components/schemas/Object2"}
+        }
+      },
+      "Out": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"}
+        }
+      },
+      "Base": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "Object1": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Base"
+          }
+        ],
+        "properties": {
+          "common": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "const": "1"
+          },
+          "a": {
+            "type": "string"
+          },
+          "x": {
+            "type": "string"
+          }
+        }
+      },
+      "Object2": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Base"
+          }
+        ],
+        "properties": {
+          "common": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "const": "2"
+          },
+          "b": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

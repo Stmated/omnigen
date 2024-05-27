@@ -25,7 +25,6 @@ import {
 import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from './CodeRootAstNode';
-import {CodeUtil} from '../util/CodeUtil';
 import {CodeOptions} from '../options/CodeOptions';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -160,96 +159,6 @@ export class CodeAstUtils implements AstTargetFunctions {
     }
 
     return node;
-  }
-
-  public static getConstructorRequirements(
-    root: CodeRootAstNode,
-    node: Code.AbstractObjectDeclaration,
-    followSupertype = false,
-  ): { fields: Code.Field[], parameters: Code.ConstructorParameter[] } {
-
-    const constructors: Code.ConstructorDeclaration[] = [];
-    const fields: Code.Field[] = [];
-    const setters: Code.FieldBackedSetter[] = [];
-
-    const voidVisitor = root.createVisitor<void>();
-    const fieldVisitor: typeof voidVisitor = {
-      ...voidVisitor,
-      visitConstructor: n => {
-        constructors.push(n);
-      },
-      visitObjectDeclaration: () => {
-        // Do not go into any nested objects.
-      },
-      visitField: n => {
-        fields.push(n);
-      },
-      visitFieldBackedSetter: n => {
-        setters.push(n);
-      },
-    };
-
-    node.body.visit(fieldVisitor);
-
-    if (constructors.length > 0) {
-
-      // This class already has a constructor, so we will trust that it is correct.
-      // NOTE: In this future this could be improved into modifying the existing constructor as-needed.
-      return {fields: [], parameters: []};
-    }
-
-    const fieldsWithSetters = setters.map(setter => root.resolveNodeRef(setter.fieldRef));
-    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type === Code.ModifierType.FINAL || m.type === Code.ModifierType.READONLY));
-    const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
-    const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer === undefined);
-
-    const immediateRequired = fields.filter(field => {
-      return fieldsWithoutInitializer.includes(field) && (fieldsWithSetters.includes(field) || fieldsWithFinal.includes(field));
-    });
-
-    if (followSupertype && node.extends) {
-
-      const supertypeArguments: Code.ConstructorParameter[] = [];
-      for (const extendChild of node.extends.types.children) {
-        const extendedBy = CodeUtil.getClassDeclaration(root, extendChild.omniType);
-        if (extendedBy) {
-
-          let depth = 0;
-          const defaultVisitor = root.createVisitor();
-          extendedBy.visit(VisitorFactoryManager.create(defaultVisitor, {
-            visitConstructor: n => {
-              if (n.parameters) {
-                supertypeArguments.push(...n.parameters.children);
-              }
-            },
-            visitObjectDeclarationBody: (n, v) => {
-              if (depth > 0) {
-                // We only check one level of object declaration, or we will find nested ones.
-                return;
-              }
-
-              try {
-                depth++;
-                defaultVisitor.visitObjectDeclarationBody(n, v);
-              } finally {
-                depth--;
-              }
-            },
-          }));
-        }
-      }
-
-      return {
-        fields: immediateRequired,
-        parameters: supertypeArguments,
-      };
-
-    } else {
-      return {
-        fields: immediateRequired,
-        parameters: [],
-      };
-    }
   }
 
   public static createInterfaceWithBody(
@@ -432,7 +341,7 @@ export class CodeAstUtils implements AstTargetFunctions {
       const interfaceDeclaration = CodeAstUtils.createInterfaceWithBody(root, interfaceType, options, () => interfaceName);
 
       root.children.push(new Code.CompilationUnit(
-        new Code.PackageDeclaration(packageName), // JavaUtil.getPackageName(interfaceType, interfaceDeclaration.name.value, options)),
+        new Code.PackageDeclaration(packageName),
         new Code.ImportList(
           [],
         ),

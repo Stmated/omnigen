@@ -1,7 +1,7 @@
 import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/core';
 import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
-import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {AbortVisitingWithResult, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
 
@@ -58,9 +58,11 @@ function getTokenTypeString(type: Code.TokenKind): string {
       return '||';
     case Code.TokenKind.AND:
       return '&&';
-    default:
-      throw new Error('Unknown token type');
+    case Code.TokenKind.COALESCE_NULL:
+      return '??';
   }
+
+  assertUnreachable(type);
 }
 
 export type CodeRenderer = CodeVisitor<string> & Renderer;

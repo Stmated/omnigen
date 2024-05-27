@@ -29,11 +29,15 @@ export class OpenRpcCSharpTestUtils {
     const stopAt = ZodCompilationUnitsContext;
 
     const pm = new PluginManager({includeAuto: true});
-    const execResult = await pm.execute({ctx: ctx, debug: true, stopAt: stopAt});
-    const last = execResult.results[execResult.results.length - 1];
+    try {
+      const execResult = await pm.execute({ctx: ctx, debug: true, stopAt: stopAt});
+      const last = execResult.results[execResult.results.length - 1];
 
-    const result = expected.parse(last.ctx) as z.output<typeof expected>;
+      const result = expected.parse(last.ctx) as z.output<typeof expected>;
 
-    return result.compilationUnits;
+      return result.compilationUnits;
+    } catch (ex) {
+      throw LoggerFactory.formatError(ex);
+    }
   }
 }

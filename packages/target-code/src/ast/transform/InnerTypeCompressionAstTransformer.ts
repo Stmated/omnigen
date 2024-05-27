@@ -53,7 +53,7 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
 
         // If the types are assignable, it means that the single use is a class extension.
         if (args.options.compressUnreferencedSubTypes && this.isAllowedKind(type, args.options)) {
-          logger.info(`Could compress ${type} into ${OmniUtil.describe(type)}`);
+          logger.info(`Could compress ${OmniUtil.describe(type)} into ${OmniUtil.describe(type)}`);
         }
 
       } else {

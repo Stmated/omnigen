@@ -113,11 +113,32 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       assertDefined(n.type.reduce(r)),
     ).withIdFrom(n),
     reduceToken: n => n,
-    reduceBinaryExpression: (n, r) => new Code.BinaryExpression(
-      assertDefined(n.left.reduce(r)),
-      assertDefined(n.token.reduce(r)),
-      assertDefined(n.right.reduce(r)),
-    ).withIdFrom(n),
+
+    // reduceAssignExpression: (n, r) => {
+    //
+    //   const left = n.left.reduce(r);
+    //   const right = n.right.reduce(r);
+    //
+    //   if (left === undefined || right === undefined) {
+    //
+    //     // If the left or right node was removed, then we either have nothing to assign to, or nothing to assign from. So we remove ourself.
+    //     return undefined;
+    //   }
+    //
+    //   return new Code.AssignExpression(left, right).withIdFrom(n);
+    // },
+    // new Code.TokenNode(Code.TokenKind.ASSIGN),
+
+    reduceBinaryExpression: (n, r) => {
+      const left = n.left.reduce(r);
+      const right = n.right.reduce(r);
+
+      if (!left || !right) {
+        return undefined;
+      }
+
+      return new Code.BinaryExpression(left, assertDefined(n.token.reduce(r)), right).withIdFrom(n);
+    },
     reduceModifier: n => n,
     reduceField: (n, r) => {
       const field = new Code.Field(
@@ -203,11 +224,24 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       n.ifStatements.map(it => it.reduce(r)).filter(isDefined),
       n.elseBlock?.reduce(r),
     ).withIdFrom(n),
-    reduceTernaryExpression: (n, r) => new Code.TernaryExpression(
-      assertDefined(n.predicate.reduce(r)),
-      assertDefined(n.passing.reduce(r)),
-      assertDefined(n.failing.reduce(r)),
-    ).withIdFrom(n),
+    reduceTernaryExpression: (n, r) => {
+      const passing = n.passing.reduce(r);
+      const failing = n.failing.reduce(r);
+
+      if (!passing && !failing) {
+        return undefined;
+      } else if (!passing && failing) {
+        return failing;
+      } else if (passing && !failing) {
+        return passing;
+      }
+
+      return new Code.TernaryExpression(
+        assertDefined(n.predicate.reduce(r)),
+        assertDefined(passing),
+        assertDefined(failing),
+      ).withIdFrom(n);
+    },
     reduceImportStatement: (n, r) => {
       const type = n.type.reduce(r);
       return !type ? undefined : new Code.ImportStatement(type).withIdFrom(n);
@@ -270,10 +304,19 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reducePackage: n => n,
     reducePredicate: (n, r) => r.reduceBinaryExpression(n, r),
     reduceModifierList: (n, r) => new Code.ModifierList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
-    reduceCast: (n, r) => new Code.Cast(
-      assertDefined(n.toType.reduce(r)),
-      assertDefined(n.expression.reduce(r)),
-    ).withIdFrom(n),
+    reduceCast: (n, r) => {
+      const expression = n.expression.reduce(r);
+      if (!expression) {
+        return undefined;
+      }
+
+      const toType = n.toType.reduce(r);
+      if (!toType) {
+        return expression;
+      }
+
+      return new Code.Cast(toType, expression).withIdFrom(n);
+    },
     reduceObjectDeclaration: () => {
       throw new Error(`Should not be called when reducing`);
     },
@@ -353,19 +396,6 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     ).withIdFrom(n),
     reduceEnumItemList: (n, r) => new Code.EnumItemList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
     reduceFieldReference: n => n,
-    reduceAssignExpression: (n, r) => {
-
-      const left = n.left.reduce(r);
-      const right = n.right.reduce(r);
-
-      if (left === undefined || right === undefined) {
-
-        // If the left or right node was removed, then we either have nothing to assign to, or nothing to assign from. So we remove ourself.
-        return undefined;
-      }
-
-      return new Code.AssignExpression(left, right).withIdFrom(n);
-    },
     reduceCompilationUnit: (n, r) => {
       const children = n.children.map(it => it.reduce(r)).filter(isDefined);
       if (children.length == 0) {

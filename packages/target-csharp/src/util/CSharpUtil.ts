@@ -18,7 +18,7 @@ export class CSharpUtil {
 
     switch (type.kind) {
       case OmniTypeKind.BOOL:
-        return 'boolean';
+        return 'bool';
       case OmniTypeKind.VOID:
         return 'void';
       case OmniTypeKind.CHAR:

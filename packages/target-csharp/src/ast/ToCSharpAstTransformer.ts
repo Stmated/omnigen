@@ -2,11 +2,15 @@ import {Code} from '@omnigen/target-code';
 import {AstTransformer, OmniTypeKind, TargetOptions, UnknownKind} from '@omnigen/core';
 import {CSharpAstTransformerArguments, CSharpRootNode} from './index.ts';
 import {CSharpOptions} from '../options';
+import {TokenKind} from '@omnigen/target-code/ast';
 
 /**
- * Replace generic modifiers into specific Java modifiers, like `static final` -> `const`
+ * Replace:
+ * - Generic modifiers into specific modifiers, like `static final` to `const`
+ * - Super constructor calls with `dynamic` type cast to `object`
+ * - Ternary `(a == null ? b : a)` into `a ?? b`
  */
-export class ToCSharpModifiersAstTransformer implements AstTransformer<CSharpRootNode, TargetOptions & CSharpOptions> {
+export class ToCSharpAstTransformer implements AstTransformer<CSharpRootNode, TargetOptions & CSharpOptions> {
 
   transformAst(args: CSharpAstTransformerArguments): void {
 
@@ -32,10 +36,15 @@ export class ToCSharpModifiersAstTransformer implements AstTransformer<CSharpRoo
 
       reduceSuperConstructorCall: (n, r) => {
 
+        const reduced = base.reduceSuperConstructorCall(n, r);
+        if (!reduced) {
+          return undefined;
+        }
+
         let alteredArgumentCount = 0;
         const newArguments = new Code.ArgumentList();
-        for (let i = 0; i < n.arguments.children.length; i++) {
-          const argument = n.arguments.children[i];
+        for (let i = 0; i < reduced.arguments.children.length; i++) {
+          const argument = reduced.arguments.children[i];
           let resolvedArgument = argument;
           let needsCast = false;
           if (resolvedArgument instanceof Code.DeclarationReference) {
@@ -67,7 +76,7 @@ export class ToCSharpModifiersAstTransformer implements AstTransformer<CSharpRoo
           return new Code.SuperConstructorCall(newArguments).withIdFrom(n);
         }
 
-        return base.reduceSuperConstructorCall(n, r);
+        return reduced;
       },
 
       reduceIdentifier: (n, r) => {
@@ -77,6 +86,26 @@ export class ToCSharpModifiersAstTransformer implements AstTransformer<CSharpRoo
         }
 
         return base.reduceIdentifier(n, r);
+      },
+
+      reduceTernaryExpression: (n, r) => {
+
+        const reduced = base.reduceTernaryExpression(n, r);
+        if (!reduced) {
+          return undefined;
+        }
+
+        if (reduced instanceof Code.TernaryExpression && reduced.predicate instanceof Code.BinaryExpression && reduced.predicate.token.type === TokenKind.EQUALS) {
+          if (reduced.predicate.right instanceof Code.Literal && reduced.predicate.right.primitiveKind === OmniTypeKind.NULL && reduced.predicate.left === reduced.failing) {
+            return new Code.BinaryExpression(
+              reduced.predicate.left,
+              new Code.TokenNode(Code.TokenKind.COALESCE_NULL),
+              reduced.passing,
+            );
+          }
+        }
+
+        return reduced;
       },
     });
 

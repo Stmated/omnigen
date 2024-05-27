@@ -25,7 +25,7 @@ import {AnyFreeText, FriendlyFreeTextIn} from './FreeText';
 import {CodeVisitor} from '../visitor/CodeVisitor';
 import {FreeTextUtils} from '../util/FreeTextUtils';
 import {AbstractCodeNode} from './AbstractCodeNode.ts';
-import {VirtualAnnotation, VirtualAnnotationNode} from './VirtualAnnotationNode.ts';
+import {VirtualAnnotationNode} from './VirtualAnnotationNode.ts';
 
 export enum TokenKind {
   ASSIGN,
@@ -39,6 +39,8 @@ export enum TokenKind {
   LTE,
   MULTIPLY,
   SUBTRACT,
+
+  COALESCE_NULL,
 
   OR,
   AND,
@@ -475,20 +477,6 @@ export class BinaryExpression extends AbstractCodeNode {
 
   reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<BinaryExpression> {
     return reducer.reduceBinaryExpression(this, reducer);
-  }
-}
-
-export class AssignExpression extends BinaryExpression {
-  constructor(left: AbstractCodeNode, right: AbstractCodeNode) {
-    super(left, new TokenNode(TokenKind.ASSIGN), right);
-  }
-
-  visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
-    return visitor.visitAssignExpression(this, visitor);
-  }
-
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AssignExpression> {
-    return reducer.reduceAssignExpression(this, reducer);
   }
 }
 
@@ -956,7 +944,7 @@ export class Cast extends AbstractCodeNode {
     return visitor.visitCast(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<Cast> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceCast(this, reducer);
   }
 }
@@ -1270,7 +1258,7 @@ export class TernaryExpression extends AbstractCodeNode {
     return visitor.visitTernaryExpression(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<TernaryExpression> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceTernaryExpression(this, reducer);
   }
 }

@@ -294,7 +294,11 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
           new Code.ConstructorParameterList(parameter),
           new Code.Block(
             new Code.Statement(
-              new Code.AssignExpression(new Code.FieldReference(field), new Code.DeclarationReference(parameter)),
+              new Code.BinaryExpression(
+                new Code.FieldReference(field),
+                new Code.TokenNode(Code.TokenKind.ASSIGN),
+                new Code.DeclarationReference(parameter),
+              ),
             ),
           ),
           new Code.ModifierList(),

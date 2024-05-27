@@ -1072,7 +1072,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         for (let i = 0; i < varDescriptions.length; i++) {
           const key = String(allowedValues[i]);
           const value = String(varDescriptions[i]);
-          logger.debug(`Setting ${key} description to: ${value}`);
+          logger.trace(`Setting ${key} description to: ${value}`);
           enumDescriptions[key] = value;
         }
 
@@ -1080,7 +1080,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
         enumDescriptions = {};
         for (const [key, value] of Object.entries(varDescriptions)) {
-          logger.debug(`Setting ${key} description to: ${value}`);
+          logger.trace(`Setting ${key} description to: ${value}`);
           enumDescriptions[key] = String(value);
         }
 

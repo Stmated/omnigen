@@ -8,8 +8,9 @@ export class SimplifyAndCleanAstTransformer implements AstTransformer<Code.CodeR
 
   transformAst(args: AstTransformerArguments<Code.CodeRootAstNode>): void {
 
+    const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
-      ...args.root.createReducer(),
+      ...defaultReducer,
       reduceBlock: (n, r) => {
 
         const children = [...n.children];
@@ -28,6 +29,24 @@ export class SimplifyAndCleanAstTransformer implements AstTransformer<Code.CodeR
       },
       reduceVirtualAnnotationNode: () => {
         return undefined;
+      },
+      reduceConstructor: (n, r) => {
+
+        const reduced = defaultReducer.reduceConstructor(n, r);
+
+        if (reduced && (!reduced.parameters || reduced.parameters.children.length == 0) && !reduced.superCall && (!reduced.body || reduced.body.children.length == 0)) {
+          return undefined;
+        }
+
+        return reduced;
+      },
+      reduceSuperConstructorCall: n => {
+
+        if (n.arguments.children.length == 0) {
+          return undefined;
+        }
+
+        return n;
       },
     });
 

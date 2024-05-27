@@ -27,7 +27,7 @@ export interface AstNode {
 
   setId(id: number): this;
   withIdFrom(node: AstNode): this;
-  hasId(id: number | undefined): boolean;
+  hasId(id: number | number[] | Set<number> | undefined): boolean;
 
   visit<R>(visitor: AstVisitor<R>): VisitResult<R>;
   reduce(reducer: Reducer<AstVisitor<unknown>>): ReducerResult<AstNode>;

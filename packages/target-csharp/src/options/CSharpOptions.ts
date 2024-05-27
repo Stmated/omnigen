@@ -1,5 +1,5 @@
 import {getEnumValues, ToEnum, ZodCoercedBoolean} from '@omnigen/core';
-import {z} from 'zod';
+import {z, ZodString} from 'zod';
 import {ZodCodeOptions} from '@omnigen/target-code';
 
 export const CSharpEnumKind = {
@@ -17,7 +17,7 @@ export const SerializationLibrary = {
 export type SerializationLibrary = ToEnum<typeof SerializationLibrary>;
 
 export const ReadonlyPropertyMode = {
-  INIT: 'ENUM',
+  INIT: 'INIT',
   NO_SETTER: 'NO_SETTER',
   PRIVATE: 'PRIVATE',
 } as const;
@@ -26,6 +26,7 @@ export type ReadonlyPropertyMode = ToEnum<typeof ReadonlyPropertyMode>;
 export const ZodCSharpOptions = ZodCodeOptions.extend({
 
   singleFile: ZodCoercedBoolean.default('f'),
+  singleFileName: z.string().optional(),
   enumKind: z.enum(getEnumValues(CSharpEnumKind)).default('CONST'),
   csharpReadonlyPropertySetterMode: z.enum(getEnumValues(ReadonlyPropertyMode)).default(ReadonlyPropertyMode.NO_SETTER),
   serializationLibrary: z.enum(getEnumValues(SerializationLibrary)).default(SerializationLibrary.NEWTONSOFT),

@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, test, Test, vi} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OpenRpcCSharpTestUtils} from '../OpenRpcCSharpTestUtils.ts';
 import {RenderedCompilationUnit} from '@omnigen/core';
+import {ReadonlyPropertyMode} from '@omnigen/target-csharp';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -40,6 +41,16 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFile: true,
   })));
 
+  test('inherited-construction_no_init', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+    singleFile: true,
+    csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.NO_SETTER,
+  })));
+
+  test('inherited-construction', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+    singleFile: true,
+    csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.INIT,
+  })));
+
   test('enum', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
     includeGenerated: false,
@@ -51,7 +62,6 @@ describe('OpenRpc+CSharp Rendering', () => {
   })));
 
   test('method-in-response', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
-    // preferInterfaces: true,
     singleFile: true,
   })));
 });

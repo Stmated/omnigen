@@ -493,8 +493,9 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
         new Code.ConstructorParameterList(constructorParameter),
         new Code.Block(
           new Code.Statement(
-            new Code.AssignExpression(
+            new Code.BinaryExpression(
               new Code.FieldReference(fieldValue),
+              new Code.TokenNode(Code.TokenKind.ASSIGN),
               new Code.DeclarationReference(constructorParameter),
             ),
           ),

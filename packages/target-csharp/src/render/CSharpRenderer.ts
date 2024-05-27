@@ -83,12 +83,6 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
           throw new Error(`Import name is not set for '${OmniUtil.describe(n.type.omniType)}'`);
         }
 
-        // const lastDotIndex = importName.lastIndexOf('.');
-        // if (lastDotIndex !== -1) {
-        //   return `using ${importName.substring(0, lastDotIndex)};`;
-        // } else {
-        //
-        // }
         return `using ${importName};`;
       }
 
@@ -209,7 +203,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
      */
     visitConstructor: (n, v) => {
       const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
-      const body = n.body ? `${render(n.body, v)}` : ' {}';
+      const body = (n.body && n.body.children.length > 0) ? `${render(n.body, v)}` : ' { }';
       const superCall = n.superCall ? `${render(n.superCall, v)}` : '';
       const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
 

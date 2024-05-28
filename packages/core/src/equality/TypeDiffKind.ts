@@ -46,6 +46,13 @@ export enum TypeDiffKind {
   IS_SUPERTYPE = 'IS_SUPERTYPE',
 
   /**
+   * Not used yet.
+   *
+   * Will be used to differentiate between `IS_SUPERTYPE` where that
+   */
+  COMMON_ANCESTRY = 'COMMON_ANCESTRY',
+
+  /**
    * This means the name of the type is different.
    * Might show up as the only difference, or sometimes not at all when more important differences were found.
    */

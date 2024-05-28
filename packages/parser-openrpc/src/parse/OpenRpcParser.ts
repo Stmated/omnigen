@@ -4,7 +4,7 @@ import {
   OmniAccessLevel,
   OmniArrayPropertiesByPositionType,
   OmniComparisonOperator,
-  OmniContact, OmniDecoratingType,
+  OmniContact,
   OmniEndpoint,
   OmniExamplePairing,
   OmniExampleParam,
@@ -59,17 +59,17 @@ import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
 import {
-  AnyJsonDefinition, AnyJSONSchema,
   ApplyIdJsonSchemaTransformerFactory,
   ExternalDocumentsFinder, JSONSchema9, JSONSchema9Definition,
   JsonSchemaParser,
   RefResolver,
   SchemaToTypeResult,
-  SimplifyJsonSchemaTransformerFactory,
+  SimplifyJsonSchemaTransformerFactory, ToDefined,
 } from '@omnigen/parser-jsonschema';
 import {JsonExpander, ObjectReducer} from '@omnigen/core-json';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
+import {OpenAPIV3_1 as OpenApi} from 'openapi-types';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -85,7 +85,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
     const schemaObject = await schemaSource.asObject<OpenrpcDocument>();
 
     const expander = new JsonExpander();
-    expander.expand(schemaObject);
+    expander.expand(schemaObject, schemaSource.getAbsolutePath());
 
     const document = await parseOpenRPCDocument(schemaObject, {
       dereference: false,
@@ -416,12 +416,28 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       return this.examplePairingToGenericExample(resultResponse.type, requestTypeAndProperties.properties || [], deref);
     });
 
+    if ('x-callbacks' in method) {
+
+      const callbacks = method['x-callbacks'] as ToDefined<OpenApi.ComponentsObject['callbacks']>;
+
+      for (const [eventName, eventOrRef] of Object.entries(callbacks)) {
+        const event = this._refResolver.resolve(eventOrRef);
+        for (const [callbackUrl, callbackOrRef] of Object.entries(event)) {
+          const callback = this._refResolver.resolve(callbackOrRef);
+
+
+        }
+      }
+    }
+
     return {
       name: method.name,
       description: method.description,
       summary: method.summary,
-      async: false,
-      path: '',
+      transports: [{
+        async: false,
+        path: '',
+      }],
       request: {
         contentType: 'application/json',
         type: requestTypeAndProperties.type,
@@ -452,14 +468,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const preferredName = this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
 
     const type = this._jsonSchemaParser.jsonSchemaToType(preferredName, resolved);
-
-    // const decoratingType: OmniDecoratingType = {
-    //   kind: OmniTypeKind.DECORATING,
-    //   of: type.type,
-    //   name: [
-    //     contentDescriptor.name,
-    //   ],
-    // };
 
     return {
       type: type.type,

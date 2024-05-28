@@ -200,8 +200,8 @@ importers:
         specifier: ^0.6.2
         version: 0.6.2
       node-fetch:
-        specifier: ^2.6.9
-        version: 2.6.9
+        specifier: ^3.3.2
+        version: 3.3.2
       object-hash:
         specifier: ^3.0.0
         version: 3.0.0
@@ -234,8 +234,8 @@ importers:
         specifier: ^18.13.0
         version: 18.13.0
       '@types/node-fetch':
-        specifier: ^2.6.2
-        version: 2.6.2
+        specifier: ^2.6.11
+        version: 2.6.11
       '@types/object-hash':
         specifier: ^2.2.1
         version: 2.2.1
@@ -263,6 +263,9 @@ importers:
       pino:
         specifier: 8.6.0
         version: 8.6.0
+      sync-fetch:
+        specifier: ^0.5.2
+        version: 0.5.2
     devDependencies:
       '@omnigen/config-typescript':
         specifier: workspace:*
@@ -273,6 +276,9 @@ importers:
       '@types/json-pointer':
         specifier: ^1.0.34
         version: 1.0.34
+      '@types/sync-fetch':
+        specifier: ^0.4.3
+        version: 0.4.3
       colors:
         specifier: ^1.4.0
         version: 1.4.0
@@ -369,8 +375,8 @@ importers:
         specifier: ^0.6.2
         version: 0.6.2
       node-fetch:
-        specifier: ^2.6.9
-        version: 2.6.9
+        specifier: ^3.3.2
+        version: 3.3.2
       object-hash:
         specifier: ^3.0.0
         version: 3.0.0
@@ -406,8 +412,8 @@ importers:
         specifier: ^18.13.0
         version: 18.13.0
       '@types/node-fetch':
-        specifier: ^2.6.2
-        version: 2.6.2
+        specifier: ^2.6.11
+        version: 2.6.11
       '@types/object-hash':
         specifier: ^2.2.1
         version: 2.2.1
@@ -504,7 +510,7 @@ importers:
         specifier: ^5.5.0-beta
         version: 5.5.0-dev.20240426
 
-  packages/parser-openapi3:
+  packages/parser-openapi:
     dependencies:
       '@omnigen/core':
         specifier: workspace:*
@@ -521,18 +527,15 @@ importers:
       '@omnigen/parser-jsonschema':
         specifier: workspace:*
         version: link:../parser-jsonschema
-      '@omnigen/target-java':
-        specifier: workspace:*
-        version: link:../target-java
       json-pointer:
         specifier: ^0.6.2
         version: 0.6.2
       json-schema:
         specifier: ^0.4.0
         version: 0.4.0
-      string-similarity:
-        specifier: ^4.0.4
-        version: 4.0.4
+      openapi-types:
+        specifier: ^12.1.3
+        version: 12.1.3
       zod:
         specifier: ^3.22.4
         version: 3.22.4
@@ -543,18 +546,12 @@ importers:
       '@omnigen/eslint-config-custom':
         specifier: workspace:*
         version: link:../eslint-config-custom
-      '@omnigen/omnigen-cli':
-        specifier: workspace:*
-        version: link:../../apps/omnigen-cli
       '@types/json-pointer':
         specifier: ^1.0.34
         version: 1.0.34
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
-      '@types/string-similarity':
-        specifier: ^4.0.0
-        version: 4.0.0
       tsx:
         specifier: ^4.7.2
         version: 4.7.2
@@ -594,6 +591,9 @@ importers:
       json-schema:
         specifier: ^0.4.0
         version: 0.4.0
+      openapi-types:
+        specifier: ^12.1.3
+        version: 12.1.3
       string-similarity:
         specifier: ^4.0.4
         version: 4.0.4
@@ -1587,8 +1587,8 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node-fetch@2.6.2':
-    resolution: {integrity: sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A==}
+  '@types/node-fetch@2.6.11':
+    resolution: {integrity: sha512-24xFj9R5+rfQJLRyM56qh+wnVSYhyXC2tkoBndtY0U+vubqNsYXGjufB2nn8Q6gt0LrARwL6UBtMCSVCwl4B1g==}
 
   '@types/node@18.13.0':
     resolution: {integrity: sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg==}
@@ -1601,6 +1601,9 @@ packages:
 
   '@types/string-similarity@4.0.0':
     resolution: {integrity: sha512-dMS4S07fbtY1AILG/RhuwmptmzK1Ql8scmAebOTJ/8iBtK/KI17NwGwKzu1uipjj8Kk+3mfPxum56kKZE93mzQ==}
+
+  '@types/sync-fetch@0.4.3':
+    resolution: {integrity: sha512-RfwkmWFd7yi6tRaDcR7KNrxyp6LpO2oXrT6tYkXBLNfp4xf4EKRX7IlLexbtd5X26g34+G6HDD2pMhOZ5srUmQ==}
 
   '@typescript-eslint/eslint-plugin@5.55.0':
     resolution: {integrity: sha512-IZGc50rtbjk+xp5YQoJvmMPmJEYoC53SiKPXyqWfv15XoD2Y5Kju6zN0DwlmaGJp1Iw33JsWJcQ7nw0lGCGjVg==}
@@ -1958,6 +1961,10 @@ packages:
     resolution: {integrity: sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==}
     engines: {node: '>= 8'}
 
+  data-uri-to-buffer@4.0.1:
+    resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
+    engines: {node: '>= 12'}
+
   dateformat@4.6.3:
     resolution: {integrity: sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA==}
 
@@ -2234,6 +2241,10 @@ packages:
   fastq@1.15.0:
     resolution: {integrity: sha512-wBrocU2LCXXa+lWBt8RoIRD89Fi8OdABODa/kEnyeyjS5aZO5/GNvI5sEINADqP/h8M29UHTHUb53sUu5Ihqdw==}
 
+  fetch-blob@3.2.0:
+    resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
+    engines: {node: ^12.20 || >= 14.13}
+
   fflate@0.8.2:
     resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
@@ -2275,9 +2286,13 @@ packages:
   foreach@2.0.6:
     resolution: {integrity: sha512-k6GAGDyqLe9JaebCsFCoudPPWfihKu8pylYXRlqP1J7ms39iPoTtk2fviNglIeQEwdh0bQeKJ01ZPyuyQvKzwg==}
 
-  form-data@3.0.1:
-    resolution: {integrity: sha512-RHkBKtLWUVwd7SqRIvCZMEvAMoGUp0XU+seQiZejj0COz3RI3hWP4sCv3gZWWLjJTd7rGwcsF5eKZGii0r/hbg==}
+  form-data@4.0.0:
+    resolution: {integrity: sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==}
     engines: {node: '>= 6'}
+
+  formdata-polyfill@4.0.10:
+    resolution: {integrity: sha512-buewHzMvYL29jdeQTVILecSaZKnt/RJWjoZCF5OW60Z67/GmSLBkOFM7qh1PI3zFNtJbaZL5eQu1vLfazOwj4g==}
+    engines: {node: '>=12.20.0'}
 
   fs-extra@9.1.0:
     resolution: {integrity: sha512-hcg3ZmepS30/7BSFqRvoo3DOMQu7IjqxO5nCDt+zM9XWjb33Wg7ziNT+Qvqbuc3+gWpzO02JubVyk2G4Zvo1OQ==}
@@ -2711,6 +2726,10 @@ packages:
     resolution: {integrity: sha512-HHqYQ6mBeiMc+N038w8LkMpDCRquCHWeNmN3v6645P3NhN2+qXOBqvPqo7Rt1VyCMzKhJ733wZqw5B7cQVFNPg==}
     engines: {node: '>= 10.13'}
 
+  node-domexception@1.0.0:
+    resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
+    engines: {node: '>=10.5.0'}
+
   node-fetch@2.6.9:
     resolution: {integrity: sha512-DJm/CJkZkRjKKj4Zi4BsKVZh3ValV5IR5s7LVZnW+6YMh0W1BfNA8XSs6DLMGYlId5F3KnA70uu2qepcR08Qqg==}
     engines: {node: 4.x || >=6.0.0}
@@ -2719,6 +2738,10 @@ packages:
     peerDependenciesMeta:
       encoding:
         optional: true
+
+  node-fetch@3.3.2:
+    resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   node-source-walk@6.0.2:
     resolution: {integrity: sha512-jn9vOIK/nfqoFCcpK89/VCVaLg1IHE6UVfDOzvqmANaJ/rWCTEdH8RZ1V278nv2jr36BJdyQXIAavBLXpzdlag==}
@@ -2756,6 +2779,9 @@ packages:
   onetime@6.0.0:
     resolution: {integrity: sha512-1FlR+gjXK7X+AsAHso35MnyN5KqGwJRi/31ft6x0M194ht7S+rWAvd7PHss9xSKMzE0asv1pyIHaJYq+BbacAQ==}
     engines: {node: '>=12'}
+
+  openapi-types@12.1.3:
+    resolution: {integrity: sha512-N4YtSYJqghVu4iek2ZUvcN/0aqH1kRDuNqzcycDxhOUpg7GdvLa2F3DgS6yBNhInhv2r/6I0Flkn7CqL8+nIcw==}
 
   optionator@0.9.1:
     resolution: {integrity: sha512-74RlY5FCnhq4jRxVUPKDaRwrVNXMqsGsiW6AJw4XK8hmtm10wC0ypZBLw5IIp85NZMr91+qd1RvvENwg7jjRFw==}
@@ -3150,6 +3176,10 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
+  sync-fetch@0.5.2:
+    resolution: {integrity: sha512-6gBqqkHrYvkH65WI2bzrDwrIKmt3U10s4Exnz3dYuE5Ah62FIfNv/F63inrNhu2Nyh3GH5f42GKU3RrSJoaUyQ==}
+    engines: {node: '>=14'}
+
   syncpack@12.3.0:
     resolution: {integrity: sha512-Gz2uGn96OmGfVVlKztvFac1EJYjP+WptQ2ohA6Uf48C6qLkhSayhkdujKQ6q7bGOTy8HSGI0iDfwfCJu6wvRig==}
     engines: {node: '>=16'}
@@ -3398,6 +3428,10 @@ packages:
 
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
+
+  web-streams-polyfill@3.3.3:
+    resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
+    engines: {node: '>= 8'}
 
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
@@ -3797,10 +3831,10 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node-fetch@2.6.2':
+  '@types/node-fetch@2.6.11':
     dependencies:
       '@types/node': 18.13.0
-      form-data: 3.0.1
+      form-data: 4.0.0
 
   '@types/node@18.13.0': {}
 
@@ -3809,6 +3843,10 @@ snapshots:
   '@types/semver@7.3.13': {}
 
   '@types/string-similarity@4.0.0': {}
+
+  '@types/sync-fetch@0.4.3':
+    dependencies:
+      '@types/node-fetch': 2.6.11
 
   '@typescript-eslint/eslint-plugin@5.55.0(@typescript-eslint/parser@5.55.0(eslint@8.36.0)(typescript@5.3.3))(eslint@8.36.0)(typescript@5.3.3)':
     dependencies:
@@ -4246,6 +4284,8 @@ snapshots:
       shebang-command: 2.0.0
       which: 2.0.2
 
+  data-uri-to-buffer@4.0.1: {}
+
   dateformat@4.6.3: {}
 
   debug@4.3.4:
@@ -4273,7 +4313,7 @@ snapshots:
       commander: 10.0.1
       filing-cabinet: 4.2.0
       precinct: 11.0.5
-      typescript: 5.3.3
+      typescript: 5.4.5
     transitivePeerDependencies:
       - supports-color
 
@@ -4574,6 +4614,11 @@ snapshots:
     dependencies:
       reusify: 1.0.4
 
+  fetch-blob@3.2.0:
+    dependencies:
+      node-domexception: 1.0.0
+      web-streams-polyfill: 3.3.3
+
   fflate@0.8.2: {}
 
   figlet@1.5.2: {}
@@ -4595,7 +4640,7 @@ snapshots:
       sass-lookup: 5.0.1
       stylus-lookup: 5.0.1
       tsconfig-paths: 4.2.0
-      typescript: 5.3.3
+      typescript: 5.4.5
 
   fill-range@7.0.1:
     dependencies:
@@ -4623,11 +4668,15 @@ snapshots:
 
   foreach@2.0.6: {}
 
-  form-data@3.0.1:
+  form-data@4.0.0:
     dependencies:
       asynckit: 0.4.0
       combined-stream: 1.0.8
       mime-types: 2.1.35
+
+  formdata-polyfill@4.0.10:
+    dependencies:
+      fetch-blob: 3.2.0
 
   fs-extra@9.1.0:
     dependencies:
@@ -5046,9 +5095,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  node-domexception@1.0.0: {}
+
   node-fetch@2.6.9:
     dependencies:
       whatwg-url: 5.0.0
+
+  node-fetch@3.3.2:
+    dependencies:
+      data-uri-to-buffer: 4.0.1
+      fetch-blob: 3.2.0
+      formdata-polyfill: 4.0.10
 
   node-source-walk@6.0.2:
     dependencies:
@@ -5084,6 +5141,8 @@ snapshots:
   onetime@6.0.0:
     dependencies:
       mimic-fn: 4.0.0
+
+  openapi-types@12.1.3: {}
 
   optionator@0.9.1:
     dependencies:
@@ -5496,6 +5555,12 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
+  sync-fetch@0.5.2:
+    dependencies:
+      node-fetch: 2.6.9
+    transitivePeerDependencies:
+      - encoding
+
   syncpack@12.3.0(typescript@5.5.0-dev.20240426):
     dependencies:
       '@effect/schema': 0.56.1(effect@2.0.0-next.62)(fast-check@3.15.0)
@@ -5735,6 +5800,8 @@ snapshots:
   wcwidth@1.0.1:
     dependencies:
       defaults: 1.0.4
+
+  web-streams-polyfill@3.3.3: {}
 
   webidl-conversions@3.0.1: {}
 

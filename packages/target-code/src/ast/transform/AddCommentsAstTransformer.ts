@@ -136,12 +136,14 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
         }
       }
 
-      for (const example of endpoint.examples) {
-        const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
-        if (example.result.type == type || parameterHasType) {
+      if (endpoint.examples) {
+        for (const example of endpoint.examples) {
+          const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
+          if (example.result.type == type || parameterHasType) {
 
-          exampleIndex++;
-          comments.push(AddCommentsAstTransformer.getExampleComments(example, exampleIndex));
+            exampleIndex++;
+            comments.push(AddCommentsAstTransformer.getExampleComments(example, exampleIndex));
+          }
         }
       }
     }

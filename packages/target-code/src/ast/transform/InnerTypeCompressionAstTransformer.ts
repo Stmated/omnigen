@@ -53,7 +53,7 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
 
         // If the types are assignable, it means that the single use is a class extension.
         if (args.options.compressUnreferencedSubTypes && this.isAllowedKind(type, args.options)) {
-          logger.info(`Could compress ${OmniUtil.describe(type)} into ${OmniUtil.describe(type)}`);
+          logger.debug(`Could compress ${OmniUtil.describe(type)} into ${OmniUtil.describe(type)}`);
         }
 
       } else {
@@ -64,7 +64,8 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
           // To decrease the number of files, we can compress the types and make this an inner type.
           const definedInObjectDec = typeToObjectDec.get(type);
           if (!definedInObjectDec) {
-            throw new Error(`Could not find the object source where '${OmniUtil.describe(type)}' is defined`);
+            // const existingList = [...typeToObjectDec.entries()].map(it => `${OmniUtil.describe(it[0])}: ${it[1].name.value}`).join('\n');
+            throw new Error(`Could not find the object source where '${OmniUtil.describe(type)}' is defined`); // , we have:\n${existingList}`);
           }
 
           const definedInUnit = typeToUnit.get(type);

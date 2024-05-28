@@ -23,6 +23,8 @@ export class ConstructorRemovalOnPropertyInitCSharpAstTransformer implements Ast
       return;
     }
 
+    // return;
+
     const classStack: Cs.ClassDeclaration[] = [];
 
     const defaultVisitor = args.root.createVisitor();

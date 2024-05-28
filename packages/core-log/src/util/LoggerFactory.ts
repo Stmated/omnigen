@@ -43,7 +43,7 @@ export class LoggerFactory {
 
     const options: LoggerOptions = {
       name: name,
-      level: 'trace',
+      level: 'debug',
     };
 
     if (LoggerFactory._pretty === undefined) {

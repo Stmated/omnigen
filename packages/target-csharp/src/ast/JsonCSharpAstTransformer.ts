@@ -11,15 +11,13 @@ import {
   TargetOptions,
   UnknownKind,
 } from '@omnigen/core';
-import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {AbortVisitingWithResult, assertUnreachable, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Code, CodeAstUtils, SerializationPropertyNameMode} from '@omnigen/target-code';
 import {CSharpOptions, SerializationLibrary} from '../options';
 import {Cs} from '../ast';
 
 const logger = LoggerFactory.create(import.meta.url);
-
-// TODO: Need to be able to give different class names depending on usage!!! Like with C# `FooAttribute` when importing and `Foo` when used!
 
 interface JsonAttribute {
   name: ObjectName | undefined;
@@ -65,21 +63,8 @@ const SystemJsonAttributes: Readonly<JsonAttributes> = Object.freeze({
   JACKSON_JSON_OBJECT: {name: undefined}, // No equivalent
 });
 
-const JsonAttributesArray: Readonly<JsonAttributes>[] = [NewtonsoftJsonAttributes, SystemJsonAttributes];
-
-// const JACKSON_JSON_PROPERTY = 'com.fasterxml.jackson.annotation.JsonProperty';
-// const JACKSON_JSON_VALUE = 'com.fasterxml.jackson.annotation.JsonValue';
-// const JACKSON_JSON_CREATOR = 'com.fasterxml.jackson.annotation.JsonCreator';
-// const JACKSON_JSON_INCLUDE = 'com.fasterxml.jackson.annotation.JsonInclude';
-// const JACKSON_JSON_ANY_GETTER = 'com.fasterxml.jackson.annotation.JsonAnyGetter';
-// const JACKSON_JSON_ANY_SETTER = 'com.fasterxml.jackson.annotation.JsonAnySetter';
-// const JACKSON_JSON_NODE = 'com.fasterxml.jackson.databind.JsonNode';
-// const JACKSON_JSON_OBJECT = 'com.fasterxml.jackson.databind.node.ObjectNode';
-// const JACKSON_JSON_NODE_FACTORY = 'com.fasterxml.jackson.databind.node.JsonNodeFactory';
-// const JACKSON_OBJECT_MAPPER = 'com.fasterxml.jackson.databind.ObjectMapper';
-
 /**
- * NOTE: This and `JacksonJavaAstTransformer` could probably be moved into `target-code` and annotations made into `VirtualAnnotation`
+ * NOTE: This is a work in progress. It only supports a small subset of what might be needed for full C# (de)serialization.
  */
 export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAstNode, TargetOptions & CSharpOptions> {
 
@@ -97,7 +82,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
 
     const delegateToObjectMapperNode = new Map<number, Code.TypeNode>();
 
-    const attributes: JsonAttributes = NewtonsoftJsonAttributes;
+    const attributes: JsonAttributes = (args.options.serializationLibrary === SerializationLibrary.NEWTONSOFT) ? NewtonsoftJsonAttributes : SystemJsonAttributes;
 
     const defaultVisitor = args.root.createVisitor();
     const visitor = VisitorFactoryManager.create(defaultVisitor, {

@@ -1,4 +1,6 @@
 
-export * from './expand';
-export * from './reduce';
-export * from './visitor';
+export * from './expand/JsonExpander';
+export * from './reduce/ObjectReducer';
+export * from './visit/ObjectVisitor';
+export * from './resolve/JsonPathResolver.ts';
+export * from './resolve/JsonPathFetcher.ts';

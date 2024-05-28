@@ -243,17 +243,24 @@ export interface OmniCompositionTypeBase<T extends OmniType, K extends OmniKindC
   types: T[];
 }
 
-export interface OmniIntersectionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.INTERSECTION> {}
-export interface OmniUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.UNION> {}
-export interface OmniExclusiveUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.EXCLUSIVE_UNION> {}
-export interface OmniNegationType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.NEGATION> {}
+export interface OmniIntersectionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.INTERSECTION> {
+}
+
+export interface OmniUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.UNION> {
+}
+
+export interface OmniExclusiveUnionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.EXCLUSIVE_UNION> {
+}
+
+export interface OmniNegationType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.NEGATION> {
+}
 
 export type OmniCompositionType<T extends OmniType = OmniType, CK extends OmniKindComposition = OmniKindComposition> = Extract<
   OmniIntersectionType<T>
   | OmniUnionType<T>
   | OmniExclusiveUnionType<T>
   | OmniNegationType<T>
-  , {kind: CK}>
+  , { kind: CK }>
   ;
 
 
@@ -491,19 +498,51 @@ export interface OmniPayloadPathQualifier {
   value?: unknown;
 }
 
+export interface OmniCallback {
+  name: string;
+  description?: string | undefined;
+  summary?: string | undefined;
+  deprecated?: boolean;
+
+  transport: OmniTransport;
+
+  request: OmniInput;
+  responses: OmniOutput[];
+
+  examples?: OmniExamplePairing[];
+}
+
+export interface OmniHttpTransport {
+  async: false;
+  path: string;
+}
+
+export interface OmniMessageQueueTransport {
+  async: true;
+  path: string;
+}
+
+export type OmniTransport =
+  OmniHttpTransport
+  | OmniMessageQueueTransport;
+
 export interface OmniEndpoint {
   name: string;
   description?: string | undefined;
   summary?: string | undefined;
-  async: boolean;
   deprecated?: boolean;
-  path: string;
+
+  transports: OmniTransport[];
+
   externalDocumentations?: OmniExternalDocumentation[];
-  requestQualifiers: OmniPayloadPathQualifier[];
+  requestQualifiers?: OmniPayloadPathQualifier[];
 
   request: OmniInput;
   responses: OmniOutput[];
-  examples: OmniExamplePairing[];
+
+  callbacks?: OmniCallback[];
+
+  examples?: OmniExamplePairing[];
 }
 
 export interface OmniServer {

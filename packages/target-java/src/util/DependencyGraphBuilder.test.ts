@@ -28,9 +28,10 @@ describe('Test CompositionDependencyUtil', () => {
       ? namedTypes.map((t, idx) => {
         return {
           name: `Endpoint${idx}`,
-          async: false,
-          path: '/',
-          requestQualifiers: [],
+          transports: [{
+            async: false,
+            path: '/',
+          }],
           examples: [],
           request: {
             type: {

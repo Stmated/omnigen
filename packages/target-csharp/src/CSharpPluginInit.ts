@@ -309,7 +309,12 @@ export const CSharpRendererPlugin = createPlugin(
 
     const singleFileName = ctx.csOptions.singleFileName;
     if (rendered.length == 1 && singleFileName) {
-      rendered[0].fileName = singleFileName;
+
+      if (singleFileName.includes('.')) {
+        rendered[0].fileName = singleFileName;
+      } else {
+        rendered[0].fileName = `${singleFileName}.cs`;
+      }
     }
 
     return {

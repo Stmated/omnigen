@@ -188,7 +188,7 @@ namespace generated.omnigen
       this.Raw = raw;
     }
 
-    public A getA(Func<dynamic, A> transformer)
+    public A GetA(Func<dynamic, A> transformer)
     {
       if (this._a != null)
       {
@@ -197,7 +197,7 @@ namespace generated.omnigen
       return this._a = transformer(this.Raw);
     }
 
-    public B getB(Func<dynamic, B> transformer)
+    public B GetB(Func<dynamic, B> transformer)
     {
       if (this._b != null)
       {

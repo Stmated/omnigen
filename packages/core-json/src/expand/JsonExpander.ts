@@ -1,6 +1,8 @@
 import pointer, {JsonObject} from 'json-pointer';
-import {ObjectVisitor} from '../visitor';
+import {ObjectVisitor} from '../visit/ObjectVisitor';
 import {LoggerFactory} from '@omnigen/core-log';
+import {JsonPathResolver} from '../resolve/JsonPathResolver.ts';
+import {DocumentStore, JsonPathFetcher} from '../resolve/JsonPathFetcher.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -9,11 +11,16 @@ export type ExpandUsing = ExpandUsingValue[];
 
 export type JsonPointerPath = string;
 
-export type ExpandNeedleMeta = { prefix?: string, suffix?: string };
-export type ExpandNeedleObj = { path: JsonPointerPath } & ExpandNeedleMeta;
+export type ExpandNeedleMeta = { prefix?: string, suffix?: string, transform?: 'lowercase' | 'uppercase' };
+export type ExpandNeedleObj = ExpandNeedleWithMeta | ExpandNeedleWithAttempts;
 
+export type ExpandNeedleWithMeta = { path: JsonPointerPath } & ExpandNeedleMeta;
+export type ExpandNeedleWithAttempts = { path: JsonPointerPath } & {attempts: Array<ExpandAttempt>};
+export type ExpandAttempt = JsonPointerPath | ExpandNeedleMeta;
 export type ExpandNeedle = JsonPointerPath | ExpandNeedleObj;
 export type ExpandFind = ExpandNeedle | ExpandNeedle[];
+
+type Predicate = (v: string) => boolean;
 
 export interface ExpandOptions {
   using: ExpandUsing;
@@ -32,8 +39,18 @@ export interface ExpandOptions {
  */
 export class JsonExpander {
 
-  public expand(original: JsonObject): typeof original {
+  public expand(original: JsonObject, workingPath?: string | undefined): typeof original {
 
+    if (workingPath) {
+      logger.info(`Expanding using working path '${workingPath}'`);
+    }
+
+    const documentStore = new DocumentStore();
+    if (workingPath) {
+      documentStore.documents.set(workingPath, original);
+    }
+
+    const cleanup: (() => void)[] = [];
     const visitor = new ObjectVisitor(args => {
 
       const current = args.obj;
@@ -64,19 +81,20 @@ export class JsonExpander {
         if (ourIndex === -1) {
           throw new Error(`Could not find the expansion object (${current}) inside array ${parent}`);
         }
-        parent.splice(ourIndex, 1);
+        cleanup.push(() => parent.splice(ourIndex, 1));
 
       } else if (typeof parent === 'object' && parent) {
 
         // Also remove the object which contains the expansion from its parent.
         // It will be re-added in its expanded form as different keys.
-        delete parent[lastKey];
+        cleanup.push(() => delete parent[lastKey]);
 
       } else {
         throw new Error(`Parent of the expansion object must be an array or an object`);
       }
 
       const findArray = Array.isArray(options.at) ? options.at : [options.at];
+      const attemptFailures: string[] = [];
 
       for (const source of options.using) {
 
@@ -85,28 +103,62 @@ export class JsonExpander {
         for (const findItem of findArray) {
 
           if (typeof findItem === 'string') {
+            this.updateItem(findItem, source, clone);
+          } else if ('attempts' in findItem) {
 
-            logger.silent(`Setting '${findItem}' to '${source}`);
-            pointer.set(clone, findItem, source);
+            attemptFailures.length = 0;
+            for (let i = 0; i < findItem.attempts.length; i++) {
+
+              const attempt = findItem.attempts[i];
+              let found = false;
+
+              const predicate: Predicate = v => {
+
+                const rootPath = workingPath ? JsonPathResolver.toAbsoluteUriParts(undefined, workingPath) : undefined;
+                logger.silent(`RootPath: ${JSON.stringify(rootPath)}`);
+
+                const resolvedPath = JsonPathResolver.toAbsoluteUriParts(rootPath, v);
+                logger.silent(`ResolvedPath: ${JSON.stringify(resolvedPath)}`);
+
+                const target = JsonPathFetcher.get(resolvedPath, documentStore);
+                return target !== undefined;
+              };
+
+              if (typeof attempt === 'string') {
+                found = this.updateItem({path: findItem.path}, attempt, clone, predicate);
+              } else {
+                found = this.updateItem({path: findItem.path, ...attempt}, source, clone, predicate);
+              }
+
+              if (found) {
+                logger.debug(`Found as attempt ${i} for ${findItem.path}`);
+                break;
+              } else {
+                const attemptString = JSON.stringify(attempt);
+                logger.debug(`Could not find '${attemptString}' for ${findItem.path}`);
+                attemptFailures.push(attemptString);
+              }
+            }
+
+            if (attemptFailures.length == findItem.attempts.length) {
+              throw new Error(`Could not find any of the attempts of ${attemptFailures.join(', ')}`);
+            }
+
           } else {
-
-            const changedValue = `${findItem.prefix ?? ''}${source}${findItem.suffix ?? ''}`;
-            logger.silent(`Setting '${findItem.path}' to '${changedValue}`);
-
-            pointer.set(clone, findItem.path, changedValue);
+            this.updateItem(findItem, source, clone);
           }
         }
 
         if (Array.isArray(parent)) {
 
-          logger.debug(`Adding expanded object for '${source}' to: ${parentPath}`);
+          logger.trace(`Adding expanded object for '${source}' to: ${parentPath}`);
           parent.push(clone);
         } else {
 
           const targetKey = options.as ? `${options.as.prefix ?? ''}${source}${options.as.suffix ?? ''}` : source;
           if (typeof targetKey === 'string' || typeof targetKey === 'number') {
 
-            logger.debug(`Adding expanded object for '${source}' to: ${parentPath} as ${targetKey}`);
+            logger.trace(`Adding expanded object for '${source}' to: ${parentPath} as ${targetKey}`);
             parent[targetKey] = clone;
           } else {
             throw new Error(`Expansion target key must be a string or number`);
@@ -119,6 +171,34 @@ export class JsonExpander {
 
     visitor.visit(original);
 
+    for (let i = cleanup.length - 1; i >= 0; i--) {
+      cleanup[i]();
+    }
+
     return original;
+  }
+
+  private updateItem(findItem: JsonPointerPath | ExpandNeedleWithMeta, source: ExpandUsingValue, clone: any, predicate?: Predicate): boolean {
+
+    if (typeof findItem === 'string') {
+      findItem = {path: findItem};
+    }
+
+    let changedValue = `${findItem.prefix ?? ''}${source}${findItem.suffix ?? ''}`;
+    if (findItem.transform === 'lowercase') {
+      changedValue = changedValue.toLowerCase();
+    } else if (findItem.transform === 'uppercase') {
+      changedValue = changedValue.toUpperCase();
+    } else if (findItem.transform) {
+      throw new Error(`Invalid expansion transform ${findItem.transform}`);
+    }
+
+    if (predicate && !predicate(changedValue)) {
+      return false;
+    }
+
+    logger.silent(`Setting '${findItem.path}' to '${changedValue}`);
+    pointer.set(clone, findItem.path, changedValue);
+    return true;
   }
 }

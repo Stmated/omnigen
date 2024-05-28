@@ -138,7 +138,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
   private readonly _refResolver: RefResolver;
 
-  protected readonly _options: TOpt;
+  private readonly _options: TOpt;
 
   constructor(refResolver: RefResolver, options: TOpt) {
     this._refResolver = refResolver;
@@ -232,7 +232,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // TODO: Add schema version migration, should support from 04 -> 2020
 
     const expander = new JsonExpander();
-    expander.expand(root);
+    expander.expand(root, absolutePath);
 
     const migrator = new JsonSchemaMigrator();
     migrator.migrate(root);
@@ -739,7 +739,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
       const value = (object as any)[key];
       if (value !== undefined) {
-        logger.debug(`Found vendor extension '${key}' as '${value}'`);
+        logger.trace(`Found vendor extension '${key}' as '${value}'`);
         if (typeof value == 'boolean') {
           return value;
         } else {

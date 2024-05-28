@@ -21,10 +21,6 @@ public class ResponseData {
     this._raw = raw;
   }
 
-  public JsonNode getRaw() {
-    return this._raw;
-  }
-
   public WithReject getResponseDataWithReject(ObjectMapper transformer) {
     if (this._responseDataWithReject != null) {
       return this._responseDataWithReject;
@@ -37,6 +33,10 @@ public class ResponseData {
       return this._responseDataWithResult;
     }
     return this._responseDataWithResult = transformer.convertValue(this._raw, WithResult.class);
+  }
+
+  public JsonNode getRaw() {
+    return this._raw;
   }
 
   public static class WithReject {

@@ -622,22 +622,16 @@ export class OmniUtil {
         return `[${OmniUtil.describe(type.type)} -> ${type.sourceIdentifier.placeholderName}]`;
       }
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      return `${OmniUtil.getTypeName(type)}<${type.targetIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
+      return `${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.targetIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-      return `${OmniUtil.getTypeName(type)}<${type.sourceIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
+      return `${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.sourceIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
     }
 
-    const baseName = Naming.unwrapWithCallback(OmniUtil.getVirtualTypeName(type), (name, parts) => {
-      if (parts && parts.length > 0) {
-        return `${parts.join('')}${name}`;
-      } else {
-        return name;
-      }
-    });
+    const baseName = this.simplifyTypeName(OmniUtil.getVirtualTypeName(type));
 
     if (type.kind == OmniTypeKind.OBJECT) {
       if (type.extendedBy) {
-        return `${baseName} [${type.kind}, with ${OmniUtil.describe(type.extendedBy)}]`;
+        return `${baseName} [${type.kind}, extendedBy ${OmniUtil.describe(type.extendedBy)}]`;
       } else {
         return `${baseName} [${type.kind}]`;
       }
@@ -658,10 +652,34 @@ export class OmniUtil {
         prefix = '!';
       }
 
-      return `${baseName} [${type.kind}${prefix} ${suffix}]`;
+      return `${baseName} [${type.kind}${prefix}${suffix}]`;
     }
 
     return `${baseName} [${type.kind}]`;
+  }
+
+  private static simplifyTypeName(type: TypeName | undefined): string {
+
+    if (!type) {
+      return 'N/A';
+    }
+
+    let baseName = Naming.unwrapWithCallback(type, (name, parts) => {
+      if (parts && parts.length > 0) {
+        return `${parts.join('')}${name}`;
+      } else {
+        return name;
+      }
+    });
+
+    if (baseName) {
+      const slashIndex = baseName.lastIndexOf('/');
+      if (slashIndex !== -1) {
+        baseName = baseName.substring(slashIndex + 1);
+      }
+    }
+
+    return baseName ?? 'N/A';
   }
 
   public static primitiveConstantValueToString(value: OmniPrimitiveConstantValue): string {
@@ -1198,6 +1216,8 @@ export class OmniUtil {
         return 9;
       } else if (diffs.includes(TypeDiffKind.NARROWED_LITERAL_TYPE)) {
         return 8;
+      } else if (diffs.includes(TypeDiffKind.IS_SUPERTYPE)) {
+        return 7;
       } else if (diffs.includes(TypeDiffKind.NO_GENERIC_OVERLAP)) {
         return 7;
       } else if (diffs.includes(TypeDiffKind.NARROWED_TYPE)) {
@@ -1212,17 +1232,6 @@ export class OmniUtil {
     return 0;
   }
 
-  public static isDifferent(a: OmniType, b: OmniType, features: TargetFeatures): boolean {
-
-    const commonDenominator = OmniUtil.getCommonDenominatorBetween(a, b, features);
-    if (!commonDenominator) {
-      return true;
-    }
-
-    const diffAmount = OmniUtil.getDiffAmount(commonDenominator?.diffs);
-    return diffAmount > 0;
-  }
-
   public static getCommonDenominator(options: TargetFeatures | { features: TargetFeatures, create?: boolean }, ...types: OmniType[]): CommonDenominatorType | undefined {
 
     if (types.length == 1) {
@@ -1235,14 +1244,14 @@ export class OmniUtil {
 
 
     let commonDiffAmount = 0;
-    let common: CommonDenominatorType<OmniType> = {
+    let common: CommonDenominatorType = {
       type: types[0],
     };
 
     for (let i = 1; i < types.length; i++) {
 
       const denominator = OmniUtil.getCommonDenominatorBetween(common.type, types[i], opt.features, opt.create);
-      if (!denominator) { // } || (denominator.diffs && denominator.diffs.includes(TypeDiffKind.FUNDAMENTAL_TYPE))) {
+      if (!denominator) {
         return undefined;
       }
 
@@ -1419,7 +1428,7 @@ export class OmniUtil {
     b: OmniType,
     targetFeatures: TargetFeatures,
     create?: boolean,
-  ): CommonDenominatorType<OmniType> | undefined {
+  ): CommonDenominatorType | undefined {
 
     if (b.kind == OmniTypeKind.OBJECT && b.extendedBy) {
 

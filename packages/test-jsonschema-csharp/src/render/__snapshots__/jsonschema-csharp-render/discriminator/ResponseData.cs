@@ -13,7 +13,7 @@ namespace generated.omnigen
       this.Raw = raw;
     }
 
-    public ResponseDataWithReject getResponseDataWithReject(Func<dynamic, ResponseDataWithReject> transformer)
+    public ResponseDataWithReject GetResponseDataWithReject(Func<dynamic, ResponseDataWithReject> transformer)
     {
       if (this._responseDataWithReject != null)
       {
@@ -22,7 +22,7 @@ namespace generated.omnigen
       return this._responseDataWithReject = transformer(this.Raw);
     }
 
-    public ResponseDataWithResult getResponseDataWithResult(Func<dynamic, ResponseDataWithResult> transformer)
+    public ResponseDataWithResult GetResponseDataWithResult(Func<dynamic, ResponseDataWithResult> transformer)
     {
       if (this._responseDataWithResult != null)
       {

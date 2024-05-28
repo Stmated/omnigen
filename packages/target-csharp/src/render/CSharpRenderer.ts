@@ -178,6 +178,8 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       }
     },
 
+    visitGetterIdentifier: (n, v) => `Get${Case.pascal(n.identifier.value)}`,
+
     visitGenericTypeDeclaration(n, v) {
       return render(n.name, v);
     },

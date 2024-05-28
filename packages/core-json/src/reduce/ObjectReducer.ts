@@ -5,7 +5,7 @@ export type PathItem = (string | number);
 type Interceptor = (obj: unknown, path: PathItem[], onPop: OnPopRegistrator) => typeof obj | undefined;
 
 /**
- * TODO: Rewrite into always returning void, make this just a walker, then ObjectReducer can be used to reshape the object
+ * TODO: Rewrite into always returning void, make this just a walker, then ObjectVisitor can be used to reshape the object
  */
 export class ObjectReducer<T> {
 

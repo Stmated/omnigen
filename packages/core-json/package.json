@@ -16,11 +16,13 @@
   "dependencies": {
     "pino": "8.6.0",
     "json-pointer": "^0.6.2",
-    "@omnigen/core-log": "workspace:*"
+    "@omnigen/core-log": "workspace:*",
+    "sync-fetch": "^0.5.2"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
+    "@types/sync-fetch": "^0.4.3",
     "@types/json-pointer": "^1.0.34",
     "colors": "^1.4.0",
     "typescript": "^5.5.0-beta",

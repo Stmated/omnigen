@@ -11,7 +11,7 @@ namespace generated.omnigen
       this.Raw = raw;
     }
     
-    public AbortData getAbortData(Func<dynamic, AbortData> transformer)
+    public AbortData GetAbortData(Func<dynamic, AbortData> transformer)
     {
       if (this._abortData != null)
       {
@@ -20,7 +20,7 @@ namespace generated.omnigen
       return this._abortData = transformer(this.Raw);
     }
 
-    public DefaultData getDefaultData(Func<dynamic, DefaultData> transformer)
+    public DefaultData GetDefaultData(Func<dynamic, DefaultData> transformer)
     {
       if (this._defaultData != null)
       {

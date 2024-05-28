@@ -131,7 +131,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     const primitiveTypes: OmniPrimitiveType[] = [];
     let otherTypeCount = 0;
     for (const xor of type.types) {
-      if (xor.kind == OmniTypeKind.ENUM) {
+      if (xor.kind === OmniTypeKind.ENUM) {
         enumTypes.push(xor);
       } else if (OmniUtil.isPrimitive(xor)) {
         primitiveTypes.push(xor);
@@ -184,10 +184,21 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
     for (const type of types) {
 
-      const otherType = handled.find(it => !OmniUtil.isDifferent(it, type, features));
+      const otherType = handled.find(it => {
+        const commonDenominator = OmniUtil.getCommonDenominatorBetween(it, type, features);
+        if (!commonDenominator) {
+          return false;
+        }
+
+        const isDiff = OmniUtil.getDiffAmount(commonDenominator.diffs) > 0;
+
+        logger.info(`Diffs ${isDiff} for ${OmniUtil.describe(it)} vs ${OmniUtil.describe(type)}: ${commonDenominator.diffs}}`);
+        return !isDiff;
+      });
+
       if (otherType) {
 
-        logger.debug(`Skipping runtime-mapped '${OmniUtil.describe(type)}' because '${OmniUtil.describe(otherType)}' already exists`);
+        logger.debug(`\nSkipping runtime-mapped: ${OmniUtil.describe(type)}\nbecause already has: ${OmniUtil.describe(otherType)}`);
         continue;
       }
 
@@ -588,7 +599,8 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
     const typedGetter = new Code.MethodDeclaration(
       new Code.MethodDeclarationSignature(
-        new Code.Identifier(`get${Case.pascal(typedField.identifier.value)}`),
+        new Code.GetterIdentifier(typedField.identifier, typedField.type),
+        // new Code.Identifier(`get${Case.pascal(typedField.identifier.value)}`),
         typedField.type,
         parameterList,
       ),

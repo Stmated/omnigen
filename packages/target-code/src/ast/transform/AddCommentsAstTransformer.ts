@@ -363,16 +363,13 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
         const investigatedName = nameResolver.investigate({type: prop.owner, options: options});
         const typeName = nameResolver.build({name: investigatedName, with: NameParts.FULL});
-        // const typeName = JavaUtil.getFullyQualifiedName(prop.owner);
         const propertyName = OmniUtil.getPropertyName(prop.name);
 
         if (propertyName === undefined) {
           continue;
         }
 
-        // let memberName: string;
         if (i < targetPath.length - 1) {
-          // memberName = `${JavaUtil.getGetterName(propertyName, prop.type)}()`;
 
           // TODO: This is wrong, since in some languages it is not a method call. Need to add a new "GetterCall" or similar abstract node
           const memberRef = new Code.MethodCall(
@@ -387,14 +384,10 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           if (options.immutableModels) {
 
             targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), new FreeText.FreeText(propertyName)));
-            // memberName = propertyName;
           } else {
             targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), new FreeText.FreeText(propertyName)));
-            // memberName = `${JavaUtil.getSetterName(propertyName)}(${JavaUtil.getFullyQualifiedName(prop.type)})`;
           }
         }
-
-        // targetLinks.push(`{@link ${typeName}#${memberName}}`);
       }
     }
 

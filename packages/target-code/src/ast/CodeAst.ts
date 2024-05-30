@@ -239,9 +239,9 @@ export class GetterIdentifier extends AbstractCodeNode {
 export class SetterIdentifier extends AbstractCodeNode {
 
   identifier: Identifier;
-  type: TypeNode;
+  type: OmniType;
 
-  constructor(identifier: Identifier, type: TypeNode) {
+  constructor(identifier: Identifier, type: OmniType) {
     super();
     this.identifier = identifier;
     this.type = type;

@@ -110,7 +110,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     ).withIdFrom(n),
     reduceSetterIdentifier: (n, r) => new Code.SetterIdentifier(
       assertDefined(n.identifier.reduce(r)),
-      assertDefined(n.type.reduce(r)),
+      n.type,
     ).withIdFrom(n),
     reduceToken: n => n,
 

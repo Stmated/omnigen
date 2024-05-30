@@ -7,11 +7,11 @@ export interface Schema {
   readonly additionalProperties?: Schema | undefined;
   readonly allOf?: readonly [Schema, ...ReadonlyArray<Schema>] | undefined;
   readonly anyOf?: readonly [Schema, ...ReadonlyArray<Schema>] | undefined;
-  readonly const?: any | undefined;
+  readonly const?: any;
   readonly contains?: Schema | undefined;
   readonly contentEncoding?: string | undefined;
   readonly contentMediaType?: string | undefined;
-  readonly default?: any | undefined;
+  readonly default?: any;
   readonly definitions?: SchemaDefinitions | undefined;
   readonly dependencies?: SchemaDependencies | undefined;
   readonly description?: string | undefined;
@@ -48,21 +48,21 @@ export interface Schema {
 }
 
 export interface SchemaDefinitions {
-  readonly [key: string /* Pattern: ".*" */]: Schema | undefined;
+  readonly [key: string]: Schema | undefined;
 }
 
 export interface SchemaDependencies {
-  readonly [key: string /* Pattern: ".*" */]: SchemaDependenciesSchema | undefined;
+  readonly [key: string]: SchemaDependenciesSchema | undefined;
 }
 
 export type SchemaDependenciesSchema = Schema | ReadonlyArray<string>;
 export type SchemaItems = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
 export interface SchemaPatternProperties {
-  readonly [key: string /* Pattern: ".*" */]: Schema | undefined;
+  readonly [key: string]: Schema | undefined;
 }
 
 export interface SchemaProperties {
-  readonly [key: string /* Pattern: ".*" */]: Schema | undefined;
+  readonly [key: string]: Schema | undefined;
 }
 
 export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];

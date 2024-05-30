@@ -44,8 +44,8 @@ describe('JsonExpander', () => {
           'x-expand': {
             using: ['x', 'y', 'z'],
             at: [
-              {path: '/bar', prefix: 'Pre-', suffix: '-Post'},
-              {path: '/baz', prefix: 'before-', suffix: '-after'},
+              {path: '/bar', with: 'Pre-$0-Post'},
+              {path: '/baz', with: 'before-$0-after'},
             ],
           } satisfies ExpandOptions,
           'bar': 'BarValue',
@@ -70,10 +70,10 @@ describe('JsonExpander', () => {
       array: [
         {
           'x-expand': {
-            using: ['x', 'y', 'z'],
+            using: ['x', 'y', ['z', 'ZED']],
             at: [
-              {path: '/bar', prefix: 'Pre-', suffix: '-Post'},
-              {path: '/baz', prefix: 'before-', suffix: '-after'},
+              {path: '/bar', with: 'Pre-$0-Post'},
+              {path: '/baz', with: 'before-$1-after'},
             ],
           } satisfies ExpandOptions,
           'bar': 'BarValue',
@@ -81,10 +81,10 @@ describe('JsonExpander', () => {
         },
         {
           'x-expand': {
-            using: ['a', 'b', 'c'],
+            using: ['a', ['b', 'bE'], 'c'],
             at: [
-              {path: '/fizz', prefix: 'Pre-', suffix: '-Post', transform: 'lowercase'},
-              {path: '/buzz', prefix: 'before-', suffix: '-after', transform: 'uppercase'},
+              {path: '/fizz', with: 'Pre-$1-Post', transform: 'lowercase'},
+              {path: '/buzz', with: 'before-$1-after', transform: 'uppercase'},
             ],
           } satisfies ExpandOptions,
           'fizz': 'FizzValue',
@@ -98,10 +98,10 @@ describe('JsonExpander', () => {
       array: [
         {bar: 'Pre-x-Post', baz: 'before-x-after'},
         {bar: 'Pre-y-Post', baz: 'before-y-after'},
-        {bar: 'Pre-z-Post', baz: 'before-z-after'},
+        {bar: 'Pre-z-Post', baz: 'before-ZED-after'},
 
         {fizz: 'pre-a-post', buzz: 'BEFORE-A-AFTER'},
-        {fizz: 'pre-b-post', buzz: 'BEFORE-B-AFTER'},
+        {fizz: 'pre-be-post', buzz: 'BEFORE-BE-AFTER'},
         {fizz: 'pre-c-post', buzz: 'BEFORE-C-AFTER'},
       ],
     });

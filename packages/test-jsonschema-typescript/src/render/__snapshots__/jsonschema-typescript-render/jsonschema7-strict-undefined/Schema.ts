@@ -48,21 +48,21 @@ export interface Schema {
 }
 
 export interface SchemaDefinitions {
-  readonly [key: string /* Pattern: ".*" */]: Schema;
+  readonly [key: string]: Schema;
 }
 
 export interface SchemaDependencies {
-  readonly [key: string /* Pattern: ".*" */]: SchemaDependenciesSchema;
+  readonly [key: string]: SchemaDependenciesSchema;
 }
 
 export type SchemaDependenciesSchema = Schema | ReadonlyArray<string>;
 export type SchemaItems = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
 export interface SchemaPatternProperties {
-  readonly [key: string /* Pattern: ".*" */]: Schema;
+  readonly [key: string]: Schema;
 }
 
 export interface SchemaProperties {
-  readonly [key: string /* Pattern: ".*" */]: Schema;
+  readonly [key: string]: Schema;
 }
 
 export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];

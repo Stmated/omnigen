@@ -82,8 +82,6 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new ResolveGenericSourceIdentifiersAstTransformer();
     yield new SimplifyGenericsAstTransformer();
     yield new GenericNodesToSpecificJavaAstTransformer();
-    yield new AddCommentsAstTransformer();
-    yield new GroupExampleTextsToSectionAstTransformer();
     yield new PatternPropertiesToMapJavaAstTransformer();
     yield new RemoveConstantParametersAstTransformer();
     yield new JacksonJavaAstTransformer();
@@ -92,7 +90,9 @@ export class JavaInterpreter extends AbstractInterpreter<JavaAndTargetOptions> {
     yield new ToJavaAstTransformer();
     yield new DelegatesToJavaAstTransformer();
     yield new AddGeneratedAnnotationJavaAstTransformer();
+    yield new AddCommentsAstTransformer();
     yield new PackageResolverAstTransformer();
+    yield new GroupExampleTextsToSectionAstTransformer();
     yield new SimplifyTypePathsJavaAstTransformer();
     yield new SimplifyAndCleanAstTransformer();
     yield new ReorderMembersAstTransformer();

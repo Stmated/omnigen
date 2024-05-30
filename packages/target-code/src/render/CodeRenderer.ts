@@ -679,7 +679,6 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     visitFreeTextPropertyLink: (node, visitor) => {
 
       const targetName = OmniUtil.getPropertyName(node.property.name, true);
-      // .fieldName || node.property.propertyName || node.property.name;
       return `{@link ${render(node.type, visitor)}#${targetName}}`;
     },
     visitFreeTextList: (node, visitor) => {

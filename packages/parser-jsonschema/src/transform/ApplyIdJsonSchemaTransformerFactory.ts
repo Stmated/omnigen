@@ -306,6 +306,30 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
           this._hints.pop();
         }
       },
+      if: (e, visitor) => {
+        try {
+          this._hints.push({tag: 'If', suffix: true});
+          return DefaultJsonSchema9Visitor.if(e, visitor);
+        } finally {
+          this._hints.pop();
+        }
+      },
+      then: (e, visitor) => {
+        try {
+          this._hints.push({tag: 'Then', suffix: true});
+          return DefaultJsonSchema9Visitor.then(e, visitor);
+        } finally {
+          this._hints.pop();
+        }
+      },
+      else: (e, visitor) => {
+        try {
+          this._hints.push({tag: 'Else', suffix: true});
+          return DefaultJsonSchema9Visitor.else(e, visitor);
+        } finally {
+          this._hints.pop();
+        }
+      },
     };
   }
 }

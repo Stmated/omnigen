@@ -80,7 +80,7 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
         const pattern = OmniUtil.getPropertyNamePattern(node.property.name);
 
         let keyComment = '';
-        if (pattern) {
+        if (pattern && pattern !== '.*') {
           keyComment = ` /* Pattern: "${pattern}" */`;
         }
 
@@ -139,7 +139,8 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
     },
 
     visitGetter: (n, v) => {
-      return `${render(n.modifiers, v)} get ${n.identifier.visit(v)}() { return ${n.target.visit(v)}; }\n`.trimStart();
+      const comments = n.comments ? render(n.comments, v) : '';
+      return `${comments}${render(n.modifiers, v)} get ${n.identifier.visit(v)}() { return ${n.target.visit(v)}; }\n`.trimStart();
     },
 
     visitSetter: (n, v) => {
@@ -292,5 +293,9 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
         return parentRenderer.visitLiteral(n, v);
       }
     },
+
+    visitFreeTextCode: (n, v) => `\n@description <pre><code>${render(n.content, v)}</code></pre>`,
+    visitFreeTextExample: (n, v) => `\n@example ${render(n.content, v)}`,
+
   };
 };

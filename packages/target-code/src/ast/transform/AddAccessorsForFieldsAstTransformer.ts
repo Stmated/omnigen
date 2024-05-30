@@ -4,6 +4,9 @@ import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../CodeAst';
 import {CodeOptions} from '../../options/CodeOptions';
 
+/**
+ * TODO: Rewrite into using Reducer instead of manipulating the node contents
+ */
 export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeRootAstNode, TargetOptions & CodeOptions> {
 
   private readonly _skip: Code.Identifier[];

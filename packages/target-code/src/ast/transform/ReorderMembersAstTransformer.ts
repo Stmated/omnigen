@@ -60,6 +60,17 @@ const getWeight = (node: AstNode, root: RootAstNode): [number, string] => {
 
   let weight = 0;
   if (node instanceof Code.Field) {
+
+    if (node.property) {
+      const pattern = OmniUtil.getPropertyNamePattern(node.property.name);
+      if (pattern) {
+
+        weight += 0;
+        weight += getModifierWeight(node.modifiers);
+        return [weight, pattern];
+      }
+    }
+
     weight += 300;
     weight += getModifierWeight(node.modifiers);
     return [weight, node.identifier.value];

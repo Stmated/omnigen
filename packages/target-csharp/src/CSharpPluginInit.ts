@@ -29,7 +29,13 @@ import {
   ZodTargetOptions,
 } from '@omnigen/core';
 import {z} from 'zod';
-import {SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {
+  ElevatePropertiesModelTransformer,
+  GenericsModelTransformer,
+  SimplifyInheritanceModelTransformer,
+  SpreadResolvedWildcardGenericsModelTransformer,
+  ZodCompilationUnitsContext,
+} from '@omnigen/core-util';
 import {createCSharpRenderer} from './render';
 import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -50,7 +56,7 @@ import {
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
-  DeleteUnnecessaryCompositionsJavaModelTransformer,
+  SimplifyUnnecessaryCompositionsModelTransformer,
   InnerTypeCompressionAstTransformer,
   InterfaceExtractorModelTransformer,
   MethodToGetterCodeAstTransformer,
@@ -60,7 +66,7 @@ import {
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer, SimplifyAndCleanAstTransformer,
   SimplifyGenericsAstTransformer,
-  SortVisitorRegistry,
+  SortVisitorRegistry, AggregateIntersectionsModelTransformer,
 } from '@omnigen/target-code';
 import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer.ts';
 import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer.ts';
@@ -165,8 +171,12 @@ export const CSharpPlugin = createPlugin(
     };
 
     const transformers: OmniModelTransformer[] = [
+      // new SimplifyInheritanceModelTransformer(),
+      // new ElevatePropertiesModelTransformer(),
+      // new GenericsModelTransformer(),
+      new AggregateIntersectionsModelTransformer(),
       new InterfaceExtractorModelTransformer(),
-      new DeleteUnnecessaryCompositionsJavaModelTransformer(),
+      new SimplifyUnnecessaryCompositionsModelTransformer(),
     ];
 
     for (const transformer of transformers) {

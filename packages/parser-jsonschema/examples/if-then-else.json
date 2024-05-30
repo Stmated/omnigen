@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnigen.com/schemas/if-then-else",
+
+  "$defs": {
+
+    "dependentSchemas": {
+      "type": "object",
+      "properties": {
+        "style": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/styles-for-cookie"
+        },
+        {
+          "$ref": "#/$defs/styles-for-form"
+        }
+      ]
+    },
+
+    "styles-for-cookie": {
+      "if": {
+        "properties": {
+          "style": {
+            "const": "cookie"
+          }
+        },
+        "required": [
+          "style"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cookie-then-prop": {
+            "type": "boolean"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "cookie-else-prop": {
+            "type": "string"
+          }
+        }
+      }
+    },
+
+    "styles-for-form": {
+      "if": {
+        "properties": {
+          "style": {
+            "const": "form"
+          }
+        },
+        "required": [
+          "style"
+        ]
+      },
+      "then": {
+        "properties": {
+          "explode": {
+            "default": true
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "explode": {
+            "default": false
+          }
+        }
+      }
+    }
+  }
+}

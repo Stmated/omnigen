@@ -19,7 +19,7 @@ export class AddCommentsCSharpAstTransformer implements AstTransformer<CSharpRoo
       ...defaultReducer,
       reduceProperty: n => {
 
-        const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n, args);
+        const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.type, args);
         if (ownerCommentsText) {
           n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
         }

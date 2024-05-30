@@ -56,10 +56,6 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       if (OmniUtil.isComposition(type) && !type.name && !type.inline) {
         const investigatedName = nameResolver.investigate({type: type, options: args.options});
         const stringName = nameResolver.build({name: investigatedName, with: NameParts.NAME, use: TypeUseKind.CONCRETE});
-        // const stringName = JavaUtil.getClassName(type, args.options);
-        // const virtualTypeName = OmniUtil.getVirtualTypeName(type);
-        // const unwrappedName = Naming.unwrap(virtualTypeName);
-        // const stringName = Case.pascal(unwrappedName);
         type.name = {
           name: stringName,
         };
@@ -254,7 +250,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
               if (commentText) {
                 comment = new Code.Comment(new FreeText.FreeText(commentText));
               } else {
-                logger.warn(`Could not find description of enum '${item}'`);
+                logger.warn(`Could not find description of enum item '${item}' for ${OmniUtil.describe(type)}`);
               }
             }
 
@@ -415,7 +411,6 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     const investigatedName = nameResolver.investigate({type: originalType || type, options: options});
     const javaClassName = nameResolver.build({name: investigatedName, with: NameParts.NAME, use: TypeUseKind.CONCRETE});
 
-    // const javaClassName = JavaUtil.getClassName(originalType || type, options);
     const javaType = root.getAstUtils().createTypeNode(type);
     const javaClassIdentifier = new Code.Identifier(javaClassName);
 

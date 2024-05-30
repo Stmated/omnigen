@@ -38,7 +38,6 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
           const typeAlias = new Ts.TypeAliasDeclaration(n.name, aliasRhsTypeNode, new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC)));
           const investigatedName = nameResolver.investigate({type: n.type.omniType, customName: n.name.value, options: args.options});
           const absolutePackageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
-          // JavaUtil.getPackageName(n.type.omniType, n.name.value, args.options)),
 
           args.root.children.push(new Code.CompilationUnit(
             new Code.PackageDeclaration(absolutePackageName),
@@ -56,36 +55,36 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
     const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
       ...defaultReducer,
-      reduceClassDeclaration: (node, reducer) => {
+      reduceClassDeclaration: (n, r) => {
 
-        if (node.type.omniType.inline) {
+        if (n.type.omniType.inline) {
           return undefined;
         }
 
-        if (typesToReplace.get(node.type)) {
+        if (typesToReplace.get(n.type)) {
           return undefined;
         }
 
-        return defaultReducer.reduceClassDeclaration(node, reducer);
+        return defaultReducer.reduceClassDeclaration(n, r);
       },
-      reduceCompilationUnit: (node, reducer) => {
-        const result = defaultReducer.reduceCompilationUnit(node, reducer);
+      reduceCompilationUnit: (n, r) => {
+        const result = defaultReducer.reduceCompilationUnit(n, r);
         if (result && result.children.length == 0) {
           return undefined;
         }
 
         return result;
       },
-      reduceEdgeType: (node, r) => {
+      reduceEdgeType: (n, r) => {
 
-        const replacementNode = typesToReplace.get(node);
+        const replacementNode = typesToReplace.get(n);
         if (replacementNode) {
           return replacementNode;
-        } else if (OmniUtil.isComposition(node.omniType)) {
-          return args.root.getAstUtils().createTypeNode(node.omniType);
+        } else if (OmniUtil.isComposition(n.omniType)) {
+          return args.root.getAstUtils().createTypeNode(n.omniType);
         }
 
-        return node;
+        return n;
       },
     });
 

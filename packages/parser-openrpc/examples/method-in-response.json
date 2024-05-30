@@ -20,10 +20,10 @@
         ],
         "at": [
           "/name",
-          {"path": "/params/1/schema/$ref", "prefix": "#/components/schemas/", "suffix": "RequestData"},
-          {"path": "/result/name", "suffix": "Result"},
-          {"path": "/result/schema/title", "suffix": "ResponseResult"},
-          {"path": "/result/schema/properties/data/$ref", "prefix": "#/components/schemas/", "suffix": "ResponseData"},
+          {"path": "/params/1/schema/$ref", "with": "#/components/schemas/$0RequestData"},
+          {"path": "/result/name", "with": "$0Result"},
+          {"path": "/result/schema/title", "with": "$0ResponseResult"},
+          {"path": "/result/schema/properties/data/$ref", "with": "#/components/schemas/$0ResponseData"},
           {"path": "/result/schema/properties/method/const"}
         ]
       },

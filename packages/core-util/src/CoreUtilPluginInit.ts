@@ -32,8 +32,6 @@ export const ZodCompilationUnitsContext = z.object({
   compilationUnits: z.array(z.custom<RenderedCompilationUnit>()),
 });
 
-export type CompilationUnitsContext = z.output<typeof ZodCompilationUnitsContext>;
-
 export const ZodWrittenFilesContext = z.object({
   writtenFiles: z.array(z.string()),
 });
@@ -106,7 +104,6 @@ export const CommonTransformPlugin = createPlugin(
     return ctx;
   },
 );
-
 
 const CommonTransformers2In = ZodModelContext
   .merge(ZodParserOptionsContext)

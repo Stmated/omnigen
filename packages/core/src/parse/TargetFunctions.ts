@@ -7,6 +7,4 @@ export interface TargetFunctions {
 
   asSubType(type: OmniType): OmniSubTypeCapableType | undefined;
   asSuperType(type: OmniType): OmniSuperTypeCapableType | undefined;
-
-  // getSuperClassHierarchy(model: OmniModel, type: OmniType | undefined): OmniSuperTypeCapableType[];
 }

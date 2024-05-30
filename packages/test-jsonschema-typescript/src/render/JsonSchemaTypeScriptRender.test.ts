@@ -87,6 +87,19 @@ describe('jsonschema-typescript-render', () => {
     const keys = Object.keys(fileContents);
     await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
   });
+
+  test('if-then-else', async ({task}) => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/if-then-else.json'), {
+      includeGenerated: false,
+      singleFile: true,
+    });
+    const fileContents = getFileContents(rendered);
+    const keys = Object.keys(fileContents);
+    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+  });
 });
 
 function getFileContents(cus: RenderedCompilationUnit[]): Record<string, string> {

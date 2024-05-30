@@ -1,4 +1,4 @@
-import {OmniCompositionType, OmniInterfaceOrObjectType, OmniModel, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TargetFunctions} from '@omnigen/core';
+import {OmniCompositionType, OmniInterfaceOrObjectType, OmniKindComposition, OmniModel, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TargetFunctions} from '@omnigen/core';
 import {AbortVisitingWithResult, Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
@@ -7,8 +7,10 @@ export class CodeUtil {
 
   private static readonly _PATTERN_STARTS_WITH_ILLEGAL_IDENTIFIER_CHARS = new RegExp(/^[^a-zA-Z$_]/);
 
-  private static readonly _PATTERN_INVALID_CHARS = new RegExp(/[^a-zA-Z0-9$_]/g);
+  private static readonly _PATTERN_INVALID_CHARS_STRICT = new RegExp(/[^a-zA-Z0-9$_]/g);
   private static readonly _PATTERN_WITH_PREFIX = new RegExp(/^[_$]+/g);
+
+  private static readonly _PATTERN_INVALID_CHARS_LAX = new RegExp(/[~!@#%^&*()\-+={}[\]|:;"'<>,.?/\s]/g);
 
   public static getClassDeclaration(root: CodeRootAstNode, type: OmniType): Code.ClassDeclaration | undefined {
 
@@ -32,13 +34,22 @@ export class CodeUtil {
     return OmniUtil.toReferenceType(type);
   }
 
+  public static getSafeIdentifierNameRelaxed(name: string): string {
+
+    if (CodeUtil._PATTERN_STARTS_WITH_ILLEGAL_IDENTIFIER_CHARS.test(name)) {
+      name = `_${name}`;
+    }
+
+    return name.replaceAll(CodeUtil._PATTERN_INVALID_CHARS_LAX, '_');
+  }
+
   public static getSafeIdentifierName(name: string): string {
 
     if (CodeUtil._PATTERN_STARTS_WITH_ILLEGAL_IDENTIFIER_CHARS.test(name)) {
       name = `_${name}`;
     }
 
-    return name.replaceAll(CodeUtil._PATTERN_INVALID_CHARS, '_');
+    return name.replaceAll(CodeUtil._PATTERN_INVALID_CHARS_STRICT, '_');
   }
 
   /**
@@ -91,19 +102,16 @@ export class CodeUtil {
     }
   }
 
-  public static getSuperClassOfIntersection(composition: OmniCompositionType<OmniSuperTypeCapableType>) {
+  public static getSuperClassOfIntersection(intersection: OmniCompositionType<OmniSuperTypeCapableType, typeof OmniKindComposition.INTERSECTION>) {
 
-    if (composition.kind != OmniTypeKind.INTERSECTION) {
-      throw new Error(`Only allowed to be called for 'AND' composition kind`);
-    }
-
-    const flattened = CodeUtil.getFlattenedSuperTypes(composition);
+    const flattened = CodeUtil.getFlattenedSuperTypes(intersection);
     if (flattened.length > 0) {
       const possibleObject = OmniUtil.getUnwrappedType(flattened[0]);
       if (possibleObject) {
         return possibleObject;
       }
     }
+
     return undefined;
   }
 
@@ -125,13 +133,13 @@ export class CodeUtil {
       return undefined;
     }
 
-    if (!subType.extendedBy || subType.extendedBy.kind == OmniTypeKind.INTERFACE) {
+    if (!subType.extendedBy || subType.extendedBy.kind === OmniTypeKind.INTERFACE) {
       return undefined;
     }
 
     const extendedUnwrapped = OmniUtil.getUnwrappedType(subType.extendedBy);
 
-    if (extendedUnwrapped.kind == OmniTypeKind.INTERSECTION) {
+    if (extendedUnwrapped.kind === OmniTypeKind.INTERSECTION) {
       const possible = CodeUtil.getSuperClassOfIntersection(extendedUnwrapped);
       if (possible) {
         return possible;

@@ -47,7 +47,7 @@ export class AccessorTypeScriptAstTransformer implements AstTransformer<Ts.TsRoo
           }
 
           if (identifier) {
-            return new Ts.Getter(identifier, soloReturn, n.signature.type, n.signature.modifiers);
+            return new Ts.Getter(identifier, soloReturn, n.signature.type, n.signature.comments, n.signature.modifiers);
           }
         }
 

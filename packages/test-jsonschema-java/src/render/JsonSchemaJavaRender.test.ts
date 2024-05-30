@@ -35,6 +35,8 @@ describe('jsonschema-java-render', () => {
 
   test('decorated_types', async ({task}) => {
 
+    // TODO: Fix so that the "default value" ternary expression is not added if the Direction is `in` or something similar -- non-nullable boolean can never be null
+
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const rendered = await JsonSchemaToJavaTestUtil.render(

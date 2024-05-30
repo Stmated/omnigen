@@ -2,12 +2,12 @@ import {OMNI_GENERIC_FEATURES, OmniModelTransformer, OmniModelTransformerArgs, O
 import {OmniUtil} from '@omnigen/core-util';
 
 /**
- * These are examples of unions that we will simplify/remove when the target is Java:
+ * These are examples of unions that we will simplify/remove.
  * <ul>
  *   <li>`string | string` to `string`</li>
  * </ul>
  */
-export class DeleteUnnecessaryCompositionsJavaModelTransformer implements OmniModelTransformer {
+export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniModelTransformer {
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 

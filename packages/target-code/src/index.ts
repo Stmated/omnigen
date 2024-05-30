@@ -33,7 +33,8 @@ export * from './render/CodeRenderer';
 
 export * from './reduce/CodeAstReducer';
 
-export * from './parse/transform/DeleteUnnecessaryCompositionsJavaModelTransformer';
+export * from './parse/transform/SimplifyUnnecessaryCompositionsModelTransformer.ts';
 export * from './parse/transform/InterfaceExtractorModelTransformer.ts';
+export * from './parse/transform/AggregateIntersectionsModelTransformer.ts';
 
 export * as Code from './ast/Code';

@@ -268,7 +268,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
     visitFreeTextTypeLink: (n, v) => `\n<see cref="${render(n.type, v)}" />\n`,
     visitFreeTextCode: (n, v) => `<code>${render(n.content, v)}</code>`,
     visitFreeTextExample: (n, v) => `\n<example>${render(n.content, v)}</example>`,
-    visitFreeTextSummary: (n, v) => `<summary>\n${render(n.content, v).trim()}\n</summary>`,
+    visitFreeTextSummary: (n, v) => `\n<summary>\n${render(n.content, v).trim()}\n</summary>`,
     visitFreeTextRemark: (n, v) => `\n<remarks>${render(n.content, v).trim()}</remarks>`,
     visitFreeTextList: (node, visitor) => {
 

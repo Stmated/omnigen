@@ -15,8 +15,8 @@ export interface AbstractResponseResult<TData, TMethod extends string> {
 
 export type DepositRequest = JsonRpcRequest<DepositRequestParams, 'Deposit'>;
 export interface DepositRequestData extends AbstractRequestData {
-  readonly [key: string /* Pattern: ".*" */]: any | undefined;
   readonly NotificationURL: string;
+  readonly [key: string]: any;
 }
 
 export type DepositRequestParams = JsonRpcRequestParams<DepositRequestData>;
@@ -63,9 +63,9 @@ export interface JsonRpcResponse<T extends AbstractResponseResult<any, string>> 
 
 export type RefundRequest = JsonRpcRequest<RefundRequestParams, 'Refund'>;
 export interface RefundRequestData extends AbstractRequestData {
-  readonly [key: string /* Pattern: ".*" */]: any | undefined;
   readonly Amount: string;
   readonly OrderID: string;
+  readonly [key: string]: any;
 }
 
 export type RefundRequestParams = JsonRpcRequestParams<RefundRequestData>;

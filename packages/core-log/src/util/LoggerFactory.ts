@@ -93,14 +93,14 @@ export class LoggerFactory {
 
       const errorLog: Error = {
         name: `Unknown`,
-        message: `${err}${message}`,
+        message: `${err}${message || ''}`,
       };
 
       let pointer: unknown | undefined;
 
       if (err instanceof Error) {
         errorLog.name = err.name;
-        errorLog.message = `${err.message}${message}`;
+        errorLog.message = `${err.message}${message || ''}`;
 
         if (err.stack) {
           errorLog.stack = err.stack;

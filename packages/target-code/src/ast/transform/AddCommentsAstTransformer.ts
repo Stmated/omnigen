@@ -18,6 +18,7 @@ import * as Code from '../Code';
 import * as FreeText from '../FreeText';
 import {CodeOptions, IncludeExampleCommentsMode} from '../../options/CodeOptions';
 import {FreeTextUtils} from '../../util/FreeTextUtils';
+import {CodeAstUtils} from '../CodeAstUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -42,8 +43,10 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
       visitField: n => {
 
-        if (args.options.commentsOnFields) { // } || (args.options.commentsOnGetters && n.property)) {
-          const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n, args);
+        // Add comment if enabled on fields or on getters/accessors.
+        // It is up to any transformer which adds the accessors for the field to remove the comment from the field if it should not stay there.
+        if (args.options.commentsOnFields/* || args.options.commentsOnGetters*/) { // } || (args.options.commentsOnGetters && n.property)) {
+          const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.type, args);
           if (ownerCommentsText) {
             n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
           }
@@ -61,10 +64,12 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       visitMethodDeclaration: n => {
 
         if (args.options.commentsOnGetters) {
-          if (!n.signature.parameters || n.signature.parameters.children.length == 0) {
+
+          const returnNode = CodeAstUtils.getSoloReturnOfNoArgsMethod(n);
+          if (returnNode) {
             const type = n.signature.type.omniType;
             if (!OmniUtil.isPrimitive(type) || type.kind != OmniTypeKind.VOID) {
-              const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.signature, args);
+              const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.signature.type, args);
               if (ownerCommentsText) {
                 n.signature.comments = new Code.Comment(FreeTextUtils.add(n.signature.comments?.text, ownerCommentsText), n.signature.comments?.kind);
               }
@@ -79,11 +84,11 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
   }
 
   public static getOwnerComments(
-    node: {type: TypeNode, comments?: Code.Comment | undefined},
+    typeNode: TypeNode,
     args: AstTransformerArguments<Code.CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>,
   ): FreeText.FriendlyFreeTextIn | undefined {
 
-    return AddCommentsAstTransformer.getCommentsForType(args.root, node.type.omniType, args.model, args.options);
+    return AddCommentsAstTransformer.getCommentsForType(args.root, typeNode.omniType, args.model, args.options);
   }
 
   public static getCommentsForType(
@@ -168,7 +173,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       }
     }
 
-    if (options.includeExampleCommentsMode == IncludeExampleCommentsMode.ALWAYS) {
+    if (options.includeExampleCommentsMode === IncludeExampleCommentsMode.ALWAYS) {
       if (type.examples && type.examples.length > 0) {
         for (const example of type.examples) {
           comments.push(new FreeText.FreeTextExample(Util.trimAny(JSON.stringify(example.value), `"'`)));

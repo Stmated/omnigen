@@ -4,7 +4,7 @@ import {
   OmniProperty,
   ParserOptions,
 } from '@omnigen/core';
-import {OMNI_GENERIC_FEATURES, TargetFeatures, TargetOptions} from '@omnigen/core';
+import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniModelTransformerArgs} from '@omnigen/core';
 import {PropertyDifference, TypeDiffKind} from '@omnigen/core';

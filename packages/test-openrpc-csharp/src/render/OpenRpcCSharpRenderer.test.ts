@@ -56,6 +56,17 @@ describe('OpenRpc+CSharp Rendering', () => {
     includeGenerated: false,
   })));
 
+  // test('sui-openrpc', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  //   singleFile: true,
+  //   includeGenerated: false,
+  //   csharpReadonlyPropertySetterMode: 'INIT',
+  //   commentsOnConstructors: false,
+  //   commentsOnFields: false,
+  //   commentsOnGetters: false,
+  //   commentsOnTypes: false,
+  //   singleFileName: 'sui',
+  // })));
+
   test('additional-properties', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     additionalPropertiesInterfaceAfterDuplicateCount: 1,
     singleFile: true,
@@ -65,3 +76,33 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFile: true,
   })));
 });
+
+// "validatorReportRecords": {
+//             "description": "A map storing the records of validator reporting each other.",
+//             "type": "array",
+//             "items": {
+//               "type": "array",
+//               "items": [
+//                 {
+//                   "$ref": "#/components/schemas/SuiAddress"
+//                 },
+//                 {
+//                   "type": "array",
+//                   "items": {
+//                     "$ref": "#/components/schemas/SuiAddress"
+//                   }
+//                 }
+//               ],
+//               "maxItems": 2,
+//               "minItems": 2
+//             }
+//           },
+
+// "SuiAddress": {
+//         "$ref": "#/components/schemas/Hex"
+//       },
+
+// "Hex": {
+//         "description": "Hex string encoding.",
+//         "type": "string"
+//       },

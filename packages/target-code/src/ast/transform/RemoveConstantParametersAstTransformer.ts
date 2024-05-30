@@ -57,7 +57,7 @@ export class RemoveConstantParametersAstTransformer implements AstTransformer<Co
           } else {
 
             const def = this.getDefault(resolved.type.omniType);
-            if (def !== undefined) {
+            if (def !== undefined && OmniUtil.isNullableType(resolved.type.omniType)) {
 
               // NOTE: This keeps the original param and ref.
               // In theory if this transformer was ran twice it would exponentially create ternary expressions.

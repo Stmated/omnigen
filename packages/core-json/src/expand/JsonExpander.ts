@@ -6,12 +6,11 @@ import {DocumentStore, JsonPathFetcher} from '../resolve/JsonPathFetcher.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export type ExpandUsingValue = string | number | object;
-export type ExpandUsing = ExpandUsingValue[];
+export type ExpandUsingValue = string | number | object | Array<string | number | object>;
 
 export type JsonPointerPath = string;
 
-export type ExpandNeedleMeta = { prefix?: string, suffix?: string, transform?: 'lowercase' | 'uppercase' };
+export type ExpandNeedleMeta = { with?: string, /* prefix?: string, suffix?: string */ transform?: 'lowercase' | 'uppercase' };
 export type ExpandNeedleObj = ExpandNeedleWithMeta | ExpandNeedleWithAttempts;
 
 export type ExpandNeedleWithMeta = { path: JsonPointerPath } & ExpandNeedleMeta;
@@ -23,7 +22,7 @@ export type ExpandFind = ExpandNeedle | ExpandNeedle[];
 type Predicate = (v: string) => boolean;
 
 export interface ExpandOptions {
-  using: ExpandUsing;
+  using: ExpandUsingValue[];
   at: ExpandFind;
   /**
    * Only required if the parent is an object, so we can know what key to use.
@@ -131,11 +130,11 @@ export class JsonExpander {
               }
 
               if (found) {
-                logger.debug(`Found as attempt ${i} for ${findItem.path}`);
+                logger.trace(`Found as attempt ${i} for ${findItem.path}`);
                 break;
               } else {
                 const attemptString = JSON.stringify(attempt);
-                logger.debug(`Could not find '${attemptString}' for ${findItem.path}`);
+                logger.trace(`Could not find '${attemptString}' for ${findItem.path}`);
                 attemptFailures.push(attemptString);
               }
             }
@@ -155,7 +154,15 @@ export class JsonExpander {
           parent.push(clone);
         } else {
 
-          const targetKey = options.as ? `${options.as.prefix ?? ''}${source}${options.as.suffix ?? ''}` : source;
+          let targetKey: ExpandUsingValue;
+          if (options.as) {
+            targetKey = this.transform(source, options.as);
+            // targetKey = `${options.as.prefix ?? ''}${source}${options.as.suffix ?? ''}`;
+          } else {
+            targetKey = source;
+          }
+
+          // = options.as ?  : source;
           if (typeof targetKey === 'string' || typeof targetKey === 'number') {
 
             logger.trace(`Adding expanded object for '${source}' to: ${parentPath} as ${targetKey}`);
@@ -184,21 +191,42 @@ export class JsonExpander {
       findItem = {path: findItem};
     }
 
-    let changedValue = `${findItem.prefix ?? ''}${source}${findItem.suffix ?? ''}`;
-    if (findItem.transform === 'lowercase') {
-      changedValue = changedValue.toLowerCase();
-    } else if (findItem.transform === 'uppercase') {
-      changedValue = changedValue.toUpperCase();
-    } else if (findItem.transform) {
-      throw new Error(`Invalid expansion transform ${findItem.transform}`);
-    }
+    const changedValue = this.transform(source, findItem);
 
-    if (predicate && !predicate(changedValue)) {
+    if (predicate && typeof changedValue === 'string' && !predicate(changedValue)) {
       return false;
     }
 
     logger.silent(`Setting '${findItem.path}' to '${changedValue}`);
     pointer.set(clone, findItem.path, changedValue);
     return true;
+  }
+
+  private transform(source: ExpandUsingValue, meta: ExpandNeedleMeta): ExpandUsingValue {
+
+    if (meta.with) {
+
+      const array = Array.isArray(source) ? source : [source];
+      source = meta.with.replace(/\$(\d)/g, (match, group) => {
+        return array[Math.min(Number.parseInt(group), array.length - 1)];
+      });
+    } else if (Array.isArray(source)) {
+
+      // There is no 'with' and the source is an array. We will pick the first value.
+      source = source[0];
+    }
+
+    if (typeof source === 'string' && meta.transform) {
+
+      if (meta.transform === 'lowercase') {
+        source = source.toLowerCase();
+      } else if (meta.transform === 'uppercase') {
+        source = source.toUpperCase();
+      } else {
+        throw new Error(`Invalid expansion transform ${meta.transform}`);
+      }
+    }
+
+    return source;
   }
 }

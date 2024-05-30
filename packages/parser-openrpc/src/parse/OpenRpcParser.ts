@@ -332,9 +332,8 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     // Now find all the types that were not referenced by a method, but is in the contract.
     // We most likely still want those types to be included.
     if (this.doc.components?.schemas) {
-      for (const key of Object.keys(this.doc.components.schemas)) {
-        const schema = this.doc.components.schemas[key] as JSONSchema9;
-        const deref = this._refResolver.resolve(schema);
+      for (const [key, schema] of Object.entries(this.doc.components.schemas)) {
+        const deref = this._refResolver.resolve(schema) as JSONSchema9;
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
@@ -387,8 +386,44 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       throw new Error(`Encountered Method without a 'name'-property, one must be set to:\n${JSON.stringify(method, undefined, 2)}`);
     }
 
-    const requestTypeAndProperties = this.toRequestTypeAndPropertiesFromMethod(method);
-    const resultResponse = this.toOmniOutputFromContentDescriptor(method, this._refResolver.resolve(method.result));
+    const methodNames: TypeName[] = [];
+
+    if ('x-title' in method) {
+      methodNames.push(`${method['x-title']}`);
+    }
+
+    methodNames.push(method.name);
+
+    if (method.tags) {
+      const tagNames: string[] = [];
+      for (const tag of method.tags) {
+        const resolved = this._refResolver.resolve(tag);
+        const trimmed = (resolved?.name ?? '').trim();
+        if (trimmed.length > 0) {
+          tagNames.push(trimmed);
+        }
+      }
+
+      if (tagNames.length > 1) {
+
+        // TODO: This should not map and Pascal-case the tagNames. Instead the `TypeName` should be able to declare that an array is required to be merged.
+        //          That way we can delay the formatting of the name until much later
+        methodNames.push({
+          name: method.name,
+          suffix: tagNames.map(it => Case.pascal(it)).join(''),
+        });
+      }
+
+      for (const tagName of tagNames) {
+        methodNames.push({
+          name: method.name,
+          suffix: Case.pascal(tagName),
+        });
+      }
+    }
+
+    const requestTypeAndProperties = this.toRequestTypeAndPropertiesFromMethod(method, methodNames);
+    const resultResponse = this.toOmniOutputFromContentDescriptor(method, this._refResolver.resolve(method.result), methodNames);
 
     const responses: OmniOutput[] = [];
 
@@ -416,6 +451,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       return this.examplePairingToGenericExample(resultResponse.type, requestTypeAndProperties.properties || [], deref);
     });
 
+    // TODO: Needs to be implemented, or solved some other way(s)
     if ('x-callbacks' in method) {
 
       const callbacks = method['x-callbacks'] as ToDefined<OpenApi.ComponentsObject['callbacks']>;
@@ -424,11 +460,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         const event = this._refResolver.resolve(eventOrRef);
         for (const [callbackUrl, callbackOrRef] of Object.entries(event)) {
           const callback = this._refResolver.resolve(callbackOrRef);
-
-
         }
       }
     }
+
+    const isCallback = 'x-callback' in method && Boolean(method['x-callback']);
+
+    logger.debug(`Done creating method '${method.name}'${isCallback ? ' (Which should be a callback)' : ''}`);
 
     return {
       name: method.name,
@@ -474,9 +512,12 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: ContentDescriptorObject): OutputAndType {
+  private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: ContentDescriptorObject, methodName: TypeName): OutputAndType {
 
-    const responseTypeName = `${Case.pascal(method.name)}Response`;
+    const responseTypeName: TypeName = {
+      name: methodName,
+      suffix: 'Response',
+    };
 
     const resultSchema = contentDescriptor.schema as JSONSchema9Definition;
     const resolvedResultSchema = this._refResolver.resolve(resultSchema);
@@ -490,15 +531,15 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     resultTypeName.push(
       contentDescriptor.name,
-      `${responseTypeName}Result`,
-      `${responseTypeName}ResultPayload`,
+      {name: responseTypeName, suffix: 'Result'},
+      {name: responseTypeName, suffix: 'ResultPayload'},
     );
 
     const resultType = this._jsonSchemaParser.jsonSchemaToType(resultTypeName, resolvedResultSchema);
 
     const responseType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
-      name: `${Case.pascal(method.name)}Response`,
+      name: responseTypeName,
       properties: [],
       description: method.description,
       summary: method.summary,
@@ -894,13 +935,18 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private toRequestTypeAndPropertiesFromMethod(method: MethodObject): TypeAndProperties {
+  private toRequestTypeAndPropertiesFromMethod(method: MethodObject, methodName: TypeName): TypeAndProperties {
 
-    const requestParamsType = this.toRequestPropertyFromParameters(method.name, method.paramStructure, method.params);
+    const requestName: TypeName = {
+      name: methodName,
+      suffix: 'Request',
+    };
+
+    const requestParamsType = this.toRequestPropertyFromParameters(method.name, method.paramStructure, method.params, requestName);
 
     const objectRequestType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
-      name: `${method.name}Request`,
+      name: requestName,
       title: method.name,
       properties: [],
       description: method.description,
@@ -941,6 +987,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     methodName: string,
     paramStructure: MethodObjectParamStructure | undefined,
     params: MethodObjectParams,
+    requestTypeName: TypeName,
   ) {
 
     let requestParamsType: OmniPropertyOwner;
@@ -964,7 +1011,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       requestParamsType = {
         kind: OmniTypeKind.OBJECT,
-        name: `${methodName}RequestParams`,
+        name: {
+          name: requestTypeName,
+          suffix: 'Params',
+        },
         properties: [],
       } satisfies OmniObjectType;
 

@@ -90,6 +90,11 @@ export class DefaultJsonSchemaParser implements Parser {
       try {
         const omniTypeRes = jsonSchemaParser.jsonSchemaToType(schema[0], resolved);
         model.types.push(omniTypeRes.type);
+        // if (OmniUtil.asExtendable(omniTypeRes.type)) {
+        //   if (omniTypeRes.type.extendedBy && !model.types.includes(omniTypeRes.type.extendedBy)) {
+        //     model.types.push(omniTypeRes.type.extendedBy);
+        //   }
+        // }
       } catch (ex) {
         const schemaName = typeof schema[1] === 'boolean' ? '{}' : (schema[1].$id ?? schema[1].title ?? schema[1].description ?? '???');
         throw new Error(`Error when handling schema '${schemaName}'`, {cause: ex});
@@ -189,10 +194,20 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       name = id;
     }
 
+    // Hack to be able to set a cached placeholder.
+    // This is required if there are recursive types.
+    // TODO: Perhaps add a special 'kind' that is 'PLACEHOLDER' so it can be reasoned about in other parts of the code, and not just have `kind: undefined`
+    // const omniType: OmniType = {} as OmniType;
+    // this._typeMap.set(id, omniType);
+
     const extendedBy = this.getExtendedBy(schema, name);
     const defaultType = this.getDefaultFromSchema(schema, name);
 
     const omniType = this.jsonSchemaToNonObjectType(schema, ownerSchema, name, id, extendedBy, defaultType) ?? this.jsonSchemaToObjectType(schema, name, id, extendedBy);
+
+    // const actualOmniType = this.jsonSchemaToNonObjectType(schema, ownerSchema, name, id, extendedBy, defaultType) ?? this.jsonSchemaToObjectType(schema, name, id, extendedBy);
+    // Object.assign(omniType, actualOmniType);
+
     this._typeMap.set(id, omniType);
 
     let subTypeHints: OmniSubTypeHint[] | undefined = undefined;
@@ -445,8 +460,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       }
     } else if (schema.type == undefined && extendedBy) {
 
-      schema.$recursiveAnchor;
-
       logger.silent(`No schema type found for ${schema.$id}, will check if can be deduced by: ${OmniUtil.describe(extendedBy)}`);
 
       extendedBy = OmniUtil.getUnwrappedType(extendedBy);
@@ -648,8 +661,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       }
     }
 
-    const enumValues = schema.enum;
-
     const lcType = schemaType.toLowerCase();
     let primitiveKind: OmniPrimitiveKinds;
     if (lcType == 'null') {
@@ -658,8 +669,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       primitiveKind = this.typeAndFormatToPrimitiveKind(lcType, schema.format?.toLowerCase() ?? '');
     }
 
-    if (enumValues && enumValues.length > 0) {
-      return this.toOmniEnum(name, schemaType, primitiveKind, enumValues, schema, schema.description);
+    if (schema.enum && schema.enum.length > 0) {
+      return this.toOmniEnum(name, schemaType, primitiveKind, schema.enum, schema, schema.description);
     }
 
     const isLiteral = ('const' in schema) || primitiveKind == OmniTypeKind.NULL || primitiveKind == OmniTypeKind.VOID;
@@ -680,6 +691,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     if ('const' in schema) {
       primitiveType.value = schema.const;
+    } else if (defaultType && OmniUtil.isPrimitive(defaultType) && defaultType.value !== undefined) {
+      primitiveType.value = defaultType.value;
     }
 
     return primitiveType;
@@ -1157,8 +1170,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     if (schema.if) {
 
-      // TODO: This is incorrect and need to fully support predicated types.
-      //        But for now this will have to do.
+      // TODO: This is incorrect and need to fully support predicated types. But for now this will have to do.
 
       const types: OmniType[] = [];
       if (schema.then) {
@@ -1176,6 +1188,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       if (types.length > 1) {
         compositionsAllOfAnd.push({
           kind: OmniTypeKind.UNION,
+          inline: false,
           types: types,
         });
       } else if (types.length === 1) {

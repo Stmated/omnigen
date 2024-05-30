@@ -35,6 +35,6 @@ export type ListThingsRequest = JsonRpcRequest;
 export type ListThingsRequestParams = JsonRpcRequestParams;
 export type ListThingsResponse = JsonRpcResponse;
 export interface Thing {
-  readonly [key: string /* Pattern: ".*" */]: any | undefined;
   readonly id: string;
+  readonly [key: string]: any;
 }

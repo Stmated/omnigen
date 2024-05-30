@@ -185,7 +185,7 @@ export class OmniModelMerge {
       }
 
       // Create the wrapper to tell that the type is in another model.
-      const toExternal: OmniExternalModelReferenceType<OmniType> = {
+      const toExternal: OmniExternalModelReferenceType = {
         kind: OmniTypeKind.EXTERNAL_MODEL_REFERENCE,
         model: common,
         of: replacement.to,

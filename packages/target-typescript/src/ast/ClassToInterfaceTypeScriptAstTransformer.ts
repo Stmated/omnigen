@@ -1,6 +1,6 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode, UnknownKind} from '@omnigen/core';
-import {Code, CodeAstUtils} from '@omnigen/target-code';
+import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/core';
+import {Code, CodeAstUtils, CodeUtil} from '@omnigen/target-code';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
 import {Case, OmniUtil} from '@omnigen/core-util';
@@ -46,60 +46,56 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
 
           const interfaces: TypeNode[] = [];
 
-          if (n.implements) {
+          for (const child of (n.implements?.types.children ?? [])) {
 
-            for (const child of n.implements.types.children) {
+            interfaces.push(child);
 
+            if (child.omniType.kind === OmniTypeKind.INTERFACE && !child.omniType.name) {
 
-              interfaces.push(child);
+              const implementationName = ('name' in child.omniType.of) ? child.omniType.of.name : undefined;
+              if (implementationName) {
 
-              if (child.omniType.kind === OmniTypeKind.INTERFACE && !child.omniType.name) {
-
-                const implementationName = ('name' in child.omniType.of) ? child.omniType.of.name : undefined;
-                if (implementationName) {
-
-                  // We prefer the exact same name as the original thing we are wrapping, since all classes will be interfaces.
-                  child.omniType.name = implementationName;
-                }
+                // We prefer the exact same name as the original thing we are wrapping, since all classes will be interfaces.
+                child.omniType.name = implementationName;
               }
-
             }
           }
 
-          if (n.extends) {
+          // If a class extends another class, then we should instead convert those classes into interfaces and add to our extends list.
+          for (const child of (n.extends?.types.children ?? [])) {
 
-            // If a class extends another class, then we should instead convert those classes into interfaces and add to our extends list.
-            for (const child of n.extends.types.children) {
+            const existing = classToInterfaceMap.get(child);
+            if (existing) {
 
-              const existing = classToInterfaceMap.get(child);
-              if (existing) {
+              logger.debug(`Found existing '${existing}' for '${child}'`);
+              interfaces.push(existing);
 
-                interfaces.push(existing);
+            } else {
+
+              if (OmniUtil.asSuperType(child.omniType)) {
+
+                logger.trace(`Going to create interface version of ${OmniUtil.describe(child.omniType)} for ${OmniUtil.describe(n.type.omniType)}`);
+
+                const interfaceType: OmniInterfaceType = {
+                  kind: OmniTypeKind.INTERFACE,
+                  of: child.omniType,
+                  inline: true,
+                };
+
+                const implementationName = ('name' in child.omniType) ? child.omniType.name : undefined;
+                if (implementationName) {
+
+                  // We prefer the exact same name as the original thing we are wrapping, since all classes will be interfaces.
+                  interfaceType.name = implementationName;
+                }
+
+                // TODO: A node for this might already exist! We SHOULD/MUST use that one instead. Perhaps the transformation needs to be done in two steps.
+                const interfaceTypeNode = args.root.getAstUtils().createTypeNode(interfaceType);
+
+                interfaces.push(interfaceTypeNode);
 
               } else {
-
-                if (OmniUtil.asSuperType(child.omniType)) {
-
-                  const implementationName = ('name' in child.omniType) ? child.omniType.name : undefined;
-                  const interfaceType: OmniInterfaceType = {
-                    kind: OmniTypeKind.INTERFACE,
-                    of: child.omniType,
-                  };
-
-                  if (implementationName) {
-
-                    // We prefer the exact same name as the original thing we are wrapping, since all classes will be interfaces.
-                    interfaceType.name = implementationName;
-                  }
-
-                  // TODO: A node for this might already exist! We SHOULD/MUST use that one instead. Perhaps the transformation needs to be done in two steps.
-                  const interfaceTypeNode = args.root.getAstUtils().createTypeNode(interfaceType);
-
-                  interfaces.push(interfaceTypeNode);
-
-                } else {
-                  logger.warn(`Could not move ${OmniUtil.describe(child.omniType)} to be a TypeScript interface, since it is not a supertype`);
-                }
+                logger.warn(`Could not move ${OmniUtil.describe(child.omniType)} to be a TypeScript interface, since it is not a supertype`);
               }
             }
           }
@@ -125,13 +121,17 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
       },
       reduceGetter: n => {
 
-        return new Code.Field(
+        const field = new Code.Field(
           n.returnType,
           n.identifier.identifier,
           new Code.ModifierList(),
           undefined,
           undefined,
         );
+
+        field.comments = n.comments;
+
+        return field;
       },
       reduceField: n => {
 
@@ -139,7 +139,13 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
         if (reducedField && reducedField.property) {
           const propertyName = OmniUtil.getPropertyName(reducedField.property.name);
           if (propertyName) {
-            reducedField.identifier = new Code.Identifier(propertyName);
+
+            // NOTE: This should probably be moved to another transformer that does it to all identifiers
+            const safePropertyName = CodeUtil.getSafeIdentifierNameRelaxed(propertyName);
+            const quoteChar = args.options.preferSingleQuoteStrings ? '\'' : '"';
+            const usedPropertyName = (safePropertyName === propertyName) ? propertyName : `${quoteChar}${propertyName}${quoteChar}`;
+
+            reducedField.identifier = new Code.Identifier(usedPropertyName);
           }
         }
 
@@ -188,6 +194,8 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
         undefined,
         method.signature.annotations,
       );
+
+      newField.comments = method.signature.comments;
 
       return this.toUniqueField(newField, fieldNames);
     } else {

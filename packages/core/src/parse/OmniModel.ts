@@ -384,6 +384,9 @@ export interface OmniPrimitiveBaseType<K extends OmniPrimitiveKinds = OmniPrimit
 
   /**
    * Means "default" if `literal` is false, means "constant value" if `literal` is true.
+   *
+   * TODO: Should perhaps be an OmniPrimitiveType instead, with `literal: true` -- so we can have more lossless handling of the value (like comments for the "default" value)
+   * TODO: Perhaps also remove the `literal` boolean and instead have two different `defaultValue` and `constValue` properties here instead, to separate them and make them clearer
    */
   value?: OmniPrimitiveConstantValue | OmniPrimitiveConstantValue[] | undefined;
   /**

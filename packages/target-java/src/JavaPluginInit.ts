@@ -16,10 +16,10 @@ import {CompositionGenericTargetToObjectJavaModelTransformer} from './parse';
 import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from '.';
 import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions} from '@omnigen/core';
 import {z} from 'zod';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SimplifyInheritanceModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import * as Java from './ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
-import {DeleteUnnecessaryCompositionsJavaModelTransformer, InterfaceExtractorModelTransformer} from '@omnigen/target-code';
+import {SimplifyUnnecessaryCompositionsModelTransformer, InterfaceExtractorModelTransformer, AggregateIntersectionsModelTransformer} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -95,9 +95,13 @@ export const JavaPlugin = createPlugin(
     };
 
     const transformers = [
+      // new SimplifyInheritanceModelTransformer(),
+      // new ElevatePropertiesModelTransformer(),
+      // new GenericsModelTransformer(),
+      new AggregateIntersectionsModelTransformer(),
       new CompositionGenericTargetToObjectJavaModelTransformer(),
       new InterfaceExtractorModelTransformer(),
-      new DeleteUnnecessaryCompositionsJavaModelTransformer(),
+      new SimplifyUnnecessaryCompositionsModelTransformer(),
     ];
 
     for (const transformer of transformers) {

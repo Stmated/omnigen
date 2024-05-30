@@ -1,21 +1,18 @@
 import {
   OmniCompositionType,
   OmniExclusiveUnionType,
-  OmniInterfaceOrObjectType,
   OmniIntersectionType,
   OmniKindComposition,
   OmniModel,
   OmniNegationType,
   OmniObjectType,
   OmniPrimitiveType,
-  OmniProperty,
   OmniSubTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   OmniUnionType,
 } from '@omnigen/core';
-import * as Java from '../ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Case, OmniUtil} from '@omnigen/core-util';
 import {CodeUtil} from '@omnigen/target-code';
@@ -34,23 +31,6 @@ export type JavaSuperTypeCapableType =
   | OmniUnionType<JavaSuperTypeCapableType>
   | OmniExclusiveUnionType<JavaSuperTypeCapableType>
   | OmniNegationType<JavaSuperTypeCapableType>;
-
-// export interface TypeNameInfo {
-//   packageName: string | undefined;
-//   className: string;
-//   outerTypes: Java.AbstractObjectDeclaration[];
-// }
-//
-// interface FqnOptions {
-//   type: OmniType,
-//   options?: JavaAndTargetOptions | undefined;
-//   withSuffix?: boolean | undefined;
-//   withPackage?: boolean | undefined;
-//   withInner?: string[] | undefined;
-//   implementation?: boolean | undefined;
-//   boxed?: boolean | undefined;
-//   localNames?: Map<OmniType, TypeNameInfo> | undefined;
-// }
 
 export const JAVA_RESERVED_WORDS = [
   'abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class',
@@ -107,23 +87,6 @@ export class JavaUtil {
 
   public static asSuperType(type: OmniType | undefined, silent = true): type is JavaSuperTypeCapableType {
     return OmniUtil.asSuperType(type, silent);
-  }
-
-  /**
-   * On the Omni side of things we have two types: Object & Interface.
-   *
-   * Interface is when the source schema has specified the type as being an interface and not an implementation.
-   *
-   * Object is when the source schema has specified the shape of an object.
-   *
-   * But depending on the target language, that Object might be handled/rendered as an interface.
-   * This is most apparent when dealing with JSONSchema to Java (or any language with single-inheritance).
-   *
-   * The schema might say "This object extends types A, B, C" but the language only allows inheriting from "A".
-   * It then needs to handle B and C as interfaces and then try to live up to that contract on the subtype of A.
-   */
-  public static getSuperInterfacesOfSubType(_model: OmniModel, subType: OmniType): OmniInterfaceOrObjectType[] {
-    return CodeUtil.getSuperInterfacesOfSubType(_model, subType);
   }
 
   public static getAsClass(model: OmniModel, type: OmniType): JavaPotentialClassType | undefined {
@@ -227,19 +190,5 @@ export class JavaUtil {
     }
 
     return path;
-  }
-
-  public static getExtendsAndImplements(
-    model: OmniModel,
-    type: OmniType,
-  ): [JavaSuperTypeCapableType | undefined, OmniInterfaceOrObjectType[]] {
-
-    const typeExtends = CodeUtil.getSuperClassOfSubType(model, type, false);
-
-    if (!OmniUtil.isComposition(type)) {
-      return [typeExtends, JavaUtil.getSuperInterfacesOfSubType(model, type)];
-    } else {
-      return [typeExtends, []];
-    }
   }
 }

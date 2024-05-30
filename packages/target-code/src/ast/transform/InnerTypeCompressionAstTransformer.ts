@@ -64,8 +64,8 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
           // To decrease the number of files, we can compress the types and make this an inner type.
           const definedInObjectDec = typeToObjectDec.get(type);
           if (!definedInObjectDec) {
-            // const existingList = [...typeToObjectDec.entries()].map(it => `${OmniUtil.describe(it[0])}: ${it[1].name.value}`).join('\n');
-            throw new Error(`Could not find the object source where '${OmniUtil.describe(type)}' is defined`); // , we have:\n${existingList}`);
+            throw new Error(`Could not find where '${OmniUtil.describe(type)}' is declared`);
+            // continue;
           }
 
           const definedInUnit = typeToUnit.get(type);

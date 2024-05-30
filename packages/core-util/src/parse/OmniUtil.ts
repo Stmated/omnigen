@@ -16,7 +16,7 @@ import {
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
-  OmniInput,
+  OmniInput, OmniInterfaceType,
   OmniKindComposition,
   OmniModel,
   OmniObjectType,
@@ -121,6 +121,9 @@ export class OmniUtil {
 
     if (set.has(ctx.type)) {
       ctx.skip = true;
+      if (ctx.typeDepth == 0) {
+        setEdge.add(ctx.type);
+      }
       return;
     }
 
@@ -131,12 +134,6 @@ export class OmniUtil {
         return;
       }
     }
-
-    // if (ctx.type.kind == OmniTypeKind.DECORATING) {
-    //
-    //   // We do not add the decorating type itself
-    //   return;
-    // }
 
     set.add(ctx.type);
     if (ctx.typeDepth == 0) {
@@ -175,6 +172,15 @@ export class OmniUtil {
     }
 
     return type as SmartUnwrappedType<T>;
+  }
+
+  public static asExtendable(type: OmniType | undefined): type is OmniObjectType | OmniInterfaceType {
+
+    if (type && 'extendedBy' in type) {
+      return true;
+    }
+
+    return false;
   }
 
   public static asSubType(type: OmniType | undefined): type is OmniSubTypeCapableType {
@@ -503,7 +509,7 @@ export class OmniUtil {
     } else if (value === null) {
       return OmniTypeKind.NULL;
     } else if (typeof value === 'object') {
-      throw new Error(`Need to implement what should happen if given an object literal`);
+      throw new Error(`Need to implement what should happen if given an object literal: ${JSON.stringify(value)}`);
     }
 
     assertUnreachable(value);
@@ -617,14 +623,14 @@ export class OmniUtil {
 
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
       if (type.placeholderName) {
-        return `[${OmniUtil.describe(type.type)} as ${type.placeholderName} -> ${type.sourceIdentifier.placeholderName}]`;
+        return `${type.placeholderName} -> ${type.sourceIdentifier.placeholderName}: ${OmniUtil.describe(type.type)}`;
       } else {
-        return `[${OmniUtil.describe(type.type)} -> ${type.sourceIdentifier.placeholderName}]`;
+        return `${type.sourceIdentifier.placeholderName}: ${OmniUtil.describe(type.type)}`;
       }
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      return `${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.targetIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
+      return `Target:${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.targetIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-      return `${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.sourceIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
+      return `Source:${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.sourceIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
     }
 
     const baseName = this.simplifyTypeName(OmniUtil.getVirtualTypeName(type));
@@ -760,17 +766,22 @@ export class OmniUtil {
    *
    * NOT to be relied upon or used for naming output classes or types.
    */
-  public static getVirtualTypeName(type: OmniType): TypeName {
+  public static getVirtualTypeName(type: OmniType, depth?: number): TypeName {
+
+    depth = depth ?? 0;
+    if (depth >= 10) {
+      return `TYPE-DEPTH-EXCEEDED:${depth}`;
+    }
 
     if (type.kind == OmniTypeKind.ARRAY) {
       return {
         prefix: 'ArrayOf',
-        name: OmniUtil.getVirtualTypeName(type.of),
+        name: OmniUtil.getVirtualTypeName(type.of, depth + 1),
       };
     } else if (type.kind == OmniTypeKind.TUPLE) {
       return {
         prefix: 'TupleOf',
-        name: type.types.map(it => OmniUtil.getVirtualTypeName(it)).join(''),
+        name: type.types.map(it => OmniUtil.getVirtualTypeName(it, depth + 1)).join(''),
       };
     } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
       return {
@@ -800,12 +811,12 @@ export class OmniUtil {
 
     } else if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
       return {
-        prefix: OmniUtil.getVirtualTypeName(type.of),
+        prefix: OmniUtil.getVirtualTypeName(type.of, depth + 1),
         name: 'From',
         suffix: type.model.name,
       };
     } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      const genericTypes = type.targetIdentifiers.map(it => OmniUtil.getVirtualTypeName(it));
+      const genericTypes = type.targetIdentifiers.map(it => OmniUtil.getVirtualTypeName(it, depth + 1));
       const genericTypeString = genericTypes.join(', ');
       return {
         name: OmniUtil.getTypeName(type) ?? 'N/A',
@@ -820,8 +831,8 @@ export class OmniUtil {
     } else if (type.kind == OmniTypeKind.DICTIONARY) {
 
       // TODO: Convert this into a generic type instead! Do NOT rely on this UGLY hardcoded string method!
-      const keyName = OmniUtil.getVirtualTypeName(type.keyType);
-      const valueName = OmniUtil.getVirtualTypeName(type.valueType);
+      const keyName = OmniUtil.getVirtualTypeName(type.keyType, depth + 1);
+      const valueName = OmniUtil.getVirtualTypeName(type.valueType, depth + 1);
       return {
         prefix: `[`,
         name: {
@@ -853,7 +864,7 @@ export class OmniUtil {
         prefix: prefix,
         name: {
           prefix: '(',
-          name: type.types.map(it => OmniUtil.getVirtualTypeName(it)).join(','),
+          name: type.types.map(it => OmniUtil.getVirtualTypeName(it, depth + 1)).join(','),
         },
         suffix: `)`,
       };
@@ -864,7 +875,7 @@ export class OmniUtil {
       return Naming.unwrap(typeName);
     }
 
-    throw new Error(`[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`);
+    return (`[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`);
   }
 
   public static toReferenceType<T extends OmniType>(type: T): T {
@@ -1997,7 +2008,7 @@ export class OmniUtil {
         } else {
           // This property already exists, so we should try and find common type.
           if (lossless) {
-            throw new Error(`Property ${toProperty.name} already exists, and merging should be lossless`);
+            throw new Error(`Property '${OmniUtil.getPropertyName(toProperty.name, true)}' already exists, and merging should be lossless`);
           } else {
             OmniUtil.mergeTwoPropertiesAndAddToClassType(fromProperty, toProperty, to);
           }

@@ -24,7 +24,9 @@ import {
   AstTransformer,
   DEFAULT_PACKAGE_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
+  OmniModelTransformer,
   OmniModelTransformer2ndPassArgs,
+  OmniModelTransformerArgs,
   PackageOptions,
   ParserOptions,
   TargetOptions,
@@ -32,7 +34,7 @@ import {
   ZodParserOptions,
 } from '@omnigen/core';
 import {z} from 'zod';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SimplifyInheritanceModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -43,12 +45,15 @@ import {
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
-  InnerTypeCompressionAstTransformer, MethodToGetterCodeAstTransformer,
+  InnerTypeCompressionAstTransformer,
+  MethodToGetterCodeAstTransformer,
   PackageResolverAstTransformer,
-  RemoveConstantParametersAstTransformer, RemoveEnumFieldsCodeAstTransformer,
+  RemoveConstantParametersAstTransformer,
+  RemoveEnumFieldsCodeAstTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyGenericsAstTransformer,
+  SimplifyUnnecessaryCompositionsModelTransformer,
   ToConstructorBodySuperCallAstTransformer,
 } from '@omnigen/target-code';
 import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
@@ -79,7 +84,6 @@ export const ZodTypeScriptInitContextIn = ZodModelContext.extend({
 
 export const ZodTypeScriptInitContextOut = ZodModelContext
   .merge(ZodTypeScriptOptionsContext)
-  // .merge(JavaPlugins.ZodJavaOptionsContext)
   .merge(ZodTypeScriptTargetContext);
 
 export const ZodTypeScriptContextIn = ZodModelContext
@@ -89,7 +93,6 @@ export const ZodTypeScriptContextIn = ZodModelContext
     .merge(ZodModelTransformOptionsContext)
     .merge(ZodTypeScriptOptionsContext)
     .merge(ZodTypeScriptTargetContext)
-  // .merge(JavaPlugins.ZodJavaOptionsContext)
 ;
 
 export const ZodTypeScriptContextOut = ZodTypeScriptContextIn
@@ -118,7 +121,6 @@ export const TypeScriptPluginInit = createPlugin(
       ...ctx,
       target: 'typescript',
       tsOptions: typescriptOptions.data,
-      // javaOptions: javaOptions.data,
       targetFeatures: TYPESCRIPT_FEATURES,
     } as const;
   },
@@ -127,6 +129,23 @@ export const TypeScriptPluginInit = createPlugin(
 export const TypeScriptPlugin = createPlugin(
   {name: 'ts', in: ZodTypeScriptContextIn, out: ZodTypeScriptContextOut, score: PluginScoreKind.REQUIRED},
   async ctx => {
+
+    const modelTransformerArgs: OmniModelTransformerArgs<ParserOptions> = {
+      model: ctx.model,
+      options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
+    };
+
+    const transformers: OmniModelTransformer[] = [
+      // new SimplifyInheritanceModelTransformer(),
+      // new ElevatePropertiesModelTransformer(),
+      // new GenericsModelTransformer(),
+      // new InterfaceExtractorModelTransformer(),
+      new SimplifyUnnecessaryCompositionsModelTransformer(),
+    ];
+
+    for (const transformer of transformers) {
+      transformer.transformModel(modelTransformerArgs);
+    }
 
     // Then do 2nd pass transforming
 
@@ -142,8 +161,6 @@ export const TypeScriptPlugin = createPlugin(
     ] as const;
 
     for (const transformer of transformers2) {
-
-      logger.info(`${transformer.transformModel2ndPass.name}: ${modelTransformer2Args.model.types.length}`);
       transformer.transformModel2ndPass(modelTransformer2Args);
     }
 
@@ -218,8 +235,6 @@ export const TypeScriptRendererPlugin = createPlugin(
   async ctx => {
 
     const rootTsNode = ctx.astNode as Ts.TsRootNode;
-
-    logger.info(`Root node: ${rootTsNode.children.length}`);
 
     const renderer = createTypeScriptRenderer(rootTsNode, {
       // ...DEFAULT_JAVA_OPTIONS,

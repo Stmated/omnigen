@@ -7,7 +7,7 @@ import {
   OmniType,
   OmniTypeKind,
   ParserOptions,
-  TargetOptions,
+  TargetOptions, UnknownKind,
 } from '@omnigen/core';
 import {TypeScriptOptions} from '../../options';
 import {OmniUtil} from '@omnigen/core-util';
@@ -54,6 +54,11 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
         }
 
         if (OmniUtil.isUndefined(property.type)) {
+          continue;
+        }
+
+        if (property.type.kind === OmniTypeKind.UNKNOWN && property.type.unknownKind === UnknownKind.ANY) {
+          // `any` can be `undefined` so no need for `undefined`.
           continue;
         }
 

@@ -71,12 +71,14 @@ export class Getter extends AbstractTypeScriptNode {
   readonly target: AstNode;
   readonly returnType: TypeNode;
   readonly modifiers: Code.ModifierList;
+  readonly comments: Code.Comment | undefined;
 
-  constructor(identifier: GetterIdentifier, target: AstNode, returnType: TypeNode, modifiers: Code.ModifierList) {
+  constructor(identifier: GetterIdentifier, target: AstNode, returnType: TypeNode, comments: Code.Comment | undefined, modifiers: Code.ModifierList) {
     super();
     this.identifier = identifier;
     this.target = target;
     this.returnType = returnType;
+    this.comments = comments;
     this.modifiers = modifiers;
   }
 

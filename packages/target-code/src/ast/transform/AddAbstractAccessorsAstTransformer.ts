@@ -31,9 +31,9 @@ export class AddAbstractAccessorsAstTransformer implements AstTransformer<CodeRo
 
           const type = property.type;
 
-          const literalMethod = new Code.AbstractMethodDeclaration(
+          const literalMethod = new Code.MethodDeclaration(
             new Code.MethodDeclarationSignature(
-              new Code.GetterIdentifier(new Code.Identifier(name), args.root.getAstUtils().createTypeNode(property.type)),
+              new Code.GetterIdentifier(new Code.Identifier(name), property.type),
               new Code.EdgeType(type),
               undefined,
               new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC), new Code.Modifier(Code.ModifierType.ABSTRACT)),

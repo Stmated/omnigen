@@ -17,7 +17,7 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
 
   transformAst(args: AstTransformerArguments<CodeRootAstNode, TargetOptions & CodeOptions>): void {
 
-    const owner: { node: Code.AbstractObjectDeclaration | undefined } = {node: undefined};
+    const objectStack: Code.AbstractObjectDeclaration[] = []; // { node: Code.AbstractObjectDeclaration | undefined } = {node: undefined};
     const defaultVisitor = args.root.createVisitor();
     args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
 
@@ -37,13 +37,17 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
           return;
         }
 
-        owner.node = node;
-        defaultVisitor.visitClassDeclaration(node, visitor);
+        try {
+          objectStack.push(node);
+          defaultVisitor.visitClassDeclaration(node, visitor);
+        } finally {
+          objectStack.pop();
+        }
       },
 
       visitField: node => {
 
-        if (!owner.node) {
+        if (objectStack.length === 0) {
           throw new Error(`Visited a field before we ever encountered a compilation unit`);
         }
 
@@ -51,7 +55,8 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
           return;
         }
 
-        AddAccessorsForFieldsAstTransformer.addAccessorForField(owner.node.body, node);
+        const objectDec = objectStack[objectStack.length - 1];
+        AddAccessorsForFieldsAstTransformer.addAccessorForField(objectDec.body, node);
       },
     }));
   }
@@ -73,14 +78,14 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
 
     const propertyAccessorName = field.property ? OmniUtil.getPropertyAccessorName(field.property.name) : undefined;
     const getterIdentifier = propertyAccessorName
-      ? new Code.GetterIdentifier(new Code.Identifier(propertyAccessorName), new Code.EdgeType(type))
+      ? new Code.GetterIdentifier(new Code.Identifier(propertyAccessorName), type)
       : undefined;
 
     if (OmniUtil.hasSpecifiedConstantValue(type)) {
 
       const literalMethod = new Code.MethodDeclaration(
         new Code.MethodDeclarationSignature(
-          getterIdentifier ?? new Code.GetterIdentifier(field.identifier, new Code.EdgeType(type)),
+          getterIdentifier ?? new Code.GetterIdentifier(field.identifier, type),
           new Code.EdgeType(type), undefined, undefined, annotationList, commentList,
         ),
         new Code.Block(

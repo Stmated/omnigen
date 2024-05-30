@@ -34,7 +34,7 @@ export const createJavaRenderer = (root: Java.JavaAstRootNode, options: JavaOpti
     visitGetterIdentifier: (n, v) => {
 
       const identifier = render(n.identifier, v);
-      return `${JavaUtil.getGetterName(identifier, n.type.omniType)}`;
+      return `${JavaUtil.getGetterName(identifier, n.type)}`;
     },
     visitSetterIdentifier: (n, v) => {
 

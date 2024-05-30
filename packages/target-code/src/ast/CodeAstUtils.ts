@@ -192,10 +192,11 @@ export class CodeAstUtils implements AstTargetFunctions {
       }
 
       body.children.push(
-        new Code.AbstractMethodDeclaration(
+        new Code.MethodDeclaration(
           new Code.MethodDeclarationSignature(
-            new Code.GetterIdentifier(new Code.Identifier(accessorName), root.getAstUtils().createTypeNode(property.type)),
-            root.getAstUtils().createTypeNode(property.type, false),
+            new Code.GetterIdentifier(new Code.Identifier(accessorName), property.type),
+            new Code.EdgeType(property.type),
+            // root.getAstUtils().createTypeNode(property.type, false),
             undefined,
             new Code.ModifierList(),
           ),

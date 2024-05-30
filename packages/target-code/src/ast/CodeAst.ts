@@ -219,9 +219,9 @@ export class Identifier extends AbstractCodeNode {
 export class GetterIdentifier extends AbstractCodeNode {
 
   identifier: Identifier;
-  type: TypeNode;
+  type: OmniType;
 
-  constructor(identifier: Identifier, type: TypeNode) {
+  constructor(identifier: Identifier, type: OmniType) {
     super();
     this.identifier = identifier;
     this.type = type;
@@ -738,23 +738,6 @@ export class MethodDeclarationSignature extends AbstractCodeNode {
 
   reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<MethodDeclarationSignature> {
     return reducer.reduceMethodDeclarationSignature(this, reducer);
-  }
-}
-
-export class AbstractMethodDeclaration extends AbstractCodeNode {
-  signature: MethodDeclarationSignature;
-
-  constructor(signature: MethodDeclarationSignature) {
-    super();
-    this.signature = signature;
-  }
-
-  visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
-    return visitor.visitAbstractMethodDeclaration(this, visitor);
-  }
-
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
-    return reducer.reduceAbstractMethodDeclaration(this, reducer);
   }
 }
 

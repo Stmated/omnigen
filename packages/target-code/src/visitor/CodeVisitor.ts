@@ -2,7 +2,6 @@ import {AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/core';
 import {createCodeFreeTextVisitor} from '../';
 import * as Code from '../ast/Code';
 import {AstFreeTextVisitor} from './FreeTextVisitor.ts';
-import {AbstractCodeNode} from '../ast/AbstractCodeNode.ts';
 
 export type CodeVisitFn<N extends AstNode, R> = VisitFn<N, R, CodeVisitor<R>>;
 
@@ -28,7 +27,6 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitFieldBackedSetter: CodeVisitFn<Code.FieldBackedSetter, R>;
   visitMethodDeclaration: CodeVisitFn<Code.MethodDeclaration, R>;
   visitMethodDeclarationSignature: CodeVisitFn<Code.MethodDeclarationSignature, R>;
-  visitAbstractMethodDeclaration: CodeVisitFn<Code.AbstractMethodDeclaration, R>;
   visitExtendsDeclaration: CodeVisitFn<Code.ExtendsDeclaration, R>;
   visitImplementsDeclaration: CodeVisitFn<Code.ImplementsDeclaration, R>;
   visitTypeList: CodeVisitFn<Code.TypeList, R>;
@@ -183,7 +181,6 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
       }
       return results;
     },
-    visitAbstractMethodDeclaration: (node, visitor) => node.signature.visit(visitor),
     visitExtendsDeclaration: (node, visitor) => node.types.visit(visitor),
     visitImplementsDeclaration: (node, visitor) => node.types.visit(visitor),
     visitTypeList: (node, visitor) => node.children.map(it => it.visit(visitor)),
@@ -202,7 +199,6 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     visitImportList: (n, v) => n.children.map(it => it.visit(v)),
     visitMethodCall: (n, v) => [
       n.target.visit(v),
-      // node.methodName.visit(visitor),
       n.methodArguments?.visit(v),
     ],
     visitNewStatement: (n, v) => [

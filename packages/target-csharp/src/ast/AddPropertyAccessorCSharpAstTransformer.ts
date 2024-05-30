@@ -48,9 +48,9 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
           interfaceDepth--;
         }
       },
-      reduceAbstractMethodDeclaration: n => {
+      reduceMethodDeclaration: n => {
 
-        if (n.signature.identifier instanceof Code.GetterIdentifier) {
+        if (!n.body && n.signature.identifier instanceof Code.GetterIdentifier) {
 
           const propertyNode = this.createPropertyNode(args, n.signature.type, n.signature.identifier.identifier, undefined, n.signature.comments, undefined, n.signature.annotations);
 

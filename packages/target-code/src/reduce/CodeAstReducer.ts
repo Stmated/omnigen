@@ -106,28 +106,13 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reduceIdentifier: n => n,
     reduceGetterIdentifier: (n, r) => new Code.GetterIdentifier(
       assertDefined(n.identifier.reduce(r)),
-      assertDefined(n.type.reduce(r)),
+      n.type,
     ).withIdFrom(n),
     reduceSetterIdentifier: (n, r) => new Code.SetterIdentifier(
       assertDefined(n.identifier.reduce(r)),
       assertDefined(n.type.reduce(r)),
     ).withIdFrom(n),
     reduceToken: n => n,
-
-    // reduceAssignExpression: (n, r) => {
-    //
-    //   const left = n.left.reduce(r);
-    //   const right = n.right.reduce(r);
-    //
-    //   if (left === undefined || right === undefined) {
-    //
-    //     // If the left or right node was removed, then we either have nothing to assign to, or nothing to assign from. So we remove ourself.
-    //     return undefined;
-    //   }
-    //
-    //   return new Code.AssignExpression(left, right).withIdFrom(n);
-    // },
-    // new Code.TokenNode(Code.TokenKind.ASSIGN),
 
     reduceBinaryExpression: (n, r) => {
       const left = n.left.reduce(r);
@@ -211,7 +196,6 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
         n.throws?.reduce(r),
       ).withIdFrom(n);
     },
-    reduceAbstractMethodDeclaration: (n, r) => new Code.AbstractMethodDeclaration(assertDefined(n.signature.reduce(r))).withIdFrom(n),
     reduceExtendsDeclaration: (n, r) => new Code.ExtendsDeclaration(assertDefined(n.types.reduce(r))).withIdFrom(n),
     reduceImplementsDeclaration: (n, r) => new Code.ImplementsDeclaration(assertDefined(n.types.reduce(r))).withIdFrom(n),
     reduceTypeList: (n, r) => new Code.TypeList(n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),

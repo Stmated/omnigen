@@ -599,8 +599,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
     const typedGetter = new Code.MethodDeclaration(
       new Code.MethodDeclarationSignature(
-        new Code.GetterIdentifier(typedField.identifier, typedField.type),
-        // new Code.Identifier(`get${Case.pascal(typedField.identifier.value)}`),
+        new Code.GetterIdentifier(typedField.identifier, typedField.type.omniType),
         typedField.type,
         parameterList,
       ),

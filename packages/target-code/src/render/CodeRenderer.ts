@@ -394,7 +394,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitMethodDeclaration: (n, v) => {
       const signature = render(n.signature, v);
-      const body = n.body ? render(n.body, v) : '';
+      const body = n.body ? render(n.body, v) : ';';
 
       return [
         `${signature}`,
@@ -417,10 +417,6 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
         annotations,
         `${modifiers}${type} ${name}(${parameters})${throws}`,
       ];
-    },
-
-    visitAbstractMethodDeclaration: (n, v) => {
-      return [n.signature.visit(v), ';\n'];
     },
 
     visitMethodCall: (n, v) => {

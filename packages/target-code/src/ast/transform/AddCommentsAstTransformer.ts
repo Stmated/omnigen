@@ -376,10 +376,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
           // TODO: This is wrong, since in some languages it is not a method call. Need to add a new "GetterCall" or similar abstract node
           const memberRef = new Code.MethodCall(
-            new Code.GetterIdentifier(
-              new Code.Identifier(propertyName),
-              root.getAstUtils().createTypeNode(prop.type),
-            ),
+            new Code.GetterIdentifier(new Code.Identifier(propertyName), prop.type),
             new Code.ArgumentList(),
           );
           targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), memberRef));

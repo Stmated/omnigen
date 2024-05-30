@@ -329,19 +329,14 @@ export class OmniUtil {
 
     const types: OmniType[] = [];
 
-    // TODO: Make a visitor version of getAllExportableTypes? Less useless memory consumption.
-    const exportableTypes = OmniUtil.getAllExportableTypes(model);
+    OmniUtil.visitTypesBreadthFirst(model, ctx => {
 
-    // TODO: getAllExportableTypes should already include all model.types???
-    const allTypes = new Set(exportableTypes.all.concat(model.types));
-
-    for (const localType of allTypes) {
-      if (localType.kind == OmniTypeKind.OBJECT) {
-        if (localType.extendedBy == type) {
-          types.push(localType);
+      if (ctx.type.kind == OmniTypeKind.OBJECT) {
+        if (ctx.type.extendedBy == type) {
+          types.push(ctx.type);
         }
       }
-    }
+    });
 
     return types;
   }

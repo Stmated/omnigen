@@ -146,22 +146,6 @@ export class JavaUtil {
     return classes;
   }
 
-  public static getConcreteClasses(model: OmniModel): JavaPotentialClassType[] {
-
-    // TODO: It should be an option or not whether concrete vs abstract classes should exist, or all just be classes.
-    const edgeTypes = OmniUtil.getAllExportableTypes(model).edge;
-
-    const concreteClasses: JavaPotentialClassType[] = [];
-    for (const edgeType of edgeTypes) {
-      const asClass = JavaUtil.getAsClass(model, edgeType);
-      if (asClass) {
-        concreteClasses.push(asClass);
-      }
-    }
-
-    return concreteClasses;
-  }
-
   public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]> {
     return OmniUtil.getSubTypeToSuperTypesMap(model);
   }

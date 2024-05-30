@@ -15,21 +15,23 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
-    const exportableTypes = OmniUtil.getAllExportableTypes(args.model, args.model.types);
-
     const interfaceMap = new Map<OmniType, OmniInterfaceType>();
+    const allTypes: OmniType[] = [];
 
-    // First pre-populate our interface map with all known interfaces and their underlying schema type.
-    for (const type of exportableTypes.all) {
+    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+
+      const type = ctx.type;
       if (type.kind == OmniTypeKind.INTERFACE && type.of.kind != OmniTypeKind.INTERFACE && !interfaceMap.has(type.of)) {
         interfaceMap.set(type.of, type);
       }
-    }
+
+      allTypes.push(ctx.type);
+    });
 
     const handled: OmniType[] = [];
 
     // Then we go through all types and find those that have multiple inheritances and convert any 1..N extensions into interfaces.
-    for (let type of exportableTypes.all) {
+    for (let type of allTypes) {
 
       type = OmniUtil.getUnwrappedType(type);
 

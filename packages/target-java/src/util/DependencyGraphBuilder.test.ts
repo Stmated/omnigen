@@ -8,7 +8,7 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/core';
-import {JavaUtil} from './JavaUtil.js';
+import {JavaPotentialClassType, JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 import {
   OmniUtil,
@@ -127,7 +127,7 @@ describe('Test CompositionDependencyUtil', () => {
     expect(model).toBeDefined();
     expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(2);
-    expect(JavaUtil.getConcreteClasses(model)).toHaveLength(1);
+    expect(getConcreteClasses(model)).toHaveLength(1);
     // expect(result.abstracts).toHaveLength(1);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
     expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
@@ -144,7 +144,7 @@ describe('Test CompositionDependencyUtil', () => {
     expect(model).toBeDefined();
     expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(4);
-    expect(JavaUtil.getConcreteClasses(model)).toHaveLength(2);
+    expect(getConcreteClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(2);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(2);
     expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
@@ -157,7 +157,7 @@ describe('Test CompositionDependencyUtil', () => {
     expect(model).toBeDefined();
     expect(getInterfaces(model)).toHaveLength(0);
     expect(JavaUtil.getClasses(model)).toHaveLength(3);
-    expect(JavaUtil.getConcreteClasses(model)).toHaveLength(2);
+    expect(getConcreteClasses(model)).toHaveLength(2);
     // expect(result.abstracts).toHaveLength(1);
     expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
     expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
@@ -187,7 +187,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     assertTypes(getInterfaces(model), [c]);
     assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
-    assertTypes(JavaUtil.getConcreteClasses(model), [a, d, b, c]);
+    assertTypes(getConcreteClasses(model), [a, d, b, c]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [a, [b, c]],
       [d, [b, c]],
@@ -208,7 +208,7 @@ describe('Test CompositionDependencyUtil', () => {
     // This would change if the search was done breadth-first vs depth-first.
     assertTypes(getInterfaces(model), [b, c]);
     assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
-    assertTypes(JavaUtil.getConcreteClasses(model), [a, d, b, c]);
+    assertTypes(getConcreteClasses(model), [a, d, b, c]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [a, [b, c]],
       [d, [c, b]],
@@ -285,7 +285,7 @@ describe('Test CompositionDependencyUtil', () => {
     // And since B is never actually used other than supertype #2 for C, it will only be an interface and not a class.
     // TODO: Maybe this is wrong? B should also be available as a class? Make it an option "javaAddSuperfluousClass?"
     assertTypes(JavaUtil.getClasses(model), [A, C]);
-    assertTypes(JavaUtil.getConcreteClasses(model), [A, C]);
+    assertTypes(getConcreteClasses(model), [A, C]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [C, [A, B]],
       [B, [A]],
@@ -310,7 +310,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     expect(getInterfaces(model)).toEqual([]);
     expect(JavaUtil.getClasses(model)).toEqual([A, B, C]);
-    expect(JavaUtil.getConcreteClasses(model)).toEqual([A, B, C]);
+    expect(getConcreteClasses(model)).toEqual([A, B, C]);
     assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [C, [B]],
       [B, [A]],
@@ -440,4 +440,20 @@ function getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
   });
 
   return interfaces;
+}
+
+function getConcreteClasses(model: OmniModel): JavaPotentialClassType[] {
+
+  // TODO: It should be an option or not whether concrete vs abstract classes should exist, or all just be classes.
+  const edgeTypes = OmniUtil.getAllExportableTypes(model).edge;
+
+  const concreteClasses: JavaPotentialClassType[] = [];
+  for (const edgeType of edgeTypes) {
+    const asClass = JavaUtil.getAsClass(model, edgeType);
+    if (asClass) {
+      concreteClasses.push(asClass);
+    }
+  }
+
+  return concreteClasses;
 }

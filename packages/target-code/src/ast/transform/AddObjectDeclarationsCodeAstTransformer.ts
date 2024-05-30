@@ -44,6 +44,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     // TODO: Remove this "getAllExportableTypes" and instead use a visitor pattern where we find the relevant types for our first pass
     const exportableTypes = OmniUtil.getAllExportableTypes(args.model, args.model.types);
+
     const nameResolver = args.root.getNameResolver();
 
     const namePairs: NamePair<OmniType & OmniOptionallyNamedType>[] = [];

@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {DEFAULT_PARSER_OPTIONS} from '@omnigen/core';
+import {DEFAULT_PARSER_OPTIONS, OmniType} from '@omnigen/core';
 import {OmniTypeKind} from '@omnigen/core';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.ts';
 import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
@@ -76,12 +76,16 @@ describe('Test Generic Model Creation', () => {
       'result',
     ]); // The others are in abstract supertype
 
-    const allTypes = OmniUtil.getAllExportableTypes(model, model.types);
-    expect(allTypes.all.map(it => {
+    const allTypes: OmniType[] = [];
+    OmniUtil.visitTypesDepthFirst(model, ctx => {
+      allTypes.push(ctx.type);
+    });
+
+    expect(allTypes.map(it => {
       const typeName = OmniUtil.getTypeName(it);
       return typeName ? Naming.unwrap(typeName) : undefined;
     })).toContain('DeletePetByIdResponse');
-    expect(allTypes.all.map(it => {
+    expect(allTypes.map(it => {
       const typeName = OmniUtil.getTypeName(it);
       return typeName ? Naming.unwrap(typeName) : undefined;
     })).toContain('ErrorUnknownError');

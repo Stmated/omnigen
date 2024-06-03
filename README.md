@@ -24,10 +24,10 @@ are some kind of archetype project generators instead of a tool to keep develope
 
 Scenarios in existing code generators:
 
-Oh, so you want to use `Lombok` for your `Java` models? Easy! Just rewrite every `Mustache` template for the language,
+* Oh, so you want to use `Lombok` for your `Java` models? Easy! Just rewrite every `Mustache` template for the language,
 and then watch as your code is basically impossible to print nicely, or to keep track of divergences between your template and the official one.
 
-You want to give support for a certain annotation for your generated properties? Easy! Just write a plugin
+* You want to give support for a certain annotation for your generated properties? Easy! Just write a plugin
 that take the generated code, and then through RegEx replace/insert your code where you want it.
 Oh? The project changed how they print the strings and now everything is broken? Tough luck.
 

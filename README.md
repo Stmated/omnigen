@@ -54,5 +54,7 @@ It means that we can create re-usable parts of code that we can use for many dif
 
 ## Supported Outputs
 * Java
+* TypeScript
+* C#
 
 Many more inputs and outputs are coming. Development is currently focused on the underlying functionality first.

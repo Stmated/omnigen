@@ -22,6 +22,8 @@ It is because the real world is messy, and you actually need your generated code
 But when you look out there on the Internet for code generators, all you see are hacks that build strings by-hand and who think they
 are some kind of archetype project generators instead of a tool to keep developers easily synchronized with the development of other projects' APIs, **without** compromising their code.
 
+Scenarios in existing code generators:
+
 Oh, so you want to use `Lombok` for your `Java` models? Easy! Just rewrite every `Mustache` template for the language,
 and then watch as your code is basically impossible to print nicely, or to keep track of divergences between your template and the official one.
 

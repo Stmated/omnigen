@@ -53,7 +53,6 @@ describe('merge-documents', () => {
     expect(model.types[2].properties).toHaveLength(4);
 
     expect(model.types[2].properties.map(it => OmniUtil.getPropertyName(it.name, true))).toEqual(['id', 'age', 'name', 'tag']);
-    expect(model.types[2].properties[1].description).toEqual('Overriding age description of the Pet');
     expect(model.types[2].properties[1].type.description).toEqual('Overriding age description of the Pet');
   });
 });

@@ -1,18 +1,16 @@
 import {JavaTestUtils} from '../util';
 import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
 import {expect, test, describe, vi} from 'vitest';
-import {DEFAULT_JAVA_OPTIONS, SerializationLibrary} from '@omnigen/target-java';
+import {ADDITIONAL_PROPERTIES_FIELD_NAME, DEFAULT_JAVA_OPTIONS, PatternPropertiesToMapJavaAstTransformer, SerializationLibrary} from '@omnigen/target-java';
 import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
 describe('Error-Schema', () => {
 
   test('ErrorStructure', async () => {
 
-    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json',
-      {
-        modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, elevateProperties: false, generifyTypes: true},
-      },
-    );
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', {
+      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, elevateProperties: false, generifyTypes: true},
+    });
     const filenames = [...fileContents.keys()].sort();
 
     // TODO: Figure out where ObjectThing.java is coming from
@@ -50,7 +48,12 @@ describe('Error-Schema', () => {
   test('ErrorStructure-1.1', async () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', {
-      javaOptions: {...DEFAULT_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
+      javaOptions: {
+        ...DEFAULT_JAVA_OPTIONS,
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+        immutable: true,
+      },
     });
 
     const errorResponse = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcErrorResponse.java');
@@ -66,7 +69,9 @@ describe('Error-Schema', () => {
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toEqual([]);
     expect(error100.foundSuperClasses).toEqual(['JsonRpcError']);
-    expect(error100.foundTypes).toEqual(['JsonNode', 'String']);
+    expect(error100.foundTypes).toHaveLength(2);
+    expect(error100.foundTypes).toContain('JsonNode');
+    expect(error100.foundTypes).toContain('String');
   });
 
   test('ErrorStructure-Custom', async () => {
@@ -81,11 +86,10 @@ describe('Error-Schema', () => {
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     expect(error100.foundFields).toEqual([]);
-    expect(error100.foundLiterals).toHaveLength(5);
     expect(error100.foundLiterals[0]).toEqual('"omnigen"');
-    expect(error100.foundLiterals[2]).toEqual(100);
+    expect(error100.foundLiterals[4]).toEqual(100);
 
     const customError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
-    expect(customError.foundFields).toEqual(['_additionalProperties', 'data', 'method', 'signature', 'uuid']);
+    expect(customError.foundFields).toEqual(['data', 'method', 'signature', 'uuid', ADDITIONAL_PROPERTIES_FIELD_NAME]);
   });
 });

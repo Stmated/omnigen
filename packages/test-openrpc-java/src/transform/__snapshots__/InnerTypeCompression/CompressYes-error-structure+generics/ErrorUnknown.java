@@ -33,4 +33,3 @@ public class ErrorUnknown extends JsonRpcErrorResponse<ErrorUnknown.Error> {
     }
   }
 }
-

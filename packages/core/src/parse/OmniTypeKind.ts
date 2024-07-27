@@ -40,7 +40,9 @@ export type OmniKindComposition = ToEnum<typeof OmniKindComposition>;
 export const OmniKindGeneric = {
   GENERIC_SOURCE: 'GENERIC_SOURCE',
   GENERIC_TARGET: 'GENERIC_TARGET',
+  // This should be called something containing "Parameter" to make things more clear
   GENERIC_SOURCE_IDENTIFIER: 'GENERIC_SOURCE_IDENTIFIER',
+  // This should be called something containing "Argument" to make things more clear
   GENERIC_TARGET_IDENTIFIER: 'GENERIC_TARGET_IDENTIFIER',
 } as const;
 export type OmniKindGeneric = ToEnum<typeof OmniKindGeneric>;

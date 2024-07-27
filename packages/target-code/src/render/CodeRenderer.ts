@@ -1,32 +1,34 @@
-import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/core';
+import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, TypeUseKind, VisitResult} from '@omnigen/core';
 import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
-import {AbortVisitingWithResult, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-function getModifierString(type: Code.ModifierType): string {
+function getModifierString(type: Code.ModifierKind): string {
   switch (type) {
-    case Code.ModifierType.PUBLIC:
+    case Code.ModifierKind.PUBLIC:
       return 'public';
-    case Code.ModifierType.PRIVATE:
+    case Code.ModifierKind.PRIVATE:
       return 'private';
-    case Code.ModifierType.DEFAULT:
+    case Code.ModifierKind.DEFAULT:
       return '';
-    case Code.ModifierType.PROTECTED:
+    case Code.ModifierKind.PROTECTED:
       return 'protected';
-    case Code.ModifierType.FINAL:
+    case Code.ModifierKind.FINAL:
       return 'final';
-    case Code.ModifierType.STATIC:
+    case Code.ModifierKind.STATIC:
       return 'static';
-    case Code.ModifierType.ABSTRACT:
+    case Code.ModifierKind.ABSTRACT:
       return 'abstract';
-    case Code.ModifierType.READONLY:
+    case Code.ModifierKind.READONLY:
       return 'final';
-    case Code.ModifierType.CONST:
+    case Code.ModifierKind.CONST:
       return 'final';
+    case Code.ModifierKind.OVERRIDE:
+      return 'override';
   }
 }
 
@@ -60,6 +62,8 @@ function getTokenTypeString(type: Code.TokenKind): string {
       return '&&';
     case Code.TokenKind.COALESCE_NULL:
       return '??';
+    case Code.TokenKind.BITWISE_OR:
+      return '|';
   }
 
   assertUnreachable(type);
@@ -87,7 +91,7 @@ export const render = <N extends AstNode, V extends AstVisitor<string>>(node: N 
   return join(node.visit(visitor));
 };
 
-function renderListWithWrapping(children: AstNode[], visitor: CodeVisitor<string>): string {
+function renderListWithWrapping(children: AstNode[], visitor: CodeVisitor<string>, renderOptions: CodeRendererOptions): string {
 
   const listStrings = children.map(it => render(it, visitor));
   const joinedListString = listStrings.join(', ');
@@ -95,7 +99,7 @@ function renderListWithWrapping(children: AstNode[], visitor: CodeVisitor<string
   // TODO: Make 100 an option
   if (joinedListString.length > 100) {
 
-    const spaces = getIndentation(1);
+    const spaces = getIndentation(1, renderOptions);
 
     return `\n${spaces}${listStrings.join(`,\n${spaces}`)}\n`;
   }
@@ -143,7 +147,7 @@ const visitCommonTypeDeclaration = (
 
     typeDeclarationContent.push(`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations}`);
     typeDeclarationContent.push(visitor.visitObjectDeclarationBody(node, visitor));
-    typeDeclarationContent.push('\n');
+    // typeDeclarationContent.push('\n');
 
     return typeDeclarationContent;
   } finally {
@@ -151,17 +155,19 @@ const visitCommonTypeDeclaration = (
   }
 };
 
-const getIndentation = (d: number): string => {
-  return '  '.repeat(d);
+const getIndentation = (d: number, options: CodeRendererOptions): string => {
+  return options.indent.repeat(d);
 };
 
 export interface CodeRendererOptions {
   fileExtension: string;
+  indent: string;
   blockPrefix?: string;
 }
 
 export const DefaultCodeRendererOptions: CodeRendererOptions = {
   fileExtension: 'unknown',
+  indent: '  ',
   blockPrefix: ' ',
 };
 
@@ -183,8 +189,9 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     units: [],
   };
 
+  const defaultVisitor = createCodeVisitor<string>();
   return {
-    ...createCodeVisitor(),
+    ...defaultVisitor,
 
     executeRender: (node, visitor) => {
       if (node === undefined) {
@@ -198,7 +205,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitFieldReference: (node, visitor) => {
       const resolved = root.resolveNodeRef(node);
-      return `this.${render(resolved.identifier, visitor)}`;
+      return `${render(resolved.identifier, visitor)}`;
     },
 
     visitDeclarationReference: (n, v) => {
@@ -225,24 +232,43 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       }
     },
 
+    visitHardCoded: n => n.content,
+
     visitReturnStatement: (n, v) => (`return ${render(n.expression, v)}`),
-    visitToken: n => (`${tokenPrefix}${getTokenTypeString(n.type)}${tokenSuffix}`),
+
+    visitBinaryExpression: (n, v) => {
+
+      if (n.right instanceof Code.Literal) {
+        if (n.token == Code.TokenKind.EQUALS && n.right.value === true) {
+          return render(n.left, v);
+        } else if (n.token == Code.TokenKind.NOT_EQUALS && n.right.value === false) {
+          return render(n.left, v);
+        } else if (n.token == Code.TokenKind.EQUALS && n.right.value === false) {
+          return `!(${render(n.left, v)})`;
+        } else if (n.token == Code.TokenKind.NOT_EQUALS && n.right.value === true) {
+          return `!(${render(n.left, v)})`;
+        }
+      }
+
+      const tokenStr = (`${tokenPrefix}${getTokenTypeString(n.token)}${tokenSuffix}`);
+      return `${render(n.left, v)}${tokenStr}${render(n.right, v)}`;
+    },
 
     visitConstructor: (n, v) => {
       const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
-      const body = n.body ? `${render(n.body, v)}` : '{}';
+      const body = n.body ? `${render(n.body, v)}` : '{}\n';
       const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
 
       const owner = ctx.objectDecStack[ctx.objectDecStack.length - 1];
       const parameters = render(n.parameters, v);
 
-      return `\n${annotations}${modifiers}${render(owner.name, v)}(${parameters})${body}\n`;
+      return `${annotations}${modifiers}${render(owner.name, v)}(${parameters})${body}`;
     },
-    visitConstructorParameterList: (n, v) => renderListWithWrapping(n.children, v),
+    visitConstructorParameterList: (n, v) => renderListWithWrapping(n.children, v, renderOptions),
     visitConstructorParameter: (n, v) => v.visitParameter(n, v),
 
     visitBlock: (n, visitor) => {
-      const indentation = getIndentation(1);
+      const indentation = getIndentation(1, renderOptions);
       const blockContent = join(n.children.map(it => it.visit(visitor))).trim();
 
       const indentedContent = blockContent.replace(patternLineStart, indentation);
@@ -282,30 +308,28 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitComment: (n, v) => {
 
+      const base = join(n.text.visit(v))
+        .trim()
+        .replaceAll('\r', '');
+
       if (n.kind === Code.CommentKind.SINGLE) {
 
-        const commentContent = join(n.text.visit(v))
-          .replaceAll('\r', '')
-          .replaceAll('\n', '\n// ')
-          .trim();
+        const commentContent = base
+          .replaceAll('\n', '\n// ');
 
-        return `// ${commentContent}`;
+        return `// ${commentContent.trim()}`;
 
       } else if (n.kind === Code.CommentKind.DOC) {
 
-        const text = join(n.text.visit(v))
-          .trim()
-          .replaceAll('\r', '')
-          .replaceAll('\n', '\n * ');
+        const text = base
+          .replaceAll('\n\n', '\n<p>\n')
+          .replaceAll('\n', '\n * ')
+          .trim();
 
         return `/**\n * ${text}\n */`;
+      } else {
+        return `/* ${base.trim()} */`;
       }
-
-      const text = join(n.text.visit(v))
-        .trim()
-      ;
-
-      return `/* ${text} */`;
     },
 
     visitCompilationUnit: (n, v) => {
@@ -320,7 +344,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       if (!unitName) {
 
         // NOTE: This is quite ugly. There needs to be a better way to figure out the name/fileName of the unit.
-        const visitor = VisitorFactoryManager.create(root.createVisitor<string>(), {
+        const visitor = Visitor.create(root.createVisitor<string>(), {
           visitObjectDeclaration: objNode => {
             if (objNode.name.value) {
               throw new AbortVisitingWithResult(objNode.name.value);
@@ -383,10 +407,10 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
       const comment = n.comment ? `${render(n.comment, v)}\n` : '';
       const key = render(n.identifier, v);
-      const value = render(n.value, v);
+      const value = n.value ? `(${render(n.value, v)})` : '';
       return [
         comment,
-        `${key}(${value})`,
+        `${key}${value}`,
       ];
     },
 
@@ -395,14 +419,11 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     visitMethodDeclaration: (n, v) => {
       const signature = render(n.signature, v);
       const body = n.body ? render(n.body, v) : ';';
-
-      return [
-        `${signature}`,
-        body,
-        '\n',
-      ];
+      const content = `${signature}${body}`;
+      return content.endsWith('\n') ? content : `${content}\n`;
     },
 
+    // TODO: This should be split to better "parts" so that other target languages can more easily only override something specific!
     visitMethodDeclarationSignature: (n, v) => {
       const comments = n.comments ? `${render(n.comments, v)}\n` : '';
       const annotations = (n.annotations && n.annotations.children.length > 0) ? `${render(n.annotations, v)}\n` : '';
@@ -411,11 +432,12 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       const name = render(n.identifier, v);
       const parameters = n.parameters ? render(n.parameters, v) : '';
       const throws = n.throws ? ` throws ${render(n.throws, v)}` : '';
+      const genericParams = n.genericParameters ? `${render(n.genericParameters, v)}` : '';
 
       return [
         comments,
         annotations,
-        `${modifiers}${type} ${name}(${parameters})${throws}`,
+        `${modifiers}${type} ${name}${genericParams}(${parameters})${throws}`,
       ];
     },
 
@@ -423,7 +445,8 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
       const targetString = render(n.target, v);
       const argumentsString = render(n.methodArguments, v);
-      return `${targetString}(${argumentsString})`;
+      const genericsString = n.genericArguments ? `<${render(n.genericArguments, v)}>` : '';
+      return `${targetString}${genericsString}(${argumentsString})`;
     },
 
     visitStatement: (n, v) => [
@@ -437,7 +460,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     visitAnnotationList: (n, v) => (n.children.map(it => render(it, v)).join(n.multiline ? '\n' : ' ')),
 
     visitAnnotation: (n, visitor) => {
-      const pairs = n.pairs ? `(${render(n.pairs, visitor)})` : '';
+      const pairs = n.pairs && n.pairs.children.length > 0 ? `(${render(n.pairs, visitor)})` : '';
       return (`@${render(n.type, visitor)}${pairs}`);
     },
 
@@ -476,7 +499,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitField: (n, v) => {
       const comments = n.comments ? `${render(n.comments, v)}\n` : '';
-      const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
+      const annotations = (n.annotations && n.annotations.children.length > 0) ? `${render(n.annotations, v)}\n` : '';
       const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
       const typeName = render(n.type, v);
       const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
@@ -512,7 +535,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       return `${annotations}${type} ${identifier}`;
     },
 
-    visitParameterList: (n, v) => renderListWithWrapping(n.children, v),
+    visitParameterList: (n, v) => renderListWithWrapping(n.children, v, renderOptions),
 
     visitArgumentList: (n, v) => n.children.map(it => render(it, v)).join(', '),
     visitTypeList: (n, v) => n.children.map(it => render(it, v)).join(', '),
@@ -542,12 +565,13 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitArrayType: (node, visitor) => {
 
-      const baseTypeString = render(node.of, visitor);
+      const baseTypeString = render(node.itemTypeNode, visitor);
 
+      // TODO: Remove this hard-coded rendering and instead replace the `ArrayType` with a generic type
       if (node.omniType.arrayKind == OmniArrayKind.SET) {
-        return node.implementation ? `HashSet<${baseTypeString}>` : `Set<${baseTypeString}>`;
+        return `Set of ${baseTypeString}`;
       } else if (node.omniType.arrayKind == OmniArrayKind.LIST) {
-        return node.implementation ? `ArrayList<${baseTypeString}>` : `List<${baseTypeString}>`;
+        return `List of ${baseTypeString}`;
       }
 
       return `${baseTypeString}[]`;
@@ -558,15 +582,15 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       const baseTypeString = render(node.baseType, visitor);
       const genericArgumentStrings = node.genericArguments.map(it => render(it, visitor));
 
-      if (genericArgumentStrings.length == 0) {
-
-        // There is a possibility that the generic arguments have been filtered away by a transformer.
-        // But it was never replaced with a RegularType. But we'll be nice and just render it as one.
-        return `${baseTypeString}`;
-      } else {
-        const genericArgumentsString = genericArgumentStrings.join(', ');
-        return `${baseTypeString}<${genericArgumentsString}>`;
-      }
+      // if (genericArgumentStrings.length == 0) {
+      //
+      //   // There is a possibility that the generic arguments have been filtered away by a transformer.
+      //   // But it was never replaced with a RegularType. But we'll be nice and just render it as one.
+      //   return baseTypeString;
+      // } else {
+      const genericArgumentsString = genericArgumentStrings.join(', ');
+      return `${baseTypeString}<${genericArgumentsString}>`;
+      // }
     },
 
     visitModifierList: (node, visitor) => {
@@ -574,7 +598,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     },
 
     visitModifier: node => {
-      const modifierString = getModifierString(node.type);
+      const modifierString = getModifierString(node.kind);
       if (modifierString) {
         return modifierString;
       }
@@ -585,29 +609,10 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     visitSuperConstructorCall: (node, visitor) => `super(${render(node.arguments, visitor)})`,
     visitIfStatement: (node, visitor) => `if (${render(node.predicate, visitor)})${render(node.body, visitor)}`,
 
-    visitPredicate(node, visitor) {
-
-      if (node.right instanceof Code.Literal) {
-        if (node.token.type == Code.TokenKind.EQUALS && node.right.value == true) {
-          return render(node.left, visitor);
-        } else if (node.token.type == Code.TokenKind.NOT_EQUALS && node.right.value == false) {
-          return render(node.left, visitor);
-        } else if (node.token.type == Code.TokenKind.EQUALS && node.right.value == false) {
-          return `!${render(node.left, visitor)}`;
-        } else if (node.token.type == Code.TokenKind.NOT_EQUALS && node.right.value == true) {
-          return `!${render(node.left, visitor)}`;
-        }
-      }
-
-      return visitor.visitBinaryExpression(node, visitor);
-    },
-
     visitIfElseStatement: (node, visitor) => {
-
-      const ifs = node.ifStatements.map(it => render(it, visitor));
-      const el = node.elseBlock ? ` else ${render(node.elseBlock, visitor)}` : '';
-
-      return `${ifs.join('else ').trim()}${el}`;
+      const ifBlocks = node.ifStatements.map(it => render(it, visitor));
+      const elseBlock = node.elseBlock ? ` else ${render(node.elseBlock, visitor)}` : '';
+      return `${ifBlocks.join('else ').trim()}${elseBlock}`;
     },
 
     visitTernaryExpression: (node, visitor) => {
@@ -632,7 +637,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
       // TODO: This needs to support multiple levels. Right now it only supports one. Or is that up to end-user to add blocks?
       const entries = node.children.map(it => render(it, visitor));
-      const indentation = getIndentation(1);
+      const indentation = getIndentation(1, renderOptions);
       return `{\n${indentation}${entries.join(',\n' + indentation)}\n}`;
     },
 
@@ -641,10 +646,10 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     visitFreeText: node => replaceWithHtml(node.text),
     visitFreeTextHeader: (node, visitor) => `\n<h${node.level}>${join(node.child.visit(visitor))}</h${node.level}>\n`,
     visitFreeTextParagraph: (node, visitor) => `\n<p>${join(node.child.visit(visitor))}</p>\n`,
-    visitFreeTextRemark: (node, visitor) => `${join(node.content.visit(visitor))}`,
+    visitFreeTextRemark: (node, visitor) => `\n${render(node.content, visitor)}`,
 
     visitFreeTextSection: (node, visitor) => {
-      const indentation = getIndentation(1);
+      const indentation = getIndentation(1, renderOptions);
       const header = render(node.header, visitor);
       const content = join(node.content.visit(visitor));
       const blockContent = `${header}${content.trim()}`;
@@ -656,7 +661,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitFreeTextLine: (node, visitor) => `${join(node.child.visit(visitor))}\n`,
     visitFreeTextIndent: (node, visitor) => {
-      const indentation = getIndentation(1);
+      const indentation = getIndentation(1, renderOptions);
       const blockContent = join(node.child.visit(visitor));
       return blockContent.replace(patternLineStart, indentation);
     },
@@ -680,7 +685,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     visitFreeTextList: (node, visitor) => {
 
       const tag = node.ordered ? 'ol' : 'ul';
-      const indent = getIndentation(1);
+      const indent = getIndentation(1, renderOptions);
       const lines = node.children.map(it => join(it.visit(visitor))).join(`</li>\n${indent}<li>`);
 
       return `<${tag}>\n${indent}<li>${lines}</li>\n</${tag}>`;
@@ -705,6 +710,14 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       throw new Error(`Should have been replaced with a method call`);
     },
 
+    visitInstanceOf: (n, v) => {
+      const narrowed = n.narrowed ? ` ${render(n.narrowed, v)}` : '';
+      return `${render(n.target, v)} instanceof ${render(n.comparison, v)}${narrowed}`;
+    },
+
     visitMemberAccess: (n, v) => `${n.owner.visit(v)}.${n.member.visit(v)}`,
+    visitIndexAccess: (n, v) => `${n.owner.visit(v)}[${n.index.visit(v)}]`,
+
+    visitFormatNewline: () => '\n',
   };
 };

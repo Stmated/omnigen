@@ -1,8 +1,9 @@
-import {AstNode, AstTransformer, AstTransformerArguments, RootAstNode} from '@omnigen/core';
-import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {AstNode, AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, RootAstNode, VisitResult} from '@omnigen/core';
+import {OmniUtil, Visitor} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
-import * as Code from '../CodeAst';
+import * as Code from '../Code';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
+import {CodeAstUtils} from '../CodeAstUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -74,6 +75,9 @@ const getWeight = (node: AstNode, root: RootAstNode): [number, string] => {
     weight += 300;
     weight += getModifierWeight(node.modifiers);
     return [weight, node.identifier.value];
+  } else if (node instanceof Code.EnumItemList) {
+    weight += 400;
+    return [weight, 'enum-list'];
   } else if (node instanceof Code.ConstructorDeclaration) {
     weight += 200;
     return [weight, 'constructor'];
@@ -91,13 +95,17 @@ const getWeight = (node: AstNode, root: RootAstNode): [number, string] => {
     return [weight, node.name.value];
   } else if (node instanceof Code.FieldBackedGetter) {
     weight += 0;
-    if (node.getterName) {
-      return [weight, node.getterName.identifier.value];
-    } else {
 
-      const field = root.resolveNodeRef(node.fieldRef);
-      return getWeight(field, root);
-    }
+    const field = root.resolveNodeRef(node.fieldRef);
+    const res = getWeight(field, root);
+    return [weight + res[0], node.getterName?.value ?? res[1]];
+
+  } else if (node instanceof Code.FieldBackedSetter) {
+    weight += 0;
+
+    const field = root.resolveNodeRef(node.fieldRef);
+    const res = getWeight(field, root);
+    return [weight + res[0], node.identifier?.value ?? res[1]];
   }
 
   if ('name' in node && node.name instanceof Code.Identifier) {
@@ -129,45 +137,138 @@ const getWeight = (node: AstNode, root: RootAstNode): [number, string] => {
 const getModifierWeight = (modifiers: Code.ModifierList) => {
 
   let weight = 0;
-  if (modifiers.children.find(it => it.type == Code.ModifierType.STATIC)) {
+  if (modifiers.children.find(it => it.kind == Code.ModifierKind.STATIC)) {
     weight += 10;
   }
 
-  if (modifiers.children.find(it => it.type == Code.ModifierType.FINAL)) {
+  if (modifiers.children.find(it => it.kind == Code.ModifierKind.FINAL)) {
     weight += 5;
   }
 
-  if (modifiers.children.find(it => it.type == Code.ModifierType.PRIVATE)) {
+  if (modifiers.children.find(it => it.kind == Code.ModifierKind.PRIVATE)) {
     weight += 3;
   }
 
-  if (modifiers.children.find(it => it.type == Code.ModifierType.PROTECTED)) {
+  if (modifiers.children.find(it => it.kind == Code.ModifierKind.PROTECTED)) {
     weight += 1;
   }
 
   return weight;
 };
 
+// TODO: Order members by "dependence" -- so if a declaration uses another type, then that type should be ordered earlier!
+//       Should just need to visit for all edge types and build a graph from it!
+
 export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstNode> {
 
   transformAst(args: AstTransformerArguments<CodeRootAstNode>): void {
 
     const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    const ownerStack: AstNode[] = [];
 
-      visitObjectDeclaration: (node, visitor) => {
+    const nodeToTypes = new Map<AstNode, OmniType[]>();
 
-        if (!(node instanceof Code.EnumDeclaration)) {
+    args.root.visit(Visitor.create(defaultVisitor, {
 
-          // Do not re-order an enum, it is sensitive to order.
-          const comparator = SortVisitorRegistry.INSTANCE;
-          node.body.children.sort((a, b) => {
-            return comparator.compare(args.root, a, b);
-          });
+      visitCompilationUnit: (n, v) => {
+
+        for (const child of n.children) {
+          try {
+            // Go deeper, in case there are nested types
+            ownerStack.push(child);
+            child.visit(v);
+          } finally {
+            ownerStack.pop();
+          }
         }
+      },
 
-        // Go deeper, in case there are nested types
-        defaultVisitor.visitObjectDeclaration(node, visitor);
+      visitObjectDeclaration: (n, v) => {
+        return [
+          n.comments?.visit(v),
+          n.annotations?.visit(v),
+          n.modifiers.visit(v),
+          n.name.visit(v),
+          n.genericParameterList?.visit(v),
+          n.extends?.visit(v),
+          n.implements?.visit(v),
+          v.visitObjectDeclarationBody(n, v),
+        ];
+      },
+
+      visitEdgeType: (n, v) => {
+        defaultVisitor.visitEdgeType(n, v);
+
+        if (ownerStack.length > 0) {
+
+          const objDecNode = ownerStack[ownerStack.length - 1];
+          // const objDecNodeType = CodeAstUtils.getOmniType(args.root, objDecNode);
+          // const objDecBaseType = this.getBaseOmniType(objDecNodeType);
+          const baseType = this.getBaseOmniType(n.omniType);
+
+          if (baseType) {
+
+            const baseTypes: OmniType[] = OmniUtil.getFlattenedTypes(baseType);
+            if (baseTypes[0] !== baseType) {
+              baseTypes.splice(0, 0, baseType);
+            }
+
+            const map = (nodeToTypes.has(objDecNode) ? nodeToTypes : nodeToTypes.set(objDecNode, [])).get(objDecNode)!;
+            for (const type of baseTypes) {
+              map.push(type);
+            }
+          }
+        }
+      },
+    }));
+
+    const sort = (children: AstNode[], args: AstTransformerArguments<CodeRootAstNode>, withDependencies: boolean) => {
+      const comparator = SortVisitorRegistry.INSTANCE;
+
+      // First sort it by type/name/whatever.
+      children.sort((a, b) => comparator.compare(args.root, a, b));
+
+      if (withDependencies) {
+
+        // Then sort it by dependencies, so that Declarations are before any Use (as best we can)
+        this.customSort(children, (a, b) => {
+
+          const bDependencies = nodeToTypes.get(b);
+          if (bDependencies) {
+            const aType = this.getBaseOmniType(CodeAstUtils.getOmniType(args.root, a));
+            if (aType) {
+              const flattened = OmniUtil.getFlattenedTypes(aType);
+              if (bDependencies.some(value => flattened.includes(value))) {
+                return -1;
+              }
+            }
+          }
+
+          const aDependencies = nodeToTypes.get(a);
+          if (aDependencies) {
+            const bType = this.getBaseOmniType(CodeAstUtils.getOmniType(args.root, b));
+            if (bType) {
+              const flattened = OmniUtil.getFlattenedTypes(bType);
+              if (aDependencies.some(value => flattened.includes(value))) {
+                return 1;
+              }
+            }
+          }
+
+          return 0;
+        });
+      }
+    };
+
+    args.root.visit(Visitor.create(defaultVisitor, {
+
+      visitObjectDeclaration: (n, v) => {
+
+        // Go deeper, in case there nested types
+        defaultVisitor.visitObjectDeclaration(n, v);
+
+        const children = n.body.children;
+        sort(children, args, false);
       },
 
       visitAnnotationList: n => {
@@ -185,15 +286,13 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
         });
       },
 
-      visitCompilationUnit: (node, visitor) => {
-
-        const comparator = SortVisitorRegistry.INSTANCE;
-        node.children.sort((a, b) => {
-          return comparator.compare(args.root, a, b);
-        });
+      visitCompilationUnit: (n, v) => {
 
         // Go deeper, in case there nested types
-        defaultVisitor.visitCompilationUnit(node, visitor);
+        defaultVisitor.visitCompilationUnit(n, v);
+
+        const children = n.children;
+        sort(children, args, true);
       },
 
       visitField: () => {
@@ -203,5 +302,54 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
       visitConstructor: () => {
       },
     }));
+  }
+
+  private getBaseOmniType(type: OmniType | undefined): OmniType | undefined {
+
+    if (!type) {
+      return undefined;
+    }
+
+    if (type.kind === OmniTypeKind.GENERIC_SOURCE) {
+      return this.getBaseOmniType(type.of);
+    }
+
+    if (type.kind === OmniTypeKind.GENERIC_TARGET) {
+      return this.getBaseOmniType(type.source);
+    }
+
+    if (type.kind === OmniTypeKind.DECORATING) {
+      return this.getBaseOmniType(type.of);
+    }
+
+    if (type.kind === OmniTypeKind.INTERFACE) {
+      return this.getBaseOmniType(type.of);
+    }
+
+    if (type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      return this.getBaseOmniType(type.of);
+    }
+
+    return type;
+  }
+
+  private customSort<T>(arr: Array<T>, compareFn: (a: T, b: T) => number) {
+
+    const n = arr.length;
+
+    for (let i = 0; i < n; i++) {
+      let minIndex = i;
+      for (let j = i + 1; j < n; j++) {
+        if (compareFn(arr[j], arr[minIndex]) < 0) {
+          minIndex = j;
+        }
+      }
+
+      if (minIndex !== i) {
+        [arr[i], arr[minIndex]] = [arr[minIndex], arr[i]];
+      }
+    }
+
+    return arr;
   }
 }

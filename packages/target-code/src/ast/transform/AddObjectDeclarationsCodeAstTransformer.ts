@@ -89,13 +89,13 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       }
     }
 
-    const removedTypes: OmniType[] = [];
-    for (const type of exportableTypes.all) {
-      removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
-    }
+    // const removedTypes: OmniType[] = [];
+    // for (const type of exportableTypes.all) {
+    //   removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
+    // }
 
     // NOTE: Is this actually correct? Could it not delete types we actually want?
-    exportableTypes.all = exportableTypes.all.filter(it => !removedTypes.includes(it));
+    // exportableTypes.all = exportableTypes.all.filter(it => !removedTypes.includes(it));
 
     for (const type of exportableTypes.all) {
 
@@ -176,9 +176,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     const cu = new Code.CompilationUnit(
       new Code.PackageDeclaration(packageName),
-      new Code.ImportList(
-        [],
-      ),
+      new Code.ImportList(),
       dec,
     );
 
@@ -215,7 +213,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     const enumDeclaration = new Code.EnumDeclaration(
       new Code.EdgeType(type),
-      new Code.Identifier(className), // JavaUtil.getClassName(originalType || type, options)),
+      new Code.Identifier(className),
       body,
     );
 
@@ -225,39 +223,19 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       );
     }
 
-    if (type.enumConstants) {
+    if (type.members) {
 
       body.children.push(
         new Code.EnumItemList(
-          ...type.enumConstants.map((item, idx) => {
-
-            let enumName: string | undefined = undefined;
-            if (type.enumNames) {
-              const enumText = type.enumNames[idx];
-              if (enumText) {
-                enumName = enumText;
-              } else {
-                logger.warn(`Could not find enum name of '${item}`);
-              }
-            }
-
+          ...type.members.map(item => {
             let comment: Code.Comment | undefined = undefined;
-            if (type.enumDescriptions) {
-
-              const commentText = type.enumDescriptions[enumName || `${item}`]
-                ?? type.enumDescriptions[`${item}`]
-                ?? type.enumDescriptions[`${idx}`];
-
-              if (commentText) {
-                comment = new Code.Comment(new FreeText.FreeText(commentText));
-              } else {
-                logger.warn(`Could not find description of enum item '${item}' for ${OmniUtil.describe(type)}`);
-              }
+            if (item.description) {
+              comment = new Code.Comment(new FreeText.FreeText(item.description));
             }
 
             return new Code.EnumItem(
-              new Code.Identifier(enumName || Case.constant(String(item))),
-              new Code.Literal(item, type.itemKind),
+              new Code.Identifier(item.name || Case.constant(String(item.value))),
+              new Code.Literal(item.value, type.itemKind),
               comment,
             );
           }),
@@ -273,10 +251,14 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       const field = new Code.Field(
         fieldType,
         fieldIdentifier,
-        undefined,
+      );
+      field.modifiers = new Code.ModifierList(
+        new Code.Modifier(Code.ModifierKind.PRIVATE),
+        new Code.Modifier(Code.ModifierKind.FINAL),
       );
 
       body.children.push(field);
+      body.children.push(new Code.FieldBackedGetter(new Code.FieldReference(field)));
 
       const parameterName = CodeUtil.getPrettyParameterName(fieldIdentifier.value);
       const parameterIdentifier = new Code.Identifier(parameterName);
@@ -292,8 +274,8 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
           new Code.Block(
             new Code.Statement(
               new Code.BinaryExpression(
-                new Code.FieldReference(field),
-                new Code.TokenNode(Code.TokenKind.ASSIGN),
+                new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(field)),
+                Code.TokenKind.ASSIGN,
                 new Code.DeclarationReference(parameter),
               ),
             ),
@@ -320,10 +302,8 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     const declaration = CodeAstUtils.createInterfaceWithBody(root, type, options, () => className);
 
     root.children.push(new Code.CompilationUnit(
-      new Code.PackageDeclaration(packageName), // JavaUtil.getPackageName(type, declaration.name.value, options)),
-      new Code.ImportList(
-        [],
-      ),
+      new Code.PackageDeclaration(packageName),
+      new Code.ImportList(),
       declaration,
     ));
 
@@ -358,7 +338,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     if (typeExtends) {
       declaration.extends = new Code.ExtendsDeclaration(
-        new Code.TypeList([root.getAstUtils().createTypeNode(typeExtends)]),
+        new Code.TypeList(root.getAstUtils().createTypeNode(typeExtends)),
       );
 
       if (!this._map.has(typeExtends)) {
@@ -371,7 +351,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     if (typeImplements.length > 0) {
       declaration.implements = new Code.ImplementsDeclaration(
-        new Code.TypeList(typeImplements.map(it => root.getAstUtils().createTypeNode(it))),
+        new Code.TypeList(...typeImplements.map(it => root.getAstUtils().createTypeNode(it))),
       );
 
       for (const typeInterface of typeImplements) {
@@ -389,9 +369,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     const packageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE}); // JavaUtil.getPackageName(type, declaration.name.value, options);
     const cu = new Code.CompilationUnit(
       new Code.PackageDeclaration(packageName),
-      new Code.ImportList(
-        [],
-      ),
+      new Code.ImportList(),
       declaration,
     );
 
@@ -429,58 +407,58 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
         javaClassIdentifier,
         body,
         undefined,
-        new Code.GenericTypeDeclarationList(genericSourceArgExpressions),
+        new Code.GenericTypeDeclarationList(...genericSourceArgExpressions),
       );
     }
 
-    const modifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC));
+    const modifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierKind.PUBLIC));
 
     if (type.kind === OmniTypeKind.OBJECT) {
       if (type.abstract) {
-        modifiers.children.push(new Code.Modifier(Code.ModifierType.ABSTRACT));
+        modifiers.children.push(new Code.Modifier(Code.ModifierKind.ABSTRACT));
       }
     }
 
     return new Code.ClassDeclaration(javaType, javaClassIdentifier, body, modifiers);
   }
 
-  /**
-   * TODO: Remove and do this in another transformer (is it not already?)
-   */
-  private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
-
-    if (type.kind == OmniTypeKind.EXCLUSIVE_UNION && type.types.length == 2) {
-
-      const nullType = type.types.find(it => it.kind == OmniTypeKind.NULL);
-      if (nullType) {
-        const otherType = type.types.find(it => it.kind != OmniTypeKind.NULL);
-        if (otherType && OmniUtil.isPrimitive(otherType)) {
-
-          // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
-          this.clearProperties(type);
-          Object.assign(type, {
-            ...otherType,
-            nullable: true,
-          });
-          return [otherType];
-        } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
-
-          // For Java, any object can always be null.
-          // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
-          this.clearProperties(type);
-          Object.assign(type, otherType);
-          return [otherType];
-        }
-      }
-    }
-
-    return [];
-  }
-
-  private clearProperties(type: OmniType): void {
-    for (const key of Object.keys(type)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      delete (type as any)[key];
-    }
-  }
+  // /**
+  //  * TODO: Remove and do this in another transformer (is it not already?)
+  //  */
+  // private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
+  //
+  //   if (type.kind === OmniTypeKind.EXCLUSIVE_UNION && type.types.length == 2) {
+  //
+  //     const nullType = type.types.find(it => it.kind == OmniTypeKind.NULL);
+  //     if (nullType) {
+  //       const otherType = type.types.find(it => it.kind != OmniTypeKind.NULL);
+  //       if (otherType && OmniUtil.isPrimitive(otherType)) {
+  //
+  //         // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
+  //         this.clearProperties(type);
+  //         Object.assign(type, {
+  //           ...otherType,
+  //           nullable: true,
+  //         });
+  //         return [otherType];
+  //       } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
+  //
+  //         // For Java, any object can always be null.
+  //         // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
+  //         this.clearProperties(type);
+  //         Object.assign(type, otherType);
+  //         return [otherType];
+  //       }
+  //     }
+  //   }
+  //
+  //   return [];
+  // }
+  //
+  // private clearProperties(type: OmniType): void {
+  //   for (const key of Object.keys(type)) {
+  //     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  //     delete (type as any)[key];
+  //   }
+  // }
 }

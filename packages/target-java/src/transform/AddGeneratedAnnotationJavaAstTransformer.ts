@@ -1,7 +1,7 @@
 import {ObjectName, OmniTypeKind} from '@omnigen/core';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 import * as Java from '../ast/JavaAst';
-import {VisitorFactoryManager} from '@omnigen/core-util';
+import {Visitor} from '@omnigen/core-util';
 import {JavaAnnotationLibrary} from '../options';
 
 export class AddGeneratedAnnotationJavaAstTransformer extends AbstractJavaAstTransformer {
@@ -13,7 +13,7 @@ export class AddGeneratedAnnotationJavaAstTransformer extends AbstractJavaAstTra
     }
 
     const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    args.root.visit(Visitor.create(defaultVisitor, {
 
       visitObjectDeclaration: node => {
 

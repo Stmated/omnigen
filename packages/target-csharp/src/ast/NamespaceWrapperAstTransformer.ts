@@ -7,7 +7,7 @@ import {assertDefined} from '@omnigen/core-util';
 const logger = LoggerFactory.create(import.meta.url);
 
 /**
- * Replaces any fields with properties with a proper getter/setter
+ * Takes all compilation units' content and places it inside a namespace declaration inside the respective unit.
  */
 export class NamespaceWrapperAstTransformer implements AstTransformer<CSharpRootNode> {
 

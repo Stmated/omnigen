@@ -15,20 +15,22 @@ export class AddCommentsCSharpAstTransformer implements AstTransformer<CSharpRoo
     }
 
     const defaultReducer = args.root.createReducer();
+    // const defaultVisitor = args.root.createVisitor<boolean>();
+
     const newRoot = args.root.reduce({
       ...defaultReducer,
       reduceProperty: n => {
-
-        const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.type, args);
-        if (ownerCommentsText) {
-          n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
-        }
 
         if (n.property) {
           const commentsText = AddCommentsAstTransformer.getCommentsList(args.root, n.property, args.model, args.options);
           if (commentsText) {
             n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, commentsText), n.comments?.kind);
           }
+        }
+
+        const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.property?.type ?? n.type.omniType, args, false);
+        if (ownerCommentsText) {
+          n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
         }
 
         return n;

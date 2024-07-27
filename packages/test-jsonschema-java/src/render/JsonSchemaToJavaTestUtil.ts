@@ -17,6 +17,9 @@ export class JsonSchemaToJavaTestUtil {
 
     const ctx: FileContext = {
       file: inPath,
+      defaults: {
+
+      },
       arguments: {
         ...options,
       },

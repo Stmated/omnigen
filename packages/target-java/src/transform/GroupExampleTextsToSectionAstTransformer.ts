@@ -29,7 +29,7 @@ export class GroupExampleTextsToSectionAstTransformer extends AbstractJavaAstTra
         if (examples.length > 0) {
           return new Java.FreeTexts(
             ...others,
-            new Java.FreeTextHeader(5, new Java.FreeText(`Examples`)),
+            new Java.FreeTextHeader(2, new Java.FreeText(`Examples`)),
             new Java.FreeTextList(examples, false),
           );
         }

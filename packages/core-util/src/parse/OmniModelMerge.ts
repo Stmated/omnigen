@@ -165,7 +165,7 @@ export class OmniModelMerge {
 
     // NOTE: Is this actually the way to do this? Just merge the options and the earlier models take precedence?
     const commonOptions = this.mergeOptions(results, options);
-    common.options = commonOptions;
+    // common.options = commonOptions;
 
     const replacements = OmniModelMerge.getReplacements(...results.map(it => it.model));
 

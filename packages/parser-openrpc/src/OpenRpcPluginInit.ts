@@ -3,7 +3,7 @@ import {JsonRpcParserOptions, ZodJsonRpcParserOptions} from './options';
 import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
 import {ZodSchemaFileContext} from '@omnigen/core-util';
 import {OpenRpcParserBootstrapFactory} from './parse';
-import {PackageOptions, ParserOptions, ZodPackageOptions} from '@omnigen/core';
+import {PackageOptions, ParserOptions, ZodPackageOptions, ZodParserOptions} from '@omnigen/core';
 
 const ZodJsonRpcParserOptionsContext = z.object({
   jsonRpcParserOptions: ZodJsonRpcParserOptions,
@@ -47,14 +47,23 @@ export const OpenRpcPlugin = createPlugin(
     const openRpcParserBootstrap = (await openRpcParserBootstrapFactory.createParserBootstrap(ctx.schemaFile));
     const schemaIncomingOptions = openRpcParserBootstrap.getIncomingOptions();
 
-    ctx.arguments = {...ctx.arguments, ...schemaIncomingOptions};
+    // Arguments from CLI has higher precedence than the arguments from the schema.
+    ctx.arguments = {
+      ...schemaIncomingOptions,
+      ...ctx.arguments,
+    };
 
-    const packageOptions: PackageOptions = ZodPackageOptions.parse({...ctx.packageOptions, ...ctx.arguments});
+    if (!ctx.arguments.jsonRpcVersion) {
+      ctx.arguments.jsonRpcVersion = '2.0';
+    }
+
+    const packageOptions: PackageOptions = ZodPackageOptions.parse({...ctx.defaults, ...ctx.packageOptions, ...ctx.arguments});
+    const parserOptions: ParserOptions = ZodParserOptions.parse({...ctx.defaults, ...ctx.parserOptions, ...ctx.arguments});
+    const jsonRpcOptions: JsonRpcParserOptions = {...ZodJsonRpcParserOptions.parse({...ctx.defaults, ...ctx.arguments}), ...ctx.jsonRpcParserOptions};
 
     const openRpcOptions: JsonRpcParserOptions & ParserOptions = {
-      ...ctx.parserOptions,
-      ...ZodJsonRpcParserOptions.parse(ctx.arguments),
-      ...ctx.jsonRpcParserOptions,
+      ...parserOptions,
+      ...jsonRpcOptions,
     };
 
     const openRpcParser = openRpcParserBootstrap.createParser(openRpcOptions);
@@ -69,6 +78,7 @@ export const OpenRpcPlugin = createPlugin(
       source: 'openrpc',
       model: parseResult.model,
       jsonRpcParserOptions: parseResult.options,
+      parserOptions: parserOptions,
       packageOptions: packageOptions,
       arguments: ctx.arguments,
     } satisfies z.output<typeof OpenRpcParserOut>;

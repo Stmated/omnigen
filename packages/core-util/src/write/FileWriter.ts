@@ -25,7 +25,7 @@ export class FileWriter implements Writer {
         logger.info(`Created directory ${created}`);
       }
     } catch (ex) {
-      logger.debug(ex, `Failed directory creation of '${directoryPath}', but will try to continue`);
+      logger.warn(ex, `Failed directory creation of '${directoryPath}', but will try to continue`);
     }
 
     try {

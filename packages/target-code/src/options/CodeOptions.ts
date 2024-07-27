@@ -1,4 +1,4 @@
-import {getEnumValues, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {DEFAULT_UNKNOWN_KIND, getEnumValues, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
 import {z} from 'zod';
 
 export const IncludeExampleCommentsMode = {
@@ -20,10 +20,17 @@ export const SerializationPropertyNameMode = {
 } as const;
 export type SerializationPropertyNameMode = ToEnum<typeof SerializationPropertyNameMode>;
 
+export const PropertyTypeCommentMode = {
+  ALWAYS: 'ALWAYS',
+  FALLBACK: 'FALLBACK',
+  NEVER: 'NEVER',
+} as const;
+export type PropertyTypeCommentMode = ToEnum<typeof PropertyTypeCommentMode>;
+
 export const ZodCodeOptions = ZodOptions.extend({
-  immutableModels: ZodCoercedBoolean.default('true'),
+  immutable: ZodCoercedBoolean.default('true'),
   preferInferredType: ZodCoercedBoolean.default('true'),
-  unknownType: z.enum(getEnumValues(UnknownKind)).default(UnknownKind.ANY),
+  unknownType: z.enum(getEnumValues(UnknownKind)).default(DEFAULT_UNKNOWN_KIND),
 
   includeLinksOnType: ZodCoercedBoolean.default('false'),
   includeLinksOnProperty: ZodCoercedBoolean.default('true'),
@@ -33,6 +40,7 @@ export const ZodCodeOptions = ZodOptions.extend({
   commentsOnGetters: ZodCoercedBoolean.default('true'),
   commentsOnConstructors: ZodCoercedBoolean.default('true'),
   includeExampleCommentsMode: z.enum(getEnumValues(IncludeExampleCommentsMode)).default(IncludeExampleCommentsMode.ALWAYS),
+  typeCommentsOnProperties: z.enum(getEnumValues(PropertyTypeCommentMode)).default(PropertyTypeCommentMode.NEVER), // ZodCoercedBoolean.default('false'),
 
   includeGenerated: ZodCoercedBoolean.default('true'),
 

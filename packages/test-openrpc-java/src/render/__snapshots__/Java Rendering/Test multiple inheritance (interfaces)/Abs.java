@@ -7,7 +7,7 @@ import jakarta.annotation.Generated;
 public class Abs {
   private final String kind;
 
-  public Abs(@JsonProperty("kind") String kind) {
+  public Abs(@JsonProperty(value = "kind") String kind) {
     this.kind = kind;
   }
 

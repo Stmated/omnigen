@@ -1,7 +1,7 @@
 import {
   AstNameBuildArgs,
   NameParts,
-  Namespace,
+  Namespace, ObjectEdgeName,
   ObjectName,
   ObjectNameResolveArgs,
   ObjectNameResolver,
@@ -23,7 +23,7 @@ import {assertUnreachable, Case} from '../util';
 
 export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & TargetOptions & Options> implements ObjectNameResolver<TOpt> {
 
-  protected abstract namespaceSeparator: string;
+  public abstract namespaceSeparator: string;
 
   public abstract isReservedWord(word: string): boolean;
 
@@ -76,6 +76,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       }
       case OmniTypeKind.TUPLE: {
         // TODO: `[String, String, String]` should be `StringTriplet` and `[Integer, Integer, String]` should be `IntegerPairThenString`
+        // TODO: This should be output as just `(String, String String)` in languages like C# that supports tuples
         const itemNames = args.type.types.map(it => this.investigate({...args, type: it}));
         const name = `TupleOf${itemNames.map(it => it.edgeName).join('')}`;
         return {
@@ -90,7 +91,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       }
       case OmniTypeKind.UNKNOWN: {
         const unknownType = this.getUnknownKind(args.type, args.options);
-        const unknownName = AbstractObjectNameResolver.getUnknownTypeString(unknownType);
+        const unknownName = this.getUnknownTypeString(unknownType);
         return this.toObjectName(args.type, unknownName, args.options);
       }
       case OmniTypeKind.DICTIONARY:
@@ -135,17 +136,16 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
         if (args.type.name) {
 
           const name = Naming.unwrap(args.type.name);
-          const commonOptions = args.type.model.options as TOpt || args.options;
-          // return JavaUtil.getClassNameWithPackageName(args.type, name, commonOptions, args.withPackage);
+          const commonOptions = /* args.type.model.options as TOpt ||*/ args.options;
           return this.toObjectName(args.type, name, commonOptions);
         }
 
-        if (args.type.model.options) {
-
-          // TODO: This way of handling it is INCREDIBLY UGLY -- need a way to make this actually typesafe!
-          const commonOptions = args.type.model.options as TOpt;
-          return this.investigate({...args, type: args.type.of, options: commonOptions});
-        }
+        // if (args.type.model.options) {
+        //
+        //   // TODO: This way of handling it is INCREDIBLY UGLY -- need a way to make this actually typesafe!
+        //   const commonOptions = args.type.model.options as TOpt;
+        //   return this.investigate({...args, type: args.type.of, options: commonOptions});
+        // }
 
         return this.investigate({...args, type: args.type.of});
       }
@@ -234,12 +234,14 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     return -1;
   }
 
-  protected static getUnknownTypeString(unknownKind: UnknownKind): string {
+  protected getUnknownTypeString(unknownKind: UnknownKind): string {
     switch (unknownKind) {
-      case UnknownKind.MUTABLE_OBJECT:
-        return `MutableObject`;
-      case UnknownKind.MAP:
-        return `Map`;
+      case UnknownKind.DYNAMIC_OBJECT:
+        return `DynamicObject`;
+      case UnknownKind.DYNAMIC:
+        return 'Dynamic';
+      case UnknownKind.DYNAMIC_NATIVE:
+        return 'DynamicNative';
       case UnknownKind.OBJECT:
       case UnknownKind.ANY:
         return 'Object';
@@ -248,7 +250,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     }
   }
 
-  protected getCompositionClassName<T extends OmniType>(type: OmniCompositionType<T>, args: ObjectNameResolveArgs<TOpt>): TypeName {
+  protected getCompositionClassName(type: OmniCompositionType, args: ObjectNameResolveArgs<TOpt>): TypeName {
 
     if (type.name) {
       return Naming.unwrap(type.name);
@@ -258,6 +260,22 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
       prefix = ['UnionOf', 'ExclusiveUnionOf'];
     } else if (type.kind == OmniTypeKind.UNION) {
+
+      if (type.types.length == 2) {
+        const arrayType = type.types.find(it => it.kind === OmniTypeKind.ARRAY);
+        if (arrayType) {
+          const itemType = type.types.find(it => it == arrayType.of);
+          if (itemType) {
+            const itemName = this.investigate({...args, type: itemType, use: TypeUseKind.DECLARED, boxed: true}).edgeName;
+            const resolved = OmniUtil.resolveObjectEdgeName(itemName, TypeUseKind.DECLARED);
+            return {
+              prefix: 'Arrayable',
+              name: resolved,
+            };
+          }
+        }
+      }
+
       prefix = 'UnionOf';
     } else if (type.kind == OmniTypeKind.INTERSECTION) {
       prefix = 'IntersectionOf';
@@ -267,7 +285,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       assertUnreachable(type);
     }
 
-    const uniqueNames = [...new Set(type.types.map(it => {
+    const uniqueNames: ObjectEdgeName[] = [...new Set(type.types.map(it => {
 
       switch (it.kind) {
         case OmniTypeKind.NULL:
@@ -276,7 +294,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
           return 'Undefined';
         case OmniTypeKind.ARRAY: {
           const itemName = this.investigate({...args, type: it.of, use: TypeUseKind.DECLARED, boxed: true}).edgeName;
-          return `${itemName}Array`;
+          return `${OmniUtil.resolveObjectEdgeName(itemName, TypeUseKind.DECLARED)}Array`;
         }
         default:
           return this.investigate({...args, type: it, use: TypeUseKind.DECLARED, boxed: true}).edgeName;

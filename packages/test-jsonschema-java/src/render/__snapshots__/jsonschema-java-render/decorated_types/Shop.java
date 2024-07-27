@@ -1,6 +1,7 @@
 package generated.omnigen;
 
 import jakarta.annotation.Generated;
+import java.util.List;
 
 /**
  * Description about the Shop
@@ -9,10 +10,10 @@ import jakarta.annotation.Generated;
 public class Shop {
   private final int id;
   private final String name;
-  private final Order[] orders;
+  private final List<Order> orders;
   private final String tag;
 
-  public Shop(int id, Order[] orders, String name, String tag) {
+  public Shop(int id, List<Order> orders, String name, String tag) {
     this.id = id;
     this.orders = orders;
     this.name = name;
@@ -33,7 +34,7 @@ public class Shop {
   /**
    * List of orders currently in this shop
    */
-  public Order[] getOrders() {
+  public List<Order> getOrders() {
     return this.orders;
   }
 

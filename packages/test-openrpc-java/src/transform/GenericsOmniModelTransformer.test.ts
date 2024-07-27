@@ -1,10 +1,10 @@
 import {TestUtils} from '@omnigen/utils-test';
-import {JavaObjectNameResolver, JavaUtil} from '@omnigen/target-java';
+import {JavaObjectNameResolver} from '@omnigen/target-java';
 import {
   type OmniModel,
   OmniTypeKind,
   DEFAULT_PARSER_OPTIONS,
-  DEFAULT_MODEL_TRANSFORM_OPTIONS, NameParts, DEFAULT_PACKAGE_OPTIONS, DEFAULT_TARGET_OPTIONS,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS, NameParts, DEFAULT_PACKAGE_OPTIONS, DEFAULT_TARGET_OPTIONS, OMNI_GENERIC_FEATURES,
 } from '@omnigen/core';
 import {
   GenericsModelTransformer,
@@ -13,7 +13,7 @@ import {
 import {expect, test, describe} from 'vitest';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '../util';
 
-describe('Test CompositionDependencyUtil', () => {
+describe('Generics', () => {
 
   test('ensureNothingChanges', async () => {
 
@@ -34,9 +34,10 @@ describe('Test CompositionDependencyUtil', () => {
     const realParserOpt = DEFAULT_PARSER_OPTIONS;
     const realTransformOpt = DEFAULT_MODEL_TRANSFORM_OPTIONS;
 
-    transformer.transformModel({
+    transformer.transformModel2ndPass({
       model: model,
-      options: {...realParserOpt, ...realTransformOpt},
+      options: {...realParserOpt, ...realTransformOpt, ...DEFAULT_TARGET_OPTIONS},
+      targetFeatures: OMNI_GENERIC_FEATURES,
     });
 
     expect(model.types).toHaveLength(1);
@@ -87,10 +88,10 @@ describe('Test CompositionDependencyUtil', () => {
       ],
     };
 
-    // TODO: Will not work -- will need to call the 2nd pass
-    transformer.transformModel({
+    transformer.transformModel2ndPass({
       model: model,
-      options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS},
+      options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS, ...DEFAULT_TARGET_OPTIONS},
+      targetFeatures: OMNI_GENERIC_FEATURES,
     });
 
     expect(model.types).toHaveLength(3);
@@ -111,14 +112,9 @@ describe('Test CompositionDependencyUtil', () => {
     if (model.types[1].extendedBy?.kind != OmniTypeKind.GENERIC_TARGET) throw new Error(`Wrong kind`);
     if (model.types[2].extendedBy?.kind != OmniTypeKind.GENERIC_TARGET) throw new Error(`Wrong kind`);
 
-    // expect(model.types[0].kind).toEqual(OmniTypeKind.GENERIC_TARGET);
-    // expect(model.types[1].extendedBy.generics).toHaveLength(1);
-    // expect(model.types[2].extendedBy.generics).toHaveLength(1);
-
     expect(model.types[1].extendedBy.source).toEqual(model.types[0]);
     expect(model.types[2].extendedBy.source).toEqual(model.types[0]);
 
-    // if (model.types[0].generics[0].kind != OmniTypeKind.PRIMITIVE) throw new Error(`Wrong kind`);
     if (!OmniUtil.isPrimitive(model.types[1].extendedBy.targetIdentifiers[0].type)) throw new Error(`Wrong kind`);
     if (!OmniUtil.isPrimitive(model.types[2].extendedBy.targetIdentifiers[0].type)) throw new Error(`Wrong kind`);
 

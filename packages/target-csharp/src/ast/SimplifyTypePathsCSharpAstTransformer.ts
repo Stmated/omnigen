@@ -1,8 +1,6 @@
 import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/core';
 import {CSharpRootNode} from './CSharpRootNode.ts';
 import {CSharpOptions} from '../options';
-import {CSharpAstReducer} from './CSharpAstReducer.ts';
-
 
 /**
  * Simplify type paths, such as making `System.String` into just `String`, and removing any `System.*` imports
@@ -13,7 +11,7 @@ export class SimplifyTypePathsCSharpAstTransformer implements AstTransformer<CSh
 
     let importDepth = 0;
     const defaultReducer = args.root.createReducer();
-    const reducer: CSharpAstReducer = {
+    const newRoot = args.root.reduce({
       ...defaultReducer,
       reduceImportList: (n, r) => {
         try {
@@ -26,25 +24,23 @@ export class SimplifyTypePathsCSharpAstTransformer implements AstTransformer<CSh
 
       reduceEdgeType: n => {
 
-        const importName = n.getImportName();
-        if (importDepth > 0 && importName && (importName === 'System' || (importName.startsWith('System.') && importName.match(/System\.\w+/)))) {
+        // const importName = n.getImportName();
+        // if (importDepth > 0 && importName && (importName === 'System' || (importName.startsWith('System.') && importName.match(/System\.\w+/)))) {
+        //
+        //   // Removed, since System.* is always automatically imported.
+        //   return undefined;
+        // }
 
-          // Removed, since System.* is always automatically imported.
-          return undefined;
-        }
-
-        const localName = n.getLocalName();
-        if (localName && localName.match(/System\.\w+/)) {
-
-          n.setLocalName(localName.substring('System.'.length));
-          return n;
-        }
+        // const localName = n.getLocalName();
+        // if (localName && localName.match(/System\.\w+/)) {
+        //
+        //   n.setLocalName(localName.substring('System.'.length));
+        //   return n;
+        // }
 
         return n;
       },
-    };
-
-    const newRoot = args.root.reduce(reducer);
+    });
     if (newRoot) {
       args.root = newRoot;
     }

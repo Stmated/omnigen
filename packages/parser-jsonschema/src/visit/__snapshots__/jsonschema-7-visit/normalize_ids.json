@@ -5,7 +5,7 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 1000000,
-      "$id": "/fake/path/PetId"
+      "$id": "PetId"
     },
     "Age": {
       "$id": "AgeIdToBeKept",
@@ -22,14 +22,14 @@
       "properties": {
         "kingdom": {
           "type": "string",
-          "$id": "/fake/path/AnimalKingdom"
+          "$id": "AnimalKingdom"
         },
         "family": {
           "type": "string",
-          "$id": "/fake/path/AnimalFamily"
+          "$id": "AnimalFamily"
         }
       },
-      "$id": "/fake/path/Animal"
+      "$id": "Animal"
     },
     "PetBase": {
       "type": "object",
@@ -48,18 +48,18 @@
             }
           ],
           "description": "Age of the Pet",
-          "$id": "/fake/path/PetBaseAge"
+          "$id": "PetBaseAge"
         },
         "name": {
           "type": "string",
-          "$id": "/fake/path/PetBaseName"
+          "$id": "PetBaseName"
         },
         "tag": {
           "type": "string",
-          "$id": "/fake/path/PetBaseTag"
+          "$id": "PetBaseTag"
         }
       },
-      "$id": "/fake/path/PetBase"
+      "$id": "PetBase"
     },
     "Pet": {
       "allOf": [
@@ -70,7 +70,7 @@
           "$ref": "#/$defs/PetBase"
         }
       ],
-      "$id": "/fake/path/Pet"
+      "$id": "Pet"
     },
     "CatBase": {
       "type": "object",
@@ -80,7 +80,7 @@
           "type": "number"
         }
       },
-      "$id": "/fake/path/CatBase"
+      "$id": "CatBase"
     },
     "Cat": {
       "allOf": [
@@ -91,8 +91,8 @@
           "$ref": "#/$defs/CatBase"
         }
       ],
-      "$id": "/fake/path/Cat"
+      "$id": "Cat"
     }
   },
-  "$id": "/fake/path"
+  "$id": "_0"
 }

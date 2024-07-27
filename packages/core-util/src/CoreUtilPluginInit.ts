@@ -60,17 +60,18 @@ export const CorePlugin = createPlugin(
   {name: 'core', in: ZodFileContext, out: CorePluginOut},
   async ctx => {
 
-    const packageOptions = ZodPackageOptions.parse(ctx.arguments);
-    const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
-    const parserOptions = ZodParserOptions.parse(ctx.arguments);
-    const targetOptions = ZodTargetOptions.parse(ctx.arguments);
+    const currentArguments = {...ctx.defaults, ...ctx.arguments};
+    const packageOptions = ZodPackageOptions.parse(currentArguments);
+    const fileWriteOptions = ZodFileWriteOptions.parse(currentArguments);
+    const parserOptions = ZodParserOptions.parse(currentArguments);
+    const targetOptions = ZodTargetOptions.parse(currentArguments);
 
     return {
       ...ctx,
       target: ctx.arguments.target,
       schemaFile: new SchemaFile(ctx.file, ctx.file),
       parserOptions: parserOptions,
-      modelTransformOptions: ZodModelTransformOptions.parse(ctx.arguments),
+      modelTransformOptions: ZodModelTransformOptions.parse(currentArguments),
       targetOptions: targetOptions,
       packageOptions: packageOptions,
       fileWriteOptions: fileWriteOptions,
@@ -91,7 +92,7 @@ export const CommonTransformPlugin = createPlugin(
     const transformers: OmniModelTransformer[] = [
       new SimplifyInheritanceModelTransformer(),
       new ElevatePropertiesModelTransformer(),
-      new GenericsModelTransformer(),
+      // new GenericsModelTransformer(), // Maybe reintroduce, but with Omni generic target features
     ];
 
     for (const transformer of transformers) {
@@ -116,6 +117,7 @@ export const CommonTransform2Plugin = createPlugin(
   async ctx => {
 
     const transformers: OmniModel2ndPassTransformer<typeof ctx.parserOptions & typeof ctx.targetOptions>[] = [
+      new GenericsModelTransformer(),
       new ElevatePropertiesModelTransformer(),
       new ConflictingIntersectionModelTransformer(),
       new SimplifyInheritanceModelTransformer(),
@@ -145,7 +147,8 @@ export const fileWriter = createPlugin(
   {name: 'file-writer', in: FileWriterIn, out: FileWriterOut},
   async ctx => {
 
-    const fileWriteOptions = ZodFileWriteOptions.parse(ctx.arguments);
+    const currentArguments = {...ctx.defaults, ...ctx.arguments};
+    const fileWriteOptions = ZodFileWriteOptions.parse(currentArguments);
     const filesWritten: string[] = [];
 
     logger.info(`Will start writing '${ctx.compilationUnits.length}' files: ${ctx.compilationUnits.map(it => it.fileName)}`);
@@ -163,6 +166,7 @@ export const fileWriter = createPlugin(
 
           // We are only outputting one file, and the output path is a file name, so we will just remove the filename and the directory will be the filename.
           logger.info(`Skipping filename ${ctx.compilationUnits[0].fileName} since output path is a filepath ${fileWriteOptions.outputDirBase}`);
+          ctx.compilationUnits[0].directories = [];
           ctx.compilationUnits[0].fileName = '';
         } else {
           throw new Error(`The output path is a filepath, but there are several compilation units`);

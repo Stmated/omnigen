@@ -1,4 +1,5 @@
 import {
+  OMNI_GENERIC_FEATURES,
   OmniCompositionType, OmniExclusiveUnionType, OmniIntersectionType,
   OmniModel,
   OmniModel2ndPassTransformer,
@@ -8,7 +9,6 @@ import {
   OmniType,
   OmniTypeKind, OmniUnionType,
   ParserOptions,
-  TypeOwner,
 } from '@omnigen/core';
 import {OmniUtil} from '../OmniUtil.ts';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -23,15 +23,30 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
   transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
 
-    if (!args.options.simplifyTypeHierarchy) {
-
-      // We will not simplify the types, for some reason. This transformer should be non-destructive/lossless.
-      return;
-    }
-
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-      if (OmniUtil.isComposition(ctx.type)) {
-        SimplifyInheritanceModelTransformer.simplifyComposition(args.model, ctx.type, ctx.parent);
+      if (args.options.simplifyTypeHierarchy && OmniUtil.isComposition(ctx.type)) {
+        SimplifyInheritanceModelTransformer.simplifyComposition(args.model, ctx.type);
+      } else if (ctx.type.kind === OmniTypeKind.OBJECT && ctx.type.extendedBy && ctx.type.extendedBy.kind === OmniTypeKind.INTERSECTION) {
+
+        // Intersection that has inline child types and is owned by an object can have their properties moved to the object.
+        let obj: OmniType = ctx.type;
+        const types = ctx.type.extendedBy.types;
+
+        for (let i = 0; i < types.length; i++) {
+          const child = types[i];
+          if (child.inline) {
+            obj = OmniUtil.mergeType(child, obj, OMNI_GENERIC_FEATURES);
+            types.splice(i, 1);
+          }
+        }
+
+        if (obj !== ctx.type) {
+          ctx.replacement = obj;
+          const idx = args.model.types.indexOf(ctx.type);
+          if (idx !== -1) {
+            args.model.types.splice(idx, 1, obj);
+          }
+        }
       }
     });
   }
@@ -42,7 +57,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
       return;
     }
 
-    logger.trace(`Language does not support primitive inheritance, so will look for replacements. Looking inside '${args.model.name}'`);
+    logger.silent(`Language does not support primitive inheritance, so will look for replacements. Looking inside '${args.model.name}'`);
 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
       if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && OmniUtil.isPrimitive(ctx.type.extendedBy)) {
@@ -60,11 +75,10 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
   private static simplifyComposition(
     model: OmniModel,
     composition: OmniCompositionType,
-    parent: TypeOwner | undefined,
   ): void {
 
     if (composition.kind == OmniTypeKind.INTERSECTION) {
-      SimplifyInheritanceModelTransformer.simplifyIntersection(composition, model, parent);
+      SimplifyInheritanceModelTransformer.simplifyIntersection(composition, model);
     } else if (OmniUtil.isUnion(composition)) {
       SimplifyInheritanceModelTransformer.simplifyUnion(composition);
     }
@@ -85,6 +99,10 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
           composition.types.splice(i, 1);
 
+          // TODO: We should not do this -- we're setting "nullable" to the original composition member! It might be used in different contexts!
+          // TODO: Instead we should use a type decorator, and say on the decorator that the type is nullable. But decorators are not supported everywhere.
+          otherUnwrappedType.nullable = true;
+
           if (!OmniUtil.isNullableType(otherUnwrappedType)) {
             composition.types[0] = OmniUtil.toReferenceType(otherType);
           }
@@ -95,7 +113,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
     }
   }
 
-  private static simplifyIntersection(composition: OmniIntersectionType, model: OmniModel, parent: TypeOwner | undefined) {
+  private static simplifyIntersection(composition: OmniIntersectionType, model: OmniModel) {
 
     // If the composition is an AND, there might be paths that have overlapping supertypes.
     // We should try to resolve and simplify if any of the types are superfluous.
@@ -129,10 +147,9 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
     if (composition.types.length == 1) {
 
-      // Could we do something here? Replace the composition with the lone type.
-      if (parent) {
-        OmniUtil.swapType(parent, composition, composition.types[0], 1);
-      }
+      // if (parent) {
+      OmniUtil.swapType(model, composition, composition.types[0], 10);
+      // }
     }
   }
 }

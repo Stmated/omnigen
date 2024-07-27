@@ -18,15 +18,15 @@ const visitor: JsonSchema9Visitor = {
       v.oneOf = undefined;
     }
 
-    if (v.enum && v.enum.length == 1) {
-
-      if (v.const !== undefined && v.const != v.enum[0]) {
-        throw new Error(`Cannot have a one-item enum and const set at the same time unless they are equal`);
-      } else {
-        v.const = v.enum[0];
-        delete v.enum;
-      }
-    }
+    // if (v.enum && v.enum.length == 1) {
+    //
+    //   if (v.const !== undefined && v.const != v.enum[0]) {
+    //     throw new Error(`Cannot have a one-item enum and const set at the same time unless they are equal`);
+    //   } else {
+    //     v.const = v.enum[0];
+    //     delete v.enum;
+    //   }
+    // }
 
     return DefaultJsonSchema9Visitor.schema(v, visitor);
   },

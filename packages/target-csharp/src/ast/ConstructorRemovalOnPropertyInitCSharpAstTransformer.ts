@@ -71,7 +71,7 @@ export class ConstructorRemovalOnPropertyInitCSharpAstTransformer implements Ast
         if (n.body) {
           for (const child of n.body.children) {
             const unwrapped = CodeAstUtils.unwrap(child);
-            if (!(unwrapped instanceof BinaryExpression) || unwrapped.token.type !== Cs.TokenKind.ASSIGN || !(unwrapped.right instanceof Cs.DeclarationReference)) {
+            if (!(unwrapped instanceof BinaryExpression) || unwrapped.token !== Cs.TokenKind.ASSIGN || !(unwrapped.right instanceof Cs.DeclarationReference)) {
 
               // The constructor body contains a statement that is not a simple assignment of constructor argument.
               // That means there is probably logic regarding a constructor argument.

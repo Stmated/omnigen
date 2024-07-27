@@ -1,5 +1,7 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import * as Java from '../ast/JavaAst';
+import {TokenKind} from '../ast/JavaAst';
+import {CodeAstUtils} from '@omnigen/target-code';
 
 /**
  * For fixing or replacing some more generic AST-structures into Java-specific ones.
@@ -17,13 +19,13 @@ export class ToJavaAstTransformer extends AbstractJavaAstTransformer {
 
       reduceModifierList: n => {
 
-        const constIndex = n.children.findIndex(it => it.type === Java.ModifierType.CONST);
+        const constIndex = n.children.findIndex(it => it.kind === Java.ModifierKind.CONST);
         if (constIndex !== -1) {
 
-          const altered = [...n.children].filter(it => it.type === Java.ModifierType.CONST || it.type === Java.ModifierType.STATIC || it.type === Java.ModifierType.FINAL);
+          const altered = [...n.children].filter(it => it.kind === Java.ModifierKind.CONST || it.kind === Java.ModifierKind.STATIC || it.kind === Java.ModifierKind.FINAL);
 
-          altered.push(new Java.Modifier(Java.ModifierType.STATIC));
-          altered.push(new Java.Modifier(Java.ModifierType.FINAL));
+          altered.push(new Java.Modifier(Java.ModifierKind.STATIC));
+          altered.push(new Java.Modifier(Java.ModifierKind.FINAL));
 
           return new Java.ModifierList(...altered).withIdFrom(n);
         }

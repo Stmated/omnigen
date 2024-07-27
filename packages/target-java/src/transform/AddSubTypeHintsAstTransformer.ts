@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, OmniTypeKind} from '@omnigen/core';
-import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {OmniUtil, Visitor} from '@omnigen/core-util';
 import {Code} from '@omnigen/target-code';
 
 export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRootAstNode> {
@@ -7,7 +7,7 @@ export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRo
   transformAst(args: AstTransformerArguments<Code.CodeRootAstNode>): void {
 
     const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    args.root.visit(Visitor.create(defaultVisitor, {
 
       visitObjectDeclaration: node => {
 

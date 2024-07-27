@@ -1,6 +1,6 @@
 import {ImplementationGenerator} from './ImplementationGenerator';
 import {
-  AddThrowsForKnownMethodsAstTransformer,
+  AddThrowsForKnownMethodsJavaAstTransformer,
   JACKSON_JSON_NODE,
   JACKSON_OBJECT_MAPPER,
   JacksonJavaAstTransformer,
@@ -107,7 +107,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
         fqn: JACKSON_OBJECT_MAPPER,
       }),
       new Java.Identifier('objectMapper'),
-      new Java.ModifierList(new Java.Modifier(Java.ModifierType.PRIVATE), new Java.Modifier(Java.ModifierType.FINAL)),
+      new Java.ModifierList(new Java.Modifier(Java.ModifierKind.PRIVATE), new Java.Modifier(Java.ModifierKind.FINAL)),
     );
 
     client.body.children.push(objectMapperField);
@@ -126,7 +126,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new AddConstructorCodeAstTransformer(),
       new AddAccessorsForFieldsAstTransformer([objectMapperField.identifier]),
       new AddAbstractAccessorsAstTransformer(),
-      new AddThrowsForKnownMethodsAstTransformer(),
+      new AddThrowsForKnownMethodsJavaAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
       new JacksonJavaAstTransformer(),
@@ -203,7 +203,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
       methodBlock.children.push(new Java.Statement(responseDeclaration));
 
-      const throwsTypeList = new Java.TypeList([]);
+      const throwsTypeList = new Java.TypeList();
 
       let unqualifiedResponses = 0;
       for (const response of endpoint.responses) {
@@ -272,7 +272,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
     root.children.push(new Java.CompilationUnit(
       new Java.PackageDeclaration(args.implOptions.clientPackage),
-      new Java.ImportList([]),
+      new Java.ImportList(),
       client,
     ));
   }
@@ -305,7 +305,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     );
 
     const requestArgumentDeclaration = new Java.Parameter(
-      new Java.EdgeType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.MUTABLE_OBJECT}, false),
+      new Java.EdgeType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.DYNAMIC_OBJECT}, false),
       requestIdentifier,
     );
 
@@ -427,7 +427,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       undefined, true,
     );
 
-    const callMethod = new Java.MethodDeclaration(
+    return new Java.MethodDeclaration(
       new Java.MethodDeclarationSignature(
         new Java.Identifier('_call'),
         new Java.EdgeType({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.OBJECT}, false),
@@ -439,7 +439,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
           requestArgumentDeclaration,
         ),
         new Java.ModifierList(
-          new Java.Modifier(Java.ModifierType.PRIVATE),
+          new Java.Modifier(Java.ModifierKind.PRIVATE),
         ),
       ),
       new Java.Block(
@@ -496,7 +496,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     //   .sendAsync(request, BodyHandlers.ofString())
     //   .thenApply(HttpResponse::statusCode)
     //   .thenAccept(System.out::println);
-    return callMethod;
+    // return callMethod;
   }
 
   private addResponseWithQualifiers(
@@ -513,7 +513,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
           ifChecks.push(
             new Java.IfStatement(
-              new Java.Predicate(
+              new Java.BinaryExpression(
                 new Java.MethodCall(
                   new Java.MemberAccess(
                     new Java.MethodCall(
@@ -542,7 +542,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
           ifChecks.push(
             new Java.IfStatement(
-              new Java.Predicate(
+              new Java.BinaryExpression(
                 new Java.MethodCall(
                   new Java.MemberAccess(
                     new Java.MethodCall(
@@ -652,14 +652,14 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new Java.Block(
       ),
       new Java.ModifierList(
-        new Java.Modifier(Java.ModifierType.PUBLIC),
-        new Java.Modifier(Java.ModifierType.STATIC),
-        new Java.Modifier(Java.ModifierType.FINAL),
+        new Java.Modifier(Java.ModifierKind.PUBLIC),
+        new Java.Modifier(Java.ModifierKind.STATIC),
+        new Java.Modifier(Java.ModifierKind.FINAL),
       ),
     );
 
     newExceptionDeclaration.extends = new Java.ExtendsDeclaration(
-      new Java.TypeList([args.root.getAstUtils().createTypeNode(exceptionType)]),
+      new Java.TypeList(args.root.getAstUtils().createTypeNode(exceptionType)),
     );
 
     cuBody.children.push(newExceptionDeclaration);

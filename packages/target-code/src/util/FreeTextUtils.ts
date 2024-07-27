@@ -1,4 +1,7 @@
 import * as FreeText from '../ast/FreeText';
+import {assertDefined, Visitor} from '@omnigen/core-util';
+import {createCodeFreeTextVisitor} from '../visitor/FreeTextVisitor.ts';
+import {createCodeFreeTextReducer} from '../reduce/CodeAstReducer.ts';
 
 export class FreeTextUtils {
 
@@ -28,16 +31,17 @@ export class FreeTextUtils {
    * @param existing The potentially already existing freetext to merge with
    * @param add The freetext of friendly freetext to add.
    */
-  public static add(existing: FreeText.AnyFreeText | undefined, add: FreeText.AnyFreeText | FreeText.FriendlyFreeTextIn): FreeText.AnyFreeText {
+  public static add(existing: FreeText.AnyFreeText | undefined, add: FreeText.AnyFreeText | FreeText.FriendlyFreeTextIn | undefined): FreeText.AnyFreeText {
 
     if (!existing) {
       if (add instanceof FreeText.AbstractFreeText) {
         return add;
-      } else {
+      } else if (add) {
         return FreeTextUtils.fromFriendlyFreeText(add);
       }
-    } else {
-      // TODO: If adding a "summary" and there already is a summary, then add it to the existing summary as a paragraph (the first one should not be a paragraph)
+    } else if (add) {
+
+      add = FreeTextUtils.fromFriendlyFreeText(add);
 
       const original = existing;
       if (!(existing instanceof FreeText.FreeTexts)) {
@@ -45,6 +49,21 @@ export class FreeTextUtils {
       }
 
       // NOTE: Perhaps this should be added as different types of freetext depending on what the already existing one is.
+      const visitor = createCodeFreeTextVisitor<FreeText.AnyFreeText>();
+      const reducer = createCodeFreeTextReducer();
+
+      const existingSummary = Visitor.single(Visitor.create(visitor, {
+        visitFreeTextSummary: n => n,
+      }), existing, existing);
+
+      if (existingSummary) {
+        add = add.reduce({...reducer, reduceFreeTextSummary: n => (FreeTextUtils.getText(n.content) === FreeTextUtils.getText(existingSummary)) ? undefined : n});
+        add = add?.reduce({...reducer, reduceFreeTextSummary: n => new FreeText.FreeTextRemark(n.content)});
+      }
+
+      if (!add) {
+        return existing;
+      }
 
       if (add instanceof FreeText.FreeTextTypeLink) {
         for (const existingChild of existing.children) {
@@ -83,10 +102,11 @@ export class FreeTextUtils {
 
       const newChildren: FreeText.AnyFreeText[] = [...existing.children];
 
-      newChildren.push(FreeTextUtils.fromFriendlyFreeText(add));
+      newChildren.push(add);
 
       const order = [
         FreeText.FreeTextSummary,
+        FreeText.FreeTextRemark,
         FreeText.FreeTextLine,
         FreeText.FreeTextExample,
         FreeText.FreeTextTypeLink,
@@ -108,18 +128,80 @@ export class FreeTextUtils {
         return 0;
       });
 
-      return FreeTextUtils.simplify(new FreeText.FreeTexts(newChildren));
+      return FreeTextUtils.simplify(newChildren);
     }
+
+    if (!existing) {
+      return new FreeText.FreeTexts();
+    }
+
+    return existing;
   }
 
-  public static simplify(text: FreeText.AnyFreeText): FreeText.AnyFreeText {
+  public static simplify(text: FreeText.AnyFreeText | FreeText.AnyFreeText[]): FreeText.AnyFreeText {
 
-    if (text instanceof FreeText.FreeTexts) {
-      if (text.children.length == 1) {
-        return text.children[0];
+    if (text && Array.isArray(text)) {
+
+      // Explode any FreeTexts, so they are flattened with the given array.
+      for (let i = 0; i < text.length; i++) {
+        const current = text[i];
+        if (current instanceof FreeText.FreeTexts) {
+          text.splice(i, 1, ...current.children);
+        }
+      }
+
+      if (text.length == 1) {
+        text = text[0];
       }
     }
 
+    if (text instanceof FreeText.FreeTexts) {
+      if (text.children.length == 1) {
+        text = text.children[0];
+      }
+    }
+
+    if (Array.isArray(text)) {
+      return new FreeText.FreeTexts(...text);
+    }
+
     return text;
+  }
+
+  public static getText(text: FreeText.FriendlyFreeTextIn): string | undefined {
+
+    if (typeof text == 'string') {
+      return text;
+    }
+
+    if (text instanceof FreeText.FreeText) {
+      return text.text;
+    }
+
+    if (text instanceof FreeText.FreeTextSummary) {
+      return this.getText(text.content);
+    }
+
+    if (text instanceof FreeText.FreeTextParagraph) {
+      return this.getText(text.child);
+    }
+
+    if (text instanceof FreeText.FreeTextSection) {
+      return this.getText(text.content);
+    }
+
+    if (text instanceof FreeText.FreeTextLine) {
+      return this.getText(text.child);
+    }
+
+    if (text instanceof FreeText.FreeTextCode) {
+      return this.getText(text.content);
+    }
+
+    if (text instanceof FreeText.FreeTextRemark) {
+      return this.getText(text.content);
+    }
+
+    return undefined;
   }
 }

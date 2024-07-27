@@ -17,7 +17,7 @@ import {
   InterfaceToTypeAliasTypeScriptAstTransformer,
   RemoveSuperfluousGetterTypeScriptAstTransformer,
   SingleFileTypeScriptAstTransformer,
-  ToHardCodedTypeTypeScriptAstTransformer,
+  ToTypeScriptAstTransformer,
   Ts,
 } from './ast';
 import {
@@ -34,7 +34,7 @@ import {
   ZodParserOptions,
 } from '@omnigen/core';
 import {z} from 'zod';
-import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SimplifyInheritanceModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -47,7 +47,7 @@ import {
   AddObjectDeclarationsCodeAstTransformer,
   InnerTypeCompressionAstTransformer,
   MethodToGetterCodeAstTransformer,
-  PackageResolverAstTransformer,
+  PackageResolverAstTransformer, PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
   RemoveEnumFieldsCodeAstTransformer,
   ReorderMembersAstTransformer,
@@ -87,12 +87,12 @@ export const ZodTypeScriptInitContextOut = ZodModelContext
   .merge(ZodTypeScriptTargetContext);
 
 export const ZodTypeScriptContextIn = ZodModelContext
-    .merge(ZodParserOptionsContext)
-    .merge(ZodPackageOptionsContext)
-    .merge(ZodTargetOptionsContext)
-    .merge(ZodModelTransformOptionsContext)
-    .merge(ZodTypeScriptOptionsContext)
-    .merge(ZodTypeScriptTargetContext)
+  .merge(ZodParserOptionsContext)
+  .merge(ZodPackageOptionsContext)
+  .merge(ZodTargetOptionsContext)
+  .merge(ZodModelTransformOptionsContext)
+  .merge(ZodTypeScriptOptionsContext)
+  .merge(ZodTypeScriptTargetContext)
 ;
 
 export const ZodTypeScriptContextOut = ZodTypeScriptContextIn
@@ -112,7 +112,7 @@ export const TypeScriptPluginInit = createPlugin(
       ]);
     }
 
-    const typescriptOptions = ZodTypeScriptOptions.safeParse(ctx.arguments);
+    const typescriptOptions = ZodTypeScriptOptions.safeParse({...ctx.defaults, ...ctx.arguments});
     if (!typescriptOptions.success) {
       return typescriptOptions.error;
     }
@@ -187,12 +187,13 @@ export const TypeScriptPlugin = createPlugin(
       new RemoveConstantParametersAstTransformer(),
       new ClassToInterfaceTypeScriptAstTransformer(),
       new InterfaceToTypeAliasTypeScriptAstTransformer(),
-      new ToHardCodedTypeTypeScriptAstTransformer(),
+      new ToTypeScriptAstTransformer(),
       new SingleFileTypeScriptAstTransformer(),
       new RemoveEnumFieldsCodeAstTransformer(),
       new PackageResolverAstTransformer(),
       new ReorderMembersAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
+      new PrettyCodeAstTransformer(),
     ] as const;
 
     const options: PackageOptions & TargetOptions & TypeScriptOptions = {
@@ -243,6 +244,16 @@ export const TypeScriptRendererPlugin = createPlugin(
       ...ctx.tsOptions,
     });
     const rendered = renderer.executeRender(ctx.astNode, renderer);
+
+    const singleFileName = ctx.tsOptions.singleFileName;
+    if (rendered.length == 1 && singleFileName) {
+
+      if (singleFileName.includes('.')) {
+        rendered[0].fileName = singleFileName;
+      } else {
+        rendered[0].fileName = `${singleFileName}.ts`;
+      }
+    }
 
     return {
       ...ctx,

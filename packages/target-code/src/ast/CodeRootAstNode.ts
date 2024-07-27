@@ -113,15 +113,4 @@ export abstract class CodeRootAstNode extends AbstractCodeNode implements RootAs
   }
 
   abstract reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<CodeRootAstNode>
-
-  // {
-  //   const reduced = this.children.map(it => it.reduce(reducer)).filter(isDefined);
-  //   if (reduced && reduced.length > 0) {
-  //     const newRoot = this.newRoot(); // new CodeRootAstNode();
-  //     newRoot.children.push(...reduced);
-  //     return newRoot;
-  //   }
-  //
-  //   return undefined;
-  // }
 }

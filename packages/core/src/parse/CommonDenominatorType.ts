@@ -5,4 +5,5 @@ export interface CommonDenominatorType<T = OmniType> {
 
   type: T;
   diffs?: TypeDiffKind[] | undefined;
+  created?: boolean;
 }

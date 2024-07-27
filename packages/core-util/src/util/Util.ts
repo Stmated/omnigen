@@ -19,16 +19,6 @@ export class Util {
     return (start > 0 || end < str.length) ? str.substring(start, end) : str;
   }
 
-  public static getShallowPayloadString<T>(origin: T) {
-
-    return JSON.stringify(origin, (key, value) => {
-      if (value && typeof value === 'object' && key) {
-        return '[...]';
-      }
-      return value;
-    });
-  }
-
   /**
    * Warning! Only use for test cases
    */

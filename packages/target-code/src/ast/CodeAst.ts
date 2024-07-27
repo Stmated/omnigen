@@ -44,23 +44,8 @@ export enum TokenKind {
 
   OR,
   AND,
-}
 
-export class TokenNode extends AbstractCodeNode {
-  type: TokenKind;
-
-  constructor(type: TokenKind) {
-    super();
-    this.type = type;
-  }
-
-  visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
-    return visitor.visitToken(this, visitor);
-  }
-
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<TokenNode> {
-    return reducer.reduceToken(this, reducer);
-  }
+  BITWISE_OR,
 }
 
 export class EdgeType<T extends OmniType = OmniType> extends AbstractCodeNode implements TypeNode<T> {
@@ -102,13 +87,13 @@ export class EdgeType<T extends OmniType = OmniType> extends AbstractCodeNode im
 
 export class ArrayType<T extends OmniArrayType = OmniArrayType> extends AbstractCodeNode implements TypeNode<T> {
   readonly omniType: T;
-  readonly of: TypeNode;
+  readonly itemTypeNode: TypeNode;
   readonly implementation?: boolean | undefined;
 
   constructor(omniType: T, of: TypeNode, implementation?: boolean | undefined) {
     super();
     this.omniType = omniType;
-    this.of = of;
+    this.itemTypeNode = of;
     this.implementation = implementation;
   }
 
@@ -116,7 +101,7 @@ export class ArrayType<T extends OmniArrayType = OmniArrayType> extends Abstract
     return visitor.visitArrayType(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<ArrayType> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<TypeNode> {
     return reducer.reduceArrayType(this, reducer);
   }
 }
@@ -204,7 +189,9 @@ export class Identifier extends AbstractCodeNode {
   constructor(name: string, original?: string) {
     super();
     this.value = name;
-    this.original = original;
+    if (original && original !== name) {
+      this.original = original;
+    }
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
@@ -365,13 +352,11 @@ export class ArrayInitializer<T extends AbstractCodeNode = AbstractCodeNode> ext
   }
 }
 
-export type StaticTarget = ClassName;
-
 export class StaticMemberReference extends AbstractCodeNode {
-  target: StaticTarget;
-  member: AbstractCodeNode;
+  target: ClassName;
+  member: AstNode;
 
-  constructor(target: StaticTarget, member: AbstractCodeNode) {
+  constructor(target: ClassName, member: AstNode) {
     super();
     this.target = target;
     this.member = member;
@@ -461,10 +446,10 @@ export class ConstructorParameterList extends AbstractCodeNode implements AstNod
 
 export class BinaryExpression extends AbstractCodeNode {
   left: AbstractCodeNode;
-  token: TokenNode;
+  token: TokenKind;
   right: AbstractCodeNode;
 
-  constructor(left: AbstractCodeNode, token: TokenNode, right: AbstractCodeNode) {
+  constructor(left: AbstractCodeNode, token: TokenKind, right: AbstractCodeNode) {
     super();
     this.left = left;
     this.token = token;
@@ -475,8 +460,31 @@ export class BinaryExpression extends AbstractCodeNode {
     return visitor.visitBinaryExpression(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<BinaryExpression> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceBinaryExpression(this, reducer);
+  }
+}
+
+export class InstanceOf extends AbstractCodeNode {
+  target: AstNode;
+  comparison: AstNode;
+  narrowed?: AstNode;
+
+  constructor(target: AstNode, comparison: AstNode, narrowed?: AstNode) {
+    super();
+    this.target = target;
+    this.comparison = comparison;
+    if (narrowed) {
+      this.narrowed = narrowed;
+    }
+  }
+
+  visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
+    return visitor.visitInstanceOf(this, visitor);
+  }
+
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<InstanceOf> {
+    return reducer.reduceInstanceOf(this, reducer);
   }
 }
 
@@ -494,29 +502,6 @@ export class PackageDeclaration extends AbstractCodeNode {
 
   reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<PackageDeclaration> {
     return reducer.reducePackage(this, reducer);
-  }
-}
-
-export type TokenTypePredicate =
-  TokenKind.EQUALS
-  | TokenKind.NOT_EQUALS
-  | TokenKind.GT
-  | TokenKind.LT
-  | TokenKind.LTE
-  | TokenKind.GTE;
-
-export class Predicate extends BinaryExpression {
-
-  constructor(left: AbstractCodeNode, token: TokenTypePredicate, right: AbstractCodeNode) {
-    super(left, new TokenNode(token), right);
-  }
-
-  visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
-    return visitor.visitPredicate(this, visitor);
-  }
-
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<Predicate> {
-    return reducer.reducePredicate(this, reducer);
   }
 }
 
@@ -592,7 +577,7 @@ export class Block extends AbstractCodeNode implements AstNodeWithChildren {
 }
 
 // Is it needed to separate these? We don't need to care to be logically consistent.
-export enum ModifierType {
+export enum ModifierKind {
   PRIVATE,
   PUBLIC,
   DEFAULT,
@@ -610,14 +595,16 @@ export enum ModifierType {
    * In `Java` there is no such thing and can be replaced with closest `static final`.
    */
   CONST,
+
+  OVERRIDE,
 }
 
 export class Modifier extends AbstractCodeNode {
-  type: ModifierType;
+  kind: ModifierKind;
 
-  constructor(type: ModifierType) {
+  constructor(type: ModifierKind) {
     super();
-    this.type = type;
+    this.kind = type;
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
@@ -676,6 +663,9 @@ export class Comment extends AbstractCodeNode {
  */
 export class Field extends AbstractCodeNode {
   identifier: Identifier;
+  /**
+   * This type is not necessarily the same as the property's type, since it might have had local changes for just this field. Prefer the property's type if want to be accurate against contract.
+   */
   type: TypeNode;
   initializer?: AbstractCodeNode | undefined;
   comments?: Comment | undefined;
@@ -685,7 +675,7 @@ export class Field extends AbstractCodeNode {
 
   constructor(type: TypeNode, name: Identifier, modifiers?: ModifierList, initializer?: AbstractCodeNode | undefined, annotations?: AnnotationList) {
     super();
-    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PRIVATE));
+    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierKind.PRIVATE));
     this.type = type;
     this.identifier = name;
     this.initializer = initializer;
@@ -709,6 +699,7 @@ export class MethodDeclarationSignature extends AbstractCodeNode {
   annotations?: AnnotationList | undefined;
   modifiers: ModifierList;
   parameters?: ParameterList | undefined;
+  genericParameters?: GenericTypeDeclarationList | undefined;
   throws?: TypeList;
 
   constructor(
@@ -719,9 +710,10 @@ export class MethodDeclarationSignature extends AbstractCodeNode {
     annotations?: AnnotationList,
     comments?: Comment,
     throws?: TypeList,
+    genericParameters?: GenericTypeDeclarationList,
   ) {
     super();
-    this.modifiers = modifiers ?? new ModifierList(new Modifier(ModifierType.PUBLIC));
+    this.modifiers = modifiers ?? new ModifierList(new Modifier(ModifierKind.PUBLIC));
     this.type = type;
     this.identifier = identifier;
     this.parameters = parameters;
@@ -729,6 +721,9 @@ export class MethodDeclarationSignature extends AbstractCodeNode {
     this.comments = comments;
     if (throws) {
       this.throws = throws;
+    }
+    if (genericParameters) {
+      this.genericParameters = genericParameters;
     }
   }
 
@@ -760,6 +755,9 @@ export class MethodDeclaration extends AbstractCodeNode {
   }
 }
 
+/**
+ * TODO: Rename to just `Return` since it is not a statement, it is an expression, and needs to be wrapped by `Statement(expr)`
+ */
 export class ReturnStatement extends AbstractCodeNode {
   expression: AbstractCodeNode;
 
@@ -813,7 +811,7 @@ export class FieldReference extends AbstractCodeNode implements Reference<Field>
   }
 }
 
-export class DeclarationReference extends AbstractCodeNode implements Reference<VariableDeclaration | Parameter> {
+export class DeclarationReference extends AbstractCodeNode implements Reference<VariableDeclaration | Parameter | ClassDeclaration> {
   targetId: number;
 
   constructor(target: number | VariableDeclaration | Parameter) {
@@ -868,13 +866,11 @@ export class FieldBackedGetter extends AbstractCodeNode {
   readonly comments?: Comment | undefined;
 
   /**
-   * TODO: This is too specific for Java, since other languages will handle getters in other ways.
-   *        Think of a better way to abstract getters -- maybe just remove this and instead rely on some other method?
-   *        Perhaps the "getterName" should be a dynamic identifier, like a "GetterIdentifier" which is rendered differently per language?
+   * If not set, it will derive the identifier from the field.
    */
-  readonly getterName?: GetterIdentifier | undefined;
+  readonly getterName?: Identifier | undefined;
 
-  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: Comment, getterName?: GetterIdentifier | undefined) {
+  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: Comment, getterName?: Identifier | undefined) {
     super();
     this.fieldRef = fieldRef;
     this.annotations = annotations;
@@ -897,11 +893,17 @@ export class FieldBackedSetter extends AbstractCodeNode {
   readonly annotations?: AnnotationList | undefined;
   readonly comments?: Comment | undefined;
 
-  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: Comment) {
+  /**
+   * If not set, it will derive the identifier from the field.
+   */
+  readonly identifier?: Identifier | undefined;
+
+  constructor(fieldRef: Reference<Field>, annotations?: AnnotationList, comments?: Comment, identifier?: Identifier | undefined) {
     super();
     this.fieldRef = fieldRef;
     this.annotations = annotations;
     this.comments = comments;
+    this.identifier = identifier;
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
@@ -933,9 +935,9 @@ export class Cast extends AbstractCodeNode {
 }
 
 export class TypeList<T extends OmniType = OmniType> extends AbstractCodeNode implements AstNodeWithChildren<TypeNode<T>> {
-  children: TypeNode<T>[];
+  children: Array<TypeNode<T>>;
 
-  constructor(types: TypeNode<T>[]) {
+  constructor(...types: Array<TypeNode<T>>) {
     super();
     this.children = types;
   }
@@ -1004,7 +1006,7 @@ export abstract class AbstractObjectDeclaration<T extends OmniType = OmniType> e
   protected constructor(type: TypeNode<T>, name: Identifier, body: Block, modifiers?: ModifierList) {
     super();
     this.type = type;
-    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
+    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierKind.PUBLIC));
     this.name = name;
     this.body = body;
   }
@@ -1055,7 +1057,7 @@ export class ConstructorDeclaration extends AbstractCodeNode {
 
   constructor(parameters?: ConstructorParameterList, body?: Block, modifiers?: ModifierList) {
     super();
-    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierType.PUBLIC));
+    this.modifiers = modifiers || new ModifierList(new Modifier(ModifierKind.PUBLIC));
     this.parameters = parameters;
     this.body = body;
   }
@@ -1137,7 +1139,7 @@ export class GenericTypeDeclaration extends AbstractCodeNode {
 export class GenericTypeDeclarationList extends AbstractCodeNode {
   types: GenericTypeDeclaration[];
 
-  constructor(types: GenericTypeDeclaration[]) {
+  constructor(...types: GenericTypeDeclaration[]) {
     super();
     this.types = types;
   }
@@ -1168,14 +1170,18 @@ export class EnumDeclaration extends AbstractObjectDeclaration<OmniEnumType> {
 
 export class EnumItem extends AbstractCodeNode {
   identifier: Identifier;
-  value: Literal;
+  value?: Literal | undefined;
   comment?: Comment | undefined;
+  annotations?: AnnotationList;
 
-  constructor(identifier: Identifier, value: Literal, comment?: Comment) {
+  constructor(identifier: Identifier, value: Literal | undefined, comment?: Comment, annotations?: AnnotationList) {
     super();
     this.identifier = identifier;
     this.value = value;
     this.comment = comment;
+    if (annotations) {
+      this.annotations = annotations;
+    }
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
@@ -1188,10 +1194,10 @@ export class EnumItem extends AbstractCodeNode {
 }
 
 export class IfStatement extends AbstractCodeNode {
-  predicate: Predicate;
+  predicate: AstNode;
   body: Block;
 
-  constructor(predicate: Predicate, body: Block) {
+  constructor(predicate: AstNode, body: Block) {
     super();
     this.predicate = predicate;
     this.body = body;
@@ -1226,11 +1232,11 @@ export class IfElseStatement extends AbstractCodeNode {
 }
 
 export class TernaryExpression extends AbstractCodeNode {
-  predicate: Predicate;
+  predicate: AstNode;
   passing: AbstractCodeNode;
   failing: AbstractCodeNode;
 
-  constructor(condition: Predicate, passing: AbstractCodeNode, failing: AbstractCodeNode) {
+  constructor(condition: AstNode, passing: AbstractCodeNode, failing: AbstractCodeNode) {
     super();
     this.predicate = condition;
     this.passing = passing;
@@ -1269,7 +1275,7 @@ export class ImportStatement extends AbstractCodeNode {
 export class ImportList extends AbstractCodeNode implements AstNodeWithChildren<ImportStatement> {
   children: ImportStatement[];
 
-  constructor(children: ImportStatement[]) {
+  constructor(...children: ImportStatement[]) {
     super();
     this.children = children;
   }
@@ -1319,12 +1325,16 @@ export class SuperConstructorCall extends AbstractCodeNode {
 
 export class MethodCall extends AbstractCodeNode {
   target: AbstractCodeNode;
+  genericArguments?: ArgumentList;
   methodArguments?: ArgumentList;
 
-  constructor(target: AbstractCodeNode, methodArguments: ArgumentList) {
+  constructor(target: AbstractCodeNode, methodArguments?: ArgumentList, genericArguments?: ArgumentList) {
     super();
     this.target = target;
-    this.methodArguments = methodArguments;
+    this.methodArguments = methodArguments ?? new ArgumentList();
+    if (genericArguments) {
+      this.genericArguments = genericArguments;
+    }
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
@@ -1580,6 +1590,17 @@ export class DelegateCall extends AbstractCodeNode {
   }
 }
 
+export class FormatNewline extends AbstractCodeNode {
+
+  visit<R>(v: CodeVisitor<R>): VisitResult<R> {
+    return v.visitFormatNewline(this, v);
+  }
+
+  reduce(r: Reducer<CodeVisitor<unknown>>): ReducerResult<FormatNewline> {
+    return r.reduceFormatNewline(this, r);
+  }
+}
+
 export class GenericRef<T extends AstNode> extends AbstractCodeNode implements Reference<T> {
 
   readonly targetId: number;
@@ -1620,5 +1641,25 @@ export class MemberAccess extends AbstractCodeNode {
 
   reduce(r: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return r.reduceMemberAccess(this, r);
+  }
+}
+
+export class IndexAccess extends AbstractCodeNode {
+
+  readonly owner: AstNode;
+  readonly index: AstNode;
+
+  constructor(owner: AstNode, index: AstNode) {
+    super();
+    this.owner = owner;
+    this.index = index;
+  }
+
+  visit<R>(v: CodeVisitor<R>): VisitResult<R> {
+    return v.visitIndexAccess(this, v);
+  }
+
+  reduce(r: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
+    return r.reduceIndexAccess(this, r);
   }
 }

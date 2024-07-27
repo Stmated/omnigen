@@ -1,7 +1,10 @@
 import {AstNameBuildArgs, NameParts, ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, TypeUseKind, UnknownKind} from '@omnigen/core';
-import {AbstractObjectNameResolver} from '@omnigen/core-util';
+import {AbstractObjectNameResolver, assertUnreachable} from '@omnigen/core-util';
 import {CSharpOptions} from '../options';
 import {CSharpUtil} from '../util/CSharpUtil.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export class CSharpObjectNameResolver extends AbstractObjectNameResolver<PackageOptions & TargetOptions & CSharpOptions> {
 
@@ -40,35 +43,55 @@ export class CSharpObjectNameResolver extends AbstractObjectNameResolver<Package
       kind = OmniTypeKind.DOUBLE;
     }
 
+    const suffix = boxed ? '?' : '';
+
     switch (kind) {
       case OmniTypeKind.BOOL:
-        return boxed ? {namespace: ['System'], edgeName: 'Boolean'} : {namespace: [], edgeName: 'boolean'};
+        return {namespace: [], edgeName: `bool${suffix}`};
       case OmniTypeKind.VOID:
         return {namespace: [], edgeName: 'void'};
       case OmniTypeKind.CHAR:
-        return boxed ? {namespace: ['System'], edgeName: 'Char'} : {namespace: [], edgeName: 'char'};
+        return {namespace: [], edgeName: `char${suffix}`};
       case OmniTypeKind.STRING:
-        return {namespace: ['System'], edgeName: 'String'};
+        return {namespace: [], edgeName: 'string'};
       case OmniTypeKind.FLOAT:
-        return boxed ? {namespace: ['System'], edgeName: 'Single'} : {namespace: [], edgeName: 'float'};
+        return {namespace: [], edgeName: `float${suffix}`};
       case OmniTypeKind.INTEGER:
-        return boxed ? {namespace: ['System'], edgeName: 'Int32'} : {namespace: [], edgeName: 'int'};
+        return {namespace: [], edgeName: `int${suffix}`};
       case OmniTypeKind.INTEGER_SMALL:
-        return boxed ? {namespace: ['System'], edgeName: 'Int16'} : {namespace: [], edgeName: 'short'};
+        return {namespace: [], edgeName: `short${suffix}`};
       case OmniTypeKind.LONG:
-        return boxed ? {namespace: ['System'], edgeName: 'Int64'} : {namespace: [], edgeName: 'long'};
+        return {namespace: [], edgeName: `long${suffix}`};
       case OmniTypeKind.DECIMAL:
-        return boxed ? {namespace: ['System'], edgeName: 'Decimal'} : {namespace: [], edgeName: 'decimal'};
+        return {namespace: [], edgeName: `decimal${suffix}`};
       case OmniTypeKind.DOUBLE:
-        return boxed ? {namespace: ['System'], edgeName: 'Double'} : {namespace: [], edgeName: 'double'};
+        return {namespace: [], edgeName: `double${suffix}`};
       case OmniTypeKind.NULL:
       case OmniTypeKind.UNDEFINED:
-        return {namespace: ['System'], edgeName: 'Object'};
+        return {namespace: [], edgeName: 'object'};
     }
+
+    assertUnreachable(kind);
   }
 
   protected getUnknownKind(type: OmniUnknownType, options: CSharpOptions): UnknownKind {
     return type.unknownKind ?? options.unknownType;
+  }
+
+  protected getUnknownTypeString(unknownKind: UnknownKind): string {
+    switch (unknownKind) {
+      case UnknownKind.DYNAMIC_OBJECT:
+        return `MutableObject`;
+      case UnknownKind.DYNAMIC:
+        return `MutableObject`;
+      case UnknownKind.DYNAMIC_NATIVE:
+        return `dynamic`;
+      case UnknownKind.OBJECT:
+        return 'object';
+      case UnknownKind.ANY:
+      case UnknownKind.WILDCARD:
+        return 'dynamic';
+    }
   }
 }
 

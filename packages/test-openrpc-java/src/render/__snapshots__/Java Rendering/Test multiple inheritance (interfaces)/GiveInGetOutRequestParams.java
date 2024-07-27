@@ -5,7 +5,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class GiveInGetOutRequestParams extends JsonRpcRequestParams {
-  public GiveInGetOutRequestParams(@JsonProperty("param") In param) {
+  public GiveInGetOutRequestParams(@JsonProperty(value = "param") In param) {
     super(param);
   }
 }

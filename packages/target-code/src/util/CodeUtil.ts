@@ -1,5 +1,5 @@
 import {OmniCompositionType, OmniInterfaceOrObjectType, OmniKindComposition, OmniModel, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TargetFunctions} from '@omnigen/core';
-import {AbortVisitingWithResult, Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
 
@@ -15,7 +15,7 @@ export class CodeUtil {
   public static getClassDeclaration(root: CodeRootAstNode, type: OmniType): Code.ClassDeclaration | undefined {
 
     const defaultVisitor = root.createVisitor<Code.ClassDeclaration | undefined>();
-    return VisitResultFlattener.visitWithSingularResult(VisitorFactoryManager.create(defaultVisitor, {
+    return VisitResultFlattener.visitWithSingularResult(Visitor.create(defaultVisitor, {
       visitClassDeclaration: node => {
         if (node.type.omniType == type) {
           throw new AbortVisitingWithResult(node);

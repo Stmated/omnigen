@@ -1,27 +1,29 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class AbortData {
+  @JsonProperty(value = "orderid", required = true)
+  @JsonInclude
   private final String orderid;
+  @JsonProperty(value = "system_initiated")
   private final StringBoolean systemInitiated;
+  @JsonProperty(value = "user_initiated")
   private final StringBoolean userInitiated;
 
   public AbortData(
     @JsonProperty(value = "orderid", required = true) String orderid,
-    @JsonProperty("user_initiated") StringBoolean userInitiated,
-    @JsonProperty("system_initiated") StringBoolean systemInitiated
+    @JsonProperty(value = "user_initiated") StringBoolean userInitiated,
+    @JsonProperty(value = "system_initiated") StringBoolean systemInitiated
   ) {
     this.orderid = orderid;
     this.userInitiated = userInitiated;
     this.systemInitiated = systemInitiated;
   }
 
-  @JsonInclude(Include.ALWAYS)
   public String getOrderid() {
     return this.orderid;
   }
@@ -29,12 +31,10 @@ public class AbortData {
   /**
    * Some descriptive description.
    */
-  @JsonProperty("system_initiated")
   public StringBoolean getSystemInitiated() {
     return this.systemInitiated;
   }
 
-  @JsonProperty("user_initiated")
   public StringBoolean getUserInitiated() {
     return this.userInitiated;
   }

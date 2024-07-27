@@ -125,8 +125,9 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
      * Should perhaps be replaced by a TS-specific node
      */
     visitFieldBackedGetter: (n, v) => {
-      const field = root.resolveNodeRef(n.fieldRef);
-      return `get ${field.identifier.value}() { return this.${field.identifier.value}; }\n`;
+      const fieldId = root.resolveNodeRef(n.fieldRef).identifier;
+      const identifier = n.getterName ?? fieldId;
+      return `get ${identifier.value}() { return this.${fieldId.value}; }\n`;
     },
 
     /**
@@ -170,13 +171,13 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
     visitModifier: (node, visitor) => {
 
-      if (bodyDepth == 0 && node.type == Code.ModifierType.PUBLIC) {
+      if (bodyDepth == 0 && node.kind == Code.ModifierKind.PUBLIC) {
 
         // TODO: Wrong -- used one way for making object declarations public, and another for members inside the objects -- need to separate them or make it context sensitive
         return 'export';
       }
 
-      if (node.type == Code.ModifierType.FINAL) {
+      if (node.kind == Code.ModifierKind.FINAL) {
         return 'readonly';
       }
 
@@ -188,13 +189,16 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
       const body = n.body ? `${render(n.body, v)}` : '';
       const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
 
-      return `\n${annotations}${modifiers}constructor(${render(n.parameters, v)})${body}\n`;
+      return `${annotations}${modifiers}constructor(${render(n.parameters, v)})${body}`;
     },
 
     visitEdgeType: (n, v) => {
 
+      // TODO: These special cases should not be here, it should be in some other transformer (if really needed at all), or handled by TypeScriptObjectNameResolver.
       if (OmniUtil.isPrimitive(n.omniType)) {
-        if (n.omniType.literal) {
+        if (n.omniType.kind === OmniTypeKind.NULL) {
+          return 'null';
+        } else if (n.omniType.literal) {
 
           if (n.omniType.value === undefined) {
             if ('value' in n.omniType) {
@@ -221,13 +225,13 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
     visitArrayType: (n, v) => {
 
-      const arrayTypeName = options.immutableModels ? 'ReadonlyArray' : 'Array';
-      const itemText = render(n.of, v);
+      const arrayTypeName = options.immutable ? 'ReadonlyArray' : 'Array';
+      const itemText = render(n.itemTypeNode, v);
       const minLength = n.omniType.minLength ?? 0;
       const maxLength = n.omniType.maxLength ?? -1;
       if (minLength > 0) {
 
-        const readonlyPrefix = options.immutableModels ? 'readonly ' : '';
+        const readonlyPrefix = options.immutable ? 'readonly ' : '';
         const prefixItemTexts: string[] = Array(minLength).fill(itemText);
         if (maxLength !== -1) {
           const suffixItemTexts: string[] = Array(maxLength - minLength).fill(`${itemText}?`);
@@ -238,25 +242,6 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
       }
 
       return `${arrayTypeName}<${itemText}>`;
-    },
-
-    visitWildcardType: (n, v) => {
-
-      if (n.omniType.kind == OmniTypeKind.UNKNOWN) {
-        if (n.omniType.unknownKind == UnknownKind.WILDCARD) {
-          return 'unknown';
-        }
-        if (n.omniType.unknownKind == UnknownKind.MUTABLE_OBJECT) {
-          return `Record<string, any>`;
-        }
-        if (n.omniType.unknownKind == UnknownKind.OBJECT) {
-          return 'object';
-        }
-
-        return 'any';
-      }
-
-      return parentRenderer.visitWildcardType(n, v);
     },
 
     visitCompositionType: (n, v) => {
@@ -289,6 +274,10 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
       if (n.primitiveKind == OmniTypeKind.STRING && options.preferSingleQuoteStrings) {
         return `'${n.value}'`;
+      } else if (OmniUtil.isNumericKind(n.primitiveKind)) {
+
+        // Typescript does not have any notation-difference for integers or decimals, so we just output the number as-is.
+        return (`${n.value}`);
       } else {
         return parentRenderer.visitLiteral(n, v);
       }

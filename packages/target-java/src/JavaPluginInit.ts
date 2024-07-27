@@ -11,15 +11,72 @@ import {
   ZodTargetFeaturesContext,
   ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
-import {JavaInterpreter} from './interpret';
 import {CompositionGenericTargetToObjectJavaModelTransformer} from './parse';
-import {createJavaRenderer, JAVA_FEATURES, ZodJavaOptions} from '.';
-import {OmniModelTransformerArgs, ParserOptions, ZodAstNodeContext, ZodParserOptions} from '@omnigen/core';
+import {
+  AddGeneratedAnnotationJavaAstTransformer,
+  AddJakartaValidationAstTransformer,
+  AddLombokAstTransformer,
+  AddSubTypeHintsAstTransformer,
+  AddThrowsForKnownMethodsJavaAstTransformer,
+  createJavaRenderer,
+  DelegatesToJavaAstTransformer,
+  FieldAccessorMode,
+  GroupExampleTextsToSectionAstTransformer,
+  JacksonJavaAstTransformer,
+  JAVA_FEATURES,
+  JavaAndTargetOptions,
+  JavaAstRootNode,
+  JavaOptions,
+  MiscNodesToSpecificJavaAstTransformer,
+  PatternPropertiesToMapJavaAstTransformer,
+  SimplifyGenericsJavaAstTransformer,
+  ToHardCodedTypeJavaAstTransformer,
+  ZodJavaOptions,
+} from '.';
+import {
+  AstTransformer,
+  AstTransformerArguments,
+  OmniModel2ndPassTransformer,
+  OmniModelTransformer,
+  OmniModelTransformer2ndPassArgs,
+  OmniModelTransformerArgs,
+  ParserOptions,
+  TargetOptions,
+  ZodAstNodeContext,
+  ZodParserOptions, ZodTargetOptions,
+} from '@omnigen/core';
 import {z} from 'zod';
-import {ElevatePropertiesModelTransformer, GenericsModelTransformer, SimplifyInheritanceModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {ZodCompilationUnitsContext} from '@omnigen/core-util';
 import * as Java from './ast/JavaAst';
+import {CodeRootAstNode} from './ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
-import {SimplifyUnnecessaryCompositionsModelTransformer, InterfaceExtractorModelTransformer, AggregateIntersectionsModelTransformer} from '@omnigen/target-code';
+import {
+  AddAbstractAccessorsAstTransformer,
+  AddAccessorsForFieldsAstTransformer,
+  AddAdditionalPropertiesInterfaceAstTransformer,
+  AddCommentsAstTransformer,
+  AddCompositionMembersCodeAstTransformer,
+  AddConstructorCodeAstTransformer,
+  AddFieldsAstTransformer,
+  AddObjectDeclarationsCodeAstTransformer,
+  AggregateIntersectionsModelTransformer,
+  InnerTypeCompressionAstTransformer,
+  InterfaceExtractorModelTransformer,
+  MergeLargeUnionLateModelTransformer,
+  PackageResolverAstTransformer, PrettyCodeAstTransformer,
+  RemoveConstantParametersAstTransformer,
+  ReorderMembersAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer,
+  SimplifyAndCleanAstTransformer,
+  SimplifyGenericsAstTransformer,
+  SimplifyUnnecessaryCompositionsModelTransformer,
+  ToConstructorBodySuperCallAstTransformer,
+} from '@omnigen/target-code';
+import {SingleFileJavaAstTransformer} from './transform/SingleFileJavaAstTransformer.ts';
+import {ToJavaAstTransformer} from './transform/ToJavaAstTransformer.ts';
+import {SimplifyTypePathsJavaAstTransformer} from './transform/SimplifyTypePathsJavaAstTransformer.ts';
+import {BeanValidationJavaAstTransformer} from './transform/BeanValidationJavaAstTransformer.ts';
+import {MapMemberAccessToJavaAstTransformer} from './transform/MapMemberAccessToJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -55,8 +112,6 @@ export const ZodJavaContextIn = ZodModelContext
 export const ZodJavaContextOut = ZodJavaContextIn
   .merge(ZodAstNodeContext);
 
-export type JavaOptionsContext = z.output<typeof ZodJavaOptionsContext>;
-
 export const JavaPluginInit = createPlugin(
   {
     name: 'java-init', in: ZodJavaInitContextIn, out: ZodJavaInitContextOut,
@@ -71,7 +126,7 @@ export const JavaPluginInit = createPlugin(
       ]);
     }
 
-    const javaOptions = ZodJavaOptions.safeParse(ctx.arguments);
+    const javaOptions = ZodJavaOptions.safeParse({...ctx.defaults, ...ctx.arguments});
     if (!javaOptions.success) {
       return javaOptions.error;
     }
@@ -94,7 +149,7 @@ export const JavaPlugin = createPlugin(
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
     };
 
-    const transformers = [
+    const transformers: OmniModelTransformer[] = [
       // new SimplifyInheritanceModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
       // new GenericsModelTransformer(),
@@ -108,22 +163,92 @@ export const JavaPlugin = createPlugin(
       transformer.transformModel(transformerArgs);
     }
 
-    const interpreter = new JavaInterpreter(
-      {...ctx.javaOptions, ...ctx.targetOptions, ...ctx.packageOptions},
-      JAVA_FEATURES,
-    );
+    const modelTransformer2Args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & JavaOptions> = {
+      model: ctx.model,
+      options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.javaOptions},
+      targetFeatures: JAVA_FEATURES,
+    };
 
-    const astNode = interpreter.buildSyntaxTree(ctx.model, []);
+    const transformers2: OmniModel2ndPassTransformer[] = [
+      new MergeLargeUnionLateModelTransformer(),
+    ] as const;
+
+    for (const transformer of transformers2) {
+      transformer.transformModel2ndPass(modelTransformer2Args);
+    }
+
+    const astTransformers: AstTransformer<CodeRootAstNode, JavaAndTargetOptions>[] = [];
+    astTransformers.push(new AddObjectDeclarationsCodeAstTransformer());
+    astTransformers.push(new AddFieldsAstTransformer());
+    if (ctx.javaOptions.fieldAccessorMode === FieldAccessorMode.POJO) {
+      astTransformers.push(new AddAccessorsForFieldsAstTransformer());
+    }
+    astTransformers.push(new AddCompositionMembersCodeAstTransformer());
+    astTransformers.push(new AddAbstractAccessorsAstTransformer());
+    if (ctx.javaOptions.fieldAccessorMode !== FieldAccessorMode.LOMBOK) {
+      // If the fields are managed by lombok, then we add no constructor.
+      // TODO: Move to much later, so things like generic normalization/simplification has been done?
+      astTransformers.push(new AddConstructorCodeAstTransformer());
+    }
+    astTransformers.push(new AddLombokAstTransformer());
+    astTransformers.push(new AddAdditionalPropertiesInterfaceAstTransformer());
+    astTransformers.push(new AddJakartaValidationAstTransformer());
+    astTransformers.push(new AddSubTypeHintsAstTransformer());
+    astTransformers.push(new InnerTypeCompressionAstTransformer());
+    astTransformers.push(new PatternPropertiesToMapJavaAstTransformer());
+    astTransformers.push(new SingleFileJavaAstTransformer());
+    astTransformers.push(new ResolveGenericSourceIdentifiersAstTransformer());
+    astTransformers.push(new SimplifyGenericsAstTransformer());
+    astTransformers.push(new MiscNodesToSpecificJavaAstTransformer());
+    astTransformers.push(new RemoveConstantParametersAstTransformer());
+    astTransformers.push(new JacksonJavaAstTransformer());
+    astTransformers.push(new AddThrowsForKnownMethodsJavaAstTransformer());
+    astTransformers.push(new BeanValidationJavaAstTransformer());
+    astTransformers.push(new MapMemberAccessToJavaAstTransformer());
+    astTransformers.push(new ToHardCodedTypeJavaAstTransformer());
+    astTransformers.push(new ToConstructorBodySuperCallAstTransformer());
+    astTransformers.push(new ToJavaAstTransformer());
+    astTransformers.push(new DelegatesToJavaAstTransformer());
+    astTransformers.push(new AddGeneratedAnnotationJavaAstTransformer());
+    astTransformers.push(new AddCommentsAstTransformer());
+    astTransformers.push(new PackageResolverAstTransformer());
+    astTransformers.push(new GroupExampleTextsToSectionAstTransformer());
+    astTransformers.push(new SimplifyTypePathsJavaAstTransformer());
+    astTransformers.push(new SimplifyAndCleanAstTransformer());
+    astTransformers.push(new SimplifyGenericsJavaAstTransformer());
+    astTransformers.push(new ReorderMembersAstTransformer());
+    astTransformers.push(new PrettyCodeAstTransformer());
+
+    const rootNode = new JavaAstRootNode();
+
+    const targetOptions: TargetOptions = ZodTargetOptions.parse({...ctx.defaults, ...ctx.targetOptions, ...ctx.arguments});
+
+    const args: AstTransformerArguments<CodeRootAstNode, JavaAndTargetOptions> = {
+      model: ctx.model,
+      root: rootNode,
+      externals: [],
+      options: {...ctx.packageOptions, ...targetOptions, ...ctx.javaOptions},
+      features: JAVA_FEATURES,
+    };
+
+    for (const transformer of astTransformers) {
+
+      // We do the transformers in order.
+      // Later we might batch them together based on "type" or "group" or whatever.
+      transformer.transformAst(args);
+    }
 
     return {
       ...ctx,
-      astNode: astNode,
+      astNode: args.root,
+      targetOptions: targetOptions,
     };
   },
 );
 
 export const JavaRendererCtxIn = ZodModelContext
   .merge(ZodAstNodeContext)
+  .merge(ZodTargetOptionsContext)
   .merge(ZodJavaOptionsContext)
   .merge(ZodJavaTargetContext);
 
@@ -137,7 +262,7 @@ export const JavaRendererPlugin = createPlugin(
   async ctx => {
 
     const javaRootNode = ctx.astNode as Java.JavaAstRootNode;
-    const renderer = createJavaRenderer(javaRootNode, ctx.javaOptions);
+    const renderer = createJavaRenderer(javaRootNode, {...ctx.targetOptions, ...ctx.javaOptions});
     const rendered = renderer.executeRender(ctx.astNode, renderer);
 
     return {

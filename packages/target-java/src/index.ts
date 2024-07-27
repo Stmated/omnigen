@@ -2,7 +2,6 @@ import {OMNI_GENERIC_FEATURES, StaticInnerTypeKind, TargetFeatures} from '@omnig
 
 export * from './visit';
 export * from './transform';
-export * from './interpret';
 export * from './options';
 export * from './util';
 export * from './render';
@@ -25,5 +24,6 @@ export const JAVA_FEATURES: TargetFeatures = {
   relativeImports: false,
   forcedImports: false,
   staticInnerTypes: StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE,
+  unions: false,
 };
 

@@ -21,7 +21,7 @@ import {
   OmniOutput,
   OmniPayloadPathQualifier,
   OmniPrimitiveType,
-  OmniProperty,
+  OmniProperty, OmniPropertyName,
   OmniPropertyOwner,
   OmniServer,
   OmniType,
@@ -33,9 +33,9 @@ import {
   ParserBootstrapFactory,
   ParserOptions,
   SchemaSource,
-  TypeName,
+  TypeName, UnknownKind,
 } from '@omnigen/core';
-import {Case, OmniUtil} from '@omnigen/core-util';
+import {Case, Naming, OmniUtil} from '@omnigen/core-util';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
@@ -72,6 +72,8 @@ import {ZodArguments} from '@omnigen/core-plugin';
 import {OpenAPIV3_1 as OpenApi} from 'openapi-types';
 
 const logger = LoggerFactory.create(import.meta.url);
+
+const UNKNOWN_ERROR_CODE = -1234567890;
 
 type OutputAndType = { output: OmniOutput; type: OmniType };
 type TypeAndProperties = { type: OmniType; properties: OmniProperty[] | undefined };
@@ -286,20 +288,15 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
   private readonly _preferablyUniqueErrorLogs = new Set<string>();
 
-  // These classes should be optionally created.
-  // Used (only?) if:
-  // * we are going to automatically try and create generics.
-  // * some setting is set to create helper classes
-  // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
   private _jsonRpcRequestClass?: OmniObjectType;
+  private _jsonRpcCallbackRequestClass?: OmniObjectType;
+
   private _jsonRpcResponseClass?: OmniObjectType;
   private _jsonRpcErrorResponseClass?: OmniObjectType;
   private _jsonRpcErrorInstanceClass?: OmniObjectType;
 
-  // This class should be optionally created if we are going to try and create generics.
-  // It is only going to work like a marker interface, so we can know that all the classes are related.
-  // TODO: Need to figure out a way of having multiple code generations using these same classes (since they are generic)
-  private _requestParamsClass?: OmniObjectType; // Used
+  private _requestParamsClass?: OmniObjectType;
+  private _callbackParamsClass?: OmniObjectType;
 
   private readonly _doc: OpenrpcDocument;
   private readonly _refResolver: RefResolver;
@@ -329,6 +326,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const docs = this.doc.externalDocs ? [this.toOmniExternalDocumentationFromExternalDocumentationObject(this.doc.externalDocs)] : [];
     const continuations = endpoints.flatMap(it => this.toOmniLinkFromDocMethods(it, endpoints));
 
+    const manualTypes: OmniType[] = [];
     // Now find all the types that were not referenced by a method, but is in the contract.
     // We most likely still want those types to be included.
     if (this.doc.components?.schemas) {
@@ -337,7 +335,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
-        this._jsonSchemaParser.jsonSchemaToType(deref.$id || key, deref);
+        manualTypes.push(this._jsonSchemaParser.jsonSchemaToType(deref.$id || key, deref).type);
       }
     }
 
@@ -354,7 +352,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       externalDocumentations: docs,
       endpoints: endpoints,
       continuations: continuations,
-      types: [],
+      types: manualTypes,
     };
 
     this._jsonSchemaParser.executePostCleanup(model);
@@ -388,8 +386,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const methodNames: TypeName[] = [];
 
-    if ('x-title' in method) {
-      methodNames.push(`${method['x-title']}`);
+    const methodTitle = ('x-title' in method) ? method['x-title'] : undefined;
+
+    if (methodTitle) {
+      methodNames.push(methodTitle);
     }
 
     methodNames.push(method.name);
@@ -435,7 +435,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     // We will always add the generic error classes, since we can never trust that the server will be truthful.
     errorsOrReferences.push({
-      code: -1234567890,
+      code: UNKNOWN_ERROR_CODE,
       message: 'Unknown Error',
     });
 
@@ -464,9 +464,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       }
     }
 
-    const isCallback = 'x-callback' in method && Boolean(method['x-callback']);
+    const isCallback = this.isCallbackMethod(method);
 
-    logger.debug(`Done creating method '${method.name}'${isCallback ? ' (Which should be a callback)' : ''}`);
+    const uniqueNames = [...new Set<string>(methodNames.map(it => Naming.unwrap(it)))];
+
+    logger.debug(`Done creating method ${method.name} (${uniqueNames.join(' / ')})${isCallback ? ' (Which should be a callback)' : ''}`);
 
     return {
       name: method.name,
@@ -496,16 +498,19 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
+  private isCallbackMethod(method: MethodObject) {
+    return 'x-callback' in method && Boolean(method['x-callback']);
+  }
+
   private toOmniTypeFromContentDescriptor(
     contentDescriptor: ContentDescriptorObject,
-    fallbackName?: TypeName,
   ): SchemaToTypeResult {
 
     const schema = contentDescriptor.schema as JSONSchema9Definition;
     const resolved = this._refResolver.resolve(schema) as JSONSchema9Definition;
-    const preferredName = this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
+    // const preferredName: TypeName = JsonSchemaParser.getVendorExtension(contentDescriptor, 'title') ?? this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
 
-    const type = this._jsonSchemaParser.jsonSchemaToType(preferredName, resolved);
+    const type = this._jsonSchemaParser.jsonSchemaToType(undefined, resolved);
 
     return {
       type: type.type,
@@ -591,7 +596,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
   private errorToGenericOutput(parentName: string, error: ErrorObject): OmniOutput {
 
-    const isUnknownCode = (error.code === -1234567890);
+    const isUnknownCode = (error.code === UNKNOWN_ERROR_CODE);
     if (isUnknownCode && this._unknownError) {
       return this._unknownError;
     } else {
@@ -738,6 +743,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const messageType: OmniPrimitiveType = {
       kind: OmniTypeKind.STRING,
+      nullable: true, // isUnknownCode,
       value: error.message,
       literal: false,
     };
@@ -753,24 +759,44 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       owner: errorPropertyType,
     });
 
-    if (error.data || !options.jsonRpcErrorDataSchema) {
-      // TODO: Check if "data" is a schema object and then create a type, instead of making it an unknown constant?
+    if (error.data) {
       errorPropertyType.properties.push({
         name: options.jsonRpcErrorPropertyName,
-        type: this.toOmniType(options.jsonRpcErrorDataSchema) || {
+        type: {
+          // TODO: Create a new "const" type, since it's not really unknown since there is a known data structure.
           kind: OmniTypeKind.UNKNOWN,
+          unknownKind: UnknownKind.DYNAMIC_NATIVE,
           valueDefault: error.data,
-        },
+          nullable: false,
+        } satisfies OmniUnknownType,
+        readOnly: true,
         owner: errorPropertyType,
+        debug: ['From OpenRpcParser with data'],
+      });
+    } else if (error.data || !options.jsonRpcErrorDataSchema) {
+      errorPropertyType.properties.push({
+        name: options.jsonRpcErrorPropertyName,
+        type: {
+          kind: OmniTypeKind.UNKNOWN,
+          unknownKind: UnknownKind.DYNAMIC,
+          nullable: false,
+        } satisfies OmniUnknownType,
+        readOnly: true,
+        owner: errorPropertyType,
+        debug: ['From OpenRpcParser with no schema, so unknown'],
       });
     } else {
 
       const optionsErrorSchema = this.toOmniType(options.jsonRpcErrorDataSchema);
+      if (!optionsErrorSchema) {
+        throw new Error(`Has a JsonRpc error data schema, but it could not be converted into an omni type`);
+      }
 
       errorPropertyType.properties.push({
         name: options.jsonRpcErrorPropertyName,
-        type: optionsErrorSchema || {kind: OmniTypeKind.UNKNOWN},
+        type: optionsErrorSchema,
         owner: errorPropertyType,
+        debug: ['From OpenRpcParser with schema'],
       });
     }
 
@@ -794,6 +820,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       type: errorPropertyType,
       owner: target,
       required: true,
+      debug: ['From OpenRpc'],
     };
 
     target.properties.push(errorProperty);
@@ -812,6 +839,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         name: 'id',
         type: {
           kind: OmniTypeKind.STRING,
+          nullable: !options.jsonRpcIdRequired,
         },
         owner: target,
       });
@@ -924,25 +952,31 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const propertyType = this.toOmniTypeFromContentDescriptor(descriptor);
 
-    return {
-      name: descriptor.name,
+    const property: OmniProperty = {
+      name: JsonSchemaParser.getPreferredPropertyName(descriptor.schema as JSONSchema9Definition, descriptor.name, this._options),
       description: descriptor.description,
       summary: descriptor.summary,
       deprecated: descriptor.deprecated ?? false,
       required: descriptor.required ?? false,
       type: propertyType.type,
       owner: owner,
+      debug: [`From OpenRpc ContentDescriptor ${descriptor.name}`],
     };
+
+    JsonSchemaParser.updateProperty(descriptor.schema as JSONSchema9, undefined, property, descriptor.name);
+
+    return property;
   }
 
   private toRequestTypeAndPropertiesFromMethod(method: MethodObject, methodName: TypeName): TypeAndProperties {
 
+    const isCallback = this.isCallbackMethod(method);
     const requestName: TypeName = {
       name: methodName,
-      suffix: 'Request',
+      suffix: (isCallback ? this._options.jsonRpcCallbackMethodTypeSuffix : this._options.jsonRpcRequestMethodTypeSuffix) ?? 'Request',
     };
 
-    const requestParamsType = this.toRequestPropertyFromParameters(method.name, method.paramStructure, method.params, requestName);
+    const requestParamsType = this.toRequestPropertyFromParameters(method, requestName);
 
     const objectRequestType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
@@ -963,19 +997,38 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     OpenRpcParser.addJsonRpcRequestProperties(objectRequestType, method, this._options);
 
-    if (!this._jsonRpcRequestClass) {
+    if (isCallback) {
 
-      const className = 'JsonRpcRequest'; // TODO: Make it a setting
-      this._jsonRpcRequestClass = {
-        kind: OmniTypeKind.OBJECT,
-        name: className,
-        description: `Generic class to describe the JsonRpc request package`,
-        properties: [],
-      };
-      this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcRequestClass);
+      if (!this._jsonRpcCallbackRequestClass) {
+
+        const className = this._options.jsonRpcCallbackTypeName;
+        this._jsonRpcCallbackRequestClass = {
+          kind: OmniTypeKind.OBJECT,
+          name: className,
+          description: `Generic class to describe the JsonRpc callback package`,
+          properties: [],
+        };
+        this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcCallbackRequestClass);
+      }
+
+      objectRequestType.extendedBy = this._jsonRpcCallbackRequestClass;
+
+    } else {
+
+      if (!this._jsonRpcRequestClass) {
+
+        const className = this._options.jsonRpcRequestTypeName;
+        this._jsonRpcRequestClass = {
+          kind: OmniTypeKind.OBJECT,
+          name: className,
+          description: `Generic class to describe the JsonRpc request package`,
+          properties: [],
+        };
+        this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcRequestClass);
+      }
+
+      objectRequestType.extendedBy = this._jsonRpcRequestClass;
     }
-
-    objectRequestType.extendedBy = this._jsonRpcRequestClass;
 
     return {
       type: objectRequestType,
@@ -984,21 +1037,19 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private toRequestPropertyFromParameters(
-    methodName: string,
-    paramStructure: MethodObjectParamStructure | undefined,
-    params: MethodObjectParams,
+    method: MethodObject,
     requestTypeName: TypeName,
   ) {
 
     let requestParamsType: OmniPropertyOwner;
-    if (paramStructure == 'by-position') {
+    if (method.paramStructure == 'by-position') {
       // The params is an array values, and not a map nor properties.
-      requestParamsType = <OmniArrayPropertiesByPositionType>{
-        // name: `${method.name}RequestParams`,
+      requestParamsType = {
         kind: OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION,
-      };
+        properties: [],
+      } satisfies OmniArrayPropertiesByPositionType;
 
-      requestParamsType.properties = params.map(it => {
+      requestParamsType.properties = method.params.map(it => {
         return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._refResolver.resolve(it));
       });
 
@@ -1018,11 +1069,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         properties: [],
       } satisfies OmniObjectType;
 
-      const properties = params.map(it => {
+      const properties = method.params.map(it => {
         try {
           return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._refResolver.resolve(it));
         } catch (ex) {
-          throw new Error(`Could not convert from property '${OmniUtil.describe(requestParamsType)}' to OpenRpc Content Descriptor for method '${methodName}'`, {cause: ex});
+          throw new Error(`Could not convert from property '${OmniUtil.describe(requestParamsType)}' to OpenRpc Content Descriptor for method '${method.name}'`, {cause: ex});
         }
       });
 
@@ -1030,16 +1081,32 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         requestParamsType.properties = properties;
       }
 
-      if (!this._requestParamsClass) {
-        this._requestParamsClass = {
-          kind: OmniTypeKind.OBJECT,
-          name: 'JsonRpcRequestParams', // TODO: Make it a setting
-          description: `Generic class to describe the JsonRpc request params`,
-          properties: [],
-        };
-      }
+      if (this.isCallbackMethod(method)) {
 
-      requestParamsType.extendedBy = this._requestParamsClass;
+        if (!this._callbackParamsClass) {
+          this._callbackParamsClass = {
+            kind: OmniTypeKind.OBJECT,
+            name: this._options.jsonRpcCallbackParamsTypeName,
+            description: `Generic class to describe the JsonRpc callback params`,
+            properties: [],
+          };
+        }
+
+        requestParamsType.extendedBy = this._callbackParamsClass;
+
+      } else {
+
+        if (!this._requestParamsClass) {
+          this._requestParamsClass = {
+            kind: OmniTypeKind.OBJECT,
+            name: this._options.jsonRpcRequestParamsTypeName,
+            description: `Generic class to describe the JsonRpc request params`,
+            properties: [],
+          };
+        }
+
+        requestParamsType.extendedBy = this._requestParamsClass;
+      }
     }
 
     return requestParamsType;
@@ -1091,23 +1158,24 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     if (options.jsonRpcIdIncluded) {
 
-      let requestIdType: OmniPrimitiveType;
-      if (options.trustedClients) {
-        requestIdType = {
-          kind: OmniTypeKind.STRING,
-          nullable: false,
-        };
-      } else {
-        requestIdType = {
-          kind: OmniTypeKind.STRING,
-          nullable: true,
-        };
-      }
+      const requestIdType: OmniPrimitiveType = {
+        kind: OmniTypeKind.STRING,
+        nullable: false,
+        // nullable: !options.trustedClients || !options.jsonRpcIdRequired,
+      };
+      // if (options.trustedClients) {
+      // requestIdType =
+      // } else {
+      //   requestIdType = {
+      //     kind: OmniTypeKind.STRING,
+      //     nullable: true,
+      //   };
+      // }
 
       targetObject.properties.push({
         name: 'id',
         type: requestIdType,
-        required: true,
+        required: options.jsonRpcIdRequired && options.trustedClients,
         owner: targetObject,
       });
     }
@@ -1154,6 +1222,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         name: 'id',
         type: {
           kind: OmniTypeKind.STRING,
+          nullable: !options.jsonRpcIdRequired,
         },
         owner: target,
       });

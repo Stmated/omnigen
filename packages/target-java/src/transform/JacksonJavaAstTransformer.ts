@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {Direction, ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniProperty, OmniPropertyName, OmniType, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/core';
-import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {Direction, ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniProperty, OmniPropertyName, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/core';
+import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
 import * as Java from '../ast/JavaAst';
 import {DelegateKind, VirtualAnnotationKind} from '../ast/JavaAst';
 import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary} from '../options';
@@ -45,7 +45,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     const nameResolver = args.root.getNameResolver();
 
     const defaultVisitor = args.root.createVisitor();
-    const visitor = VisitorFactoryManager.create(defaultVisitor, {
+    const visitor = Visitor.create(defaultVisitor, {
 
       visitObjectDeclaration: (node, visitor) => {
 
@@ -60,23 +60,20 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
           // Need to do this *after* the object declaration has been visited.
           // Otherwise we will not have had time to find the constructor, or other influencing members.
-          const entry = fieldsStack.pop();
-          if (entry && !hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1]) {
+          const entry = fieldsStack.pop()!;
+          for (const field of entry.annotate) {
+            if (!field.property || entry.skip.includes(field)) {
+              continue;
+            }
 
-            for (const field of entry.annotate) {
-              if (!field.property || entry.skip.includes(field)) {
-                continue;
-              }
+            if (!this.shouldAddJsonPropertyAnnotation(field.identifier.value, field.property.name, args.options)) {
+              continue;
+            }
 
-              if (!this.shouldAddJsonPropertyAnnotation(field.identifier.value, field.property.name, args.options)) {
-                continue;
-              }
-
-              const annotations = field.annotations || new Java.AnnotationList(...[]);
-              annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(field.identifier.value, field.property, Direction.BOTH, args.options, false));
-              if (!field.annotations && annotations.children.length > 0) {
-                field.annotations = annotations;
-              }
+            const annotations = field.annotations || new Java.AnnotationList(...[]);
+            annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(field.identifier.value, field.property, Direction.BOTH, args.options, false));
+            if (!field.annotations && annotations.children.length > 0) {
+              field.annotations = annotations;
             }
           }
 
@@ -84,38 +81,44 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
         }
       },
 
-      visitField: node => {
+      visitField: n => {
 
         // A JsonValue field should not have any JsonProperty added to it.
-        const jsonValueAnnotation = node.annotations?.children.find(
-          it => (it instanceof Java.Annotation) && (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) && nameResolver.isEqual(it.type.omniType.fqn, JACKSON_JSON_VALUE),
+        const jsonValueAnnotation = n.annotations?.children.find(
+          it => (it instanceof Java.Annotation) && (it.type.omniType.kind === OmniTypeKind.HARDCODED_REFERENCE) && nameResolver.isEqual(it.type.omniType.fqn, JACKSON_JSON_VALUE),
         );
 
-        if (!jsonValueAnnotation && this.shouldAddJsonPropertyAnnotation(node.identifier.value, node.identifier.original, args.options)) {
-          fieldsStack[fieldsStack.length - 1].annotate.push(node);
+        if (!jsonValueAnnotation && this.shouldAddJsonPropertyAnnotation(n.identifier.value, n.identifier.original, args.options)) {
+          fieldsStack[fieldsStack.length - 1].annotate.push(n);
         }
       },
 
       visitMethodDeclaration: (n, v) => {
+        defaultVisitor.visitMethodDeclaration(n, v);
 
-        // Figure out of method is a getter, and if it is, then add the JsonProperty there -- irregardless if constructor already adds one (until we can separate "client" vs "server")
+        // Figure out if method is a getter, and if it is, then add the JsonProperty there -- irregardless if constructor already adds one (until we can separate "client" vs "server")
         const getterField = JavaAstUtils.getGetterField(args.root, n);
 
         if (getterField && getterField.property) {
+
+          const stackEntry = fieldsStack[fieldsStack.length - 1];
+          if (stackEntry.annotate.includes(getterField)) {
+
+            // The field will already have annotations added, so no need to also add them to the getter.
+            return;
+          }
 
           const annotations = n.signature.annotations || new Java.AnnotationList(...[]);
 
           if (this.shouldAddJsonPropertyAnnotation(getterField.identifier.value, getterField.property.name, args.options)) {
             annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(getterField.identifier.value, getterField.property, Direction.OUT, args.options, true));
-            fieldsStack[fieldsStack.length - 1].skip.push(getterField);
+            // fieldsStack[fieldsStack.length - 1].skip.push(getterField);
           }
 
           if (!n.signature.annotations) {
             n.signature.annotations = annotations;
           }
         }
-
-        return defaultVisitor.visitMethodDeclaration(n, v);
       },
 
       visitConstructor: node => {
@@ -136,12 +139,11 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
     args.root.visit(visitor);
 
+    const enumFieldIdsToAnnotate = new Set<number>();
+
     const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
       ...defaultReducer,
-      reduceField: (n, r) => {
-        return defaultReducer.reduceField(n, r);
-      },
       reduceWildcardType: (n, r) => {
 
         const converted = this.wildcardToJacksonType(n.omniType, args.options);
@@ -162,7 +164,6 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
           if (OmniUtil.isPrimitive(keyType.omniType) && keyType.omniType.kind == OmniTypeKind.STRING) {
             if (valueType.omniType.kind == OmniTypeKind.UNKNOWN || (valueType.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE && valueType.omniType.fqn == JACKSON_JSON_NODE)) {
-              // return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_OBJECT}, n.implementation);
 
               const type = n.omniType;
               const mapClassOrInterface = n.implementation ? 'HashMap' : 'Map';
@@ -180,6 +181,18 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
         if (n.value.kind === VirtualAnnotationKind.SERIALIZATION_VALUE) {
           return new Java.Annotation(
             new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
+          );
+        }
+
+        if (n.value.kind === VirtualAnnotationKind.SERIALIZATION_ALIAS) {
+          return new Java.Annotation(
+            new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_PROPERTY}),
+            new Java.AnnotationKeyValuePairList(
+              new Java.AnnotationKeyValuePair(
+                new Java.Identifier('value'),
+                new Java.Literal(n.value.name),
+              ),
+            ),
           );
         }
 
@@ -211,17 +224,42 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
           const delegate = args.root.resolveNodeRef(n.delegateRef);
 
-          // Go from `delegate.apply(x)` to `objectMapper.convertValue(x, delegateReturnType)`
+          // Go from `delegate.apply(x)` to `objectMapper.treeToValue(x, delegateReturnType)`
           const newArguments = [...n.args.children];
           newArguments.push(new Code.ClassReference(new Code.ClassName(delegate.returnType)));
 
           return new Code.MethodCall(
-            new Code.MemberAccess(n.target, new Code.Identifier('convertValue')),
+            new Code.MemberAccess(n.target, new Code.Identifier('treeToValue')),
             new Code.ArgumentList(...newArguments),
           );
         }
 
         return n;
+      },
+
+      reduceEnumDeclaration: (n, r) => {
+        const fields = n.body.children.filter(it => it instanceof Code.Field);
+        if (fields.length == 1) {
+          enumFieldIdsToAnnotate.add(fields[0].id);
+        }
+
+        return defaultReducer.reduceEnumDeclaration(n, r);
+      },
+      reduceField: (n, r) => {
+
+        if (n.hasId(enumFieldIdsToAnnotate)) {
+
+          if (!n.annotations) {
+            n.annotations = new Code.AnnotationList();
+          }
+
+          // TODO: This should be immutable, and return a new instance of the field with this annotation added.
+          n.annotations.children.push(new Java.Annotation(
+            new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_VALUE}),
+          ));
+        }
+
+        return defaultReducer.reduceField(n, r);
       },
     });
 
@@ -233,9 +271,9 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
   private wildcardToJacksonType(n: OmniUnknownType, options: JavaAndTargetOptions): OmniHardcodedReferenceType | undefined {
 
     const unknownKind = n.unknownKind ?? options.unknownType;
-    if (unknownKind == UnknownKind.MUTABLE_OBJECT) {
+    if (unknownKind === UnknownKind.DYNAMIC_OBJECT) {
       return {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_OBJECT};
-    } else if (unknownKind == UnknownKind.ANY) {
+    } else if (unknownKind === UnknownKind.DYNAMIC) {
       return {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_NODE};
     }
 
@@ -275,16 +313,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     let hasJsonValue = false;
 
     const defaultBooleanVisitor = args.root.createVisitor<boolean>();
-    const jsonValueVisitor = VisitorFactoryManager.create(defaultBooleanVisitor, {
-      // visitAnnotation: node => {
-      //   if (node.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-      //     if (node.type.omniType.fqn.indexOf(JACKSON_JSON_VALUE) >= 0) {
-      //       hasJsonValue = true;
-      //     } else if (node.type.omniType.fqn.indexOf(JACKSON_JSON_CREATOR) >= 0) {
-      //       throw new AbortVisitingWithResult(true); // Abort right away
-      //     }
-      //   }
-      // },
+    const jsonValueVisitor = Visitor.create(defaultBooleanVisitor, {
       visitVirtualAnnotationNode: n => {
         if (n.value.kind === VirtualAnnotationKind.SERIALIZATION_VALUE) {
           hasJsonValue = true;
@@ -301,11 +330,14 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
     });
 
     const constructorAnnotationMode = args.options.serializationConstructorAnnotationMode;
+    const addAlways = (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS);
+    const addIfRequired = (constructorAnnotationMode == SerializationConstructorAnnotationMode.IF_REQUIRED);
+
     const hasJsonCreator = VisitResultFlattener.visitWithSingularResult(jsonValueVisitor, owner.body, false);
     if (!hasJsonCreator) {
-      if (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS) {
+      if (addAlways) {
         annotations.children.push(new Java.Annotation(new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_CREATOR})));
-      } else if (constructorAnnotationMode == SerializationConstructorAnnotationMode.IF_REQUIRED) {
+      } else if (addIfRequired) {
 
         // TODO: IF_REQUIRED might be needed if there are multiple constructors. But right now there are only ever one constructor.
 
@@ -315,7 +347,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       }
     }
 
-    if (node.parameters && (constructorAnnotationMode == SerializationConstructorAnnotationMode.ALWAYS || constructorAnnotationMode == SerializationConstructorAnnotationMode.IF_REQUIRED)) {
+    if (node.parameters && (addAlways || addIfRequired)) {
 
       for (const parameter of node.parameters.children) {
 
@@ -332,7 +364,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
         const parameterAnnotations = parameter.annotations || new Java.AnnotationList();
 
-        if (this.shouldAddJsonPropertyAnnotation(parameter.identifier.value, property.name, args.options)) {
+        if (this.shouldAddJsonPropertyAnnotation(parameter.identifier.value, property.name, args.options) || (addIfRequired && node.parameters.children.length <= 1)) {
           hasAnnotatedConstructor[hasAnnotatedConstructor.length - 1] = true;
           parameterAnnotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(field.identifier.value, property, Direction.IN, args.options, false));
         }
@@ -378,7 +410,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
       // NOTE: Perhaps if this is undefined (name is a regex), then we should add some other annotation?
       if (resolvedPropertyName) {
-        annotationArguments.children.push(new Java.AnnotationKeyValuePair(undefined, new Java.Literal(resolvedPropertyName)));
+        annotationArguments.children.push(new Java.AnnotationKeyValuePair(new Java.Identifier('value'), new Java.Literal(resolvedPropertyName)));
       }
     } else if (requiresName) {
       return undefined;
@@ -388,13 +420,13 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       annotationArguments.children.push(new Java.AnnotationKeyValuePair(new Java.Identifier('required'), new Java.Literal(true)));
     }
 
-    if (annotationArguments.children.length > 1) {
-
-      const unnamed = annotationArguments.children.find(it => it.key === undefined);
-      if (unnamed) {
-        unnamed.key = new Java.Identifier('value');
-      }
-    }
+    // if (annotationArguments.children.length > 1) {
+    //
+    //   const unnamed = annotationArguments.children.find(it => it.key === undefined);
+    //   if (unnamed) {
+    //     unnamed.key = new Java.Identifier('value');
+    //   }
+    // }
 
     if (annotationArguments.children.length == 0) {
       return undefined;
@@ -412,17 +444,17 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       return new Java.Annotation(
         new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: JACKSON_JSON_INCLUDE}),
         new Java.AnnotationKeyValuePairList(
-          new Java.AnnotationKeyValuePair(
-            undefined,
-            new Java.StaticMemberReference(
-              new Java.ClassName(
-                new Java.EdgeType({
-                  kind: OmniTypeKind.HARDCODED_REFERENCE,
-                  fqn: {namespace: ['com', 'fasterxml', 'jackson', 'annotation', {name: 'JsonInclude', nested: true}], edgeName: 'Include'},
-                })),
-              new Java.Identifier('ALWAYS'),
-            ),
-          ),
+          // new Java.AnnotationKeyValuePair(
+          //   undefined,
+          //   new Java.StaticMemberReference(
+          //     new Java.ClassName(
+          //       new Java.EdgeType({
+          //         kind: OmniTypeKind.HARDCODED_REFERENCE,
+          //         fqn: {namespace: ['com', 'fasterxml', 'jackson', 'annotation', {name: 'JsonInclude', nested: true}], edgeName: 'Include'},
+          //       })),
+          //     new Java.Identifier('ALWAYS'),
+          //   ),
+          // ),
         ),
       );
     }
@@ -432,14 +464,14 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private shouldAddJsonPropertyAnnotation(sourceCodeName: string | undefined, propertyName: OmniPropertyName | undefined, javaOptions: JavaOptions) {
 
-    if (javaOptions.serializationPropertyNameMode == SerializationPropertyNameMode.ALWAYS) {
+    if (javaOptions.serializationPropertyNameMode === SerializationPropertyNameMode.ALWAYS) {
       return true;
-    } else if (javaOptions.serializationPropertyNameMode == SerializationPropertyNameMode.IF_REQUIRED) {
+    } else if (javaOptions.serializationPropertyNameMode === SerializationPropertyNameMode.IF_REQUIRED) {
 
       const resolvedPropertyName = propertyName ? OmniUtil.getPropertyName(propertyName) : undefined;
       return (sourceCodeName ?? resolvedPropertyName) != (resolvedPropertyName ?? sourceCodeName);
 
-    } else if (javaOptions.serializationPropertyNameMode == SerializationPropertyNameMode.SKIP) {
+    } else if (javaOptions.serializationPropertyNameMode === SerializationPropertyNameMode.SKIP) {
       return false;
     }
 

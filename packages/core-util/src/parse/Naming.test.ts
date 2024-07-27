@@ -190,3 +190,71 @@ test('Prefix-Multi', async () => {
     {owner: obj1, name: 'Ba_2'},
   ]);
 });
+
+test('Common words', async () => {
+
+  expect(Naming.getCommonName(['Foo', 'Bar', 'Baz'])).toBeUndefined();
+  expect(Naming.getCommonName(['Foo'])).toEqual('Foo');
+  expect(Naming.getCommonName(['FooBar', 'FooBaz'])).toBeUndefined();
+  expect(Naming.getCommonName(['FooBar', 'FooBaz'], 1)).toEqual('Foo');
+  expect(Naming.getCommonName(['BarBaz', 'BarFoo'], 1)).toEqual('Bar');
+  expect(Naming.getCommonName(['Bar_Baz', 'Bar_Foo'], 1)).toEqual('Bar');
+  expect(Naming.getCommonName(['Bar Baz', 'Bar Foo'], 1)).toEqual('Bar');
+
+  expect(Naming.getCommonName(['SomeInTheMiddleWord', 'AnotherInTheMiddleToken'])).toEqual('InTheMiddle');
+});
+
+test('Common words with diff prefix', async () => {
+
+  expect(Naming.getCommonName([
+    'ThisHasSomeWordsInsideOfIt',
+    'ThisAlsoHasSomeWordsInsideOfIt',
+    'SomePartAlsoHasSomeWordsInsideOfIt',
+  ])).toEqual('HasSomeWordsInsideOfIt');
+});
+
+test('Common words by total length', async () => {
+
+  expect(Naming.getCommonName([
+    'CatDogDuck',
+    'DuckCatDog',
+    'DogDuckCat',
+  ], 1)).toEqual('Duck');
+});
+
+test('Common words by total length with prefix', async () => {
+
+  expect(Naming.getCommonName([
+    'PrefixCatDogDuck',
+    'PrefixDuckCatDog',
+    'PrefixDogDuckCat',
+  ], 1)).toEqual('PrefixDuck');
+});
+
+test('Common words by total length with suffix', async () => {
+
+  expect(Naming.getCommonName([
+    'CatDogDuckSuffix',
+    'DuckCatDogSuffix',
+    'DogDuckCatSuffix',
+  ], 1)).toEqual('DuckSuffix');
+});
+
+test('Common words by total length with prefix and suffix', async () => {
+
+  expect(Naming.getCommonName([
+    'PrefixCatDogDuckSuffix',
+    'PrefixDuckCatDogSuffix',
+    'PrefixDogDuckCatSuffix',
+  ], 1)).toEqual('PrefixDuckSuffix');
+});
+
+test('Common words by total length with prefix repeated prefix and suffix', async () => {
+
+  expect(Naming.getCommonName([
+    'PrefixCatDogPrefixDuckSuffixSuffix',
+    'PrefixPrefixDuckSuffixCatDogSuffix',
+    'PrefixDogPrefixDuckSuffixCatSuffix',
+  ], 1)).toEqual('PrefixDuckSuffix');
+});
+

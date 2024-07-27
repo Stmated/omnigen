@@ -52,23 +52,13 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
                   n.omniType,
                   superType.omniType,
                 ],
+                debug: OmniUtil.addDebug(superType.omniType.debug, 'Composition type to type alias'),
               };
-
-              // We will be replacing the node with a new node, so is safe to mutate it.
-              // TODO: Perhaps the "inline" property should be removed and a new node for "inline object" should be added, if that makes things easier? Less node types seems easier though.
-              // n.inline = true;
-              // n.extends = undefined;
-
-              // new Java.Block
 
               n.body.enclosed = true;
               n.body.compact = true;
 
-              const newTypeNode = new Ts.CompositionType(joinedCompositionType, [
-                n.body,
-                superType,
-                // args.root.getAstUtils().createTypeNode(joinedCompositionType),
-              ]);
+              const newTypeNode = new Ts.CompositionType(joinedCompositionType, [n.body, superType]);
 
               return new Ts.TypeAliasDeclaration(n.name, newTypeNode, n.modifiers);
             }
@@ -96,6 +86,6 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
   }
 
   private getInlinedIfNeededType(type: OmniType) {
-    return type.inline ? type : {...type, inline: true} satisfies typeof type;
+    return type.inline ? type : {...type, inline: true, debug: OmniUtil.addDebug(type.debug, 'Type made inline')} satisfies typeof type;
   }
 }

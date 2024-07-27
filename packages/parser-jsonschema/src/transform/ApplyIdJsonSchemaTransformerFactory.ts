@@ -38,7 +38,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
 
   constructor(absolutePath: string | undefined) {
     if (absolutePath) {
-      this._hints.push({uri: absolutePath});
+      // this._hints.push({uri: absolutePath});
     }
   }
 
@@ -56,7 +56,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
 
   newIdFromContext(others: string[]): string {
 
-    let bestUri = this.addSlash(this._hints.findLast(it => !!it.uri)?.uri || '');
+    const bestUri = ''; // this.addSlash(this._hints.findLast(it => !!it.uri)?.uri || '');
 
     const parts: string[] = [];
     const tags: string[] = [];
@@ -69,10 +69,10 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       }
 
       let changed = false;
-      if (hint.uri) {
-        bestUri = this.addSlash(hint.uri);
-        changed = true;
-      }
+      // if (hint.uri) {
+      //   bestUri = this.addSlash(hint.uri);
+      //   changed = true;
+      // }
 
       if (hint.id) {
         parts.push(hint.id);
@@ -112,14 +112,14 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
     return `${bestUri}_${ApplyIdJsonSchemaTransformerFactory._uniqueIdCounter++}`;
   }
 
-  private addSlash(bestUri: string) {
-
-    if (bestUri && !bestUri.endsWith('/')) {
-      bestUri += '/';
-    }
-
-    return bestUri;
-  }
+  // private addSlash(bestUri: string) {
+  //
+  //   if (bestUri && !bestUri.endsWith('/')) {
+  //     bestUri += '/';
+  //   }
+  //
+  //   return bestUri;
+  // }
 
   getSuffixes(i: number): string[] {
 
@@ -197,9 +197,12 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
 
         if (!v.$id) {
 
+          const hints: IdHint[] = [];
+
           const typeExtras: string[] = [];
           if (v.format) {
-            typeExtras.push(v.format);
+            // typeExtras.push(v.format);
+            hints.push({tag: v.format, suffix: true});
           }
           if (v.const !== undefined) {
             typeExtras.push(`const`);
@@ -209,7 +212,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
           }
 
           const typeExtra = typeExtras.map(it => Case.pascal(it)).join('');
-          const hints: IdHint[] = [];
+
           if (v.type) {
             const typeStrings = (v.type ? (Array.isArray(v.type) ? v.type : [v.type]) : []);
             if (typeExtra) {
@@ -230,18 +233,25 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
             }
           }
 
+          if (v.$dynamicRef) {
+            hints.push({tag: v.$dynamicRef.replaceAll('#', ''), suffix: true});
+          }
+
           if (v.title) {
             hints.push({name: v.title});
           }
 
-          if (!hints.find(it => it.name || it.tag)) {
-
-            // There was nothing inside the schema which unique identifies it, so will add a suffix to differentiate it from its parent/owner or similar.
-            hints.splice(0, 0, {extra: `Schema`, suffix: true});
-          }
-
           try {
             hints.forEach(it => this._hints.push(it));
+
+            if (!this._hints.find(it => it.name || it.tag)) {
+
+              // There was nothing inside the schema which uniquely identifies it, so will add a suffix to differentiate it from its parent/owner or similar.
+              const hint: IdHint = {extra: `Schema`, suffix: true};
+              hints.push(hint);
+              this._hints.push(hint);
+            }
+
             return DefaultJsonSchema9Visitor.schema(v, visitor);
           } finally {
             hints.forEach(_ => this._hints.pop());
@@ -278,6 +288,10 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
 
           registeredIds.push(newId);
           return newId;
+        } else {
+
+          // Register the existing constant id, so it is not used by anything else.
+          registeredIds.push(v);
         }
 
         return v;
@@ -326,6 +340,14 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
         try {
           this._hints.push({tag: 'Else', suffix: true});
           return DefaultJsonSchema9Visitor.else(e, visitor);
+        } finally {
+          this._hints.pop();
+        }
+      },
+      additionalProperties: (e, v) => {
+        try {
+          this._hints.push({tag: 'Additional', suffix: true} satisfies IdHint);
+          return DefaultJsonSchema9Visitor.additionalProperties(e, v);
         } finally {
           this._hints.pop();
         }

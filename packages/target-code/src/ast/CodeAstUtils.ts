@@ -4,7 +4,7 @@ import {
   AstTargetFunctions,
   AstVisitor,
   NameParts,
-  NodeResolveCtx,
+  NodeResolveCtx, OMNI_GENERIC_FEATURES,
   OmniArrayType,
   OmniGenericTargetType,
   OmniInterfaceOrObjectType,
@@ -22,8 +22,8 @@ import {
   TypeUseKind,
   UnknownKind,
 } from '@omnigen/core';
-import {Case, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
-import * as Code from '../ast/CodeAst';
+import {Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
+import * as Code from '../ast/Code';
 import {CodeRootAstNode} from './CodeRootAstNode';
 import {CodeOptions} from '../options/CodeOptions';
 
@@ -71,8 +71,10 @@ export class CodeAstUtils implements AstTargetFunctions {
     //        But for now we change all the primitive types into a reference type.
     const mappedGenericTargetArguments = type.targetIdentifiers.map(it => {
 
+      // TODO: Resume code and check that we get the proper key for the map! If we said it should be "OBJECT" then it bloody damn well should be that.
+
       let referenceType = OmniUtil.toReferenceType(it.type);
-      if (referenceType.kind == OmniTypeKind.UNKNOWN && (!referenceType.unknownKind || referenceType.unknownKind == UnknownKind.OBJECT)) {
+      if (referenceType.kind === OmniTypeKind.UNKNOWN && !referenceType.unknownKind) {
 
         // No set unknown type and Object, are probably better off as wildcard type ?
         referenceType = {
@@ -181,7 +183,7 @@ export class CodeAstUtils implements AstTargetFunctions {
 
   public static addInterfaceProperties(root: RootAstNode, type: OmniInterfaceOrObjectType, body: Code.Block): void {
 
-    const interfaceLikeTarget = (type.kind == OmniTypeKind.INTERFACE) ? type.of : type;
+    const interfaceLikeTarget = (type.kind === OmniTypeKind.INTERFACE) ? type.of : type;
 
     // Transform the object, but add no fields and only add the abstract method declaration (signature only)
     for (const property of OmniUtil.getPropertiesOf(interfaceLikeTarget)) {
@@ -191,12 +193,17 @@ export class CodeAstUtils implements AstTargetFunctions {
         continue;
       }
 
+      // TODO: The accessor name should be based on the PROPERTY NAME
+      //        Right now since real
+
+      const identifier = new Code.Identifier(accessorName);
+      const getterIdentifier = new Code.GetterIdentifier(identifier, property.type);
+
       body.children.push(
         new Code.MethodDeclaration(
           new Code.MethodDeclarationSignature(
-            new Code.GetterIdentifier(new Code.Identifier(accessorName), property.type),
+            getterIdentifier,
             new Code.EdgeType(property.type),
-            // root.getAstUtils().createTypeNode(property.type, false),
             undefined,
             new Code.ModifierList(),
           ),
@@ -205,17 +212,27 @@ export class CodeAstUtils implements AstTargetFunctions {
     }
   }
 
-  public static getOmniType(node: AstNode): OmniType | undefined {
+  public static getOmniType(root: RootAstNode, node: AstNode): OmniType | undefined {
 
     if (node instanceof Code.AbstractObjectDeclaration) {
       return node.omniType;
+    } else if (node instanceof Code.StaticMemberReference) {
+      return CodeAstUtils.getOmniType(root, node.member);
+    } else if (node instanceof Code.FieldReference) {
+      const resolved = node.resolve(root);
+      return CodeAstUtils.getOmniType(root, resolved);
+    } else if (node instanceof Code.DeclarationReference) {
+      const resolved = node.resolve(root);
+      return CodeAstUtils.getOmniType(root, resolved);
+    } else if ('type' in node && node.type) {
+      return CodeAstUtils.getOmniType(root, node.type as AstNode);
     } else if ('omniType' in node && typeof node.omniType == 'object' && node.omniType && 'kind' in node.omniType) {
 
       // NOTE: This is quite ugly
       return node.omniType as OmniType;
-    } else {
-      return undefined;
     }
+
+    return undefined;
   }
 
   public static addOmniPropertyToBlockAsField(args: {
@@ -223,7 +240,7 @@ export class CodeAstUtils implements AstTargetFunctions {
     property: OmniProperty,
     body: Code.Block,
     options: CodeOptions,
-    modifiers?: Code.ModifierType[],
+    modifiers?: Code.ModifierKind[],
   }): void {
 
     if (OmniUtil.isNull(args.property.type) && !args.options.includeAlwaysNullProperties) {
@@ -237,7 +254,9 @@ export class CodeAstUtils implements AstTargetFunctions {
       return;
     }
 
-    const fieldType = args.root.getAstUtils().createTypeNode(args.property.type);
+    const fieldType = OmniUtil.asNonNullableIfHasDefault(args.property.type, OMNI_GENERIC_FEATURES);
+
+    const fieldTypeNode = args.root.getAstUtils().createTypeNode(fieldType);
     let originalName: TypeName | undefined = OmniUtil.getPropertyName(args.property.name);
     if (!originalName) {
       if (OmniUtil.isPatternPropertyName(args.property.name)) {
@@ -254,14 +273,13 @@ export class CodeAstUtils implements AstTargetFunctions {
     }
 
     const fieldName = OmniUtil.getPropertyFieldNameOnly(args.property.name) || Case.camel(originalName);
-
     const fieldIdentifier = new Code.Identifier(fieldName, originalName);
 
     const field = new Code.Field(
-      fieldType,
+      fieldTypeNode,
       fieldIdentifier,
       new Code.ModifierList(
-        ...(args.modifiers ?? [Code.ModifierType.PRIVATE]).map(m => new Code.Modifier(m)),
+        ...(args.modifiers ?? [Code.ModifierKind.PRIVATE]).map(m => new Code.Modifier(m)),
       ),
     );
 
@@ -269,7 +287,7 @@ export class CodeAstUtils implements AstTargetFunctions {
       if (args.property.type.kind == OmniTypeKind.NULL) {
         field.initializer = new Code.Literal(args.property.type.value ?? null, args.property.type.kind);
       } else if (args.property.type.value !== undefined) {
-        if (args.options.immutableModels && !args.property.type.literal) {
+        if (args.options.immutable && !args.property.type.literal) {
 
           // If the model is immutable and the value given is just a default,
           // then it will have to be given through the constructor in the constructor transformer.
@@ -283,8 +301,8 @@ export class CodeAstUtils implements AstTargetFunctions {
 
     field.property = args.property;
 
-    if (args.options.immutableModels || OmniUtil.isNull(args.property.type)) {
-      field.modifiers.children.push(new Code.Modifier(Code.ModifierType.FINAL));
+    if (args.property.readOnly === true || (args.property.readOnly === undefined && args.options.immutable) || OmniUtil.isNull(args.property.type)) {
+      field.modifiers.children.push(new Code.Modifier(Code.ModifierKind.FINAL));
     }
 
     args.body.children.push(field);
@@ -296,36 +314,28 @@ export class CodeAstUtils implements AstTargetFunctions {
     options: PackageOptions & TargetOptions & CodeOptions,
   ): OmniInterfaceType {
 
-    // TODO: Interface should be an actual interface :)
-    // TODO: Need to add a step that adds any missing types -- unsure how that is best done, or if it should be done manually at every location things are changed'
-    // TODO: Find or create default way of translating object to interface
-    // TODO: Check if one already exists, and if it does then use the existing one!
-    // TODO: Possible to add way to easily visit all nodes but only care about some visitor functions? How?
-
-    const astClassDeclarations: Code.AbstractObjectDeclaration[] = [];
+    const objectDeclarations: Code.AbstractObjectDeclaration[] = [];
 
     const baseVisitor = root.createVisitor<OmniInterfaceType>();
-    const javaVisitor = VisitorFactoryManager.create(baseVisitor, {
+
+    const result = VisitResultFlattener.flattenToSingle(root.visit(Visitor.create(baseVisitor, {
       visitInterfaceDeclaration: node => {
         const ot = node.type.omniType;
-        if (ot.kind == OmniTypeKind.INTERFACE && ot.of == objectType) {
+        if (ot.kind === OmniTypeKind.INTERFACE && ot.of === objectType) {
           return ot;
         } else {
           return undefined;
         }
       },
       visitObjectDeclaration: (node, visitor) => {
-
-        if (node.type.omniType == objectType) {
-          astClassDeclarations.push(node);
+        if (node.type.omniType === objectType) {
+          objectDeclarations.push(node);
         }
-
         return baseVisitor.visitObjectDeclaration(node, visitor);
       },
       visitMethodDeclaration: () => undefined,
-    });
+    })));
 
-    const result = VisitResultFlattener.flattenToSingle(root.visit(javaVisitor));
     if (!result) {
 
       const interfaceType: OmniInterfaceType = {
@@ -343,15 +353,13 @@ export class CodeAstUtils implements AstTargetFunctions {
 
       root.children.push(new Code.CompilationUnit(
         new Code.PackageDeclaration(packageName),
-        new Code.ImportList(
-          [],
-        ),
+        new Code.ImportList(),
         interfaceDeclaration,
       ));
 
-      for (const ast of astClassDeclarations) {
+      for (const ast of objectDeclarations) {
         if (!ast.implements) {
-          ast.implements = new Code.ImplementsDeclaration(new Code.TypeList<OmniInterfaceOrObjectType>([]));
+          ast.implements = new Code.ImplementsDeclaration(new Code.TypeList<OmniInterfaceOrObjectType>());
         }
 
         ast.implements.types.children.push(root.getAstUtils().createTypeNode(interfaceType));
@@ -361,12 +369,32 @@ export class CodeAstUtils implements AstTargetFunctions {
     } else if (Array.isArray(result)) {
 
       if (result.length != 1) {
-        throw new Error(`There were non-one (${result.length}) interfaces found for '${OmniUtil.describe(objectType)}'`);
+        throw new Error(`There were more than one (${result.length}) interfaces found for '${OmniUtil.describe(objectType)}'`);
       }
 
       return result[0];
     } else {
       return result;
     }
+  }
+
+  public static getFieldPropertyNameIdentifier(field: Code.Field): Code.Identifier {
+
+    if (field.property) {
+
+      const accessorName = OmniUtil.getPropertyAccessorName(field.property.name);
+      if (accessorName) {
+        const original = field.identifier.original ?? field.identifier.value;
+        if (accessorName === original) {
+          return new Code.Identifier(accessorName);
+        }
+        return new Code.Identifier(accessorName, original);
+      }
+      // else {
+      //   return new Code.Identifier(accessorName, field.identifier.original ?? field.identifier.value);
+      // }
+    }
+
+    return field.identifier;
   }
 }

@@ -12,7 +12,9 @@ public class DataEntry {
 
   /**
    * The current state of the withdrawal.
-   * <h5>Examples</h5>
+   * <p>
+   * Enum Description
+   * <h2>Examples</h2>
    * <ul>
    *   <li>EXECUTING</li>
    *   <li>EXECUTED</li>

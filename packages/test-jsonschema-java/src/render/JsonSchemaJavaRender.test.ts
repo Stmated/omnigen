@@ -58,6 +58,7 @@ describe('jsonschema-java-render', () => {
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/enum_string_composition.json'), {
       compressSoloReferencedTypes: false,
       serializationLibrary: SerializationLibrary.POJO,
+      beanValidation: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -73,7 +74,7 @@ describe('jsonschema-java-render', () => {
 
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/interface_order.json'), {
       compressSoloReferencedTypes: false,
-      // serializationLibrary: 'POJO',
+      beanValidation: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -110,6 +111,7 @@ describe('jsonschema-java-render', () => {
       compressUnreferencedSubTypes: false,
       serializationLibrary: SerializationLibrary.JACKSON,
       includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
+      beanValidation: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -139,7 +141,9 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/one_of_same_type.json'));
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/one_of_same_type.json'), {
+      beanValidation: false,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -152,7 +156,9 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/discriminator.json'));
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/discriminator.json'), {
+      beanValidation: false,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();

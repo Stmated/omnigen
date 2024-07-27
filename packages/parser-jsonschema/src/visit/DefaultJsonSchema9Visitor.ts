@@ -230,6 +230,8 @@ export const DefaultJsonSchema9Visitor: JsonSchema9Visitor = {
   },
 
   $id: v => v,
+  $dynamicAnchor: v => v,
+  $dynamicRef: v => v,
   const: (v, visitor) => v ? visitor.jsonSchemaType(v, visitor) : v,
   contains: (v, visitor) => v ? visitor.visit(v, visitor) : v,
   examples: (v, visitor) => v ? visitUniformArray(v, item => visitor.jsonSchemaType(item, visitor)) : v, // visitor.jsonSchemaType(v, visitor) : v,

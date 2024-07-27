@@ -1,27 +1,30 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class RefundResponse extends JsonRpcResponse<RefundResponse.Result> {
-  public RefundResponse(@JsonProperty("id") String id, @JsonProperty("result") Result result) {
+  public RefundResponse(@JsonProperty(value = "id") String id, @JsonProperty(value = "result") Result result) {
     super(id, result);
   }
 
   public static class Result {
+    @JsonProperty(value = "data")
     private final Data data;
+    @JsonProperty(value = "method")
     private final String method;
+    @JsonProperty(value = "signature")
     private final String signature;
+    @JsonProperty(value = "uuid")
     private final String uuid;
 
     public Result(
-      @JsonProperty("signature") String signature,
-      @JsonProperty("uuid") String uuid,
-      @JsonProperty("method") String method,
-      @JsonProperty("data") Data data
+      @JsonProperty(value = "signature") String signature,
+      @JsonProperty(value = "uuid") String uuid,
+      @JsonProperty(value = "method") String method,
+      @JsonProperty(value = "data") Data data
     ) {
       this.signature = signature;
       this.uuid = uuid;
@@ -46,11 +49,14 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.Result> {
     }
 
     public static class Data {
+      @JsonProperty(value = "orderid")
       private final String orderid;
+      @JsonProperty(value = "result", required = true)
+      @JsonInclude
       private final String result;
 
       public Data(
-        @JsonProperty("orderid") String orderid,
+        @JsonProperty(value = "orderid") String orderid,
         @JsonProperty(value = "result", required = true) String result
       ) {
         this.orderid = orderid;
@@ -61,7 +67,6 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.Result> {
         return this.orderid;
       }
 
-      @JsonInclude(Include.ALWAYS)
       public String getResult() {
         return this.result;
       }

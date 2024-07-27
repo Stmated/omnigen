@@ -1,27 +1,22 @@
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PACKAGE_OPTIONS, OmniKindPrimitive, PackageOptions, TargetOptions} from '@omnigen/core';
+import {DEFAULT_PACKAGE_OPTIONS, OmniKindPrimitive, PackageOptions, TargetOptions} from '@omnigen/core';
 import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '../util';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '@omnigen/target-java';
 import {describe, expect, test, vi} from 'vitest';
-import {LoggerFactory} from '@omnigen/core-log';
 
 describe('PackageResolver', () => {
 
   test('FromSchema', async ({task}) => {
 
-    try {
-      vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-      const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json', {
-        modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false},
-        javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniKindPrimitive.DOUBLE},
-      });
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('packages.json', {
+      modelTransformOptions: {generifyTypes: false},
+      javaOptions: {preferNumberType: OmniKindPrimitive.DOUBLE},
+    });
 
-      expect([...fileContents.keys()].sort()).toMatchSnapshot();
-      for (const [fileName, fileContent] of fileContents) {
-        expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
-      }
-    } catch (ex) {
-      throw LoggerFactory.formatError(ex, `Test ${task.name}`);
+    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    for (const [fileName, fileContent] of fileContents) {
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -30,7 +25,7 @@ describe('PackageResolver', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const javaOptions: JavaOptions = {
-      ...DEFAULT_JAVA_OPTIONS,
+      ...DEFAULT_TEST_JAVA_OPTIONS,
       includeGenerated: false,
       serializationLibrary: SerializationLibrary.POJO,
     };

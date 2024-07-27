@@ -100,9 +100,9 @@ describe('JsonExpander', () => {
         {bar: 'Pre-y-Post', baz: 'before-y-after'},
         {bar: 'Pre-z-Post', baz: 'before-ZED-after'},
 
-        {fizz: 'pre-a-post', buzz: 'BEFORE-A-AFTER'},
-        {fizz: 'pre-be-post', buzz: 'BEFORE-BE-AFTER'},
-        {fizz: 'pre-c-post', buzz: 'BEFORE-C-AFTER'},
+        {fizz: 'Pre-a-Post', buzz: 'before-A-after'},
+        {fizz: 'Pre-be-Post', buzz: 'before-BE-after'},
+        {fizz: 'Pre-c-Post', buzz: 'before-C-after'},
       ],
     });
   });

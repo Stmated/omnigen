@@ -15,6 +15,7 @@ test('lombok', async ({task}) => {
       fieldAccessorMode: FieldAccessorMode.LOMBOK,
       serializationLibrary: SerializationLibrary.JACKSON,
       serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+      lombokBuilder: true,
     },
     targetOptions: {
       ...DEFAULT_TEST_TARGET_OPTIONS,

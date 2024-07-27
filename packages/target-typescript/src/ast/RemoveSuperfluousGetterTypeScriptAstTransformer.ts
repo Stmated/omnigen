@@ -51,7 +51,7 @@ export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTrans
         if (fieldsToMakePublic.includes(n)) {
 
           // NOTE: This should not be allowed later on; everything should be read-only and need to be fully re-created. No assignments like below.
-          const newModifiers = n.modifiers.children.filter(it => it.type !== Ts.ModifierType.PRIVATE);
+          const newModifiers = n.modifiers.children.filter(it => it.kind !== Ts.ModifierKind.PRIVATE);
           n.modifiers = new Ts.ModifierList(...newModifiers).withIdFrom(n.modifiers);
 
           return n;

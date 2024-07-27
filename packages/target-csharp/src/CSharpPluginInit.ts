@@ -29,13 +29,7 @@ import {
   ZodTargetOptions,
 } from '@omnigen/core';
 import {z} from 'zod';
-import {
-  ElevatePropertiesModelTransformer,
-  GenericsModelTransformer,
-  SimplifyInheritanceModelTransformer,
-  SpreadResolvedWildcardGenericsModelTransformer,
-  ZodCompilationUnitsContext,
-} from '@omnigen/core-util';
+import {SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
 import {createCSharpRenderer} from './render';
 import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -46,7 +40,7 @@ import {NamespaceWrapperAstTransformer} from './ast/NamespaceWrapperAstTransform
 import {DelegatesToCSharpAstTransformer} from './ast/DelegatesToCSharpAstTransformer.ts';
 import {NonNumericEnumToConstClassAstTransformer} from './ast/NonNumericEnumToConstClassAstTransformer.ts';
 import {ToCSharpAstTransformer} from './ast/ToCSharpAstTransformer.ts';
-import {NamespaceCompressionAstTransformer} from './ast/NamespaceCompressionAstTransformer.ts';
+import {NamespaceCompressionCSharpAstTransformer} from './ast/NamespaceCompressionCSharpAstTransformer.ts';
 import {
   AddAbstractAccessorsAstTransformer,
   AddAdditionalPropertiesInterfaceAstTransformer,
@@ -56,17 +50,19 @@ import {
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
-  SimplifyUnnecessaryCompositionsModelTransformer,
+  AggregateIntersectionsModelTransformer,
   InnerTypeCompressionAstTransformer,
   InterfaceExtractorModelTransformer,
   MethodToGetterCodeAstTransformer,
-  PackageResolverAstTransformer,
+  PackageResolverAstTransformer, PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
   RemoveEnumFieldsCodeAstTransformer,
   ReorderMembersAstTransformer,
-  ResolveGenericSourceIdentifiersAstTransformer, SimplifyAndCleanAstTransformer,
+  ResolveGenericSourceIdentifiersAstTransformer,
+  SimplifyAndCleanAstTransformer,
   SimplifyGenericsAstTransformer,
-  SortVisitorRegistry, AggregateIntersectionsModelTransformer,
+  SimplifyUnnecessaryCompositionsModelTransformer,
+  SortVisitorRegistry,
 } from '@omnigen/target-code';
 import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer.ts';
 import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer.ts';
@@ -99,12 +95,12 @@ export const ZodCSharpInitContextOut = ZodModelContext
   .merge(ZodCSharpTargetContext);
 
 export const ZodCSharpContextIn = ZodModelContext
-    .merge(ZodParserOptionsContext)
-    .merge(ZodPackageOptionsContext)
-    .merge(ZodTargetOptionsContext)
-    .merge(ZodModelTransformOptionsContext)
-    .merge(ZodCSharpOptionsContext)
-    .merge(ZodCSharpTargetContext)
+  .merge(ZodParserOptionsContext)
+  .merge(ZodPackageOptionsContext)
+  .merge(ZodTargetOptionsContext)
+  .merge(ZodModelTransformOptionsContext)
+  .merge(ZodCSharpOptionsContext)
+  .merge(ZodCSharpTargetContext)
 ;
 
 export const ZodCSharpContextOut = ZodCSharpContextIn
@@ -124,7 +120,7 @@ export const CSharpPluginInit = createPlugin(
       ]);
     }
 
-    const csharpOptions = ZodCSharpOptions.safeParse(ctx.arguments);
+    const csharpOptions = ZodCSharpOptions.safeParse({...ctx.defaults, ...ctx.arguments});
     if (!csharpOptions.success) {
       return csharpOptions.error;
     }
@@ -205,7 +201,6 @@ export const CSharpPlugin = createPlugin(
     ] as const;
 
     for (const transformer of transformers2) {
-
       transformer.transformModel2ndPass(modelTransformer2Args);
     }
 
@@ -214,8 +209,8 @@ export const CSharpPlugin = createPlugin(
     const astTransformers: AstTransformer<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>[] = [
       new AddObjectDeclarationsCodeAstTransformer(),
       new AddFieldsAstTransformer(),
-      new NonNumericEnumToConstClassAstTransformer(),
-      // // new AddAccessorsForFieldsAstTransformer(),
+      // new NonNumericEnumToConstClassAstTransformer(),
+      // new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
       new AddCompositionMembersCodeAstTransformer(),
       new AddConstructorCodeAstTransformer(),
@@ -225,34 +220,29 @@ export const CSharpPlugin = createPlugin(
       new NamespaceWrapperAstTransformer(),
       // new SiblingTypeCompressionAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
-      new NamespaceCompressionAstTransformer(),
+      new NamespaceCompressionCSharpAstTransformer(),
 
       // new AddThrowsForKnownMethodsAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
-      // new CompositionTypeScriptAstTransformer(),
 
       new MethodToGetterCodeAstTransformer(),
-      // new RemoveSuperfluousGetterTypeScriptAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
-      // new InterfaceToTypeAliasTypeScriptAstTransformer(),
-      // new ToHardCodedTypeTypeScriptAstTransformer(),
-      // new SingleFileTypeScriptAstTransformer(),
       new RemoveEnumFieldsCodeAstTransformer(),
       new AddPropertyAccessorCSharpAstTransformer(),
       new JsonCSharpAstTransformer(),
       new ToCSharpAstTransformer(),
-      // new GenericNodesToSpecificJavaAstTransformer(), // TODO: Add back in again?
       new DelegatesToCSharpAstTransformer(),
       new AddCommentsCSharpAstTransformer(),
       new ConstructorRemovalOnPropertyInitCSharpAstTransformer(),
 
+      new NonNumericEnumToConstClassAstTransformer(),
       new PackageResolverAstTransformer(),
       new SimplifyTypePathsCSharpAstTransformer(),
-      new NonNumericEnumToConstClassAstTransformer(),
       new ReorderMembersAstTransformer(),
       new SimplifyAndCleanAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
+      new PrettyCodeAstTransformer(),
     ] as const;
 
     const options: PackageOptions & TargetOptions & CSharpOptions = {

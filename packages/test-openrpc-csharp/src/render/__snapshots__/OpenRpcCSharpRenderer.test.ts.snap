@@ -2,13 +2,13 @@
 
 exports[`OpenRpc+CSharp Rendering > additional-properties 1`] = `
 [
-  "JsonRpcRequest.cs",
+  "additional-properties.cs",
 ]
 `;
 
 exports[`OpenRpc+CSharp Rendering > compressable-types 1`] = `
 [
-  "JsonRpcRequest.cs",
+  "compressable-types.cs",
 ]
 `;
 
@@ -20,30 +20,30 @@ exports[`OpenRpc+CSharp Rendering > compressable-types_init 1`] = `
 
 exports[`OpenRpc+CSharp Rendering > enum 1`] = `
 [
-  "JsonRpcRequest.cs",
+  "enum.cs",
 ]
 `;
 
 exports[`OpenRpc+CSharp Rendering > inherited-construction 1`] = `
 [
-  "Method1Request.cs",
+  "inherited-construction.cs",
 ]
 `;
 
 exports[`OpenRpc+CSharp Rendering > inherited-construction_no_init 1`] = `
 [
-  "Method1Request.cs",
+  "inherited-construction_no_init.cs",
 ]
 `;
 
 exports[`OpenRpc+CSharp Rendering > method-in-response 1`] = `
 [
-  "DepositRequest.cs",
+  "method-in-response.cs",
 ]
 `;
 
 exports[`OpenRpc+CSharp Rendering > multiple-inheritance 1`] = `
 [
-  "GiveInGetOutRequest.cs",
+  "multiple-inheritance.cs",
 ]
 `;

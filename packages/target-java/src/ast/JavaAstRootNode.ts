@@ -4,9 +4,6 @@ import {JavaObjectNameResolver} from './JavaObjectNameResolver.ts';
 import {isDefined} from '@omnigen/core-util';
 import {JavaModelFunctions} from '../parse/JavaModelFunctions';
 
-// const javaNameResolver = new JavaAstNameResolver();
-// const javaModelFunctions = new JavaModelFunctions();
-
 export class JavaAstRootNode extends Code.CodeRootAstNode {
 
   getNameResolver(): ObjectNameResolver {

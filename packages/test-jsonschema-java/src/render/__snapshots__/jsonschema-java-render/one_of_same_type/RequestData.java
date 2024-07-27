@@ -5,9 +5,10 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class RequestData {
+  @JsonProperty(value = "senderInformation")
   private final SenderInformation senderInformation;
 
-  public RequestData(@JsonProperty("senderInformation") SenderInformation senderInformation) {
+  public RequestData(@JsonProperty(value = "senderInformation") SenderInformation senderInformation) {
     this.senderInformation = senderInformation;
   }
 
@@ -16,20 +17,22 @@ public class RequestData {
   }
 
   public static class SenderInformation {
+    @JsonProperty(value = "DateOfBirth")
     private final String dateOfBirth;
 
-    public SenderInformation(@JsonProperty("DateOfBirth") String dateOfBirth) {
+    public SenderInformation(@JsonProperty(value = "DateOfBirth") String dateOfBirth) {
       this.dateOfBirth = dateOfBirth;
     }
 
     /**
-     * Date string in the ISO 8601 format (YYYY-MM-DD), A description, An organization number
-     * <h5>Examples</h5>
+     * A description
+     * <p>
+     * Date string in the ISO 8601 format (YYYY-MM-DD), An organization number
+     * <h2>Examples</h2>
      * <ul>
      *   <li>2014-04-01</li>
      * </ul>
      */
-    @JsonProperty("DateOfBirth")
     public String getDateOfBirth() {
       return this.dateOfBirth;
     }

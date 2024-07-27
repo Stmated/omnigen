@@ -12,7 +12,7 @@ import {
   PackageOptions,
   TargetOptions, TypeNode,
 } from '@omnigen/core';
-import {OmniUtil, Util, VisitorFactoryManager} from '@omnigen/core-util';
+import {assertUnreachable, OmniUtil, Util, Visitor} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
 import * as FreeText from '../FreeText';
@@ -27,7 +27,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
   transformAst(args: AstTransformerArguments<Code.CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>): void {
 
     const baseVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(baseVisitor, {
+    args.root.visit(Visitor.create(baseVisitor, {
 
       visitObjectDeclaration: (n, v) => {
 
@@ -45,18 +45,17 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
         // Add comment if enabled on fields or on getters/accessors.
         // It is up to any transformer which adds the accessors for the field to remove the comment from the field if it should not stay there.
-        if (args.options.commentsOnFields/* || args.options.commentsOnGetters*/) { // } || (args.options.commentsOnGetters && n.property)) {
-          const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.type, args);
-          if (ownerCommentsText) {
-            n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
-          }
-
+        if (args.options.commentsOnFields) {
           if (n.property) {
-
             const commentsText = AddCommentsAstTransformer.getCommentsList(args.root, n.property, args.model, args.options);
             if (commentsText) {
               n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, commentsText), n.comments?.kind);
             }
+          }
+
+          const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.property?.type ?? n.type.omniType, args, false);
+          if (ownerCommentsText) {
+            n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
           }
         }
       },
@@ -68,8 +67,8 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           const returnNode = CodeAstUtils.getSoloReturnOfNoArgsMethod(n);
           if (returnNode) {
             const type = n.signature.type.omniType;
-            if (!OmniUtil.isPrimitive(type) || type.kind != OmniTypeKind.VOID) {
-              const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.signature.type, args);
+            if (!OmniUtil.isPrimitive(type) || (type.kind !== OmniTypeKind.VOID)) {
+              const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.signature.type.omniType, args, false);
               if (ownerCommentsText) {
                 n.signature.comments = new Code.Comment(FreeTextUtils.add(n.signature.comments?.text, ownerCommentsText), n.signature.comments?.kind);
               }
@@ -84,11 +83,12 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
   }
 
   public static getOwnerComments(
-    typeNode: TypeNode,
+    type: OmniType,
     args: AstTransformerArguments<Code.CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>,
+    secondary?: boolean,
   ): FreeText.FriendlyFreeTextIn | undefined {
 
-    return AddCommentsAstTransformer.getCommentsForType(args.root, typeNode.omniType, args.model, args.options);
+    return AddCommentsAstTransformer.getCommentsForType(args.root, type, args.model, args.options, secondary);
   }
 
   public static getCommentsForType(
@@ -96,6 +96,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     type: OmniType,
     model: OmniModel,
     options: PackageOptions & TargetOptions & CodeOptions,
+    secondary?: boolean,
   ): FreeText.FriendlyFreeTextIn | undefined {
 
     const comments: FreeText.FriendlyFreeTextIn[] = [];
@@ -111,10 +112,10 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
         for (const property of endpoint.request.type.properties) {
           if (property.type == type) {
             if (property.description) {
-              comments.push(new FreeText.FreeTextSummary(property.description));
+              comments.push(secondary ? new FreeText.FreeTextRemark(property.description) : new FreeText.FreeTextSummary(property.description));
             }
             if (property.summary) {
-              comments.push(new FreeText.FreeTextSummary(property.summary));
+              comments.push(secondary ? new FreeText.FreeTextRemark(property.summary) : new FreeText.FreeTextSummary(property.summary));
             }
           }
         }
@@ -158,25 +159,37 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     const hasExtraComments = (comments.length > 0);
 
     if (type.description) {
+      const description = secondary ? new FreeText.FreeTextRemark(type.description) : new FreeText.FreeTextSummary(type.description);
       if (hasExtraComments) {
-        comments.splice(0, 0, new FreeText.FreeTextSummary(type.description));
+        comments.splice(0, 0, description);
       } else {
-        comments.push(new FreeText.FreeTextSummary(type.description));
+        comments.push(description);
       }
+      secondary = true;
     }
 
     if (type.summary) {
+      const summary = secondary ? new FreeText.FreeTextRemark(type.summary) : new FreeText.FreeTextSummary(type.summary);
       if (hasExtraComments) {
-        comments.splice(0, 0, new FreeText.FreeTextSummary(type.summary));
+        comments.splice(0, 0, summary);
       } else {
-        comments.push(new FreeText.FreeTextSummary(type.summary));
+        comments.push(summary);
       }
     }
 
     if (options.includeExampleCommentsMode === IncludeExampleCommentsMode.ALWAYS) {
       if (type.examples && type.examples.length > 0) {
         for (const example of type.examples) {
-          comments.push(new FreeText.FreeTextExample(Util.trimAny(JSON.stringify(example.value), `"'`)));
+
+          let exampleValueString = Util.trimAny(JSON.stringify(example.value), `"'`);
+          if (example.description) {
+
+            // NOTE: If description exists, then perhaps it should be added as another member to `FreeTextExample`, so it can be rendered differently depending on target.
+            exampleValueString = `${exampleValueString} - ${example.description}`;
+          }
+
+          comments.push(new FreeText.FreeTextExample(exampleValueString));
+
         }
       }
     }
@@ -381,7 +394,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
         } else {
           // TODO: Possible to find the *actual* setter/field and use that as the @link?
           //       We should not need to check for immutability here, should be centralized somehow
-          if (options.immutableModels) {
+          if (options.immutable) {
 
             targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), new FreeText.FreeText(propertyName)));
           } else {
@@ -413,14 +426,26 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
     const comments: FreeText.AnyFreeText[] = [];
 
+    let summariesAdded = 0;
+
+    if (property.summary && !this.hasComment(property.summary, comments)) {
+      if (AddCommentsAstTransformer.addComment(new FreeText.FreeTextSummary(property.summary), comments)) {
+        summariesAdded++;
+      }
+    }
+
     if (property.description && !this.hasComment(property.description, comments)) {
 
       // Sometimes a description can be set both to the property itself and its type.
-      AddCommentsAstTransformer.addComment(new FreeText.FreeTextSummary(property.description), comments);
-    }
+      const comment = (summariesAdded == 0)
+        ? new FreeText.FreeTextSummary(property.description)
+        : new FreeText.FreeTextParagraph(property.description);
 
-    if (property.summary && !this.hasComment(property.summary, comments)) {
-      AddCommentsAstTransformer.addComment(new FreeText.FreeTextSummary(property.summary), comments);
+      if (AddCommentsAstTransformer.addComment(comment, comments)) {
+        if (comment instanceof FreeText.FreeTextSummary) {
+          summariesAdded++;
+        }
+      }
     }
 
     if (property.deprecated) {
@@ -432,9 +457,13 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
       // If the type is not an object, then we will never create a class just for its sake.
       // So we should propagate all the examples and all other data we can find about it, to the property's comments.
-      const typeComment = AddCommentsAstTransformer.getCommentsForType(root, property.type, model, options);
+      let typeComment = AddCommentsAstTransformer.getCommentsForType(root, property.type, model, options);
 
       if (typeComment) {
+        if (typeComment instanceof Code.FreeTextSummary && summariesAdded > 0) {
+          typeComment = new Code.FreeTextParagraph(typeComment.content);
+        }
+
         AddCommentsAstTransformer.addComment(typeComment, comments);
       }
 
@@ -446,7 +475,6 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
           const investigatedName = nameResolver.investigate({type: prop.type, options: options});
           const typeName = nameResolver.build({name: investigatedName, with: NameParts.FULL});
-          // const typeName = JavaUtil.getFullyQualifiedName(prop.type);
 
           const parameterName = OmniUtil.getPropertyName(prop.name);
           const description = prop.description || prop.type.description;
@@ -466,26 +494,13 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
   private static addComment(comment: FreeText.FriendlyFreeTextIn, comments: FreeText.FriendlyFreeTextIn[]): boolean {
 
-    const commentText = AddCommentsAstTransformer.getText(comment);
+    const commentText = FreeTextUtils.getText(comment);
     if (!commentText || AddCommentsAstTransformer.hasComment(commentText, comments)) {
       return false;
     } else {
       comments.push(comment);
       return true;
     }
-  }
-
-  private static getText(text: FreeText.FriendlyFreeTextIn): string | undefined {
-
-    if (typeof text == 'string') {
-      return text;
-    }
-
-    if (text instanceof FreeText.FreeText) {
-      return text.text;
-    }
-
-    return undefined;
   }
 
   private static hasComment(needle: string, freeTexts: FreeText.FriendlyFreeTextIn[]): boolean {

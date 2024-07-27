@@ -9,21 +9,24 @@ import jakarta.annotation.Generated;
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcError {
-  private final Integer code;
+  @JsonProperty(value = "code")
+  private final int code;
+  @JsonProperty(value = "data")
   private final JsonNode data;
+  @JsonProperty(value = "message")
   private final String message;
 
   public JsonRpcError(
-    @JsonProperty("code") Integer code,
-    @JsonProperty("message") String message,
-    @JsonProperty("data") JsonNode data
+    @JsonProperty(value = "code") Integer code,
+    @JsonProperty(value = "message") String message,
+    @JsonProperty(value = "data") JsonNode data
   ) {
     this.code = ((code == null) ? -1 : code);
     this.message = ((message == null) ? "Unknown Error" : message);
     this.data = data;
   }
 
-  public Integer getCode() {
+  public int getCode() {
     return this.code;
   }
 

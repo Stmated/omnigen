@@ -1,6 +1,7 @@
 import {CSharpVisitor} from '../visit';
 import {AstNode, OmniProperty, Reducer, ReducerResult, Reference, RootAstNode, TypeNode, VisitResult} from '@omnigen/core';
 import {Code} from '@omnigen/target-code';
+import {Identifier} from '@omnigen/target-code/ast';
 
 export * from '@omnigen/target-code/ast';
 
@@ -35,19 +36,17 @@ export class PropertyIdentifier extends AbstractCSharpNode {
 export class PropertyNode extends AbstractCSharpNode {
 
   readonly type: TypeNode;
-  readonly identifier: PropertyIdentifier;
+  readonly identifier: PropertyIdentifier | Identifier;
   property?: OmniProperty | undefined;
   modifiers?: Code.ModifierList | undefined;
   getModifiers?: Code.ModifierList | undefined;
   setModifiers?: Code.ModifierList | undefined;
-  // getBody?: AstNode | undefined;
-  // setBody?: AstNode | undefined;
   initializer?: AstNode | undefined;
   comments?: Code.Comment | undefined;
   immutable?: boolean | undefined;
   annotations?: Code.AnnotationList | undefined;
 
-  constructor(typeNode: TypeNode, identifier: PropertyIdentifier) {
+  constructor(typeNode: TypeNode, identifier: PropertyIdentifier | Identifier) {
     super();
     this.type = typeNode;
     this.identifier = identifier;

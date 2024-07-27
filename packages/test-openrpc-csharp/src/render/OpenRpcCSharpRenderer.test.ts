@@ -34,25 +34,30 @@ describe('OpenRpc+CSharp Rendering', () => {
 
   test('multiple-inheritance', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
+    singleFileName: task.name,
   })));
 
   test('compressable-types', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     generifyTypes: false,
     singleFile: true,
+    singleFileName: task.name,
   })));
 
   test('inherited-construction_no_init', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
+    singleFileName: task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.NO_SETTER,
   })));
 
   test('inherited-construction', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
+    singleFileName: task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.INIT,
   })));
 
   test('enum', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
+    singleFileName: task.name,
     includeGenerated: false,
   })));
 
@@ -70,39 +75,11 @@ describe('OpenRpc+CSharp Rendering', () => {
   test('additional-properties', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     additionalPropertiesInterfaceAfterDuplicateCount: 1,
     singleFile: true,
+    singleFileName: task.name,
   })));
 
   test('method-in-response', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
+    singleFileName: task.name,
   })));
 });
-
-// "validatorReportRecords": {
-//             "description": "A map storing the records of validator reporting each other.",
-//             "type": "array",
-//             "items": {
-//               "type": "array",
-//               "items": [
-//                 {
-//                   "$ref": "#/components/schemas/SuiAddress"
-//                 },
-//                 {
-//                   "type": "array",
-//                   "items": {
-//                     "$ref": "#/components/schemas/SuiAddress"
-//                   }
-//                 }
-//               ],
-//               "maxItems": 2,
-//               "minItems": 2
-//             }
-//           },
-
-// "SuiAddress": {
-//         "$ref": "#/components/schemas/Hex"
-//       },
-
-// "Hex": {
-//         "description": "Hex string encoding.",
-//         "type": "string"
-//       },

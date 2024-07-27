@@ -63,6 +63,10 @@ export interface JSONSchema9 {
   $defs?: Record<string, JSONSchema9Definition>;
   definitions?: Record<string, JSONSchema9Definition>;
   $comment?: string;
+
+  $dynamicRef?: string;
+  $dynamicAnchor?: string;
+
   if?: JSONSchema9Definition;
   then?: JSONSchema9Definition;
   else?: JSONSchema9Definition;

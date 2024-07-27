@@ -2,38 +2,13 @@
 
 exports[`Java Rendering > AdditionalProperties 1`] = `
 [
-  "ErrorUnknown.java",
-  "ErrorUnknownError.java",
-  "IAdditionalProperties.java",
-  "JsonRpcError.java",
-  "JsonRpcErrorResponse.java",
-  "JsonRpcRequest.java",
-  "JsonRpcRequestParams.java",
-  "JsonRpcResponse.java",
-  "ListThingsRequest.java",
-  "ListThingsRequestParams.java",
-  "ListThingsResponse.java",
-  "Thing.java",
+  "AdditionalProperties.java",
 ]
 `;
 
 exports[`Java Rendering > Enum 1`] = `
 [
-  "ErrorUnknown.java",
-  "ErrorUnknownError.java",
-  "JsonRpcError.java",
-  "JsonRpcErrorResponse.java",
-  "JsonRpcRequest.java",
-  "JsonRpcRequestParams.java",
-  "JsonRpcResponse.java",
-  "ListThingsError100.java",
-  "ListThingsError100Error.java",
-  "ListThingsRequest.java",
-  "ListThingsRequestParams.java",
-  "ListThingsResponse.java",
-  "Tag.java",
-  "Thing.java",
-  "ThingType.java",
+  "Enum.java",
 ]
 `;
 
@@ -90,53 +65,7 @@ exports[`Java Rendering > Type compressions 1`] = `
 
 exports[`Java Rendering > description-inheritance 1`] = `
 [
-  "AbstractOne.java",
-  "AbstractOneSchema.java",
-  "AbstractOther.java",
-  "AbstractOtherSchema.java",
-  "ErrorUnknown.java",
-  "ErrorUnknownError.java",
-  "IAbstractOtherSchema.java",
-  "IResultSchemaSchema.java",
-  "JsonRpcError.java",
-  "JsonRpcErrorResponse.java",
-  "JsonRpcRequest.java",
-  "JsonRpcRequestParams.java",
-  "JsonRpcResponse.java",
-  "MethodRequest.java",
-  "MethodRequestParams.java",
-  "MethodResponse.java",
-  "RequestParamDescriptor.java",
-  "RequestParamSchema.java",
-  "ResultDescriptor.java",
-  "ResultSchema.java",
-  "ResultSchemaSchema.java",
-]
-`;
-
-exports[`Java Rendering > description-inheritance 2`] = `
-[
-  "AbstractOne.java",
-  "AbstractOneSchema.java",
-  "AbstractOther.java",
-  "AbstractOtherSchema.java",
-  "ErrorUnknown.java",
-  "ErrorUnknownError.java",
-  "IAbstractOtherSchema.java",
-  "IResultSchemaSchema.java",
-  "JsonRpcError.java",
-  "JsonRpcErrorResponse.java",
-  "JsonRpcRequest.java",
-  "JsonRpcRequestParams.java",
-  "JsonRpcResponse.java",
-  "MethodRequest.java",
-  "MethodRequestParams.java",
-  "MethodResponse.java",
-  "RequestParamDescriptor.java",
-  "RequestParamSchema.java",
-  "ResultDescriptor.java",
-  "ResultSchema.java",
-  "ResultSchemaSchema.java",
+  "description-inheritance.java",
 ]
 `;
 
@@ -189,6 +118,5 @@ public class GiveNumberGetCharRequestParams extends JsonRpcRequestParams<Double>
     super(param);
   }
 }
-
 "
 `;

@@ -1,11 +1,14 @@
-import {AstNode, AstTransformer, AstTransformerArguments, OmniModel, Reference, RootAstNode, TargetOptions, TypeNode} from '@omnigen/core';
-import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {AstNode, AstTransformer, AstTransformerArguments, OmniModel, OmniType, Reference, RootAstNode, TargetOptions, TypeNode} from '@omnigen/core';
+import {OmniUtil, Visitor} from '@omnigen/core-util';
 import {CodeAstUtils} from '../CodeAstUtils';
 import * as Code from '../CodeAst';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 import {CodeOptions} from '../../options/CodeOptions.ts';
 import {CodeUtil} from '../../util/CodeUtil.ts';
 import {AbstractCodeNode} from '../AbstractCodeNode.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Adds a constructor to a class, based on what fields are required (final) and what fields are required from any potential supertype.
@@ -17,7 +20,7 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
     const classDeclarations: Code.ClassDeclaration[] = [];
 
     const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    args.root.visit(Visitor.create(defaultVisitor, {
       visitClassDeclaration: (node, visitor) => {
         defaultVisitor.visitClassDeclaration(node, visitor);
         classDeclarations.push(node);
@@ -57,13 +60,14 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
     for (let i = 0; i < fields.length; i++) {
 
       const constructorField = fields[i];
+      const constructorFieldType = constructorField.property?.type ?? constructorField.type.omniType;
       const constructorFieldRef = new Code.FieldReference(constructorField);
-      const parameter = this.createConstructorParameter(constructorFieldRef, constructorField.type, constructorField.identifier);
+      const parameter = this.createConstructorParameter(constructorFieldRef, constructorFieldType, constructorField.identifier, root);
       parameters.push(parameter);
 
       blockExpressions.push(new Code.Statement(new Code.BinaryExpression(
-        new Code.FieldReference(constructorField),
-        new Code.TokenNode(Code.TokenKind.ASSIGN),
+        new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(constructorField)),
+        Code.TokenKind.ASSIGN,
         new Code.DeclarationReference(parameter),
       )));
     }
@@ -122,12 +126,12 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
         const literalValue = type.value ?? null;
         superConstructorArguments.push(new Code.Literal(literalValue));
       } else if (OmniUtil.isPrimitive(type) && type.value !== undefined) {
-        const parameter = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier);
+        const parameter = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier, root);
         requiredSuperArguments.push(parameter);
         superConstructorArguments.push(new Code.DeclarationReference(parameter));
       } else {
 
-        const constructorParam = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier);
+        const constructorParam = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier, root);
 
         superConstructorArguments.push(new Code.DeclarationReference(constructorParam));
         requiredSuperArguments.push(constructorParam);
@@ -141,7 +145,7 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
     return [requiredSuperArguments, superCall];
   }
 
-  private createConstructorParameter(fieldRef: Reference<AstNode>, type: TypeNode, identifier: Code.Identifier): Code.ConstructorParameter {
+  private createConstructorParameter(fieldRef: Reference<AstNode>, type: OmniType | TypeNode, identifier: Code.Identifier, root: RootAstNode): Code.ConstructorParameter {
 
     const schemaIdentifier = identifier.original || identifier.value;
     const safeName = CodeUtil.getPrettyParameterName(schemaIdentifier);
@@ -151,7 +155,8 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
       usedIdentifier = new Code.Identifier(safeName, schemaIdentifier);
     }
 
-    return new Code.ConstructorParameter(fieldRef, type, usedIdentifier);
+    const typeNode = ('kind' in type) ? root.getAstUtils().createTypeNode(type) : type;
+    return new Code.ConstructorParameter(fieldRef, typeNode, usedIdentifier);
   }
 
   private static getConstructorRequirements(
@@ -190,13 +195,13 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
       return {fields: [], parameters: []};
     }
 
-    const fieldsWithSetters = setters.map(setter => root.resolveNodeRef(setter.fieldRef));
-    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.type === Code.ModifierType.FINAL || m.type === Code.ModifierType.READONLY));
-    const fieldsWithoutSetters = fields.filter(field => !fieldsWithSetters.includes(field));
+    const fieldIdsWithSetters = setters.map(setter => setter.fieldRef.targetId); // root.resolveNodeRef(setter.fieldRef));
+    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.kind === Code.ModifierKind.FINAL || m.kind === Code.ModifierKind.READONLY));
+    const fieldsWithoutSetters = fields.filter(field => !fieldIdsWithSetters.includes(field.id));
     const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer === undefined);
 
     const immediateRequired = fields.filter(field => {
-      return fieldsWithoutInitializer.includes(field) && (fieldsWithSetters.includes(field) || fieldsWithFinal.includes(field));
+      return fieldsWithoutInitializer.includes(field) && (fieldIdsWithSetters.includes(field.id) || fieldsWithFinal.includes(field));
     });
 
     if (followSupertype && node.extends) {
@@ -208,7 +213,7 @@ export class AddConstructorCodeAstTransformer implements AstTransformer<CodeRoot
 
           let depth = 0;
           const defaultVisitor = root.createVisitor();
-          extendedBy.visit(VisitorFactoryManager.create(defaultVisitor, {
+          extendedBy.visit(Visitor.create(defaultVisitor, {
             visitConstructor: n => {
               if (n.parameters) {
                 supertypeArguments.push(...n.parameters.children);

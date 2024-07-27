@@ -1,6 +1,6 @@
 import * as Java from '../ast/JavaAst';
 import {OmniType, TargetOptions} from '@omnigen/core';
-import {VisitorFactoryManager} from '@omnigen/core-util';
+import {Visitor} from '@omnigen/core-util';
 
 export interface DependencyNode {
   unit: Java.CompilationUnit;
@@ -23,7 +23,7 @@ export class DependencyGraphAstUtils {
     const typeToGraphNode = new Map<OmniType, DependencyNode>();
 
     const defaultVisitor = root.createVisitor();
-    root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    root.visit(Visitor.create(defaultVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 

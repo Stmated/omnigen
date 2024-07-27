@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, OmniTypeKind, TargetOptions} from '@omnigen/core';
-import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {OmniUtil, Visitor} from '@omnigen/core-util';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 import {CodeAstUtils} from '../CodeAstUtils.ts';
 import {CodeOptions} from '../../options/CodeOptions.ts';
@@ -9,7 +9,7 @@ export class AddFieldsAstTransformer implements AstTransformer<CodeRootAstNode, 
   transformAst(args: AstTransformerArguments<CodeRootAstNode, TargetOptions & CodeOptions>): void {
 
     const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    args.root.visit(Visitor.create(defaultVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
 

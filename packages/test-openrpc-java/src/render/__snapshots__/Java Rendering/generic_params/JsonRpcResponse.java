@@ -8,10 +8,12 @@ import jakarta.annotation.Generated;
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcResponse<T> {
+  @JsonProperty(value = "id")
   private final String id;
+  @JsonProperty(value = "result")
   private final T result;
 
-  public JsonRpcResponse(@JsonProperty("id") String id, @JsonProperty("result") T result) {
+  public JsonRpcResponse(@JsonProperty(value = "id") String id, @JsonProperty(value = "result") T result) {
     this.id = id;
     this.result = result;
   }
@@ -20,6 +22,7 @@ public class JsonRpcResponse<T> {
     return this.id;
   }
 
+  @JsonProperty(value = "jsonrpc")
   public String getJsonrpc() {
     return "2.0";
   }

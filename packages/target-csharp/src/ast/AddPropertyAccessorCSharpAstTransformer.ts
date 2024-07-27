@@ -34,7 +34,6 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
     });
 
     let interfaceDepth = 0;
-    // let abstractDepth = 0;
 
     // Step1, replace fields with properties
     const defaultReducer = args.root.createReducer();
@@ -61,8 +60,8 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
             if (!propertyNode.modifiers) {
               propertyNode.modifiers = new Code.ModifierList();
             }
-            if (!propertyNode.modifiers.children.some(it => it.type === Code.ModifierType.ABSTRACT)) {
-              propertyNode.modifiers.children.push(new Code.Modifier(Code.ModifierType.ABSTRACT));
+            if (!propertyNode.modifiers.children.some(it => it.kind === Code.ModifierKind.ABSTRACT)) {
+              propertyNode.modifiers.children.push(new Code.Modifier(Code.ModifierKind.ABSTRACT));
             }
           }
 
@@ -130,8 +129,9 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
     annotations: Code.AnnotationList | undefined,
   ) {
 
-    const propertyNode = new Cs.PropertyNode(type, new Cs.PropertyIdentifier(identifier));
-    propertyNode.modifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC));
+    const propertyIdentifier = this.getPropertyIdentifier(property, identifier);
+    const propertyNode = new Cs.PropertyNode(type, propertyIdentifier);
+    propertyNode.modifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierKind.PUBLIC));
     propertyNode.property = property;
     propertyNode.comments = comments;
     propertyNode.annotations = annotations;
@@ -139,10 +139,10 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
     // C# 6.0: public object MyProperty { get; }
     // C# 9.0: public string Orderid { get; init; } -- NOTE: could be used to skip constructor
 
-    if ((property && property.readOnly) || args.options.immutableModels) {
+    if (property?.readOnly === true || (property?.readOnly === undefined && args.options.immutable)) {
 
-      if (!args.options.immutableModels && args.options.csharpReadonlyPropertySetterMode === ReadonlyPropertyMode.PRIVATE) {
-        propertyNode.setModifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierType.PRIVATE));
+      if (!args.options.immutable && args.options.csharpReadonlyPropertySetterMode === ReadonlyPropertyMode.PRIVATE) {
+        propertyNode.setModifiers = new Code.ModifierList(new Code.Modifier(Code.ModifierKind.PRIVATE));
       }
 
       propertyNode.immutable = true;
@@ -162,5 +162,18 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
     }
 
     return propertyNode;
+  }
+
+  private getPropertyIdentifier(property: OmniProperty | undefined, identifier: Code.Identifier): Code.Identifier | Cs.PropertyIdentifier {
+
+    if (property) {
+
+      const accessorName = OmniUtil.getPropertyAccessorNameOnly(property.name);
+      if (accessorName) {
+        return new Cs.Identifier(accessorName);
+      }
+    }
+
+    return new Cs.PropertyIdentifier(identifier);
   }
 }

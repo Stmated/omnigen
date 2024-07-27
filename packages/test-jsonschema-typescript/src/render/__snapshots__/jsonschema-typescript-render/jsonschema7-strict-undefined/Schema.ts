@@ -1,4 +1,37 @@
-export interface Schema {
+export interface SchemaPatternProperties {
+  readonly [key: string]: Schema;
+}
+
+export type ArrayableSchema = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
+export type Schema = SchemaObject | boolean;
+
+export interface SchemaDefinitions {
+  readonly [key: string]: Schema;
+}
+
+export interface SchemaDependencies {
+  readonly [key: string]: SchemaDependenciesAdditional;
+}
+
+export type SchemaDependenciesAdditional = Schema | ReadonlyArray<string>;
+
+export interface SchemaProperties {
+  readonly [key: string]: Schema;
+}
+
+export enum SimpleTypes {
+  ARRAY = 'array',
+  BOOLEAN = 'boolean',
+  INTEGER = 'integer',
+  NULL = 'null',
+  NUMBER = 'number',
+  OBJECT = 'object',
+  STRING = 'string',
+}
+
+export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];
+
+export interface SchemaObject {
   readonly $comment?: string;
   readonly $id?: string;
   readonly $ref?: string;
@@ -22,7 +55,7 @@ export interface Schema {
   readonly exclusiveMinimum?: number;
   readonly format?: string;
   readonly if?: Schema;
-  readonly items?: SchemaItems;
+  readonly items?: ArrayableSchema;
   readonly maximum?: number;
   readonly maxItems?: number;
   readonly maxLength?: number;
@@ -45,33 +78,4 @@ export interface Schema {
   readonly type?: SchemaType;
   readonly uniqueItems?: boolean;
   readonly writeOnly?: boolean;
-}
-
-export interface SchemaDefinitions {
-  readonly [key: string]: Schema;
-}
-
-export interface SchemaDependencies {
-  readonly [key: string]: SchemaDependenciesSchema;
-}
-
-export type SchemaDependenciesSchema = Schema | ReadonlyArray<string>;
-export type SchemaItems = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
-export interface SchemaPatternProperties {
-  readonly [key: string]: Schema;
-}
-
-export interface SchemaProperties {
-  readonly [key: string]: Schema;
-}
-
-export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];
-export enum SimpleTypes {
-  ARRAY = 'array',
-  BOOLEAN = 'boolean',
-  INTEGER = 'integer',
-  NULL = 'null',
-  NUMBER = 'number',
-  OBJECT = 'object',
-  STRING = 'string',
 }

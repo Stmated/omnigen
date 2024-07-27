@@ -33,6 +33,6 @@
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
     "java-parser": "^2.3.0",
-    "typescript": "^5.5.0-beta"
+    "typescript": "^5.5.3"
   }
 }

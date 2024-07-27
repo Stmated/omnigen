@@ -62,18 +62,16 @@ export class JavaUtil {
    * TODO: Move to elsewhere, these should be based on the renderer and its settings?
    */
   public static getGetterName(baseName: string, type: OmniType): string {
-    const capitalized = Case.pascal(baseName);
-    if (type.kind != OmniTypeKind.ARRAY) {
-      if (OmniUtil.isPrimitive(type) && type.kind == OmniTypeKind.BOOL && !type.nullable) {
-        return `is${capitalized}`;
-      }
+    const capitalized = baseName.match(/^[A-Z]/) ? baseName : Case.pascal(baseName);
+    if (OmniUtil.isPrimitive(type) && type.kind === OmniTypeKind.BOOL && !type.nullable) {
+      return `is${capitalized}`;
     }
 
     return `get${capitalized}`;
   }
 
   public static getSetterName(baseName: string): string {
-    const capitalized = Case.pascal(baseName);
+    const capitalized = baseName.match(/^[A-Z]/) ? baseName : Case.pascal(baseName);
     return `set${capitalized}`;
   }
 

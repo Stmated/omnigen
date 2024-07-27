@@ -25,7 +25,7 @@ describe('Test Generic Model Creation', () => {
         new SchemaFile(filePath),
       );
 
-      const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS});
+      const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS, jsonRpcVersion: '2.0'});
       try {
         const model = (await parser.parse()).model;
         expect(model).toBeDefined();
@@ -41,7 +41,7 @@ describe('Test Generic Model Creation', () => {
       new SchemaFile(Util.getPathFromRoot('./packages/parser-openrpc/examples/petstore-expanded.json')),
     );
 
-    const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS});
+    const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS, jsonRpcVersion: '2.0'});
     const model = (await parser.parse()).model;
 
     expect(model).toBeDefined();

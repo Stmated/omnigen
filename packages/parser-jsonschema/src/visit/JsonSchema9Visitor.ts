@@ -75,6 +75,9 @@ export interface JsonSchema9Visitor<S extends AnyJSONSchema = AnyJSONSchema> {
   // type_option: DocVisitorTransformer<ToDefined<ToSingle<S['type']>>, this>;
   uniqueItems: DocVisitorTransformer<S['uniqueItems'], this>;
   $ref: DocVisitorTransformer<S['$ref'], this>;
+
+  $dynamicRef: DocVisitorTransformer<S['$dynamicRef'], this>;
+  $dynamicAnchor: DocVisitorTransformer<S['$dynamicAnchor'], this>;
 }
 
 type JsonSchemaDefinitionArray<S extends AnyJSONSchema> = ToDefined<ToArray<ToDefined<S['const']>>>;

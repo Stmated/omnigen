@@ -1,28 +1,31 @@
 import {
   ModelTransformOptions,
-  OMNI_GENERIC_FEATURES,
   OmniExternalModelReferenceType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniModel,
-  OmniModelTransformer,
+  OmniModel2ndPassTransformer,
+  OmniModelTransformer2ndPassArgs,
   OmniModelTransformerArgs,
+  OmniProperty,
   OmniPropertyOwner,
   OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
-  ParserOptions,
   PropertiesInformation,
   PropertyInformation,
+  TargetFeatures,
+  TypeDiffKind,
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniUtil} from '../OmniUtil.ts';
-import {Case, Sorters} from '../../util';
+import {Case, CreateMode, Sorters} from '../../util';
+import {Naming} from '../Naming.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -30,10 +33,13 @@ const logger = LoggerFactory.create(import.meta.url);
  * Takes an OmniModel, and tries to modify it to use generics where possible.
  * This will remove the need for a lot of extra types, and make code more readable.
  */
-export class GenericsModelTransformer implements OmniModelTransformer {
+export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
-  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
+  transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
+    this.transform(args, args.targetFeatures);
+  }
 
+  private transform(args: OmniModelTransformerArgs, targetFeatures: TargetFeatures) {
     if (!args.options.generifyTypes) {
       return;
     }
@@ -56,7 +62,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         continue;
       }
 
-      if (superType.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      if (superType.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
 
         // Maybe external model reference could in the future -- or it will be removed in favor of normalizing all referenced documents, and remove the type kind
         continue;
@@ -67,7 +73,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         continue;
       }
 
-      this.attemptHoistToSuperType(superType, subTypes, sourceToTargets, args.model, args.options);
+      this.attemptHoistToSuperType(superType, subTypes, sourceToTargets, args.model, args.options, targetFeatures);
     }
   }
 
@@ -77,14 +83,15 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     sourceToTargets: Map<OmniGenericSourceType, OmniGenericTargetType[]>,
     model: OmniModel,
     options: ModelTransformOptions,
+    features: TargetFeatures,
   ) {
 
     const commonProperties = PropertyUtil.getCommonProperties(
       // We do not care *at all* if they have nothing in-common. Just nice if get one.
       () => false,
-      () => false, //  EqualityFinder.matchesPropDiff(pdiff, PropertyDifference.META),
-
-      OMNI_GENERIC_FEATURES,
+      () => false,
+      features,
+      {create: CreateMode.SIMPLE},
       ...subTypes,
     );
 
@@ -101,10 +108,13 @@ export class GenericsModelTransformer implements OmniModelTransformer {
       }
 
       const info = commonProperties.byPropertyName[propertyName];
-
       if (info.distinctTypes.length <= 1) {
 
         // There are 1 or less distinct types, so we will not replace it with generics.
+        continue;
+      }
+
+      if (info.typeDiffs?.includes(TypeDiffKind.POLYMORPHIC_LITERAL) && !features.literalTypes && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? it.literal : false)) {
         continue;
       }
 
@@ -117,6 +127,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         sourceToTargets,
         model,
         options,
+        features,
       );
     }
   }
@@ -130,11 +141,12 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     sourceToTargets: Map<OmniGenericSourceType, OmniGenericTargetType[]>,
     model: OmniModel,
     options: ModelTransformOptions,
+    features: TargetFeatures,
   ): void {
 
     const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(info.propertyName)}`;
 
-    const upperBound = this.toGenericBoundType(info.commonType);
+    const upperBound = this.toGenericUpperBoundType(info, features);
 
     const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
@@ -158,7 +170,7 @@ export class GenericsModelTransformer implements OmniModelTransformer {
           ...lowerTarget,
           type: {
             kind: OmniTypeKind.UNKNOWN,
-            upperBound: lowerTarget.type, // {...lowerTarget.type},
+            upperBound: lowerTarget.type,
           },
         };
       }
@@ -211,6 +223,8 @@ export class GenericsModelTransformer implements OmniModelTransformer {
         }
       }
 
+      // const targetIdType = OmniUtil.asNonNullableIfHasDefault(property.type, features);
+
       const targetIdentifier: OmniGenericTargetIdentifierType = {
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
         type: property.type,
@@ -228,17 +242,47 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     }
 
     if (genericSource.of.kind === OmniTypeKind.OBJECT) {
-      genericSource.of.properties.push({
+
+      const newProperty: OmniProperty = {
         name: info.propertyName,
         type: genericSourceIdentifier,
         owner: genericSource.of,
+        debug: OmniUtil.addDebug(
+          info.properties.flatMap(it => {
+            const debug = it.debug || [];
+            const debugArray = (typeof debug === 'string') ? [debug] : debug;
+            return debugArray.map(d => `${Naming.getNameString(it.owner)}: ${d}`);
+          }),
+          `Merged into one generic property`,
+        ),
+      };
 
-        readOnly: info.properties.every(it => it.readOnly),
-        writeOnly: info.properties.every(it => it.writeOnly),
-        required: info.properties.every(it => it.required),
-        deprecated: info.properties.every(it => it.deprecated),
-        abstract: info.properties.every(it => it.abstract),
-      });
+      if (info.properties.every(it => it.readOnly)) {
+        newProperty.readOnly = true;
+      }
+      if (info.properties.every(it => it.writeOnly)) {
+        newProperty.writeOnly = true;
+      }
+      if (info.properties.every(it => it.required)) {
+        newProperty.required = true;
+      }
+      if (info.properties.every(it => it.deprecated)) {
+        newProperty.deprecated = true;
+      }
+      if (info.properties.every(it => it.abstract)) {
+        newProperty.abstract = true;
+      }
+
+      const existing = genericSource.of.properties.find(it => it.name === newProperty.name);
+      if (existing) {
+
+        logger.warn(`Encountered property '${existing.name}' attempted to be added twice, which is unexpected behavior. Replacing with generic version.`);
+        const existingIndex = genericSource.of.properties.indexOf(existing);
+        genericSource.of.properties.splice(existingIndex, 1, newProperty);
+
+      } else {
+        genericSource.of.properties.push(newProperty);
+      }
     } else {
 
       // Go back to info logging? Feels like this should have been filtered away earlier!
@@ -246,9 +290,18 @@ export class GenericsModelTransformer implements OmniModelTransformer {
     }
   }
 
-  private toGenericBoundType(targetIdentifierType: OmniType | undefined): OmniType | undefined {
+  private toGenericUpperBoundType(info: PropertyInformation, features: TargetFeatures): OmniType | undefined {
+
+    const targetIdentifierType = info.commonType;
 
     if (!targetIdentifierType || targetIdentifierType.kind == OmniTypeKind.UNKNOWN) {
+      return undefined;
+    }
+
+    // /*&& !features.literalTypes && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? it.literal : false)/*
+    if (info.typeDiffs?.includes(TypeDiffKind.FUNDAMENTAL_TYPE)) {
+
+      // If the type difference is fundamental, then we cannot have an upper bound set, since some have nothing in-common.
       return undefined;
     }
 

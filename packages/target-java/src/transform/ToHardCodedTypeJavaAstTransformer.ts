@@ -1,11 +1,13 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
-import {AstTargetFunctions, OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniGenericTargetType, OmniType, OmniTypeKind, UnknownKind} from '@omnigen/core';
+import {AstTargetFunctions, OmniArrayKind, OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniGenericTargetType, OmniType, OmniTypeKind, UnknownKind} from '@omnigen/core';
 import * as Java from '../ast/JavaAst';
 import {assertDefined} from '@omnigen/core-util';
+import {render} from '@omnigen/target-code';
 
 export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransformer {
 
   private static readonly _MAP_GENERIC_SOURCES = new Map<String, OmniGenericSourceType>();
+  private static readonly _LIST_GENERIC_SOURCES = new Map<String, OmniGenericSourceType>();
 
   transformAst(args: JavaAstTransformerArgs): void {
 
@@ -33,12 +35,42 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
             ],
           };
 
-          // NOTE: Possible endless recursion?
           return astUtils.createTypeNode(genericTargetType, implementation).reduce(r);
 
         } else {
           return defaultReducer.reduceEdgeType(n, r);
         }
+      },
+      reduceArrayType: (n, r) => {
+
+        const reduced = defaultReducer.reduceArrayType(n, r);
+
+        if (reduced && reduced instanceof Java.ArrayType) {
+          let baseType: string | undefined = undefined;
+          if (reduced.omniType.arrayKind === OmniArrayKind.SET) {
+            baseType = n.implementation ? `HashSet` : `Set`;
+          } else if (reduced.omniType.arrayKind === OmniArrayKind.LIST) {
+            baseType = reduced.implementation ? `ArrayList` : `List`;
+          }
+
+          if (baseType) {
+
+            const implementation = n.implementation ?? false;
+            const source = ToHardCodedTypeJavaAstTransformer.getListGenericSource(baseType);
+            const genericTargetType: OmniGenericTargetType = {
+              kind: OmniTypeKind.GENERIC_TARGET,
+              source: source,
+              targetIdentifiers: [
+                {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: n.itemTypeNode.omniType, sourceIdentifier: source.sourceIdentifiers[0]},
+              ],
+            };
+
+            return astUtils.createTypeNode(genericTargetType, implementation).reduce(r);
+          }
+        }
+
+        // Keep it as-is, and it will be rendered as something special by its renderer.
+        return reduced;
       },
     });
 
@@ -54,10 +86,10 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
   ): Java.TypeNode {
 
     switch (unknownKind) {
-      case UnknownKind.MUTABLE_OBJECT:
-        // NOTE: Should probably be a map instead. But additionalProperties becomes `Map<String, Map<String, Object>>` which is a bit weird.
-        return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'Object'}}, implementation);
-      case UnknownKind.MAP: {
+      // case UnknownKind.DYNAMIC_OBJECT:
+      //   // NOTE: Should probably be a map instead. But additionalProperties becomes `Map<String, Map<String, Object>>` which is a bit weird.
+      //   return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'Object'}}, implementation);
+      case UnknownKind.DYNAMIC_OBJECT: {
 
         const targetKeyType: OmniType = {kind: OmniTypeKind.STRING};
         const targetValueType: OmniType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'Object'}};
@@ -74,12 +106,13 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
 
         return astUtils.createTypeNode(genericTargetType, implementation);
       }
-
+      case UnknownKind.DYNAMIC_NATIVE:
+      case UnknownKind.DYNAMIC:
       case UnknownKind.OBJECT:
       case UnknownKind.ANY:
         return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'Object'}}, implementation);
       case UnknownKind.WILDCARD:
-        return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [''], edgeName: '?'}}, implementation);
+        return new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: '?'}}, implementation);
     }
   }
 
@@ -104,6 +137,29 @@ export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransforme
       });
 
       ToHardCodedTypeJavaAstTransformer._MAP_GENERIC_SOURCES.set(objectName, source);
+    }
+
+    return source;
+  }
+
+  private static getListGenericSource(objectName: string): OmniGenericSourceType {
+
+    let source = ToHardCodedTypeJavaAstTransformer._LIST_GENERIC_SOURCES.get(objectName);
+
+    if (!source) {
+      const mapType: OmniType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'util'], edgeName: objectName}};
+
+      const itemType: OmniGenericSourceIdentifierType = {kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER, placeholderName: 'T'};
+
+      source = Object.freeze({
+        kind: OmniTypeKind.GENERIC_SOURCE,
+        of: mapType,
+        sourceIdentifiers: [
+          itemType,
+        ],
+      });
+
+      ToHardCodedTypeJavaAstTransformer._LIST_GENERIC_SOURCES.set(objectName, source);
     }
 
     return source;

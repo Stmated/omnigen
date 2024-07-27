@@ -4,7 +4,7 @@ package some.base.pkg.errors;
  * Generic class to describe the JsonRpc error inside an error response
  */
 public class JsonRpcError {
-  private final Integer code;
+  private final int code;
   private final Object data;
   private final String message;
 
@@ -14,7 +14,7 @@ public class JsonRpcError {
     this.data = data;
   }
 
-  public Integer getCode() {
+  public int getCode() {
     return this.code;
   }
 

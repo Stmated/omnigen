@@ -1,6 +1,5 @@
 package generated.omnigen;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Generated;
 
@@ -9,21 +8,17 @@ import jakarta.annotation.Generated;
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcError {
-  private final Integer code;
+  private final int code;
   private final JsonNode data;
   private final String message;
 
-  public JsonRpcError(
-    @JsonProperty("code") Integer code,
-    @JsonProperty("message") String message,
-    @JsonProperty("data") JsonNode data
-  ) {
+  public JsonRpcError(Integer code, String message, JsonNode data) {
     this.code = ((code == null) ? -1 : code);
     this.message = ((message == null) ? "Unknown Error" : message);
     this.data = data;
   }
 
-  public Integer getCode() {
+  public int getCode() {
     return this.code;
   }
 

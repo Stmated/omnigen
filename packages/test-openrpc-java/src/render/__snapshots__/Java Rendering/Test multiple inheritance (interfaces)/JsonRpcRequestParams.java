@@ -10,7 +10,7 @@ import jakarta.annotation.Generated;
 public class JsonRpcRequestParams {
   private final In param;
 
-  public JsonRpcRequestParams(@JsonProperty("param") In param) {
+  public JsonRpcRequestParams(@JsonProperty(value = "param") In param) {
     this.param = param;
   }
 

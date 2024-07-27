@@ -26,7 +26,7 @@ public class ErrorUnknown extends JsonRpcErrorResponse {
   }
 
   public static class Error extends JsonRpcError {
-    private final Integer code;
+    private final int code;
     private final JsonNode data;
     private final String message;
 
@@ -36,7 +36,7 @@ public class ErrorUnknown extends JsonRpcErrorResponse {
       this.data = data;
     }
 
-    public Integer getCode() {
+    public int getCode() {
       return this.code;
     }
 

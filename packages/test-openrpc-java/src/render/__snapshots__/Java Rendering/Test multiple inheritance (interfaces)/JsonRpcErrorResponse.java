@@ -1,8 +1,5 @@
 package generated.omnigen;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
 /**
@@ -13,15 +10,11 @@ public class JsonRpcErrorResponse {
   private final ErrorUnknownError error;
   private final String id;
 
-  public JsonRpcErrorResponse(
-    @JsonProperty(value = "error", required = true) ErrorUnknownError error,
-    @JsonProperty("id") String id
-  ) {
+  public JsonRpcErrorResponse(ErrorUnknownError error, String id) {
     this.error = error;
     this.id = id;
   }
 
-  @JsonInclude(Include.ALWAYS)
   public ErrorUnknownError getError() {
     return this.error;
   }

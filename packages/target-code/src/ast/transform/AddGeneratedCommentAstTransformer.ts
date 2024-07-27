@@ -1,4 +1,4 @@
-import {VisitorFactoryManager} from '@omnigen/core-util';
+import {Visitor} from '@omnigen/core-util';
 import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 import * as Code from '../CodeAst';
@@ -17,7 +17,7 @@ export class AddGeneratedCommentAstTransformer implements AstTransformer<CodeRoo
     const defaultVisitor = args.root.createVisitor();
     const unitHasCommentStack: boolean[] = [];
 
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    args.root.visit(Visitor.create(defaultVisitor, {
 
       visitCompilationUnit: (n, v) => {
         try {

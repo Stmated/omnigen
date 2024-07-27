@@ -71,7 +71,7 @@ export class ZodUtils {
       if (actual instanceof ZodOptional) {
         return ZodUtils.isCompatibleWith(expected.unwrap(), actual.unwrap(), path, silent);
       } else if (actual instanceof ZodCustomNotSet) {
-        return this.createError(Compat.NEEDS_EVALUATION, `Actual is not set, expected is optional, will need eval`, path); // {v: Compat.NEEDS_EVALUATION};
+        return this.createError(Compat.NEEDS_EVALUATION, `Actual is not set, expected is optional, will need eval`, path);
       } else if (actual instanceof ZodUndefined) {
         return {v: Compat.SAME};
       } else {
@@ -452,22 +452,6 @@ class ZodCustomNotSet {
     typeName: 'NotSet',
   };
 }
-
-// export interface ZodNotSetDef extends ZodTypeDef {
-//   typeName: ZodFirstPartyTypeKind.ZodUndefined;
-// }
-// export class ZodNotSet extends ZodType<undefined, ZodNotSetDef> {
-//   // eslint-disable-next-line @typescript-eslint/naming-convention
-//   _parse(input: ParseInput): ParseReturnType<this['_output']> {
-//     return {
-//       status: 'valid',
-//       value: undefined,
-//     };
-//   }
-//
-//   params?: RawCreateParams;
-//   // static create: (params?: RawCreateParams) => ZodNotSet;
-// }
 
 export type MapperFn<V> = (args: MapperArgs<V>) => ZodType | undefined;
 

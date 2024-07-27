@@ -2,6 +2,7 @@ package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Generated;
@@ -18,18 +19,18 @@ public class UnionOfAB {
     this._raw = raw;
   }
 
-  public A getA(ObjectMapper transformer) {
+  public A getA(ObjectMapper transformer) throws JsonProcessingException {
     if (this._a != null) {
       return this._a;
     }
-    return this._a = transformer.convertValue(this._raw, A.class);
+    return this._a = transformer.treeToValue(this._raw, A.class);
   }
 
-  public B getB(ObjectMapper transformer) {
+  public B getB(ObjectMapper transformer) throws JsonProcessingException {
     if (this._b != null) {
       return this._b;
     }
-    return this._b = transformer.convertValue(this._raw, B.class);
+    return this._b = transformer.treeToValue(this._raw, B.class);
   }
 
   public JsonNode getRaw() {

@@ -7,7 +7,7 @@ import jakarta.annotation.Generated;
 public class ErrorUnknown extends JsonRpcErrorResponse {
   public ErrorUnknown(
     @JsonProperty(value = "error", required = true) ErrorUnknownError error,
-    @JsonProperty("id") String id
+    @JsonProperty(value = "id") String id
   ) {
     super(error, id);
   }

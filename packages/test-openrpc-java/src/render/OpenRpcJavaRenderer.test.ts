@@ -98,7 +98,7 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON},
+      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -120,6 +120,7 @@ describe('Java Rendering', () => {
         preferNumberType: OmniTypeKind.DOUBLE,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+        beanValidation: false,
       },
     });
 
@@ -137,12 +138,14 @@ describe('Java Rendering', () => {
         includeGenerated: false,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+        singleFile: true,
+        singleFileName: task.name,
       },
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${fileName}`);
     }
   });
 
@@ -156,12 +159,14 @@ describe('Java Rendering', () => {
         ...DEFAULT_TEST_JAVA_OPTIONS,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+        singleFile: true,
+        singleFileName: task.name,
       },
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${fileName}`);
     }
   });
 
@@ -170,16 +175,15 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('description-inheritance.json', {
-      targetOptions: DEFAULT_TEST_TARGET_OPTIONS,
-      javaOptions: DEFAULT_TEST_JAVA_OPTIONS,
+      javaOptions: {
+        singleFile: true,
+        singleFileName: 'description-inheritance',
+      },
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      if (fileName.startsWith('JsonRpc')) {
-        continue;
-      }
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${fileName}`);
     }
   });
 
@@ -216,13 +220,11 @@ describe('Java Rendering', () => {
     const result = await JavaTestUtils.getResultFromFilePath(Util.getPathFromRoot(`./packages/test-openrpc-java/examples/generic_params.json`), {
       parserOptions: {...DEFAULT_PARSER_OPTIONS, defaultAdditionalProperties: false},
       targetOptions: {
-        ...DEFAULT_TEST_TARGET_OPTIONS,
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
         additionalPropertiesInterfaceAfterDuplicateCount: 100,
       },
       javaOptions: {
-        ...DEFAULT_TEST_JAVA_OPTIONS,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.ALWAYS,
       },

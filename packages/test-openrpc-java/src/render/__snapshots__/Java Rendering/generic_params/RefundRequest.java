@@ -1,14 +1,18 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
-  public RefundRequest(@JsonProperty(value = "id", required = true) String id, @JsonProperty("params") Params params) {
-    super(id, params, "Refund");
+  public RefundRequest(@JsonProperty(value = "id") String id, @JsonProperty(value = "params") Params params) {
+    super(id, params);
+  }
+
+  @JsonProperty(value = "method")
+  public String getMethod() {
+    return "Refund";
   }
 
   public static class Params extends JsonRpcRequestParams<Params.Data> {
@@ -21,8 +25,14 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
     }
 
     public static class Data extends AbstractRequestData<Data.Attributes> {
+      @JsonProperty(value = "Amount", required = true)
+      @JsonInclude
       private final String amount;
+      @JsonProperty(value = "Currency", required = true)
+      @JsonInclude
       private final String currency;
+      @JsonProperty(value = "OrderID", required = true)
+      @JsonInclude
       private final String orderId;
 
       public Data(
@@ -39,32 +49,26 @@ public class RefundRequest extends JsonRpcRequest<RefundRequest.Params> {
         this.currency = currency;
       }
 
-      @JsonProperty(value = "Amount", required = true)
-      @JsonInclude(Include.ALWAYS)
       public String getAmount() {
         return this.amount;
       }
 
-      @JsonProperty(value = "Currency", required = true)
-      @JsonInclude(Include.ALWAYS)
       public String getCurrency() {
         return this.currency;
       }
 
-      @JsonProperty(value = "OrderID", required = true)
-      @JsonInclude(Include.ALWAYS)
-      public String getOrderId() {
+      public String getOrderID() {
         return this.orderId;
       }
 
       public static class Attributes {
+        @JsonProperty(value = "ExternalReference")
         private final String externalReference;
 
-        public Attributes(@JsonProperty("ExternalReference") String externalReference) {
+        public Attributes(@JsonProperty(value = "ExternalReference") String externalReference) {
           this.externalReference = externalReference;
         }
 
-        @JsonProperty("ExternalReference")
         public String getExternalReference() {
           return this.externalReference;
         }

@@ -83,14 +83,6 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
           }
         }
 
-        // if (!hardType) {
-        //   if (n.parameterTypes.length == 1) {
-        //     hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.Function'};
-        //   } else if (n.parameterTypes.length == 2) {
-        //     hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: 'java.util.function.BiFunction'};
-        //   }
-        // }
-
         if (!hardType) {
           throw new Error(`Do not know how to convert delegate '${n}' into a Java FunctionalInterface`);
         }

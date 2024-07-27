@@ -15,6 +15,8 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
     const typesToReplace = new Map<TypeNode, TypeNode>();
     const nameResolver = args.root.getNameResolver();
 
+    // const modelTypeReplacements = new Map<OmniType, OmniType>();
+
     args.root.visit({
       ...DefaultTypeScriptVisitor,
       visitClassDeclaration: (n, v) => {
@@ -30,18 +32,22 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
           const inlinedType: OmniType = {
             ...n.type.omniType,
             inline: true,
+            debug: OmniUtil.addDebug(n.type.omniType.debug, `Turned regular ${n.type.omniType.kind} into TS inline type`),
           };
+
+          // modelTypeReplacements.set(n.type.omniType, inlinedType);
+
           const aliasRhsTypeNode = args.root.getAstUtils().createTypeNode(inlinedType);
           const replacementAliasTargetNode = new Code.EdgeType(n.type.omniType, false);
 
           // TODO: Add this to an existing suitable CompilationUnit instead? Make it an option to move it elsewhere? Maybe to where it is used the most?
-          const typeAlias = new Ts.TypeAliasDeclaration(n.name, aliasRhsTypeNode, new Code.ModifierList(new Code.Modifier(Code.ModifierType.PUBLIC)));
+          const typeAlias = new Ts.TypeAliasDeclaration(n.name, aliasRhsTypeNode, new Code.ModifierList(new Code.Modifier(Code.ModifierKind.PUBLIC)));
           const investigatedName = nameResolver.investigate({type: n.type.omniType, customName: n.name.value, options: args.options});
           const absolutePackageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
 
           args.root.children.push(new Code.CompilationUnit(
             new Code.PackageDeclaration(absolutePackageName),
-            new Code.ImportList([]),
+            new Code.ImportList(),
             typeAlias,
           ));
 
@@ -51,6 +57,12 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
         return DefaultTypeScriptVisitor.visitClassDeclaration(n, v);
       },
     });
+
+    // TODO: This should rather be done in a 2nd pass model transformer -- it is too late to do model changes inside an AST transformer.
+    //        Same thing goes for the creation of the inline type above, it should be done elsewhere so hopefully this AST transformer is not needed at all.
+    // for (const [original, replacement] of modelTypeReplacements.entries()) {
+    //   OmniUtil.swapType(args.model, original, replacement);
+    // }
 
     const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
@@ -75,12 +87,14 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
 
         return result;
       },
-      reduceEdgeType: (n, r) => {
+      reduceEdgeType: n => {
 
         const replacementNode = typesToReplace.get(n);
         if (replacementNode) {
           return replacementNode;
-        } else if (OmniUtil.isComposition(n.omniType)) {
+        } /* else if (modelTypeReplacements.has(n.omniType)) {
+          return args.root.getAstUtils().createTypeNode(modelTypeReplacements.get(n.omniType)!);
+        }*/ else if (OmniUtil.isComposition(n.omniType)) {
           return args.root.getAstUtils().createTypeNode(n.omniType);
         }
 

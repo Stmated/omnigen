@@ -1,12 +1,33 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
-import {NameParts, OmniDictionaryType, OmniInterfaceType, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind, RootAstNode, TypeNode, TypeUseKind} from '@omnigen/core';
+import {
+  NameParts,
+  ObjectName,
+  OmniDictionaryType,
+  OmniInterfaceType,
+  OmniObjectType,
+  OmniPrimitiveType,
+  OmniProperty,
+  OmniType,
+  OmniTypeKind,
+  RootAstNode,
+  TypeNode,
+  TypeUseKind,
+  UnknownKind,
+} from '@omnigen/core';
 import * as Java from '../ast/JavaAst';
-import {OmniUtil} from '@omnigen/core-util';
+import {CreateMode, OmniUtil} from '@omnigen/core-util';
 import {JavaOptions, SerializationLibrary} from '../options';
 import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER} from './JacksonJavaAstTransformer';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 const METHOD_GETTER_NAME = 'getAdditionalProperties';
 const METHOD_ADDER_NAME = 'addAdditionalProperty';
+
+export const ADDITIONAL_PROPERTIES_FIELD_NAME = 'additionalProperties';
+
+export const LOMBOK_SINGULAR: ObjectName = {namespace: ['lombok'], edgeName: 'Singular'};
 
 export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTransformer {
 
@@ -43,8 +64,8 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
           const dec = classDeclarationStack[classDeclarationStack.length - 1];
           const dictionaryType = this.propertyToDictionary(n.property);
-          const decId = dec.id;
-          (decWithDictionary.has(decId) ? decWithDictionary : decWithDictionary.set(decId, [])).get(decId)!.push(dictionaryType);
+
+          (decWithDictionary.has(dec.id) ? decWithDictionary : decWithDictionary.set(dec.id, [])).get(dec.id)!.push(dictionaryType);
           allDictionaries.push(dictionaryType);
 
           // Replace with something else
@@ -101,7 +122,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     if (decWithDictionary.size >= args.options.additionalPropertiesInterfaceAfterDuplicateCount) {
 
       // There are several objects which have additional properties, so we will introduce a common interface for them.
-      const commonDictionary = OmniUtil.getCommonDenominator({features: args.features, create: true}, ...allDictionaries)!;
+      const commonDictionary = OmniUtil.getCommonDenominator({features: args.features, create: CreateMode.ANY}, ...allDictionaries)!;
 
       if (!commonDictionary) {
 
@@ -126,7 +147,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
         if (dec instanceof Java.AbstractObjectDeclaration) {
           if (!dec.implements) {
-            dec.implements = new Java.ImplementsDeclaration(new Java.TypeList([]));
+            dec.implements = new Java.ImplementsDeclaration(new Java.TypeList());
           }
 
           dec.implements.types.children.push(newInterfaceDec.type);
@@ -137,12 +158,9 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       const resolved = nameResolver.investigate({type: newInterfaceDec.type.omniType, options: args.options});
       const namespaceString = nameResolver.build({name: resolved, with: NameParts.NAMESPACE, use: TypeUseKind.NAMESPACE_DECLARATION});
 
-      // const typeName = JavaUtil.getClassName(newInterfaceDec.type.omniType, args.options);
-      // const packageName = JavaUtil.getPackageName(newInterfaceDec.type.omniType, typeName, args.options);
-
       args.root.children.push(new Java.CompilationUnit(
         new Java.PackageDeclaration(namespaceString),
-        new Java.ImportList([]),
+        new Java.ImportList(),
         newInterfaceDec,
       ));
     }
@@ -163,7 +181,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     };
 
     properties.push({
-      name: 'additionalProperties',
+      name: ADDITIONAL_PROPERTIES_FIELD_NAME,
       type: commonDictionary,
       owner: newInterfaceObjectType,
     });
@@ -172,14 +190,15 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     const newInterfaceTypeNode = root.getAstUtils().createTypeNode(newInterfaceType);
 
     const block = new Java.Block(
-      new Java.Statement(this.createGetterMethodSignature(newDictionaryTypeNode)),
+      new Java.Statement(this.createGetterMethodSignature(newDictionaryTypeNode, undefined, new Java.ModifierList())),
     );
 
-    if (!options.immutableModels) {
+    if (!options.immutable) {
       block.children.push(new Java.Statement(this.createAdderMethodSignature(
         root,
         this.createAdderMethodKeyParameter(root, commonDictionary),
         this.createAdderMethodValueParameter(root, commonDictionary),
+        new Java.ModifierList(),
       )));
     }
 
@@ -196,11 +215,27 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       kind: OmniTypeKind.STRING,
     };
 
+    // - A pattern property becomes a "property" with a regex name, where the type is "object"
+    // - So here when we turn it into a Dictionary, we need to translate it into `any` (JsonNode for Java)
+    // NOTE: This would perhaps gain from having an additional unknown kind that is "An object which contains primitives" and "An object which contains anything, including objects"
+    const valueType = this.getNormalizedDictionaryValueType(property.type);
+
     return {
       kind: OmniTypeKind.DICTIONARY,
       keyType: keyType,
-      valueType: property.type,
+      valueType: valueType,
     };
+  }
+
+  private getNormalizedDictionaryValueType(type: OmniType): OmniType {
+
+    if (type.kind === OmniTypeKind.UNKNOWN) {
+      if (type.unknownKind === UnknownKind.DYNAMIC_OBJECT) {
+        return {...type, unknownKind: UnknownKind.ANY};
+      }
+    }
+
+    return type;
   }
 
   private createJsonAnyNode(
@@ -209,22 +244,20 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     options: JavaOptions,
   ): Java.Nodes {
 
-    // TODO: Need to do something else than Block, something which can be replaced/flattened by a later transformer.
     const nodes = new Java.Nodes();
 
-    // TODO: This should be some other type. Point directly to Map<String, Object>? Or have specific known type?
+    const additionalPropertiesFieldIdentifier = new Java.Identifier(ADDITIONAL_PROPERTIES_FIELD_NAME);
 
-    const additionalPropertiesFieldIdentifier = new Java.Identifier('_additionalProperties');
+    const additionalPropertiesTypeNodeDec = root.getAstUtils().createTypeNode(dictionaryType, false);
+    const additionalPropertiesTypeNodeImpl = root.getAstUtils().createTypeNode(dictionaryType, true);
 
-    const additionalPropertiesTypeNode = this.createAdditionalPropertiesTypeNode(root, dictionaryType);
     const additionalPropertiesField = new Java.Field(
-      additionalPropertiesTypeNode,
+      additionalPropertiesTypeNodeDec,
       additionalPropertiesFieldIdentifier,
       new Java.ModifierList(
-        new Java.Modifier(Java.ModifierType.PRIVATE),
-        new Java.Modifier(Java.ModifierType.FINAL),
+        new Java.Modifier(Java.ModifierKind.PRIVATE),
       ),
-      new Java.NewStatement(root.getAstUtils().createTypeNode(dictionaryType, true)),
+      new Java.NewStatement(additionalPropertiesTypeNodeImpl),
     );
 
     const keyParameterDeclaration = this.createAdderMethodKeyParameter(root, dictionaryType);
@@ -235,7 +268,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       new Java.Block(
         new Java.Statement(
           new Java.MethodCall(
-            new Java.MemberAccess(new Java.FieldReference(additionalPropertiesField.id), new Java.Identifier('put')),
+            new Java.MemberAccess(new Java.MemberAccess(new Java.SelfReference(), new Java.FieldReference(additionalPropertiesField.id)), new Java.Identifier('put')),
             new Java.ArgumentList(
               new Java.DeclarationReference(keyParameterDeclaration),
               new Java.DeclarationReference(valueParameterDeclaration),
@@ -245,33 +278,48 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       ),
     );
 
-    adderMethod.signature.annotations = new Java.AnnotationList();
-
-    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
-      adderMethod.signature.annotations.children.push(new Java.Annotation(
-        new Java.EdgeType({
-          kind: OmniTypeKind.HARDCODED_REFERENCE,
-          fqn: JACKSON_JSON_ANY_SETTER,
-        }),
-      ));
-    }
-
-    const getterAnnotations = new Java.AnnotationList();
     const getterMethod = new Java.MethodDeclaration(
-      this.createGetterMethodSignature(additionalPropertiesTypeNode, getterAnnotations),
+      this.createGetterMethodSignature(additionalPropertiesTypeNodeDec),
       new Java.Block(
         new Java.Statement(
           new Java.ReturnStatement(
-            new Java.FieldReference(additionalPropertiesField.id),
+            new Java.MemberAccess(new Java.SelfReference(), new Java.FieldReference(additionalPropertiesField.id)),
           ),
         ),
       ),
     );
 
-    if (options.serializationLibrary == SerializationLibrary.JACKSON) {
+    if (!additionalPropertiesField.annotations) {
+      additionalPropertiesField.annotations = new Java.AnnotationList();
+    }
 
-      // NOTE: This should not be on a field. But should be moved by later transformers.
-      getterAnnotations.children.push(new Java.Annotation(
+    adderMethod.signature.annotations = new Java.AnnotationList();
+    getterMethod.signature.annotations = new Java.AnnotationList();
+
+    if (options.lombokBuilder) {
+
+      if (!additionalPropertiesField.annotations) {
+        additionalPropertiesField.annotations = new Java.AnnotationList();
+      }
+
+      additionalPropertiesField.annotations.children.push(new Java.Annotation(
+        new Java.EdgeType({
+          kind: OmniTypeKind.HARDCODED_REFERENCE,
+          fqn: LOMBOK_SINGULAR,
+        }),
+      ));
+    }
+
+    if (options.serializationLibrary === SerializationLibrary.JACKSON) {
+
+      additionalPropertiesField.annotations.children.push(new Java.Annotation(
+        new Java.EdgeType({
+          kind: OmniTypeKind.HARDCODED_REFERENCE,
+          fqn: JACKSON_JSON_ANY_SETTER,
+        }),
+      ));
+
+      getterMethod.signature.annotations.children.push(new Java.Annotation(
         new Java.EdgeType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,
           fqn: JACKSON_JSON_ANY_GETTER,
@@ -284,20 +332,18 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     nodes.children.push(getterMethod);
 
     return nodes;
-
   }
 
-  private createAdditionalPropertiesTypeNode(root: RootAstNode, dictionaryType: OmniDictionaryType) {
-    return root.getAstUtils().createTypeNode(dictionaryType, false);
-  }
-
-  private createGetterMethodSignature(additionalPropertiesTypeNode: TypeNode, getterAnnotations?: Java.AnnotationList) {
+  private createGetterMethodSignature(additionalPropertiesTypeNode: TypeNode, annotations?: Java.AnnotationList, modifiers?: Java.ModifierList) {
     return new Java.MethodDeclarationSignature(
       new Java.Identifier(METHOD_GETTER_NAME),
       additionalPropertiesTypeNode,
       undefined,
-      undefined,
-      getterAnnotations,
+      modifiers,
+      // new Java.ModifierList(
+      //   new Java.Modifier(Java.ModifierKind.PUBLIC),
+      // ),
+      annotations,
     );
   }
 
@@ -311,16 +357,15 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     return new Java.Parameter(root.getAstUtils().createTypeNode(dictionaryType.keyType), keyParameterIdentifier);
   }
 
-  private createAdderMethodSignature(root: RootAstNode, keyParameterDeclaration: Java.Parameter, valueParameterDeclaration: Java.Parameter) {
+  private createAdderMethodSignature(root: RootAstNode, keyParameterDeclaration: Java.Parameter, valueParameterDeclaration: Java.Parameter, modifiers?: Java.ModifierList) {
     return new Java.MethodDeclarationSignature(
       new Java.Identifier(METHOD_ADDER_NAME),
-      root.getAstUtils().createTypeNode({
-        kind: OmniTypeKind.VOID,
-      } satisfies OmniPrimitiveType),
+      root.getAstUtils().createTypeNode({kind: OmniTypeKind.VOID} satisfies OmniPrimitiveType),
       new Java.ParameterList(
         keyParameterDeclaration,
         valueParameterDeclaration,
       ),
+      modifiers,
     );
   }
 }

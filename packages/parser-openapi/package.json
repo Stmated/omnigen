@@ -29,7 +29,7 @@
     "@omnigen/eslint-config-custom": "workspace:*",
     "@types/json-schema": "^7.0.15",
     "@types/json-pointer": "^1.0.34",
-    "typescript": "^5.5.0-beta",
+    "typescript": "^5.5.3",
     "tsx": "^4.7.2"
   }
 }

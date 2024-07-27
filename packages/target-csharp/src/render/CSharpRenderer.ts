@@ -1,16 +1,20 @@
-import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind, VisitResult} from '@omnigen/core';
+import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, VisitResult} from '@omnigen/core';
 import {CSharpOptions, ReadonlyPropertyMode} from '../options';
 import {createCSharpVisitor, CSharpVisitor} from '../visit';
-import {Code, CodeRenderContext, CodeRendererOptions, createCodeRenderer, join, render} from '@omnigen/target-code';
+import {Code, CodeRenderContext, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, join, render} from '@omnigen/target-code';
 import {CSharpRootNode} from '../ast';
 import {Case, OmniUtil} from '@omnigen/core-util';
-import {CSharpUtil} from '../util/CSharpUtil.ts';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export type CSharpRenderer = CSharpVisitor<string> & Renderer;
 
 export const DefaultCSharpRendererOptions: CodeRendererOptions = {
+  ...DefaultCodeRendererOptions,
   fileExtension: 'cs',
   blockPrefix: '\n',
+  indent: '    ',
 };
 
 // TODO:
@@ -55,16 +59,19 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
     visitModifier: (n, v) => {
 
-      switch (n.type) {
-        case Code.ModifierType.FINAL: {
+      switch (n.kind) {
+        case Code.ModifierKind.FINAL: {
           if (fieldDepth > 0) {
             return 'readonly';
           } else {
             return 'sealed';
           }
         }
-        case Code.ModifierType.CONST: {
+        case Code.ModifierKind.CONST: {
           return 'const';
+        }
+        case Code.ModifierKind.READONLY: {
+          return 'readonly';
         }
       }
 
@@ -90,6 +97,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
     },
 
     visitProperty: (n, v) => {
+      const identifier = n.identifier.visit(v);
       const type = n.type.visit(v);
       const annotations = (n.annotations && n.annotations.children.length > 0) ? `${n.annotations.visit(v)}\n` : '';
       const modifiers = n.modifiers ? `${n.modifiers.visit(v)} ` : '';
@@ -108,15 +116,25 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
       const initializer = n.initializer ? ` = ${n.initializer.visit(v)};` : '';
 
-      return `${comments}${annotations}${modifiers}${type} ${n.identifier.visit(v)} { ${getModifiers}get; ${setter}}${initializer}\n`;
+      return `${comments}${annotations}${modifiers}${type} ${identifier} { ${getModifiers}get; ${setter}}${initializer}\n`;
     },
-    // NOTE: Is the "Case.pascal" really needed here?
-    visitPropertyIdentifier: (n, v) => Case.pascal(`${n.identifier.visit(v)}`),
-    visitPropertyReference: (n, v) => {
-
-      const property = n.resolve(root);
-      return `this.${property.identifier.visit(v)}`;
+    visitPropertyIdentifier: (n, v) => {
+      const rendered = render(n.identifier, v);
+      const original = n.identifier.original ?? rendered;
+      if (/^\p{Lu}.*/u.test(original)) {
+        return original;
+      }
+      return Case.pascal(rendered);
     },
+    visitGetterIdentifier: (n, v) => {
+      const rendered = render(n.identifier, v);
+      const original = n.identifier.original ?? rendered;
+      if (/^\p{Lu}.*/u.test(original)) {
+        return `Get${original}`;
+      }
+      return `Get${Case.pascal(rendered)}`;
+    },
+    visitPropertyReference: (n, v) => `${n.resolve(root).identifier.visit(v)}`,
 
     visitNamespace: (n, v) => `namespace ${n.name.visit(v)}${n.block.visit(v)}`,
     visitNamespaceBlock: (n, v) => n.block.visit(v),
@@ -177,8 +195,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
         ctx.objectDecStack.pop();
       }
     },
-
-    visitGetterIdentifier: (n, v) => `Get${Case.pascal(n.identifier.value)}`,
+    visitClassReference: (node, visitor) => `typeof(${render(node.className, visitor)})`,
 
     visitGenericTypeDeclaration(n, v) {
       return render(n.name, v);
@@ -194,9 +211,8 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
     },
 
     visitAnnotation: (n, v) => {
-
       const pairs = n.pairs ? `(${render(n.pairs, v)})` : '';
-      return (`[${render(n.type, v)}${pairs}]`);
+      return `[${render(n.type, v)}${pairs}]`;
     },
 
     /**
@@ -211,42 +227,79 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
       const owner = ctx.objectDecStack[ctx.objectDecStack.length - 1];
       const parameters = render(n.parameters, v);
+      const identifier = render(owner.name, v);
 
-      return `\n${annotations}${modifiers}${render(owner.name, v)}(${parameters})${superCall}${body}\n`;
+      const newlineBody = body.endsWith('\n') ? body : `${body}\n`;
+
+      return `${annotations}${modifiers}${identifier}(${parameters})${superCall}${newlineBody}`;
+    },
+
+    visitMethodDeclarationSignature: (n, v) => {
+
+      const signature = join(parent.visitMethodDeclarationSignature(n, v));
+
+      if (n.genericParameters && n.genericParameters.types.length > 0) {
+
+        const bounds: string[] = [];
+        for (const param of n.genericParameters.types) {
+          if (param.upperBounds) {
+            bounds.push(`where ${render(param.name, v)} : ${render(param.upperBounds, v)}`);
+          }
+        }
+
+        if (bounds.length > 0) {
+          return `${signature} ${bounds.join(' ')}`;
+        }
+      }
+
+      return signature;
     },
 
     visitSuperConstructorCall: (n, v) => ` : base(${render(n.arguments, v)})`,
 
+    visitIfElseStatement: (node, visitor) => {
+      const ifBlocks = node.ifStatements.map(it => render(it, visitor));
+      const elseBlock = node.elseBlock ? `\nelse${render(node.elseBlock, visitor)}` : '';
+      return `${ifBlocks.join('else ').trim()}${elseBlock}`;
+    },
+
     visitEnumItemList: (n, v) => `${n.children.map(it => render(it, v)).join(',\n')},\n`,
     visitEnumItem: (n, v) => {
-      return `${n.identifier.visit(v)} = ${n.value.visit(v)}`;
+      const attributes = n.annotations ? `${render(n.annotations, v)}\n` : '';
+      const value = n.value ? ` = ${render(n.value, v)}` : '';
+      return `${attributes}${n.identifier.visit(v)}${value}`;
     },
 
     visitEdgeType: (n, v) => {
 
       const t = n.omniType;
-      if (t.kind === OmniTypeKind.STRING) {
-        // TODO: This should not be needed; the renderer should be able to more easily replace primitive types; should not be calculated by something else.
-        return `string`;
-      } else if (OmniUtil.isPrimitive(t)) {
-        return CSharpUtil.toPrimitiveTypeName(t);
-      } else if (OmniUtil.isEmptyType(t) && t.kind === OmniTypeKind.OBJECT && t.properties.length == 0 && !t.name && !t.extendedBy) {
+      if (OmniUtil.isEmptyType(t) && t.kind === OmniTypeKind.OBJECT && t.properties.length == 0 && !t.name && !t.extendedBy) {
+        // TODO: This should not be needed, it should be handled somewhere else
         return 'object';
+      }
+
+      if (n.omniType.kind === OmniTypeKind.ENUM) {
+        return `${join(parent.visitEdgeType(n, v))}?`;
       }
 
       return parent.visitEdgeType(n, v);
     },
 
-    visitWildcardType: (n, v) => {
+    // visitWildcardType: (n, v) => {
+    //
+    //   // const kind = n.omniType.unknownKind ?? options.unknownType;
+    //   // if (kind === UnknownKind.OBJECT) {
+    //   //   return 'object';
+    //   // } else if (kind == UnknownKind.ANY) {
+    //   //   return 'dynamic';
+    //   // }
+    //
+    //   return parent.visitWildcardType(n, v);
+    // },
 
-      const kind = n.omniType.unknownKind ?? options.unknownType;
-      if (kind === UnknownKind.OBJECT) {
-        return 'object';
-      } else if (kind == UnknownKind.ANY) {
-        return 'dynamic';
-      }
-
-      return parent.visitWildcardType(n, v);
+    visitInstanceOf: (n, v) => {
+      const narrowed = n.narrowed ? ` ${render(n.narrowed, v)}` : '';
+      return `${render(n.target, v)} is ${render(n.comparison, v)}${narrowed}`;
     },
 
     visitComment: (n, v) => {

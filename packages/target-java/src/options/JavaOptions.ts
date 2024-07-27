@@ -29,16 +29,23 @@ export const JavaAnnotationLibrary = {
 export type JavaAnnotationLibrary = ToEnum<typeof JavaAnnotationLibrary>;
 
 export const ZodJavaOptions = ZodCodeOptions.extend({
-  immutableModels: ZodCoercedBoolean.default('true'),
-
   interfaceNamePrefix: z.string().default('I'),
   interfaceNameSuffix: z.string().default(''),
+
   fieldAccessorMode: z.enum(getEnumValues(FieldAccessorMode)).default(FieldAccessorMode.POJO),
+  lombokBuilder: ZodCoercedBoolean.default(false),
+  lombokGetter: ZodCoercedBoolean.default(false),
+  lombokSetter: ZodCoercedBoolean.default(false),
 
   preferNumberType: z.enum(getEnumValues(OmniKindPrimitive)).default(OmniKindPrimitive.INTEGER),
   serializationLibrary: z.enum(getEnumValues(SerializationLibrary)).default(SerializationLibrary.JACKSON),
   javaAnnotationLibrary: z.enum(getEnumValues(JavaAnnotationLibrary)).default(JavaAnnotationLibrary.JAKARTA),
   serializationConstructorAnnotationMode: z.enum(getEnumValues(SerializationConstructorAnnotationMode)).default(SerializationConstructorAnnotationMode.IF_REQUIRED),
+
+  singleFile: ZodCoercedBoolean.default('f'),
+  singleFileName: z.string().optional(),
+
+  beanValidation: ZodCoercedBoolean.default(true),
 });
 
 export type JavaOptions = z.infer<typeof ZodJavaOptions>;

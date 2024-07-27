@@ -1,7 +1,6 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
@@ -10,18 +9,20 @@ import jakarta.annotation.Generated;
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcErrorResponse {
+  @JsonProperty(value = "error", required = true)
+  @JsonInclude
   private final ErrorUnknownError error;
+  @JsonProperty(value = "id")
   private final String id;
 
   public JsonRpcErrorResponse(
     @JsonProperty(value = "error", required = true) ErrorUnknownError error,
-    @JsonProperty("id") String id
+    @JsonProperty(value = "id") String id
   ) {
     this.error = error;
     this.id = id;
   }
 
-  @JsonInclude(Include.ALWAYS)
   public ErrorUnknownError getError() {
     return this.error;
   }
@@ -30,6 +31,7 @@ public class JsonRpcErrorResponse {
     return this.id;
   }
 
+  @JsonProperty(value = "jsonrpc")
   public String getJsonrpc() {
     return "2.0";
   }

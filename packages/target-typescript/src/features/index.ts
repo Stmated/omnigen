@@ -8,4 +8,5 @@ export const TYPESCRIPT_FEATURES: TargetFeatures = {
   nestedDeclarations: false,
   relativeImports: true,
   forcedImports: true,
+  transparentAccessors: true,
 };

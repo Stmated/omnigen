@@ -9,7 +9,7 @@ import {
 import {OmniUtil} from './OmniUtil.js';
 import {TargetFeatures} from '@omnigen/core';
 import {PropertyDifference, PropertyEquality, TypeDiffKind} from '@omnigen/core';
-import {isDefined} from '../util';
+import {isDefined, CreateMode, CombineOptions} from '../util';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
 
@@ -30,19 +30,6 @@ export class PropertyUtil {
     owner.properties.push(propertyWithOwner);
 
     return propertyWithOwner;
-  }
-
-  public static isDisqualifyingPropertyDiff(diffs: PropertyDifference[] | undefined): boolean {
-
-    if (diffs) {
-      for (const diff of diffs) {
-        if (diff === PropertyDifference.NAME) {
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 
   public static isDiffMatch(diffs: PropertyDifference[] | undefined, ...needles: PropertyDifference[]): boolean {
@@ -70,6 +57,7 @@ export class PropertyUtil {
     bannedTypeDiff: (diff: TypeDiffKind) => boolean,
     bannedPropDiff: (diff: PropertyDifference) => boolean,
     targetFeatures: TargetFeatures,
+    combineOpt?: CombineOptions,
     ...types: OmniType[]
   ): PropertiesInformation {
 
@@ -106,6 +94,7 @@ export class PropertyUtil {
         bannedTypeDiff,
         bannedPropDiff,
         targetFeatures,
+        combineOpt,
       );
 
       if (propertyEquality) {
@@ -134,6 +123,7 @@ export class PropertyUtil {
     bannedTypeDiff: (diff: TypeDiffKind) => boolean,
     bannedPropDiff: (diff: PropertyDifference) => boolean,
     targetFeatures: TargetFeatures,
+    combineOpt?: CombineOptions,
   ): PropertyEquality | undefined {
 
     const propertyEquality: NonNullableProperties<PropertyEquality> = {
@@ -162,7 +152,7 @@ export class PropertyUtil {
 
       const next = properties[i + 1];
 
-      const equalityLevel = PropertyUtil.getPropertyEquality(current, next, targetFeatures);
+      const equalityLevel = PropertyUtil.getPropertyEquality(current, next, targetFeatures, combineOpt);
 
       if (equalityLevel.propertyDiffs?.find(it => bannedPropDiff(it))) {
         return undefined;
@@ -177,15 +167,23 @@ export class PropertyUtil {
       }
 
       if (equalityLevel.typeDiffs) {
-        propertyEquality.typeDiffs.push(...equalityLevel.typeDiffs);
+        for (const diff of equalityLevel.typeDiffs) {
+          if (!propertyEquality.typeDiffs.includes(diff)) {
+            propertyEquality.typeDiffs.push(diff);
+          }
+        }
       }
 
       if (equalityLevel.propertyDiffs) {
-        propertyEquality.propertyDiffs.push(...equalityLevel.propertyDiffs);
+        for (const diff of equalityLevel.propertyDiffs) {
+          if (!propertyEquality.propertyDiffs.includes(diff)) {
+            propertyEquality.propertyDiffs.push(diff);
+          }
+        }
       }
     }
 
-    const commonType = OmniUtil.getCommonDenominator(targetFeatures, ...possiblePropertyTypes);
+    const commonType = OmniUtil.getCommonDenominator({features: targetFeatures}, ...possiblePropertyTypes);
     if (commonType) {
 
       // We still want to keep the diffs that we collected.
@@ -201,19 +199,18 @@ export class PropertyUtil {
     a: OmniProperty,
     b: OmniProperty,
     targetFeatures: TargetFeatures,
+    combineOptions: CombineOptions = {create: CreateMode.NONE},
   ): PropertyEquality {
 
     if (a == b) {
       return {type: a.type};
     }
 
-    // const aName = ;
-    // const bName = ;
-    if (!OmniUtil.isPropertyNameMatching(a.name, b.name)) { // } aName !== bName) {
+    if (!OmniUtil.isPropertyNameMatching(a.name, b.name)) {
       return {propertyDiffs: [PropertyDifference.NAME]};
     }
 
-    let commonType = OmniUtil.getCommonDenominatorBetween(a.type, b.type, targetFeatures, false);
+    let commonType = OmniUtil.getCommonDenominatorBetween(a.type, b.type, targetFeatures, combineOptions);
     if (!commonType) {
 
       // If no common type was found, we will set the type to UNKNOWN, and level to NOT_EQUAL.

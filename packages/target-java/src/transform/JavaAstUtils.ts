@@ -19,7 +19,7 @@ export class JavaAstUtils extends CodeAstUtils {
     property: OmniProperty,
     body: Java.Block,
     options: JavaOptions,
-    modifiers?: Java.ModifierType[],
+    modifiers?: Java.ModifierKind[],
   }): void {
 
     if (OmniUtil.isNull(args.property.type) && !args.options.includeAlwaysNullProperties) {
@@ -57,7 +57,7 @@ export class JavaAstUtils extends CodeAstUtils {
       fieldType,
       fieldIdentifier,
       new Java.ModifierList(
-        ...(args.modifiers ?? [Java.ModifierType.PRIVATE]).map(m => new Java.Modifier(m)),
+        ...(args.modifiers ?? [Java.ModifierKind.PRIVATE]).map(m => new Java.Modifier(m)),
       ),
     );
 
@@ -65,7 +65,7 @@ export class JavaAstUtils extends CodeAstUtils {
       if (args.property.type.kind == OmniTypeKind.NULL) {
         field.initializer = new Java.Literal(args.property.type.value ?? null, args.property.type.kind);
       } else if (args.property.type.value !== undefined) {
-        if (args.options.immutableModels && !args.property.type.literal) {
+        if (args.options.immutable && !args.property.type.literal) {
 
           // If the model is immutable and the value given is just a default,
           // then it will have to be given through the constructor in the constructor transformer.
@@ -79,8 +79,8 @@ export class JavaAstUtils extends CodeAstUtils {
 
     field.property = args.property;
 
-    if (args.options.immutableModels || OmniUtil.isNull(args.property.type)) {
-      field.modifiers.children.push(new Java.Modifier(Java.ModifierType.FINAL));
+    if (args.options.immutable || OmniUtil.isNull(args.property.type)) {
+      field.modifiers.children.push(new Java.Modifier(Java.ModifierKind.FINAL));
     }
 
     args.body.children.push(field);
@@ -91,7 +91,6 @@ export class JavaAstUtils extends CodeAstUtils {
   }
 
   public static createInterfaceWithBody(root: RootAstNode, type: OmniInterfaceType, options: JavaAndTargetOptions) {
-
 
     return CodeAstUtils.createInterfaceWithBody(root, type, options, () => {
       const nameResolver = root.getNameResolver();
@@ -108,8 +107,8 @@ export class JavaAstUtils extends CodeAstUtils {
     return CodeAstUtils.getGetterField(root, method);
   }
 
-  public static getOmniType(node: AstNode): OmniType | undefined {
-    return CodeAstUtils.getOmniType(node);
+  public static getOmniType(root: RootAstNode, node: AstNode): OmniType | undefined {
+    return CodeAstUtils.getOmniType(root, node);
   }
 
   public static unwrap(node: AstNode): AstNode {

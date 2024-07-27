@@ -5,7 +5,12 @@ export interface VisitorArgs<T = any> {
   replaceWith?: unknown;
 }
 
+/**
+ * Return true to continue visiting children, otherwise false to stop traversing downwards.
+ */
 export type Visitor = (args: VisitorArgs) => boolean;
+
+const UNDEFINED_MARKER = '__-th1s-1s-n0-v4lu3-__';
 
 export class ObjectVisitor {
 
@@ -18,6 +23,7 @@ export class ObjectVisitor {
     return this.visitInto({
       obj: obj,
       path: [],
+      replaceWith: UNDEFINED_MARKER,
     });
   }
 
@@ -37,9 +43,9 @@ export class ObjectVisitor {
 
         try {
           args.path.push(i);
-          const a: VisitorArgs = {obj: args.obj[i], path: args.path};
+          const a: VisitorArgs = {obj: args.obj[i], path: args.path, replaceWith: UNDEFINED_MARKER};
           this.visitInto(a);
-          if (a.replaceWith) {
+          if (a.replaceWith !== UNDEFINED_MARKER) {
             args.obj[i] = a.replaceWith;
           }
         } finally {
@@ -56,9 +62,9 @@ export class ObjectVisitor {
 
         try {
           args.path.push(key);
-          const a: VisitorArgs = {obj: args.obj[key], path: args.path};
+          const a: VisitorArgs = {obj: args.obj[key], path: args.path, replaceWith: UNDEFINED_MARKER};
           this.visitInto(a);
-          if (a.replaceWith) {
+          if (a.replaceWith !== UNDEFINED_MARKER) {
             args.obj[key] = a.replaceWith;
           }
         } finally {

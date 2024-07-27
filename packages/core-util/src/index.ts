@@ -3,7 +3,6 @@ import {CommonTransformPlugin, CommonTransform2Plugin, fileWriter, CorePlugin} f
 
 export * from './ast';
 export * from './equality';
-export * from './interpret';
 export * from './parse';
 export * from './util';
 export * from './visit';

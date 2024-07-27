@@ -15,7 +15,6 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitIdentifier: CodeVisitFn<Code.Identifier, R>;
   visitGetterIdentifier: CodeVisitFn<Code.GetterIdentifier, R>;
   visitSetterIdentifier: CodeVisitFn<Code.SetterIdentifier, R>;
-  visitToken: CodeVisitFn<Code.TokenNode, R>;
   visitAnnotationList: CodeVisitFn<Code.AnnotationList, R>;
   visitParameter: CodeVisitFn<Code.Parameter, R>;
   visitParameterList: CodeVisitFn<Code.ParameterList, R>;
@@ -48,7 +47,6 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitHardCoded: CodeVisitFn<Code.HardCoded, R>;
   visitBlock: CodeVisitFn<Code.Block, R>;
   visitPackage: CodeVisitFn<Code.PackageDeclaration, R>;
-  visitPredicate: CodeVisitFn<Code.Predicate, R>;
   visitModifierList: CodeVisitFn<Code.ModifierList, R>;
   visitCast: CodeVisitFn<Code.Cast, R>;
   visitObjectDeclaration: CodeVisitFn<Code.AbstractObjectDeclaration, R>;
@@ -86,10 +84,14 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitDelegateCall: CodeVisitFn<Code.DelegateCall, R>;
 
   visitMemberAccess: CodeVisitFn<Code.MemberAccess, R>;
+  visitIndexAccess: CodeVisitFn<Code.IndexAccess, R>;
 
   visitGenericRef: <C extends AstNode>(n: Code.GenericRef<C>, v: CodeVisitor<R>) => VisitResult<R>;
-
   visitVirtualAnnotationNode: CodeVisitFn<Code.VirtualAnnotationNode, R>;
+  visitInstanceOf: CodeVisitFn<Code.InstanceOf, R>;
+
+
+  visitFormatNewline: CodeVisitFn<Code.FormatNewline, R>;
 }
 
 export const createCodeVisitor = <R>(partial?: Partial<CodeVisitor<R>>, noop?: R | undefined): Readonly<CodeVisitor<R>> => {
@@ -103,7 +105,7 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     visitEdgeType: () => noop,
     visitWildcardType: () => noop,
     visitBoundedType: (node, visitor) => [node.type.visit(visitor), node.lowerBound?.visit(visitor), node.upperBound?.visit(visitor)],
-    visitArrayType: (node, visitor) => node.of.visit(visitor),
+    visitArrayType: (node, visitor) => node.itemTypeNode.visit(visitor),
     visitGenericType: (node, visitor) => [
       node.baseType.visit(visitor),
       node.genericArguments.map(it => it.visit(visitor)),
@@ -126,58 +128,45 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     visitIdentifier: () => noop,
     visitGetterIdentifier: (n, v) => n.identifier.visit(v),
     visitSetterIdentifier: (n, v) => n.identifier.visit(v),
-    visitToken: () => noop,
     visitBinaryExpression: (node, visitor) => [
       node.left.visit(visitor),
-      node.token.visit(visitor),
       node.right.visit(visitor),
     ],
     visitModifier: () => noop,
-    visitField: (node, visitor) => {
-      const results: VisitResult<R>[] = [];
-      if (node.comments) {
-        results.push(node.comments.visit(visitor));
-      }
-      if (node.annotations) {
-        results.push(node.annotations.visit(visitor));
-      }
-      if (node.modifiers) {
-        results.push(node.modifiers.visit(visitor));
-      }
-      results.push(node.type.visit(visitor));
-      results.push(node.identifier.visit(visitor));
-      if (node.initializer) {
-        results.push(node.initializer.visit(visitor));
-      }
+    visitField: (n, v) => [
+      n.comments?.visit(v),
+      n.annotations?.visit(v),
+      n.modifiers.visit(v),
+      n.type.visit(v),
+      n.identifier.visit(v),
+      n.initializer?.visit(v),
+    ],
 
-      return results;
-    },
+    visitComment: (n, v) => n.text.visit(v),
 
-    visitComment: (node, visitor) => node.text.visit(visitor),
-
-    visitFieldBackedGetter: (n, v) => [n.fieldRef.visit(v), n.getterName?.visit(v), n.comments?.visit(v), n.annotations?.visit(v)],
+    visitFieldBackedGetter: (n, v) => [n.fieldRef.visit(v), /* n.getterName?.visit(v),*/ n.comments?.visit(v), n.annotations?.visit(v)],
     visitFieldBackedSetter: (n, v) => [n.fieldRef.visit(v), n.comments?.visit(v), n.annotations?.visit(v)],
-    visitMethodDeclaration: (node, visitor) => node.body
-      ? [node.signature.visit(visitor), node.body.visit(visitor)]
-      : node.signature.visit(visitor),
-    visitMethodDeclarationSignature: (node, visitor) => {
+    visitMethodDeclaration: (n, v) => n.body
+      ? [n.signature.visit(v), n.body.visit(v)]
+      : n.signature.visit(v),
+    visitMethodDeclarationSignature: (n, v) => {
       const results: VisitResult<R>[] = [];
-      if (node.comments) {
-        results.push(node.comments.visit(visitor));
+      if (n.comments) {
+        results.push(n.comments.visit(v));
       }
-      if (node.annotations) {
-        results.push(node.annotations.visit(visitor));
+      if (n.annotations) {
+        results.push(n.annotations.visit(v));
       }
-      if (node.modifiers) {
-        results.push(node.modifiers.visit(visitor));
+      if (n.modifiers) {
+        results.push(n.modifiers.visit(v));
       }
-      results.push(node.type.visit(visitor));
-      results.push(node.identifier.visit(visitor));
-      if (node.parameters) {
-        results.push(node.parameters.visit(visitor));
+      results.push(n.type.visit(v));
+      results.push(n.identifier.visit(v));
+      if (n.parameters) {
+        results.push(n.parameters.visit(v));
       }
-      if (node.throws) {
-        results.push(node.throws.visit(visitor));
+      if (n.throws) {
+        results.push(n.throws.visit(v));
       }
       return results;
     },
@@ -228,7 +217,6 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     visitHardCoded: () => noop,
     visitBlock: (n, v) => n.children.map(it => it.visit(v)),
     visitPackage: () => noop,
-    visitPredicate: (n, v) => v.visitBinaryExpression(n, v),
     visitModifierList: (n, v) => n.children.map(it => it.visit(v)),
     visitCast: (n, v) => [
       n.expression.visit(v),
@@ -276,8 +264,9 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     visitEnumDeclaration: (node, visitor) => visitor.visitObjectDeclaration(node, visitor),
     visitEnumItem: (n, v) => [
       n.comment?.visit(v),
+      n.annotations?.visit(v),
       n.identifier.visit(v),
-      n.value.visit(v),
+      n.value?.visit(v),
     ],
     visitEnumItemList: (n, v) => n.children.map(it => it.visit(v)),
     visitFieldReference: () => noop,
@@ -334,6 +323,13 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
       n.owner.visit(v),
       n.member.visit(v),
     ],
+    visitIndexAccess: (n, v) => [
+      n.owner.visit(v),
+      n.index.visit(v),
+    ],
+
+    visitInstanceOf: (n, v) => [n.target.visit(v), n.comparison.visit(v)],
+    visitFormatNewline: () => noop,
 
     ...partial,
   };

@@ -1,6 +1,6 @@
 import {AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, StaticInnerTypeKind, TargetFeatures, TargetOptions} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 import * as Code from '../CodeAst';
 import {CodeOptions} from '../../options/CodeOptions.ts';
@@ -64,8 +64,8 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
           // To decrease the number of files, we can compress the types and make this an inner type.
           const definedInObjectDec = typeToObjectDec.get(type);
           if (!definedInObjectDec) {
-            throw new Error(`Could not find where '${OmniUtil.describe(type)}' is declared`);
-            // continue;
+            logger.warn(`Could not find where '${OmniUtil.describe(type)}' is declared`);
+            continue;
           }
 
           const definedInUnit = typeToUnit.get(type);
@@ -110,7 +110,7 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
     const objectDecStack: Code.AbstractObjectDeclaration[] = [];
 
     const defaultVisitor = root.createVisitor();
-    root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    root.visit(Visitor.create(defaultVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
@@ -238,11 +238,11 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
 
     } else {
 
-      if (!sourceObject.modifiers.children.find(it => it.type == Code.ModifierType.STATIC) && features.staticInnerTypes === StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE) {
+      if (!sourceObject.modifiers.children.find(it => it.kind == Code.ModifierKind.STATIC) && features.staticInnerTypes === StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE) {
 
         // Add the static modifier if it is not already added.
         sourceObject.modifiers.children.push(
-          new Code.Modifier(Code.ModifierType.STATIC),
+          new Code.Modifier(Code.ModifierKind.STATIC),
         );
       }
 

@@ -1,5 +1,9 @@
 import {AstTransformer, AstTransformerArguments} from '@omnigen/core';
 import * as Code from '../Code';
+import {ModifierKind} from '../Code';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Flattens any unnecessary nodes, to make the structure a bit simpler.
@@ -47,6 +51,15 @@ export class SimplifyAndCleanAstTransformer implements AstTransformer<Code.CodeR
         }
 
         return n;
+      },
+      reduceEnumDeclaration: (n, r) => {
+
+        const reduced = defaultReducer.reduceEnumDeclaration(n, r);
+        if (reduced && reduced instanceof Code.EnumDeclaration) {
+          reduced.modifiers = new Code.ModifierList(...reduced.modifiers.children.filter(it => it.kind !== ModifierKind.STATIC));
+        }
+
+        return reduced;
       },
     });
 

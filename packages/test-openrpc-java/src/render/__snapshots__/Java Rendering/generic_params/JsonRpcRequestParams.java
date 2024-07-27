@@ -1,7 +1,6 @@
 package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
@@ -10,8 +9,14 @@ import jakarta.annotation.Generated;
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcRequestParams<T extends AbstractRequestData<?>> {
+  @JsonProperty(value = "Data", required = true)
+  @JsonInclude
   private final T data;
+  @JsonProperty(value = "Signature", required = true)
+  @JsonInclude
   private final String signature;
+  @JsonProperty(value = "UUID", required = true)
+  @JsonInclude
   private final String uuid;
 
   public JsonRpcRequestParams(
@@ -24,21 +29,15 @@ public class JsonRpcRequestParams<T extends AbstractRequestData<?>> {
     this.data = data;
   }
 
-  @JsonProperty(value = "Data", required = true)
-  @JsonInclude(Include.ALWAYS)
   public T getData() {
     return this.data;
   }
 
-  @JsonProperty(value = "Signature", required = true)
-  @JsonInclude(Include.ALWAYS)
   public String getSignature() {
     return this.signature;
   }
 
-  @JsonProperty(value = "UUID", required = true)
-  @JsonInclude(Include.ALWAYS)
-  public String getUuid() {
+  public String getUUID() {
     return this.uuid;
   }
 }

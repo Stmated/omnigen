@@ -10,9 +10,14 @@ public enum TransferState {
   EXECUTING("EXECUTING"),
   EXECUTED("EXECUTED"),
   PENDING("PENDING");
-  private String value;
+
+  private final String value;
 
   TransferState(String value) {
     this.value = value;
+  }
+
+  public String getValue() {
+    return this.value;
   }
 }

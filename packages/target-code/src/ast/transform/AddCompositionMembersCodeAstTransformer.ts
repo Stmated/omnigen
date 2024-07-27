@@ -5,7 +5,6 @@ import {
   OmniCompositionType,
   OmniEnumType,
   OmniIntersectionType,
-  OmniModel,
   OmniPrimitiveKinds,
   OmniPrimitiveType,
   OmniType,
@@ -18,7 +17,7 @@ import {
   TypeNode,
   UnknownKind,
 } from '@omnigen/core';
-import {Case, Naming, OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {Case, Naming, OmniUtil, Visitor} from '@omnigen/core-util';
 import {CodeAstUtils, CodeOptions, CodeUtil} from '../../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
@@ -38,7 +37,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
   transformAst(args: AstTransformerArguments<CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>): void {
 
     const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    args.root.visit(Visitor.create(defaultVisitor, {
 
       visitClassDeclaration: (node, visitor) => {
 
@@ -47,7 +46,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
         if (omniType.kind == OmniTypeKind.EXCLUSIVE_UNION) {
           this.addXOrMappingToBody(args.root, omniType, node, args.options, args.features);
         } else if (omniType.kind == OmniTypeKind.INTERSECTION) {
-          this.addAndCompositionToClassDeclaration(args.model, args.root, omniType, node, args.options);
+          this.addAndCompositionToClassDeclaration(args.root, omniType, node, args.options);
         }
 
         // Then keep searching deeper, into nested types
@@ -61,7 +60,6 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
    * This needs to be handled in some other way which orders and/or categorizes the extensions.
    */
   private addAndCompositionToClassDeclaration(
-    model: OmniModel,
     root: CodeRootAstNode,
     andType: OmniIntersectionType,
     classDec: Code.ClassDeclaration,
@@ -69,7 +67,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
   ): void {
 
     const implementsDeclarations = new Code.ImplementsDeclaration(
-      new Code.TypeList([]),
+      new Code.TypeList(),
     );
 
     for (const type of andType.types) {
@@ -83,7 +81,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
         if (OmniUtil.asSuperType(type)) {
 
           if (!classDec.extends) {
-            classDec.extends = new Code.ExtendsDeclaration(new Code.TypeList([root.getAstUtils().createTypeNode(type)]));
+            classDec.extends = new Code.ExtendsDeclaration(new Code.TypeList(root.getAstUtils().createTypeNode(type)));
           } else {
 
             if (type.kind === OmniTypeKind.OBJECT) {
@@ -141,7 +139,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     }
 
     if (enumTypes.length > 0 && primitiveTypes.length > 0 && otherTypeCount == 0) {
-      this.addEnumAndPrimitivesAsObjectEnum(root, enumTypes, primitiveTypes, declaration, options);
+      this.addEnumAndPrimitivesAsObjectEnum(root, enumTypes, primitiveTypes, declaration);
     } else {
 
       // This means the specification did not have any discriminators.
@@ -163,13 +161,13 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
     const untypedFieldType: OmniUnknownType = {
       kind: OmniTypeKind.UNKNOWN,
-      unknownKind: UnknownKind.ANY,
+      unknownKind: UnknownKind.DYNAMIC,
     };
 
     const untypedField = new Code.Field(
       root.getAstUtils().createTypeNode(untypedFieldType),
       new Code.Identifier('_raw', 'raw'),
-      new Code.ModifierList(new Code.Modifier(Code.ModifierType.PRIVATE), new Code.Modifier(Code.ModifierType.FINAL)),
+      new Code.ModifierList(new Code.Modifier(Code.ModifierKind.PRIVATE), new Code.Modifier(Code.ModifierKind.FINAL)),
       undefined,
       fieldAnnotations,
     );
@@ -192,7 +190,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
         const isDiff = OmniUtil.getDiffAmount(commonDenominator.diffs) > 0;
 
-        logger.info(`Diffs ${isDiff} for ${OmniUtil.describe(it)} vs ${OmniUtil.describe(type)}: ${commonDenominator.diffs}}`);
+        logger.trace(`Diffs ${isDiff} for ${OmniUtil.describe(it)} vs ${OmniUtil.describe(type)}: ${commonDenominator.diffs}}`);
         return !isDiff;
       });
 
@@ -204,7 +202,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
       handled.push(type);
 
-      const pair = this.createdTypedPair(root, untypedField, type, options, features);
+      const pair = this.createdTypedPair(root, untypedField, type, options);
 
       target.children.push(pair.field);
       target.children.push(pair.method);
@@ -216,7 +214,6 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     enumTypes: OmniEnumType[],
     primitiveTypes: OmniPrimitiveType[],
     declaration: Code.AbstractObjectDeclaration,
-    options: CodeOptions,
   ): void {
 
     // Java does not support advanced enums. We need to handle it some other way.
@@ -232,9 +229,10 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     const checkMethods: Code.MethodDeclaration[] = [];
 
     const fieldValueIdentifier = new Code.Identifier(`_value`);
-    const fieldValueType = new Code.EdgeType({
+    const fieldValueType = root.getAstUtils().createTypeNode({
       kind: OmniTypeKind.UNKNOWN,
       unknownKind: UnknownKind.OBJECT,
+      debug: 'Enum backing-value',
     });
 
     const fieldAnnotations = new Code.AnnotationList();
@@ -244,8 +242,8 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       fieldValueType,
       fieldValueIdentifier,
       new Code.ModifierList(
-        new Code.Modifier(Code.ModifierType.PRIVATE),
-        new Code.Modifier(Code.ModifierType.FINAL),
+        new Code.Modifier(Code.ModifierKind.PRIVATE),
+        new Code.Modifier(Code.ModifierKind.FINAL),
       ),
       undefined,
       fieldAnnotations,
@@ -253,31 +251,31 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
     for (const enumType of enumTypes) {
       primitiveKinds.add(enumType.itemKind);
-      if (!enumType.enumConstants) {
+      if (enumType.members.length === 0) {
 
         // If we have no enum constants, we can't really do much, since we do not know any values.
         continue;
       }
 
       const knownEnumFields: Code.Field[] = [];
-      for (const enumValue of enumType.enumConstants) {
+      for (const enumMember of enumType.members) {
 
         // TODO: Instead use a constructor and each field should be a singleton instance
-        const fieldIdentifier = new Code.Identifier(Case.constant(String(enumValue)));
+        const fieldIdentifier = new Code.Identifier(Case.constant(String(enumMember.value)));
 
         const field = new Code.Field(
           declaration.type,
           fieldIdentifier,
           new Code.ModifierList(
-            new Code.Modifier(Code.ModifierType.PUBLIC),
-            new Code.Modifier(Code.ModifierType.STATIC),
-            new Code.Modifier(Code.ModifierType.FINAL),
+            new Code.Modifier(Code.ModifierKind.PUBLIC),
+            new Code.Modifier(Code.ModifierKind.STATIC),
+            new Code.Modifier(Code.ModifierKind.FINAL),
           ),
           new Code.MethodCall(
             new Code.MemberAccess(new Code.ClassName(declaration.type), singletonFactoryMethodIdentifier),
             new Code.ArgumentList(
               // TODO: Somehow in the future reference the Enum item instead of the string value
-              new Code.Literal(enumValue, enumType.itemKind),
+              new Code.Literal(enumMember.value, enumType.itemKind),
             ),
           ),
         );
@@ -318,7 +316,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
                   new Code.ArgumentList(
                     new Code.Cast(
                       root.getAstUtils().createTypeNode({kind: enumType.itemKind}),
-                      new Code.FieldReference(fieldValue),
+                      new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(fieldValue)),
                     ),
                   ),
                 ),
@@ -354,9 +352,9 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
         declaration.type,
         fieldIdentifier,
         new Code.ModifierList(
-          new Code.Modifier(Code.ModifierType.PUBLIC),
-          new Code.Modifier(Code.ModifierType.STATIC),
-          new Code.Modifier(Code.ModifierType.FINAL),
+          new Code.Modifier(Code.ModifierKind.PUBLIC),
+          new Code.Modifier(Code.ModifierKind.STATIC),
+          new Code.Modifier(Code.ModifierKind.FINAL),
         ),
         new Code.MethodCall(
           new Code.MemberAccess(new Code.ClassName(declaration.type), singletonFactoryMethodIdentifier),
@@ -381,9 +379,9 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       root.getAstUtils().createTypeNode(fieldValuesType, false),
       dictionaryIdentifier,
       new Code.ModifierList(
-        new Code.Modifier(Code.ModifierType.PRIVATE),
-        new Code.Modifier(Code.ModifierType.STATIC),
-        new Code.Modifier(Code.ModifierType.FINAL),
+        new Code.Modifier(Code.ModifierKind.PRIVATE),
+        new Code.Modifier(Code.ModifierKind.STATIC),
+        new Code.Modifier(Code.ModifierKind.FINAL),
       ),
       new Code.NewStatement(root.getAstUtils().createTypeNode(fieldValuesType, true)),
     );
@@ -391,13 +389,14 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
     const fieldValuesStaticTarget = new Code.StaticMemberReference(
       new Code.ClassName(declaration.type),
-      fieldValues.identifier,
+      new Code.FieldReference(fieldValues),
+      // fieldValues.identifier,
     );
 
     const singletonFactoryParamIdentifier = new Code.Identifier('value');
     const createdIdentifier = new Code.Identifier('created');
 
-    const singletonFactoryDeclaration = new Code.Parameter(
+    const singletonFactoryParameterDeclaration = new Code.Parameter(
       fieldValueType,
       singletonFactoryParamIdentifier,
     );
@@ -407,7 +406,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       new Code.NewStatement(
         declaration.type,
         new Code.ArgumentList(
-          new Code.DeclarationReference(singletonFactoryDeclaration),
+          new Code.DeclarationReference(singletonFactoryParameterDeclaration),
         ),
       ),
       undefined,
@@ -421,10 +420,10 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       new Code.MethodDeclarationSignature(
         singletonFactoryMethodIdentifier,
         declaration.type,
-        new Code.ParameterList(singletonFactoryDeclaration),
+        new Code.ParameterList(singletonFactoryParameterDeclaration),
         new Code.ModifierList(
-          new Code.Modifier(Code.ModifierType.PUBLIC),
-          new Code.Modifier(Code.ModifierType.STATIC),
+          new Code.Modifier(Code.ModifierKind.PUBLIC),
+          new Code.Modifier(Code.ModifierKind.STATIC),
         ),
         singletonMethodAnnotations,
       ),
@@ -436,10 +435,10 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
                 new Code.MethodCall(
                   new Code.MemberAccess(fieldValuesStaticTarget, new Code.Identifier('containsKey')),
                   new Code.ArgumentList(
-                    new Code.DeclarationReference(singletonFactoryDeclaration),
+                    new Code.DeclarationReference(singletonFactoryParameterDeclaration),
                   ),
                 ),
-                new Code.TokenNode(Code.TokenKind.EQUALS),
+                Code.TokenKind.EQUALS,
                 new Code.Literal(true),
               ),
               new Code.Block(
@@ -448,7 +447,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
                     new Code.MethodCall(
                       new Code.MemberAccess(fieldValuesStaticTarget, new Code.Identifier('get')),
                       new Code.ArgumentList(
-                        new Code.DeclarationReference(singletonFactoryDeclaration),
+                        new Code.DeclarationReference(singletonFactoryParameterDeclaration),
                       ),
                     ),
                   ),
@@ -459,13 +458,18 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
           new Code.Block(
             new Code.Statement(createdVariableDeclaration),
             new Code.Statement(
-              new Code.MethodCall(
-                new Code.MemberAccess(fieldValuesStaticTarget, new Code.Identifier('set')),
-                new Code.ArgumentList(
-                  new Code.DeclarationReference(singletonFactoryDeclaration),
-                  new Code.DeclarationReference(createdVariableDeclaration),
-                ),
+              new Code.BinaryExpression(
+                new Code.IndexAccess(fieldValuesStaticTarget, new Code.DeclarationReference(singletonFactoryParameterDeclaration)),
+                Code.TokenKind.ASSIGN,
+                new Code.DeclarationReference(createdVariableDeclaration),
               ),
+              // new Code.MethodCall(
+              //   new Code.MemberAccess(fieldValuesStaticTarget, new Code.Identifier('put')),
+              //   new Code.ArgumentList(
+              //     new Code.DeclarationReference(singletonFactoryDeclaration),
+              //     new Code.DeclarationReference(createdVariableDeclaration),
+              //   ),
+              // ),
             ),
             new Code.Statement(
               new Code.ReturnStatement(
@@ -505,15 +509,15 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
         new Code.Block(
           new Code.Statement(
             new Code.BinaryExpression(
-              new Code.FieldReference(fieldValue),
-              new Code.TokenNode(Code.TokenKind.ASSIGN),
+              new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(fieldValue)),
+              Code.TokenKind.ASSIGN,
               new Code.DeclarationReference(constructorParameter),
             ),
           ),
         ),
         // Private constructor, since all creation should go through the singleton method.
         new Code.ModifierList(
-          new Code.Modifier(Code.ModifierType.PRIVATE),
+          new Code.Modifier(Code.ModifierKind.PRIVATE),
         ),
       ),
     );
@@ -556,7 +560,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
       const binaryExpression = new Code.BinaryExpression(
         new Code.SelfReference(),
-        new Code.TokenNode(Code.TokenKind.EQUALS),
+        Code.TokenKind.EQUALS,
         new Code.StaticMemberReference(
           new Code.ClassName(selfType),
           element.identifier,
@@ -564,7 +568,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       );
 
       if (knownBinary) {
-        knownBinary = new Code.BinaryExpression(knownBinary, new Code.TokenNode(Code.TokenKind.OR), binaryExpression);
+        knownBinary = new Code.BinaryExpression(knownBinary, Code.TokenKind.OR, binaryExpression);
       } else {
         knownBinary = binaryExpression;
       }
@@ -578,21 +582,17 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     untypedField: Code.Field,
     type: OmniType,
     options: PackageOptions & TargetOptions & CodeOptions,
-    features: TargetFeatures,
   ): TypedPair {
 
-    // const nameResolver = root.getNameResolver();
-    // const codeName = nameResolver.investigate({type: type, options: options});
-    // const codeObjectName = nameResolver.build({name: codeName, with: NameParts.NAME, use: TypeUseKind.DECLARED});
-    const typedFieldName = Case.camel(Naming.unwrap(OmniUtil.getVirtualTypeName(type))); // codeObjectName);
+    const typedFieldName = Case.camel(Naming.unwrap(OmniUtil.getVirtualTypeName(type)));
 
     const typedField = new Code.Field(root.getAstUtils().createTypeNode(type), new Code.Identifier(`_${typedFieldName}`));
     const typedFieldReference = new Code.FieldReference(typedField);
 
     const parameterList = new Code.ParameterList();
     let conversionExpression: AbstractCodeNode;
-    if (options.unknownType == UnknownKind.MUTABLE_OBJECT || options.unknownType == UnknownKind.ANY) {
-      conversionExpression = this.modifyGetterForPojo(root, untypedField, typedField, parameterList, features);
+    if (options.unknownType == UnknownKind.DYNAMIC_OBJECT || options.unknownType == UnknownKind.ANY) {
+      conversionExpression = this.modifyGetterForPojo(untypedField, typedField, parameterList);
     } else {
       conversionExpression = new Code.Literal('Conversion path unknown');
     }
@@ -606,12 +606,12 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       new Code.Block(
         // First check if we have already cached the result.
         new Code.IfStatement(
-          new Code.Predicate(typedFieldReference, Code.TokenKind.NOT_EQUALS, new Code.Literal(null)),
-          new Code.Block(new Code.Statement(new Code.ReturnStatement(typedFieldReference))),
+          new Code.BinaryExpression(new Code.MemberAccess(new Code.SelfReference(), typedFieldReference), Code.TokenKind.NOT_EQUALS, new Code.Literal(null)),
+          new Code.Block(new Code.Statement(new Code.ReturnStatement(new Code.MemberAccess(new Code.SelfReference(), typedFieldReference)))),
         ),
         // If not, then try to convert the raw value into the target type and cache it.
         new Code.Statement(new Code.ReturnStatement(
-          new Code.BinaryExpression(typedFieldReference, new Code.TokenNode(Code.TokenKind.ASSIGN), conversionExpression),
+          new Code.BinaryExpression(new Code.MemberAccess(new Code.SelfReference(), typedFieldReference), Code.TokenKind.ASSIGN, conversionExpression),
         )),
       ),
     );
@@ -623,11 +623,9 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
   }
 
   private modifyGetterForPojo(
-    root: RootAstNode,
     untypedField: Code.Field,
     typedField: Code.Field,
     parameterList: Code.ParameterList,
-    features: TargetFeatures,
   ): AbstractCodeNode {
 
     const transformerIdentifier = new Code.Identifier('transformer');
@@ -645,7 +643,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       new Code.DeclarationReference(transformerParameter),
       new Code.GenericRef(delegateNode),
       new Code.ArgumentList(
-        new Code.FieldReference(untypedField),
+        new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(untypedField)),
       ),
     );
   }

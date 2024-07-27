@@ -16,7 +16,7 @@ export const createCodeFreeTextReducer = (partial?: Partial<FreeTextReducer>): F
         return undefined;
       }
 
-      return new FreeText.FreeTexts(children).withIdFrom(n);
+      return new FreeText.FreeTexts(...children).withIdFrom(n);
     },
     reduceFreeText: n => n,
     reduceFreeTextParagraph: (n, r) => reduce(n.child, r, it => new FreeText.FreeTextParagraph(it)),
@@ -84,11 +84,11 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       n.upperBound?.reduce(r),
       n.lowerBound?.reduce(r),
     ).withIdFrom(n),
-    reduceArrayType: (n, r) => new Code.ArrayType(n.omniType, assertDefined(n.of.reduce(r)), n.implementation).withIdFrom(n),
+    reduceArrayType: (n, r) => new Code.ArrayType(n.omniType, assertDefined(n.itemTypeNode.reduce(r)), n.implementation).withIdFrom(n),
     reduceGenericType: (n, r) => {
       const baseType = n.baseType.reduce(r);
-      const genericArguments = n.genericArguments.map(it => it.reduce(r)).filter(isDefined);
-      if (baseType && baseType instanceof Code.EdgeType && genericArguments.length > 0) {
+      if (baseType && baseType instanceof Code.EdgeType) {
+        const genericArguments = n.genericArguments.map(it => it.reduce(r)).filter(isDefined);
         return new Code.GenericType(baseType.omniType, baseType, genericArguments).withIdFrom(n);
       }
 
@@ -96,8 +96,13 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     },
     reduceParameter: (n, r) => {
 
+      const type = n.type.reduce(r);
+      if (!type) {
+        return undefined;
+      }
+
       return new Code.Parameter(
-        assertDefined(n.type.reduce(r)),
+        type,
         assertDefined(n.identifier.reduce(r)),
         n.annotations?.reduce(r),
       ).withIdFrom(n);
@@ -112,7 +117,6 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       assertDefined(n.identifier.reduce(r)),
       n.type,
     ).withIdFrom(n),
-    reduceToken: n => n,
 
     reduceBinaryExpression: (n, r) => {
       const left = n.left.reduce(r);
@@ -122,7 +126,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
         return undefined;
       }
 
-      return new Code.BinaryExpression(left, assertDefined(n.token.reduce(r)), right).withIdFrom(n);
+      return new Code.BinaryExpression(left, n.token, right).withIdFrom(n);
     },
     reduceModifier: n => n,
     reduceField: (n, r) => {
@@ -177,6 +181,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
         fieldRef,
         n.annotations?.reduce(r),
         n.comments?.reduce(r),
+        n.identifier?.reduce(r),
       ).withIdFrom(n);
     },
     reduceMethodDeclaration: (n, r) => {
@@ -194,11 +199,12 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
         n.annotations?.reduce(r),
         n.comments?.reduce(r),
         n.throws?.reduce(r),
+        n.genericParameters?.reduce(r),
       ).withIdFrom(n);
     },
     reduceExtendsDeclaration: (n, r) => new Code.ExtendsDeclaration(assertDefined(n.types.reduce(r))).withIdFrom(n),
     reduceImplementsDeclaration: (n, r) => new Code.ImplementsDeclaration(assertDefined(n.types.reduce(r))).withIdFrom(n),
-    reduceTypeList: (n, r) => new Code.TypeList(n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
+    reduceTypeList: (n, r) => new Code.TypeList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
     reduceLiteral: n => n,
     reduceIfStatement: (n, r) => new Code.IfStatement(
       assertDefined(n.predicate.reduce(r)),
@@ -230,10 +236,11 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       const type = n.type.reduce(r);
       return !type ? undefined : new Code.ImportStatement(type).withIdFrom(n);
     },
-    reduceImportList: (n, r) => new Code.ImportList(n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
+    reduceImportList: (n, r) => new Code.ImportList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
     reduceMethodCall: (n, r) => new Code.MethodCall(
       assertDefined(n.target.reduce(r)),
       assertDefined(n.methodArguments?.reduce(r)),
+      n.genericArguments?.reduce(r),
     ).withIdFrom(n),
     reduceNewStatement: (n, r) => new Code.NewStatement(
       assertDefined(n.type.reduce(r)),
@@ -259,7 +266,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reduceAnnotation: (n, r) => {
 
       const type = assertDefined(n.type.reduce(r));
-      if (type.omniType.kind != OmniTypeKind.HARDCODED_REFERENCE) {
+      if (type.omniType.kind !== OmniTypeKind.HARDCODED_REFERENCE) {
         throw new Error(`Only allowed to have a hardcoded reference as annotation type`);
       }
 
@@ -286,7 +293,6 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       return reduced;
     },
     reducePackage: n => n,
-    reducePredicate: (n, r) => r.reduceBinaryExpression(n, r),
     reduceModifierList: (n, r) => new Code.ModifierList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
     reduceCast: (n, r) => {
       const expression = n.expression.reduce(r);
@@ -324,7 +330,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       return dec;
     },
     reduceGenericTypeDeclarationList: (n, r) =>
-      new Code.GenericTypeDeclarationList(n.types.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
+      new Code.GenericTypeDeclarationList(...n.types.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
     reduceGenericTypeDeclaration: (n, r) => new Code.GenericTypeDeclaration(
       assertDefined(n.name.reduce(r)),
       n.sourceIdentifier,
@@ -375,8 +381,9 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     },
     reduceEnumItem: (n, r) => new Code.EnumItem(
       assertDefined(n.identifier.reduce(r)),
-      assertDefined(n.value.reduce(r)),
+      n.value?.reduce(r),
       n.comment?.reduce(r),
+      n.annotations?.reduce(r),
     ).withIdFrom(n),
     reduceEnumItemList: (n, r) => new Code.EnumItemList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
     reduceFieldReference: n => n,
@@ -486,10 +493,30 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       assertDefined(n.delegateRef.reduce(r)),
       assertDefined(n.args.reduce(r)),
     ).withIdFrom(n),
-    reduceMemberAccess: (n, r) => new Code.MemberAccess(
+
+    reduceMemberAccess: (n, r) => {
+      const member = n.member.reduce(r);
+      if (!member) {
+        return undefined;
+      }
+
+      return new Code.MemberAccess(
+        assertDefined(n.owner.reduce(r)),
+        member,
+      ).withIdFrom(n);
+    },
+    reduceIndexAccess: (n, r) => new Code.IndexAccess(
       assertDefined(n.owner.reduce(r)),
-      assertDefined(n.member.reduce(r)),
+      assertDefined(n.index.reduce(r)),
     ).withIdFrom(n),
+
+    reduceInstanceOf: (n, r) => new Code.InstanceOf(
+      assertDefined(n.target.reduce(r)),
+      assertDefined(n.comparison.reduce(r)),
+      n.narrowed?.reduce(r),
+    ).withIdFrom(n),
+
+    reduceFormatNewline: n => n,
   };
 };
 

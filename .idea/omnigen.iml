@@ -39,6 +39,7 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-typescript/src/render/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-csharp/src/render/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-csharp/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/.target_test" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

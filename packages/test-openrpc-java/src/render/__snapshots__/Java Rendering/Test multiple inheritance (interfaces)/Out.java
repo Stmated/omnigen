@@ -7,7 +7,7 @@ import jakarta.annotation.Generated;
 public class Out {
   private final String result;
 
-  public Out(@JsonProperty("result") String result) {
+  public Out(@JsonProperty(value = "result") String result) {
     this.result = result;
   }
 

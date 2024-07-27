@@ -22,6 +22,7 @@ export * from './ast/transform/RemoveEnumFieldsCodeAstTransformer.ts';
 export * from './ast/transform/MethodToGetterCodeAstTransformer.ts';
 export * from './ast/transform/AddCompositionMembersCodeAstTransformer.ts';
 export * from './ast/transform/SimplifyAndCleanAstTransformer.ts';
+export * from './ast/transform/PrettyCodeAstTransformer.ts';
 
 export * from './visitor/CodeVisitor';
 export * from './visitor/FreeTextVisitor';
@@ -36,5 +37,6 @@ export * from './reduce/CodeAstReducer';
 export * from './parse/transform/SimplifyUnnecessaryCompositionsModelTransformer.ts';
 export * from './parse/transform/InterfaceExtractorModelTransformer.ts';
 export * from './parse/transform/AggregateIntersectionsModelTransformer.ts';
+export * from './parse/transform/MergeLargeUnionLateModelTransformer.ts';
 
 export * as Code from './ast/Code';

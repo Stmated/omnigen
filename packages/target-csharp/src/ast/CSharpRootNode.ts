@@ -66,7 +66,6 @@ export class CSharpRootNode extends Code.CodeRootAstNode implements RootAstNode,
         ctx.map.set(n.id, n);
         ctx.visitor.visitDelegate(n, v);
       },
-
     };
   }
 }

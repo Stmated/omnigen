@@ -38,7 +38,6 @@ exports[`jsonschema-csharp-render > enum_string_composition 1`] = `
 exports[`jsonschema-csharp-render > inline_boolean 1`] = `
 [
   "AccountNotificationData.cs",
-  "StringBoolean.cs",
 ]
 `;
 

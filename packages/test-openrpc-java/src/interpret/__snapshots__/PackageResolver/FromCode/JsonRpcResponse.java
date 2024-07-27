@@ -1,5 +1,6 @@
 package some.base.pkg;
 
+import java.util.List;
 import some.other.pkg.Thing;
 
 /**
@@ -7,9 +8,9 @@ import some.other.pkg.Thing;
  */
 public class JsonRpcResponse {
   private final String id;
-  private final Thing[] result;
+  private final List<Thing> result;
 
-  public JsonRpcResponse(String id, Thing[] result) {
+  public JsonRpcResponse(String id, List<Thing> result) {
     this.id = id;
     this.result = result;
   }
@@ -22,7 +23,7 @@ public class JsonRpcResponse {
     return "2.0";
   }
 
-  public Thing[] getResult() {
+  public List<Thing> getResult() {
     return this.result;
   }
 }

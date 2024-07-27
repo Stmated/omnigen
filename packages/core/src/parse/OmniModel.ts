@@ -73,6 +73,12 @@ export interface OmniProperty {
   description?: string | undefined;
   summary?: string | undefined;
   deprecated?: boolean;
+
+  debug?: string | string[] | undefined;
+
+  /**
+   * TODO: This and the other booleans below should rather be part of the type, since it can have significance depending on target language
+   */
   required?: boolean;
   readOnly?: boolean;
   writeOnly?: boolean;
@@ -207,6 +213,7 @@ export interface OmniTypeWithInnerType<T extends OmniType | OmniType[] = OmniTyp
 
 export interface OmniExample<T> {
   value: T;
+  description?: string | undefined;
 }
 
 export interface OmniBaseType<T extends OmniTypeKind> {
@@ -222,6 +229,11 @@ export interface OmniBaseType<T extends OmniTypeKind> {
    * True if the type SHOULD be preferred to be inlined.
    */
   inline?: boolean;
+
+  /**
+   * Depending on target language, nullability of a type means different things. In Java any reference can be null, in TypeScript it needs to be explicitly allowed to be null.
+   */
+  nullable?: boolean;
   /**
    * TODO: Implement! REMOVE the optional and make it required! ALL types MUST have an absolute uri, to make it possible to merge types between schemas/contracts
    */
@@ -229,14 +241,20 @@ export interface OmniBaseType<T extends OmniTypeKind> {
   accessLevel?: OmniAccessLevel | undefined;
   title?: string | undefined;
   description?: string | undefined;
+
+  /**
+   * Rename to `remarks` to separate it more clearly from 'description'. Or remove in favor of making `description` an array where order is importance.
+   */
   summary?: string | undefined;
 
-  debug?: string | undefined;
+  debug?: string | string[] | undefined;
 
   examples?: OmniExample<unknown>[] | undefined;
 }
 
 export type OmniTypeOf<T extends OmniType, K extends OmniTypeKind> = Extract<T, { kind: K }>;
+
+// TODO: Likely `NULL` should not be a primitive, and instead be its own separate type, since most properties are not relevant to `NULL`
 export type OmniPrimitiveNull = OmniTypeOf<OmniType, typeof OmniKindPrimitive.NULL>;
 
 export interface OmniCompositionTypeBase<T extends OmniType, K extends OmniKindComposition> extends OmniBaseType<K>, OmniOptionallyNamedType {
@@ -326,21 +344,43 @@ export interface OmniDecoratingType<T extends OmniType = OmniType> extends OmniB
 }
 
 export const UnknownKind = {
-  MAP: 'MAP',
-  MUTABLE_OBJECT: 'MUTABLE_OBJECT',
+
+  /**
+   * Java: `JsonNode` (if Jackson), TypeScript: `unknown`, C#: `dynamic`
+   */
+  DYNAMIC: 'DYNAMIC',
+
+  /**
+   * Java: `Object`, TypeScript: `unknown`, C#: `dynamic`
+   */
+  DYNAMIC_NATIVE: 'DYNAMIC_NATIVE',
+
+  /**
+   * Java: `JsonObject` (if Jackson), TypeScript: `object`, C#: `dynamic`
+   */
+  DYNAMIC_OBJECT: 'DYNAMIC_OBJECT',
+
+  /**
+   * Java: `Object`, TypeScript: `object`, C#: `object`
+   */
   OBJECT: 'OBJECT',
 
   /**
-   * For language like Java this would represent '?', while in TypeScript this would represent 'unknown'
+   * Java: `?`, TypeScript: `unknown`, C#: `dynamic`
    */
   WILDCARD: 'WILDCARD',
 
   /**
-   * Java: `Object`, TypeScript: `any`
+   * Java: `Object`, TypeScript: `any`, C#: `Object`
    */
   ANY: 'ANY',
 } as const;
 export type UnknownKind = (typeof UnknownKind)[keyof typeof UnknownKind];
+
+/**
+ * Avoid using this, but can be helpful if has no access to any context/options.
+ */
+export const DEFAULT_UNKNOWN_KIND = UnknownKind.ANY;
 
 export interface OmniUnknownType extends OmniBaseType<typeof OmniTypeKind.UNKNOWN> {
   valueDefault?: OmniPrimitiveConstantValue | null;
@@ -380,7 +420,6 @@ export type OmniPrimitiveConstantValue = string | boolean | number | object | nu
 export interface OmniPrimitiveBaseType<K extends OmniPrimitiveKinds = OmniPrimitiveKinds> extends OmniBaseType<K>, OmniOptionallyNamedType {
 
   name?: TypeName;
-  nullable?: boolean;
 
   /**
    * Means "default" if `literal` is false, means "constant value" if `literal` is true.
@@ -400,10 +439,14 @@ export type AllowedEnumTsTypes = number | string;
 export type OmniPrimitiveKinds = OmniPrimitiveType['kind'];
 export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKinds, typeof OmniTypeKind.NULL | typeof OmniTypeKind.VOID>;
 
+export interface OmniEnumMember {
+  value: AllowedEnumTsTypes;
+  name?: string;
+  description?: string;
+}
+
 export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, OmniNamedType {
-  enumConstants?: AllowedEnumTsTypes[];
-  enumNames?: string[];
-  enumDescriptions?: Record<string, string>;
+  members: OmniEnumMember[];
   itemKind: OmniPrimitiveKinds;
   extendedBy?: OmniSuperTypeCapableType;
 }
@@ -598,7 +641,7 @@ export interface OmniLink {
 }
 
 export interface OmniModel {
-  name: string;
+  name?: string;
 
   /**
    * TODO: Remove the optionality, this should always be required to uniquely identify a model. Based on disk uri or remote web uri, etc
@@ -609,27 +652,19 @@ export interface OmniModel {
   /**
    * The version of the schema itself, and not of the originating source schema type's specification version.
    */
-  version: string;
+  version?: string | undefined;
   schemaType: 'openrpc' | 'openapi' | 'jsonschema' | 'other';
   /**
    * The version of the source schema
    */
-  schemaVersion: string;
+  schemaVersion?: string | undefined;
   contact?: OmniContact | undefined;
   license?: OmniLicense | undefined;
   termsOfService?: string | undefined;
   endpoints: OmniEndpoint[];
   types: OmniType[];
-  servers: OmniServer[];
+  servers?: OmniServer[];
   externalDocumentations?: OmniExternalDocumentation[];
   continuations?: OmniLink[];
-
-  /**
-   * Any options given from the schema to the model.
-   * This can be absolutely anything, and it is up to some kind of conversion to decide how they should be used.
-   *
-   * @deprecated Remove one day -- it should not be needed elsewhere; it just feels wrong
-   */
-  options?: Record<string, unknown>;
 }
 

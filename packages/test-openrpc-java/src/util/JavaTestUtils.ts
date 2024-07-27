@@ -1,9 +1,6 @@
 import * as JavaParser from 'java-parser';
 import {
   AstNode,
-  DEFAULT_MODEL_TRANSFORM_OPTIONS,
-  DEFAULT_PACKAGE_OPTIONS,
-  DEFAULT_PARSER_OPTIONS,
   ModelTransformOptions,
   PackageOptions,
   ParserOptions,
@@ -23,23 +20,32 @@ import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export const DEFAULT_TEST_JAVA_OPTIONS: JavaOptions = {
-  ...ZodJavaOptions.parse({}),
+export const DEFAULT_SPECIFIC_TEST_JAVA_OPTIONS: Partial<JavaOptions> = {
   serializationLibrary: SerializationLibrary.POJO,
+  beanValidation: false,
 };
 
-export const DEFAULT_TEST_TARGET_OPTIONS: TargetOptions = {
-  ...ZodTargetOptions.parse({}),
+export const DEFAULT_TEST_JAVA_OPTIONS: JavaOptions = {
+  ...ZodJavaOptions.parse({}),
+  ...DEFAULT_SPECIFIC_TEST_JAVA_OPTIONS,
+};
+
+export const DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS: Partial<TargetOptions> = {
   compressSoloReferencedTypes: false,
   compressUnreferencedSubTypes: false,
 };
 
+export const DEFAULT_TEST_TARGET_OPTIONS: TargetOptions = {
+  ...ZodTargetOptions.parse({}),
+  ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
+};
+
 export interface JavaTestUtilsOptions {
-  parserOptions?: ParserOptions,
-  modelTransformOptions?: ModelTransformOptions,
-  targetOptions?: TargetOptions,
-  packageOptions?: PackageOptions,
-  javaOptions?: JavaOptions,
+  parserOptions?: Partial<ParserOptions>,
+  modelTransformOptions?: Partial<ModelTransformOptions>,
+  targetOptions?: Partial<TargetOptions>,
+  packageOptions?: Partial<PackageOptions>,
+  javaOptions?: Partial<JavaOptions>,
   arguments?: Record<string, any>,
 }
 
@@ -67,25 +73,20 @@ export class JavaTestUtils {
     stopAt?: S,
   ): Promise<z.output<E>> {
 
-    const all: Required<typeof options> = {
-      parserOptions: options.parserOptions ?? DEFAULT_PARSER_OPTIONS,
-      modelTransformOptions: options.modelTransformOptions ?? DEFAULT_MODEL_TRANSFORM_OPTIONS,
-      targetOptions: options.targetOptions ?? DEFAULT_TEST_TARGET_OPTIONS,
-      packageOptions: options.packageOptions ?? DEFAULT_PACKAGE_OPTIONS,
-      javaOptions: options.javaOptions ?? DEFAULT_TEST_JAVA_OPTIONS,
-      arguments: options.arguments ?? {},
-    };
-
     const ctx: BaseContext & FileContext & TargetContext = {
       file: filePath,
       // target: 'java', // <-- implicit, because we have no other target plugin in this package
+      defaults: {
+        ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
+        ...DEFAULT_SPECIFIC_TEST_JAVA_OPTIONS,
+      },
       arguments: {
-        ...all.modelTransformOptions,
-        ...all.parserOptions,
-        ...all.targetOptions,
-        ...all.packageOptions,
-        ...all.javaOptions,
-        ...all.arguments,
+        ...(options.parserOptions),
+        ...(options.modelTransformOptions),
+        ...(options.targetOptions),
+        ...(options.packageOptions),
+        ...(options.javaOptions),
+        ...(options.arguments),
       },
     };
 

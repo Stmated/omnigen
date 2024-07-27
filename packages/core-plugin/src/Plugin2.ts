@@ -24,6 +24,7 @@ export const ZodArguments = z.record(z.string(), z.any());
 
 export const ZodArgumentsContext = z.object({
   arguments: ZodArguments,
+  defaults: ZodArguments.optional(),
 });
 
 export const ZOD_CONTEXT_TARGETS = z.object({

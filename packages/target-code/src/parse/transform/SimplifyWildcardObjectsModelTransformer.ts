@@ -1,4 +1,4 @@
-import {OMNI_GENERIC_FEATURES, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniType, OmniTypeKind, OmniUnknownType, ParserOptions, UnknownKind} from '@omnigen/core';
+import {OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniTypeKind, OmniUnknownType, ParserOptions, UnknownKind} from '@omnigen/core';
 import {OmniUtil} from '@omnigen/core-util';
 
 /**
@@ -16,22 +16,7 @@ export class SimplifyWildcardObjectsModelTransformer implements OmniModelTransfo
           kind: OmniTypeKind.UNKNOWN,
           unknownKind: UnknownKind.OBJECT,
         } satisfies OmniUnknownType;
-        // return;
       }
-
-      // const alreadyReplaced = replaced.get(ctx.type);
-      // if (alreadyReplaced) {
-      //   ctx.replacement = alreadyReplaced;
-      // } else if (ctx.type.kind == OmniTypeKind.EXCLUSIVE_UNION || ctx.type.kind == OmniTypeKind.UNION) {
-      //
-      //   const distinctTypes = OmniUtil.getDistinctTypes(ctx.type.types, OMNI_GENERIC_FEATURES); // TODO: Make this use impl like JAVA_FEATURES -- need to move to 2nd pass?
-      //   if (distinctTypes.length == 1) {
-      //
-      //     const merged = this.mergeTypes(ctx.type, ctx.type.types, lossless);
-      //     ctx.replacement = merged;
-      //     replaced.set(ctx.type, merged);
-      //   }
-      // }
     });
   }
 

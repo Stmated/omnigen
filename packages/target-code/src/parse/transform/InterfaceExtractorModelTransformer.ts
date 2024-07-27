@@ -76,8 +76,6 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
 
       if (OmniUtil.isComposition(type.extendedBy)) {
         this.makeExtensionsInterfaces(type.extendedBy, interfaceMap, depth > 0 ? 0 : startConvertingAt, depth + 1);
-      } else {
-        // logger.debug(`Should ${OmniUtil.describe(type.extendedBy)} ever need conversion?`);
       }
 
     } else {

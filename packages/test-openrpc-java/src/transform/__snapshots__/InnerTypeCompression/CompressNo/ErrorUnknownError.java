@@ -5,7 +5,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ErrorUnknownError extends JsonRpcError {
-  private final Integer code;
+  private final int code;
   private final JsonNode data;
   private final String message;
 
@@ -15,7 +15,7 @@ public class ErrorUnknownError extends JsonRpcError {
     this.data = data;
   }
 
-  public Integer getCode() {
+  public int getCode() {
     return this.code;
   }
 

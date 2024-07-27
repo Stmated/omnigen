@@ -1,5 +1,6 @@
 package generated.omnigen;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import jakarta.annotation.Generated;
 
 /**
@@ -9,9 +10,15 @@ import jakarta.annotation.Generated;
 public enum Kind1 {
   _1_A("1A"),
   _1_B("1B");
-  private String value;
+
+  @JsonValue
+  private final String value;
 
   Kind1(String value) {
     this.value = value;
+  }
+
+  public String getValue() {
+    return this.value;
   }
 }

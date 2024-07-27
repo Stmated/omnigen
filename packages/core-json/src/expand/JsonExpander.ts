@@ -3,6 +3,7 @@ import {ObjectVisitor} from '../visit/ObjectVisitor';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonPathResolver} from '../resolve/JsonPathResolver.ts';
 import {DocumentStore, JsonPathFetcher} from '../resolve/JsonPathFetcher.ts';
+import {Case} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -10,7 +11,8 @@ export type ExpandUsingValue = string | number | object | Array<string | number 
 
 export type JsonPointerPath = string;
 
-export type ExpandNeedleMeta = { with?: string, /* prefix?: string, suffix?: string */ transform?: 'lowercase' | 'uppercase' };
+export type TransformKinds = 'lowercase' | 'uppercase' | 'pascal';
+export type ExpandNeedleMeta = { with?: string, transform?: TransformKinds };
 export type ExpandNeedleObj = ExpandNeedleWithMeta | ExpandNeedleWithAttempts;
 
 export type ExpandNeedleWithMeta = { path: JsonPointerPath } & ExpandNeedleMeta;
@@ -130,11 +132,11 @@ export class JsonExpander {
               }
 
               if (found) {
-                logger.trace(`Found as attempt ${i} for ${findItem.path}`);
+                logger.silent(`Found as attempt ${i} for ${findItem.path}`);
                 break;
               } else {
                 const attemptString = JSON.stringify(attempt);
-                logger.trace(`Could not find '${attemptString}' for ${findItem.path}`);
+                logger.silent(`Could not find '${attemptString}' for ${findItem.path}`);
                 attemptFailures.push(attemptString);
               }
             }
@@ -157,12 +159,10 @@ export class JsonExpander {
           let targetKey: ExpandUsingValue;
           if (options.as) {
             targetKey = this.transform(source, options.as);
-            // targetKey = `${options.as.prefix ?? ''}${source}${options.as.suffix ?? ''}`;
           } else {
             targetKey = source;
           }
 
-          // = options.as ?  : source;
           if (typeof targetKey === 'string' || typeof targetKey === 'number') {
 
             logger.trace(`Adding expanded object for '${source}' to: ${parentPath} as ${targetKey}`);
@@ -208,25 +208,40 @@ export class JsonExpander {
 
       const array = Array.isArray(source) ? source : [source];
       source = meta.with.replace(/\$(\d)/g, (match, group) => {
-        return array[Math.min(Number.parseInt(group), array.length - 1)];
+        const sourceIndex = Math.min(Number.parseInt(group), array.length - 1);
+        let sourceValue = array[sourceIndex];
+
+        // We possibly translate the source; we do not want to transform the whole `meta.with` string.
+        if (typeof sourceValue === 'string' && meta.transform) {
+          sourceValue = this.doTransform(sourceValue, meta.transform);
+        }
+
+        return sourceValue;
       });
     } else if (Array.isArray(source)) {
 
       // There is no 'with' and the source is an array. We will pick the first value.
       source = source[0];
-    }
 
-    if (typeof source === 'string' && meta.transform) {
-
-      if (meta.transform === 'lowercase') {
-        source = source.toLowerCase();
-      } else if (meta.transform === 'uppercase') {
-        source = source.toUpperCase();
-      } else {
-        throw new Error(`Invalid expansion transform ${meta.transform}`);
+      // And then possibly transform the whole source.
+      if (typeof source === 'string' && meta.transform) {
+        source = this.doTransform(source, meta.transform);
       }
     }
 
     return source;
+  }
+
+  private doTransform(value: string, transform: TransformKinds) {
+
+    if (transform === 'lowercase') {
+      return value.toLowerCase();
+    } else if (transform === 'uppercase') {
+      return value.toUpperCase();
+    } else if (transform === 'pascal') {
+      return Case.pascal(value);
+    } else {
+      throw new Error(`Invalid expansion transform ${transform}`);
+    }
   }
 }

@@ -28,6 +28,7 @@ describe('jsonschema-typescript-render', () => {
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/test-jsonschema-typescript/examples/jsonschema-draft-07.json'), {
       strictUndefined: false,
       includeGenerated: false,
+      singleFileName: 'Schema',
     });
     const fileContents = getFileContents(rendered);
 
@@ -45,6 +46,7 @@ describe('jsonschema-typescript-render', () => {
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/test-jsonschema-typescript/examples/jsonschema-draft-07.json'), {
       strictUndefined: true,
       includeGenerated: false,
+      singleFileName: 'Schema',
     });
     const fileContents = getFileContents(rendered);
 
@@ -74,6 +76,8 @@ describe('jsonschema-typescript-render', () => {
    *        * anyOf: [{required: [...]}, {required: [...]}]
    *        * $dynamicRef
    *        * $dynamicAnchor
+   *
+   * TODO: Currently incorrect output -- it refers to types that does not exist, like `SpecificationExtensions`. Something is wrong and needs narrower test cases.
    */
   test('openapi', async ({task}) => {
 

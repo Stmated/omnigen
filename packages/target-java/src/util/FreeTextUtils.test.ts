@@ -11,6 +11,10 @@ describe('FreeTextUtils', () => {
     const result = FreeTextUtils.add(a, b);
 
     expect(result).toBeDefined();
-    expect(result).toBeInstanceOf(Java.FreeTextSummary);
+    expect(result).toBeInstanceOf(Java.FreeTexts);
+
+    expect((result as Java.FreeTexts).children).toHaveLength(2);
+    expect((result as Java.FreeTexts).children[0]).toBeInstanceOf(Java.FreeTextSummary);
+    expect((result as Java.FreeTexts).children[1]).toBeInstanceOf(Java.FreeTextRemark);
   });
 });

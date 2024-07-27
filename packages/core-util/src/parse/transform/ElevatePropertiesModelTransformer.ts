@@ -1,8 +1,8 @@
 import {
   OmniModel2ndPassTransformer,
   OmniModelTransformer,
-  OmniProperty,
-  ParserOptions,
+  OmniProperty, OmniType, OmniTypeKind,
+  ParserOptions, TargetOptions,
 } from '@omnigen/core';
 import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
 import {PropertyUtil} from '../PropertyUtil.ts';
@@ -10,7 +10,7 @@ import {OmniModelTransformerArgs} from '@omnigen/core';
 import {PropertyDifference, TypeDiffKind} from '@omnigen/core';
 import {OmniModelTransformer2ndPassArgs} from '@omnigen/core';
 import {OmniUtil} from '../OmniUtil.ts';
-import {Sorters} from '../../util';
+import {CreateMode, Sorters} from '../../util';
 
 /**
  * Takes an OmniModel, and tries to compress types as much as possible.
@@ -30,15 +30,15 @@ import {Sorters} from '../../util';
  */
 export class ElevatePropertiesModelTransformer implements OmniModelTransformer, OmniModel2ndPassTransformer {
 
+  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
+    this.transformInner(args);
+  }
+
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
     this.transformInner(args, args.targetFeatures);
   }
 
-  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
-    this.transformInner(args, OMNI_GENERIC_FEATURES);
-  }
-
-  transformInner(args: OmniModelTransformerArgs<ParserOptions>, targetFeatures: TargetFeatures): void {
+  transformInner(args: OmniModelTransformerArgs, targetFeatures?: TargetFeatures): void {
 
     if (!args.options.elevateProperties) {
 
@@ -65,11 +65,11 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
       PropertyDifference.SIGNATURE,
     ];
 
-    if (targetFeatures.literalTypes) {
+    if (targetFeatures && targetFeatures.literalTypes) {
 
       // If the target allows literal types, then we need to care about the visible signature type,
       // and not just about the underlying fundamental type and/or isomorphic type differences.
-      bannedTypeDifferences.push(TypeDiffKind.NARROWED_LITERAL_TYPE);
+      // bannedTypeDifferences.push(TypeDiffKind.POLYMORPHIC_LITERAL);
     }
 
     for (const superType of superTypes) {
@@ -85,7 +85,8 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
 
         // These features will limit the kind of properties we can elevate, since it will go for common denominator.
         // It is up to syntax tree transformers to do the more specialized elevating later, if possible.
-        targetFeatures,
+        targetFeatures ?? OMNI_GENERIC_FEATURES,
+        {create: CreateMode.NONE},
         ...subTypes,
       );
 
@@ -101,22 +102,25 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
         }
 
         const info = properties.byPropertyName[propertyName]!;
-
         const propertyToElevate = info.properties[0];
-
         const uniqueDiffs = [...new Set(info.typeDiffs ?? [])];
 
-        if (uniqueDiffs.length == 1 && uniqueDiffs[0] == TypeDiffKind.NARROWED_LITERAL_TYPE) {
+        if (uniqueDiffs.length == 1 && uniqueDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL) {
+
+          const abstractPropertyType: OmniType = (targetFeatures && targetFeatures.literalTypes && info.distinctTypes.length < args.options.literalUnionMaxCount)
+            ? {kind: OmniTypeKind.EXCLUSIVE_UNION, types: info.distinctTypes, debug: 'Polymorphic literal union'}
+            : info.commonType;
 
           const abstractProperty: OmniProperty = {
             ...propertyToElevate,
-            type: info.commonType,
-            description: undefined,
-            summary: undefined,
+            type: abstractPropertyType,
+            description: info.properties.every(it => (info.properties[0].description === it.description)) ? info.properties[0].description : undefined,
+            summary: info.properties.every(it => (info.properties[0].summary === it.summary)) ? info.properties[0].summary : undefined,
             annotations: [], // TODO: Add annotations if they exist on all subtype properties?
             abstract: true,
-            required: info.properties.filter(it => it.required).length == info.properties.length,
-            deprecated: info.properties.filter(it => it.deprecated).length == info.properties.length,
+            required: info.properties.every(it => it.required),
+            deprecated: info.properties.every(it => it.deprecated),
+            debug: OmniUtil.addDebug(propertyToElevate.debug, `elevated from ${info.properties.map(it => OmniUtil.describe(it.owner))}`),
             owner: superType,
           };
 

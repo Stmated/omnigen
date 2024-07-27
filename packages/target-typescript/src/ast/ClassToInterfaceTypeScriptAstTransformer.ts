@@ -7,8 +7,8 @@ import {Case, OmniUtil} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-const IGNORED_MODIFIERS = [Code.ModifierType.PRIVATE, Code.ModifierType.PUBLIC, Code.ModifierType.ABSTRACT];
-const IGNORED_INTERFACE_MODIFIERS = [Code.ModifierType.ABSTRACT];
+const IGNORED_MODIFIERS = [Code.ModifierKind.PRIVATE, Code.ModifierKind.PUBLIC, Code.ModifierKind.ABSTRACT];
+const IGNORED_INTERFACE_MODIFIERS = [Code.ModifierKind.ABSTRACT];
 
 /**
  * TODO: Perhaps move this into an earlier 2nd stage model transformer
@@ -33,7 +33,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
           fieldNamesStack.push([]);
           const body = n.body.reduce(r) ?? new Code.Block();
 
-          const modifiers = n.modifiers.children.filter(it => !IGNORED_INTERFACE_MODIFIERS.includes(it.type));
+          const modifiers = n.modifiers.children.filter(it => !IGNORED_INTERFACE_MODIFIERS.includes(it.kind));
 
           // TODO: Add support for generic parameters
           // TODO: Add support for better "implements", which actually targets an existing type node
@@ -80,6 +80,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
                   kind: OmniTypeKind.INTERFACE,
                   of: child.omniType,
                   inline: true,
+                  debug: OmniUtil.addDebug(child.omniType.debug, `Made inline interface from class ${OmniUtil.describe(child.omniType)}`),
                 };
 
                 const implementationName = ('name' in child.omniType) ? child.omniType.name : undefined;
@@ -101,7 +102,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
           }
 
           if (interfaces.length > 0) {
-            newInterface.extends = new Code.ExtendsDeclaration(new Code.TypeList(interfaces));
+            newInterface.extends = new Code.ExtendsDeclaration(new Code.TypeList(...interfaces));
           }
 
           return newInterface;
@@ -226,7 +227,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
 
   private stripModifiers<N extends Code.MethodDeclarationSignature | Code.Field>(n: N): N {
 
-    const newModifiers = n.modifiers.children.filter(it => !IGNORED_MODIFIERS.includes(it.type));
+    const newModifiers = n.modifiers.children.filter(it => !IGNORED_MODIFIERS.includes(it.kind));
     if (newModifiers.length != n.modifiers.children.length) {
       // TODO: Should return a new instance of Field, and the ast nodes should be immutable
       n.modifiers.children = newModifiers;

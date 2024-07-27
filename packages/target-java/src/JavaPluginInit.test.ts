@@ -43,12 +43,13 @@ const fakePropertiesPlugin = createPlugin(
   },
   async ctx => {
 
+    const currentArguments = {...ctx.defaults, ...ctx.arguments};
     return {
       ...ctx,
       target: 'java',
       model: createEmptyOmniModel('fake'),
-      parserOptions: ZodParserOptions.parse(ctx.arguments),
-      modelTransformOptions: ZodModelTransformOptions.parse(ctx.arguments),
+      parserOptions: ZodParserOptions.parse(currentArguments),
+      modelTransformOptions: ZodModelTransformOptions.parse(currentArguments),
       packageOptions: DEFAULT_PACKAGE_OPTIONS,
       targetOptions: ZodTargetOptions.parse({}),
       javaOptions: ZodJavaOptions.parse({}),

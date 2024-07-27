@@ -40,6 +40,7 @@ describe('TypeScript Rendering', () => {
       options: {
         singleFile: true,
         preferInterfaces: false,
+        strictUndefined: true,
       },
     });
 

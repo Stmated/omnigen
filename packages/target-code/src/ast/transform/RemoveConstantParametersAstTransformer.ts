@@ -63,7 +63,7 @@ export class RemoveConstantParametersAstTransformer implements AstTransformer<Co
               // In theory if this transformer was ran twice it would exponentially create ternary expressions.
               // So make sure this is only ran once.
               return new Code.TernaryExpression(
-                new Code.Predicate(n, Code.TokenKind.EQUALS, new Code.Literal(null)),
+                new Code.BinaryExpression(n, Code.TokenKind.EQUALS, new Code.Literal(null)),
                 new Code.Literal(def), n,
               );
             }

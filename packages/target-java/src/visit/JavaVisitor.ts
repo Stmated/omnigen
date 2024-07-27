@@ -1,7 +1,4 @@
-import {AstNode, VisitFn} from '@omnigen/core';
 import {AstFreeTextVisitor, CodeVisitor, createCodeFreeTextVisitor, createCodeVisitor} from '@omnigen/target-code';
-
-export type JavaVisitFn<N extends AstNode, R> = VisitFn<N, R, JavaVisitor<R>>;
 
 export interface JavaVisitor<R> extends CodeVisitor<R>, AstFreeTextVisitor<R> {
 

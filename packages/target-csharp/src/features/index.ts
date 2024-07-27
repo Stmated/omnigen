@@ -9,4 +9,5 @@ export const CSHARP_FEATURES: TargetFeatures = {
   relativeImports: true,
   forcedImports: false,
   staticInnerTypes: StaticInnerTypeKind.DEFAULT_STATIC,
+  unions: false,
 };

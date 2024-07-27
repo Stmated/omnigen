@@ -1,6 +1,6 @@
 import {AstTransformer, AstTransformerArguments, ExternalSyntaxTree, NameParts, Namespace, OmniType, PackageOptions, TargetFeatures, TargetOptions, TypeUseKind} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil, VisitorFactoryManager} from '@omnigen/core-util';
+import {OmniUtil, Visitor} from '@omnigen/core-util';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 
 import * as Code from '../../ast/CodeAst';
@@ -51,7 +51,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
     // Then we will go through the currently compiling root node and set all type nodes' local names.
     const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    args.root.visit(Visitor.create(defaultVisitor, {
 
       visitNamespace: (n, v) => {
 
@@ -65,11 +65,11 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
         }
       },
 
-      visitCompilationUnit: (node, visitor) => {
+      visitCompilationUnit: (n, v) => {
 
-        const cuNamespace = this.getUnitPackageName(args, namespaceStack, node);
+        const cuNamespace = this.getUnitPackageName(args, namespaceStack, n);
         const cuInfo: CompilationUnitInfo = {
-          unit: node,
+          unit: n,
           packageName: cuNamespace,
           handledTypeNodes: [],
           importNameMap: new Map<OmniType, string>(),
@@ -78,37 +78,33 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
         try {
           namespaceStack.push(cuNamespace);
           unitStack.push(cuInfo);
-          defaultVisitor.visitCompilationUnit(node, visitor);
+          defaultVisitor.visitCompilationUnit(n, v);
         } finally {
           unitStack.pop();
           namespaceStack.pop();
         }
 
         // After the visitation is done, all imports should have been found
-        node.imports.children.sort((a, b) => {
+        n.imports.children.sort((a, b) => {
           const aPackage = cuInfo.importNameMap.get(a.type.omniType) || ''; // Should never be undefined
           const bPackage = cuInfo.importNameMap.get(b.type.omniType) || ''; // Should never be undefined
           return aPackage.localeCompare(bPackage);
         });
       },
 
-      visitObjectDeclarationBody: (node, visitor) => {
+      visitObjectDeclarationBody: (n, v) => {
         try {
-          objectStack.push(node);
-          defaultVisitor.visitObjectDeclarationBody(node, visitor);
+          objectStack.push(n);
+          defaultVisitor.visitObjectDeclarationBody(n, v);
         } finally {
           objectStack.pop();
         }
       },
 
-      visitBoundedType: (n, v) => {
-        return defaultVisitor.visitBoundedType(n, v);
-      },
-
-      visitEdgeType: node => {
+      visitEdgeType: n => {
 
         const namespace = namespaceStack[namespaceStack.length - 1];
-        this.setLocalNameAndAddImport(args.root, node, objectStack, unitStack, typeNameMap, namespace, args.options, args.features);
+        this.setLocalNameAndAddImport(args.root, n, objectStack, unitStack, typeNameMap, namespace, args.options, args.features);
       },
     }));
   }
@@ -116,40 +112,45 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
   private getUnitPackageName(
     args: AstTransformerArguments<CodeRootAstNode, TargetOptions & PackageOptions & CodeOptions>,
     namespaceStack: Namespace[],
-    node: Code.CompilationUnit,
+    unit: Code.CompilationUnit,
   ): Namespace {
 
     const cuNamespace = namespaceStack.length > 0 ? namespaceStack[namespaceStack.length - 1] : undefined;
     if (cuNamespace) {
       return cuNamespace;
-      // nameResolver.build({name: cuNamespace, with: NameParts.NAMESPACE});
     }
 
     const nameResolver = args.root.getNameResolver();
     let firstTypedChild: OmniType | undefined = undefined;
-    if (!cuNamespace) {
-      for (const child of node.children) {
-        if (child instanceof Code.Namespace) {
+    // if (!cuNamespace) {
 
-          // NOTE: Maybe restructure somehow, so that we do not end up inside the compilation unit content until *after* we've entered a namespace.
-          //        Do not know yet how that would be done though. As things are right now it would break if there are multiple namespaces inside the same unit.
-          return nameResolver.parseNamespace(child.name.value);
+    for (const child of unit.children) {
+      if (child instanceof Code.Namespace) {
 
-        } else {
-          firstTypedChild = CodeAstUtils.getOmniType(child);
-          if (firstTypedChild) {
-            break;
-          }
-        }
+        // NOTE: Maybe restructure somehow, so that we do not end up inside the compilation unit content until *after* we've entered a namespace.
+        //        Do not know yet how that would be done though. As things are right now it would break if there are multiple namespaces inside the same unit.
+        return nameResolver.parseNamespace(child.name.value);
       }
     }
 
-    if (!cuNamespace && firstTypedChild) {
+    if (unit.packageDeclaration) {
 
+      return unit.packageDeclaration.fqn.split(nameResolver.namespaceSeparator); // '/');
+
+      // return nameResolver.parse(unit.packageDeclaration.fqn).namespace; // {type: firstTypedChild, options: args.options}).namespace;
+    }
+
+    for (const child of unit.children) {
+      firstTypedChild = CodeAstUtils.getOmniType(args.root, child);
+      if (firstTypedChild) {
+        break;
+      }
+    }
+
+    if (firstTypedChild) {
       return nameResolver.investigate({type: firstTypedChild, options: args.options}).namespace;
-      // return nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
     } else {
-      const name = node.name || `Owner of ${node.children.map(it => it.name.value).join(', ')}`;
+      const name = unit.name || `Owner of ${unit.children.map(it => it.name.value).join(', ')}`;
       throw new Error(`No named object declaration found inside ${name}`);
     }
   }
@@ -166,6 +167,10 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
   ): void {
 
     const insideUnit = unitStack[unitStack.length - 1];
+    if (!insideUnit) {
+      throw new Error(`Could not find a Unit in the stack -- has ${OmniUtil.describe(node.omniType)} been placed straight into the root node?`);
+    }
+
     if (insideUnit.handledTypeNodes.includes(node)) {
       // This type node has already been handled.
       // It has probably been added to multiple locations in the tree.
@@ -178,7 +183,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     if (typeNameInfo) {
       this.setLocalNameAndAddImportForKnownTypeName(root, typeNameInfo, unwrapped, node, objectStack, namespaceParts, insideUnit, options, features);
     } else {
-      this.setLocalNameAndAddImportForUnknownTypeName(root, node, objectStack, insideUnit, typeNameMap, namespaceParts, options);
+      this.setLocalNameAndAddImportForUnknownTypeName(root, node, objectStack, insideUnit, namespaceParts, options);
     }
 
     insideUnit.handledTypeNodes.push(node);
@@ -189,7 +194,6 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     node: Code.EdgeType,
     objectStack: Code.AbstractObjectDeclaration[],
     insideUnit: CompilationUnitInfo,
-    typeNameMap: Map<OmniType, TypeInfo>,
     namespaceParts: Namespace,
     options: PackageOptions & TargetOptions & CodeOptions,
   ): void {
@@ -201,11 +205,8 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
     node.setLocalName(relativeLocalName);
 
-    if (nodeImportName && nodeImportName.indexOf('.') !== -1) {
-
-      if (!nameResolver.isEqualNamespace(investigatedName.namespace, insideUnit.packageName)) {
-        this.addImportIfUnique(root, objectStack, insideUnit, namespaceParts, options, nodeImportName, node);
-      }
+    if (nodeImportName && investigatedName.namespace.length > 0 && !nameResolver.isEqualNamespace(investigatedName.namespace, insideUnit.packageName)) {
+      this.addImportIfUnique(root, objectStack, insideUnit, namespaceParts, options, nodeImportName, node);
     }
   }
 
@@ -286,7 +287,6 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
           // TODO: This might be incorrect, and we need some other, more specific function
           otherImportName = nameResolver.build({name: nameInfo, with: NameParts.FULL, relativeTo: namespace, use: (it.type.implementation ? TypeUseKind.CONCRETE : TypeUseKind.DECLARED)});
-          // JavaUtil.getClassNameForImport(it.type.omniType, options, it.type.implementation);
           it.type.setImportName(otherImportName);
         }
 
@@ -318,7 +318,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     const nameResolver = root.getNameResolver();
 
     const originalVisitor = external.node.createVisitor();
-    external.node.visit(VisitorFactoryManager.create(originalVisitor, {
+    external.node.visit(Visitor.create(originalVisitor, {
 
       visitCompilationUnit: (node, visitor) => {
 
@@ -343,9 +343,6 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
         const resolvedName = nameResolver.investigate({type: omniType, options: external.options});
 
         let className = nameResolver.build({name: resolvedName, with: NameParts.NAME, use: TypeUseKind.DECLARED});
-        // const packageName = nameResolver.build({name: resolvedName, with: NameParts.NAMESPACE});
-        // let className = JavaUtil.getClassName(omniType, external.options);
-        // const packageName = JavaUtil.getPackageName(omniType, className, external.options);
 
         const outerTypes = [...objectStack];
 
@@ -372,7 +369,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
                 }
 
                 className = newClassName;
-                node.name.original = node.name.original || node.name.value;
+                // node.name.original = node.name.original || node.name.value;
                 node.name.value = className;
                 break;
               }

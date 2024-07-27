@@ -5,6 +5,9 @@ import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
+/**
+ * Will remove any child inside an enum that is not an enum list.
+ */
 export class RemoveEnumFieldsCodeAstTransformer implements AstTransformer<CodeRootAstNode> {
 
   transformAst(args: AstTransformerArguments<CodeRootAstNode, TargetOptions>): void {

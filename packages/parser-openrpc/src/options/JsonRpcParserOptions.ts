@@ -1,9 +1,17 @@
-// import {JSONSchema6, JSONSchema7} from 'json-schema';
 import {OmniType, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
 import {z} from 'zod';
 import {JSONSchema9} from '@omnigen/parser-jsonschema';
 
 export const ZodJsonRpcParserOptionsBase = ZodOptions.extend({
+  jsonRpcRequestParamsTypeName: z.string().default('JsonRpcRequestParams'),
+  jsonRpcCallbackParamsTypeName: z.string().default('JsonRpcCallbackParams'),
+
+  jsonRpcRequestTypeName: z.string().default('JsonRpcRequest'),
+  jsonRpcCallbackTypeName: z.string().default('JsonRpcCallback'),
+
+  jsonRpcRequestMethodTypeSuffix: z.string().default('Request'),
+  jsonRpcCallbackMethodTypeSuffix: z.string().default('Request'),
+
   jsonRpcErrorDataSchema: z.union([z.custom<JSONSchema9>(), z.custom<OmniType>()]).optional()
     .transform((v, ctx) => {
 
@@ -16,31 +24,31 @@ export const ZodJsonRpcParserOptionsBase = ZodOptions.extend({
 });
 
 export const ZodJsonRpc10ParserOptions = ZodJsonRpcParserOptionsBase.extend({
-  jsonRpcVersion: z.literal('1.0').default('1.0'),
   jsonRpcPropertyName: z.string().optional(),
   jsonRpcIdIncluded: ZodCoercedBoolean.default('true'),
+  jsonRpcIdRequired: ZodCoercedBoolean.default('true'),
   jsonRpcErrorPropertyName: z.string().default('error'),
   jsonRpcErrorNameIncluded: ZodCoercedBoolean.default('true'),
 });
 export const ZodJsonRpc11ParserOptions = ZodJsonRpcParserOptionsBase.extend({
-  jsonRpcVersion: z.literal('1.1').default('1.1'),
   jsonRpcPropertyName: z.string().optional().default('version'),
   jsonRpcIdIncluded: ZodCoercedBoolean.default('true'),
+  jsonRpcIdRequired: ZodCoercedBoolean.default('false'),
   jsonRpcErrorPropertyName: z.string().default('error'),
   jsonRpcErrorNameIncluded: ZodCoercedBoolean.default('true'),
 });
 export const ZodJsonRpc20ParserOptions = ZodJsonRpcParserOptionsBase.extend({
-  jsonRpcVersion: z.literal('2.0').default('2.0'),
   jsonRpcPropertyName: z.string().optional().default('jsonrpc'),
   jsonRpcIdIncluded: ZodCoercedBoolean.default('true'),
+  jsonRpcIdRequired: ZodCoercedBoolean.default('false'),
   jsonRpcErrorPropertyName: z.string().default('data'),
   jsonRpcErrorNameIncluded: ZodCoercedBoolean.default('false'),
 });
 
-export const ZodJsonRpcParserOptions = z.union([
-  ZodJsonRpc20ParserOptions,
-  ZodJsonRpc11ParserOptions,
-  ZodJsonRpc10ParserOptions,
+export const ZodJsonRpcParserOptions = z.discriminatedUnion('jsonRpcVersion', [
+  ZodJsonRpc20ParserOptions.extend({jsonRpcVersion: z.literal('2.0')}),
+  ZodJsonRpc11ParserOptions.extend({jsonRpcVersion: z.literal('1.1')}),
+  ZodJsonRpc10ParserOptions.extend({jsonRpcVersion: z.literal('1.0')}),
 ]);
 
 export type IncomingJsonRpcParserOptions = z.input<typeof ZodJsonRpcParserOptions>;

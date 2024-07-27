@@ -1,8 +1,11 @@
-import {AstNode, AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/core';
-import {AbortVisitingWithResult, OmniUtil, VisitorFactoryManager, VisitResultFlattener} from '@omnigen/core-util';
+import {AstNode, AstTransformer, AstTransformerArguments, TargetFeatures, TargetOptions} from '@omnigen/core';
+import {AbortVisitingWithResult, OmniUtil, PropertyUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
 import {CodeRootAstNode} from '../CodeRootAstNode';
-import * as Code from '../CodeAst';
-import {CodeOptions} from '../../options/CodeOptions';
+import * as Code from '../Code';
+import {CodeOptions, SerializationPropertyNameMode} from '../../options/CodeOptions';
+import {CodeAstUtils} from '../CodeAstUtils.ts';
+import {literal} from 'zod';
+import {VirtualAnnotationKind} from '../Code';
 
 /**
  * TODO: Rewrite into using Reducer instead of manipulating the node contents
@@ -17,16 +20,17 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
 
   transformAst(args: AstTransformerArguments<CodeRootAstNode, TargetOptions & CodeOptions>): void {
 
-    const objectStack: Code.AbstractObjectDeclaration[] = []; // { node: Code.AbstractObjectDeclaration | undefined } = {node: undefined};
-    const defaultVisitor = args.root.createVisitor();
-    args.root.visit(VisitorFactoryManager.create(defaultVisitor, {
+    const objectStack: Code.AbstractObjectDeclaration[] = [];
+    const fieldsToRemove: number[] = [];
+    const fieldsToPrefix: number[] = [];
+    const addToBlock = new Map<number, Code.AbstractCodeNode[]>();
 
-      visitEnumDeclaration: () => {
-      },
-      visitInterfaceDeclaration: () => {
-      },
-      visitMethodDeclaration: () => {
-      },
+    const defaultVisitor = args.root.createVisitor();
+    args.root.visit(Visitor.create(defaultVisitor, {
+
+      visitEnumDeclaration: () => {},
+      visitInterfaceDeclaration: () => {},
+      visitMethodDeclaration: () => {},
 
       visitClassDeclaration: (node, visitor) => {
 
@@ -56,51 +60,120 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
         }
 
         const objectDec = objectStack[objectStack.length - 1];
-        AddAccessorsForFieldsAstTransformer.addAccessorForField(objectDec.body, node);
+        AddAccessorsForFieldsAstTransformer.addAccessorForField(objectDec.body, node, fieldsToRemove, fieldsToPrefix, addToBlock, args.options, args.features);
       },
     }));
+
+    const defaultReducer = args.root.createReducer();
+    const newRoot = args.root.reduce({
+      ...defaultReducer,
+      reduceField: (n, r) => {
+
+        if (n.hasId(fieldsToRemove)) {
+          return undefined;
+        }
+
+        const reduced = defaultReducer.reduceField(n, r);
+        if (reduced && reduced.hasId(fieldsToPrefix) && reduced instanceof Code.Field) {
+
+          // TODO: Do not replace like this -- instead build a new Field, it should be readonly.
+          reduced.identifier = new Code.Identifier(`_${reduced.identifier.value}`, reduced.identifier.original ?? reduced.identifier.value);
+        }
+
+        return reduced;
+      },
+
+      reduceBlock: (n, r) => {
+
+        const reduced = defaultReducer.reduceBlock(n, r);
+        if (reduced) {
+
+          const toAdd = addToBlock.get(n.id);
+          if (toAdd) {
+            reduced.children.push(...toAdd);
+          }
+        }
+
+        return reduced;
+      },
+    });
+
+    if (newRoot) {
+      args.root = newRoot;
+    }
   }
 
-  private static addAccessorForField(body: Code.Block, field: Code.Field) {
+  private static addAccessorForField(
+    body: Code.Block,
+    field: Code.Field,
+    fieldsToRemove: number[],
+    fieldsToPrefix: number[],
+    addToBlock: Map<number, Code.AbstractCodeNode[]>,
+    options: TargetOptions & CodeOptions,
+    features: TargetFeatures,
+  ) {
 
     // Move comments from field over to the getter.
     const commentList: Code.Comment | undefined = field.comments;
     field.comments = undefined;
 
-    // Move annotations from field over to the getter.
-    // TODO: This should be an option, to move or not.
-    const annotationList: Code.AnnotationList | undefined = (field.annotations)
-      ? new Code.AnnotationList(...(field.annotations.children || []))
-      : undefined;
-    field.annotations = undefined;
+    const toAdd = (addToBlock.has(body.id) ? addToBlock : addToBlock.set(body.id, [])).get(body.id)!;
 
-    const type = field.type.omniType;
+    if (OmniUtil.hasSpecifiedConstantValue(field.type.omniType)) {
 
-    const propertyAccessorName = field.property ? OmniUtil.getPropertyAccessorName(field.property.name) : undefined;
-    const getterIdentifier = propertyAccessorName
-      ? new Code.GetterIdentifier(new Code.Identifier(propertyAccessorName), type)
-      : undefined;
-
-    if (OmniUtil.hasSpecifiedConstantValue(type)) {
-
+      const fieldIdentifier = CodeAstUtils.getFieldPropertyNameIdentifier(field);
       const literalMethod = new Code.MethodDeclaration(
         new Code.MethodDeclarationSignature(
-          getterIdentifier ?? new Code.GetterIdentifier(field.identifier, type),
-          new Code.EdgeType(type), undefined, undefined, annotationList, commentList,
+          new Code.GetterIdentifier(fieldIdentifier, field.type.omniType),
+          new Code.EdgeType(field.type.omniType), undefined, undefined, undefined, commentList,
         ),
         new Code.Block(
-          new Code.Statement(new Code.ReturnStatement(new Code.Literal(type.value ?? null))),
+          new Code.Statement(new Code.ReturnStatement(new Code.Literal(field.type.omniType.value ?? null))),
         ),
       );
 
-      const fieldIndex = body.children.indexOf(field);
-      body.children.splice(fieldIndex, 1, literalMethod);
+      const mode = options.serializationPropertyNameMode;
+      const propertyName = (field.property ? OmniUtil.getPropertyName(field.property.name) : undefined);
+      const fieldName = field.identifier.original ?? field.identifier.value;
+
+      if (mode === SerializationPropertyNameMode.ALWAYS || (mode === SerializationPropertyNameMode.IF_REQUIRED && propertyName !== fieldName)) {
+        if (!literalMethod.signature.annotations) {
+          literalMethod.signature.annotations = new Code.AnnotationList();
+        }
+
+        literalMethod.signature.annotations.children.push(new Code.VirtualAnnotationNode({
+          kind: VirtualAnnotationKind.SERIALIZATION_ALIAS,
+          name: propertyName ?? fieldName,
+        }));
+      }
+
+      // if (features.transparentAccessors) {
+      //   if (!field.identifier.original || field.identifier.value === field.identifier.original) {
+      //     fieldsToPrefix.push(field.id);
+      //   }
+      // }
+
+      fieldsToRemove.push(field.id);
+      toAdd.push(literalMethod);
+
+      // const fieldIndex = body.children.indexOf(field);
+      // body.children.splice(fieldIndex, 0, literalMethod);
 
     } else {
 
-      body.children.push(new Code.FieldBackedGetter(new Code.FieldReference(field), annotationList, commentList, getterIdentifier));
-      if (!field.modifiers.children.find(it => it.type == Code.ModifierType.FINAL)) {
-        body.children.push(new Code.FieldBackedSetter(new Code.FieldReference(field), undefined, undefined));
+      let identifier: Code.Identifier | undefined = undefined;
+      if (features.transparentAccessors) {
+        if (!field.identifier.original || field.identifier.value === field.identifier.original) {
+          fieldsToPrefix.push(field.id);
+          identifier = field.identifier;
+        }
+      }/* else {
+        fieldsToRemove.push(field.id);
+      }*/
+
+      toAdd.push(new Code.FieldBackedGetter(new Code.FieldReference(field), undefined, commentList, identifier));
+      if (!field.modifiers.children.find(it => it.kind === Code.ModifierKind.FINAL)) {
+        toAdd.push(new Code.FieldBackedSetter(new Code.FieldReference(field), undefined, undefined, identifier));
       }
     }
   }
@@ -109,7 +182,7 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
 
     const defaultVisitor = root.createVisitor<boolean>();
 
-    const visitor = VisitorFactoryManager.create(defaultVisitor, {
+    const visitor = Visitor.create(defaultVisitor, {
 
       visitField: () => {
       },

@@ -7,7 +7,7 @@ import jakarta.annotation.Generated;
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class JsonRpcError {
-  private final Integer code;
+  private final int code;
   private final Object data;
   private final String message;
 
@@ -17,7 +17,7 @@ public class JsonRpcError {
     this.data = data;
   }
 
-  public Integer getCode() {
+  public int getCode() {
     return this.code;
   }
 

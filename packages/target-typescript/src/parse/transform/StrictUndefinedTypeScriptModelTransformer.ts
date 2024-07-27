@@ -66,6 +66,7 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
           kind: OmniTypeKind.EXCLUSIVE_UNION,
           types: [property.type, StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE],
           inline: true,
+          debug: OmniUtil.addDebug(property.type.debug, 'Strict undefined made it an inline exclusive union of `T | undefined`'),
         };
 
         typeToUndefinedMap.set(property.type, compositionType);

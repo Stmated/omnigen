@@ -2,7 +2,7 @@ import {describe, expect, test, vi} from 'vitest';
 import {JsonSchemaToCSharpTestUtil} from './JsonSchemaToCSharpTestUtil.ts';
 import {Util} from '@omnigen/core-util';
 import {SerializationLibrary} from '@omnigen/target-csharp';
-import {IncludeExampleCommentsMode} from '@omnigen/target-code';
+import {IncludeExampleCommentsMode, PropertyTypeCommentMode} from '@omnigen/target-code';
 
 describe('jsonschema-csharp-render', () => {
 
@@ -57,6 +57,7 @@ describe('jsonschema-csharp-render', () => {
 
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/enum_string_composition.json'), {
       compressSoloReferencedTypes: false,
+      typeCommentsOnProperties: PropertyTypeCommentMode.ALWAYS,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -82,9 +83,6 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  /**
-   * Will result in 2 files in difference to Java, since StringBoolean is not really *used* anywhere, so cannot compress to a related class.
-   */
   test('inline_boolean', async ({task}) => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
@@ -94,6 +92,7 @@ describe('jsonschema-csharp-render', () => {
       includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
+      singleFile: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 

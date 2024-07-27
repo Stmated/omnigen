@@ -10,15 +10,21 @@ export enum TypeDiffKind {
   ISOMORPHIC_TYPE = 'ISOMORPHIC_TYPE',
   /**
    * Difference being in how the signature will be presented, even though the fundamental types themselves are the same.
-   * This can happen if two types are strings but they are the literal strings of "hello" and "bye".
+   * This can happen if two types are strings but they are the literal strings of `"hello"` and `"bye"`.
    */
-  NARROWED_LITERAL_TYPE = 'NARROWED_LITERAL_TYPE',
+  POLYMORPHIC_LITERAL = 'POLYMORPHIC_LITERAL',
   /**
-   * Narrowed type is for example if one is type `string` and the other is constant/enum/literal `"foo"`.
-   *
-   * Or if one is `T | U` and the other is `T`.
+   * Narrowed type, for example if one is type `String` and the other is constant/enum/literal `"foo"`.
    */
-  NARROWED_TYPE = 'NARROWED_TYPE',
+  CONCRETE_VS_ABSTRACT = 'CONCRETE_VS_ABSTRACT',
+  /**
+   * If one is `T | U` and the other is `T`. NOTE: Not yet used.
+   */
+  NARROWED_UNION = 'NARROWED_UNION',
+  /**
+   * If one is an enum with items of type `String` and the other is a `String`. Nominal because the "names" are different.
+   */
+  NOMINAL = 'NOMINAL',
 
   /**
    * For example `int` to `long`.
@@ -35,6 +41,9 @@ export enum TypeDiffKind {
    * - And another class 'B' also points to generic parameter 'P' with its 'T'.
    *
    * But there is no overlap between generic target from 'A' and 'B'. For example `Foo<string>` and `Foo<double>`.
+   *
+   * If this diff kind is included in an array of diffs, then it means that all other diffs are related to it.
+   * This means the difference is for `string` vs `double` and not related to `Foo`.
    */
   NO_GENERIC_OVERLAP = 'NO_GENERIC_OVERLAP',
 
@@ -48,7 +57,7 @@ export enum TypeDiffKind {
   /**
    * Not used yet.
    *
-   * Will be used to differentiate between `IS_SUPERTYPE` where that
+   * Will be used to differentiate between `IS_SUPERTYPE`
    */
   COMMON_ANCESTRY = 'COMMON_ANCESTRY',
 
@@ -67,4 +76,9 @@ export enum TypeDiffKind {
    * They differ in nullability, one might be null and other must not be null.
    */
   NULLABILITY = 'NULLABILITY',
+
+  /**
+   * They differ in the members of the two types, for example an Enum with `[1, 2]` vs `[1, 3]` then the baseline will be missing `3`.
+   */
+  MISSING_MEMBERS = 'MISSING_MEMBERS',
 }

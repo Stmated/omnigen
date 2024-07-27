@@ -12,6 +12,8 @@ export const Direction = {
 } as const;
 export type Direction = ToEnum<typeof Direction>;
 
+export type PropertyNameMapper = (original: string) => string | undefined;
+
 export const ZodParserOptions = ZodOptions.extend({
 
   relaxedLookup: ZodCoercedBoolean.default('t'),
@@ -42,6 +44,21 @@ export const ZodParserOptions = ZodOptions.extend({
    * </p>
    */
   direction: z.enum(getEnumValues(Direction)).default(Direction.OUT),
+
+  propertyNameMapper: z.union([z.custom<PropertyNameMapper>(), z.record(z.string(), z.string()), z.undefined()])
+    .transform(input => {
+      if (!input) {
+        return undefined;
+      }
+
+      if (typeof input === 'function') {
+        return input as PropertyNameMapper;
+      } else {
+        return (original => input[original]) satisfies PropertyNameMapper;
+      }
+    }),
+
+  literalUnionMaxCount: z.number().default(5),
 });
 
 export type IncomingParserOptions = z.input<typeof ZodParserOptions>;

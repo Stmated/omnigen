@@ -1,7 +1,7 @@
 import {AstNode, OmniType, Reducer, ReducerResult, TypeNode, VisitResult} from '@omnigen/core';
 import {TypeScriptVisitor} from '../visit';
 import {Code} from '@omnigen/target-code';
-import {GetterIdentifier, Identifier, SetterIdentifier} from '@omnigen/target-code/ast';
+import {GetterIdentifier, SetterIdentifier} from '@omnigen/target-code/ast';
 
 export * from '@omnigen/target-code/ast';
 

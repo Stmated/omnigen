@@ -2,6 +2,7 @@ package generated.omnigen;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Generated;
@@ -18,18 +19,18 @@ public class Data {
     this._raw = raw;
   }
 
-  public AbortData getAbortData(ObjectMapper transformer) {
+  public AbortData getAbortData(ObjectMapper transformer) throws JsonProcessingException {
     if (this._abortData != null) {
       return this._abortData;
     }
-    return this._abortData = transformer.convertValue(this._raw, AbortData.class);
+    return this._abortData = transformer.treeToValue(this._raw, AbortData.class);
   }
 
-  public DefaultData getDefaultData(ObjectMapper transformer) {
+  public DefaultData getDefaultData(ObjectMapper transformer) throws JsonProcessingException {
     if (this._defaultData != null) {
       return this._defaultData;
     }
-    return this._defaultData = transformer.convertValue(this._raw, DefaultData.class);
+    return this._defaultData = transformer.treeToValue(this._raw, DefaultData.class);
   }
 
   public JsonNode getRaw() {

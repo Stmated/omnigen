@@ -21,7 +21,7 @@ describe('OmniUtil', () => {
       {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
       {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
       {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: true},
-    ).diffs).toEqual([TypeDiffKind.FUNDAMENTAL_TYPE]);
+    ).diffs).toEqual([TypeDiffKind.POLYMORPHIC_LITERAL]);
 
     // With Java, the literal types become the same type in the signature
     const literalString = expectCommon(
@@ -30,7 +30,9 @@ describe('OmniUtil', () => {
       {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: false},
     );
 
-    expect(literalString.diffs).toEqual([TypeDiffKind.NARROWED_LITERAL_TYPE]);
+    // The diff itself is still a POLYMORPHIC_LITERAL, even though for the target the types are fundamentally incompatible.
+    // But it is up to the caller to decide what the diff means in its context.
+    expect(literalString.diffs).toEqual([TypeDiffKind.POLYMORPHIC_LITERAL]);
     expect(OmniUtil.isPrimitive(literalString.type)).toEqual(true);
 
     const literalPrimitiveString = (literalString.type as OmniPrimitiveType);
@@ -220,6 +222,20 @@ describe('OmniUtil', () => {
   });
 
   test('unique diffs, mixed types', () => {
+
+    const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
+    const others: OmniType[] = [
+      {kind: OmniTypeKind.NUMBER},
+      {kind: OmniTypeKind.OBJECT, name: 'b', properties: [bIntProp]},
+    ];
+
+    const uniqueDiffs = OmniUtil.getAllEncompassingDiffs(baseline, others, OMNI_GENERIC_FEATURES);
+
+    expect(uniqueDiffs).toHaveLength(1);
+    expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
+  });
+
+  test('literal diffs', () => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [

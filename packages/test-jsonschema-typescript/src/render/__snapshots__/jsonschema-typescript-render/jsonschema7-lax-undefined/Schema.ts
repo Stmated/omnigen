@@ -1,4 +1,37 @@
-export interface Schema {
+export interface SchemaPatternProperties {
+  readonly [key: string]: Schema | undefined;
+}
+
+export type ArrayableSchema = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
+export type Schema = SchemaObject | boolean;
+
+export interface SchemaDefinitions {
+  readonly [key: string]: Schema | undefined;
+}
+
+export interface SchemaDependencies {
+  readonly [key: string]: SchemaDependenciesAdditional | undefined;
+}
+
+export type SchemaDependenciesAdditional = Schema | ReadonlyArray<string>;
+
+export interface SchemaProperties {
+  readonly [key: string]: Schema | undefined;
+}
+
+export enum SimpleTypes {
+  ARRAY = 'array',
+  BOOLEAN = 'boolean',
+  INTEGER = 'integer',
+  NULL = 'null',
+  NUMBER = 'number',
+  OBJECT = 'object',
+  STRING = 'string',
+}
+
+export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];
+
+export interface SchemaObject {
   readonly $comment?: string | undefined;
   readonly $id?: string | undefined;
   readonly $ref?: string | undefined;
@@ -22,7 +55,7 @@ export interface Schema {
   readonly exclusiveMinimum?: number | undefined;
   readonly format?: string | undefined;
   readonly if?: Schema | undefined;
-  readonly items?: SchemaItems | undefined;
+  readonly items?: ArrayableSchema | undefined;
   readonly maximum?: number | undefined;
   readonly maxItems?: number | undefined;
   readonly maxLength?: number | undefined;
@@ -45,33 +78,4 @@ export interface Schema {
   readonly type?: SchemaType | undefined;
   readonly uniqueItems?: boolean | undefined;
   readonly writeOnly?: boolean | undefined;
-}
-
-export interface SchemaDefinitions {
-  readonly [key: string]: Schema | undefined;
-}
-
-export interface SchemaDependencies {
-  readonly [key: string]: SchemaDependenciesSchema | undefined;
-}
-
-export type SchemaDependenciesSchema = Schema | ReadonlyArray<string>;
-export type SchemaItems = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
-export interface SchemaPatternProperties {
-  readonly [key: string]: Schema | undefined;
-}
-
-export interface SchemaProperties {
-  readonly [key: string]: Schema | undefined;
-}
-
-export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];
-export enum SimpleTypes {
-  ARRAY = 'array',
-  BOOLEAN = 'boolean',
-  INTEGER = 'integer',
-  NULL = 'null',
-  NUMBER = 'number',
-  OBJECT = 'object',
-  STRING = 'string',
 }

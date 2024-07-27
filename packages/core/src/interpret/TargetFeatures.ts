@@ -43,6 +43,17 @@ export interface TargetFeatures {
    * In `C#` the default is no access (static class).
    */
   staticInnerTypes: StaticInnerTypeKind;
+
+  /**
+   * True if the language supports unions natively,
+   */
+  unions: boolean;
+
+  /**
+   * True if the language has accessors where the accessor has the "original" name, and then any backing field would need to be renamed to not clash.
+   * For example in `TypeScript` the accessor for `name` would be `name()` and the backing-field would be `_name` or similar.
+   */
+  transparentAccessors: boolean;
 }
 
 /**
@@ -57,4 +68,6 @@ export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   relativeImports: true,
   forcedImports: false,
   staticInnerTypes: StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE,
+  unions: true,
+  transparentAccessors: false,
 };

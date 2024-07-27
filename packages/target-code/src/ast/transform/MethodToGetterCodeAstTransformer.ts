@@ -23,7 +23,6 @@ export class MethodToGetterCodeAstTransformer implements AstTransformer<CodeRoot
             new Code.FieldReference(getterFieldReference.targetId),
             n.signature.annotations,
             n.signature.comments,
-            undefined,
           );
         }
 

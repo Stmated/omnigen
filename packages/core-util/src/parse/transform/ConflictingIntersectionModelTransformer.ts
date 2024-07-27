@@ -1,5 +1,5 @@
 import {
-  AllowedEnumTsTypes,
+  OmniEnumMember, OmniExample,
   OmniIntersectionType,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
@@ -16,8 +16,8 @@ const logger = LoggerFactory.create(import.meta.url);
  * There might be AND-composition types that have weird restrictions, such as (`ENUM['foo']` + `string`).
  *
  * In this case we cannot represent the type in Java as exactly that. There are two alternatives:
- * * Change to common denominator and throw away enum (but maybe add a comment)
- * * Change to XOR composition, and let data consumer call correct accessors.
+ * - Change to common denominator and throw away enum (but maybe add a comment)
+ * - Change to XOR composition, and let data consumer call correct accessors.
  */
 export class ConflictingIntersectionModelTransformer implements OmniModel2ndPassTransformer {
 
@@ -43,7 +43,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
 
     const descriptions: string[] = [];
     const summaries: string[] = [];
-    const enumValues: AllowedEnumTsTypes[] = [];
+    const enumMembers: OmniEnumMember[] = [];
 
     if (type.description) {
       descriptions.push(type.description);
@@ -56,21 +56,26 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
     for (const child of type.types) {
       if (child.kind === OmniTypeKind.ENUM) {
         enumCount++;
-        if (child.enumConstants) {
-          enumValues.push(...child.enumConstants);
-        }
+        enumMembers.push(...child.members);
+        // if (child.enumConstants) {
+        //   enumValues.push(...child.enumConstants);
+        // }
       } else if (OmniUtil.isPrimitive(child)) {
         primitiveCount++;
       } else {
         otherCount++;
       }
 
-      if (child.summary) {
-        summaries.push(child.summary);
+      if (child.description) {
+        if (type.description) {
+          summaries.push(child.description);
+        } else {
+          descriptions.push(child.description);
+        }
       }
 
-      if (child.description) {
-        descriptions.push(child.description);
+      if (child.summary) {
+        summaries.push(child.summary);
       }
     }
 
@@ -88,9 +93,8 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
     const commonDenominator = OmniUtil.getCommonDenominator(features, ...type.types);
     if (commonDenominator) {
 
-      if (descriptions.length > 0) {
-        const str = descriptions.join(', ');
-        commonDenominator.type.description = `${commonDenominator.type.description ?? ''}${str}`;
+      if (type.name && OmniUtil.isNameable(commonDenominator.type)) {
+        commonDenominator.type.name = type.name;
       }
 
       if (summaries.length > 0) {
@@ -98,17 +102,26 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
         commonDenominator.type.summary = `${commonDenominator.type.summary ?? ''}${str}`;
       }
 
-      if (enumValues.length > 0) {
+      if (descriptions.length > 0) {
+        const str = descriptions.join(', ');
+        commonDenominator.type.description = `${commonDenominator.type.description ?? ''}${str}`;
+      }
+
+      if (enumMembers.length > 0) {
 
         if (!commonDenominator.type.examples) {
           commonDenominator.type.examples = [];
         }
 
-        for (const value of enumValues) {
-          if (!commonDenominator.type.examples.find(it => it.value == value)) {
-            commonDenominator.type.examples.push({
-              value: value,
-            });
+        for (const member of enumMembers) {
+          if (!commonDenominator.type.examples.find(it => it.value == member.value)) {
+
+            const example: OmniExample<typeof member.value> = {
+              value: member.value,
+              description: member.description ?? member.name,
+            };
+
+            commonDenominator.type.examples.push(example);
           }
         }
       }

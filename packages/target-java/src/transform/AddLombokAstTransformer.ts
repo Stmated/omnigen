@@ -23,7 +23,12 @@ export interface StackInfo {
 export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootNode, JavaAndTargetOptions> {
   transformAst(args: JavaAstTransformerArgs): void {
 
-    if (!args.options.lombokBuilder && !args.options.lombokGetter && !args.options.lombokSetter && args.options.fieldAccessorMode !== FieldAccessorMode.LOMBOK) {
+    if (!args.options.lombokBuilder
+      && !args.options.lombokGetter
+      && !args.options.lombokSetter
+      && args.options.fieldAccessorMode !== FieldAccessorMode.LOMBOK
+      && !args.options.lombokRequiredConstructor
+    ) {
       return;
     }
 
@@ -38,6 +43,17 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
 
       visitClassDeclaration: (n, v) => {
         this.visitObjectDec(n, cuStack, defaultVisitor, v, args.options);
+
+        if (args.options.lombokRequiredConstructor) {
+
+          if (!n.annotations) {
+            n.annotations = new Java.AnnotationList();
+          }
+
+          n.annotations.children.push(new Java.Annotation(
+            new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'RequiredArgsConstructor'}}),
+          ));
+        }
       },
 
       visitEnumDeclaration: n => n,

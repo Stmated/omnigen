@@ -36,6 +36,7 @@ export const ZodJavaOptions = ZodCodeOptions.extend({
   lombokBuilder: ZodCoercedBoolean.default(false),
   lombokGetter: ZodCoercedBoolean.default(false),
   lombokSetter: ZodCoercedBoolean.default(false),
+  lombokRequiredConstructor: ZodCoercedBoolean.default(false),
 
   preferNumberType: z.enum(getEnumValues(OmniKindPrimitive)).default(OmniKindPrimitive.INTEGER),
   serializationLibrary: z.enum(getEnumValues(SerializationLibrary)).default(SerializationLibrary.JACKSON),

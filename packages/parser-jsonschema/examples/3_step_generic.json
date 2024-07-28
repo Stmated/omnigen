@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/draft-07/schema",
+  "$id": "https://omnigen.com/schemas/3_step_generic",
+  "definitions": {
+
+    "A": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "string"
+        }
+      }
+    },
+
+    "AA": {
+      "allOf": [
+        {"$ref": "#/definitions/A"}
+      ],
+      "type": "object",
+      "properties": {
+        "ap": {
+          "type": "string"
+        },
+        "aa": {
+          "type": "string"
+        },
+        "b": {"$ref": "#/definitions/BA"}
+      }
+    },
+
+    "AB": {
+      "allOf": [
+        {"$ref": "#/definitions/A"}
+      ],
+      "type": "object",
+      "properties": {
+        "ap": {
+          "type": "number"
+        },
+        "ab": {
+          "type": "string"
+        },
+        "b": {"$ref": "#/definitions/BB"}
+      }
+    },
+
+
+    "B": {
+      "type": "object",
+      "properties": {
+        "b": {
+          "type": "string"
+        }
+      }
+    },
+
+    "BA": {
+      "allOf": [
+        {"$ref": "#/definitions/B"}
+      ],
+      "type": "object",
+      "properties": {
+        "bp": {
+          "type": "string"
+        },
+        "ba": {
+          "type": "string"
+        },
+        "c": {"$ref": "#/definitions/CA"}
+      }
+    },
+
+    "BB": {
+      "allOf": [
+        {"$ref": "#/definitions/B"}
+      ],
+      "type": "object",
+      "properties": {
+        "bp": {
+          "type": "number"
+        },
+        "bb": {
+          "type": "string"
+        },
+        "c": {"$ref": "#/definitions/CB"}
+      }
+    },
+
+
+    "C": {
+      "type": "object",
+      "properties": {
+        "c": {
+          "type": "string"
+        }
+      }
+    },
+    "CA": {
+      "allOf": [
+        {"$ref": "#/definitions/C"}
+      ],
+      "type": "object",
+      "properties": {
+        "cp": {
+          "type": "string"
+        },
+        "ca": {
+          "type": "string"
+        },
+        "d": {"$ref": "#/definitions/DA"}
+      }
+    },
+    "CB": {
+      "allOf": [
+        {"$ref": "#/definitions/C"}
+      ],
+      "type": "object",
+      "properties": {
+        "cp": {
+          "type": "number"
+        },
+        "cb": {
+          "type": "string"
+        },
+        "d": {"$ref": "#/definitions/DB"}
+      }
+    },
+
+
+    "D": {
+      "type": "object",
+      "properties": {
+        "d": {
+          "type": "string"
+        }
+      }
+    },
+    "DA": {
+      "allOf": [
+        {"$ref": "#/definitions/D"}
+      ],
+      "type": "object",
+      "properties": {
+        "dp": {
+          "type": "string"
+        },
+        "da": {
+          "type": "string"
+        }
+      }
+    },
+    "DB": {
+      "allOf": [
+        {"$ref": "#/definitions/D"}
+      ],
+      "type": "object",
+      "properties": {
+        "dp": {
+          "type": "number"
+        },
+        "db": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
+

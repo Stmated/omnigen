@@ -166,4 +166,25 @@ describe('jsonschema-java-render', () => {
       expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
     }
   });
+
+  test('3-generic', async ({task}) => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/3_step_generic.json'), {
+      beanValidation: false,
+      singleFile: true,
+      singleFileName: task.name,
+      serializationLibrary: SerializationLibrary.POJO,
+      compressSoloReferencedTypes: false,
+      compressUnreferencedSubTypes: false,
+      lombokGetter: true,
+    });
+    const fileContents = Map.groupBy(rendered, it => it.fileName);
+
+    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    for (const [fileName, cu] of fileContents) {
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+    }
+  });
 });

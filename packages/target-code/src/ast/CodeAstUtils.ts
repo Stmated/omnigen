@@ -71,8 +71,6 @@ export class CodeAstUtils implements AstTargetFunctions {
     //        But for now we change all the primitive types into a reference type.
     const mappedGenericTargetArguments = type.targetIdentifiers.map(it => {
 
-      // TODO: Resume code and check that we get the proper key for the map! If we said it should be "OBJECT" then it bloody damn well should be that.
-
       let referenceType = OmniUtil.toReferenceType(it.type);
       if (referenceType.kind === OmniTypeKind.UNKNOWN && !referenceType.unknownKind) {
 

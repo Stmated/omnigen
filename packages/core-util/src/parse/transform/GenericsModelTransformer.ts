@@ -153,30 +153,10 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       placeholderName: genericName,
     };
 
-    if (upperBound && upperBound.kind === OmniTypeKind.GENERIC_TARGET) {
-
-      for (let i = 0; i < upperBound.targetIdentifiers.length; i++) {
-        const lowerTarget = upperBound.targetIdentifiers[i];
-        if (!OmniUtil.asSuperType(lowerTarget.type)) {
-          continue;
-        }
-        if (OmniUtil.isPrimitive(lowerTarget.type)) {
-
-          // Creating generics like `? extends String` does not make much sense, though legal.
-          continue;
-        }
-
-        upperBound.targetIdentifiers[i] = {
-          ...lowerTarget,
-          type: {
-            kind: OmniTypeKind.UNKNOWN,
-            upperBound: lowerTarget.type,
-          },
-        };
-      }
-    }
+    this.maybeWildcardUpperBound(upperBound, genericSource, info.propertyName);
 
     if (upperBound) {
+      logger.info(`Setting upperBound for ${OmniUtil.describe(genericSourceIdentifier)} for ${OmniUtil.describe(genericSource)}`);
       genericSourceIdentifier.upperBound = upperBound;
     }
 
@@ -223,8 +203,6 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         }
       }
 
-      // const targetIdType = OmniUtil.asNonNullableIfHasDefault(property.type, features);
-
       const targetIdentifier: OmniGenericTargetIdentifierType = {
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
         type: property.type,
@@ -232,7 +210,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       };
       genericTarget.targetIdentifiers.push(targetIdentifier);
 
-      // Remove the now generic property from the original property owner.
+      // Remove the non-generic property from the original property owner.
       const idx = property.owner.properties.indexOf(property);
       if (idx == -1) {
         throw new Error(`Could not find property '${OmniUtil.getPropertyNameOrPattern(property.name)}' in owner ${OmniUtil.describe(property.owner)}, something is wrong with the generic hoisting`);
@@ -290,11 +268,60 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     }
   }
 
+  /**
+   * from: `class A extends B<C<D>>`
+   * into: `class A extends B<? extends C<? extends D>>`
+   *
+   * Making it possible for languages to let subtypes of given generic argument to be used.
+   * Some target languages might remove/simplify this in some other transformer, since that it their default.
+   */
+  private maybeWildcardUpperBound(
+    upperBound: OmniType | undefined,
+    genericSource: OmniGenericSourceType,
+    propertyName: string,
+  ): void {
+
+    if (!upperBound || upperBound.kind !== OmniTypeKind.GENERIC_TARGET) {
+      return;
+    }
+
+    for (let i = 0; i < upperBound.targetIdentifiers.length; i++) {
+      const lowerTarget = upperBound.targetIdentifiers[i];
+
+      if (!OmniUtil.asSuperType(lowerTarget.type)) {
+        continue;
+      }
+
+      if (OmniUtil.isPrimitive(lowerTarget.type)) {
+
+        // Creating generics like `? extends String` does not make much sense, though legal.
+        continue;
+      }
+
+      logger.debug(
+        `Creating unknown with upperBound (${OmniUtil.describe(lowerTarget.type)})
+        for property='${propertyName}'
+        upperBound='${OmniUtil.describe(upperBound)}'
+        genericSource='${OmniUtil.describe(genericSource)}'`,
+      );
+
+      this.maybeWildcardUpperBound(lowerTarget.type, genericSource, propertyName);
+
+      upperBound.targetIdentifiers[i] = {
+        ...lowerTarget,
+        type: {
+          kind: OmniTypeKind.UNKNOWN,
+          upperBound: lowerTarget.type,
+          debug: OmniUtil.addDebug(lowerTarget.type.debug, `To unknown type with upper bound`),
+        },
+        debug: OmniUtil.addDebug(lowerTarget.debug, `To unknown with upper bound`),
+      };
+    }
+  }
+
   private toGenericUpperBoundType(info: PropertyInformation, features: TargetFeatures): OmniType | undefined {
 
-    const targetIdentifierType = info.commonType;
-
-    if (!targetIdentifierType || targetIdentifierType.kind == OmniTypeKind.UNKNOWN) {
+    if (info.commonType.kind == OmniTypeKind.UNKNOWN) {
       return undefined;
     }
 
@@ -305,6 +332,6 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       return undefined;
     }
 
-    return targetIdentifierType;
+    return info.commonType;
   }
 }

@@ -2,7 +2,7 @@
 
 exports[`jsonschema-java-render > 3-generic 1`] = `
 [
-  "3-generic.java",
+  "_3_generic.java",
 ]
 `;
 

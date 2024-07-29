@@ -1,6 +1,6 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Code} from '@omnigen/target-code';
+import {Code, CodeUtil} from '@omnigen/target-code';
 import {JavaOptions} from '../options';
 import {JavaAstRootNode} from '../ast/JavaAstRootNode.ts';
 import {OmniUtil} from '@omnigen/core-util';
@@ -28,7 +28,7 @@ export class SingleFileJavaAstTransformer implements AstTransformer<JavaAstRootN
       unitFileName = `${unitFileName}.java`;
     }
 
-    const unitClassName = unitFileName.substring(0, unitFileName.length - '.java'.length);
+    const unitClassName = CodeUtil.getSafeIdentifierName(unitFileName.substring(0, unitFileName.length - '.java'.length));
 
     const defaultVisitor = args.root.createVisitor();
     args.root.visit({

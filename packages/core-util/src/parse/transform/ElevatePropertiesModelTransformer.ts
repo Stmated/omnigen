@@ -30,7 +30,7 @@ import {CreateMode, Sorters} from '../../util';
  */
 export class ElevatePropertiesModelTransformer implements OmniModelTransformer, OmniModel2ndPassTransformer {
 
-  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
+  transformModel(args: OmniModelTransformerArgs): void {
     this.transformInner(args);
   }
 

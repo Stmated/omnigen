@@ -1,6 +1,7 @@
 import {TypeName} from './TypeName';
 import {OmniKindComposition, OmniKindPrimitive, OmniTypeKind} from './OmniTypeKind.ts';
 import {ObjectName} from '../ast';
+import {OmniItemKind} from './OmniItemKind.ts';
 
 export interface OmniParameter {
   name: string;
@@ -59,14 +60,14 @@ export interface OmniPropertyNamePattern {
 
 export type OmniPropertyName = string | OmniPropertyNames | OmniPropertyNamePattern;
 
-export interface OmniProperty {
+export interface OmniProperty extends OmniItemBase<typeof OmniItemKind.PROPERTY> {
 
   name: OmniPropertyName;
 
   type: OmniType;
   /**
    * TODO: REMOVE! It is ugly and should not really be needed...
-   * @deprecated Find some other way of finding this
+   * @deprecated Find some other way of handling this per-context, like keeping an informational stack
    */
   owner: OmniPropertyOwner;
 
@@ -154,6 +155,7 @@ export type OmniPrimitiveNumericType =
   | OmniPrimitiveBaseType<typeof OmniTypeKind.FLOAT>
   | OmniPrimitiveBaseType<typeof OmniTypeKind.DECIMAL>
   | OmniPrimitiveBaseType<typeof OmniTypeKind.NUMBER>
+  ;
 
 export type OmniPrimitiveType =
   OmniPrimitiveNumericType
@@ -211,7 +213,7 @@ export interface OmniTypeWithInnerType<T extends OmniType | OmniType[] = OmniTyp
   of: T;
 }
 
-export interface OmniExample<T> {
+export interface OmniExample<T> extends OmniItemBase<typeof OmniItemKind.EXAMPLE> {
   value: T;
   description?: string | undefined;
 }
@@ -388,7 +390,7 @@ export interface OmniUnknownType extends OmniBaseType<typeof OmniTypeKind.UNKNOW
   upperBound?: OmniType;
 }
 
-export interface OmniSubTypeHint {
+export interface OmniSubTypeHint extends OmniItemBase<typeof OmniItemKind.SUBTYPE_HINT> {
 
   type: OmniType;
   qualifiers: OmniPayloadPathQualifier[];
@@ -408,7 +410,7 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
    * If there is a runtime mapping, then we do not need to do it manually in the target language's code.
    * This is predicated on the language having some other method of doing it, though. Like Java `@JsonTypeInfo` and `@JsonSubTypes`
    */
-  subTypeHints?: OmniSubTypeHint[];
+  subTypeHints?: OmniSubTypeHint[] | undefined;
 
   properties: OmniProperty[];
 
@@ -439,11 +441,42 @@ export type AllowedEnumTsTypes = number | string;
 export type OmniPrimitiveKinds = OmniPrimitiveType['kind'];
 export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKinds, typeof OmniTypeKind.NULL | typeof OmniTypeKind.VOID>;
 
-export interface OmniEnumMember {
+export interface OmniItemBase<K extends OmniItemKind> {
+  kind: K;
+}
+
+export interface OmniEnumMember extends OmniItemBase<typeof OmniItemKind.ENUM_MEMBER> {
   value: AllowedEnumTsTypes;
   name?: string;
   description?: string;
 }
+
+export type OmniItem =
+  OmniModel
+  | OmniEnumMember
+  | OmniProperty
+  | OmniExample<unknown>
+  | OmniLicense
+  | OmniContact
+  | OmniLink
+  | OmniLinkMapping
+  | OmniLinkSourceParameter
+  | OmniLinkTargetParameter
+  | OmniEndpoint
+  | OmniExternalDocumentation
+  | OmniServer
+  | OmniCallback
+  | OmniExamplePairing
+  | OmniExampleParam
+  | OmniExampleResult
+  | OmniTransport
+  | OmniPayloadPathQualifier
+  | OmniOutput
+  | OmniInput
+  | OmniSubTypeHint
+  ;
+
+export type OmniNode = OmniType | OmniItem;
 
 export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, OmniNamedType {
   members: OmniEnumMember[];
@@ -466,7 +499,7 @@ export interface OmniGenericSourceIdentifierType<
    * List of distinct known types used as bounds for the generic source.
    * This can be used to quickly know in some places what the implementations of a certain generic identifier is.
    */
-  knownEdgeTypes?: Edges;
+  knownEdgeTypes?: Edges | undefined;
 }
 
 export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_TARGET_IDENTIFIER> {
@@ -488,14 +521,14 @@ export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType
   targetIdentifiers: OmniGenericTargetIdentifierType[];
 }
 
-export interface OmniInput {
+export interface OmniInput extends OmniItemBase<typeof OmniItemKind.INPUT> {
   description?: string;
   contentType: string;
 
   type: OmniType;
 }
 
-export interface OmniOutput {
+export interface OmniOutput extends OmniItemBase<typeof OmniItemKind.OUTPUT> {
   name: string;
   description?: string | undefined;
   summary?: string | undefined;
@@ -508,7 +541,7 @@ export interface OmniOutput {
   qualifiers: OmniPayloadPathQualifier[];
 }
 
-export interface OmniExampleParam {
+export interface OmniExampleParam extends OmniItemBase<typeof OmniItemKind.EXAMPLE_PARAM> {
   name: string;
   property: OmniProperty;
   description?: string | undefined;
@@ -517,7 +550,7 @@ export interface OmniExampleParam {
   value: unknown;
 }
 
-export interface OmniExampleResult {
+export interface OmniExampleResult extends OmniItemBase<typeof OmniItemKind.EXAMPLE_RESULT> {
   name: string;
   summary?: string | undefined;
   description?: string | undefined;
@@ -525,12 +558,12 @@ export interface OmniExampleResult {
   value: unknown;
 }
 
-export interface OmniExamplePairing {
+export interface OmniExamplePairing extends OmniItemBase<typeof OmniItemKind.EXAMPLE_PAIRING> {
   name: string;
-  description?: string;
-  summary?: string;
-  params?: OmniExampleParam[];
-  result: OmniExampleResult;
+  description?: string | undefined;
+  summary?: string | undefined;
+  params?: OmniExampleParam[] | undefined;
+  result: OmniExampleResult | undefined;
 }
 
 export enum OmniComparisonOperator {
@@ -538,13 +571,13 @@ export enum OmniComparisonOperator {
   DEFINED,
 }
 
-export interface OmniPayloadPathQualifier {
+export interface OmniPayloadPathQualifier extends OmniItemBase<typeof OmniItemKind.PAYLOAD_PATH_QUALIFIER> {
   path: string[];
   operator: OmniComparisonOperator;
   value?: unknown;
 }
 
-export interface OmniCallback {
+export interface OmniCallback extends OmniItemBase<typeof OmniItemKind.CALLBACK> {
   name: string;
   description?: string | undefined;
   summary?: string | undefined;
@@ -555,15 +588,15 @@ export interface OmniCallback {
   request: OmniInput;
   responses: OmniOutput[];
 
-  examples?: OmniExamplePairing[];
+  examples?: OmniExamplePairing[] | undefined;
 }
 
-export interface OmniHttpTransport {
+export interface OmniHttpTransport extends OmniItemBase<typeof OmniItemKind.TRANSPORT_HTTP> {
   async: false;
   path: string;
 }
 
-export interface OmniMessageQueueTransport {
+export interface OmniMessageQueueTransport extends OmniItemBase<typeof OmniItemKind.TRANSPORT_MQ> {
   async: true;
   path: string;
 }
@@ -572,7 +605,7 @@ export type OmniTransport =
   OmniHttpTransport
   | OmniMessageQueueTransport;
 
-export interface OmniEndpoint {
+export interface OmniEndpoint extends OmniItemBase<typeof OmniItemKind.ENDPOINT> {
   name: string;
   description?: string | undefined;
   summary?: string | undefined;
@@ -580,67 +613,67 @@ export interface OmniEndpoint {
 
   transports: OmniTransport[];
 
-  externalDocumentations?: OmniExternalDocumentation[];
-  requestQualifiers?: OmniPayloadPathQualifier[];
+  externalDocumentations?: OmniExternalDocumentation[] | undefined;
+  requestQualifiers?: OmniPayloadPathQualifier[] | undefined;
 
   request: OmniInput;
   responses: OmniOutput[];
 
-  callbacks?: OmniCallback[];
+  callbacks?: OmniCallback[] | undefined;
 
-  examples?: OmniExamplePairing[];
+  examples?: OmniExamplePairing[] | undefined;
 }
 
-export interface OmniServer {
-  name: string;
-  description?: string;
-  summary?: string;
+export interface OmniServer extends OmniItemBase<typeof OmniItemKind.SERVER> {
+  name: string | undefined;
+  description?: string | undefined;
+  summary?: string | undefined;
   url: string;
   variables: Map<string, unknown>;
 }
 
-export interface OmniExternalDocumentation {
+export interface OmniExternalDocumentation extends OmniItemBase<typeof OmniItemKind.EXTERNAL_DOCUMENTATION> {
   url: string;
-  description?: string;
+  description?: string | undefined;
 }
 
-export interface OmniLicense {
+export interface OmniLicense extends OmniItemBase<typeof OmniItemKind.LICENSE> {
   name: string;
-  url: string;
+  url?: string | undefined;
 }
 
-export interface OmniContact {
-  name?: string;
-  email?: string;
-  url?: string;
+export interface OmniContact extends OmniItemBase<typeof OmniItemKind.CONTACT> {
+  name?: string | undefined;
+  email?: string | undefined;
+  url?: string | undefined;
 }
 
-export interface OmniLinkSourceParameter {
-  propertyPath?: OmniProperty[];
+export interface OmniLinkSourceParameter extends OmniItemBase<typeof OmniItemKind.LINK_SOURCE_PARAMETER> {
+  propertyPath?: OmniProperty[] | undefined;
   constantValue?: unknown;
 }
 
-export interface OmniLinkTargetParameter {
+export interface OmniLinkTargetParameter extends OmniItemBase<typeof OmniItemKind.LINK_TARGET_PARAMETER> {
   propertyPath: OmniProperty[];
 }
 
-export interface OmniLinkMapping {
+export interface OmniLinkMapping extends OmniItemBase<typeof OmniItemKind.LINK_MAPPING> {
   source: OmniLinkSourceParameter;
   target: OmniLinkTargetParameter;
 }
 
-export interface OmniLink {
-  sourceModel?: OmniModel;
-  targetModel?: OmniModel;
+export interface OmniLink extends OmniItemBase<typeof OmniItemKind.LINK> {
+  sourceModel?: OmniModel | undefined;
+  targetModel?: OmniModel | undefined;
   mappings: OmniLinkMapping[];
 
-  description?: string;
-  summary?: string;
+  description?: string | undefined;
+  summary?: string | undefined;
 
-  server?: OmniServer;
+  server?: OmniServer | undefined;
 }
 
-export interface OmniModel {
+export interface OmniModel extends OmniItemBase<typeof OmniItemKind.MODEL> {
   name?: string;
 
   /**
@@ -663,8 +696,8 @@ export interface OmniModel {
   termsOfService?: string | undefined;
   endpoints: OmniEndpoint[];
   types: OmniType[];
-  servers?: OmniServer[];
-  externalDocumentations?: OmniExternalDocumentation[];
-  continuations?: OmniLink[];
+  servers?: OmniServer[] | undefined;
+  externalDocumentations?: OmniExternalDocumentation[] | undefined;
+  continuations?: OmniLink[] | undefined;
 }
 

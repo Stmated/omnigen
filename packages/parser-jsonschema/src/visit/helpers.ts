@@ -2,7 +2,6 @@
 export type ToSingle<T> = T extends Array<infer Item> ? Item : T;
 export type DocVisitorTransformer<T, V> = (v: T, visitor: V) => typeof v | undefined;
 export type DocVisitorUnknownTransformer<T> = { path: [string, ...string[]], value: T };
-export type ToDefined<T> = Exclude<T, undefined>;
 export type ToArray<T> = T extends Array<any> ? T : undefined;
 export type ToResolved<T> = T extends {$ref: any} ? Exclude<T, {$ref: any}> : T;
 export type Entry<T> = {key: string, value: T};

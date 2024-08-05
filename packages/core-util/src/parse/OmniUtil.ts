@@ -19,7 +19,7 @@ import {
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
   OmniInput,
-  OmniInterfaceType,
+  OmniInterfaceType, OmniItemKind,
   OmniKindComposition,
   OmniModel,
   OmniObjectType,
@@ -239,10 +239,17 @@ export class OmniUtil {
     return undefined;
   }
 
-  public static asSuperType(type: OmniType | undefined, silent = true): type is OmniSuperTypeCapableType {
+  public static asSuperType(type: OmniType | undefined, silent = true, special?: (t: OmniType) => boolean | undefined): type is OmniSuperTypeCapableType {
 
     if (!type) {
       return false;
+    }
+
+    if (special) {
+      const isSpecial = special(type);
+      if (isSpecial !== undefined) {
+        return isSpecial;
+      }
     }
 
     if (type.kind == OmniTypeKind.OBJECT
@@ -253,23 +260,23 @@ export class OmniUtil {
       return true;
     }
 
-    if (OmniUtil.isPrimitive(type) && !type.nullable && type.kind != OmniTypeKind.VOID && type.kind != OmniTypeKind.NULL) {
+    if (OmniUtil.isPrimitive(type) && !type.nullable && type.kind !== OmniTypeKind.VOID && type.kind !== OmniTypeKind.NULL) {
       return true;
     }
 
-    if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      return OmniUtil.asSuperType(type.of);
+    if (type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      return OmniUtil.asSuperType(type.of, silent, special);
     }
 
-    if (type.kind == OmniTypeKind.DECORATING) {
-      return OmniUtil.asSuperType(type.of);
+    if (type.kind === OmniTypeKind.DECORATING) {
+      return OmniUtil.asSuperType(type.of, silent, special);
     }
 
     if (OmniUtil.isComposition(type)) {
 
       // This seems like an unnecessary operation to do, but cannot figure out a better way yet.
       for (const child of type.types) {
-        const childSuperType = OmniUtil.asSuperType(child);
+        const childSuperType = OmniUtil.asSuperType(child, silent, special);
         if (!childSuperType) {
 
           // This might seem confusing, when you call "asSuperType" on a composition but get back undefined.
@@ -551,6 +558,24 @@ export class OmniUtil {
       if (type.properties.length == 0 && !OmniUtil.hasAdditionalProperties(type)) {
         return true;
       }
+    }
+
+    return false;
+  }
+
+  public static hasMeta(type: OmniType): boolean {
+
+    if (('name' satisfies keyof OmniObjectType) in type) {
+      return !!type.name;
+    }
+    if (('description' satisfies keyof OmniObjectType) in type) {
+      return !!type.description;
+    }
+    if (('summary' satisfies keyof OmniObjectType) in type) {
+      return !!type.summary;
+    }
+    if (('title' satisfies keyof OmniObjectType) in type) {
+      return !!type.title;
     }
 
     return false;
@@ -1014,11 +1039,9 @@ export class OmniUtil {
       return undefined;
     }
 
-    // TODO: Make use of the improved type traverser instead!
-
     if ('endpoints' in parent) {
       this.swapTypeInsideModel(parent, from, to, maxDepth);
-    } else if ('type' in parent && !('kind' in parent)) {
+    } else if ('type' in parent && parent.kind !== OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
       this.swapTypeInsideTypeOwner(parent, from, to, maxDepth);
     } else {
       this.swapTypeInsideType(parent, from, to, maxDepth);
@@ -2787,7 +2810,7 @@ export class OmniUtil {
     }
   }
 
-  public static addPropertyToClassType(property: Omit<OmniProperty, 'owner'>, toType: OmniObjectType, as?: OmniType): void {
+  public static addPropertyToClassType(property: Omit<OmniProperty, 'owner' | 'kind'>, toType: OmniObjectType, as?: OmniType): void {
 
     if (!toType.properties) {
       toType.properties = [];
@@ -2795,6 +2818,7 @@ export class OmniUtil {
 
     toType.properties.push({
       ...property,
+      kind: OmniItemKind.PROPERTY,
       owner: toType,
       type: as || property.type,
     });

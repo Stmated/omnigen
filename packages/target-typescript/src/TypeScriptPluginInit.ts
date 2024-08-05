@@ -130,7 +130,7 @@ export const TypeScriptPlugin = createPlugin(
   {name: 'ts', in: ZodTypeScriptContextIn, out: ZodTypeScriptContextOut, score: PluginScoreKind.REQUIRED},
   async ctx => {
 
-    const modelTransformerArgs: OmniModelTransformerArgs<ParserOptions> = {
+    const modelArgs: OmniModelTransformerArgs = {
       model: ctx.model,
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
     };
@@ -144,13 +144,13 @@ export const TypeScriptPlugin = createPlugin(
     ];
 
     for (const transformer of transformers) {
-      transformer.transformModel(modelTransformerArgs);
+      transformer.transformModel(modelArgs);
     }
 
     // Then do 2nd pass transforming
 
-    const modelTransformer2Args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions> = {
-      model: ctx.model,
+    const modelArgs2: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions> = {
+      model: modelArgs.model,
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.tsOptions},
       targetFeatures: TYPESCRIPT_FEATURES,
     };
@@ -161,7 +161,7 @@ export const TypeScriptPlugin = createPlugin(
     ] as const;
 
     for (const transformer of transformers2) {
-      transformer.transformModel2ndPass(modelTransformer2Args);
+      transformer.transformModel2ndPass(modelArgs2);
     }
 
     const astNode = new Ts.TsRootNode([]);
@@ -202,8 +202,8 @@ export const TypeScriptPlugin = createPlugin(
       ...ctx.packageOptions,
     };
 
-    const astTransformerArgs: TypeScriptAstTransformerArgs = {
-      model: ctx.model,
+    const astArgs: TypeScriptAstTransformerArgs = {
+      model: modelArgs2.model,
       externals: [],
       features: TYPESCRIPT_FEATURES,
       options: options,
@@ -211,12 +211,13 @@ export const TypeScriptPlugin = createPlugin(
     };
 
     for (const transformer of astTransformers) {
-      transformer.transformAst(astTransformerArgs);
+      transformer.transformAst(astArgs);
     }
 
     return {
       ...ctx,
-      astNode: astTransformerArgs.root,
+      model: astArgs.model,
+      astNode: astArgs.root,
     };
   },
 );

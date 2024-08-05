@@ -4,7 +4,7 @@ import {
   DEFAULT_TARGET_OPTIONS,
   ObjectName,
   ObjectNameResolver,
-  OMNI_GENERIC_FEATURES, OmniInterfaceOrObjectType,
+  OMNI_GENERIC_FEATURES, OmniInterfaceOrObjectType, OmniItemKind,
   OmniModel,
   OmniObjectType,
   OmniPrimitiveKinds,
@@ -28,7 +28,7 @@ type NameResolverOptions = PackageOptions & TargetOptions & Options;
 
 class TestObjectNameResolver extends AbstractObjectNameResolver<NameResolverOptions> {
 
-  protected namespaceSeparator: string = '.';
+  public namespaceSeparator: string = '.';
 
   public isReservedWord(word: string): boolean {
     return false;
@@ -134,6 +134,7 @@ test('test order', () => {
   );
 
   const model: OmniModel = {
+    kind: OmniItemKind.MODEL,
     schemaType: 'other',
     types: [bType, aType],
     endpoints: [],

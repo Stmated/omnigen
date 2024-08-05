@@ -12,3 +12,5 @@ export * from './NameCallback.ts';
 
 export * from './SchemaFile.ts';
 
+export * from './Reducer.ts';
+export * from './OmniReducer.ts';

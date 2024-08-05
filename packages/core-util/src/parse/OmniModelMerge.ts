@@ -1,5 +1,5 @@
 import {
-  OmniExternalModelReferenceType,
+  OmniExternalModelReferenceType, OmniItemKind,
   OmniModel,
   OmniModelParserResult,
   OmniType,
@@ -143,6 +143,7 @@ export class OmniModelMerge {
     }
 
     const common: OmniModel = {
+      kind: OmniItemKind.MODEL,
       name: results.map(it => it.model.name).join(' & '),
       endpoints: [],
       types: [],
@@ -155,6 +156,7 @@ export class OmniModelMerge {
       schemaVersion: results[0].model.schemaVersion,
       version: results[0].model.version,
       contact: {
+        kind: OmniItemKind.CONTACT,
         name: [...new Set(results.map(it => it.model.contact?.name).filter(it => it !== undefined))].join(' / '),
         url: [...new Set(results.map(it => it.model.contact?.url).filter(it => it !== undefined))].join(' / '),
         email: [...new Set(results.map(it => it.model.contact?.email).filter(it => it !== undefined))].join(' / '),

@@ -7,7 +7,7 @@ import {
   OmniType,
   OmniTypeKind,
   TypeName,
-  VisitResult,
+  VisitResult, OmniItemKind,
 } from '@omnigen/core';
 import {expect} from 'vitest';
 
@@ -47,12 +47,14 @@ export class TestUtils {
   public static prop(name: string, type: OmniType, owner?: OmniPropertyOwner): OmniProperty | OmniPropertyOrphan {
     if (owner) {
       return {
+        kind: OmniItemKind.PROPERTY,
         name: name,
         type: type,
         owner: owner,
       };
     } else {
       return {
+        kind: OmniItemKind.PROPERTY,
         name: name,
         type: type,
       };

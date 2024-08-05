@@ -1,6 +1,7 @@
 
-import {ToDefined, DocVisitorTransformer, ToResolved, ToSingle} from '@omnigen/parser-jsonschema';
+import {DocVisitorTransformer, ToResolved, ToSingle} from '@omnigen/parser-jsonschema';
 import {OpenrpcDocument} from '@open-rpc/meta-schema';
+import {ToDefined} from '@omnigen/core-util';
 
 type MethodType<S extends OpenrpcDocument> = ToResolved<ToSingle<S['methods']>>;
 type ServerType<S extends OpenrpcDocument> = ToSingle<ToDefined<S['servers']>>;

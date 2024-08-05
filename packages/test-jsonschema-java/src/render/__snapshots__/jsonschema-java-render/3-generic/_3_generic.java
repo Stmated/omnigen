@@ -20,10 +20,10 @@ public class _3_generic {
   }
 
   @Getter
-  public static class AAobject extends A<String, BA> {
+  public static class AA extends A<String, BA> {
     private final String aa;
 
-    public AAobject(String a, String ap, BA b, String aa) {
+    public AA(String a, String ap, BA b, String aa) {
       super(a, ap, b);
       this.aa = aa;
     }

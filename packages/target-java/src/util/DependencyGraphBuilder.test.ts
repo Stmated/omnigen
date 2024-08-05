@@ -1,7 +1,7 @@
 import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS,
   OmniCompositionType,
-  OmniEndpoint, OmniInterfaceOrObjectType,
+  OmniEndpoint, OmniInterfaceOrObjectType, OmniItemKind,
   OmniModel,
   OmniObjectType,
   OmniSuperTypeCapableType,
@@ -27,19 +27,23 @@ describe('Test CompositionDependencyUtil', () => {
     const endpoints: OmniEndpoint[] = namedTypes
       ? namedTypes.map((t, idx) => {
         return {
+          kind: OmniItemKind.ENDPOINT,
           name: `Endpoint${idx}`,
           transports: [{
+            kind: OmniItemKind.TRANSPORT_HTTP,
             async: false,
             path: '/',
           }],
           examples: [],
           request: {
+            kind: OmniItemKind.INPUT,
             type: {
               kind: OmniTypeKind.STRING,
             },
             contentType: 'application/json',
           },
           responses: [{
+            kind: OmniItemKind.OUTPUT,
             type: t,
             required: true,
             contentType: 'application/json',
@@ -53,6 +57,7 @@ describe('Test CompositionDependencyUtil', () => {
       : [];
 
     return {
+      kind: OmniItemKind.MODEL,
       name: 'Test Model for Dependency Tests',
       types: namedTypes,
       endpoints: endpoints,
@@ -368,6 +373,7 @@ const inlineClassWithProp = (name: string): OmniObjectType => {
   };
   inline.properties = [
     {
+      kind: OmniItemKind.PROPERTY,
       name: `${name}Property`,
       owner: inline,
       type: {kind: OmniTypeKind.INTEGER},

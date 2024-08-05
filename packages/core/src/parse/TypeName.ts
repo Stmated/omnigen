@@ -1,3 +1,3 @@
-import {TypeNameModifier} from './TypeNameModifier.js';
+import {TypeNameModifier} from './TypeNameModifier';
 
-export type TypeName = string | TypeNameModifier | ReadonlyArray<TypeName>;
+export type TypeName = string | TypeNameModifier | Array<TypeName>;

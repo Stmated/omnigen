@@ -4,11 +4,11 @@ import {
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
-  OmniGenericTargetType,
+  OmniGenericTargetType, OmniItemKind,
   OmniModel,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniModelTransformerArgs,
+  OmniModelTransformerArgs, OmniObjectType,
   OmniProperty,
   OmniPropertyOwner,
   OmniSubTypeCapableType,
@@ -24,8 +24,9 @@ import {
 import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniUtil} from '../OmniUtil.ts';
-import {Case, CreateMode, Sorters} from '../../util';
+import {Case, CreateMode, isDefined, Sorters} from '../../util';
 import {Naming} from '../Naming.ts';
+import {OmniReducer} from '../OmniReducer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -73,7 +74,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         continue;
       }
 
-      this.attemptHoistToSuperType(superType, subTypes, sourceToTargets, args.model, args.options, targetFeatures);
+      args.model = this.attemptHoistToSuperType(superType, subTypes, sourceToTargets, args.model, args.options, targetFeatures);
     }
   }
 
@@ -84,7 +85,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     model: OmniModel,
     options: ModelTransformOptions,
     features: TargetFeatures,
-  ) {
+  ): OmniModel {
 
     const commonProperties = PropertyUtil.getCommonProperties(
       // We do not care *at all* if they have nothing in-common. Just nice if get one.
@@ -118,7 +119,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         continue;
       }
 
-      this.attemptHoistPropertyToGeneric(
+      model = this.attemptHoistPropertyToGeneric(
         superType,
         genericSource,
         commonProperties,
@@ -130,6 +131,8 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         features,
       );
     }
+
+    return model;
   }
 
   private attemptHoistPropertyToGeneric(
@@ -142,7 +145,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     model: OmniModel,
     options: ModelTransformOptions,
     features: TargetFeatures,
-  ): void {
+  ): OmniModel {
 
     const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(info.propertyName)}`;
 
@@ -165,7 +168,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     if (!options.generificationBoxAllowed) {
       if (info.properties.map(it => it.type).find(it => !OmniUtil.isGenericAllowedType(it))) {
         logger.warn(`Skipping '${info.propertyName}' since some property types cannot be made generic`);
-        return;
+        return model;
       }
     }
 
@@ -188,6 +191,38 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         targets.push(genericTarget);
 
         if (ownerToGenericTargetMap.size == 0) {
+
+          // TODO: This does not work, since we rebuild the whole model for every iteration, so the target identifiers are added to a dead model!
+          // TODO: Need to rethink the whole generic functionality to make it work the new reducers, to do all things in proper passes.
+          // const reducer = new DefaultOmniReducerDispatcher({
+          //   ANY: n => {
+          //     if (n === superType) {
+          //       return genericSource;
+          //     }
+          //
+          //     return undefined;
+          //   },
+          //   OBJECT: (n, a) => {
+          //
+          //     const extendedBy = n.extendedBy ? a.dispatcher.reduce(n.extendedBy) : undefined;
+          //     let extendedSuper: OmniSuperTypeCapableType | undefined;
+          //     if (extendedBy) {
+          //       if (!OmniUtil.asSuperType(extendedBy)) {
+          //         logger.warn(`Cannot replace '${OmniUtil.describe(n.extendedBy)}' with '${OmniUtil.describe(extendedBy)}' since it is not a valid supertype`);
+          //       } else {
+          //         extendedSuper = extendedBy;
+          //       }
+          //     }
+          //
+          //     return {
+          //       ...n,
+          //       properties: n.properties.map(it => a.dispatcher.reduce(it)).filter(isDefined),
+          //       extendedBy: extendedSuper,
+          //     } satisfies OmniObjectType;
+          //   },
+          // });
+          //
+          // model = reducer.reduce(model);
 
           // Swap all places that uses the superType with the new GenericSource.
           // We do this for the first time we alter the GenericTarget, to do it as late as possible.
@@ -222,6 +257,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     if (genericSource.of.kind === OmniTypeKind.OBJECT) {
 
       const newProperty: OmniProperty = {
+        kind: OmniItemKind.PROPERTY,
         name: info.propertyName,
         type: genericSourceIdentifier,
         owner: genericSource.of,
@@ -266,6 +302,8 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       // Go back to info logging? Feels like this should have been filtered away earlier!
       throw new Error(`Encountered ${OmniUtil.describe(genericSource.of)} as generic source, which cannot represent properties, so cannot move ${info.propertyName} there`);
     }
+
+    return model;
   }
 
   /**

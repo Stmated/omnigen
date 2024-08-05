@@ -1,5 +1,5 @@
-import {OmniExclusiveUnionType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, OmniUnionType, TargetFeatures} from '@omnigen/core';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniExclusiveUnionType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, OmniUnionType, TargetFeatures} from '@omnigen/core';
+import {DefaultOmniReducerArgs, OmniReducer, isDefined, OmniUtil} from '@omnigen/core-util';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -17,53 +17,32 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
       return;
     }
 
-    const replaced = new Map<OmniType, OmniType | null>();
-
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-
-      if (!ctx.parent) {
-        return;
-      }
-
-      const alreadyReplaced = replaced.get(ctx.type);
-      if (alreadyReplaced) {
-        ctx.replacement = alreadyReplaced;
-      } else if (ctx.type.kind === OmniTypeKind.UNION || ctx.type.kind === OmniTypeKind.EXCLUSIVE_UNION) {
-
-        const distinctTypes = OmniUtil.getDistinctTypes(ctx.type.types, args.targetFeatures);
-        if (distinctTypes.length > 2 && distinctTypes.every(it => it.kind === OmniTypeKind.OBJECT)) {
-
-          const merged = this.mergeTypes(ctx.type, args.targetFeatures);
-          // if (!args.model.types.includes(merged)) {
-          //   args.model.types.push(merged);
-          // }
-
-          ctx.replacement = merged;
-          replaced.set(ctx.type, merged);
-        }
-      }
+    const reducer = new OmniReducer({
+      UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
+      EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
     });
 
-    for (const replacedType of replaced.keys()) {
-
-      const index = args.model.types.indexOf(replacedType);
-      if (index != -1) {
-        args.model.types.splice(index, 1);
-      }
-    }
+    args.model = reducer.reduce(args.model);
   }
 
-  private mergeTypes(union: OmniUnionType | OmniExclusiveUnionType, features: TargetFeatures): OmniType {
+  private maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: DefaultOmniReducerArgs, features: TargetFeatures) {
 
-    const types = union.types;
-    let target = {...types[0]};
-    OmniUtil.mergeTypeMeta(union, target, false, true);
-    OmniUtil.copyName(union, target);
+    const reduced = n.types.map(it => a.dispatcher.reduce(it)).filter(isDefined);
+    const distinctTypes = OmniUtil.getDistinctTypes(reduced, features);
+    if (distinctTypes.length > 2 && distinctTypes.every(it => (it.kind === OmniTypeKind.OBJECT))) {
 
-    for (let i = 1; i < types.length; i++) {
-      target = OmniUtil.mergeType(types[i], target, features, false, true);
+      const types = n.types;
+      let target = {...types[0]};
+      OmniUtil.mergeTypeMeta(n, target, false, true);
+      OmniUtil.copyName(n, target);
+
+      for (let i = 1; i < types.length; i++) {
+        target = OmniUtil.mergeType(types[i], target, features, false, true);
+      }
+
+      return target;
     }
 
-    return target;
+    return {...n, types: reduced};
   }
 }

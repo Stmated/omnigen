@@ -26,7 +26,10 @@ export * from './PropertyInformation';
 export * from './transform/index';
 export * from './TypeName';
 export * from './TypeNameModifier';
+
 export * from './OmniTypeKind';
+export * from './OmniItemKind';
+export * from './OmniNodeKind';
 
 export * from './OmniTypeLibrary';
 export * from './OmniModelLibrary';

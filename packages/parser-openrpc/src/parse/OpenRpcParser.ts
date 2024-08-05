@@ -10,6 +10,7 @@ import {
   OmniExampleParam,
   OmniExampleResult,
   OmniExternalDocumentation,
+  OmniItemKind,
   OmniLicense,
   OmniLink,
   OmniLinkMapping,
@@ -21,7 +22,7 @@ import {
   OmniOutput,
   OmniPayloadPathQualifier,
   OmniPrimitiveType,
-  OmniProperty, OmniPropertyName,
+  OmniProperty,
   OmniPropertyOwner,
   OmniServer,
   OmniType,
@@ -33,9 +34,10 @@ import {
   ParserBootstrapFactory,
   ParserOptions,
   SchemaSource,
-  TypeName, UnknownKind,
+  TypeName,
+  UnknownKind,
 } from '@omnigen/core';
-import {Case, Naming, OmniUtil} from '@omnigen/core-util';
+import {Case, Naming, OmniUtil, ToDefined} from '@omnigen/core-util';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
@@ -48,7 +50,7 @@ import {
   LicenseObject,
   LinkObject,
   MethodObject,
-  MethodObjectErrors, MethodObjectParams, MethodObjectParamStructure,
+  MethodObjectErrors,
   MethodObjectResult,
   MethodOrReference,
   OpenrpcDocument,
@@ -60,11 +62,13 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
 import {
   ApplyIdJsonSchemaTransformerFactory,
-  ExternalDocumentsFinder, JSONSchema9, JSONSchema9Definition,
+  ExternalDocumentsFinder,
+  JSONSchema9,
+  JSONSchema9Definition,
   JsonSchemaParser,
   RefResolver,
   SchemaToTypeResult,
-  SimplifyJsonSchemaTransformerFactory, ToDefined,
+  SimplifyJsonSchemaTransformerFactory,
 } from '@omnigen/parser-jsonschema';
 import {JsonExpander, ObjectReducer} from '@omnigen/core-json';
 import {z} from 'zod';
@@ -340,6 +344,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     const model: OmniModel = {
+      kind: OmniItemKind.MODEL,
       schemaType: 'openrpc',
       schemaVersion: this.doc.openrpc,
       name: this.doc.info.title,
@@ -364,14 +369,16 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   toOmniLicenseFromLicense(license: LicenseObject): OmniLicense {
-    return <OmniLicense>{
-      name: license.name,
+    return {
+      kind: OmniItemKind.LICENSE,
+      name: license.name ?? 'N/A',
       url: license.url,
     };
   }
 
   toOmniContactFromContact(contact: ContactObject): OmniContact {
-    return <OmniContact>{
+    return {
+      kind: OmniItemKind.CONTACT,
       name: contact.name,
       url: contact.url,
       email: contact.email,
@@ -471,19 +478,23 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     logger.debug(`Done creating method ${method.name} (${uniqueNames.join(' / ')})${isCallback ? ' (Which should be a callback)' : ''}`);
 
     return {
+      kind: OmniItemKind.ENDPOINT,
       name: method.name,
       description: method.description,
       summary: method.summary,
       transports: [{
+        kind: OmniItemKind.TRANSPORT_HTTP,
         async: false,
         path: '',
       }],
       request: {
+        kind: OmniItemKind.INPUT,
         contentType: 'application/json',
         type: requestTypeAndProperties.type,
       },
       requestQualifiers: [
         {
+          kind: OmniItemKind.PAYLOAD_PATH_QUALIFIER,
           path: ['method'],
           operator: OmniComparisonOperator.EQUALS,
           value: method.name,
@@ -568,6 +579,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     responseType.extendedBy = this._jsonRpcResponseClass;
 
     responseType.properties.push({
+      kind: OmniItemKind.PROPERTY,
       name: 'result',
       type: resultType.type,
       owner: responseType,
@@ -575,6 +587,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     return {
       output: {
+        kind: OmniItemKind.OUTPUT,
         name: contentDescriptor.name,
         description: contentDescriptor.description,
         summary: contentDescriptor.summary,
@@ -585,6 +598,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         contentType: 'application/json',
         qualifiers: [
           {
+            kind: OmniItemKind.PAYLOAD_PATH_QUALIFIER,
             path: ['result'],
             operator: OmniComparisonOperator.DEFINED,
           },
@@ -661,12 +675,14 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     );
 
     const qualifiers: OmniPayloadPathQualifier[] = [{
+      kind: OmniItemKind.PAYLOAD_PATH_QUALIFIER,
       path: ['error'],
       operator: OmniComparisonOperator.DEFINED,
     }];
 
     if (!isUnknownCode) {
       qualifiers.push({
+        kind: OmniItemKind.PAYLOAD_PATH_QUALIFIER,
         path: ['error', 'code'],
         operator: OmniComparisonOperator.EQUALS,
         value: error.code,
@@ -674,6 +690,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     return {
+      kind: OmniItemKind.OUTPUT,
       name: `error-${isUnknownCode ? 'unknown' : error.code}`,
       deprecated: false,
       required: false,
@@ -707,6 +724,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       }
 
       target.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcPropertyName,
         type: responseJsonRpcPropertyType,
         owner: target,
@@ -749,11 +767,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
 
     errorPropertyType.properties.push({
+      kind: OmniItemKind.PROPERTY,
       name: 'code',
       type: codeType,
       owner: errorPropertyType,
     });
     errorPropertyType.properties.push({
+      kind: OmniItemKind.PROPERTY,
       name: 'message',
       type: messageType,
       owner: errorPropertyType,
@@ -761,6 +781,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     if (error.data) {
       errorPropertyType.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcErrorPropertyName,
         type: {
           // TODO: Create a new "const" type, since it's not really unknown since there is a known data structure.
@@ -775,6 +796,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       });
     } else if (error.data || !options.jsonRpcErrorDataSchema) {
       errorPropertyType.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcErrorPropertyName,
         type: {
           kind: OmniTypeKind.UNKNOWN,
@@ -793,6 +815,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       }
 
       errorPropertyType.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcErrorPropertyName,
         type: optionsErrorSchema,
         owner: errorPropertyType,
@@ -809,6 +832,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       };
 
       errorPropertyType.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: 'name',
         type: nameType,
         owner: errorPropertyType,
@@ -816,6 +840,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     const errorProperty: OmniProperty = {
+      kind: OmniItemKind.PROPERTY,
       name: 'error',
       type: errorPropertyType,
       owner: target,
@@ -826,6 +851,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     target.properties.push(errorProperty);
 
     target.properties.push({
+      kind: OmniItemKind.PROPERTY,
       name: 'result',
       type: {
         kind: OmniTypeKind.NULL,
@@ -836,6 +862,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     if (options.jsonRpcIdIncluded) {
       target.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: 'id',
         type: {
           kind: OmniTypeKind.STRING,
@@ -857,7 +884,8 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       return this.exampleParamToGenericExampleParam(inputProperties, param, idx);
     });
 
-    return <OmniExamplePairing>{
+    return {
+      kind: OmniItemKind.EXAMPLE_PAIRING,
       name: example.name,
       description: example.description,
       summary: example['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
@@ -903,10 +931,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     if (property) {
       valueType = property.type;
     } else {
-      valueType = <OmniUnknownType>{kind: OmniTypeKind.UNKNOWN};
+      valueType = {kind: OmniTypeKind.UNKNOWN} satisfies OmniUnknownType;
     }
 
     return {
+      kind: OmniItemKind.EXAMPLE_PARAM,
       name: param.name,
       property: property,
       description: param.description,
@@ -923,6 +952,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     return {
+      kind: OmniItemKind.EXAMPLE_RESULT,
       name: example.name,
       description: example.description,
       summary: example.summary,
@@ -932,14 +962,16 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   toOmniExternalDocumentationFromExternalDocumentationObject(documentation: ExternalDocumentationObject): OmniExternalDocumentation {
-    return <OmniExternalDocumentation>{
+    return {
+      kind: OmniItemKind.EXTERNAL_DOCUMENTATION,
       url: documentation.url,
       description: documentation.description,
     };
   }
 
   toOmniServerFromServerObject(server: ServerObject): OmniServer {
-    return <OmniServer>{
+    return {
+      kind: OmniItemKind.SERVER,
       name: server.name,
       description: server.description,
       summary: server.summary,
@@ -953,6 +985,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const propertyType = this.toOmniTypeFromContentDescriptor(descriptor);
 
     const property: OmniProperty = {
+      kind: OmniItemKind.PROPERTY,
       name: JsonSchemaParser.getPreferredPropertyName(descriptor.schema as JSONSchema9Definition, descriptor.name, this._options),
       description: descriptor.description,
       summary: descriptor.summary,
@@ -989,6 +1022,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     objectRequestType.properties = [
       {
+        kind: OmniItemKind.PROPERTY,
         name: 'params',
         type: requestParamsType,
         owner: objectRequestType,
@@ -1141,6 +1175,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       }
 
       targetObject.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcPropertyName,
         type: requestJsonRpcType,
         required: true,
@@ -1149,6 +1184,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     targetObject.properties.push({
+      kind: OmniItemKind.PROPERTY,
       name: 'method',
       type: requestMethodType,
       required: true,
@@ -1173,6 +1209,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       // }
 
       targetObject.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: 'id',
         type: requestIdType,
         required: options.jsonRpcIdRequired && options.trustedClients,
@@ -1201,6 +1238,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       }
 
       target.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcPropertyName,
         type: responseJsonRpcPropertyType,
         owner: target,
@@ -1209,6 +1247,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     target.properties.push({
+      kind: OmniItemKind.PROPERTY,
       name: 'error',
       type: {
         kind: OmniTypeKind.NULL,
@@ -1219,6 +1258,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     if (options.jsonRpcIdIncluded) {
       target.properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: 'id',
         type: {
           kind: OmniTypeKind.STRING,
@@ -1322,6 +1362,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         );
 
         const targetParameter: OmniLinkTargetParameter = {
+          kind: OmniItemKind.LINK_TARGET_PARAMETER,
           propertyPath: [
             requestParamsParameter,
             requestResultParamParameter,
@@ -1329,6 +1370,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         };
 
         mappings.push({
+          kind: OmniItemKind.LINK_MAPPING,
           source: sourceParameter,
           target: targetParameter,
         });
@@ -1337,12 +1379,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       }
     }
 
-    return <OmniLink>{
-      name: link.name || refName,
+    return {
+      kind: OmniItemKind.LINK,
+      // name: link.name || refName,
       mappings: mappings,
-      description: link.description,
+      description: link.description ?? link.name ?? refName,
       summary: link.summary,
-    };
+    } satisfies OmniLink;
   }
 
   private toOmniLinkSourceParameterFromLinkObject(
@@ -1389,12 +1432,14 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         }
 
         return {
+          kind: OmniItemKind.LINK_SOURCE_PARAMETER,
           propertyPath: propertyPath,
         };
       }
     }
 
     return {
+      kind: OmniItemKind.LINK_SOURCE_PARAMETER,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       constantValue: value,
     };

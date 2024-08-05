@@ -1,6 +1,6 @@
 import {JSONSchema9Definition, JSONSchema9, JsonSchemaParser, RefResolver} from '@omnigen/parser-jsonschema';
 import {JsonObject} from 'json-pointer';
-import {OmniModel, ParserOptions} from '@omnigen/core';
+import {OmniItemKind, OmniModel, ParserOptions} from '@omnigen/core';
 import {SchemaFile} from '@omnigen/core-util';
 import {OpenAPIV3_1 as OpenApi3} from 'openapi-types';
 
@@ -23,6 +23,7 @@ export class OpenApiJsonSchemaParser<TRoot extends JsonObject, TOpt extends Pars
     const openApiDocument = root as OpenApi3.Document;
 
     const model: OmniModel = {
+      kind: OmniItemKind.MODEL,
       name: openApiDocument.info.title || root.$id || '',
       version: openApiDocument.info.version,
       endpoints: [],

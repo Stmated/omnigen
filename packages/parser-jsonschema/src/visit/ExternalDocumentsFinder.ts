@@ -1,5 +1,5 @@
 import pointer, {JsonObject} from 'json-pointer';
-import {ProtocolHandler, Util} from '@omnigen/core-util';
+import {getShallowPayloadString, ProtocolHandler, Util} from '@omnigen/core-util';
 import {JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -124,7 +124,7 @@ export class ExternalDocumentsFinder {
       element = uri.path ? pointer.get(schema, uri.path) : schema;
     } catch (ex) {
 
-      const shallowPayloadString = Util.getShallowPayloadString(origin);
+      const shallowPayloadString = getShallowPayloadString(origin);
       throw new Error(`Could not find element '${uri.path}' inside ${uri.documentUri}, referenced from resolved ${shallowPayloadString}: ${ex}`, {cause: ex});
     }
 

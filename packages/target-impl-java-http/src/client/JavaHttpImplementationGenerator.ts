@@ -15,7 +15,7 @@ import {
   AstTransformer,
   LiteralValue,
   OmniComparisonOperator,
-  OmniHardcodedReferenceType,
+  OmniHardcodedReferenceType, OmniItemKind,
   OmniObjectType,
   OmniOutput,
   OmniType,
@@ -636,6 +636,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       extendedBy: exceptionType,
     };
     newExceptionType.properties.push({
+      kind: OmniItemKind.PROPERTY,
       type: type,
       name: 'body',
       owner: newExceptionType,

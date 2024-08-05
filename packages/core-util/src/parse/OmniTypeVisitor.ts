@@ -8,6 +8,11 @@ const logger = LoggerFactory.create(import.meta.url);
 export interface DFSTraverseContext {
   type: OmniType;
   parent: TypeOwner | undefined;
+
+  /**
+   * TODO: Remove, and instead use a proper reducer pattern, so we can make all properties read-only.
+   * @deprecated Should be replaced with a proper reducer
+   */
   replacement?: OmniType | undefined;
   depth: number;
   skip: boolean;

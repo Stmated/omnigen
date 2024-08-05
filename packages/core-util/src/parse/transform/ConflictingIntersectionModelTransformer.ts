@@ -1,6 +1,6 @@
 import {
   OmniEnumMember, OmniExample,
-  OmniIntersectionType,
+  OmniIntersectionType, OmniItemKind,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
   OmniType,
@@ -9,6 +9,7 @@ import {
 } from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil.ts';
+import {OmniReducer} from '../OmniReducer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -23,16 +24,10 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-
-      if (ctx.type.kind === OmniTypeKind.INTERSECTION) {
-
-        const replacement = this.replaceIntersection(ctx.type, args.targetFeatures);
-        if (replacement) {
-          ctx.replacement = replacement;
-        }
-      }
-    }, undefined, true);
+    const reducer = new OmniReducer({
+      INTERSECTION: (n, a) => this.replaceIntersection(n, args.targetFeatures) ?? a.base.INTERSECTION(n, a),
+    });
+    args.model = reducer.reduce(args.model);
   }
 
   private replaceIntersection(type: OmniIntersectionType, features: TargetFeatures): OmniType | undefined {
@@ -117,6 +112,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
           if (!commonDenominator.type.examples.find(it => it.value == member.value)) {
 
             const example: OmniExample<typeof member.value> = {
+              kind: OmniItemKind.EXAMPLE,
               value: member.value,
               description: member.description ?? member.name,
             };

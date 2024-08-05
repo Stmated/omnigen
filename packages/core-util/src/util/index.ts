@@ -1,10 +1,13 @@
+import {OmniSuperGenericTypeCapableType, OmniType} from '@omnigen/core';
+import {OmniUtil} from '../parse';
 
-export * from './ProtocolHandler.js';
-export * from './Sorters.js';
-export * from './ToString.js';
-export * from './Case.js';
-export * from './Util.ts';
-export * from './CombineTypeUtils.ts';
+export * from './ProtocolHandler';
+export * from './Sorters';
+export * from './ToString';
+export * from './Case';
+export * from './Util';
+export * from './CombineTypeUtils';
+export * from './TsTypes';
 
 export function assertUnreachable(x: never): never {
   throw new Error(`Unreachable code was reached, with: ${getShallowPayloadString(x)}`);
@@ -17,6 +20,15 @@ export function assertDefined<T>(x: T): Exclude<T, undefined | null | void> {
 
   // @ts-ignore
   return x;
+}
+
+export function assertGenericSuperType(type: OmniType | undefined): OmniSuperGenericTypeCapableType {
+  const superType = OmniUtil.asGenericSuperType(type);
+  if (superType) {
+    return superType;
+  } else {
+    throw new Error(`${OmniUtil.describe(type)} should have been generic supertype compatible`);
+  }
 }
 
 export function isDefined<T>(argument: T | undefined): argument is T {

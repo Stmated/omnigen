@@ -1,5 +1,5 @@
-import {OMNI_GENERIC_FEATURES, OmniModelTransformer, OmniModelTransformerArgs, OmniType, OmniTypeKind, ParserOptions, TargetFeatures} from '@omnigen/core';
-import {OmniUtil} from '@omnigen/core-util';
+import {OMNI_GENERIC_FEATURES, OmniExclusiveUnionType, OmniModelTransformer, OmniModelTransformerArgs, OmniNode, OmniType, OmniUnionType, TargetFeatures} from '@omnigen/core';
+import {OmniReducer, isDefined, OmniUtil, ReducerArgs, ReturnTypeOverride} from '@omnigen/core-util';
 
 /**
  * These are examples of unions that we will simplify/remove.
@@ -9,43 +9,45 @@ import {OmniUtil} from '@omnigen/core-util';
  */
 export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniModelTransformer {
 
-  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
+  transformModel(args: OmniModelTransformerArgs): void {
 
     const lossless = true;
-    const replaced = new Map<OmniType, OmniType | null>();
-
     const features = OMNI_GENERIC_FEATURES; // TODO: Make this use impl like JAVA_FEATURES -- need to move to 2nd pass?
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-
-      if (!ctx.parent) {
-        return;
-      }
-
-      const alreadyReplaced = replaced.get(ctx.type);
-      if (alreadyReplaced) {
-        ctx.replacement = alreadyReplaced;
-      } else if (ctx.type.kind === OmniTypeKind.EXCLUSIVE_UNION || ctx.type.kind === OmniTypeKind.UNION) {
-
-        const distinctTypes = OmniUtil.getDistinctTypes(ctx.type.types, features);
-        if (distinctTypes.length == 1) {
-
-          const merged = this.mergeTypes(ctx.type, ctx.type.types, lossless, features);
-          ctx.replacement = merged;
-          replaced.set(ctx.type, merged);
-        }
-      } else if (ctx.type.kind === OmniTypeKind.INTERSECTION && ctx.type.types.length == 1) {
-        OmniUtil.swapType(args.model, ctx.type, ctx.type.types[0], 10);
-      }
+    const reducer = new OmniReducer({
+      UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.base.UNION(n, a),
+      EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.base.EXCLUSIVE_UNION(n, a),
+      INTERSECTION: (n, a) => (n.types.length === 1) ? a.dispatcher.reduce(n.types[0]) : a.base.INTERSECTION(n, a),
     });
 
-    for (const replacedType of replaced.keys()) {
+    args.model = reducer.reduce(args.model);
+  }
 
-      const index = args.model.types.indexOf(replacedType);
-      if (index != -1) {
-        args.model.types.splice(index, 1);
+  maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: ReducerArgs<OmniNode, 'kind', ReturnTypeOverride>, lossless: boolean, features: TargetFeatures): OmniType | undefined {
+
+    const reduced = n.types.map(it => a.dispatcher.reduce(it)).filter(isDefined);
+    if (reduced.length === 1) {
+
+      if (OmniUtil.hasMeta(n)) {
+
+        // The composition/owner has meta information. Need to create a new type.
+        const target = {...reduced[0]};
+        OmniUtil.mergeTypeMeta(n, target, false, false, true);
+        return target;
+
+      } else {
+
+        // We can just return the single child.
+        return reduced[0];
       }
     }
+
+    const distinctTypes = OmniUtil.getDistinctTypes(reduced, features);
+    if (distinctTypes.length == 1) {
+      return this.mergeTypes(n, reduced, lossless, features);
+    }
+
+    return undefined;
   }
 
   mergeTypes(original: OmniType, types: OmniType[], lossless: boolean, features: TargetFeatures): OmniType {

@@ -71,15 +71,27 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       }
     }
 
-    // TODO: This sorting should probably be more general and prefer Object > Interface > Composition
     namePairs.sort((a, b) => {
-      if (OmniUtil.isComposition(a.owner) && !OmniUtil.isComposition(b.owner)) {
-        return 1;
-      } else if (!OmniUtil.isComposition(a.owner) && OmniUtil.isComposition(b.owner)) {
-        return -1;
-      } else {
-        return 0;
+      let res = (OmniUtil.isPrimitive(a.owner) ? 1 : 0) - (OmniUtil.isPrimitive(b.owner) ? 1 : 0);
+      if (res === 0) {
+        res = (OmniUtil.isComposition(a.owner) ? 1 : 0) - (OmniUtil.isComposition(b.owner) ? 1 : 0);
+        if (res === 0) {
+          res = (a.owner.kind === OmniTypeKind.INTERFACE ? 1 : 0) - (b.owner.kind === OmniTypeKind.INTERFACE ? 1 : 0);
+        }
       }
+      return res;
+
+      // if ( && !OmniUtil.isComposition(b.owner)) {
+      //   return 1;
+      // } else if (!OmniUtil.isComposition(a.owner) && OmniUtil.isComposition(b.owner)) {
+      //   return -1;
+      // } else if (OmniUtil.isPrimitive(a.owner) && !OmniUtil.isPrimitive(b.owner)) {
+      //   return 1;
+      // } else if (!OmniUtil.isPrimitive(a.owner) && OmniUtil.isPrimitive(b.owner)) {
+      //   return -1;
+      // } else {
+      //   return 0;
+      // }
     });
 
     if (namePairs.length > 0) {

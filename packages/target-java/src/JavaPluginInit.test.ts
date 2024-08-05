@@ -1,5 +1,5 @@
 import {
-  DEFAULT_PACKAGE_OPTIONS,
+  DEFAULT_PACKAGE_OPTIONS, OmniItemKind,
   OmniModel,
   ZodModelTransformOptions,
   ZodParserOptions,
@@ -20,6 +20,7 @@ import {ZodJavaContextIn} from './JavaPluginInit.ts';
 const createEmptyOmniModel = (name: string): OmniModel => {
 
   return {
+    kind: OmniItemKind.MODEL,
     name: `${name}`,
     types: [],
     contact: undefined,

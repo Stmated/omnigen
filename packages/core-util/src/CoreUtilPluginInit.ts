@@ -16,7 +16,16 @@ import {
 } from '@omnigen/core-plugin';
 import {z} from 'zod';
 import {ConflictingIntersectionModelTransformer, ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse';
-import {OmniModel2ndPassTransformer, OmniModelTransformer, RenderedCompilationUnit, ZodModelTransformOptions, ZodPackageOptions, ZodParserOptions, ZodTargetOptions} from '@omnigen/core';
+import {
+  OmniModel2ndPassTransformer,
+  OmniModelTransformer,
+  OmniModelTransformer2ndPassArgs,
+  RenderedCompilationUnit,
+  ZodModelTransformOptions,
+  ZodPackageOptions,
+  ZodParserOptions,
+  ZodTargetOptions,
+} from '@omnigen/core';
 import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary.ts';
 import {FileWriter} from './write';
 import {DefaultOmniModelLibrary} from './parse/DefaultOmniModelLibrary.ts';
@@ -123,15 +132,20 @@ export const CommonTransform2Plugin = createPlugin(
       new SimplifyInheritanceModelTransformer(),
     ];
 
+    const args: OmniModelTransformer2ndPassArgs = {
+      model: ctx.model,
+      options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions},
+      targetFeatures: ctx.targetFeatures,
+    };
+
     for (const transformer of transformers) {
-      transformer.transformModel2ndPass({
-        model: ctx.model,
-        options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions},
-        targetFeatures: ctx.targetFeatures,
-      });
+      transformer.transformModel2ndPass(args);
     }
 
-    return ctx;
+    return {
+      ...ctx,
+      model: args.model,
+    };
   },
 );
 

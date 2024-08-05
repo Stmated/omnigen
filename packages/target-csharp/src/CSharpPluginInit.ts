@@ -161,7 +161,7 @@ export const CSharpPlugin = createPlugin(
   {name: 'cs', in: ZodCSharpContextIn, out: ZodCSharpContextOut, score: PluginScoreKind.REQUIRED},
   async ctx => {
 
-    const modelTransformerArgs: OmniModelTransformerArgs<ParserOptions> = {
+    const args: OmniModelTransformerArgs = {
       model: ctx.model,
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
     };
@@ -176,15 +176,15 @@ export const CSharpPlugin = createPlugin(
     ];
 
     for (const transformer of transformers) {
-      transformer.transformModel(modelTransformerArgs);
+      transformer.transformModel(args);
     }
 
     // Then do 2nd pass transforming
 
     type TOpt = ParserOptions & TargetOptions & CSharpOptions;
 
-    const modelTransformer2Args: OmniModelTransformer2ndPassArgs<TOpt> = {
-      model: ctx.model,
+    const args2: OmniModelTransformer2ndPassArgs<TOpt> = {
+      model: args.model,
       options: {
         ...ctx.parserOptions,
         ...ctx.modelTransformOptions,
@@ -201,7 +201,7 @@ export const CSharpPlugin = createPlugin(
     ] as const;
 
     for (const transformer of transformers2) {
-      transformer.transformModel2ndPass(modelTransformer2Args);
+      transformer.transformModel2ndPass(args2);
     }
 
     const astNode = new CSharpRootNode([]);
@@ -251,8 +251,8 @@ export const CSharpPlugin = createPlugin(
       ...ctx.csOptions,
     };
 
-    const astTransformerArgs: CSharpAstTransformerArgs = {
-      model: ctx.model,
+    const astArgs: CSharpAstTransformerArgs = {
+      model: args2.model,
       externals: [],
       features: CSHARP_FEATURES,
       options: options,
@@ -260,12 +260,13 @@ export const CSharpPlugin = createPlugin(
     };
 
     for (const transformer of astTransformers) {
-      transformer.transformAst(astTransformerArgs);
+      transformer.transformAst(astArgs);
     }
 
     return {
       ...ctx,
-      astNode: astTransformerArgs.root,
+      model: astArgs.model,
+      astNode: astArgs.root,
     };
   },
 );

@@ -4,7 +4,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 @SuppressWarnings("unused")
-public class description-inheritance {
+public class description_inheritance {
   /**
    * components_schemas_AbstractOne_description
    */

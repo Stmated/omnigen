@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, ParserOptions, TargetOptions} from '@omnigen/core';
+import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, ParserOptions, TargetOptions} from '@omnigen/core';
 import {TypeScriptOptions} from '../../options';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniReducer} from '@omnigen/core-util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -16,11 +16,9 @@ export class RemoveWildcardGenericParamTypeScriptModelTransformer implements Omn
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions>): void {
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-
-      if (ctx.type.kind === OmniTypeKind.UNKNOWN && ctx.type.upperBound) {
-        ctx.replacement = ctx.type.upperBound;
-      }
+    const reducer = new OmniReducer({
+      UNKNOWN: (n, a) => n.upperBound ? a.dispatcher.reduce(n.upperBound) : n,
     });
+    args.model = reducer.reduce(args.model);
   }
 }

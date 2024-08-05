@@ -144,7 +144,7 @@ export const JavaPlugin = createPlugin(
   {name: 'java', in: ZodJavaContextIn, out: ZodJavaContextOut, score: PluginScoreKind.REQUIRED},
   async ctx => {
 
-    const transformerArgs: OmniModelTransformerArgs<ParserOptions> = {
+    const transformerArgs: OmniModelTransformerArgs = {
       model: ctx.model,
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
     };
@@ -164,7 +164,7 @@ export const JavaPlugin = createPlugin(
     }
 
     const modelTransformer2Args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & JavaOptions> = {
-      model: ctx.model,
+      model: transformerArgs.model,
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.javaOptions},
       targetFeatures: JAVA_FEATURES,
     };
@@ -223,8 +223,8 @@ export const JavaPlugin = createPlugin(
 
     const targetOptions: TargetOptions = ZodTargetOptions.parse({...ctx.defaults, ...ctx.targetOptions, ...ctx.arguments});
 
-    const args: AstTransformerArguments<CodeRootAstNode, JavaAndTargetOptions> = {
-      model: ctx.model,
+    const astArgs: AstTransformerArguments<CodeRootAstNode, JavaAndTargetOptions> = {
+      model: modelTransformer2Args.model,
       root: rootNode,
       externals: [],
       options: {...ctx.packageOptions, ...targetOptions, ...ctx.javaOptions},
@@ -235,14 +235,15 @@ export const JavaPlugin = createPlugin(
 
       // We do the transformers in order.
       // Later we might batch them together based on "type" or "group" or whatever.
-      transformer.transformAst(args);
+      transformer.transformAst(astArgs);
     }
 
     return {
       ...ctx,
-      astNode: args.root,
+      model: astArgs.model,
+      astNode: astArgs.root,
       targetOptions: targetOptions,
-    };
+    } satisfies z.infer<typeof ZodJavaContextOut>;
   },
 );
 

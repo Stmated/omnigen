@@ -4,7 +4,7 @@ import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
   DEFAULT_PARSER_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
-  OMNI_GENERIC_FEATURES,
+  OMNI_GENERIC_FEATURES, OmniItemKind,
   OmniModel,
   OmniModelTransformer2ndPassArgs,
   OmniObjectType,
@@ -37,6 +37,7 @@ test('Test Merge', () => {
   const union: OmniUnionType = {kind: OmniTypeKind.UNION, name: 'Union', types: [a, b, c]};
 
   const model: OmniModel = {
+    kind: OmniItemKind.MODEL,
     schemaType: 'other',
     endpoints: [],
     types: [superType, a, b, c, union],
@@ -60,7 +61,7 @@ test('Test Merge', () => {
 
   const features: TargetFeatures = {...OMNI_GENERIC_FEATURES, unions: false};
 
-  const args2: OmniModelTransformer2ndPassArgs = {model, options, targetFeatures: features};
+  const args2: OmniModelTransformer2ndPassArgs = {model: args.model, options, targetFeatures: features};
   for (const transformer of transformers2) {
     transformer.transformModel2ndPass(args2);
   }
@@ -69,12 +70,12 @@ test('Test Merge', () => {
   assert.isTrue(b.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET);
   assert.isTrue(c.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET);
 
-  assert.equal(model.types.length, 5);
+  assert.equal(args2.model.types.length, 5);
   assert.equal(union.types.length, 3);
 
   assert.equal(union.kind, OmniTypeKind.UNION);
 
-  const modelUnion = model.types.find(it => it.kind === OmniTypeKind.OBJECT && Naming.unwrap(it.name) === 'Union')!;
+  const modelUnion = args2.model.types.find(it => it.kind === OmniTypeKind.OBJECT && Naming.unwrap(it.name) === 'Union')!;
   assert.isDefined(modelUnion);
 
   // TODO: More validations, that make sure that the structure is what we expect -- ie. A, B, C not changed, but the union type has been changed

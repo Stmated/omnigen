@@ -3,7 +3,7 @@ import {
   NameParts,
   ObjectName,
   OmniDictionaryType,
-  OmniInterfaceType,
+  OmniInterfaceType, OmniItemKind,
   OmniObjectType,
   OmniPrimitiveType,
   OmniProperty,
@@ -181,6 +181,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     };
 
     properties.push({
+      kind: OmniItemKind.PROPERTY,
       name: ADDITIONAL_PROPERTIES_FIELD_NAME,
       type: commonDictionary,
       owner: newInterfaceObjectType,

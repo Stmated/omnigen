@@ -65,7 +65,7 @@ exports[`Java Rendering > Type compressions 1`] = `
 
 exports[`Java Rendering > description-inheritance 1`] = `
 [
-  "description-inheritance.java",
+  "description_inheritance.java",
 ]
 `;
 

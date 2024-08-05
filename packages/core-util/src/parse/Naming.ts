@@ -82,7 +82,7 @@ export class Naming {
       return undefined;
     }
 
-    if (typeof input == 'object') {
+    if (typeof input === 'object' && !Array.isArray(input)) {
       return Naming.unwrapWithCallback(input.name, (name, parts) => {
         return Naming.unwrapWithCallback(input.prefix ?? '', (prefix, _prefixParts) => {
           return Naming.unwrapWithCallback(input.suffix ?? '', (suffix, _suffixParts) => {

@@ -6,7 +6,7 @@ import {
   OmniDecoratingType,
   OmniEnumMember,
   OmniEnumType,
-  OmniExample, OmniExclusiveUnionType,
+  OmniExample, OmniExclusiveUnionType, OmniItemKind,
   OmniModel,
   OmniModelParserResult,
   OmniObjectType,
@@ -27,9 +27,9 @@ import {
 import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
-import {Case, CompositionUtil, getShallowPayloadString, isDefined, Naming, OmniUtil, SchemaFile} from '@omnigen/core-util';
+import {Case, CompositionUtil, getShallowPayloadString, isDefined, Naming, OmniUtil, SchemaFile, ToDefined} from '@omnigen/core-util';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
-import {ExternalDocumentsFinder, RefResolver, ToDefined, ToSingle} from '../visit';
+import {ExternalDocumentsFinder, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
 import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';
@@ -75,6 +75,7 @@ export class DefaultJsonSchemaParser implements Parser {
     root = JsonSchemaParser.preProcessJsonSchema(this._schemaFile.getAbsolutePath(), root);
 
     const model: OmniModel = {
+      kind: OmniItemKind.MODEL,
       name: root.$id || '',
       version: '1.0',
       endpoints: [],
@@ -423,6 +424,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         const additionalPropertiesType = this.normalizeAdditionalPropertiesType(additionalPropertiesTypeRes.type);
 
         properties.push({
+          kind: OmniItemKind.PROPERTY,
           name: {
             isPattern: true,
             name: new RegExp(propertyPattern),
@@ -470,6 +472,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       }
 
       properties.push({
+        kind: OmniItemKind.PROPERTY,
         name: additionalPropertiesPropertyName,
         type: additionalPropertiesType,
         owner: type,
@@ -825,11 +828,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     if (Array.isArray(jsonExamples)) {
 
       for (const item of jsonExamples) {
-        examples.push({value: item});
+        examples.push({kind: OmniItemKind.EXAMPLE, value: item});
       }
 
     } else {
-      examples.push({value: jsonExamples});
+      examples.push({kind: OmniItemKind.EXAMPLE, value: jsonExamples});
     }
 
     return examples;
@@ -925,6 +928,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     const property: OmniProperty = {
+      kind: OmniItemKind.PROPERTY,
       name: JsonSchemaParser.getPreferredPropertyName(resolvedSchema, propertyName, this._options),
       type: propertyType.type,
       owner: owner,
@@ -1201,11 +1205,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
 
     let enumMembers: OmniEnumMember[];
     if (primitiveKind === OmniTypeKind.STRING) {
-      enumMembers = enumValues.map(it => ({value: `${String(it)}`}));
+      enumMembers = enumValues.map(it => ({kind: OmniItemKind.ENUM_MEMBER, value: `${String(it)}`}));
     } else if (OmniUtil.isNumericKind(primitiveKind)) {
-      enumMembers = enumValues.map(it => ({value: Number.parseFloat(`${String(it)}`)}));
+      enumMembers = enumValues.map(it => ({kind: OmniItemKind.ENUM_MEMBER, value: Number.parseFloat(`${String(it)}`)}));
     } else {
-      enumMembers = enumValues.map(it => ({value: Number.parseInt(`${String(it)}`)}));
+      enumMembers = enumValues.map(it => ({kind: OmniItemKind.ENUM_MEMBER, value: Number.parseInt(`${String(it)}`)}));
       primitiveKind = OmniTypeKind.STRING;
     }
 
@@ -1494,9 +1498,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
           const typeResult = this.jsonSchemaToType(this.getId(deref) || ref, deref);
 
           subTypeHints.push({
+            kind: OmniItemKind.SUBTYPE_HINT,
             type: typeResult.type,
             qualifiers: [
               {
+                kind: OmniItemKind.PAYLOAD_PATH_QUALIFIER,
                 path: [discriminatorPropertyName],
                 operator: OmniComparisonOperator.EQUALS,
                 value: key,
@@ -1537,9 +1543,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         }
 
         subTypeHints.push({
+          kind: OmniItemKind.SUBTYPE_HINT,
           type: subType,
           qualifiers: [
             {
+              kind: OmniItemKind.PAYLOAD_PATH_QUALIFIER,
               path: [discriminatorPropertyName],
               operator: OmniComparisonOperator.EQUALS,
               value: supposedPropertyValue,
@@ -1674,9 +1682,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       for (const inheritor of inheritors) {
 
         subTypeHints.push({
+          kind: OmniItemKind.SUBTYPE_HINT,
           type: inheritor,
           qualifiers: [
             {
+              kind: OmniItemKind.PAYLOAD_PATH_QUALIFIER,
               path: [propertyName],
               operator: OmniComparisonOperator.EQUALS,
               // TODO: This is VERY LIKELY INVALID! Must get the originating reference name or something!
@@ -1746,6 +1756,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         }
 
         objectType.properties.push({
+          kind: OmniItemKind.PROPERTY,
           name: key,
           type: propertyType,
           owner: objectType,

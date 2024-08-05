@@ -1,5 +1,5 @@
 import {ZodSchemaFileContext} from '@omnigen/core-util';
-import {ActionKind, createPlugin, ZodModelContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
+import {ActionKind, createPlugin, PluginAutoRegistry, ZodModelContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
 import {z} from 'zod';
 import {OpenApiJsonSchemaParser} from './parse/OpenApiJsonSchemaParser';
 import {AnyJSONSchema, ExternalDocumentsFinder} from '@omnigen/parser-jsonschema';
@@ -47,3 +47,5 @@ export const OpenApiPlugin = createPlugin(
     } as const;
   },
 );
+
+export default PluginAutoRegistry.register([OpenApiPlugin]);

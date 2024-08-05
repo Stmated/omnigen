@@ -9,15 +9,15 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class AggregateIntersectionsModelTransformer implements OmniModelTransformer {
 
-  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
+  transformModel(args: OmniModelTransformerArgs): void {
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-
-      // if (ctx.type.kind === OmniTypeKind.INTERSECTION) {
-      //
-      //   // NOTE: Wrong and bad, but what we have to work with at the moment.
-      //   ctx.replacement = ctx.type.types[0];
-      // }
-    });
+    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+    //
+    //   // if (ctx.type.kind === OmniTypeKind.INTERSECTION) {
+    //   //
+    //   //   // NOTE: Wrong and bad, but what we have to work with at the moment.
+    //   //   ctx.replacement = ctx.type.types[0];
+    //   // }
+    // });
   }
 }

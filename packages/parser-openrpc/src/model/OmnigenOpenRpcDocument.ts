@@ -1,5 +1,5 @@
 import {OmnigenOpenRpcVisitor} from './OmnigenOpenRpcVisitor.ts';
-import {VisitResult} from '@omnigen/core';
+import {VisitResult} from '@omnigen/api';
 import {
   Components,
   ContactObject,

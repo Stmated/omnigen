@@ -1,5 +1,5 @@
 import {expect, test, describe} from 'vitest';
-import {ZodModelTransformOptions, ZodOptions, ZodTargetOptions} from '@omnigen/core';
+import {ZodModelTransformOptions, ZodOptions, ZodTargetOptions} from '@omnigen/api';
 import {z} from 'zod';
 import {Compat, ZodUtils} from './ZodUtils.ts';
 

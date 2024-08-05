@@ -1,5 +1,5 @@
-import {OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/core';
-import {OmniReducer, OmniUtil} from '@omnigen/core-util';
+import {OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/api';
+import {OmniReducer, OmniUtil} from '@omnigen/core';
 
 /**
  * If an object has no properties but has pattern properties that match anything and has any type, then it can be replaced with an `unknown` type.

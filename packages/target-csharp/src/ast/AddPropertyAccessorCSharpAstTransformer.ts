@@ -1,8 +1,8 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, OmniProperty, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, OmniProperty, PackageOptions, TargetOptions} from '@omnigen/api';
 import {Cs, CSharpRootNode} from '../ast';
 import {CSharpOptions, ReadonlyPropertyMode} from '../options';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniUtil} from '@omnigen/core';
 import {Code} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);

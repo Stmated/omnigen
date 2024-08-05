@@ -3,7 +3,7 @@ import {ObjectVisitor} from '../visit/ObjectVisitor';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonPathResolver} from '../resolve/JsonPathResolver.ts';
 import {DocumentStore, JsonPathFetcher} from '../resolve/JsonPathFetcher.ts';
-import {Case} from '@omnigen/core-util';
+import {Case} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 

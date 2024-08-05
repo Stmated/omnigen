@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAndTargetOptions, JavaAstTransformerArgs, JavaAstUtils} from '../transform';
-import {Direction, ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniProperty, OmniPropertyName, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/core';
-import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
+import {Direction, ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniProperty, OmniPropertyName, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/api';
+import {AbortVisitingWithResult, assertDefined, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Java from '../ast/JavaAst';
 import {DelegateKind, VirtualAnnotationKind} from '../ast/JavaAst';
 import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrary} from '../options';

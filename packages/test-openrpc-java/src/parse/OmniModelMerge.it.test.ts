@@ -1,6 +1,6 @@
 import {JavaOptions, JavaPlugins} from '@omnigen/target-java';
-import {ModelTransformOptions, OmniModelParserResult, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
-import {Naming, OmniModelMerge, OmniUtil, Util} from '@omnigen/core-util';
+import {ModelTransformOptions, OmniModelParserResult, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/api';
+import {Naming, OmniModelMerge, OmniUtil, Util} from '@omnigen/core';
 import {describe, expect, test, vi} from 'vitest';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';

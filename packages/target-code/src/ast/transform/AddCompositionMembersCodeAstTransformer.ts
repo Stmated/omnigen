@@ -16,8 +16,8 @@ import {
   TargetOptions,
   TypeNode,
   UnknownKind,
-} from '@omnigen/core';
-import {Case, Naming, OmniUtil, Visitor} from '@omnigen/core-util';
+} from '@omnigen/api';
+import {Case, Naming, OmniUtil, Visitor} from '@omnigen/core';
 import {CodeAstUtils, CodeOptions, CodeUtil} from '../../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';

@@ -12,9 +12,9 @@ import {
   OmniType,
   OmniTypeKind,
   OmniUnionType,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Case, OmniUtil} from '@omnigen/core-util';
+import {Case, OmniUtil} from '@omnigen/core';
 import {CodeUtil} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);

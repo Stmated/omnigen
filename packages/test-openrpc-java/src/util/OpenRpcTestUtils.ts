@@ -1,9 +1,9 @@
 import fs from 'fs/promises';
 import {JavaTestUtils, JavaTestUtilsOptions} from './JavaTestUtils.ts';
-import {OmniModelParserResult, PackageOptions, TargetOptions} from '@omnigen/core';
+import {OmniModelParserResult, PackageOptions, TargetOptions} from '@omnigen/api';
 import {JavaPlugins, JavaOptions} from '@omnigen/target-java';
 import {ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
-import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 
 export type KnownSchemaNames = 'openrpc';
 

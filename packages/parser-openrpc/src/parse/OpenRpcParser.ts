@@ -36,8 +36,8 @@ import {
   SchemaSource,
   TypeName,
   UnknownKind,
-} from '@omnigen/core';
-import {Case, Naming, OmniUtil, ToDefined} from '@omnigen/core-util';
+} from '@omnigen/api';
+import {Case, Naming, OmniUtil, ToDefined} from '@omnigen/core';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,

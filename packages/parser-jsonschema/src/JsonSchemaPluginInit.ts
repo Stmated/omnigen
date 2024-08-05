@@ -1,4 +1,4 @@
-import {ZodSchemaFileContext} from '@omnigen/core-util';
+import {ZodSchemaFileContext} from '@omnigen/core';
 import {ActionKind, createPlugin, ZodModelContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
 import {z} from 'zod';
 import {DefaultJsonSchemaParser} from './parse';

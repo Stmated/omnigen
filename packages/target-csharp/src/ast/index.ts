@@ -1,4 +1,4 @@
-import {AstTransformerArguments, TargetOptions} from '@omnigen/core';
+import {AstTransformerArguments, TargetOptions} from '@omnigen/api';
 import {CSharpRootNode} from './CSharpRootNode.ts';
 import {CSharpOptions} from '../options';
 

@@ -1,4 +1,4 @@
-import {ZodOptions} from '@omnigen/core';
+import {ZodOptions} from '@omnigen/api';
 import {z} from 'zod';
 
 export const ZodOpenRpc10Options = ZodOptions.extend({

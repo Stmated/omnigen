@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/api';
 import {AddCommentsAstTransformer, Code, FreeTextUtils} from '@omnigen/target-code';
 import {CSharpRootNode} from '../ast';
 import {CSharpOptions} from '../options';

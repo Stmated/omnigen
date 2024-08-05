@@ -1,4 +1,4 @@
-import {Renderer, TargetOptions} from '@omnigen/core';
+import {Renderer, TargetOptions} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
 import {JavaOptions} from '../options';
 import {LoggerFactory} from '@omnigen/core-log';

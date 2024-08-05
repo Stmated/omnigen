@@ -4,7 +4,7 @@ import {
   ParserOptions,
   RenderedCompilationUnit,
   TargetOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 
 export interface OmnigenResult<TOpt extends Options | undefined> {
 

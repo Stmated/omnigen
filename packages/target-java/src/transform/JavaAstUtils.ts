@@ -1,6 +1,6 @@
-import {AstNode, NameParts, OmniInterfaceOrObjectType, OmniInterfaceType, OmniObjectType, OmniProperty, OmniType, OmniTypeKind, Reference, RootAstNode, TypeName} from '@omnigen/core';
+import {AstNode, NameParts, OmniInterfaceOrObjectType, OmniInterfaceType, OmniObjectType, OmniProperty, OmniType, OmniTypeKind, Reference, RootAstNode, TypeName} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Case, OmniUtil} from '@omnigen/core-util';
+import {Case, OmniUtil} from '@omnigen/core';
 import {JavaOptions} from '../options';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer';
 import {CodeAstUtils} from '@omnigen/target-code';

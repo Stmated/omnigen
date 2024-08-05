@@ -1,7 +1,7 @@
 import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
 import {Java, JavaPlugins} from '@omnigen/target-java';
 import {ZodImplementationOptions} from './ImplementationOptions';
-import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/core';
+import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/api';
 import {JavaHttpImplementationGenerator} from './JavaHttpImplementationGenerator';
 import {z} from 'zod';
 

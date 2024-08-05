@@ -14,8 +14,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@omnigen/api": "workspace:*",
     "@omnigen/core": "workspace:*",
-    "@omnigen/core-util": "workspace:*",
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/target-code": "workspace:*",
@@ -26,6 +26,6 @@
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.4"
   }
 }

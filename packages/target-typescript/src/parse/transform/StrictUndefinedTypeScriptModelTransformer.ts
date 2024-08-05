@@ -8,9 +8,9 @@ import {
   OmniTypeKind,
   ParserOptions,
   TargetOptions, UnknownKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {TypeScriptOptions} from '../../options';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniUtil} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 

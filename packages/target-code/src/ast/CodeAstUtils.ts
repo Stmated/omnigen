@@ -21,8 +21,8 @@ import {
   TypeNode,
   TypeUseKind,
   UnknownKind,
-} from '@omnigen/core';
-import {Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
+} from '@omnigen/api';
+import {Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/Code';
 import {CodeRootAstNode} from './CodeRootAstNode';
 import {CodeOptions} from '../options/CodeOptions';

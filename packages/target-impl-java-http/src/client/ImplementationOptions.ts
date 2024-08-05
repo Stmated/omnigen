@@ -1,6 +1,6 @@
 import {
   ZodCoercedBoolean, DEFAULT_PACKAGE_OPTIONS,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {z} from 'zod';
 
 export const ZodImplementationOptions = z.object({

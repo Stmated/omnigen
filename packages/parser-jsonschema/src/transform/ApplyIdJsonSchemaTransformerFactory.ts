@@ -1,7 +1,7 @@
 import {JsonSchema9VisitorFactory} from '../visit/JsonSchema9VisitorFactory.ts';
 import {JsonSchema9Visitor} from '../visit/JsonSchema9Visitor.ts';
 import {DefaultJsonSchema9Visitor} from '../visit/DefaultJsonSchema9Visitor.ts';
-import {Case, Util} from '@omnigen/core-util';
+import {Case, Util} from '@omnigen/core';
 
 export type IdHint = {
   /**

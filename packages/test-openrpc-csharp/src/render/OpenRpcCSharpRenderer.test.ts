@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, test, Test, vi} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OpenRpcCSharpTestUtils} from '../OpenRpcCSharpTestUtils.ts';
-import {RenderedCompilationUnit} from '@omnigen/core';
+import {RenderedCompilationUnit} from '@omnigen/api';
 import {ReadonlyPropertyMode} from '@omnigen/target-csharp';
 
 const logger = LoggerFactory.create(import.meta.url);

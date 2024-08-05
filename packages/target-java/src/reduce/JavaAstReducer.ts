@@ -1,6 +1,6 @@
 import {AstFreeTextVisitor, createCodeFreeTextReducer, createCodeReducer} from '@omnigen/target-code';
 import {JavaVisitor} from '../visit';
-import {Reducer} from '@omnigen/core';
+import {Reducer} from '@omnigen/api';
 
 export type FreeTextReducer = Reducer<AstFreeTextVisitor<unknown>>;
 

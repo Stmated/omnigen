@@ -27,9 +27,9 @@ import {
   ZodPackageOptions,
   ZodParserOptions,
   ZodTargetOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {z} from 'zod';
-import {SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createCSharpRenderer} from './render';
 import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';

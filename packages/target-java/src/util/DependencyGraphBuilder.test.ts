@@ -7,13 +7,13 @@ import {
   OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {JavaPotentialClassType, JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 import {
   OmniUtil,
   SimplifyInheritanceModelTransformer,
-} from '@omnigen/core-util';
+} from '@omnigen/core';
 import {describe, test, expect} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 

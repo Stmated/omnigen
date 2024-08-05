@@ -1,4 +1,4 @@
-import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/core';
+import {OMNI_GENERIC_FEATURES, TargetFeatures} from '@omnigen/api';
 
 export const TYPESCRIPT_FEATURES: TargetFeatures = {
   ...OMNI_GENERIC_FEATURES,

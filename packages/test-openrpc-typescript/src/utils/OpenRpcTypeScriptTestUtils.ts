@@ -1,5 +1,5 @@
-import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
-import {ModelTransformOptions, PackageOptions, ParserOptions, RenderedCompilationUnit, TargetOptions} from '@omnigen/core';
+import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
+import {ModelTransformOptions, PackageOptions, ParserOptions, RenderedCompilationUnit, TargetOptions} from '@omnigen/api';
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
 import {PluginManager} from '@omnigen/plugin';
 import {TypeScriptOptions, TypeScriptPlugins} from '@omnigen/target-typescript';

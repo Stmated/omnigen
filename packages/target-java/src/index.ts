@@ -1,4 +1,4 @@
-import {OMNI_GENERIC_FEATURES, StaticInnerTypeKind, TargetFeatures} from '@omnigen/core';
+import {OMNI_GENERIC_FEATURES, StaticInnerTypeKind, TargetFeatures} from '@omnigen/api';
 
 export * from './visit';
 export * from './transform';

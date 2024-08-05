@@ -1,7 +1,7 @@
 import {Code, CodeVisitor} from '@omnigen/target-code';
-import {ObjectNameResolver, Reducer, ReducerResult, TargetFunctions} from '@omnigen/core';
+import {ObjectNameResolver, Reducer, ReducerResult, TargetFunctions} from '@omnigen/api';
 import {JavaObjectNameResolver} from './JavaObjectNameResolver.ts';
-import {isDefined} from '@omnigen/core-util';
+import {isDefined} from '@omnigen/core';
 import {JavaModelFunctions} from '../parse/JavaModelFunctions';
 
 export class JavaAstRootNode extends Code.CodeRootAstNode {

@@ -3,7 +3,7 @@ import {OpenRpcModelConverter} from './OpenRpcModelConverter.ts';
 import * as fs from 'fs';
 import {OpenrpcDocument} from '@open-rpc/meta-schema';
 import {DefaultOmnigenOpenRpcVisitor} from './OmnigenOpenRpcVisitor.ts';
-import {Util} from '@omnigen/core-util';
+import {Util} from '@omnigen/core';
 
 describe('OpenRpcModelConverter', () => {
 

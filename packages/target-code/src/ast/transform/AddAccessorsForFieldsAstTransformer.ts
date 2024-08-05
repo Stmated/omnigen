@@ -1,5 +1,5 @@
-import {AstNode, AstTransformer, AstTransformerArguments, TargetFeatures, TargetOptions} from '@omnigen/core';
-import {AbortVisitingWithResult, OmniUtil, PropertyUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
+import {AstNode, AstTransformer, AstTransformerArguments, TargetFeatures, TargetOptions} from '@omnigen/api';
+import {AbortVisitingWithResult, OmniUtil, PropertyUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../Code';
 import {CodeOptions, SerializationPropertyNameMode} from '../../options/CodeOptions';

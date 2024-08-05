@@ -1,4 +1,4 @@
-import {DEFAULT_PACKAGE_OPTIONS} from '@omnigen/core';
+import {DEFAULT_PACKAGE_OPTIONS} from '@omnigen/api';
 import {z} from 'zod';
 
 export const ZodServerOptions = z.object({

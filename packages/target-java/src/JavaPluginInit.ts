@@ -44,9 +44,9 @@ import {
   TargetOptions,
   ZodAstNodeContext,
   ZodParserOptions, ZodTargetOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {z} from 'zod';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {ZodCompilationUnitsContext} from '@omnigen/core';
 import * as Java from './ast/JavaAst';
 import {CodeRootAstNode} from './ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';

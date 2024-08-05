@@ -2,7 +2,7 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJava
 import * as Java from '../ast/JavaAst';
 import {TokenKind} from '../ast/JavaAst';
 import {CodeAstUtils} from '@omnigen/target-code';
-import {OmniTypeKind} from '@omnigen/core';
+import {OmniTypeKind} from '@omnigen/api';
 
 /**
  * Will replace generic index access and assignment to index access for maps into map function calls.

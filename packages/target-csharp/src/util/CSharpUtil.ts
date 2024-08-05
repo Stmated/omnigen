@@ -1,4 +1,4 @@
-import {OmniPrimitiveType, OmniTypeKind} from '@omnigen/core';
+import {OmniPrimitiveType, OmniTypeKind} from '@omnigen/api';
 
 export class CSharpUtil {
 

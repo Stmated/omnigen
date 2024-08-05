@@ -1,5 +1,5 @@
-import {OmniCompositionType, OmniInterfaceOrObjectType, OmniKindComposition, OmniModel, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TargetFunctions} from '@omnigen/core';
-import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
+import {OmniCompositionType, OmniInterfaceOrObjectType, OmniKindComposition, OmniModel, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TargetFunctions} from '@omnigen/api';
+import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
 

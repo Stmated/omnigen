@@ -7,11 +7,11 @@ import {
   RenderedCompilationUnit,
   TargetOptions,
   ZodTargetOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {createJavaVisitor, Java, JavaOptions, SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '../util';
 import {TestUtils} from '@omnigen/utils-test';
-import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
 import {z, ZodObject} from 'zod';

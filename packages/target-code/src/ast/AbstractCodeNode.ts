@@ -1,4 +1,4 @@
-import {AstNode, Reducer, ReducerResult, VisitResult} from '@omnigen/core';
+import {AstNode, Reducer, ReducerResult, VisitResult} from '@omnigen/api';
 import {CodeVisitor} from '../visitor/CodeVisitor.ts';
 
 class CounterSource {

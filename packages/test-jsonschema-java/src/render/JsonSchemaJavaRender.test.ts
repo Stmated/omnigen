@@ -1,7 +1,7 @@
 import {describe, expect, test, vi} from 'vitest';
 import {JsonSchemaToJavaTestUtil} from './JsonSchemaToJavaTestUtil.ts';
 import {SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
-import {Util} from '@omnigen/core-util';
+import {Util} from '@omnigen/core';
 import {IncludeExampleCommentsMode} from '@omnigen/target-code';
 
 describe('jsonschema-java-render', () => {

@@ -1,6 +1,6 @@
 import {assert, describe, test} from 'vitest';
 import {JavaObjectNameResolver} from './JavaObjectNameResolver.ts';
-import {DEFAULT_PACKAGE_OPTIONS, DEFAULT_TARGET_OPTIONS, NameParts, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
+import {DEFAULT_PACKAGE_OPTIONS, DEFAULT_TARGET_OPTIONS, NameParts, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/api';
 import {DEFAULT_JAVA_OPTIONS, JavaOptions} from '../options';
 
 describe('JavaAstNameResolver', () => {

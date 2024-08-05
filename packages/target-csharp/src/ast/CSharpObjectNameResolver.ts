@@ -1,5 +1,5 @@
-import {AstNameBuildArgs, NameParts, ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, TypeUseKind, UnknownKind} from '@omnigen/core';
-import {AbstractObjectNameResolver, assertUnreachable} from '@omnigen/core-util';
+import {AstNameBuildArgs, NameParts, ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, TypeUseKind, UnknownKind} from '@omnigen/api';
+import {AbstractObjectNameResolver, assertUnreachable} from '@omnigen/core';
 import {CSharpOptions} from '../options';
 import {CSharpUtil} from '../util/CSharpUtil.ts';
 import {LoggerFactory} from '@omnigen/core-log';

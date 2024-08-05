@@ -1,5 +1,5 @@
-import {OmniInterfaceOrObjectType, OmniModel, OmniSubTypeCapableType, OmniSuperTypeCapableType, OmniType, TargetFunctions} from '@omnigen/core';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniInterfaceOrObjectType, OmniModel, OmniSubTypeCapableType, OmniSuperTypeCapableType, OmniType, TargetFunctions} from '@omnigen/api';
+import {OmniUtil} from '@omnigen/core';
 import {CodeUtil} from '@omnigen/target-code';
 
 export class TsModelFunctions implements TargetFunctions {

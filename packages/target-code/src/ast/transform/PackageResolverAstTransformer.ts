@@ -1,6 +1,6 @@
-import {AstTransformer, AstTransformerArguments, ExternalSyntaxTree, NameParts, Namespace, OmniType, PackageOptions, TargetFeatures, TargetOptions, TypeUseKind} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, ExternalSyntaxTree, NameParts, Namespace, OmniType, PackageOptions, TargetFeatures, TargetOptions, TypeUseKind} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil, Visitor} from '@omnigen/core-util';
+import {OmniUtil, Visitor} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 
 import * as Code from '../../ast/CodeAst';

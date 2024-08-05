@@ -1,11 +1,11 @@
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
-import {Util, ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {z} from 'zod';
 import {PluginManager} from '@omnigen/plugin';
 import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 import {CSharpOptions, CSharpPlugins} from '@omnigen/target-csharp';
 import {LoggerFactory} from '@omnigen/core-log';
-import {ModelTransformOptions, PackageOptions, ParserOptions, TargetOptions} from '@omnigen/core';
+import {ModelTransformOptions, PackageOptions, ParserOptions, TargetOptions} from '@omnigen/api';
 
 const logger = LoggerFactory.create(import.meta.url);
 

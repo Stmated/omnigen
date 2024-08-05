@@ -1,7 +1,7 @@
-import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/core';
+import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/api';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniUtil} from '@omnigen/core';
 import {Code, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, render} from '@omnigen/target-code';
 import {Ts} from '../ast';
 

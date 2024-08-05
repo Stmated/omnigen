@@ -1,4 +1,4 @@
-import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/api';
 import {JavaOptions} from '../options';
 import {JavaAstRootNode} from '../ast/JavaAstRootNode';
 import * as Java from '../ast/JavaAst';

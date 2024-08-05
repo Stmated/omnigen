@@ -1,5 +1,5 @@
-import {AstTransformer, AstTransformerArguments, OmniTypeKind} from '@omnigen/core';
-import {OmniUtil, Visitor} from '@omnigen/core-util';
+import {AstTransformer, AstTransformerArguments, OmniTypeKind} from '@omnigen/api';
+import {OmniUtil, Visitor} from '@omnigen/core';
 import {Code} from '@omnigen/target-code';
 
 export class AddSubTypeHintsAstTransformer implements AstTransformer<Code.CodeRootAstNode> {

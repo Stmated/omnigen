@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import {JsonSchema9Visitor} from './JsonSchema9Visitor.ts';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {z} from 'zod';
-import {SchemaFile, Util} from '@omnigen/core-util';
+import {SchemaFile, Util} from '@omnigen/core';
 import {JSONSchema9Definition} from '../definitions';
 import {JsonSchemaMigrator} from '../migrate';
 

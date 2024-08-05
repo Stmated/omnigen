@@ -24,10 +24,10 @@ import {
   TargetOptions,
   TypeNode,
   UnknownKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {ImplementationOptions} from './ImplementationOptions';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Case, Naming, OmniUtil} from '@omnigen/core-util';
+import {Case, Naming, OmniUtil} from '@omnigen/core';
 import {
   AddAbstractAccessorsAstTransformer,
   AddAccessorsForFieldsAstTransformer,

@@ -1,4 +1,4 @@
-import {RenderedCompilationUnit, TargetOptions} from '@omnigen/core';
+import {RenderedCompilationUnit, TargetOptions} from '@omnigen/api';
 import {PluginManager} from '@omnigen/plugin';
 import {TypeScriptOptions, TypeScriptPlugins} from '@omnigen/target-typescript';
 import {LoggerFactory} from '@omnigen/core-log';

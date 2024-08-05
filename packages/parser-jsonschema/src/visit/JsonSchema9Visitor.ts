@@ -1,6 +1,6 @@
 import {AnyJSONSchema} from '../parse';
 import {DocVisitorTransformer, DocVisitorUnknownTransformer, Entry, ToArray, ToSingle} from './helpers.ts';
-import {ToDefined} from '@omnigen/core-util';
+import {ToDefined} from '@omnigen/core';
 
 export interface JsonSchema9Visitor<S extends AnyJSONSchema = AnyJSONSchema> {
   $defs: DocVisitorTransformer<S['$defs'], this>;

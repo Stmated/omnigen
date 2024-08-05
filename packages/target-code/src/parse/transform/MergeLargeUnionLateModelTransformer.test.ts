@@ -11,8 +11,8 @@ import {
   OmniTypeKind,
   OmniUnionType,
   TargetFeatures,
-} from '@omnigen/core';
-import {GenericsModelTransformer, Naming, OmniUtil} from '@omnigen/core-util';
+} from '@omnigen/api';
+import {GenericsModelTransformer, Naming, OmniUtil} from '@omnigen/core';
 
 test('Test Merge', () => {
 

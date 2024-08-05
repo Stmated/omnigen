@@ -1,5 +1,5 @@
-import {Visitor} from '@omnigen/core-util';
-import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/core';
+import {Visitor} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/api';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 import * as Code from '../CodeAst';
 import * as FreeText from '../FreeText';

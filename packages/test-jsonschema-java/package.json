@@ -14,9 +14,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@omnigen/core": "workspace:*",
+    "@omnigen/api": "workspace:*",
     "@omnigen/core-log": "workspace:*",
-    "@omnigen/core-util": "workspace:*",
+    "@omnigen/core": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/target-code": "workspace:*",
     "@omnigen/target-java": "workspace:*",
@@ -28,7 +28,7 @@
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
-    "typescript": "^5.5.3",
+    "typescript": "^5.5.4",
     "java-parser": "^2.3.0"
   }
 }

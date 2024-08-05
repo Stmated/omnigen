@@ -11,8 +11,8 @@ import {
   OmniTypeKind,
   PackageOptions,
   TargetOptions, TypeNode,
-} from '@omnigen/core';
-import {assertUnreachable, OmniUtil, Util, Visitor} from '@omnigen/core-util';
+} from '@omnigen/api';
+import {assertUnreachable, OmniUtil, Util, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
 import * as FreeText from '../FreeText';
@@ -145,7 +145,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       if (endpoint.examples) {
         for (const example of endpoint.examples) {
           const parameterHasType = (example.params || []).filter(it => it.type == type).length > 0;
-          if (example.result.type == type || parameterHasType) {
+          if (example.result?.type === type || parameterHasType) {
 
             exampleIndex++;
             comments.push(AddCommentsAstTransformer.getExampleComments(example, exampleIndex));
@@ -296,7 +296,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       }
     }
 
-    if (example.result.description || example.result.summary || example.result.value) {
+    if (example.result && (example.result.description || example.result.summary || example.result.value)) {
 
       const lines: FreeText.FreeTextLine[] = [];
 

@@ -1,4 +1,4 @@
-import {getEnumValues, ToEnum, ZodCoercedBoolean} from '@omnigen/core';
+import {getEnumValues, ToEnum, ZodCoercedBoolean} from '@omnigen/api';
 import {z} from 'zod';
 import {ZodCodeOptions} from '@omnigen/target-code';
 

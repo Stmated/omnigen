@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, ParserOptions, TargetOptions} from '@omnigen/core';
+import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, ParserOptions, TargetOptions} from '@omnigen/api';
 import {TypeScriptOptions} from '../../options';
-import {OmniReducer} from '@omnigen/core-util';
+import {OmniReducer} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 

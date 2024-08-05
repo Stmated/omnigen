@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, OmniHardcodedReferenceType, OmniProperty, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, OmniHardcodedReferenceType, OmniProperty, OmniType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/api';
 import {JavaOptions} from '../options';
 import {JavaAstRootNode} from '../ast/JavaAstRootNode.ts';
 import {Code} from '@omnigen/target-code';

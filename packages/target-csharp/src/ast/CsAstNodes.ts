@@ -1,5 +1,5 @@
 import {CSharpVisitor} from '../visit';
-import {AstNode, OmniProperty, Reducer, ReducerResult, Reference, RootAstNode, TypeNode, VisitResult} from '@omnigen/core';
+import {AstNode, OmniProperty, Reducer, ReducerResult, Reference, RootAstNode, TypeNode, VisitResult} from '@omnigen/api';
 import {Code} from '@omnigen/target-code';
 import {Identifier} from '@omnigen/target-code/ast';
 

@@ -1,5 +1,5 @@
-import {ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, UnknownKind} from '@omnigen/core';
-import {AbstractObjectNameResolver} from '@omnigen/core-util';
+import {ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, UnknownKind} from '@omnigen/api';
+import {AbstractObjectNameResolver} from '@omnigen/core';
 import {TypeScriptOptions} from '../options';
 
 export class TypeScriptObjectNameResolver extends AbstractObjectNameResolver<PackageOptions & TargetOptions & TypeScriptOptions> {

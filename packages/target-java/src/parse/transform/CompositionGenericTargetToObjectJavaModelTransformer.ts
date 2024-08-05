@@ -1,5 +1,5 @@
-import {OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/core';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/api';
+import {OmniUtil} from '@omnigen/core';
 import {JavaUtil} from '../../util';
 
 /**

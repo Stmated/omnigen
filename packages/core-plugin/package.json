@@ -14,7 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@omnigen/core": "workspace:*",
+    "@omnigen/api": "workspace:*",
     "@omnigen/core-log": "workspace:*",
     "pino": "8.6.0",
     "zod": "^3.22.4"
@@ -24,7 +24,7 @@
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "colors": "^1.4.0",
-    "typescript": "^5.5.3",
+    "typescript": "^5.5.4",
     "pino-pretty": "^10.3.1"
   }
 }

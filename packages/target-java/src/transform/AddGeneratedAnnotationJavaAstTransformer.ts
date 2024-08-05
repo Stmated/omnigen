@@ -1,7 +1,7 @@
-import {ObjectName, OmniTypeKind} from '@omnigen/core';
+import {ObjectName, OmniTypeKind} from '@omnigen/api';
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from '../transform';
 import * as Java from '../ast/JavaAst';
-import {Visitor} from '@omnigen/core-util';
+import {Visitor} from '@omnigen/core';
 import {JavaAnnotationLibrary} from '../options';
 
 export class AddGeneratedAnnotationJavaAstTransformer extends AbstractJavaAstTransformer {

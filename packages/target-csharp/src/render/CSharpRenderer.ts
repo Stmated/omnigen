@@ -1,9 +1,9 @@
-import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, VisitResult} from '@omnigen/core';
+import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, VisitResult} from '@omnigen/api';
 import {CSharpOptions, ReadonlyPropertyMode} from '../options';
 import {createCSharpVisitor, CSharpVisitor} from '../visit';
 import {Code, CodeRenderContext, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, join, render} from '@omnigen/target-code';
 import {CSharpRootNode} from '../ast';
-import {Case, OmniUtil} from '@omnigen/core-util';
+import {Case, OmniUtil} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

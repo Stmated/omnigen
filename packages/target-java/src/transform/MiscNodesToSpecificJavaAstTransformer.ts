@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import * as Java from '../ast/JavaAst';
-import {OmniTypeKind} from '@omnigen/core';
+import {OmniTypeKind} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {CodeAstUtils} from '@omnigen/target-code';
 

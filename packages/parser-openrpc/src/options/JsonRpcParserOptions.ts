@@ -1,4 +1,4 @@
-import {OmniType, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {OmniType, ZodCoercedBoolean, ZodOptions} from '@omnigen/api';
 import {z} from 'zod';
 import {JSONSchema9} from '@omnigen/parser-jsonschema';
 

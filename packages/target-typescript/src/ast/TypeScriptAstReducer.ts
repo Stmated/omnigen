@@ -1,7 +1,7 @@
 import {TypeScriptVisitor} from '../visit';
 import {Ts} from '../ast';
-import {Reducer} from '@omnigen/core';
-import {assertDefined, isDefined} from '@omnigen/core-util';
+import {Reducer} from '@omnigen/api';
+import {assertDefined, isDefined} from '@omnigen/core';
 import {createCodeReducer} from '@omnigen/target-code';
 
 export type TypeScriptAstReducer = Reducer<TypeScriptVisitor<unknown>>

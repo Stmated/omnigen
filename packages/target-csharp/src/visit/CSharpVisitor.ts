@@ -1,4 +1,4 @@
-import {AstNode, VisitFn} from '@omnigen/core';
+import {AstNode, VisitFn} from '@omnigen/api';
 import {Cs} from '../ast';
 import {createCodeVisitor, CodeVisitor} from '@omnigen/target-code';
 

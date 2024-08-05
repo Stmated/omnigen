@@ -13,9 +13,9 @@ import {
   TypeNode,
   TypeUseKind,
   UnknownKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
-import {CreateMode, OmniUtil} from '@omnigen/core-util';
+import {CreateMode, OmniUtil} from '@omnigen/core';
 import {JavaOptions, SerializationLibrary} from '../options';
 import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER} from './JacksonJavaAstTransformer';
 import {LoggerFactory} from '@omnigen/core-log';

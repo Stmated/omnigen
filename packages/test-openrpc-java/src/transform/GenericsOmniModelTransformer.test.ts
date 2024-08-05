@@ -5,11 +5,11 @@ import {
   OmniTypeKind,
   DEFAULT_PARSER_OPTIONS,
   DEFAULT_MODEL_TRANSFORM_OPTIONS, NameParts, DEFAULT_PACKAGE_OPTIONS, DEFAULT_TARGET_OPTIONS, OMNI_GENERIC_FEATURES,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {
   GenericsModelTransformer,
   OmniUtil,
-} from '@omnigen/core-util';
+} from '@omnigen/core';
 import {expect, test, describe} from 'vitest';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '../util';
 

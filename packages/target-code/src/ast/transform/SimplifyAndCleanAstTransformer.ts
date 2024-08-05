@@ -1,4 +1,4 @@
-import {AstTransformer, AstTransformerArguments} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments} from '@omnigen/api';
 import * as Code from '../Code';
 import {ModifierKind} from '../Code';
 import {LoggerFactory} from '@omnigen/core-log';

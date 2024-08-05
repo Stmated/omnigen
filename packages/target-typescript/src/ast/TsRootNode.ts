@@ -1,6 +1,6 @@
-import {AstNode, AstNodeWithChildren, AstTargetFunctions, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/core';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/api';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
-import {isDefined} from '@omnigen/core-util';
+import {isDefined} from '@omnigen/core';
 import {DefaultTypeScriptAstReducer, TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
 import {TsAstUtils} from './TsAstUtils.ts';
 import {Code} from '@omnigen/target-code';

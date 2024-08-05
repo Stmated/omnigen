@@ -1,7 +1,7 @@
-import {AstNode, OmniTypeKind, reduce, Reducer, Reference} from '@omnigen/core';
+import {AstNode, OmniTypeKind, reduce, Reducer, Reference} from '@omnigen/api';
 import * as Code from '../ast/CodeAst';
 import * as FreeText from '../ast/FreeText';
-import {assertDefined, isDefined, OmniUtil} from '@omnigen/core-util';
+import {assertDefined, isDefined, OmniUtil} from '@omnigen/core';
 import {AstFreeTextVisitor} from '../visitor/FreeTextVisitor';
 import {CodeVisitor} from '../visitor/CodeVisitor';
 

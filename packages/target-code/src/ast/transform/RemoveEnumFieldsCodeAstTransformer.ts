@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/api';
 import * as Code from '../CodeAst';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 

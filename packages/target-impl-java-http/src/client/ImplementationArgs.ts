@@ -1,4 +1,4 @@
-import {OmniModel, RootAstNode} from '@omnigen/core';
+import {OmniModel, RootAstNode} from '@omnigen/api';
 import {ImplementationOptions} from './ImplementationOptions.ts';
 import {JavaAndTargetOptions} from '@omnigen/target-java';
 

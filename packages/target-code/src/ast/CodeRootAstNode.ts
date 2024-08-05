@@ -1,5 +1,5 @@
-import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ObjectNameResolver, Reducer, ReducerResult, Reference, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/core';
-import {ReferenceNodeNotFoundError} from '@omnigen/core-util';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ObjectNameResolver, Reducer, ReducerResult, Reference, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/api';
+import {ReferenceNodeNotFoundError} from '@omnigen/core';
 import {CodeAstUtils} from './CodeAstUtils.ts';
 import {CodeVisitor, createCodeVisitor} from '../visitor/CodeVisitor.ts';
 import {CodeReducer, DefaultCodeReducer} from '../reduce/CodeAstReducer.ts';

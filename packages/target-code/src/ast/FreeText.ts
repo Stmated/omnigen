@@ -1,4 +1,4 @@
-import {AstNode, AstNodeWithChildren, OmniProperty, Reducer, ReducerResult, VisitResult} from '@omnigen/core';
+import {AstNode, AstNodeWithChildren, OmniProperty, Reducer, ReducerResult, VisitResult} from '@omnigen/api';
 import {AstFreeTextVisitor} from '../visitor/FreeTextVisitor';
 import {FreeTextUtils} from '../util/FreeTextUtils';
 import {AbstractCodeNode} from './AbstractCodeNode.ts';

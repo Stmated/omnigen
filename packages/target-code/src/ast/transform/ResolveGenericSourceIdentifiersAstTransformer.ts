@@ -1,5 +1,5 @@
-import {AstTransformer, AstTransformerArguments, OmniGenericSourceIdentifierType, OmniType, OmniTypeKind, TypeNode} from '@omnigen/core';
-import {OmniUtil} from '@omnigen/core-util';
+import {AstTransformer, AstTransformerArguments, OmniGenericSourceIdentifierType, OmniType, OmniTypeKind, TypeNode} from '@omnigen/api';
+import {OmniUtil} from '@omnigen/core';
 import * as Code from '../CodeAst';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 

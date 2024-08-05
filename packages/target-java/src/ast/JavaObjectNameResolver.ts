@@ -1,6 +1,6 @@
-import {ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, UnknownKind} from '@omnigen/core';
+import {ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, UnknownKind} from '@omnigen/api';
 import {JAVA_RESERVED_WORDS, JavaUtil} from '../util';
-import {AbstractObjectNameResolver} from '@omnigen/core-util';
+import {AbstractObjectNameResolver} from '@omnigen/core';
 import {JavaOptions} from '../options';
 
 export class JavaObjectNameResolver extends AbstractObjectNameResolver<PackageOptions & TargetOptions & JavaOptions> {

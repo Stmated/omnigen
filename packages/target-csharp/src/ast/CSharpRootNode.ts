@@ -1,6 +1,6 @@
-import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/core';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/api';
 import {createCSharpVisitor, CSharpVisitor} from '../visit';
-import {isDefined} from '@omnigen/core-util';
+import {isDefined} from '@omnigen/core';
 import {Code} from '@omnigen/target-code';
 import {CSharpAstReducer, DefaultCSharpAstReducer} from './CSharpAstReducer';
 import {CsAstUtils} from './CsAstUtils';

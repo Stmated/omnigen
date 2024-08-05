@@ -1,5 +1,5 @@
-import {AstNode, AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, RootAstNode, VisitResult} from '@omnigen/core';
-import {OmniUtil, Visitor} from '@omnigen/core-util';
+import {AstNode, AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, RootAstNode, VisitResult} from '@omnigen/api';
+import {OmniUtil, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';

@@ -1,7 +1,7 @@
 import {JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
-import {AstTransformer, OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/core';
+import {AstTransformer, OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
-import {OmniUtil, Visitor} from '@omnigen/core-util';
+import {OmniUtil, Visitor} from '@omnigen/core';
 import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
 import {JavaVisitor} from '../visit';
 import {FieldAccessorMode, JavaOptions} from '../options';

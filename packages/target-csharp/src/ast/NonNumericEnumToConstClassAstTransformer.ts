@@ -5,7 +5,7 @@ import {
   OmniTypeKind,
   PackageOptions,
   TargetOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {Cs, CSharpRootNode} from '../ast';
 
 const logger = LoggerFactory.create(import.meta.url);

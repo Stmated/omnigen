@@ -1,6 +1,6 @@
-import {AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, StaticInnerTypeKind, TargetFeatures, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, StaticInnerTypeKind, TargetFeatures, TargetOptions} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core-util';
+import {OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 import * as Code from '../CodeAst';
 import {CodeOptions} from '../../options/CodeOptions.ts';

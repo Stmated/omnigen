@@ -1,5 +1,5 @@
 import {JavaTestUtils} from '../util';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/core';
+import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/api';
 import {expect, test, describe, vi} from 'vitest';
 import {ADDITIONAL_PROPERTIES_FIELD_NAME, DEFAULT_JAVA_OPTIONS, PatternPropertiesToMapJavaAstTransformer, SerializationLibrary} from '@omnigen/target-java';
 import {SerializationPropertyNameMode} from '@omnigen/target-code';

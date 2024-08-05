@@ -8,7 +8,7 @@ import {
   OmniTypeKind,
   TypeName,
   VisitResult, OmniItemKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {expect} from 'vitest';
 
 type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<OmniProperty, 'owner'>>;

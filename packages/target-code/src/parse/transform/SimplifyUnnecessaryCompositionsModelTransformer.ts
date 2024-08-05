@@ -1,5 +1,5 @@
-import {OMNI_GENERIC_FEATURES, OmniExclusiveUnionType, OmniModelTransformer, OmniModelTransformerArgs, OmniNode, OmniType, OmniUnionType, TargetFeatures} from '@omnigen/core';
-import {OmniReducer, isDefined, OmniUtil, ReducerArgs, ReturnTypeOverride} from '@omnigen/core-util';
+import {OMNI_GENERIC_FEATURES, OmniExclusiveUnionType, OmniModelTransformer, OmniModelTransformerArgs, OmniNode, OmniType, OmniUnionType, TargetFeatures} from '@omnigen/api';
+import {OmniReducer, isDefined, OmniUtil, ReducerArgs, ReturnTypeOverride} from '@omnigen/core';
 
 /**
  * These are examples of unions that we will simplify/remove.

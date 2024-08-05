@@ -1,9 +1,9 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/core';
+import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/api';
 import {Code, CodeAstUtils, CodeUtil} from '@omnigen/target-code';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
-import {Case, OmniUtil} from '@omnigen/core-util';
+import {Case, OmniUtil} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 

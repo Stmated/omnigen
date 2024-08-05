@@ -1,4 +1,4 @@
-import {ZodCoercedBoolean} from '@omnigen/core';
+import {ZodCoercedBoolean} from '@omnigen/api';
 import {z} from 'zod';
 import {ZodCodeOptions} from '@omnigen/target-code';
 

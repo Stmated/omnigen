@@ -4,7 +4,7 @@ import {
   ZodModelTransformOptions,
   ZodParserOptions,
   ZodTargetOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {
   BaseContext,
   createPlugin,

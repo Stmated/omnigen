@@ -1,4 +1,4 @@
-import {CompressTypeLevel, CompressTypeNaming, TargetOptions, ZodTargetOptions} from '@omnigen/core';
+import {CompressTypeLevel, CompressTypeNaming, TargetOptions, ZodTargetOptions} from '@omnigen/api';
 import {PluginManager} from './PluginManager.ts';
 import {z} from 'zod';
 import {describe, test, expect} from 'vitest';
@@ -53,7 +53,7 @@ describe('plugin path', () => {
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('a', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
 
-    await expect(pm.execute({ctx: {'x': 'foo'}})).rejects.toThrow(`There was no plugin execution path found`);
+    await expect(pm.execute({ctx: {x: 'foo'}})).rejects.toThrow(`There was no plugin execution path found`);
   });
 
   test('match', async () => {
@@ -61,7 +61,7 @@ describe('plugin path', () => {
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('a', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
 
-    const result = await pm.execute({ctx: {'a': 'foo'}});
+    const result = await pm.execute({ctx: {a: 'foo'}});
     expect(result.results).toHaveLength(1);
     expect(result.results[0].ctx).toMatchObject({b: 'foobar'});
     expect(result.results[0].ctx).toEqual({a: 'foo', b: 'foobar'});
@@ -73,7 +73,7 @@ describe('plugin path', () => {
     pm.createPlugin('p1', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
     pm.createPlugin('p2', z.object({b: z.string()}), z.object({c: z.string()}), async ctx => ({c: `${ctx.b}baz`}));
 
-    const result = await pm.execute({ctx: {'a': 'foo'}});
+    const result = await pm.execute({ctx: {a: 'foo'}});
     expect(result.results).toHaveLength(2);
     expect(result.results[0].ctx).toEqual({a: 'foo', b: 'foobar'});
     expect(result.results[1].ctx).toEqual({a: 'foo', b: 'foobar', c: 'foobarbaz'});
@@ -85,7 +85,7 @@ describe('plugin path', () => {
     pm.createPlugin('p1', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
     pm.createPlugin('p2', z.object({b: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.b}baz`}));
 
-    const result = await pm.execute({ctx: {'a': 'foo'}});
+    const result = await pm.execute({ctx: {a: 'foo'}});
     expect(result.results).toHaveLength(2);
     expect(result.results[0].ctx).toEqual({a: 'foo', b: 'foobar'});
     expect(result.results[1].ctx).toEqual({a: 'foo', b: 'foobarbaz'});
@@ -97,7 +97,7 @@ describe('plugin path', () => {
     pm.createPlugin('p1', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
     pm.createPlugin('p2', z.object({b: z.literal('foobar')}), z.object({c: z.string()}), async ctx => ({c: `${ctx.b}baz`}));
 
-    const result = await pm.execute({ctx: {'a': 'foo'}});
+    const result = await pm.execute({ctx: {a: 'foo'}});
     expect(result.results).toHaveLength(2);
     expect(result.results[0].ctx).toMatchObject({b: 'foobar'});
     expect(result.results[1].ctx).toMatchObject({c: 'foobarbaz'});
@@ -111,7 +111,7 @@ describe('plugin path', () => {
     pm.createPlugin('p3', z.object({c: z.string()}), z.object({d: z.string()}), async ctx => ({d: `${ctx.c}3`}));
     pm.createPlugin('p4', z.object({b: z.string()}), z.object({e: z.string()}), async ctx => ({e: `${ctx.b}4`}));
 
-    const result = await pm.execute({ctx: {'a': '0'}});
+    const result = await pm.execute({ctx: {a: '0'}});
     expect(result.results).toHaveLength(4);
     expect(result.results[0].ctx).toMatchObject({b: '01'});
     expect(result.results[1].ctx).toMatchObject({c: '012'});
@@ -128,7 +128,7 @@ describe('plugin path', () => {
     pm.createPlugin('p3_4', z.object({c: z.literal('012')}), z.object({d: z.string()}), async ctx => ({d: `${ctx.c}3`}));
     pm.createPlugin('p3_5', z.object({c: z.literal('no-match')}), z.object({d: z.string()}), async ctx => ({d: `${ctx.c}4`}));
 
-    const result = await pm.execute({ctx: {'a': '0'}});
+    const result = await pm.execute({ctx: {a: '0'}});
     expect(result.results).toHaveLength(3);
     expect(result.results[0].ctx).toMatchObject({b: '01'});
     expect(result.results[1].ctx).toMatchObject({c: '012'});
@@ -150,7 +150,7 @@ describe('plugin path', () => {
       async ctx => ({c: `${ctx.b}3`}),
     ).score = 5;
 
-    const result = await pm.execute({ctx: {'a': '0'}});
+    const result = await pm.execute({ctx: {a: '0'}});
     expect(result.results).toHaveLength(2);
     expect(result.results[0].ctx).toMatchObject({b: '01'});
     expect(result.results[1].ctx).toMatchObject({c: '013'});

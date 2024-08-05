@@ -1,4 +1,4 @@
-import {DEFAULT_UNKNOWN_KIND, getEnumValues, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {DEFAULT_UNKNOWN_KIND, getEnumValues, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/api';
 import {z} from 'zod';
 
 export const IncludeExampleCommentsMode = {

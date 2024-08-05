@@ -1,6 +1,6 @@
-import {AstTargetFunctions, OmniArrayType, OmniDictionaryType, OmniGenericTargetType, OmniType, OmniTypeKind, TypeNode} from '@omnigen/core';
+import {AstTargetFunctions, OmniArrayType, OmniDictionaryType, OmniGenericTargetType, OmniType, OmniTypeKind, TypeNode} from '@omnigen/api';
 import {Ts} from '../ast';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniUtil} from '@omnigen/core';
 import {Code} from '@omnigen/target-code';
 
 export class TsAstUtils implements AstTargetFunctions {

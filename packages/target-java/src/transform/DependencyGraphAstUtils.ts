@@ -1,6 +1,6 @@
 import * as Java from '../ast/JavaAst';
-import {OmniType, TargetOptions} from '@omnigen/core';
-import {Visitor} from '@omnigen/core-util';
+import {OmniType, TargetOptions} from '@omnigen/api';
+import {Visitor} from '@omnigen/core';
 
 export interface DependencyNode {
   unit: Java.CompilationUnit;

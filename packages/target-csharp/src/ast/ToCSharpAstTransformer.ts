@@ -11,7 +11,7 @@ import {
   OmniTypeKind,
   TargetOptions,
   UnknownKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {CSharpAstTransformerArguments, CSharpRootNode} from './index.ts';
 import {CSharpOptions} from '../options';
 import {TokenKind} from '@omnigen/target-code/ast';

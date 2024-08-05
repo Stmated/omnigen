@@ -18,10 +18,10 @@ import {
   TargetFunctions,
   TargetOptions,
   UnknownKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import * as Code from '../Code';
 import {CodeVisitor} from 'visitor/CodeVisitor.ts';
-import {AbstractObjectNameResolver, isDefined, OmniUtil} from '@omnigen/core-util';
+import {AbstractObjectNameResolver, isDefined, OmniUtil} from '@omnigen/core';
 import {CodeUtil} from '../../util/CodeUtil.ts';
 
 type NameResolverOptions = PackageOptions & TargetOptions & Options;

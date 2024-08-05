@@ -1,4 +1,4 @@
-import {AstVisitor, VisitFn} from '@omnigen/core';
+import {AstVisitor, VisitFn} from '@omnigen/api';
 import * as FreeText from '../ast/FreeText';
 
 export interface AstFreeTextVisitor<R> extends AstVisitor<R> {

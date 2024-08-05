@@ -10,8 +10,8 @@ import {
   OmniUnknownType,
   TargetOptions,
   UnknownKind,
-} from '@omnigen/core';
-import {AbortVisitingWithResult, assertUnreachable, Case, OmniUtil, Visitor} from '@omnigen/core-util';
+} from '@omnigen/api';
+import {AbortVisitingWithResult, assertUnreachable, Case, OmniUtil, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Code, CodeAstUtils, SerializationPropertyNameMode} from '@omnigen/target-code';
 import {CSharpOptions, SerializationLibrary} from '../options';

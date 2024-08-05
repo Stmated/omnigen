@@ -1,7 +1,7 @@
 import {CSharpVisitor} from '../visit';
 import {Cs} from '../ast';
-import {Reducer} from '@omnigen/core';
-import {assertDefined} from '@omnigen/core-util';
+import {Reducer} from '@omnigen/api';
+import {assertDefined} from '@omnigen/core';
 import {Code, CodeVisitor, createCodeReducer} from '@omnigen/target-code';
 
 export type CSharpAstReducer = Reducer<CSharpVisitor<unknown>>

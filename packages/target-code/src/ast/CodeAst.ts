@@ -19,8 +19,8 @@ import {
   RootAstNode,
   TypeNode,
   VisitResult,
-} from '@omnigen/core';
-import {OmniUtil} from '@omnigen/core-util';
+} from '@omnigen/api';
+import {OmniUtil} from '@omnigen/core';
 import {AnyFreeText, FriendlyFreeTextIn} from './FreeText';
 import {CodeVisitor} from '../visitor/CodeVisitor';
 import {FreeTextUtils} from '../util/FreeTextUtils';

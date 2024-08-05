@@ -1,6 +1,6 @@
 import {AbstractCodeNode} from './AbstractCodeNode.ts';
 import {CodeVisitor} from '../visitor/CodeVisitor.ts';
-import {Reducer, ReducerResult, VisitResult} from '@omnigen/core';
+import {Reducer, ReducerResult, VisitResult} from '@omnigen/api';
 import {Annotation} from './CodeAst.ts';
 
 export enum VirtualAnnotationKind {

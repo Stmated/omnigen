@@ -1,6 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {JavaReducer} from '../reduce';
-import {AstNode, TypeNode} from '@omnigen/core';
+import {AstNode, TypeNode} from '@omnigen/api';
 import * as Code from '@omnigen/target-code/ast';
 
 /**

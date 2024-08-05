@@ -1,5 +1,5 @@
 import pointer, {JsonObject} from 'json-pointer';
-import {getShallowPayloadString, ProtocolHandler, Util} from '@omnigen/core-util';
+import {getShallowPayloadString, ProtocolHandler, Util} from '@omnigen/core';
 import {JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
 import {LoggerFactory} from '@omnigen/core-log';

@@ -1,4 +1,4 @@
-import {AstNode, RootAstNode} from '@omnigen/core';
+import {AstNode, RootAstNode} from '@omnigen/api';
 import {ImplementationArgs} from './ImplementationArgs';
 import {ImplementationOptions} from './ImplementationOptions';
 import {JavaAndTargetOptions} from '@omnigen/target-java';

@@ -1,9 +1,9 @@
 import {z} from 'zod';
 import {JsonRpcParserOptions, ZodJsonRpcParserOptions} from './options';
 import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
-import {ZodSchemaFileContext} from '@omnigen/core-util';
+import {ZodSchemaFileContext} from '@omnigen/core';
 import {OpenRpcParserBootstrapFactory} from './parse';
-import {PackageOptions, ParserOptions, ZodPackageOptions, ZodParserOptions} from '@omnigen/core';
+import {PackageOptions, ParserOptions, ZodPackageOptions, ZodParserOptions} from '@omnigen/api';
 
 const ZodJsonRpcParserOptionsContext = z.object({
   jsonRpcParserOptions: ZodJsonRpcParserOptions,

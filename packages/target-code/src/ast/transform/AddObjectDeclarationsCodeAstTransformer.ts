@@ -17,9 +17,9 @@ import {
   RootAstNode,
   TargetOptions,
   TypeUseKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core-util';
+import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core';
 import * as Code from '../CodeAst';
 import * as FreeText from '../FreeText';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';

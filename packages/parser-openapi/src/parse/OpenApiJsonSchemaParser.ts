@@ -1,7 +1,7 @@
 import {JSONSchema9Definition, JSONSchema9, JsonSchemaParser, RefResolver} from '@omnigen/parser-jsonschema';
 import {JsonObject} from 'json-pointer';
-import {OmniItemKind, OmniModel, ParserOptions} from '@omnigen/core';
-import {SchemaFile} from '@omnigen/core-util';
+import {OmniItemKind, OmniModel, ParserOptions} from '@omnigen/api';
+import {SchemaFile} from '@omnigen/core';
 import {OpenAPIV3_1 as OpenApi3} from 'openapi-types';
 
 // TODO: This is the only one that should be able to handle 'discriminator' of JsonSchema -- move discriminator-related code into here

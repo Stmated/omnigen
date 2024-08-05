@@ -32,9 +32,9 @@ import {
   TargetOptions,
   ZodAstNodeContext,
   ZodParserOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {z} from 'zod';
-import {ZodCompilationUnitsContext} from '@omnigen/core-util';
+import {ZodCompilationUnitsContext} from '@omnigen/core';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,

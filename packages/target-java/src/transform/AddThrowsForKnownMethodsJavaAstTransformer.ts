@@ -1,8 +1,8 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
-import {ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniType, OmniTypeKind, RootAstNode} from '@omnigen/core';
+import {ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniType, OmniTypeKind, RootAstNode} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil, Visitor} from '@omnigen/core-util';
+import {OmniUtil, Visitor} from '@omnigen/core';
 import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver.ts';
 import {JACKSON_OBJECT_MAPPER} from './JacksonJavaAstTransformer.ts';
 

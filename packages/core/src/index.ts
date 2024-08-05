@@ -1,12 +1,12 @@
+import {PluginAutoRegistry} from '@omnigen/core-plugin';
+import {CommonTransformPlugin, CommonTransform2Plugin, fileWriter, CorePlugin} from './CoreUtilPluginInit.ts';
 
 export * from './ast';
-export * from './interpret';
-export * from './options';
+export * from './equality';
 export * from './parse';
-export * from './render';
-export * from './transform';
+export * from './util';
 export * from './visit';
 export * from './write';
-export * from './equality';
-export * from './reduce';
-export * from './util';
+export {ZodSchemaFileContext, ZodCompilationUnitsContext, ZodWrittenFilesContext} from './CoreUtilPluginInit.ts';
+
+export default PluginAutoRegistry.register([CorePlugin, CommonTransformPlugin, CommonTransform2Plugin, fileWriter]);

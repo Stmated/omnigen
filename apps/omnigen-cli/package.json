@@ -14,10 +14,10 @@
     "bin": "tsx src/index.ts"
   },
   "dependencies": {
-    "@omnigen/core": "workspace:*",
+    "@omnigen/api": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/core-log": "workspace:*",
-    "@omnigen/core-util": "workspace:*",
+    "@omnigen/core": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
     "@omnigen/target-java": "workspace:*",
@@ -35,7 +35,7 @@
     "@omnigen/eslint-config-custom": "workspace:*",
     "@types/node": "^18.13.0",
     "@types/figlet": "1.5.2",
-    "typescript": "^5.5.3",
+    "typescript": "^5.5.4",
     "pino-pretty": "^10.3.1",
     "tsx": "^4.7.1"
   }

@@ -1,9 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {DEFAULT_PARSER_OPTIONS, OmniType} from '@omnigen/core';
-import {OmniTypeKind} from '@omnigen/core';
+import {DEFAULT_PARSER_OPTIONS, OmniType} from '@omnigen/api';
+import {OmniTypeKind} from '@omnigen/api';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.ts';
-import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core-util';
+import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core';
 import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
 import {describe, test, expect} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';

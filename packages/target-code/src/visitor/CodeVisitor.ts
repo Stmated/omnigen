@@ -1,4 +1,4 @@
-import {AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/core';
+import {AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/api';
 import {createCodeFreeTextVisitor} from '../';
 import * as Code from '../ast/Code';
 import {AstFreeTextVisitor} from './FreeTextVisitor.ts';

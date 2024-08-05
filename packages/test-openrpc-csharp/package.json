@@ -12,9 +12,9 @@
     "lint": "TIMING=1 eslint src/**/*.ts* --fix"
   },
   "dependencies": {
-    "@omnigen/core": "workspace:*",
+    "@omnigen/api": "workspace:*",
     "@omnigen/core-log": "workspace:*",
-    "@omnigen/core-util": "workspace:*",
+    "@omnigen/core": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
     "@omnigen/target-csharp": "workspace:*",
@@ -26,7 +26,7 @@
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
-    "typescript": "^5.5.3",
+    "typescript": "^5.5.4",
     "java-parser": "^2.3.0"
   }
 }

@@ -10,7 +10,7 @@ import {
   ZodPackageOptions,
   ZodParserOptions,
   ZodTargetOptions,
-} from '@omnigen/core';
+} from '@omnigen/api';
 
 export enum PluginScoreKind {
   SUITABLE = 1,

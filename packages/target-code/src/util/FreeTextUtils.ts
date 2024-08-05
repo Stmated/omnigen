@@ -1,5 +1,5 @@
 import * as FreeText from '../ast/FreeText';
-import {assertDefined, Visitor} from '@omnigen/core-util';
+import {assertDefined, Visitor} from '@omnigen/core';
 import {createCodeFreeTextVisitor} from '../visitor/FreeTextVisitor.ts';
 import {createCodeFreeTextReducer} from '../reduce/CodeAstReducer.ts';
 

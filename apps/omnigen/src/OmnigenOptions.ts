@@ -1,4 +1,4 @@
-import {ZodCoercedBoolean, ZodOptions} from '@omnigen/core';
+import {ZodCoercedBoolean, ZodOptions} from '@omnigen/api';
 import {z} from 'zod';
 
 export const ZodRunOptions = ZodOptions.extend({

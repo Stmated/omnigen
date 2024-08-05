@@ -1,7 +1,7 @@
 import {describe, expect, test, vi} from 'vitest';
-import {Util} from '@omnigen/core-util';
+import {Util} from '@omnigen/core';
 import {JsonSchemaToTypeScriptTestUtil} from './JsonSchemaToTypeScriptTestUtil.ts';
-import {RenderedCompilationUnit} from '@omnigen/core';
+import {RenderedCompilationUnit} from '@omnigen/api';
 
 describe('jsonschema-typescript-render', () => {
 

@@ -14,11 +14,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@omnigen/core": "workspace:*"
+    "@omnigen/api": "workspace:*"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.4"
   }
 }

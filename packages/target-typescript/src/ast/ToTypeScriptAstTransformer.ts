@@ -9,7 +9,7 @@ import {
   OmniTypeKind,
   TargetOptions,
   UnknownKind,
-} from '@omnigen/core';
+} from '@omnigen/api';
 import {Ts} from '../ast';
 import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
 import {Code} from '@omnigen/target-code';

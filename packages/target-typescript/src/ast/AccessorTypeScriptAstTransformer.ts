@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/api';
 // import {Code} from '@omnigen/target-code';
 // import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptOptions} from '../options';

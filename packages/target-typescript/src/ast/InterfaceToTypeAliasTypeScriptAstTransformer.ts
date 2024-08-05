@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, OmniIntersectionType, OmniType, OmniTypeKind, TargetOptions, TypeNode, UnknownKind} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments, OmniIntersectionType, OmniType, OmniTypeKind, TargetOptions, TypeNode, UnknownKind} from '@omnigen/api';
 import {Ts} from '.';
-import {OmniUtil} from '@omnigen/core-util';
+import {OmniUtil} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 

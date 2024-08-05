@@ -1,6 +1,6 @@
 import {Code, CodeUtil} from '@omnigen/target-code';
-import {AstTransformer, OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TargetOptions, TypeNode} from '@omnigen/core';
-import {OmniUtil} from '@omnigen/core-util';
+import {AstTransformer, OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TargetOptions, TypeNode} from '@omnigen/api';
+import {OmniUtil} from '@omnigen/core';
 import {CSharpRootNode} from './CSharpRootNode.ts';
 import {CSharpOptions} from '../options';
 import {CSharpAstTransformerArguments} from './index.ts';

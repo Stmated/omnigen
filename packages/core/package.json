@@ -8,16 +8,18 @@
   "types": "./src/index.ts",
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "build": "vite build --config vite.config.js",
+    "build:profile": "vite build --config vite.config.profile.ts",
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@etclabscore/string-json-template-language": "^1.0.0",
     "@omnigen/api": "workspace:*",
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
-    "@etclabscore/string-json-template-language": "^1.0.0",
     "@open-rpc/schema-utils-js": "^1.16.1",
     "change-case": "^4.1.2",
     "deepmerge": "^4.3.0",
@@ -41,8 +43,8 @@
     "@types/object-hash": "^2.2.1",
     "@types/string-similarity": "^4.0.0",
     "colors": "^1.4.0",
+    "find-up": "^7.0.0",
     "nock": "^13.3.0",
-    "typescript": "^5.5.4",
-    "find-up": "^7.0.0"
+    "typescript": "^5.5.4"
   }
 }

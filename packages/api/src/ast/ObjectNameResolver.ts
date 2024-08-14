@@ -33,6 +33,7 @@ export interface ObjectNameResolveArgs<TOpt extends PackageOptions & TargetOptio
   options: TOpt;
   boxed?: boolean | undefined;
   use?: TypeUseKind | undefined;
+  recursion?: OmniType[];
 }
 
 export type AstNameBuildArgs =

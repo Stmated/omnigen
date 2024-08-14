@@ -1,12 +1,11 @@
-export type ListThingsError100Error = JsonRpcError<100, string>;
+export type ErrorUnknown = JsonRpcErrorResponse<ErrorUnknownError>;
+export type ErrorUnknownError = JsonRpcError<number, string>;
 
 export interface JsonRpcError<TCode extends number> {
   readonly code?: TCode | undefined;
   readonly data?: any | undefined;
   readonly message?: string | undefined;
 }
-
-export type ErrorUnknownError = JsonRpcError<number, string>;
 
 export interface JsonRpcErrorResponse<T extends JsonRpcError<number>> {
   readonly error: T;
@@ -17,23 +16,12 @@ export interface JsonRpcErrorResponse<T extends JsonRpcError<number>> {
 
 export interface JsonRpcRequest {
   readonly id?: string | undefined;
+  readonly jsonrpc: '2.0';
+  readonly method: 'list_things';
   readonly params?: ListThingsRequestParams | undefined;
-  jsonrpc: '2.0';
-  method: 'list_things';
 }
 
 export type JsonRpcRequestParams = object;
-
-export enum ThingType {
-  TYPE_A = 'TypeA',
-  TYPE_B = 'TypeB',
-  TYPE_C = 'TypeC',
-}
-
-export type ErrorUnknown = JsonRpcErrorResponse<ErrorUnknownError>;
-export type ListThingsError100 = JsonRpcErrorResponse<ListThingsError100Error>;
-export type ListThingsRequest = JsonRpcRequest;
-export type ListThingsRequestParams = JsonRpcRequestParams;
 
 export interface JsonRpcResponse {
   readonly error?: null | undefined;
@@ -41,6 +29,12 @@ export interface JsonRpcResponse {
   readonly jsonrpc?: '2.0' | undefined;
   readonly result?: ReadonlyArray<Thing> | undefined;
 }
+
+export type ListThingsError100 = JsonRpcErrorResponse<ListThingsError100Error>;
+export type ListThingsError100Error = JsonRpcError<100, string>;
+export type ListThingsRequest = JsonRpcRequest;
+export type ListThingsRequestParams = JsonRpcRequestParams;
+export type ListThingsResponse = JsonRpcResponse;
 
 export enum Species {
   SPECIES_A = 'SpeciesA',
@@ -53,11 +47,11 @@ export enum Tag {
   TAG_C = 'TagC',
 }
 
+export type TagOrSpeciesOrString = Tag | Species | 'foo' | TagOrSpeciesOrStringDouble | string;
+
 export enum TagOrSpeciesOrStringDouble {
   _1337 = 1337,
 }
-
-export type TagOrSpeciesOrString = Tag | Species | 'foo' | TagOrSpeciesOrStringDouble | string;
 
 export interface Thing {
   readonly id: string;
@@ -65,4 +59,8 @@ export interface Thing {
   readonly type?: ThingType | undefined;
 }
 
-export type ListThingsResponse = JsonRpcResponse;
+export enum ThingType {
+  TYPE_A = 'TypeA',
+  TYPE_B = 'TypeB',
+  TYPE_C = 'TypeC',
+}

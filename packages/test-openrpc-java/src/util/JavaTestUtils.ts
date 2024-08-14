@@ -1,16 +1,8 @@
 import * as JavaParser from 'java-parser';
-import {
-  AstNode,
-  ModelTransformOptions,
-  PackageOptions,
-  ParserOptions,
-  RenderedCompilationUnit,
-  TargetOptions,
-  ZodTargetOptions,
-} from '@omnigen/api';
+import {AstNode, ModelTransformOptions, PackageOptions, RenderedCompilationUnit} from '@omnigen/api';
 import {createJavaVisitor, Java, JavaOptions, SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '../util';
-import {TestUtils} from '@omnigen/utils-test';
+import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS, TestUtils} from '@omnigen/utils-test';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
@@ -27,23 +19,14 @@ export const DEFAULT_SPECIFIC_TEST_JAVA_OPTIONS: Partial<JavaOptions> = {
 
 export const DEFAULT_TEST_JAVA_OPTIONS: JavaOptions = {
   ...ZodJavaOptions.parse({}),
+  ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
   ...DEFAULT_SPECIFIC_TEST_JAVA_OPTIONS,
 };
 
-export const DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS: Partial<TargetOptions> = {
-  compressSoloReferencedTypes: false,
-  compressUnreferencedSubTypes: false,
-};
-
-export const DEFAULT_TEST_TARGET_OPTIONS: TargetOptions = {
-  ...ZodTargetOptions.parse({}),
-  ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
-};
-
 export interface JavaTestUtilsOptions {
-  parserOptions?: Partial<ParserOptions>,
+  // parserOptions?: Partial<ParserOptions>,
   modelTransformOptions?: Partial<ModelTransformOptions>,
-  targetOptions?: Partial<TargetOptions>,
+  // targetOptions?: Partial<TargetOptions>,
   packageOptions?: Partial<PackageOptions>,
   javaOptions?: Partial<JavaOptions>,
   arguments?: Record<string, any>,
@@ -81,9 +64,9 @@ export class JavaTestUtils {
         ...DEFAULT_SPECIFIC_TEST_JAVA_OPTIONS,
       },
       arguments: {
-        ...(options.parserOptions),
+        // ...(options.parserOptions),
         ...(options.modelTransformOptions),
-        ...(options.targetOptions),
+        // ...(options.targetOptions),
         ...(options.packageOptions),
         ...(options.javaOptions),
         ...(options.arguments),

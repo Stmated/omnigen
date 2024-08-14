@@ -1,5 +1,5 @@
 import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, TypeUseKind, VisitResult} from '@omnigen/api';
-import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
+import {CodeOptions, CodeUtil, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/CodeAst';
@@ -213,13 +213,11 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       return `${render(resolved.identifier, v)}`;
     },
 
-    /**
-     * TODO: Should this be used together with the field reference above, so 'this.' is not hard coded
-     */
     visitSelfReference: () => `this`,
+    visitSuperReference: () => `super`,
     visitVariableDeclaration: (n, v) => {
 
-      const constant = (n.constant) ? 'final ' : '';
+      const constant = (n.immutable) ? 'final ' : '';
       const type = (options.preferInferredType || !n.type) ? 'var ' : `${render(n.type, v)} `;
       const name = render(n.identifier, v);
 
@@ -256,13 +254,14 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitConstructor: (n, v) => {
       const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
+      const comments = n.comments ? `${render(n.comments, v)}\n` : '';
       const body = n.body ? `${render(n.body, v)}` : '{}\n';
       const modifiers = n.modifiers.children.length > 0 ? `${render(n.modifiers, v)} ` : '';
 
       const owner = ctx.objectDecStack[ctx.objectDecStack.length - 1];
       const parameters = render(n.parameters, v);
 
-      return `${annotations}${modifiers}${render(owner.name, v)}(${parameters})${body}`;
+      return `${annotations}${comments}${modifiers}${render(owner.name, v)}(${parameters})${body}`;
     },
     visitConstructorParameterList: (n, v) => renderListWithWrapping(n.children, v, renderOptions),
     visitConstructorParameter: (n, v) => v.visitParameter(n, v),
@@ -472,30 +471,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitVirtualAnnotationNode: n => `[General annotation node ${JSON.stringify(n.value)} must be replaced with something target-specific or be removed]`,
 
-    visitLiteral: n => {
-      if (typeof n.value === 'string') {
-        return (`"${n.value}"`);
-      } else if (typeof n.value == 'boolean') {
-        return (`${n.value ? 'true' : 'false'}`);
-      } else if (n.value === null) {
-        return (`null`);
-      } else {
-        if (n.primitiveKind !== undefined) {
-          if (n.primitiveKind == OmniTypeKind.DOUBLE) {
-            return (`${n.value}d`);
-          } else if (n.primitiveKind == OmniTypeKind.FLOAT) {
-            return (`${n.value}f`);
-          } else if (n.primitiveKind == OmniTypeKind.LONG) {
-            return (`${n.value}L`);
-          } else if (n.primitiveKind == OmniTypeKind.INTEGER) {
-            return (`${n.value}`);
-          } else if (n.primitiveKind == OmniTypeKind.NUMBER) {
-            // If the type is just 'number' we will have to hope type inference is good enough.
-          }
-        }
-        return (`${n.value}`);
-      }
-    },
+    visitLiteral: n => OmniUtil.literalToGeneralPrettyString(n.value, n.primitiveKind),
 
     visitField: (n, v) => {
       const comments = n.comments ? `${render(n.comments, v)}\n` : '';

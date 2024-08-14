@@ -61,6 +61,15 @@ export class SimplifyAndCleanAstTransformer implements AstTransformer<Code.CodeR
 
         return reduced;
       },
+      reduceInterfaceDeclaration: (n, r) => {
+
+        const reduced = defaultReducer.reduceInterfaceDeclaration(n, r);
+        if (reduced && reduced instanceof Code.InterfaceDeclaration) {
+          reduced.modifiers = new Code.ModifierList(...reduced.modifiers.children.filter(it => it.kind !== ModifierKind.STATIC));
+        }
+
+        return reduced;
+      },
     });
 
     if (newRoot) {

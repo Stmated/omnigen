@@ -1,6 +1,5 @@
 
 // Basic types
-export * from './LiteralValue';
 export * from './CompressTypeLevel';
 
 // Basic classes

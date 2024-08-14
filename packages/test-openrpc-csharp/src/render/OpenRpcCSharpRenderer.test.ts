@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, test, Test, vi} from 'vitest';
+import {beforeEach, describe, expect, test, Test, vi, TaskContext} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OpenRpcCSharpTestUtils} from '../OpenRpcCSharpTestUtils.ts';
 import {RenderedCompilationUnit} from '@omnigen/api';
@@ -12,16 +12,16 @@ describe('OpenRpc+CSharp Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
   });
 
-  function verify(task: Test<{}>, units: RenderedCompilationUnit[]) {
+  function verify(task: TaskContext['task'], units: RenderedCompilationUnit[]) {
     const fileContents = new Map<string, string>();
     for (const cu of units) {
       fileContents.set(cu.fileName, cu.content);
-      expect(cu.content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${cu.fileName}`);
+      expect(cu.content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${cu.fileName}`);
     }
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
   }
 
-  function getFileName(task: Test<{}>): string {
+  function getFileName(task: TaskContext['task']): string {
 
     const taskName = task.name;
     const underscoreIdx = taskName.indexOf('_');
@@ -35,12 +35,15 @@ describe('OpenRpc+CSharp Rendering', () => {
   test('multiple-inheritance', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
     singleFileName: task.name,
+    orderObjectsByDependency: true,
   })));
 
   test('compressable-types', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     generifyTypes: false,
     singleFile: true,
     singleFileName: task.name,
+    orderObjectsByName: true,
+    orderObjectsByDependency: false,
   })));
 
   test('inherited-construction_no_init', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -53,12 +56,14 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFile: true,
     singleFileName: task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.INIT,
+    orderObjectsByDependency: true,
   })));
 
   test('enum', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
     singleFileName: task.name,
     includeGenerated: false,
+    orderObjectsByDependency: true,
   })));
 
   // test('sui-openrpc', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -76,10 +81,12 @@ describe('OpenRpc+CSharp Rendering', () => {
     additionalPropertiesInterfaceAfterDuplicateCount: 1,
     singleFile: true,
     singleFileName: task.name,
+    orderObjectsByDependency: true,
   })));
 
   test('method-in-response', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
     singleFileName: task.name,
+    orderObjectsByDependency: true,
   })));
 });

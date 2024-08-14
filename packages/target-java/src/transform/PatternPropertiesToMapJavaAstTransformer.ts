@@ -122,7 +122,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     if (decWithDictionary.size >= args.options.additionalPropertiesInterfaceAfterDuplicateCount) {
 
       // There are several objects which have additional properties, so we will introduce a common interface for them.
-      const commonDictionary = OmniUtil.getCommonDenominator({features: args.features, create: CreateMode.ANY}, ...allDictionaries)!;
+      const commonDictionary = OmniUtil.getCommonDenominator({features: args.features, create: CreateMode.ANY}, allDictionaries)!;
 
       if (!commonDictionary) {
 

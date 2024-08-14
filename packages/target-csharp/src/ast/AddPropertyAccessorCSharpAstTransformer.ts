@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, OmniProperty, PackageOptions, TargetOptions} from '@omnigen/api';
-import {Cs, CSharpRootNode} from '../ast';
-import {CSharpOptions, ReadonlyPropertyMode} from '../options';
+import {AstTransformer, OmniProperty} from '@omnigen/api';
+import {Cs, CSharpAstTransformerArguments, CSharpRootNode} from '../ast';
+import {ReadonlyPropertyMode} from '../options';
 import {OmniUtil} from '@omnigen/core';
 import {Code} from '@omnigen/target-code';
 
@@ -12,7 +12,7 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<CSharpRootNode> {
 
-  transformAst(args: AstTransformerArguments<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>): void {
+  transformAst(args: CSharpAstTransformerArguments): void {
 
     const fieldsToReplace: number[] = [];
     const fieldIdToPropertyId = new Map<number, number>();
@@ -120,7 +120,7 @@ export class AddPropertyAccessorCSharpAstTransformer implements AstTransformer<C
   }
 
   private createPropertyNode(
-    args: AstTransformerArguments<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>,
+    args: CSharpAstTransformerArguments,
     type: Code.TypeNode,
     identifier: Code.Identifier,
     property: OmniProperty | undefined,

@@ -2,6 +2,7 @@ import {OmniModel, OmniPrimitiveType, OmniType, OmniTypeKind} from '@omnigen/api
 import {LoggerFactory} from '@omnigen/core-log';
 import {TypeOwner} from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.js';
+import {getShallowPayloadString, Util} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -87,6 +88,7 @@ export class OmniTypeVisitor {
       }
     }
 
+    const used: BFSTraverseContext[] = [];
     const visited: OmniType[] = [];
     while (q.length > 0) {
 
@@ -94,6 +96,7 @@ export class OmniTypeVisitor {
       if (!dq) {
         break;
       }
+      used.push(dq);
 
       if (visitOnce) {
         if (visited.includes(dq.type)) {
@@ -200,7 +203,7 @@ export class OmniTypeVisitor {
             break;
           }
 
-          throw new Error(`Do not know how to handle kind '${(type as any)?.kind || '?'}`);
+          throw new Error(`Do not know how to handle kind '${(type as any)?.kind || '?'}' (${getShallowPayloadString(type, 2)})`);
         }
       }
     }

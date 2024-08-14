@@ -932,7 +932,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       name: JsonSchemaParser.getPreferredPropertyName(resolvedSchema, propertyName, this._options),
       type: propertyType.type,
       owner: owner,
-      debug: ['From JsonSchema'],
+      debug: 'From JsonSchema',
       description: this.getSchemaProperty(resolvedSchema, obj => obj.description),
     };
 
@@ -1614,7 +1614,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         return this.jsonSchemaToType(this.getId(derefArrayItem) || 'UnknownArrayItem', derefArrayItem);
       });
 
-      const commonDenominator = OmniUtil.getCommonDenominator(OMNI_GENERIC_FEATURES, ...staticArrayTypes.map(it => it.type))?.type;
+      const commonDenominator = OmniUtil.getCommonDenominator(OMNI_GENERIC_FEATURES, staticArrayTypes.map(it => it.type))?.type;
 
       return {
         kind: OmniTypeKind.TUPLE,

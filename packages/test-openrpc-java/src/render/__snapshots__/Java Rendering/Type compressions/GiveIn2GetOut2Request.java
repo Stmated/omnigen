@@ -7,12 +7,8 @@ public class GiveIn2GetOut2Request extends JsonRpcRequest {
   private final GiveIn2GetOut2RequestParams params;
 
   public GiveIn2GetOut2Request(String id, GiveIn2GetOut2RequestParams params) {
-    super(id);
+    super(id, "give_in2_get_out2");
     this.params = params;
-  }
-
-  public String getMethod() {
-    return "give_in2_get_out2";
   }
 
   public GiveIn2GetOut2RequestParams getParams() {

@@ -16,11 +16,13 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 
   test('Type compressions', async ({task}) => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    // TODO: This must pass when all other have been fixed!
 
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('compressable-types.json', {
       options: {
@@ -30,7 +32,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 
   test('compressable-types_classes', async ({task}) => {
@@ -41,11 +43,12 @@ describe('TypeScript Rendering', () => {
         singleFile: true,
         preferInterfaces: false,
         strictUndefined: true,
+        orderObjectsByDependency: true,
       },
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 
   test('Enum', async ({task}) => {
@@ -61,7 +64,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 
   test('AdditionalProperties', async ({task}) => {
@@ -75,7 +78,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 
   test('method-in-response', async ({task}) => {
@@ -89,6 +92,6 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 });

@@ -3,5 +3,5 @@
  */
 export interface ResponseDataWithResult {
   readonly rejected?: null | undefined;
-  result: '1';
+  readonly result: '1';
 }

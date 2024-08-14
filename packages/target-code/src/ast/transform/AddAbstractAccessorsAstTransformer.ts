@@ -3,6 +3,9 @@ import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/a
 import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../../ast/CodeAst';
 import {CodeOptions} from '../../options/CodeOptions';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export class AddAbstractAccessorsAstTransformer implements AstTransformer<CodeRootAstNode, TargetOptions & CodeOptions> {
 

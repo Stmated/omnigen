@@ -1,16 +1,19 @@
 import {TestUtils} from '@omnigen/utils-test';
-import {JavaObjectNameResolver} from '@omnigen/target-java';
+import {JavaObjectNameResolver, JavaOptions} from '@omnigen/target-java';
 import {
+  DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  DEFAULT_PACKAGE_OPTIONS,
+  DEFAULT_PARSER_OPTIONS,
+  DEFAULT_TARGET_OPTIONS,
+  NameParts,
+  OMNI_GENERIC_FEATURES,
+  OmniItemKind,
   type OmniModel,
   OmniTypeKind,
-  DEFAULT_PARSER_OPTIONS,
-  DEFAULT_MODEL_TRANSFORM_OPTIONS, NameParts, DEFAULT_PACKAGE_OPTIONS, DEFAULT_TARGET_OPTIONS, OMNI_GENERIC_FEATURES,
+  PackageOptions,
 } from '@omnigen/api';
-import {
-  GenericsModelTransformer,
-  OmniUtil,
-} from '@omnigen/core';
-import {expect, test, describe} from 'vitest';
+import {GenericsModelTransformer, OmniUtil} from '@omnigen/core';
+import {describe, expect, test} from 'vitest';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '../util';
 
 describe('Generics', () => {
@@ -20,6 +23,7 @@ describe('Generics', () => {
     const transformer = new GenericsModelTransformer();
 
     const model: OmniModel = {
+      kind: OmniItemKind.MODEL,
       name: 'model',
       schemaType: 'other',
       schemaVersion: '1.0',
@@ -45,7 +49,7 @@ describe('Generics', () => {
     const type = model.types[0];
 
     const nameResolver = new JavaObjectNameResolver();
-    const nameOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TARGET_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
+    const nameOptions: PackageOptions & JavaOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
 
     expect(nameResolver.build({name: nameResolver.investigate({type: type, options: nameOptions}), with: NameParts.NAME})).toEqual('A');
     if (type.kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
@@ -75,6 +79,7 @@ describe('Generics', () => {
     ]);
 
     const model: OmniModel = {
+      kind: OmniItemKind.MODEL,
       name: 'model',
       schemaType: 'other',
       schemaVersion: '1.0',
@@ -103,7 +108,7 @@ describe('Generics', () => {
     if (model.types[2].kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object not ${OmniUtil.describe(model.types[2])}`);
 
     const nameResolver = new JavaObjectNameResolver();
-    const nameOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TARGET_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
+    const nameOptions: PackageOptions & JavaOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
 
     expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0], options: nameOptions}), with: NameParts.NAME})).toEqual('A');
     expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0].of, options: nameOptions}), with: NameParts.NAME})).toEqual('A');

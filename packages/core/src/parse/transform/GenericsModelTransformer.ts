@@ -4,11 +4,12 @@ import {
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniGenericTargetIdentifierType,
-  OmniGenericTargetType, OmniItemKind,
+  OmniGenericTargetType,
+  OmniItemKind,
   OmniModel,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniModelTransformerArgs, OmniObjectType,
+  OmniModelTransformerArgs,
   OmniProperty,
   OmniPropertyOwner,
   OmniSubTypeCapableType,
@@ -24,9 +25,8 @@ import {
 import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniUtil} from '../OmniUtil.ts';
-import {Case, CreateMode, isDefined, Sorters} from '../../util';
+import {Case, CreateMode, Sorters} from '../../util';
 import {Naming} from '../Naming.ts';
-import {OmniReducer} from '../OmniReducer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -128,7 +128,6 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         sourceToTargets,
         model,
         options,
-        features,
       );
     }
 
@@ -144,12 +143,11 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     sourceToTargets: Map<OmniGenericSourceType, OmniGenericTargetType[]>,
     model: OmniModel,
     options: ModelTransformOptions,
-    features: TargetFeatures,
   ): OmniModel {
 
     const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(info.propertyName)}`;
 
-    const upperBound = this.toGenericUpperBoundType(info, features);
+    const upperBound = this.toGenericUpperBoundType(info);
 
     const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
@@ -159,7 +157,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     this.maybeWildcardUpperBound(upperBound, genericSource, info.propertyName);
 
     if (upperBound) {
-      logger.info(`Setting upperBound for ${OmniUtil.describe(genericSourceIdentifier)} for ${OmniUtil.describe(genericSource)}`);
+      logger.debug(`Setting upperBound for ${OmniUtil.describe(genericSourceIdentifier)} for ${OmniUtil.describe(genericSource)}`);
       genericSourceIdentifier.upperBound = upperBound;
     }
 
@@ -336,7 +334,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         continue;
       }
 
-      logger.debug(
+      logger.trace(
         `Creating unknown with upperBound (${OmniUtil.describe(lowerTarget.type)})
         for property='${propertyName}'
         upperBound='${OmniUtil.describe(upperBound)}'
@@ -357,7 +355,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     }
   }
 
-  private toGenericUpperBoundType(info: PropertyInformation, features: TargetFeatures): OmniType | undefined {
+  private toGenericUpperBoundType(info: PropertyInformation): OmniType | undefined {
 
     if (info.commonType.kind == OmniTypeKind.UNKNOWN) {
       return undefined;

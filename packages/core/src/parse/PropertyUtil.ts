@@ -1,4 +1,5 @@
 import {
+  Arrayable,
   OmniProperty,
   OmniPropertyOrphan,
   OmniPropertyOwner,
@@ -32,20 +33,16 @@ export class PropertyUtil {
     return propertyWithOwner;
   }
 
-  public static isDiffMatch(diffs: PropertyDifference[] | undefined, ...needles: PropertyDifference[]): boolean {
+  public static isDiffMatch(diffs: PropertyDifference, needles: ReadonlyArray<PropertyDifference>): boolean {
 
-    if (diffs) {
-      for (const needle of needles) {
-        if (diffs.includes(needle)) {
+    for (const needle of needles) {
+      if (diffs === needle) {
+        return true;
+      }
+
+      if (needle == PropertyDifference.SIGNATURE) {
+        if (diffs === PropertyDifference.TYPE || diffs === PropertyDifference.NAME || diffs === PropertyDifference.META) {
           return true;
-        }
-
-        if (needle == PropertyDifference.SIGNATURE) {
-          if (diffs.includes(PropertyDifference.TYPE)
-            || diffs.includes(PropertyDifference.NAME)
-            || diffs.includes(PropertyDifference.META)) {
-            return true;
-          }
         }
       }
     }
@@ -183,7 +180,7 @@ export class PropertyUtil {
       }
     }
 
-    const commonType = OmniUtil.getCommonDenominator({features: targetFeatures}, ...possiblePropertyTypes);
+    const commonType = OmniUtil.getCommonDenominator({features: targetFeatures}, possiblePropertyTypes);
     if (commonType) {
 
       // We still want to keep the diffs that we collected.

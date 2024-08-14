@@ -1,7 +1,7 @@
 import {expect, test} from 'vitest';
 import {OmniEndpoint, OmniItemKind, OmniModel, OmniObjectType, OmniProperty, OmniTypeKind} from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.ts';
-import {OmniReducer} from './OmniReducer.ts';
+import {ReducerOmni} from './ReducerOmni.ts';
 
 test('no-op', () => {
 
@@ -12,7 +12,7 @@ test('no-op', () => {
     types: [],
   };
 
-  const dispatcher = new OmniReducer({
+  const dispatcher = new ReducerOmni({
     MODEL: n => n,
   });
   const reduced = dispatcher.reduce(model);
@@ -37,7 +37,7 @@ test('swap-endpoints', () => {
     types: [],
   };
 
-  const dispatcher = new OmniReducer({
+  const dispatcher = new ReducerOmni({
     ENDPOINT: n => (n === endpointA) ? endpointB : n,
   });
 
@@ -61,7 +61,7 @@ test('swap-types', () => {
     types: [],
   };
 
-  const dispatcher = new OmniReducer({
+  const dispatcher = new ReducerOmni({
     STRING: n => {
       return {kind: OmniTypeKind.INTEGER, description: n.description};
     },
@@ -95,7 +95,7 @@ test('swap-recursively', () => {
     types: [obj],
   };
 
-  const dispatcher = new OmniReducer({
+  const dispatcher = new ReducerOmni({
     OBJECT: n => {
       return {kind: OmniTypeKind.FLOAT, description: n.description};
     },
@@ -149,7 +149,7 @@ test('swap-owner', () => {
 
   let calls = 0;
 
-  const dispatcher = new OmniReducer({
+  const dispatcher = new ReducerOmni({
     reducer: {
       [OmniItemKind.PROPERTY]: (n, a) => {
         if (n === p1) {
@@ -239,7 +239,7 @@ test('swap-recursively-2', () => {
     types: [obj1],
   };
 
-  const dispatcher = new OmniReducer({
+  const dispatcher = new ReducerOmni({
     OBJECT: n => ({kind: OmniTypeKind.FLOAT, description: n.description}),
   });
   const reduced = dispatcher.reduce(model);

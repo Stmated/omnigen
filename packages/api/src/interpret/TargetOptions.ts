@@ -1,5 +1,5 @@
-import {getEnumValues, ZodCoercedBoolean, ZodCoercedNumber, ZodOptions} from '../options';
-import {CompressTypeLevel, OmniTypeKind} from '../parse';
+import {getEnumValues, ZodCoercedBoolean, ZodCoercedNumber} from '../options';
+import {CompressTypeLevel, OmniTypeKind, ZodParserOptions} from '../parse';
 import {ZodOmniTypeNameReducer} from './OmniTypeNameReducer.ts';
 import {CompressTypeNaming} from './CompressTypeNaming.ts';
 import {z} from 'zod';
@@ -9,7 +9,7 @@ import {z} from 'zod';
 //        For example ALL names that exist inside java.lang or java.util should be excluded. Object, List, etc.
 //        Maybe also add a "minimum number of common words"?
 
-export const ZodTargetOptions = ZodOptions.extend({
+export const ZodTargetOptions = ZodParserOptions.extend({
 
   /**
    * Means to compress types by making them an inner type, if it is only ever used by one other type.
@@ -46,8 +46,15 @@ export const ZodTargetOptions = ZodOptions.extend({
 
   shortenNestedTypeNames: ZodCoercedBoolean.default('true'),
 
+  /**
+   * If true, then we should order object members by name when output, instead of trying to keep the original schema's order.
+   */
+  orderMembersByName: ZodCoercedBoolean.default('false'),
+
+  orderObjectsByName: ZodCoercedBoolean.default('true'),
+  orderObjectsByDependency: ZodCoercedBoolean.default('true'),
+
   debug: ZodCoercedBoolean.default('false'),
-  // debugPlugin: z.string().optional(),
 });
 
 export type TargetOptions = z.infer<typeof ZodTargetOptions>;

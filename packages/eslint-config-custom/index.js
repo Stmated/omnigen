@@ -5,7 +5,7 @@ module.exports = {
     'google',
     'turbo',
   ],
-  ignorePatterns: ['node_modules'],
+  ignorePatterns: ['node_modules', 'dist', 'dist/*'],
   env: {
     browser: false,
     node: true,

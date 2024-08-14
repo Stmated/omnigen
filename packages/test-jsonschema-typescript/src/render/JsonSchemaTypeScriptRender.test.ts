@@ -16,7 +16,7 @@ describe('jsonschema-typescript-render', () => {
 
     expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -34,7 +34,7 @@ describe('jsonschema-typescript-render', () => {
 
     expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      await expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      await expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -52,7 +52,7 @@ describe('jsonschema-typescript-render', () => {
 
     expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      await expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      await expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -66,7 +66,7 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
-    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 
   /**
@@ -89,7 +89,7 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
-    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 
   test('if-then-else', async ({task}) => {
@@ -99,10 +99,12 @@ describe('jsonschema-typescript-render', () => {
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/if-then-else.json'), {
       includeGenerated: false,
       singleFile: true,
+      orderObjectsByName: true,
+      orderObjectsByDependency: false,
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
-    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.ts`);
+    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
   });
 });
 

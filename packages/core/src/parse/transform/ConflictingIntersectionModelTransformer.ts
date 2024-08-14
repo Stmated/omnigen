@@ -1,15 +1,7 @@
-import {
-  OmniEnumMember, OmniExample,
-  OmniIntersectionType, OmniItemKind,
-  OmniModel2ndPassTransformer,
-  OmniModelTransformer2ndPassArgs,
-  OmniType,
-  OmniTypeKind,
-  TargetFeatures,
-} from '@omnigen/api';
+import {OmniEnumMember, OmniExample, OmniIntersectionType, OmniItemKind, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, TargetFeatures} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil.ts';
-import {OmniReducer} from '../OmniReducer.ts';
+import {ReducerOmni} from '../ReducerOmni.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -24,7 +16,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
-    const reducer = new OmniReducer({
+    const reducer = new ReducerOmni({
       INTERSECTION: (n, a) => this.replaceIntersection(n, args.targetFeatures) ?? a.base.INTERSECTION(n, a),
     });
     args.model = reducer.reduce(args.model);
@@ -52,9 +44,6 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
       if (child.kind === OmniTypeKind.ENUM) {
         enumCount++;
         enumMembers.push(...child.members);
-        // if (child.enumConstants) {
-        //   enumValues.push(...child.enumConstants);
-        // }
       } else if (OmniUtil.isPrimitive(child)) {
         primitiveCount++;
       } else {
@@ -85,7 +74,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
       return undefined;
     }
 
-    const commonDenominator = OmniUtil.getCommonDenominator(features, ...type.types);
+    const commonDenominator = OmniUtil.getCommonDenominator(features, type.types);
     if (commonDenominator) {
 
       if (type.name && OmniUtil.isNameable(commonDenominator.type)) {

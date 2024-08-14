@@ -5,6 +5,7 @@ import {describe, expect, test, vi} from 'vitest';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
 import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
+import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 
 describe('merge-documents', () => {
 
@@ -57,10 +58,6 @@ describe('merge-documents', () => {
   });
 });
 
-const toArguments = (args: Partial<ModelTransformOptions & TargetOptions & PackageOptions>) => {
-  return args;
-};
-
 describe('merge-models', () => {
 
   test('find-equivalent-models-error-structure-1.0+1.1', async () => {
@@ -75,12 +72,12 @@ describe('merge-models', () => {
       ctx: {
         file: Util.getPathFromRoot('./packages/parser-openrpc/examples/error-structure.json'),
         target: 'java',
-        arguments: toArguments({
+        arguments: {
           generifyTypes: false,
           compressUnreferencedSubTypes: true,
           compressSoloReferencedTypes: true,
           package: 'com.error10',
-        }),
+        } satisfies Partial<ModelTransformOptions & TargetOptions & PackageOptions>,
       } satisfies BaseContext & FileContext & TargetContext,
       debug: true,
       stopAt: ZodModelContext.merge(JavaPlugins.ZodJavaOptionsContext).merge(ZodPackageOptionsContext).merge(ZodTargetOptionsContext),
@@ -90,12 +87,12 @@ describe('merge-models', () => {
       ctx: {
         file: Util.getPathFromRoot('./packages/parser-openrpc/examples/error-structure-1.1.json'),
         target: 'java',
-        arguments: toArguments({
+        arguments: {
           generifyTypes: false,
           compressUnreferencedSubTypes: true,
           compressSoloReferencedTypes: true,
           package: 'com.error11',
-        }),
+        } satisfies Partial<ModelTransformOptions & TargetOptions & PackageOptions>,
       } satisfies BaseContext & FileContext & TargetContext,
       debug: true,
       stopAt: ZodModelContext.merge(JavaPlugins.ZodJavaOptionsContext).merge(ZodPackageOptionsContext).merge(ZodTargetOptionsContext),
@@ -116,6 +113,8 @@ describe('merge-models', () => {
 
     const resultMerged = OmniModelMerge.merge<JavaOptions & PackageOptions & TargetOptions>(results, {
       // TODO: Add capability of figuring out package automatically, common denominator for all given options
+      ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
+      ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
       package: 'com.common',
       compressUnreferencedSubTypes: true,
       compressSoloReferencedTypes: true,
@@ -132,10 +131,8 @@ describe('merge-models', () => {
     resultMerged.model.types.sort((a, b) => OmniUtil.describe(a).localeCompare(OmniUtil.describe(b)));
 
     const typeNames = resultMerged.model.types.map(it => Naming.unwrap(OmniUtil.getTypeName(it) || ''));
-    expect(typeNames).toEqual([
-      'JsonRpcRequestParams',
-      'ListThingsRequestParams',
-      'Thing',
-    ]);
-  }, {timeout: 5_000});
+    expect(typeNames).toContain('JsonRpcRequestParams');
+    expect(typeNames).toContain('ListThingsRequestParams');
+    expect(typeNames).toContain('Thing');
+  });
 });

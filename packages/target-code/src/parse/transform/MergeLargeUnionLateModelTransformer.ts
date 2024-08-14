@@ -1,5 +1,5 @@
 import {OmniExclusiveUnionType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, OmniUnionType, TargetFeatures} from '@omnigen/api';
-import {DefaultOmniReducerArgs, OmniReducer, isDefined, OmniUtil} from '@omnigen/core';
+import {DefaultOmniReducerArgs, ReducerOmni, isDefined, OmniUtil, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -17,21 +17,46 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
       return;
     }
 
-    const reducer = new OmniReducer({
-      UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
-      EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
+    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+      if (ctx.type.kind === OmniTypeKind.UNION || ctx.type.kind === OmniTypeKind.EXCLUSIVE_UNION) {
+        const reduced = this.maybeReduce(ctx.type, args.targetFeatures);
+        if (reduced) {
+          ctx.replacement = reduced;
+        }
+        // const n = ctx.type;
+        // const unimplementedProperties = this.collectUnimplementedPropertiesFromInterfaces(n);
+        // if (unimplementedProperties.length > 0) {
+        //
+        //   // TODO: Add option for if we should make object abstract or actually add the property to the object
+        //
+        //   n.debug = OmniUtil.addDebug(n.debug, `Adding unimplemented interface properties ${unimplementedProperties.map(it => it.name).join(', ')}`);
+        //   n.properties = [
+        //     ...n.properties,
+        //     ...unimplementedProperties.map(it => ({
+        //       ...it,
+        //       owner: n, // TODO: Remove the notion of `owner` someday, so we do not need to clone the property
+        //     })),
+        //   ];
+        // }
+      }
     });
 
-    args.model = reducer.reduce(args.model);
+    // const reducer = new ReducerOmni({
+    //   UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
+    //   EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
+    // });
+    //
+    // args.model = reducer.reduce(args.model);
   }
 
-  private maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: DefaultOmniReducerArgs, features: TargetFeatures) {
+  private maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, features: TargetFeatures) {
 
-    const reduced = n.types.map(it => a.dispatcher.reduce(it)).filter(isDefined);
-    const distinctTypes = OmniUtil.getDistinctTypes(reduced, features);
+    const types = n.types;
+    // const reduced = n.types.map(it => a.dispatcher.reduce(it)).filter(isDefined);
+    const distinctTypes = OmniUtil.getDistinctTypes(types, features);
     if (distinctTypes.length > 2 && distinctTypes.every(it => (it.kind === OmniTypeKind.OBJECT))) {
 
-      const types = n.types;
+      // const types = n.types;
       let target = {...types[0]};
       OmniUtil.mergeTypeMeta(n, target, false, true);
       OmniUtil.copyName(n, target);
@@ -43,6 +68,8 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
       return target;
     }
 
-    return {...n, types: reduced};
+    return undefined;
+
+    // return {...n, types: reduced};
   }
 }

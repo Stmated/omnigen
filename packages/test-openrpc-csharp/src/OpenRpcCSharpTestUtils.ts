@@ -6,6 +6,7 @@ import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 import {CSharpOptions, CSharpPlugins} from '@omnigen/target-csharp';
 import {LoggerFactory} from '@omnigen/core-log';
 import {ModelTransformOptions, PackageOptions, ParserOptions, TargetOptions} from '@omnigen/api';
+import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -20,6 +21,7 @@ export class OpenRpcCSharpTestUtils {
     const ctx: BaseContext & FileContext & TargetContext = {
       file: fileName.includes('/') ? fileName : Util.getPathFromRoot(`./packages/parser-openrpc/examples/${fileName}`),
       arguments: {
+        ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
         ...options,
         target: 'csharp',
       },

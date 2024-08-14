@@ -4,13 +4,13 @@ import {TypeScriptOptions, TypeScriptPlugins} from '@omnigen/target-typescript';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonSchemaPlugins} from '@omnigen/parser-jsonschema';
 import {FileContext, TargetContext} from '@omnigen/core-plugin';
-import {JavaOptions, SerializationLibrary} from '@omnigen/target-java';
+import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 export class JsonSchemaToTypeScriptTestUtil {
 
-  public static async render(inPath: string, options?: Partial<TypeScriptOptions & TargetOptions & JavaOptions>): Promise<RenderedCompilationUnit[]> {
+  public static async render(inPath: string, options?: Partial<TypeScriptOptions & TargetOptions>): Promise<RenderedCompilationUnit[]> {
 
     const pm = new PluginManager({includeAuto: true});
 
@@ -20,11 +20,9 @@ export class JsonSchemaToTypeScriptTestUtil {
       file: inPath,
       target: 'typescript',
       arguments: {
+        ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
         ...options,
         target: 'typescript',
-        ...{
-          serializationLibrary: SerializationLibrary.POJO,
-        } satisfies Partial<JavaOptions>,
       },
     };
 

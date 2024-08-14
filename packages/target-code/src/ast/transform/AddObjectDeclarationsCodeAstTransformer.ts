@@ -280,21 +280,25 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
         parameterIdentifier,
       );
 
-      body.children.push(
-        new Code.ConstructorDeclaration(
-          new Code.ConstructorParameterList(parameter),
-          new Code.Block(
-            new Code.Statement(
-              new Code.BinaryExpression(
-                new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(field)),
-                Code.TokenKind.ASSIGN,
-                new Code.DeclarationReference(parameter),
-              ),
+      const constructorDec = new Code.ConstructorDeclaration(
+        new Code.ConstructorParameterList(parameter),
+        new Code.Block(
+          new Code.Statement(
+            new Code.BinaryExpression(
+              new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(field)),
+              Code.TokenKind.ASSIGN,
+              new Code.DeclarationReference(parameter),
             ),
           ),
-          new Code.ModifierList(),
         ),
+        new Code.ModifierList(),
       );
+
+      body.children.push(constructorDec);
+
+      if (options.debug) {
+        constructorDec.comments = CodeUtil.addComment(constructorDec.comments, `Enum constructor, to take a non-standard backing value`);
+      }
     }
 
     return enumDeclaration;

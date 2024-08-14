@@ -13,18 +13,15 @@ export interface AbstractResponseResult<TData, TMethod extends string> {
   readonly uuid: string;
 }
 
-export interface JsonRpcRequestParams<T extends AbstractRequestData> {
-  readonly Data: T;
-  readonly UUID: string;
-}
+export type DepositRequest = JsonRpcRequest<DepositRequestParams, 'Deposit'>;
 
 export interface DepositRequestData extends AbstractRequestData {
   readonly NotificationURL: string;
   readonly [key: string]: any;
 }
 
-export type RefundRequestParams = JsonRpcRequestParams<RefundRequestData>;
-export type RefundResponseResult = AbstractResponseResult<RefundResponseData, 'Refund'>;
+export type DepositRequestParams = JsonRpcRequestParams<DepositRequestData>;
+export type DepositResponse = JsonRpcResponse<DepositResponseResult>;
 
 export interface DepositResponseData {
   readonly orderid?: string | undefined;
@@ -32,6 +29,14 @@ export interface DepositResponseData {
 }
 
 export type DepositResponseResult = AbstractResponseResult<DepositResponseData, 'Deposit'>;
+export type ErrorUnknown = JsonRpcErrorResponse;
+export type ErrorUnknownError = JsonRpcError;
+
+export interface JsonRpcError {
+  readonly code?: number | undefined;
+  readonly data?: any | undefined;
+  readonly message?: string | undefined;
+}
 
 export interface JsonRpcErrorResponse {
   readonly error: ErrorUnknownError;
@@ -40,21 +45,16 @@ export interface JsonRpcErrorResponse {
   readonly result?: null | undefined;
 }
 
-export interface JsonRpcError {
-  readonly code?: number | undefined;
-  readonly data?: any | undefined;
-  readonly message?: string | undefined;
-}
-
-export type ErrorUnknownError = JsonRpcError;
-export type ErrorUnknown = JsonRpcErrorResponse;
-export type DepositRequestParams = JsonRpcRequestParams<DepositRequestData>;
-
 export interface JsonRpcRequest<TParams extends JsonRpcRequestParams<AbstractRequestData>, TMethod extends string> {
   readonly id?: string | undefined;
+  readonly jsonrpc: '2.0';
   readonly method: TMethod;
   readonly params?: TParams | undefined;
-  jsonrpc: '2.0';
+}
+
+export interface JsonRpcRequestParams<T extends AbstractRequestData> {
+  readonly Data: T;
+  readonly UUID: string;
 }
 
 export interface JsonRpcResponse<T extends AbstractResponseResult<any, string>> {
@@ -64,7 +64,7 @@ export interface JsonRpcResponse<T extends AbstractResponseResult<any, string>> 
   readonly result?: T | undefined;
 }
 
-export type DepositRequest = JsonRpcRequest<DepositRequestParams, 'Deposit'>;
+export type RefundRequest = JsonRpcRequest<RefundRequestParams, 'Refund'>;
 
 export interface RefundRequestData extends AbstractRequestData {
   readonly Amount: string;
@@ -72,12 +72,12 @@ export interface RefundRequestData extends AbstractRequestData {
   readonly [key: string]: any;
 }
 
-export type RefundRequest = JsonRpcRequest<RefundRequestParams, 'Refund'>;
-export type DepositResponse = JsonRpcResponse<DepositResponseResult>;
+export type RefundRequestParams = JsonRpcRequestParams<RefundRequestData>;
+export type RefundResponse = JsonRpcResponse<RefundResponseResult>;
 
 export interface RefundResponseData {
   readonly orderid?: string | undefined;
   readonly result: string;
 }
 
-export type RefundResponse = JsonRpcResponse<RefundResponseResult>;
+export type RefundResponseResult = AbstractResponseResult<RefundResponseData, 'Refund'>;

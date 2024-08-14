@@ -1,6 +1,6 @@
-import {DEFAULT_PACKAGE_OPTIONS, OmniKindPrimitive, PackageOptions, TargetOptions} from '@omnigen/api';
-import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '../util';
-import {DEFAULT_JAVA_OPTIONS, JavaOptions, SerializationLibrary} from '@omnigen/target-java';
+import {OmniKindPrimitive, PackageOptions} from '@omnigen/api';
+import {JavaTestUtils} from '../util';
+import {JavaOptions, SerializationLibrary} from '@omnigen/target-java';
 import {describe, expect, test, vi} from 'vitest';
 
 describe('PackageResolver', () => {
@@ -16,7 +16,7 @@ describe('PackageResolver', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -24,20 +24,23 @@ describe('PackageResolver', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const javaOptions: JavaOptions = {
-      ...DEFAULT_TEST_JAVA_OPTIONS,
+    const javaOptions: Partial<JavaOptions> = {
+      // ...DEFAULT_TEST_TARGET_OPTIONS,
+      // ...DEFAULT_TEST_JAVA_OPTIONS,
       includeGenerated: false,
       serializationLibrary: SerializationLibrary.POJO,
-    };
-
-    const targetOptions: TargetOptions = {
-      ...DEFAULT_TEST_TARGET_OPTIONS,
       additionalPropertiesInterfaceAfterDuplicateCount: 1,
       allowCompressInterfaceToInner: false,
     };
 
-    const packageOptions: PackageOptions = {
-      ...DEFAULT_PACKAGE_OPTIONS,
+    // const targetOptions: TargetOptions = {
+    //   ...DEFAULT_TEST_TARGET_OPTIONS,
+    //   additionalPropertiesInterfaceAfterDuplicateCount: 1,
+    //   allowCompressInterfaceToInner: false,
+    // };
+
+    const packageOptions: Partial<PackageOptions> = {
+      // ...DEFAULT_PACKAGE_OPTIONS,
       packageResolver: (_type, typeName) => {
         if (typeName.match(/.*Error.*/i)) {
           return 'some.base.pkg.errors';
@@ -51,13 +54,12 @@ describe('PackageResolver', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', {
       javaOptions: javaOptions,
-      targetOptions: targetOptions,
       packageOptions: packageOptions,
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 });

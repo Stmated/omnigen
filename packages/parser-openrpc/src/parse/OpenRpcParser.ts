@@ -1045,6 +1045,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcCallbackRequestClass);
       }
 
+      objectRequestType.direction = Direction.IN;
       objectRequestType.extendedBy = this._jsonRpcCallbackRequestClass;
 
     } else {
@@ -1061,6 +1062,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         this._jsonSchemaParser.registerCustomTypeManually(className, this._jsonRpcRequestClass);
       }
 
+      objectRequestType.direction = Direction.OUT;
       objectRequestType.extendedBy = this._jsonRpcRequestClass;
     }
 
@@ -1089,7 +1091,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(
         OMNI_GENERIC_FEATURES,
-        ...requestParamsType.properties.map(it => it.type),
+        requestParamsType.properties.map(it => it.type),
       )?.type;
 
     } else {
@@ -1189,6 +1191,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       type: requestMethodType,
       required: true,
       readOnly: true,
+      debug: `Method literal (${method.name}) from OpenRpc Spec`,
       owner: targetObject,
     });
 

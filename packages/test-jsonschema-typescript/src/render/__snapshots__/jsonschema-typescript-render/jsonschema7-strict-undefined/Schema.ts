@@ -1,7 +1,3 @@
-export interface SchemaPatternProperties {
-  readonly [key: string]: Schema;
-}
-
 export type ArrayableSchema = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
 export type Schema = SchemaObject | boolean;
 
@@ -14,22 +10,6 @@ export interface SchemaDependencies {
 }
 
 export type SchemaDependenciesAdditional = Schema | ReadonlyArray<string>;
-
-export interface SchemaProperties {
-  readonly [key: string]: Schema;
-}
-
-export enum SimpleTypes {
-  ARRAY = 'array',
-  BOOLEAN = 'boolean',
-  INTEGER = 'integer',
-  NULL = 'null',
-  NUMBER = 'number',
-  OBJECT = 'object',
-  STRING = 'string',
-}
-
-export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];
 
 export interface SchemaObject {
   readonly $comment?: string;
@@ -78,4 +58,24 @@ export interface SchemaObject {
   readonly type?: SchemaType;
   readonly uniqueItems?: boolean;
   readonly writeOnly?: boolean;
+}
+
+export interface SchemaPatternProperties {
+  readonly [key: string]: Schema;
+}
+
+export interface SchemaProperties {
+  readonly [key: string]: Schema;
+}
+
+export type SchemaType = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];
+
+export enum SimpleTypes {
+  ARRAY = 'array',
+  BOOLEAN = 'boolean',
+  INTEGER = 'integer',
+  NULL = 'null',
+  NUMBER = 'number',
+  OBJECT = 'object',
+  STRING = 'string',
 }

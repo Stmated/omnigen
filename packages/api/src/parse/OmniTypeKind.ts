@@ -66,10 +66,6 @@ export const OmniTypeKind = {
   INTERFACE: 'INTERFACE',
   DECORATING: 'DECORATING',
   /**
-   * TODO: Deprecated. Remove. Should be up to the target language to handle the original type as best it can!
-   */
-  // WRAPPED: 'WRAPPED',
-  /**
    * Type used when the type is known to be unknown.
    * It is a way of saying "it is an object, but it can be anything"
    */

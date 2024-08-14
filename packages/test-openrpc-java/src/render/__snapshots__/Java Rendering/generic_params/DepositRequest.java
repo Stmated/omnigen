@@ -7,12 +7,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class DepositRequest extends JsonRpcRequest<DepositRequest.Params> {
   public DepositRequest(@JsonProperty(value = "id") String id, @JsonProperty(value = "params") Params params) {
-    super(id, params);
-  }
-
-  @JsonProperty(value = "method")
-  public String getMethod() {
-    return "Deposit";
+    super(id, "Deposit", params);
   }
 
   public static class Params extends JsonRpcRequestParams<Params.Data> {

@@ -18,7 +18,7 @@ export const DefaultJavaRendererOptions: CodeRendererOptions = {
   indent: '  ',
 };
 
-export const createJavaRenderer = (root: Java.JavaAstRootNode, options: TargetOptions & JavaOptions, renderOptions = DefaultJavaRendererOptions, ctxIn?: CodeRenderContext): JavaRenderer => {
+export const createJavaRenderer = (root: Java.JavaAstRootNode, options: JavaOptions, renderOptions = DefaultJavaRendererOptions, ctxIn?: CodeRenderContext): JavaRenderer => {
 
   return {
     ...createJavaVisitor(),
@@ -37,14 +37,14 @@ export const createJavaRenderer = (root: Java.JavaAstRootNode, options: TargetOp
 
       const identifier = render(n.identifier, v);
       return options.debug
-        ? `/*g!-${n.identifier.value}-${n.identifier.original}*/${JavaUtil.getGetterName(identifier, n.type)}`
+        ? `/*getter-${n.identifier.value}-${n.identifier.original ?? ''}*/${JavaUtil.getGetterName(identifier, n.type)}`
         : JavaUtil.getGetterName(identifier, n.type);
     },
     visitSetterIdentifier: (n, v) => {
 
       const identifier = render(n.identifier, v);
       return options.debug
-        ? `/*s!-${n.identifier.value}-${n.identifier.original}*/${JavaUtil.getSetterName(identifier)}`
+        ? `/*setter-${n.identifier.value}-${n.identifier.original ?? ''}*/${JavaUtil.getSetterName(identifier)}`
         : JavaUtil.getSetterName(identifier);
     },
 

@@ -4,7 +4,7 @@ export * from './options/CodeOptions';
 export * from './ast/CodeAstUtils';
 
 export * from './ast/transform/AddObjectDeclarationsCodeAstTransformer.ts';
-export * from './ast/transform/AddConstructorCodeAstTransformer.ts';
+export * from './ast/transform/AddConstructorAstTransformer.ts';
 export * from './ast/transform/AddAdditionalPropertiesInterfaceAstTransformer';
 export * from './ast/transform/InnerTypeCompressionAstTransformer';
 export * from './ast/transform/PackageResolverAstTransformer';
@@ -38,5 +38,6 @@ export * from './parse/transform/SimplifyUnnecessaryCompositionsModelTransformer
 export * from './parse/transform/InterfaceExtractorModelTransformer.ts';
 export * from './parse/transform/AggregateIntersectionsModelTransformer.ts';
 export * from './parse/transform/MergeLargeUnionLateModelTransformer.ts';
+export * from './parse/transform/ElevatePropertiesModelTransformer.ts';
 
 export * as Code from './ast/Code';

@@ -34,17 +34,17 @@ import {
   ZodParserOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
   AddAccessorsForFieldsAstTransformer,
   AddAdditionalPropertiesInterfaceAstTransformer,
   AddCommentsAstTransformer,
-  AddConstructorCodeAstTransformer,
+  AddConstructorAstTransformer,
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
-  AddObjectDeclarationsCodeAstTransformer,
+  AddObjectDeclarationsCodeAstTransformer, ElevatePropertiesModelTransformer,
   InnerTypeCompressionAstTransformer,
   MethodToGetterCodeAstTransformer,
   PackageResolverAstTransformer, PrettyCodeAstTransformer,
@@ -65,9 +65,9 @@ import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTrans
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export const ZodParserOptionsContext = z.object({
-  parserOptions: ZodParserOptions,
-});
+// export const ZodParserOptionsContext = z.object({
+//   parserOptions: ZodParserOptions,
+// });
 
 export const ZodTypeScriptOptionsContext = z.object({
   tsOptions: ZodTypeScriptOptions,
@@ -87,9 +87,9 @@ export const ZodTypeScriptInitContextOut = ZodModelContext
   .merge(ZodTypeScriptTargetContext);
 
 export const ZodTypeScriptContextIn = ZodModelContext
-  .merge(ZodParserOptionsContext)
+  // .merge(ZodParserOptionsContext)
   .merge(ZodPackageOptionsContext)
-  .merge(ZodTargetOptionsContext)
+  // .merge(ZodTargetOptionsContext)
   .merge(ZodModelTransformOptionsContext)
   .merge(ZodTypeScriptOptionsContext)
   .merge(ZodTypeScriptTargetContext)
@@ -132,7 +132,7 @@ export const TypeScriptPlugin = createPlugin(
 
     const modelArgs: OmniModelTransformerArgs = {
       model: ctx.model,
-      options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
+      options: {...ctx.tsOptions, ...ctx.modelTransformOptions},
     };
 
     const transformers: OmniModelTransformer[] = [
@@ -140,6 +140,7 @@ export const TypeScriptPlugin = createPlugin(
       // new ElevatePropertiesModelTransformer(),
       // new GenericsModelTransformer(),
       // new InterfaceExtractorModelTransformer(),
+      new ElevatePropertiesModelTransformer(),
       new SimplifyUnnecessaryCompositionsModelTransformer(),
     ];
 
@@ -151,13 +152,16 @@ export const TypeScriptPlugin = createPlugin(
 
     const modelArgs2: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions> = {
       model: modelArgs.model,
-      options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.tsOptions},
+      options: {...ctx.modelTransformOptions, ...ctx.tsOptions},
       targetFeatures: TYPESCRIPT_FEATURES,
     };
 
     const transformers2 = [
+      new ElevatePropertiesModelTransformer(),
+      new GenericsModelTransformer(),
       new StrictUndefinedTypeScriptModelTransformer(),
       new RemoveWildcardGenericParamTypeScriptModelTransformer(),
+      new AlignObjectWithInterfaceModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -171,7 +175,7 @@ export const TypeScriptPlugin = createPlugin(
       new AddFieldsAstTransformer(),
       new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
-      new AddConstructorCodeAstTransformer(),
+      new AddConstructorAstTransformer(),
       new ToConstructorBodySuperCallAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
@@ -196,9 +200,9 @@ export const TypeScriptPlugin = createPlugin(
       new PrettyCodeAstTransformer(),
     ] as const;
 
-    const options: PackageOptions & TargetOptions & TypeScriptOptions = {
+    const options: PackageOptions & TypeScriptOptions = {
       ...ctx.tsOptions,
-      ...ctx.targetOptions,
+      // ...ctx.targetOptions,
       ...ctx.packageOptions,
     };
 

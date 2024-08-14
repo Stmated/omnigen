@@ -46,7 +46,7 @@ import {
   ZodParserOptions, ZodTargetOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
 import * as Java from './ast/JavaAst';
 import {CodeRootAstNode} from './ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -56,10 +56,10 @@ import {
   AddAdditionalPropertiesInterfaceAstTransformer,
   AddCommentsAstTransformer,
   AddCompositionMembersCodeAstTransformer,
-  AddConstructorCodeAstTransformer,
+  AddConstructorAstTransformer,
   AddFieldsAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
-  AggregateIntersectionsModelTransformer,
+  AggregateIntersectionsModelTransformer, ElevatePropertiesModelTransformer,
   InnerTypeCompressionAstTransformer,
   InterfaceExtractorModelTransformer,
   MergeLargeUnionLateModelTransformer,
@@ -153,6 +153,7 @@ export const JavaPlugin = createPlugin(
       // new SimplifyInheritanceModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
       // new GenericsModelTransformer(),
+      new ElevatePropertiesModelTransformer(),
       new AggregateIntersectionsModelTransformer(),
       new CompositionGenericTargetToObjectJavaModelTransformer(),
       new InterfaceExtractorModelTransformer(),
@@ -170,7 +171,10 @@ export const JavaPlugin = createPlugin(
     };
 
     const transformers2: OmniModel2ndPassTransformer[] = [
+      new ElevatePropertiesModelTransformer(),
+      new GenericsModelTransformer(),
       new MergeLargeUnionLateModelTransformer(),
+      new AlignObjectWithInterfaceModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -180,15 +184,13 @@ export const JavaPlugin = createPlugin(
     const astTransformers: AstTransformer<CodeRootAstNode, JavaAndTargetOptions>[] = [];
     astTransformers.push(new AddObjectDeclarationsCodeAstTransformer());
     astTransformers.push(new AddFieldsAstTransformer());
-    if (ctx.javaOptions.fieldAccessorMode === FieldAccessorMode.POJO) {
-      astTransformers.push(new AddAccessorsForFieldsAstTransformer());
-    }
+    astTransformers.push(new AddAccessorsForFieldsAstTransformer());
     astTransformers.push(new AddCompositionMembersCodeAstTransformer());
     astTransformers.push(new AddAbstractAccessorsAstTransformer());
     if (ctx.javaOptions.fieldAccessorMode !== FieldAccessorMode.LOMBOK) {
       // If the fields are managed by lombok, then we add no constructor.
       // TODO: Move to much later, so things like generic normalization/simplification has been done?
-      astTransformers.push(new AddConstructorCodeAstTransformer());
+      astTransformers.push(new AddConstructorAstTransformer());
     }
     astTransformers.push(new AddLombokAstTransformer());
     astTransformers.push(new AddAdditionalPropertiesInterfaceAstTransformer());
@@ -221,7 +223,7 @@ export const JavaPlugin = createPlugin(
 
     const rootNode = new JavaAstRootNode();
 
-    const targetOptions: TargetOptions = ZodTargetOptions.parse({...ctx.defaults, ...ctx.targetOptions, ...ctx.arguments});
+    const targetOptions: TargetOptions = {...ctx.parserOptions, ...ZodTargetOptions.parse({...ctx.defaults, ...ctx.targetOptions, ...ctx.arguments})};
 
     const astArgs: AstTransformerArguments<CodeRootAstNode, JavaAndTargetOptions> = {
       model: modelTransformer2Args.model,
@@ -249,7 +251,6 @@ export const JavaPlugin = createPlugin(
 
 export const JavaRendererCtxIn = ZodModelContext
   .merge(ZodAstNodeContext)
-  .merge(ZodTargetOptionsContext)
   .merge(ZodJavaOptionsContext)
   .merge(ZodJavaTargetContext);
 
@@ -263,7 +264,7 @@ export const JavaRendererPlugin = createPlugin(
   async ctx => {
 
     const javaRootNode = ctx.astNode as Java.JavaAstRootNode;
-    const renderer = createJavaRenderer(javaRootNode, {...ctx.targetOptions, ...ctx.javaOptions});
+    const renderer = createJavaRenderer(javaRootNode, ctx.javaOptions);
     const rendered = renderer.executeRender(ctx.astNode, renderer);
 
     return {

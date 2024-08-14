@@ -15,7 +15,12 @@ import {
   ZodTypeLibraryContext,
 } from '@omnigen/core-plugin';
 import {z} from 'zod';
-import {ConflictingIntersectionModelTransformer, ElevatePropertiesModelTransformer, GenericsModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse';
+import {
+  ConflictingIntersectionModelTransformer,
+  GenericsModelTransformer,
+  SchemaFile,
+  SimplifyInheritanceModelTransformer,
+} from './parse';
 import {
   OmniModel2ndPassTransformer,
   OmniModelTransformer,
@@ -52,14 +57,16 @@ export const ZodSomeTargetContextOut = ZodBaseContext.extend({
 const TypeLibraryPluginOut = ZodTypeLibraryContext
   .merge(ZodModelLibraryContext);
 
-const ZodStdOptionsContext = ZodArgumentsContext
+// const ZodStdOptionsContext = ZodArgumentsContext
+//   // .merge(ZodParserOptionsContext)
+//   ;
+
+const CorePluginOut = ZodSchemaFileContext
+  .merge(ZodArgumentsContext)
   .merge(ZodParserOptionsContext)
   .merge(ZodTargetOptionsContext)
   .merge(ZodModelTransformOptionsContext)
-  .merge(ZodPackageOptionsContext);
-
-const CorePluginOut = ZodSchemaFileContext
-  .merge(ZodStdOptionsContext)
+  .merge(ZodPackageOptionsContext)
   .merge(ZodFileWriteOptionsContext)
   .merge(TypeLibraryPluginOut)
   .merge(ZodSomeTargetContextOut)
@@ -100,7 +107,7 @@ export const CommonTransformPlugin = createPlugin(
 
     const transformers: OmniModelTransformer[] = [
       new SimplifyInheritanceModelTransformer(),
-      new ElevatePropertiesModelTransformer(),
+      // new ElevatePropertiesModelTransformer(),
       // new GenericsModelTransformer(), // Maybe reintroduce, but with Omni generic target features
     ];
 
@@ -126,10 +133,11 @@ export const CommonTransform2Plugin = createPlugin(
   async ctx => {
 
     const transformers: OmniModel2ndPassTransformer<typeof ctx.parserOptions & typeof ctx.targetOptions>[] = [
-      new GenericsModelTransformer(),
-      new ElevatePropertiesModelTransformer(),
+      // new GenericsModelTransformer(),
+      // new ElevatePropertiesModelTransformer(),
       new ConflictingIntersectionModelTransformer(),
       new SimplifyInheritanceModelTransformer(),
+      // new AlignObjectWithInterfaceModelTransformer(),
     ];
 
     const args: OmniModelTransformer2ndPassArgs = {

@@ -16,7 +16,6 @@
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
-    "@omnigen/target-java": "workspace:*",
     "@omnigen/target-typescript": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",

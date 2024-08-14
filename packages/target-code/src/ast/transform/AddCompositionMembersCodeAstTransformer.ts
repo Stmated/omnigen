@@ -139,7 +139,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     }
 
     if (enumTypes.length > 0 && primitiveTypes.length > 0 && otherTypeCount == 0) {
-      this.addEnumAndPrimitivesAsObjectEnum(root, enumTypes, primitiveTypes, declaration);
+      this.addEnumAndPrimitivesAsObjectEnum(root, enumTypes, primitiveTypes, declaration, options);
     } else {
 
       // This means the specification did not have any discriminators.
@@ -214,6 +214,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     enumTypes: OmniEnumType[],
     primitiveTypes: OmniPrimitiveType[],
     declaration: Code.AbstractObjectDeclaration,
+    options: TargetOptions & CodeOptions,
   ): void {
 
     // Java does not support advanced enums. We need to handle it some other way.
@@ -503,24 +504,28 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
       parameterIdentifier,
     );
 
-    declaration.body.children.push(
-      new Code.ConstructorDeclaration(
-        new Code.ConstructorParameterList(constructorParameter),
-        new Code.Block(
-          new Code.Statement(
-            new Code.BinaryExpression(
-              new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(fieldValue)),
-              Code.TokenKind.ASSIGN,
-              new Code.DeclarationReference(constructorParameter),
-            ),
+    const constructorDec = new Code.ConstructorDeclaration(
+      new Code.ConstructorParameterList(constructorParameter),
+      new Code.Block(
+        new Code.Statement(
+          new Code.BinaryExpression(
+            new Code.MemberAccess(new Code.SelfReference(), new Code.FieldReference(fieldValue)),
+            Code.TokenKind.ASSIGN,
+            new Code.DeclarationReference(constructorParameter),
           ),
         ),
-        // Private constructor, since all creation should go through the singleton method.
-        new Code.ModifierList(
-          new Code.Modifier(Code.ModifierKind.PRIVATE),
-        ),
+      ),
+      // Private constructor, since all creation should go through the singleton method.
+      new Code.ModifierList(
+        new Code.Modifier(Code.ModifierKind.PRIVATE),
       ),
     );
+
+    if (options.debug) {
+      constructorDec.comments = CodeUtil.addComment(constructorDec.comments, `Constructor for composition`);
+    }
+
+    declaration.body.children.push(constructorDec);
   }
 
   private addSelfIfOfOneOfStaticFieldsMethod(

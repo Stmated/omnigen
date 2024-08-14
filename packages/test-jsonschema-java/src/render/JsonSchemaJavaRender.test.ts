@@ -10,13 +10,15 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/string_union.json'));
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/string_union.json'), {
+      serializationLibrary: SerializationLibrary.JACKSON,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
       expect(cu).toHaveLength(1);
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -24,12 +26,14 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json'));
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json'), {
+      serializationLibrary: SerializationLibrary.JACKSON,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -39,15 +43,17 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render(
-      Util.getPathFromRoot('./packages/parser-jsonschema/examples/decorated_types.json'),
-      {...ZodJavaOptions.parse({}), commentsOnFields: false, commentsOnGetters: true, serializationLibrary: SerializationLibrary.POJO, compressSoloReferencedTypes: false},
-    );
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/decorated_types.json'), {
+      commentsOnFields: false,
+      commentsOnGetters: true,
+      serializationLibrary: SerializationLibrary.POJO,
+      compressSoloReferencedTypes: false,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -64,7 +70,7 @@ describe('jsonschema-java-render', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -80,7 +86,7 @@ describe('jsonschema-java-render', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -98,7 +104,7 @@ describe('jsonschema-java-render', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -117,7 +123,7 @@ describe('jsonschema-java-render', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -125,12 +131,14 @@ describe('jsonschema-java-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/enum_inheritance.json'));
+    const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/enum_inheritance.json'), {
+      serializationLibrary: SerializationLibrary.JACKSON,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -142,13 +150,16 @@ describe('jsonschema-java-render', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/one_of_same_type.json'), {
+      serializationLibrary: SerializationLibrary.JACKSON,
       beanValidation: false,
+      compressUnreferencedSubTypes: true,
+      compressSoloReferencedTypes: true,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -157,13 +168,16 @@ describe('jsonschema-java-render', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/discriminator.json'), {
+      serializationLibrary: SerializationLibrary.JACKSON,
       beanValidation: false,
+      compressSoloReferencedTypes: true,
+      compressUnreferencedSubTypes: true,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -184,7 +198,7 @@ describe('jsonschema-java-render', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 });

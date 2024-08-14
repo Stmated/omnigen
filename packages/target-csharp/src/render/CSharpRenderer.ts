@@ -285,17 +285,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       return parent.visitEdgeType(n, v);
     },
 
-    // visitWildcardType: (n, v) => {
-    //
-    //   // const kind = n.omniType.unknownKind ?? options.unknownType;
-    //   // if (kind === UnknownKind.OBJECT) {
-    //   //   return 'object';
-    //   // } else if (kind == UnknownKind.ANY) {
-    //   //   return 'dynamic';
-    //   // }
-    //
-    //   return parent.visitWildcardType(n, v);
-    // },
+    visitSuperReference: () => 'base',
 
     visitInstanceOf: (n, v) => {
       const narrowed = n.narrowed ? ` ${render(n.narrowed, v)}` : '';

@@ -39,6 +39,10 @@ export class ObjectPool<T> {
     }
   }
 
+  public isUnused(): boolean {
+    return this._cursor === 0;
+  }
+
   /**
    * Returns the next value from the pool.
    *

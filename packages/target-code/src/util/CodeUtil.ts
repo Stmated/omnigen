@@ -1,7 +1,17 @@
-import {OmniCompositionType, OmniInterfaceOrObjectType, OmniKindComposition, OmniModel, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TargetFunctions} from '@omnigen/api';
+import {
+  OmniCompositionType,
+  OmniInterfaceOrObjectType,
+  OmniKindComposition,
+  OmniModel,
+  OmniSuperTypeCapableType,
+  OmniType,
+  OmniTypeKind,
+  TargetFunctions,
+} from '@omnigen/api';
 import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
+import {FreeTextUtils} from './FreeTextUtils.ts';
 
 export class CodeUtil {
 
@@ -17,10 +27,10 @@ export class CodeUtil {
     const defaultVisitor = root.createVisitor<Code.ClassDeclaration | undefined>();
     return VisitResultFlattener.visitWithSingularResult(Visitor.create(defaultVisitor, {
       visitClassDeclaration: node => {
-        if (node.type.omniType == type) {
+        if (node.type.omniType === type) {
           throw new AbortVisitingWithResult(node);
-        } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-          if (node.type.omniType == type.source.of) {
+        } else if (type.kind === OmniTypeKind.GENERIC_TARGET) {
+          if (node.type.omniType === type.source.of) {
             // Return the class declaration; which will be generic.
             // It is up to the calling code to map the generic arguments to real types.
             throw new AbortVisitingWithResult(node);
@@ -165,38 +175,6 @@ export class CodeUtil {
     }
   }
 
-  public static collectUnimplementedPropertiesFromInterfaces(type: OmniType): OmniProperty[] {
-
-    const properties: OmniProperty[] = [];
-    if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
-
-      // Collecting properties from an XOR composition makes no sense, since we cannot know which needs implementing.
-      return properties;
-    }
-
-    OmniUtil.visitTypesDepthFirst(type, ctx => {
-
-      if (ctx.type.kind == OmniTypeKind.OBJECT) {
-        if (ctx.depth > 0) {
-          ctx.skip = true;
-          return;
-        }
-      } else if (ctx.type.kind == OmniTypeKind.INTERFACE) {
-        // The interface might be the interface of the calling type. Filter it out below.
-        if (ctx.type.of != type) {
-          properties.push(...OmniUtil.getPropertiesOf(ctx.type.of));
-        }
-      } else if (ctx.type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
-        ctx.skip = true;
-        return;
-      }
-
-      return undefined;
-    });
-
-    return properties;
-  }
-
   /**
    * On the Omni side of things we have two types: Object & Interface.
    *
@@ -239,5 +217,9 @@ export class CodeUtil {
     }
 
     return interfaces;
+  }
+
+  public static addComment(existing: Code.Comment | undefined, text: string): Code.Comment {
+    return new Code.Comment(FreeTextUtils.add(existing?.text, text), existing?.kind);
   }
 }

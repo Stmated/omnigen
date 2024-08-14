@@ -23,8 +23,6 @@ export class ConstructorRemovalOnPropertyInitCSharpAstTransformer implements Ast
       return;
     }
 
-    // return;
-
     const classStack: Cs.ClassDeclaration[] = [];
 
     const defaultVisitor = args.root.createVisitor();
@@ -40,7 +38,7 @@ export class ConstructorRemovalOnPropertyInitCSharpAstTransformer implements Ast
           classStack.pop();
         }
       },
-      visitConstructorParameterList: (n, v) => {
+      visitConstructorParameterList: n => {
         const owner = classStack[classStack.length - 1];
         for (let i = 0; i < n.children.length; i++) {
 

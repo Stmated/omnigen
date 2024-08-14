@@ -1,8 +1,8 @@
 
-export {AbstractCodeNode} from './AbstractCodeNode.ts';
+export * from './AbstractCodeNode.ts';
 export * from './CodeRootAstNode';
 export * from './CodeAst';
 export * from './FreeText';
 export * from './VirtualAnnotationNode.ts';
-export type {TypeNode} from '@omnigen/api';
+export type {TypeNode, AstNode} from '@omnigen/api';
 

@@ -69,6 +69,7 @@ export interface CodeVisitor<R> extends AstVisitor<R>, AstFreeTextVisitor<R> {
   visitArrayInitializer: CodeVisitFn<Code.ArrayInitializer, R>;
   visitStaticMemberReference: CodeVisitFn<Code.StaticMemberReference, R>;
   visitSelfReference: CodeVisitFn<Code.SelfReference, R>;
+  visitSuperReference: CodeVisitFn<Code.SuperReference, R>;
   visitNodes: CodeVisitFn<Code.Nodes, R>;
   visitDecoratingTypeNode: CodeVisitFn<Code.DecoratingTypeNode, R>;
 
@@ -297,6 +298,7 @@ const createCodeVisitorInternal = <R>(partial?: Partial<CodeVisitor<R>>, noop?: 
     visitArrayInitializer: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitStaticMemberReference: (node, visitor) => [node.target.visit(visitor), node.member.visit(visitor)],
     visitSelfReference: () => noop,
+    visitSuperReference: () => noop,
     visitNodes: (node, visitor) => node.children.map(it => it.visit(visitor)),
     visitDecoratingTypeNode: (n, v) => n.of.visit(v),
 

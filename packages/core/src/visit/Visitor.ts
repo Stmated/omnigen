@@ -84,7 +84,7 @@ export class Visitor {
   }
 
   public static single<const T>(
-    visitor: AstVisitor<T>,
+    visitor: AstVisitor<any>,
     node: AstNode,
     fallback: T,
     reducer: (a: T, b: T) => T = (a, b) => a || b,

@@ -22,7 +22,7 @@ import {
   TypeUseKind,
   UnknownKind,
 } from '@omnigen/api';
-import {Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
+import {AbortVisitingWithResult, Case, isDefined, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/Code';
 import {CodeRootAstNode} from './CodeRootAstNode';
 import {CodeOptions} from '../options/CodeOptions';
@@ -134,6 +134,10 @@ export class CodeAstUtils implements AstTargetFunctions {
     return root.resolveNodeRef<Code.Field>(fieldId);
   }
 
+  public static isVisibleToSubTypes(node: Code.Field): boolean {
+    return node.modifiers.children.some(it => it.kind === Code.ModifierKind.PUBLIC || it.kind === Code.ModifierKind.PROTECTED);
+  }
+
   public static getSoloReturnOfNoArgsMethod(method: Code.MethodDeclaration): AstNode | undefined {
 
     if (method.signature.parameters && method.signature.parameters.children.length > 0) {
@@ -239,17 +243,17 @@ export class CodeAstUtils implements AstTargetFunctions {
     body: Code.Block,
     options: CodeOptions,
     modifiers?: Code.ModifierKind[],
-  }): void {
+  }): Code.Field | undefined {
 
     if (OmniUtil.isNull(args.property.type) && !args.options.includeAlwaysNullProperties) {
-      return;
+      return undefined;
     }
 
     if (args.property.abstract) {
 
       // If the property is abstract, then we should not be adding a field for it.
       // Instead it will be added by another transformer that deals with the getters and setters.
-      return;
+      return undefined;
     }
 
     const fieldType = OmniUtil.asNonNullableIfHasDefault(args.property.type, OMNI_GENERIC_FEATURES);
@@ -266,7 +270,7 @@ export class CodeAstUtils implements AstTargetFunctions {
         originalName = `additionalProperties`;
 
       } else {
-        return;
+        return undefined;
       }
     }
 
@@ -304,6 +308,7 @@ export class CodeAstUtils implements AstTargetFunctions {
     }
 
     args.body.children.push(field);
+    return field;
   }
 
   public static addInterfaceOf(
@@ -388,11 +393,70 @@ export class CodeAstUtils implements AstTargetFunctions {
         }
         return new Code.Identifier(accessorName, original);
       }
-      // else {
-      //   return new Code.Identifier(accessorName, field.identifier.original ?? field.identifier.value);
-      // }
     }
 
     return field.identifier;
+  }
+
+  public static getTypeToClassDecMap(root: Code.CodeRootAstNode) {
+
+    const defaultVisitor = root.createVisitor();
+    const typeToDec = new Map<OmniType, Code.ClassDeclaration>();
+    root.visit(Visitor.create(defaultVisitor, {
+      visitEnumDeclaration: () => {
+      },
+      visitInterfaceDeclaration: () => {
+      },
+      visitMethodDeclaration: () => {
+      },
+
+      visitClassDeclaration: (n, visitor) => {
+        typeToDec.set(n.type.omniType, n);
+        defaultVisitor.visitClassDeclaration(n, visitor);
+      },
+    }));
+
+    return typeToDec;
+  }
+
+  public static getSuperClassDeclarations(typeToDec: Map<OmniType, Code.ClassDeclaration>, extDec: Code.ExtendsDeclaration): Code.ClassDeclaration[] {
+
+    return extDec.types.children.map(it => {
+      const unwrapped = OmniUtil.getTopLevelType(it.omniType);
+      const mapped = typeToDec.get(unwrapped);
+      if (mapped) {
+        logger.silent(`Found ${OmniUtil.describe(unwrapped)} -> ${mapped}`);
+        return mapped;
+      } else {
+        return undefined;
+      }
+
+    }).filter(isDefined) ?? [];
+  }
+
+  public static getSuperFields(root: Code.CodeRootAstNode, classDeclarations: Code.ClassDeclaration[], subField: Code.Field): Code.Field[] {
+
+    const subFieldName = subField.identifier.original ?? subField.identifier.value;
+    return classDeclarations.map(it => CodeAstUtils.getField(root, it, subFieldName)).filter(isDefined);
+  }
+
+  public static getField(root: Code.CodeRootAstNode, node: Code.AbstractCodeNode, name: string): Code.Field | undefined {
+
+    const defaultVisitor = root.createVisitor();
+    return Visitor.single(Visitor.create(defaultVisitor, {
+      visitMethodDeclaration: () => {
+      },
+      visitField: n => {
+        if (n.identifier.original === name || n.identifier.value === name) {
+          throw new AbortVisitingWithResult(n);
+        }
+      },
+    }), node, undefined);
+
+    // return classDeclarations.map(it => {
+    //   const otherField =
+    //
+    //   return (otherField != subField) ? otherField : undefined;
+    // }).filter(isDefined);
   }
 }

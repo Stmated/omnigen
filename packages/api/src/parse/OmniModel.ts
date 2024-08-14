@@ -2,6 +2,7 @@ import {TypeName} from './TypeName';
 import {OmniKindComposition, OmniKindPrimitive, OmniTypeKind} from './OmniTypeKind.ts';
 import {ObjectName} from '../ast';
 import {OmniItemKind} from './OmniItemKind.ts';
+import {Direction} from './ParserOptions.ts';
 
 export interface OmniParameter {
   name: string;
@@ -83,6 +84,14 @@ export interface OmniProperty extends OmniItemBase<typeof OmniItemKind.PROPERTY>
   required?: boolean;
   readOnly?: boolean;
   writeOnly?: boolean;
+
+  /**
+   * If `true`, then the property exists as meta-information but should/might not be displayed in the generated code.
+   *
+   * An example is if we have `A: {prop: 'foo'}` and `B: {prop: 'bar'}` with supertype `C: {}`, and we want to elevate `prop` to `C` as `string`,
+   * then hide `A#prop` and `B#prop`; but need to keep the literal values `foo` and `bar` for later transformers.
+   */
+  hidden?: boolean;
   abstract?: boolean;
 
   accessLevel?: OmniAccessLevel;
@@ -412,9 +421,18 @@ export interface OmniObjectType<E extends OmniSuperTypeCapableType = OmniSuperTy
    */
   subTypeHints?: OmniSubTypeHint[] | undefined;
 
+  /**
+   * NOTE: Important to note that a property can exist in multiple places in the type hierarchy. It is up to target-specific transformers to handle those situations.
+   */
   properties: OmniProperty[];
 
   abstract?: boolean | undefined;
+
+  /**
+   * The direction that this object is used in. If the direction is `OUT` (we send it to a server) then we can use more constant values from the contracts.
+   * In difference to `IN` where we still need to take and use what is given to us from the other end.
+   */
+  direction?: Direction;
 }
 
 export type OmniPrimitiveConstantValue = string | boolean | number | object | null;

@@ -258,7 +258,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       assertDefined(n.identifier.reduce(r)),
       n.initializer?.reduce(r),
       n.type?.reduce(r),
-      n.constant,
+      n.immutable,
     ).withIdFrom(n),
     reduceDeclarationReference: n => n,
 
@@ -450,6 +450,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       assertDefined(n.member.reduce(r)),
     ).withIdFrom(n),
     reduceSelfReference: n => n,
+    reduceSuperReference: n => n,
     reduceNodes: (n, r) => {
       const children = n.children.map(it => it.reduce(r)).filter(isDefined);
       return (children.length > 0) ? new Code.Nodes(...children).withIdFrom(n) : undefined;

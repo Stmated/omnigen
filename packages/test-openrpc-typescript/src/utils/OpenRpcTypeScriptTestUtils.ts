@@ -5,6 +5,7 @@ import {PluginManager} from '@omnigen/plugin';
 import {TypeScriptOptions, TypeScriptPlugins} from '@omnigen/target-typescript';
 import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 import {z} from 'zod';
+import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 
 export type TypeScriptTestOptions = ParserOptions & ModelTransformOptions & TargetOptions & PackageOptions & TypeScriptOptions
 
@@ -28,6 +29,7 @@ export class OpenRpcTypeScriptTestUtils {
     const ctx: BaseContext & FileContext & TargetContext = {
       file: filePath,
       arguments: {
+        ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
         ...options?.options,
         ...options?.arguments,
         target: 'typescript',

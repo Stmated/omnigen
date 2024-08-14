@@ -1,4 +1,4 @@
-import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/api';
+import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniUtil} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -13,7 +13,7 @@ type NotInterface = Exclude<OmniSuperTypeCapableType, OmniInterfaceType>;
  */
 export class InterfaceExtractorModelTransformer implements OmniModelTransformer {
 
-  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
+  transformModel(args: OmniModelTransformerArgs): void {
 
     const interfaceMap = new Map<OmniType, OmniInterfaceType>();
     const allTypes: OmniType[] = [];
@@ -21,7 +21,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
 
       const type = ctx.type;
-      if (type.kind == OmniTypeKind.INTERFACE && type.of.kind != OmniTypeKind.INTERFACE && !interfaceMap.has(type.of)) {
+      if (type.kind == OmniTypeKind.INTERFACE && type.of.kind != OmniTypeKind.INTERFACE) { // && !interfaceMap.has(type.of)) {
         interfaceMap.set(type.of, type);
       }
 
@@ -45,7 +45,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
         this.makeExtensionsInterfaces(type, interfaceMap, 0);
       } else if (type.kind == OmniTypeKind.OBJECT) {
         this.makeExtensionsInterfaces(type, interfaceMap, 1);
-      } else if ('extendedBy' in type) {
+      } else if (('extendedBy' satisfies keyof OmniObjectType) in type) {
         logger.warn(`Found '${OmniUtil.describe(type)}' which has extensions but seems not covered by the InterfaceJavaModelTransformer`);
       }
     }

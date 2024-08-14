@@ -38,6 +38,13 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
         continue;
       }
 
+      if (type.kind === OmniTypeKind.INTERFACE) {
+
+        // We do not place interfaces inside its single user, since most likely that user is implementing the interface.
+        // NOTE: This is of course not always true, and a more detailed check would be nice.
+        continue;
+      }
+
       const singleUseInObjDec = usedInObjDec[0];
 
       // Check for supertype interference. Don't want a superclass to be inside a subclass.

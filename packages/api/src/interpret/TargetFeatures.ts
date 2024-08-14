@@ -71,3 +71,15 @@ export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   unions: true,
   transparentAccessors: false,
 };
+
+export const OMNI_RESTRICTIVE_GENERIC_FEATURES: TargetFeatures = {
+  literalTypes: false,
+  primitiveGenerics: false,
+  primitiveInheritance: false,
+  nestedDeclarations: false,
+  relativeImports: false,
+  forcedImports: false,
+  staticInnerTypes: StaticInnerTypeKind.DEFAULT_STATIC,
+  unions: false,
+  transparentAccessors: false,
+};

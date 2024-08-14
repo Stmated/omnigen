@@ -2,12 +2,11 @@ import {
   AstNode,
   AstNodeWithChildren,
   AstVisitor,
-  LiteralValue,
   OmniArrayType,
   OmniDecoratingType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
-  OmniHardcodedReferenceType,
+  OmniHardcodedReferenceType, OmniPrimitiveConstantValue,
   OmniPrimitiveKinds,
   OmniProperty,
   OmniType,
@@ -244,10 +243,10 @@ export class SetterIdentifier extends AbstractCodeNode {
 }
 
 export class Literal extends AbstractCodeNode {
-  readonly value: LiteralValue;
+  readonly value: OmniPrimitiveConstantValue;
   readonly primitiveKind: OmniPrimitiveKinds;
 
-  constructor(value: LiteralValue, primitiveKind?: OmniPrimitiveKinds) {
+  constructor(value: OmniPrimitiveConstantValue, primitiveKind?: OmniPrimitiveKinds) {
     super();
     this.value = value;
     this.primitiveKind = primitiveKind ?? OmniUtil.nativeLiteralToPrimitiveKind(value);
@@ -301,11 +300,15 @@ export class AnnotationKeyValuePairList extends AbstractCodeNode implements AstN
 export class Annotation extends AbstractCodeNode {
   readonly type: EdgeType<OmniHardcodedReferenceType>;
   readonly pairs?: AnnotationKeyValuePairList | undefined;
+  readonly group?: string;
 
-  constructor(type: EdgeType<OmniHardcodedReferenceType>, pairs?: AnnotationKeyValuePairList) {
+  constructor(type: EdgeType<OmniHardcodedReferenceType>, pairs?: AnnotationKeyValuePairList, group?: string) {
     super();
     this.type = type;
     this.pairs = pairs;
+    if (group) {
+      this.group = group;
+    }
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
@@ -790,6 +793,21 @@ export class SelfReference extends AbstractCodeNode {
   }
 }
 
+export class SuperReference extends AbstractCodeNode {
+
+  constructor() {
+    super();
+  }
+
+  visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
+    return visitor.visitSuperReference(this, visitor);
+  }
+
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<SelfReference> {
+    return reducer.reduceSuperReference(this, reducer);
+  }
+}
+
 export class FieldReference extends AbstractCodeNode implements Reference<Field> {
   targetId: number;
 
@@ -836,9 +854,9 @@ export class VariableDeclaration extends AbstractCodeNode {
   identifier: Identifier;
   type?: TypeNode | undefined;
   initializer?: AbstractCodeNode | undefined;
-  constant?: boolean | undefined;
+  immutable?: boolean | undefined;
 
-  constructor(variableName: Identifier, initializer?: AbstractCodeNode, type?: TypeNode | undefined, constant?: boolean) {
+  constructor(variableName: Identifier, initializer?: AbstractCodeNode, type?: TypeNode | undefined, immutable?: boolean) {
     super();
     if (!type && !initializer) {
       throw new Error(`Either a type or an initializer must be given to the field declaration`);
@@ -847,7 +865,7 @@ export class VariableDeclaration extends AbstractCodeNode {
     this.identifier = variableName;
     this.type = type;
     this.initializer = initializer;
-    this.constant = constant;
+    this.immutable = immutable;
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
@@ -951,6 +969,10 @@ export class TypeList<T extends OmniType = OmniType> extends AbstractCodeNode im
   }
 }
 
+/**
+ * TODO: This should be updated so that `types` contains a list of weakly linked references to the other object declarations that we are extending.
+ *        We care about the AST stage resolution for these nodes, and not what they used to be in the OmniModel stage.
+ */
 export class ExtendsDeclaration extends AbstractCodeNode {
   types: TypeList;
 

@@ -1,4 +1,4 @@
-import {AstNode, AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, RootAstNode, VisitResult} from '@omnigen/api';
+import {AstNode, AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, RootAstNode, TargetOptions} from '@omnigen/api';
 import {OmniUtil, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
@@ -7,7 +7,13 @@ import {CodeAstUtils} from '../CodeAstUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-type AstNodeComparator = (root: RootAstNode, a: AstNode, b: AstNode) => number | undefined;
+export enum ExecutionStatus {
+  NEXT = 'next',
+  ABORT = 'abort',
+}
+
+export type AstNodeComparatorOptions = TargetOptions;
+export type AstNodeComparator = (root: RootAstNode, a: AstNode, b: AstNode, options: AstNodeComparatorOptions) => number | ExecutionStatus;
 
 type ImportantAstNodeComparator = {
   importance: number;
@@ -31,12 +37,16 @@ export class SortVisitorRegistry {
     this._comparators.sort((a, b) => b.importance - a.importance);
   }
 
-  public compare(root: RootAstNode, a: AstNode, b: AstNode): number {
+  public compare(root: RootAstNode, a: AstNode, b: AstNode, options: AstNodeComparatorOptions): number {
 
     for (const comparator of this._comparators) {
-      const result = comparator.comparator(root, a, b);
-      if (result !== undefined) {
+      const result = comparator.comparator(root, a, b, options);
+      if (typeof result === 'number') {
         return result;
+      }
+
+      if (result === ExecutionStatus.ABORT) {
+        break;
       }
     }
 
@@ -44,94 +54,91 @@ export class SortVisitorRegistry {
   }
 }
 
-SortVisitorRegistry.INSTANCE.register((root, a, b) => {
+SortVisitorRegistry.INSTANCE.register((root, a, b, options) => {
 
-  const aWeight = getWeight(a, root);
-  const bWeight = getWeight(b, root);
+  const aWeight = getWeight(a, root, options);
+  const bWeight = getWeight(b, root, options);
 
   let result = bWeight[0] - aWeight[0];
-  if (result == 0) {
-    result = aWeight[1].localeCompare(bWeight[1]);
+  if (result == 0 && (aWeight[1] || bWeight[1])) {
+    result = (aWeight[1] ?? '').localeCompare(bWeight[1] ?? '');
   }
 
   return result;
 });
 
-const getWeight = (node: AstNode, root: RootAstNode): [number, string] => {
+const getWeight = (node: AstNode, root: RootAstNode, options: TargetOptions): [number, string | undefined] => {
 
-  let weight = 0;
   if (node instanceof Code.Field) {
+
+    let weight = 300;
+    let name: string | undefined;
+
+    weight += getModifierWeight(node.modifiers);
+    if (options.orderMembersByName) {
+      name = node.identifier.value;
+    }
 
     if (node.property) {
       const pattern = OmniUtil.getPropertyNamePattern(node.property.name);
       if (pattern) {
-
-        weight += 0;
-        weight += getModifierWeight(node.modifiers);
-        return [weight, pattern];
+        weight--;
+        name = pattern;
       }
     }
 
-    weight += 300;
-    weight += getModifierWeight(node.modifiers);
-    return [weight, node.identifier.value];
+    return [weight, name];
   } else if (node instanceof Code.EnumItemList) {
-    weight += 400;
-    return [weight, 'enum-list'];
+    return [400, undefined];
   } else if (node instanceof Code.ConstructorDeclaration) {
-    weight += 200;
-    return [weight, 'constructor'];
+    return [200, undefined];
   } else if (node instanceof Code.MethodDeclaration) {
-    weight += 100;
-    weight -= getModifierWeight(node.signature.modifiers);
+    const weight = 100 - getModifierWeight(node.signature.modifiers);
     if (node.signature.identifier instanceof Code.GetterIdentifier || node.signature.identifier instanceof Code.SetterIdentifier) {
-      return [weight, node.signature.identifier.identifier.value];
+      return [weight, options.orderMembersByName ? node.signature.identifier.identifier.value : undefined];
     } else {
-      return [weight, node.signature.identifier.value];
+      return [weight, options.orderMembersByName ? node.signature.identifier.value : undefined];
     }
   } else if (node instanceof Code.AbstractObjectDeclaration) {
-    weight += 0;
-    weight += getModifierWeight(node.modifiers);
-    return [weight, node.name.value];
+
+    const weight = getModifierWeight(node.modifiers);
+    return [weight, options.orderObjectsByName ? node.name.value : undefined];
   } else if (node instanceof Code.FieldBackedGetter) {
-    weight += 0;
 
     const field = root.resolveNodeRef(node.fieldRef);
-    const res = getWeight(field, root);
-    return [weight + res[0], node.getterName?.value ?? res[1]];
-
+    const res = getWeight(field, root, options);
+    const name = options.orderMembersByName ? (node.getterName?.value ?? res[1]) : undefined;
+    return [res[0], name];
   } else if (node instanceof Code.FieldBackedSetter) {
-    weight += 0;
-
     const field = root.resolveNodeRef(node.fieldRef);
-    const res = getWeight(field, root);
-    return [weight + res[0], node.identifier?.value ?? res[1]];
+    const res = getWeight(field, root, options);
+    const name = options.orderMembersByName ? (node.identifier?.value ?? res[1]) : undefined;
+    return [res[0], name];
   }
 
-  if ('name' in node && node.name instanceof Code.Identifier) {
+  if (options.orderMembersByName) {
 
-    weight += 0;
-    return [weight, node.name.value];
-  } else if (node instanceof Code.Identifier) {
-    weight += 0;
-    return [weight, node.value];
-  }
+    if ('name' in node && node.name instanceof Code.Identifier) {
+      return [0, node.name.value];
+    } else if (node instanceof Code.Identifier) {
+      return [0, node.value];
+    }
 
-  // NOTE: Not good. Better would be to give a visitor which finds first identifier, even if it is hidden deep and weird.
-  //        But right now I do not know how to nicely solve this.
-  let n: object = node;
-  while ('identifier' in n) {
-    if (n.identifier instanceof Code.Identifier) {
-      weight += 0;
-      return [weight, n.identifier.value];
-    } else if (n.identifier && typeof n.identifier === 'object') {
-      n = n.identifier;
-    } else {
-      break;
+    // NOTE: Not good. Better would be to give a visitor which finds first identifier, even if it is hidden deep and weird.
+    //        But right now I do not know how to nicely solve this.
+    let n: object = node;
+    while ('identifier' in n) {
+      if (n.identifier instanceof Code.Identifier) {
+        return [0, n.identifier.value];
+      } else if (n.identifier && typeof n.identifier === 'object') {
+        n = n.identifier;
+      } else {
+        break;
+      }
     }
   }
 
-  return [0, ''];
+  return [0, undefined];
 };
 
 const getModifierWeight = (modifiers: Code.ModifierList) => {
@@ -163,6 +170,10 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
 
   transformAst(args: AstTransformerArguments<CodeRootAstNode>): void {
 
+    if (!args.options.orderMembersByName && !args.options.orderObjectsByName && !args.options.orderObjectsByDependency) {
+      return;
+    }
+
     const defaultVisitor = args.root.createVisitor();
     const ownerStack: AstNode[] = [];
 
@@ -183,37 +194,49 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
         }
       },
 
+      visitNamespaceBlock: (n, v) => {
+        try {
+          ownerStack.push(n);
+          defaultVisitor.visitNamespaceBlock(n, v);
+        } finally {
+          ownerStack.pop();
+        }
+      },
+
       visitObjectDeclaration: (n, v) => {
-        return [
-          n.comments?.visit(v),
-          n.annotations?.visit(v),
-          n.modifiers.visit(v),
-          n.name.visit(v),
-          n.genericParameterList?.visit(v),
-          n.extends?.visit(v),
-          n.implements?.visit(v),
-          v.visitObjectDeclarationBody(n, v),
-        ];
+        try { // Override visit to skip its own type node.
+          ownerStack.push(n);
+          n.comments?.visit(v);
+          n.annotations?.visit(v);
+          n.modifiers.visit(v);
+          n.name.visit(v);
+          n.genericParameterList?.visit(v);
+          n.extends?.visit(v);
+          n.implements?.visit(v);
+          v.visitObjectDeclarationBody(n, v);
+        } finally {
+          ownerStack.pop();
+        }
       },
 
       visitEdgeType: (n, v) => {
         defaultVisitor.visitEdgeType(n, v);
+        if (ownerStack.length <= 0) {
+          return;
+        }
 
-        if (ownerStack.length > 0) {
+        const baseType = OmniUtil.getTopLevelType(n.omniType);
+        if (baseType) {
 
-          const objDecNode = ownerStack[ownerStack.length - 1];
-          // const objDecNodeType = CodeAstUtils.getOmniType(args.root, objDecNode);
-          // const objDecBaseType = this.getBaseOmniType(objDecNodeType);
-          const baseType = this.getBaseOmniType(n.omniType);
+          const baseTypes: OmniType[] = OmniUtil.getFlattenedTypes(baseType);
+          if (baseTypes[0] !== baseType) {
+            baseTypes.splice(0, 0, baseType);
+          }
 
-          if (baseType) {
-
-            const baseTypes: OmniType[] = OmniUtil.getFlattenedTypes(baseType);
-            if (baseTypes[0] !== baseType) {
-              baseTypes.splice(0, 0, baseType);
-            }
-
-            const map = (nodeToTypes.has(objDecNode) ? nodeToTypes : nodeToTypes.set(objDecNode, [])).get(objDecNode)!;
+          // We add this edge type to all possible owners in the stack.
+          // This way when we later try to look up `which types does this type use` then we have multiple levels of granularity.
+          for (const owner of ownerStack) {
+            const map = (nodeToTypes.has(owner) ? nodeToTypes : nodeToTypes.set(owner, [])).get(owner)!;
             for (const type of baseTypes) {
               map.push(type);
             }
@@ -222,41 +245,23 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
       },
     }));
 
-    const sort = (children: AstNode[], args: AstTransformerArguments<CodeRootAstNode>, withDependencies: boolean) => {
+    const sort = (children: AstNode[], args: AstTransformerArguments<CodeRootAstNode>, forObjects: boolean) => {
       const comparator = SortVisitorRegistry.INSTANCE;
 
-      // First sort it by type/name/whatever.
-      children.sort((a, b) => comparator.compare(args.root, a, b));
+      if (children.length <= 1) {
+        return;
+      }
 
-      if (withDependencies) {
+      if (forObjects && args.options.orderObjectsByDependency) {
 
         // Then sort it by dependencies, so that Declarations are before any Use (as best we can)
-        this.customSort(children, (a, b) => {
-
-          const bDependencies = nodeToTypes.get(b);
-          if (bDependencies) {
-            const aType = this.getBaseOmniType(CodeAstUtils.getOmniType(args.root, a));
-            if (aType) {
-              const flattened = OmniUtil.getFlattenedTypes(aType);
-              if (bDependencies.some(value => flattened.includes(value))) {
-                return -1;
-              }
-            }
-          }
-
-          const aDependencies = nodeToTypes.get(a);
-          if (aDependencies) {
-            const bType = this.getBaseOmniType(CodeAstUtils.getOmniType(args.root, b));
-            if (bType) {
-              const flattened = OmniUtil.getFlattenedTypes(bType);
-              if (aDependencies.some(value => flattened.includes(value))) {
-                return 1;
-              }
-            }
-          }
-
-          return 0;
-        });
+        this.topologicalSort(
+          children,
+          (a, b) => this.getSortValue(args.root, a, b, nodeToTypes),
+          (a, b) => comparator.compare(args.root, a, b, args.options),
+        );
+      } else {
+        children.sort((a, b) => comparator.compare(args.root, a, b, args.options));
       }
     };
 
@@ -266,9 +271,7 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
 
         // Go deeper, in case there nested types
         defaultVisitor.visitObjectDeclaration(n, v);
-
-        const children = n.body.children;
-        sort(children, args, false);
+        sort(n.body.children, args, false);
       },
 
       visitAnnotationList: n => {
@@ -288,11 +291,16 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
 
       visitCompilationUnit: (n, v) => {
 
-        // Go deeper, in case there nested types
+        // Go deeper, in case there are nested types
         defaultVisitor.visitCompilationUnit(n, v);
+        sort(n.children, args, true);
+      },
 
-        const children = n.children;
-        sort(children, args, true);
+      visitNamespaceBlock: (n, v) => {
+
+        // Go deeper, in case there are nested types
+        defaultVisitor.visitNamespaceBlock(n, v);
+        sort(n.block.children, args, true);
       },
 
       visitField: () => {
@@ -304,52 +312,83 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
     }));
   }
 
-  private getBaseOmniType(type: OmniType | undefined): OmniType | undefined {
+  private getSortValue(
+    root: Code.CodeRootAstNode,
+    a: Code.AstNode,
+    b: Code.AstNode,
+    nodeToTypes: Map<Code.AstNode, Array<OmniType>>,
+  ): -1 | 0 {
 
-    if (!type) {
-      return undefined;
-    }
-
-    if (type.kind === OmniTypeKind.GENERIC_SOURCE) {
-      return this.getBaseOmniType(type.of);
-    }
-
-    if (type.kind === OmniTypeKind.GENERIC_TARGET) {
-      return this.getBaseOmniType(type.source);
-    }
-
-    if (type.kind === OmniTypeKind.DECORATING) {
-      return this.getBaseOmniType(type.of);
-    }
-
-    if (type.kind === OmniTypeKind.INTERFACE) {
-      return this.getBaseOmniType(type.of);
-    }
-
-    if (type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      return this.getBaseOmniType(type.of);
-    }
-
-    return type;
-  }
-
-  private customSort<T>(arr: Array<T>, compareFn: (a: T, b: T) => number) {
-
-    const n = arr.length;
-
-    for (let i = 0; i < n; i++) {
-      let minIndex = i;
-      for (let j = i + 1; j < n; j++) {
-        if (compareFn(arr[j], arr[minIndex]) < 0) {
-          minIndex = j;
+    const bDependencies = nodeToTypes.get(b);
+    if (bDependencies) {
+      const aType = CodeAstUtils.getOmniType(root, a);
+      if (aType) {
+        const aTopType = OmniUtil.getTopLevelType(aType);
+        if (bDependencies.includes(aTopType)) {
+          return -1;
         }
       }
+    }
 
-      if (minIndex !== i) {
-        [arr[i], arr[minIndex]] = [arr[minIndex], arr[i]];
+    return 0;
+  }
+
+  private topologicalSort<T>(
+    items: T[],
+    dependencyCompare: (a: T, b: T) => number,
+    defaultCompare: (a: T, b: T) => number,
+  ): void {
+
+    const graph: Map<T, T[]> = new Map();
+
+    items.sort(defaultCompare);
+
+    // Initialize the graph
+    for (const item of items) {
+      graph.set(item, []);
+    }
+
+    // Build the graph
+    for (let i = 0; i < items.length; i++) {
+      for (let j = 0; j < items.length; j++) {
+        if (i !== j) {
+          if (dependencyCompare(items[i], items[j]) === -1) {
+            graph.get(items[i])!.push(items[j]);
+          }
+        }
       }
     }
 
-    return arr;
+    const visited: Set<T> = new Set();
+    const result: T[] = [];
+    const temp: Set<T> = new Set();
+
+    const visit = (item: T) => {
+      if (temp.has(item)) {
+        logger.trace(`Cycle detected in graph, will not dive deeper`);
+      } else if (!visited.has(item)) {
+        temp.add(item);
+        for (const neighbor of graph.get(item)!) {
+          visit(neighbor);
+        }
+        temp.delete(item);
+        visited.add(item);
+        result.push(item);
+      }
+    };
+
+    // Perform the topological sort
+    for (const item of items) {
+      if (!visited.has(item)) {
+        visit(item);
+      }
+    }
+
+    // Reverse the result to reflect correct topological order
+    result.reverse();
+
+    for (let i = 0; i < result.length; i++) {
+      items[i] = result[i];
+    }
   }
 }

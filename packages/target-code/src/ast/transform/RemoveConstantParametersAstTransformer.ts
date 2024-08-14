@@ -20,7 +20,7 @@ export class RemoveConstantParametersAstTransformer implements AstTransformer<Co
         if (toBeInlined.includes(n)) {
           return undefined;
         }
-        // TODO: Figure out why DepositRequest (first class dec) has argument without the literal. Where was it lost?
+
         if (this.getConstantLiteral(n.type.omniType)) {
           toBeInlined.push(n);
           return undefined;

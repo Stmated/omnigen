@@ -29,7 +29,7 @@ import {
   ZodTargetOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createCSharpRenderer} from './render';
 import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -46,11 +46,11 @@ import {
   AddAdditionalPropertiesInterfaceAstTransformer,
   AddCommentsAstTransformer,
   AddCompositionMembersCodeAstTransformer,
-  AddConstructorCodeAstTransformer,
+  AddConstructorAstTransformer,
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
-  AggregateIntersectionsModelTransformer,
+  AggregateIntersectionsModelTransformer, ElevatePropertiesModelTransformer, ExecutionStatus,
   InnerTypeCompressionAstTransformer,
   InterfaceExtractorModelTransformer,
   MethodToGetterCodeAstTransformer,
@@ -95,9 +95,9 @@ export const ZodCSharpInitContextOut = ZodModelContext
   .merge(ZodCSharpTargetContext);
 
 export const ZodCSharpContextIn = ZodModelContext
-  .merge(ZodParserOptionsContext)
+  // .merge(ZodParserOptionsContext)
   .merge(ZodPackageOptionsContext)
-  .merge(ZodTargetOptionsContext)
+  // .merge(ZodTargetOptionsContext)
   .merge(ZodModelTransformOptionsContext)
   .merge(ZodCSharpOptionsContext)
   .merge(ZodCSharpTargetContext)
@@ -128,10 +128,10 @@ export const CSharpPluginInit = createPlugin(
     const order = [
       Cs.PropertyNode,
       Cs.ConstructorDeclaration,
-    ];
+    ] as const;
 
     SortVisitorRegistry.INSTANCE.register(
-      (root, a, b) => {
+      (_, a, b) => {
 
         const aIndex = order.findIndex(it => a instanceof it);
         const bIndex = order.findIndex(it => b instanceof it);
@@ -143,7 +143,7 @@ export const CSharpPluginInit = createPlugin(
           }
         }
 
-        return undefined;
+        return ExecutionStatus.NEXT;
       },
       100,
     );
@@ -163,13 +163,14 @@ export const CSharpPlugin = createPlugin(
 
     const args: OmniModelTransformerArgs = {
       model: ctx.model,
-      options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
+      options: {...ctx.csOptions, ...ctx.modelTransformOptions},
     };
 
     const transformers: OmniModelTransformer[] = [
       // new SimplifyInheritanceModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
       // new GenericsModelTransformer(),
+      new ElevatePropertiesModelTransformer(),
       new AggregateIntersectionsModelTransformer(),
       new InterfaceExtractorModelTransformer(),
       new SimplifyUnnecessaryCompositionsModelTransformer(),
@@ -186,9 +187,9 @@ export const CSharpPlugin = createPlugin(
     const args2: OmniModelTransformer2ndPassArgs<TOpt> = {
       model: args.model,
       options: {
-        ...ctx.parserOptions,
+        // ...ctx.parserOptions,
         ...ctx.modelTransformOptions,
-        ...ctx.targetOptions,
+        // ...ctx.targetOptions,
         ...ctx.csOptions,
       },
       targetFeatures: CSHARP_FEATURES,
@@ -197,7 +198,11 @@ export const CSharpPlugin = createPlugin(
     const transformers2: OmniModel2ndPassTransformer<TOpt>[] = [
       // new StrictUndefinedTypeScriptModelTransformer(),
       // new RemoveWildcardGenericParamTypeScriptModelTransformer(),
+      new ElevatePropertiesModelTransformer(),
+      new GenericsModelTransformer(),
+      // new ElevatePropertiesModelTransformer(),
       new SpreadResolvedWildcardGenericsModelTransformer(),
+      new AlignObjectWithInterfaceModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -213,7 +218,7 @@ export const CSharpPlugin = createPlugin(
       // new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
       new AddCompositionMembersCodeAstTransformer(),
-      new AddConstructorCodeAstTransformer(),
+      new AddConstructorAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
       // new AddSubTypeHintsAstTransformer(),
@@ -247,7 +252,7 @@ export const CSharpPlugin = createPlugin(
 
     const options: PackageOptions & TargetOptions & CSharpOptions = {
       ...ctx.packageOptions,
-      ...ctx.targetOptions,
+      // ...ctx.targetOptions,
       ...ctx.csOptions,
     };
 

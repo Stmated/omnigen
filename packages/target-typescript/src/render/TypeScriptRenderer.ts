@@ -1,4 +1,4 @@
-import {OmniTypeKind, PackageOptions, Renderer, TargetOptions, UnknownKind} from '@omnigen/api';
+import {OmniTypeKind, PackageOptions, Renderer, TargetOptions} from '@omnigen/api';
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core';
@@ -171,13 +171,13 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
     visitModifier: (node, visitor) => {
 
-      if (bodyDepth == 0 && node.kind == Code.ModifierKind.PUBLIC) {
+      if (bodyDepth === 0 && node.kind === Code.ModifierKind.PUBLIC) {
 
         // TODO: Wrong -- used one way for making object declarations public, and another for members inside the objects -- need to separate them or make it context sensitive
         return 'export';
       }
 
-      if (node.kind == Code.ModifierKind.FINAL) {
+      if (node.kind === Code.ModifierKind.FINAL) {
         return 'readonly';
       }
 

@@ -1,19 +1,22 @@
 import {ObjectPool} from '../util/ObjectPool.ts';
-import {Environment, OmniNode} from '@omnigen/api';
-import {ANY, DEFAULT_OMNI_REDUCER, ReducerSpec, Reducer, OmniReducerFn, Ret, ReducerArgs, ReturnTypeOverride, ReducerSpecObject} from './Reducer.ts';
-
-export type EqualityResult = boolean | undefined;
-
-export const PROP_KEY_RECURSIVE_USE_COUNT = Symbol('Use-Counter');
-export const PROP_KEY_RECURSIVE_ORIGINAL = Symbol('Original');
-
-export const PROP_KEY_ID = Symbol('ID');
-export const PROP_KEY_GENERATION = Symbol('Generation');
-
-export interface Placeholder<N extends object> {
-  [PROP_KEY_RECURSIVE_USE_COUNT]: number;
-  [PROP_KEY_RECURSIVE_ORIGINAL]?: N;
-}
+import {Environment} from '@omnigen/api';
+import {
+  ANY,
+  EqualityResult,
+  IncomingReducerOptions,
+  OmniReducerFn,
+  Placeholder,
+  PROP_KEY_GENERATION,
+  PROP_KEY_ID,
+  PROP_KEY_RECURSIVE_ORIGINAL,
+  PROP_KEY_RECURSIVE_USE_COUNT,
+  Reducer,
+  ReducerArgs,
+  ReducerOptions,
+  ReducerSpec,
+  ReducerSpecObject,
+  Ret,
+} from './Reducer.ts';
 
 const PLACEHOLDER_POOL = new ObjectPool<Placeholder<any>>({
   factory: () => ({[PROP_KEY_RECURSIVE_USE_COUNT]: 0}),
@@ -23,29 +26,20 @@ const PLACEHOLDER_POOL = new ObjectPool<Placeholder<any>>({
   },
   capacity: 10,
 });
-
 const LIST_POOL = new ObjectPool<unknown[]>({
   factory: () => [],
   reset: v => (v.length = 0),
   capacity: 10,
 });
 
-type Arrayable<T> = T | ReadonlyArray<T>;
-
-export interface ReducerOptions<N extends object, K extends keyof N, O> {
-  readonly reducer: Arrayable<Partial<ReducerSpec<N, K, O>>>;
-  readonly track?: boolean;
-}
-
-export type IncomingReducerOptions<N extends object, D extends keyof N, O> = ReducerOptions<N, D, O> | Partial<ReducerSpec<N, D, O>>;
-
 /**
  * TODO: Implement a "next" on the given `args` -- so can easy "call parent" when you do not want to handle it.
  * TODO: Add support for property reducing -- right now can set them but we never call them
  * TODO: Add support for using proxies for updating objects, lazily cloning once a value is changed
  * TODO: Improve the generics, using less `as` casts
+ * TODO: Add support for the placeholder being a Proxy, which transparently handles in-creation objects
  */
-abstract class AbstractReducer<N extends object, D extends keyof N, O> implements Reducer<N, D, O> {
+export abstract class ReducerBase<N extends object, D extends keyof N, O> implements Reducer<N, D, O> {
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   private static _ID_COUNTER: number = 0;
@@ -134,7 +128,7 @@ abstract class AbstractReducer<N extends object, D extends keyof N, O> implement
     } else if (typeof reduced === 'object') {
       if (this._options.track) {
         if ((reduced as any)[PROP_KEY_ID] === undefined) {
-          (reduced as any)[PROP_KEY_ID] = OmniReducer._ID_COUNTER++;
+          (reduced as any)[PROP_KEY_ID] = ReducerBase._ID_COUNTER++;
         }
         (reduced as any)[PROP_KEY_GENERATION] = ((reduced as any)[PROP_KEY_GENERATION] ?? 0) + 1;
       }
@@ -143,7 +137,7 @@ abstract class AbstractReducer<N extends object, D extends keyof N, O> implement
     return reduced;
   }
 
-  private updatePlaceholder<FN extends N>(reduced: Ret<FN, D, O>, placeholder: Placeholder<FN>) : Ret<FN, D, O> {
+  private updatePlaceholder<FN extends N>(reduced: Ret<FN, D, O>, placeholder: Placeholder<FN>): Ret<FN, D, O> {
 
     if (placeholder[PROP_KEY_RECURSIVE_USE_COUNT] > 0) {
 
@@ -237,18 +231,5 @@ abstract class AbstractReducer<N extends object, D extends keyof N, O> implement
 
     // @ts-ignore
     return (reduced == original);
-  }
-}
-
-export type DefaultOmniReducerArgs = ReducerArgs<OmniNode, 'kind', ReturnTypeOverride>;
-
-export class OmniReducer extends AbstractReducer<OmniNode, 'kind', ReturnTypeOverride> {
-
-  constructor(options: IncomingReducerOptions<OmniNode, 'kind', ReturnTypeOverride>) {
-    super(options, DEFAULT_OMNI_REDUCER);
-  }
-
-  protected getDiscriminator<FN extends OmniNode>(obj: FN): FN['kind'] {
-    return obj.kind;
   }
 }

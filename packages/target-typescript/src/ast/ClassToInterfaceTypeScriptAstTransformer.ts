@@ -1,9 +1,10 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, OmniInterfaceType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/api';
+import {AstTransformer, OmniInterfaceType, OmniType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/api';
 import {Code, CodeAstUtils, CodeUtil} from '@omnigen/target-code';
 import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
 import {Case, OmniUtil} from '@omnigen/core';
+import {ModifierKind} from '@omnigen/target-code/ast';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -25,12 +26,17 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
     const fieldNamesStack: string[][] = [];
 
     const classToInterfaceMap = new Map<TypeNode, TypeNode>();
+    const typeToDec = CodeAstUtils.getTypeToClassDecMap(args.root);
 
     const newRoot = args.root.reduce({
       ...defaultReducer,
       reduceClassDeclaration: (n, r) => {
         try {
+
           fieldNamesStack.push([]);
+
+          this.addHiddenPropertiesWithNarrowerType(n, args, typeToDec);
+
           const body = n.body.reduce(r) ?? new Code.Block();
 
           const modifiers = n.modifiers.children.filter(it => !IGNORED_INTERFACE_MODIFIERS.includes(it.kind));
@@ -131,6 +137,11 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
         );
 
         field.comments = n.comments;
+        if (args.options.immutable) {
+
+          // NOTE: The final modifier should be removed/not be added if the property is specifically writeable.
+          field.modifiers.children.push(new Code.Modifier(ModifierKind.FINAL));
+        }
 
         return field;
       },
@@ -156,6 +167,51 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
 
     if (newRoot) {
       args.root = newRoot;
+    }
+  }
+
+  private addHiddenPropertiesWithNarrowerType(
+    n: Code.ClassDeclaration,
+    args: TypeScriptAstTransformerArgs,
+    typeToDec: Map<OmniType, Code.ClassDeclaration>,
+  ) {
+
+    if (!n.extends) {
+      return;
+    }
+
+    const hiddenProperties = OmniUtil.getPropertiesOf(n.omniType).filter(it => it.hidden);
+    if (hiddenProperties.length <= 0) {
+      return;
+    }
+
+    const superClassDeclarations = CodeAstUtils.getSuperClassDeclarations(typeToDec, n.extends);
+    for (const hiddenProp of hiddenProperties) {
+      const propStringName = OmniUtil.getPropertyName(hiddenProp.name);
+      if (!propStringName) {
+        continue;
+      }
+
+      for (const superClassDec of superClassDeclarations) {
+        const field = CodeAstUtils.getField(args.root, superClassDec, propStringName);
+        if (field) {
+          const superFields = CodeAstUtils.getSuperFields(args.root, superClassDeclarations, field);
+          if (superFields.length > 0) {
+
+            const superTypes = superFields.map(it => it.type.omniType);
+            const commonType = OmniUtil.getCommonDenominator(args.features, [...superTypes, hiddenProp.type]);
+            if (commonType && commonType.diffs && commonType.diffs.length > 0) {
+
+              CodeAstUtils.addOmniPropertyToBlockAsField({
+                root: args.root,
+                options: args.options,
+                property: hiddenProp,
+                body: n.body,
+              });
+            }
+          }
+        }
+      }
     }
   }
 

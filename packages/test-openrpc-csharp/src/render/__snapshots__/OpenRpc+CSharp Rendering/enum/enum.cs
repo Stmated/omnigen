@@ -7,6 +7,33 @@ using System.Runtime.Serialization;
 
 namespace generated.omnigen
 {
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum ThingType
+    {
+        [EnumMember(Value = "TypeA")]
+        TYPE_A,
+        [EnumMember(Value = "TypeB")]
+        TYPE_B,
+        [EnumMember(Value = "TypeC")]
+        TYPE_C,
+    }
+
+    public enum TagOrSpeciesOrStringDouble
+    {
+        _1337 = 1337d,
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum Tag
+    {
+        [EnumMember(Value = "TagA")]
+        TAG_A,
+        [EnumMember(Value = "TagB")]
+        TAG_B,
+        [EnumMember(Value = "TagC")]
+        TAG_C,
+    }
+
     public class Thing
     {
         [JsonProperty("id", Required = Required.Always)]
@@ -26,25 +53,12 @@ namespace generated.omnigen
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
-    public enum ThingType
+    public enum Species
     {
-        [EnumMember(Value = "TypeA")]
-        TYPE_A,
-        [EnumMember(Value = "TypeB")]
-        TYPE_B,
-        [EnumMember(Value = "TypeC")]
-        TYPE_C,
-    }
-
-    [JsonConverter(typeof(StringEnumConverter))]
-    public enum Tag
-    {
-        [EnumMember(Value = "TagA")]
-        TAG_A,
-        [EnumMember(Value = "TagB")]
-        TAG_B,
-        [EnumMember(Value = "TagC")]
-        TAG_C,
+        [EnumMember(Value = "SpeciesA")]
+        SPECIES_A,
+        [EnumMember(Value = "SpeciesB")]
+        SPECIES_B,
     }
 
     public class TagOrSpeciesOrString
@@ -116,18 +130,45 @@ namespace generated.omnigen
         public Object Value { get; }
     }
 
-    [JsonConverter(typeof(StringEnumConverter))]
-    public enum Species
+    /// <summary>
+    /// Generic class to describe the JsonRpc response package
+    /// </summary>
+    public class JsonRpcResponse
     {
-        [EnumMember(Value = "SpeciesA")]
-        SPECIES_A,
-        [EnumMember(Value = "SpeciesB")]
-        SPECIES_B,
+        [JsonProperty("id")]
+        public string Id { get; }
+        [JsonProperty("jsonrpc")]
+        public string Jsonrpc { get; } = "2.0";
+        [JsonProperty("result")]
+        public IList<Thing> Result { get; }
+
+        public JsonRpcResponse(string id, IList<Thing> result)
+        {
+            this.Id = id;
+            this.Result = result;
+        }
     }
 
-    public enum TagOrSpeciesOrStringDouble
+    /// <summary>
+    /// List all things
+    /// </summary>
+    /// <p>As response: An array of things</p>
+    public class ListThingsResponse : JsonRpcResponse
     {
-        _1337 = 1337d,
+        public ListThingsResponse(string id, IList<Thing> result) : base(id, result) { }
+    }
+
+    /// <summary>
+    /// Generic class to describe the JsonRpc request params
+    /// </summary>
+    public class JsonRpcRequestParams
+    {
+
+    }
+
+    public class ListThingsRequestParams : JsonRpcRequestParams
+    {
+
     }
 
     /// <summary>
@@ -162,64 +203,28 @@ namespace generated.omnigen
     }
 
     /// <summary>
-    /// Generic class to describe the JsonRpc response package
+    /// Generic class to describe the JsonRpc error inside an error response
     /// </summary>
-    public class JsonRpcResponse
+    public class JsonRpcError
     {
-        [JsonProperty("id")]
-        public string Id { get; }
-        [JsonProperty("jsonrpc")]
-        public string Jsonrpc { get; } = "2.0";
-        [JsonProperty("result")]
-        public IList<Thing> Result { get; }
+        [JsonProperty("code")]
+        public int Code { get; }
+        [JsonProperty("data")]
+        public dynamic Data { get; }
+        [JsonProperty("message")]
+        public string Message { get; }
 
-        public JsonRpcResponse(string id, IList<Thing> result)
+        public JsonRpcError(dynamic data, string message, int code)
         {
-            this.Id = id;
-            this.Result = result;
+            this.Data = data;
+            this.Message = message;
+            this.Code = code;
         }
-    }
-
-    /// <summary>
-    /// List all things
-    /// </summary>
-    /// <p>As response: An array of things</p>
-    public class ListThingsResponse : JsonRpcResponse
-    {
-        public ListThingsResponse(string id, IList<Thing> result) : base(id, result) { }
-    }
-
-    public class ListThingsError100 : JsonRpcErrorResponse<ListThingsError100Error>
-    {
-        public ListThingsError100(string id, ListThingsError100Error error) : base(id, error) { }
     }
 
     public class ListThingsError100Error : JsonRpcError
     {
-        public ListThingsError100Error(string message, dynamic data) : base(message ?? "Server is busy", data, 100) { }
-    }
-
-    public class ErrorUnknown : JsonRpcErrorResponse<ErrorUnknownError>
-    {
-        public ErrorUnknown(string id, ErrorUnknownError error) : base(id, error) { }
-    }
-
-    public class ErrorUnknownError : JsonRpcError
-    {
-        public ErrorUnknownError(string message, dynamic data, int? code) : base(message ?? "Unknown Error", data, code ?? -1) { }
-    }
-
-    /// <summary>
-    /// Generic class to describe the JsonRpc request params
-    /// </summary>
-    public class JsonRpcRequestParams
-    {
-
-    }
-
-    public class ListThingsRequestParams : JsonRpcRequestParams
-    {
-
+        public ListThingsError100Error(dynamic data, string message) : base(data, message ?? "Server is busy", 100) { }
     }
 
     /// <summary>
@@ -243,23 +248,18 @@ namespace generated.omnigen
         }
     }
 
-    /// <summary>
-    /// Generic class to describe the JsonRpc error inside an error response
-    /// </summary>
-    public class JsonRpcError
+    public class ListThingsError100 : JsonRpcErrorResponse<ListThingsError100Error>
     {
-        [JsonProperty("code")]
-        public int Code { get; }
-        [JsonProperty("data")]
-        public dynamic Data { get; }
-        [JsonProperty("message")]
-        public string Message { get; }
+        public ListThingsError100(string id, ListThingsError100Error error) : base(id, error) { }
+    }
 
-        public JsonRpcError(string message, dynamic data, int code)
-        {
-            this.Message = message;
-            this.Data = data;
-            this.Code = code;
-        }
+    public class ErrorUnknownError : JsonRpcError
+    {
+        public ErrorUnknownError(dynamic data, string message, int? code) : base(data, message ?? "Unknown Error", code ?? -1) { }
+    }
+
+    public class ErrorUnknown : JsonRpcErrorResponse<ErrorUnknownError>
+    {
+        public ErrorUnknown(string id, ErrorUnknownError error) : base(id, error) { }
     }
 }

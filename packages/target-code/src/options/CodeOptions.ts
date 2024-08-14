@@ -1,4 +1,4 @@
-import {DEFAULT_UNKNOWN_KIND, getEnumValues, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions} from '@omnigen/api';
+import {DEFAULT_UNKNOWN_KIND, getEnumValues, ParserOptions, TargetOptions, ToEnum, UnknownKind, ZodCoercedBoolean, ZodOptions, ZodTargetOptions} from '@omnigen/api';
 import {z} from 'zod';
 
 export const IncludeExampleCommentsMode = {
@@ -27,7 +27,7 @@ export const PropertyTypeCommentMode = {
 } as const;
 export type PropertyTypeCommentMode = ToEnum<typeof PropertyTypeCommentMode>;
 
-export const ZodCodeOptions = ZodOptions.extend({
+export const ZodCodeOptions = ZodTargetOptions.extend({
   immutable: ZodCoercedBoolean.default('true'),
   preferInferredType: ZodCoercedBoolean.default('true'),
   unknownType: z.enum(getEnumValues(UnknownKind)).default(DEFAULT_UNKNOWN_KIND),
@@ -50,6 +50,11 @@ export const ZodCodeOptions = ZodOptions.extend({
     .describe(`Useful to change to 'IF_REQUIRED' if you have enabled compiler flag '-parameters' and registered 'jackson-module-parameter-names'`),
 
   serializationEnsureRequiredFieldExistence: ZodCoercedBoolean.default('true'),
+
+  /**
+   * If we need to merge some types, then if the language supports unions, this is the max size of that union or we will find the common denominator.
+   */
+  maxAutoUnionSize: z.number().default(5),
 });
 
 export type CodeOptions = z.infer<typeof ZodCodeOptions>;

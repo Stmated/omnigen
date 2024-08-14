@@ -1,5 +1,5 @@
 import {OMNI_GENERIC_FEATURES, OmniExclusiveUnionType, OmniModelTransformer, OmniModelTransformerArgs, OmniNode, OmniType, OmniUnionType, TargetFeatures} from '@omnigen/api';
-import {OmniReducer, isDefined, OmniUtil, ReducerArgs, ReturnTypeOverride} from '@omnigen/core';
+import {ReducerOmni, isDefined, OmniUtil, ReducerArgs, ReduceReturnTypeOmni} from '@omnigen/core';
 
 /**
  * These are examples of unions that we will simplify/remove.
@@ -14,7 +14,7 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
     const lossless = true;
     const features = OMNI_GENERIC_FEATURES; // TODO: Make this use impl like JAVA_FEATURES -- need to move to 2nd pass?
 
-    const reducer = new OmniReducer({
+    const reducer = new ReducerOmni({
       UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.base.UNION(n, a),
       EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.base.EXCLUSIVE_UNION(n, a),
       INTERSECTION: (n, a) => (n.types.length === 1) ? a.dispatcher.reduce(n.types[0]) : a.base.INTERSECTION(n, a),
@@ -23,7 +23,7 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
     args.model = reducer.reduce(args.model);
   }
 
-  maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: ReducerArgs<OmniNode, 'kind', ReturnTypeOverride>, lossless: boolean, features: TargetFeatures): OmniType | undefined {
+  maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: ReducerArgs<OmniNode, 'kind', ReduceReturnTypeOmni>, lossless: boolean, features: TargetFeatures): OmniType | undefined {
 
     const reduced = n.types.map(it => a.dispatcher.reduce(it)).filter(isDefined);
     if (reduced.length === 1) {

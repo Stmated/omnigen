@@ -1,7 +1,8 @@
 import * as FreeText from '../ast/FreeText';
-import {assertDefined, Visitor} from '@omnigen/core';
+import {Visitor} from '@omnigen/core';
 import {createCodeFreeTextVisitor} from '../visitor/FreeTextVisitor.ts';
 import {createCodeFreeTextReducer} from '../reduce/CodeAstReducer.ts';
+import {FreeTextLine} from '../ast/FreeText';
 
 export class FreeTextUtils {
 
@@ -42,10 +43,22 @@ export class FreeTextUtils {
     } else if (add) {
 
       add = FreeTextUtils.fromFriendlyFreeText(add);
+      // if (add instanceof FreeText.FreeText) {
+      //
+      //   // Since other text already exists, then we add this as a new line.
+      //   add = new FreeText.FreeTextLine(add.text);
+      //   // if (existing)
+      // }
 
       const original = existing;
       if (!(existing instanceof FreeText.FreeTexts)) {
         existing = new FreeText.FreeTexts(existing);
+      }
+
+      if (existing.children[existing.children.length - 1] instanceof FreeText.FreeText) {
+
+        // The tail freetext is a regular text. We need to add a linebreak so it is properly formatted.
+        existing.children.push(new FreeTextLine(''));
       }
 
       // NOTE: Perhaps this should be added as different types of freetext depending on what the already existing one is.

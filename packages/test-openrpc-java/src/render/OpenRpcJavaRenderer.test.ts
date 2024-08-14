@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as JavaParser from 'java-parser';
-import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils, OpenRpcTestUtils, ParsedJavaTestVisitor} from '../util';
+import {JavaTestUtils, OpenRpcTestUtils, ParsedJavaTestVisitor} from '../util';
 import {describe, expect, test, vi} from 'vitest';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, OmniTypeKind} from '@omnigen/api';
+import {OmniTypeKind} from '@omnigen/api';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {SerializationLibrary} from '@omnigen/target-java';
@@ -98,12 +98,12 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
+      javaOptions: {serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -114,9 +114,8 @@ describe('Java Rendering', () => {
     // Check that the property 'common' from A and B are moved into Abs.
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('compressable-types.json', {
-      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false},
+      modelTransformOptions: {generifyTypes: false},
       javaOptions: {
-        ...DEFAULT_TEST_JAVA_OPTIONS,
         preferNumberType: OmniTypeKind.DOUBLE,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
@@ -126,7 +125,7 @@ describe('Java Rendering', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -134,7 +133,6 @@ describe('Java Rendering', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json', {
       javaOptions: {
-        ...DEFAULT_TEST_JAVA_OPTIONS,
         includeGenerated: false,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
@@ -145,7 +143,7 @@ describe('Java Rendering', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${fileName}`);
     }
   });
 
@@ -154,19 +152,24 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', {
-      targetOptions: {...DEFAULT_TEST_TARGET_OPTIONS, additionalPropertiesInterfaceAfterDuplicateCount: 1},
+      // targetOptions: {
+      //   ...,
+      //
+      // },
       javaOptions: {
-        ...DEFAULT_TEST_JAVA_OPTIONS,
+        // ...DEFAULT_TEST_TARGET_OPTIONS,
+        // ...DEFAULT_TEST_JAVA_OPTIONS,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         singleFile: true,
         singleFileName: task.name,
+        additionalPropertiesInterfaceAfterDuplicateCount: 1,
       },
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${fileName}`);
     }
   });
 
@@ -183,7 +186,7 @@ describe('Java Rendering', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${fileName}`);
     }
   });
 
@@ -204,7 +207,7 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('primitive-generics.json', {
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, preferNumberType: OmniTypeKind.DOUBLE, serializationLibrary: 'POJO'},
+      javaOptions: {preferNumberType: OmniTypeKind.DOUBLE, serializationLibrary: SerializationLibrary.POJO},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -218,15 +221,14 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const result = await JavaTestUtils.getResultFromFilePath(Util.getPathFromRoot(`./packages/test-openrpc-java/examples/generic_params.json`), {
-      parserOptions: {...DEFAULT_PARSER_OPTIONS, defaultAdditionalProperties: false},
-      targetOptions: {
+      // parserOptions: {...DEFAULT_PARSER_OPTIONS, },
+      javaOptions: {
+        defaultAdditionalProperties: false,
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.ALWAYS,
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
         additionalPropertiesInterfaceAfterDuplicateCount: 100,
-      },
-      javaOptions: {
-        serializationLibrary: SerializationLibrary.JACKSON,
-        serializationPropertyNameMode: SerializationPropertyNameMode.ALWAYS,
       },
     }, ZodCompilationUnitsContext);
 
@@ -234,7 +236,7 @@ describe('Java Rendering', () => {
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 

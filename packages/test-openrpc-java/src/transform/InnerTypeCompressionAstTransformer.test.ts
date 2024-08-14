@@ -1,5 +1,5 @@
-import {DEFAULT_TEST_JAVA_OPTIONS, DEFAULT_TEST_TARGET_OPTIONS, JavaTestUtils} from '../util';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS, Direction} from '@omnigen/api';
+import {JavaTestUtils} from '../util';
+import {Direction} from '@omnigen/api';
 import {describe, expect, test, vi} from 'vitest';
 import {SerializationLibrary} from '@omnigen/target-java';
 import {SerializationPropertyNameMode} from '@omnigen/target-code';
@@ -11,18 +11,21 @@ describe('InnerTypeCompression', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
-      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false, elevateProperties: false},
-      targetOptions: {
-        ...DEFAULT_TEST_TARGET_OPTIONS,
+      modelTransformOptions: {generifyTypes: false, elevateProperties: false},
+      // targetOptions: {
+      //   ...DEFAULT_TEST_TARGET_OPTIONS,
+      // },
+      javaOptions: {
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         compressSoloReferencedTypes: false,
         compressUnreferencedSubTypes: false,
       },
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 
@@ -31,19 +34,24 @@ describe('InnerTypeCompression', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
-      parserOptions: {...DEFAULT_PARSER_OPTIONS, direction: Direction.OUT},
-      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false, elevateProperties: false},
-      targetOptions: {
-        ...DEFAULT_TEST_TARGET_OPTIONS,
+      // parserOptions: {...DEFAULT_PARSER_OPTIONS, },
+      modelTransformOptions: {generifyTypes: false, elevateProperties: false},
+      // targetOptions: {
+      //   ...DEFAULT_TEST_TARGET_OPTIONS,
+      //
+      // },
+      javaOptions: {
+        direction: Direction.OUT,
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
       },
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
 
     // TODO: This is actually INCORRECT! It is not properly serializable with the @JsonValue annotation!
@@ -53,9 +61,11 @@ describe('InnerTypeCompression', () => {
   test('CompressYes-error-structure', async () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', {
-      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: false, elevateProperties: false},
-      targetOptions: {
-        ...DEFAULT_TEST_TARGET_OPTIONS,
+      modelTransformOptions: {generifyTypes: false, elevateProperties: false},
+      // targetOptions: {
+      //   ...DEFAULT_TEST_TARGET_OPTIONS,
+      // },
+      javaOptions: {
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
       },
@@ -71,18 +81,21 @@ describe('InnerTypeCompression', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', {
-      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, generifyTypes: true, elevateProperties: false},
-      targetOptions: {
-        ...DEFAULT_TEST_TARGET_OPTIONS,
+      modelTransformOptions: {generifyTypes: true, elevateProperties: false},
+      // targetOptions: {
+      //   ...DEFAULT_TEST_TARGET_OPTIONS,
+      // },
+      javaOptions: {
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
       },
-      javaOptions: {...DEFAULT_TEST_JAVA_OPTIONS, serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}/${fileName}`);
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
     }
   });
 });

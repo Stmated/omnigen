@@ -10,9 +10,9 @@ import {
   OmniType,
   OmniTypeKind,
   PackageOptions,
-  TargetOptions, TypeNode,
+  TargetOptions,
 } from '@omnigen/api';
-import {assertUnreachable, OmniUtil, Util, Visitor} from '@omnigen/core';
+import {OmniUtil, Util, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
 import * as FreeText from '../FreeText';
@@ -56,6 +56,18 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.property?.type ?? n.type.omniType, args, false);
           if (ownerCommentsText) {
             n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
+          }
+        }
+
+        if (args.options.debug) {
+          if (n.type.omniType.debug) {
+            const paragraph = FreeTextUtils.fromFriendlyFreeText(n.type.omniType.debug);
+            n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, paragraph), n.comments?.kind);
+          }
+
+          if (n.property?.debug) {
+            const paragraph = FreeTextUtils.fromFriendlyFreeText(n.property.debug);
+            n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, paragraph), n.comments?.kind);
           }
         }
       },

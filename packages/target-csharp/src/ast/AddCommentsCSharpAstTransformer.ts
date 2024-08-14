@@ -15,7 +15,6 @@ export class AddCommentsCSharpAstTransformer implements AstTransformer<CSharpRoo
     }
 
     const defaultReducer = args.root.createReducer();
-    // const defaultVisitor = args.root.createVisitor<boolean>();
 
     const newRoot = args.root.reduce({
       ...defaultReducer,

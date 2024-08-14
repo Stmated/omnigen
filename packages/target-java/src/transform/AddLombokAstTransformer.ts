@@ -5,7 +5,6 @@ import {OmniUtil, Visitor} from '@omnigen/core';
 import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
 import {JavaVisitor} from '../visit';
 import {FieldAccessorMode, JavaOptions} from '../options';
-import {CodeAstUtils} from '@omnigen/target-code';
 import {ModifierKind} from '../ast/JavaAst';
 
 export interface StackInfo {
@@ -122,20 +121,20 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
       },
     }));
 
-    if (args.options.lombokGetter || args.options.lombokSetter) {
+    if (args.options.lombokGetter || args.options.lombokSetter || args.options.fieldAccessorMode === FieldAccessorMode.LOMBOK) {
 
       const defaultReducer = args.root.createReducer();
       const newRoot = args.root.reduce({
         ...defaultReducer,
         reduceFieldBackedGetter: (n, r) => {
-          if (args.options.lombokGetter) {
+          if (args.options.lombokGetter || args.options.fieldAccessorMode === FieldAccessorMode.LOMBOK) {
             return undefined;
           } else {
             return defaultReducer.reduceFieldBackedGetter(n, r);
           }
         },
         reduceFieldBackedSetter: (n, r) => {
-          if (args.options.lombokSetter) {
+          if (args.options.lombokSetter || args.options.fieldAccessorMode === FieldAccessorMode.LOMBOK) {
             return undefined;
           } else {
             return defaultReducer.reduceFieldBackedSetter(n, r);

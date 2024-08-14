@@ -51,3 +51,33 @@ export function getShallowPayloadStringInternal<T>(origin: T, depth: number, max
     return value;
   });
 }
+
+function expectToBeInstanceOf<const T, const C extends new(...args: any[]) => T>(value: T, clss: C): asserts value is InstanceType<C> {
+  if (!(value instanceof clss)) {
+    throw new Error(`Expected value to be an instance of ${clss.name}`);
+  }
+}
+
+export function expectToBeDefined<T>(val?: T): asserts val is NonNullable<T> {
+  if (!val) {
+    throw new Error(`Expected value ${val} to be defined`);
+  }
+}
+
+export function expectPropertyToBe<O, K extends keyof O, const V extends O[K]>(owner: O, key: K, compareVal: V): asserts owner is Extract<O, Record<K, V>> {
+  if (owner[key] !== compareVal) {
+    throw new Error(`${owner[key]} should have been ${compareVal}`);
+  }
+}
+
+export interface ExpectTs {
+  toBeDefined: typeof expectToBeDefined,
+  toBeInstanceOf: typeof expectToBeInstanceOf,
+  propertyToBe: typeof expectPropertyToBe,
+}
+
+export const expectTs: ExpectTs = {
+  toBeDefined: expectToBeDefined,
+  toBeInstanceOf: expectToBeInstanceOf,
+  propertyToBe: expectPropertyToBe,
+} as const;

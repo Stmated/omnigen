@@ -4,6 +4,7 @@ import {CSharpOptions, CSharpPlugins} from '@omnigen/target-csharp';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonSchemaPlugins} from '@omnigen/parser-jsonschema';
 import {FileContext} from '@omnigen/core-plugin';
+import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -19,6 +20,7 @@ export class JsonSchemaToCSharpTestUtil {
       file: inPath,
       arguments: {
         target: 'csharp',
+        ...DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS,
         ...options,
       },
     };

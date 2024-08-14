@@ -1,7 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/api';
-// import {Code} from '@omnigen/target-code';
-// import {TsRootNode} from './TsRootNode.ts';
 import {TypeScriptOptions} from '../options';
 import {Ts} from '../ast';
 import {CodeAstUtils} from '@omnigen/target-code';
@@ -37,7 +35,7 @@ export class AccessorTypeScriptAstTransformer implements AstTransformer<Ts.TsRoo
       //   );
       // },
 
-      reduceMethodDeclaration: (n, r) => {
+      reduceMethodDeclaration: n => {
 
         const soloReturn = CodeAstUtils.getSoloReturnOfNoArgsMethod(n);
         if (soloReturn) {

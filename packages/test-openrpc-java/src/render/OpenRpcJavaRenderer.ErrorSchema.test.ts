@@ -1,7 +1,6 @@
 import {JavaTestUtils} from '../util';
-import {DEFAULT_MODEL_TRANSFORM_OPTIONS} from '@omnigen/api';
-import {expect, test, describe, vi} from 'vitest';
-import {ADDITIONAL_PROPERTIES_FIELD_NAME, DEFAULT_JAVA_OPTIONS, PatternPropertiesToMapJavaAstTransformer, SerializationLibrary} from '@omnigen/target-java';
+import {describe, expect, test} from 'vitest';
+import {ADDITIONAL_PROPERTIES_FIELD_NAME, SerializationLibrary} from '@omnigen/target-java';
 import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
 describe('Error-Schema', () => {
@@ -9,7 +8,7 @@ describe('Error-Schema', () => {
   test('ErrorStructure', async () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', {
-      modelTransformOptions: {...DEFAULT_MODEL_TRANSFORM_OPTIONS, elevateProperties: false, generifyTypes: true},
+      modelTransformOptions: {elevateProperties: false, generifyTypes: true},
     });
     const filenames = [...fileContents.keys()].sort();
 
@@ -49,7 +48,6 @@ describe('Error-Schema', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', {
       javaOptions: {
-        ...DEFAULT_JAVA_OPTIONS,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         immutable: true,

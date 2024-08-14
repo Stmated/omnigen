@@ -54,10 +54,21 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     };
   }
 
+  /**
+   * TODO: Make the args into an updating stack/object, instead of creating a new args object for each recursive call.
+   */
   public investigate(args: ObjectNameResolveArgs<TOpt>): ObjectName {
 
     if (OmniUtil.isPrimitive(args.type)) {
       return this.getPrimitiveName(args.type, args.type.kind, args.boxed, args.options);
+    }
+    if (!args.recursion) {
+      args.recursion = [];
+    }
+    if (args.recursion.includes(args.type)) {
+      return {namespace: [], edgeName: 'Recursion'};
+    } else {
+      args.recursion.push(args.type);
     }
 
     switch (args.type.kind) {

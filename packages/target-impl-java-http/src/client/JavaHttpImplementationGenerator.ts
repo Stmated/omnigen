@@ -13,11 +13,10 @@ import {type ImplementationArgs} from './ImplementationArgs';
 import {
   AstNode,
   AstTransformer,
-  LiteralValue,
   OmniComparisonOperator,
   OmniHardcodedReferenceType, OmniItemKind,
   OmniObjectType,
-  OmniOutput,
+  OmniOutput, OmniPrimitiveConstantValue,
   OmniType,
   OmniTypeKind, PackageOptions,
   RootAstNode,
@@ -32,7 +31,7 @@ import {
   AddAbstractAccessorsAstTransformer,
   AddAccessorsForFieldsAstTransformer,
   AddCompositionMembersCodeAstTransformer,
-  AddConstructorCodeAstTransformer,
+  AddConstructorAstTransformer,
   AddFieldsAstTransformer, Code,
   PackageResolverAstTransformer,
   RemoveConstantParametersAstTransformer,
@@ -123,7 +122,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       // new ElevateAsAbstractMembersAstTransformer(),
       new AddCompositionMembersCodeAstTransformer(),
       new AddFieldsAstTransformer(),
-      new AddConstructorCodeAstTransformer(),
+      new AddConstructorAstTransformer(),
       new AddAccessorsForFieldsAstTransformer([objectMapperField.identifier]),
       new AddAbstractAccessorsAstTransformer(),
       new AddThrowsForKnownMethodsJavaAstTransformer(),
@@ -718,7 +717,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     return args.root.getAstUtils().createTypeNode(regularResponses[0].type, false);
   }
 
-  private getTypeAndLiteral(value: unknown | undefined): ['null' | 'string' | 'number' | 'boolean', LiteralValue] {
+  private getTypeAndLiteral(value: unknown | undefined): ['null' | 'string' | 'number' | 'boolean', OmniPrimitiveConstantValue] {
 
     if (value == undefined) {
       return ['null', null];

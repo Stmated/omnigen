@@ -5,6 +5,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "build:profile": {
+      "dependsOn": ["^build:profile"],
+      "outputs": ["dist/**"]
+    },
     "test": {},
     "test:watch": {
       "cache": false

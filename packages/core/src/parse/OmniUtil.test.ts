@@ -93,11 +93,11 @@ describe('OmniUtil', () => {
     expect(diff[0]).toEqual({kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.SIZE]} satisfies Diff);
   });
 
-  const aIntProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pa', owner: undefined as any, type: {kind: OmniTypeKind.INTEGER}};
-  const aStringProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pa', owner: undefined as any, type: {kind: OmniTypeKind.STRING}};
-  const bIntProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.INTEGER}};
-  const bFloatProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.FLOAT}};
-  const bDoubleProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', owner: undefined as any, type: {kind: OmniTypeKind.DOUBLE}};
+  const aIntProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pa', type: {kind: OmniTypeKind.INTEGER}};
+  const aStringProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pa', type: {kind: OmniTypeKind.STRING}};
+  const bIntProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', type: {kind: OmniTypeKind.INTEGER}};
+  const bFloatProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', type: {kind: OmniTypeKind.FLOAT}};
+  const bDoubleProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', type: {kind: OmniTypeKind.DOUBLE}};
 
   test('object diff', () => {
 
@@ -254,7 +254,7 @@ const expectA = (a: OmniPrimitiveType, b: OmniPrimitiveType): void => {
   expect(expectCommon(a, b).type).toEqual(a);
 };
 
-const expectCommon = (a: OmniPrimitiveType, b: OmniPrimitiveType, features = OMNI_GENERIC_FEATURES): CommonDenominatorType<OmniType> => {
+const expectCommon = (a: OmniPrimitiveType, b: OmniPrimitiveType, features = OMNI_GENERIC_FEATURES): CommonDenominatorType => {
 
   return OmniUtil.getCommonDenominatorBetween(a, b, features)
     || {type: {kind: OmniTypeKind.UNKNOWN}, diffs: [TypeDiffKind.FUNDAMENTAL_TYPE]};

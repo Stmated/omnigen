@@ -1,6 +1,4 @@
 
-export * from './PropertyEquality.js';
-
+export * from './PropertyEquality.ts';
 export * from './TypeDiffKind.ts';
-export * from './PropertyDifference.js';
-
+export * from './PropertyDifference.ts';

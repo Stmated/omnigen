@@ -192,8 +192,6 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
    *
    * NOTE: This might not be correct for all future target languages.
    *        Might need to be looked at in the future.
-   *
-   * @param type
    */
   public static getResolvedVisibleTypes(type: OmniType): OmniType[] {
 

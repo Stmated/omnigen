@@ -1,16 +1,7 @@
-import {
-  OmniItemKind,
-  OmniObjectType,
-  OmniPrimitiveTangibleKind,
-  OmniProperty,
-  OmniPropertyOrphan,
-  OmniSuperTypeCapableType, OmniType,
-  OmniTypeKind,
-} from '@omnigen/api';
+import {OmniItemKind, OmniObjectType, OmniPrimitiveTangibleKind, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniModelMerge, Replacement} from './OmniModelMerge';
-import {PropertyUtil} from './PropertyUtil';
 import {OmniUtil} from './OmniUtil';
-import {describe, test, expect} from 'vitest';
+import {expect, test} from 'vitest';
 
 test('Not Similar', async () => {
 
@@ -151,25 +142,16 @@ function byObjects(replacement: Replacement<OmniType>) {
   return replacement.from.kind == OmniTypeKind.OBJECT;
 }
 
-function createObject(name: string, extendedBy?: OmniSuperTypeCapableType, ...properties: OmniPropertyOrphan[]): OmniObjectType {
-
-  const type: OmniObjectType = {
+function createObject(name: string, extendedBy?: OmniSuperTypeCapableType, ...properties: OmniProperty[]): OmniObjectType {
+  return {
     kind: OmniTypeKind.OBJECT,
-    properties: [],
+    properties: properties,
     name: name,
     extendedBy: extendedBy,
   };
-
-  if (properties) {
-    for (const property of properties) {
-      PropertyUtil.addProperty(type, property);
-    }
-  }
-
-  return type;
 }
 
-function createPrimitive(name: string, primitiveKind: OmniPrimitiveTangibleKind = OmniTypeKind.DOUBLE): Omit<OmniProperty, 'owner'> {
+function createPrimitive(name: string, primitiveKind: OmniPrimitiveTangibleKind = OmniTypeKind.DOUBLE): OmniProperty {
 
   return {
     kind: OmniItemKind.PROPERTY,

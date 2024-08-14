@@ -32,6 +32,5 @@ export * from './OmniNodeKind';
 
 export * from './OmniTypeLibrary';
 export * from './OmniModelLibrary';
-export * from './OmniPrimitiveKind';
 
 export * from './TargetFunctions';

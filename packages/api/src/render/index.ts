@@ -1,3 +1,2 @@
 
-export * from './Renderer.js';
-export * from './RenderResult.js';
+export * from './Renderer.ts';

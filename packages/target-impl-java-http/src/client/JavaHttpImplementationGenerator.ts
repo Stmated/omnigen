@@ -638,7 +638,6 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       kind: OmniItemKind.PROPERTY,
       type: type,
       name: 'body',
-      owner: newExceptionType,
       required: true,
       readOnly: true,
       description: 'The error response body object',
@@ -719,11 +718,11 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
 
   private getTypeAndLiteral(value: unknown | undefined): ['null' | 'string' | 'number' | 'boolean', OmniPrimitiveConstantValue] {
 
-    if (value == undefined) {
+    if (value === undefined) {
       return ['null', null];
     }
 
-    if (value == null) {
+    if (value === null) {
       return ['null', null];
     }
 

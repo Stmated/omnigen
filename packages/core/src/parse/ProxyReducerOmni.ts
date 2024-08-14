@@ -194,7 +194,6 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC: ProxyReducerSpec<OmniNode, 'kind', Reduce
 
   PROPERTY: (n, a) => {
     n.type = assertDefined(a.reducer.reduce(n.type));
-    n.owner = assertDefined(a.reducer.reduce(n.owner));
   },
 
   EXAMPLE_PAIRING: (n, a) => {

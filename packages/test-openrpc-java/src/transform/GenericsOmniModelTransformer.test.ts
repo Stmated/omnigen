@@ -35,12 +35,9 @@ describe('Generics', () => {
       ],
     };
 
-    const realParserOpt = DEFAULT_PARSER_OPTIONS;
-    const realTransformOpt = DEFAULT_MODEL_TRANSFORM_OPTIONS;
-
     transformer.transformModel2ndPass({
       model: model,
-      options: {...realParserOpt, ...realTransformOpt, ...DEFAULT_TARGET_OPTIONS},
+      options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS, ...DEFAULT_TARGET_OPTIONS},
       targetFeatures: OMNI_GENERIC_FEATURES,
     });
 

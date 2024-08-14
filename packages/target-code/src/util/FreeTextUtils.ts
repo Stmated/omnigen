@@ -29,8 +29,8 @@ export class FreeTextUtils {
    *
    * It is up to the caller to have a somewhat structured freetext that is being added to and added as.
    *
-   * @param existing The potentially already existing freetext to merge with
-   * @param add The freetext of friendly freetext to add.
+   * @param existing - The potentially already existing freetext to merge with
+   * @param add - The freetext of friendly freetext to add.
    */
   public static add(existing: FreeText.AnyFreeText | undefined, add: FreeText.AnyFreeText | FreeText.FriendlyFreeTextIn | undefined): FreeText.AnyFreeText {
 

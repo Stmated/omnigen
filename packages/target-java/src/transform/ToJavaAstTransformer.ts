@@ -1,7 +1,5 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
 import * as Java from '../ast/JavaAst';
-import {TokenKind} from '../ast/JavaAst';
-import {CodeAstUtils} from '@omnigen/target-code';
 
 /**
  * For fixing or replacing some more generic AST-structures into Java-specific ones.

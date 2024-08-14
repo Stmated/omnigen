@@ -188,7 +188,6 @@ const DEFAULT_OMNI_REDUCER: ReducerSpec<OmniNode, 'kind', ReduceReturnTypeOmni> 
   PROPERTY: (n, a) => ({
     ...n,
     type: assertDefined(a.dispatcher.reduce(n.type)),
-    owner: assertDefined(a.dispatcher.reduce(n.owner)),
   }),
 
   EXAMPLE: n => n,

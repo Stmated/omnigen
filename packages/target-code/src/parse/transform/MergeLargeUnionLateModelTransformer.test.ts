@@ -4,7 +4,8 @@ import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
   DEFAULT_PARSER_OPTIONS,
   DEFAULT_TARGET_OPTIONS,
-  OMNI_GENERIC_FEATURES, OmniItemKind,
+  OMNI_GENERIC_FEATURES,
+  OmniItemKind,
   OmniModel,
   OmniModelTransformer2ndPassArgs,
   OmniObjectType,
@@ -12,7 +13,7 @@ import {
   OmniUnionType,
   TargetFeatures,
 } from '@omnigen/api';
-import {GenericsModelTransformer, Naming, OmniUtil} from '@omnigen/core';
+import {GenericsModelTransformer, Naming, PropertyUtil} from '@omnigen/core';
 
 test('Test Merge', () => {
 
@@ -26,13 +27,13 @@ test('Test Merge', () => {
   const bx: OmniObjectType = {kind: OmniTypeKind.OBJECT, name: 'BX', properties: []};
   const cx: OmniObjectType = {kind: OmniTypeKind.OBJECT, name: 'CX', properties: []};
 
-  OmniUtil.addPropertyToClassType({name: 'someString', type: {kind: OmniTypeKind.STRING}}, ax);
-  OmniUtil.addPropertyToClassType({name: 'someNumber', type: {kind: OmniTypeKind.NUMBER}}, bx);
-  OmniUtil.addPropertyToClassType({name: 'someBoolean', type: {kind: OmniTypeKind.BOOL}}, cx);
+  PropertyUtil.addProperty(ax, {name: 'someString', type: {kind: OmniTypeKind.STRING}});
+  PropertyUtil.addProperty(bx, {name: 'someNumber', type: {kind: OmniTypeKind.NUMBER}});
+  PropertyUtil.addProperty(cx, {name: 'someBoolean', type: {kind: OmniTypeKind.BOOL}});
 
-  OmniUtil.addPropertyToClassType({name: 'x', type: ax}, a);
-  OmniUtil.addPropertyToClassType({name: 'x', type: bx}, b);
-  OmniUtil.addPropertyToClassType({name: 'x', type: cx}, c);
+  PropertyUtil.addProperty(a, {name: 'x', type: ax});
+  PropertyUtil.addProperty(b, {name: 'x', type: bx});
+  PropertyUtil.addProperty(c, {name: 'x', type: cx});
 
   const union: OmniUnionType = {kind: OmniTypeKind.UNION, name: 'Union', types: [a, b, c]};
 

@@ -1,6 +1,6 @@
 import {
   Arrayable,
-  CommonDenominatorType,
+  CommonDenominatorType, DebugValue,
   DEFAULT_UNKNOWN_KIND, Direction,
   Namespace,
   NamespaceArrayItem,
@@ -19,7 +19,6 @@ import {
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
   OmniInput,
-  OmniItemKind,
   OmniKindComposition,
   OmniModel,
   OmniObjectType,
@@ -33,7 +32,6 @@ import {
   OmniProperty,
   OmniPropertyName,
   OmniPropertyNamePattern,
-  OmniPropertyOwner,
   OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
   OmniSuperTypeCapableType,
@@ -53,6 +51,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
 import {Naming} from './Naming';
 import {assertUnreachable, Case, CombineMode, CombineOptions, CreateMode} from '../util';
+import {PropertyUtil} from './PropertyUtil.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -329,18 +328,15 @@ export class OmniUtil {
    */
   public static getPropertiesOf(type: OmniType): ReadonlyArray<OmniProperty> {
 
-    if (type.kind == OmniTypeKind.OBJECT) {
-      return type.properties;
-    }
-
-    if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-
-      // This could quickly become very wonky if the properties are simply added to an interface?
-      // Or is this handled by some other code, to convert it properly with index to the correct setter/constructor?
+    if (OmniUtil.isPropertyOwner(type)) {
       return type.properties;
     }
 
     return EMPTY_ARRAY;
+  }
+
+  public static isPropertyOwner(type: OmniType): type is Extract<OmniType, Pick<OmniObjectType, 'properties'>> {
+    return type.kind === OmniTypeKind.OBJECT || type.kind === OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION;
   }
 
   public static getTypesThatInheritFrom(model: OmniModel, type: OmniType): OmniType[] {
@@ -389,44 +385,12 @@ export class OmniUtil {
     }
   }
 
-  public static isTypeInside(needle: OmniType, haystack: Arrayable<OmniType>): boolean {
-
-    if (Array.isArray(haystack)) {
-      for (const item of haystack) {
-        if (OmniUtil.isTypeInside(needle, item)) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    if (needle === haystack) {
-      return true;
-    }
-
-    if (OmniUtil.isComposition(haystack)) {
-      for (const child of haystack.types) {
-        if (OmniUtil.isTypeInside(needle, child)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  public static getSuperTypes(_model: OmniModel, type: OmniSubTypeCapableType | undefined): OmniSuperTypeCapableType[] {
+  public static getSuperTypes(_model: OmniModel, type: OmniSubTypeCapableType | undefined): ReadonlyArray<OmniSuperTypeCapableType> {
 
     if (type) {
       const unwrapped = OmniUtil.getUnwrappedType(type);
       if (OmniUtil.isComposition(unwrapped)) {
-        // if (unwrapped.kind === OmniTypeKind.INTERSECTION) {
-        //   unwrapped.types;
-        // }
-        //
-        // return [unwrapped];
-        return [];
+        return EMPTY_ARRAY;
       }
 
       if (OmniUtil.isComposition(unwrapped.extendedBy)) {
@@ -438,32 +402,7 @@ export class OmniUtil {
       }
     }
 
-    return [];
-  }
-
-  public static getSubTypesOfSuperType(model: OmniModel, superType: OmniType): OmniSubTypeCapableType[] {
-
-    const subTypes: OmniSubTypeCapableType[] = [];
-
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-      const type = ctx.type;
-      if (!OmniUtil.asSubType(type)) {
-        return;
-      }
-
-      if (type.kind === OmniTypeKind.OBJECT) {
-        if (type.extendedBy) {
-          for (const localSuperType of OmniUtil.getFlattenedSuperTypes(type.extendedBy)) {
-            if (localSuperType == superType) {
-              subTypes.push(type);
-              break;
-            }
-          }
-        }
-      }
-    });
-
-    return subTypes;
+    return EMPTY_ARRAY;
   }
 
   /**
@@ -1049,25 +988,6 @@ export class OmniUtil {
     return type;
   }
 
-  public static toNonLiteralType<T extends OmniType>(type: T): T {
-
-    if (OmniUtil.isPrimitive(type)) {
-      if (type.literal && type.value !== undefined) {
-        return {
-          ...type,
-          // Make it not-nullable and remove the Default-value.
-          // NOTE: Perhaps the Default-value should be kept, for the sake of
-          nullable: false,
-          literal: false,
-          value: undefined,
-          debug: OmniUtil.addDebug(type.debug, `Nullable literal made non-literal (value was: ${type.value})`),
-        } satisfies OmniPrimitiveType;
-      }
-    }
-
-    return type;
-  }
-
   /**
    * Iterates through a type and all its related types, and replaces all found needles with the given replacement.
    *
@@ -1112,6 +1032,7 @@ export class OmniUtil {
 
   /**
    * TODO: Replace with a tree-folding traverser/visitor instead
+   * @deprecated Instead use `ProxyReducerOmni` (it needs to be fixed first, but prematurely deprecating so that there are lots of warnings to remind me to work on it)
    */
   private static swapTypeInsideType<T extends OmniType, R extends OmniType>(parent: OmniType, from: T, to: R, maxDepth: number): void {
 
@@ -1333,22 +1254,12 @@ export class OmniUtil {
     (parent.continuations || []).forEach(c => {
       c.mappings.forEach(m => {
         (m.source.propertyPath || []).forEach(p => {
-          const swappedOwner = OmniUtil.swapType(p.owner, from, to, maxDepth);
-          if (swappedOwner) {
-            p.owner = swappedOwner as OmniPropertyOwner;
-          }
-
           const swappedType = OmniUtil.swapType(p.type, from, to, maxDepth);
           if (swappedType) {
             p.type = swappedType;
           }
         });
         (m.target.propertyPath || []).forEach(p => {
-          const swappedOwner = OmniUtil.swapType(p.owner, from, to, maxDepth);
-          if (swappedOwner) {
-            p.owner = swappedOwner as OmniPropertyOwner;
-          }
-
           const swappedType = OmniUtil.swapType(p.type, from, to, maxDepth);
           if (swappedType) {
             p.type = swappedType;
@@ -2567,7 +2478,7 @@ export class OmniUtil {
       }
 
       // This is a new property, and we should add it for `to`.
-      OmniUtil.addPropertyToClassType(finalProperty, to);
+      PropertyUtil.addProperty(to, finalProperty);
 
     } else {
 
@@ -2596,7 +2507,7 @@ export class OmniUtil {
             property.description = `From ${Naming.unwrap(from.name)}`;
           }
 
-          OmniUtil.addPropertyToClassType(property, to, common);
+          PropertyUtil.addProperty(to, property, common);
         }
       } else {
 
@@ -2822,35 +2733,38 @@ export class OmniUtil {
   /**
    * TODO: An env should decide if this function is no-op, to decrease overhead in "release"-mode
    */
-  public static addDebug(previous: string | string[] | undefined, add: string | string[] | undefined): string | string[] | undefined {
+  public static addDebug(previous: DebugValue, add: DebugValue): DebugValue {
     return OmniUtil.addTo(previous, add);
-    // if (!add) {
-    //   return previous;
-    // }
-    // if (previous) {
-    //   if (typeof add === 'string') {
-    //     if (typeof previous === 'string') {
-    //       return [previous, add];
-    //     } else {
-    //       return [...previous, add];
-    //     }
-    //   } else {
-    //
-    //     if (typeof previous === 'string') {
-    //       add.splice(0, 0, previous);
-    //       return add;
-    //     } else {
-    //       add.splice(0, 0, ...previous);
-    //       return add;
-    //     }
-    //   }
-    // } else {
-    //   if (typeof add === 'string') {
-    //     return [add];
-    //   } else {
-    //     return add;
-    //   }
-    // }
+  }
+
+  public static addDebugTo<T extends {debug?: DebugValue}>(obj: T, add: DebugValue): T {
+
+    const newDebug = OmniUtil.addTo(obj.debug, add);
+    if (newDebug === obj.debug) {
+      return obj;
+    } else {
+      return {
+        ...obj,
+        debug: newDebug,
+      };
+    }
+  }
+
+  public static prefixDebug(previous: DebugValue, prefix: string | undefined): DebugValue {
+
+    if (!prefix) {
+      return previous;
+    }
+
+    if (previous) {
+      if (Array.isArray(previous)) {
+        return previous.map(it => `${prefix}${it}`);
+      } else {
+        return `${prefix}${previous}`;
+      }
+    } else {
+      return undefined;
+    }
   }
 
   public static addTo<T>(target: T | T[] | undefined, value: T | T[] | undefined): T | T[] | undefined {
@@ -2884,20 +2798,6 @@ export class OmniUtil {
     if ('name' in from && 'name' in to) {
       to.name = from.name;
     }
-  }
-
-  public static addPropertyToClassType(property: Omit<OmniProperty, 'owner' | 'kind'>, toType: OmniObjectType, as?: OmniType): void {
-
-    if (!toType.properties) {
-      toType.properties = [];
-    }
-
-    toType.properties.push({
-      ...property,
-      kind: OmniItemKind.PROPERTY,
-      owner: toType,
-      type: as || property.type,
-    });
   }
 
   public static getPrimitiveNumberCoverageScore(kind: OmniPrimitiveKinds): number {
@@ -3047,15 +2947,6 @@ export class OmniUtil {
     }
 
     return undefined;
-  }
-
-  public static isIdentifiable(type: OmniType): type is typeof type & OmniOptionallyNamedType {
-
-    if ('name' in type) {
-      return true;
-    }
-
-    return (OmniUtil.isComposition(type) || type.kind == OmniTypeKind.DECORATING || type.kind == OmniTypeKind.INTERFACE);
   }
 
   public static isUnion<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, typeof OmniTypeKind.EXCLUSIVE_UNION | typeof OmniTypeKind.UNION> {

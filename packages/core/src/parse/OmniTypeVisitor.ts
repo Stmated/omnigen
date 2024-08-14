@@ -1,8 +1,7 @@
-import {OmniModel, OmniPrimitiveType, OmniType, OmniTypeKind} from '@omnigen/api';
+import {OmniModel, OmniPrimitiveType, OmniType, OmniTypeKind, TypeOwner} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {TypeOwner} from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.js';
-import {getShallowPayloadString, Util} from '../util';
+import {getShallowPayloadString} from '../util';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -37,6 +36,9 @@ export interface BFSTraverseCallback<R> {
   (ctx: BFSTraverseContext): R | void;
 }
 
+/**
+ * @deprecated Use the new `OmniVisitor` (make sure it works properly first)
+ */
 export class OmniTypeVisitor {
 
   private static readonly _NULL_TYPE: OmniPrimitiveType = {
@@ -44,6 +46,9 @@ export class OmniTypeVisitor {
     nullable: true,
   };
 
+  /**
+   * @deprecated Use the new `OmniVisitor` (make sure it works properly first)
+   */
   public visitTypesBreadthFirst<R>(
     inputs: TypeOwner | TypeOwner[] | undefined,
     onDown: BFSTraverseCallback<R>,
@@ -71,11 +76,9 @@ export class OmniTypeVisitor {
         for (const c of input.continuations || []) {
           for (const m of c.mappings) {
             for (const p of m.source.propertyPath || []) {
-              q.push({owner: p, parent: undefined, type: p.owner, typeDepth: 0, useDepth: 0, skip: false});
               q.push({owner: p, parent: undefined, type: p.type, typeDepth: 0, useDepth: 0, skip: false});
             }
             for (const p of m.target.propertyPath || []) {
-              q.push({owner: p, parent: undefined, type: p.owner, typeDepth: 0, useDepth: 0, skip: false});
               q.push({owner: p, parent: undefined, type: p.type, typeDepth: 0, useDepth: 0, skip: false});
             }
           }
@@ -88,7 +91,6 @@ export class OmniTypeVisitor {
       }
     }
 
-    const used: BFSTraverseContext[] = [];
     const visited: OmniType[] = [];
     while (q.length > 0) {
 
@@ -96,7 +98,6 @@ export class OmniTypeVisitor {
       if (!dq) {
         break;
       }
-      used.push(dq);
 
       if (visitOnce) {
         if (visited.includes(dq.type)) {
@@ -211,6 +212,9 @@ export class OmniTypeVisitor {
     return undefined;
   }
 
+  /**
+   * @deprecated Use the new `OmniVisitor` (make sure it works properly first)
+   */
   public visitTypesDepthFirst<R>(
     input: TypeOwner | undefined,
     onDown?: DFSTraverseCallback<R>,
@@ -270,18 +274,10 @@ export class OmniTypeVisitor {
 
         for (const p of m.source.propertyPath || []) {
           ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.owner, ctx, onDown, onUp, onlyOnce);
-          if (result !== undefined) return result;
-
-          ctx.parent = p;
           result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;
         }
         for (const p of m.target.propertyPath || []) {
-          ctx.parent = p;
-          result = this.visitTypesDepthFirstInternal(p.owner, ctx, onDown, onUp, onlyOnce);
-          if (result !== undefined) return result;
-
           ctx.parent = p;
           result = this.visitTypesDepthFirstInternal(p.type, ctx, onDown, onUp, onlyOnce);
           if (result !== undefined) return result;

@@ -1,9 +1,9 @@
-import {OmniProperty, OmniType} from './OmniModel';
+import {OmniOwnedProperty, OmniType} from './OmniModel';
 import {PropertyDifference, TypeDiffKind} from '../equality';
 
 export interface PropertyInformation {
   propertyName: string;
-  properties: OmniProperty[];
+  properties: OmniOwnedProperty[];
   propertyDiffs: PropertyDifference[] | undefined,
   typeDiffs: TypeDiffKind[] | undefined,
   commonType: OmniType;

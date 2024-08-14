@@ -52,9 +52,9 @@ test('swap-recursively-3', () => {
     types: [obj1, obj2, obj3],
   };
 
-  obj1.properties.push({kind: OmniItemKind.PROPERTY, type: obj2, name: 'P1', owner: obj1});
-  obj2.properties.push({kind: OmniItemKind.PROPERTY, type: obj3, name: 'P2', owner: obj2});
-  obj3.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.DOUBLE}, name: 'P3', owner: obj3});
+  obj1.properties.push({kind: OmniItemKind.PROPERTY, type: obj2, name: 'P1'});
+  obj2.properties.push({kind: OmniItemKind.PROPERTY, type: obj3, name: 'P2'});
+  obj3.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.DOUBLE}, name: 'P3'});
 
   const model: OmniModel = {
     name: 'my-model',

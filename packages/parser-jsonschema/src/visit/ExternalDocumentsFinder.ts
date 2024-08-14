@@ -1,5 +1,5 @@
 import pointer, {JsonObject} from 'json-pointer';
-import {getShallowPayloadString, ProtocolHandler, Util} from '@omnigen/core';
+import {getShallowPayloadString, ProtocolHandler} from '@omnigen/core';
 import {JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -180,11 +180,6 @@ export class ExternalDocumentsFinder {
         let anchor: DynamicAnchor | undefined = undefined;
         if (anchors.length == 1) {
           anchor = anchors[0];
-        } else {
-
-          // for (const a of anchors) {
-          //
-          // }
         }
 
         // TODO: Find the closest $dynamicAnchor for this $dynamicRef, then figure out where to take it from there

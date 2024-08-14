@@ -6,7 +6,12 @@ export type ToArray<T> = T extends Array<any> ? T : undefined;
 export type ToResolved<T> = T extends {$ref: any} ? Exclude<T, {$ref: any}> : T;
 export type Entry<T> = {key: string, value: T};
 
-export function safeSet<O extends object, OK extends keyof O & string, V extends Pick<Record<PropertyKey, DocVisitorTransformer<O[OK], any>>, OK>>(owner: O, visitor: V, prop: OK, handled: string[]): void {
+export function safeSet<O extends object, OK extends keyof O & string, V extends Pick<Record<PropertyKey, DocVisitorTransformer<O[OK], any>>, OK>>(
+  owner: O,
+  visitor: V,
+  prop: OK, 
+  handled: string[],
+): void {
 
   handled.push(prop);
 

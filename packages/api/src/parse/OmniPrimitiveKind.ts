@@ -1,1 +1,0 @@
-import {ToEnum} from '../options';

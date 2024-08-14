@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/api';
+import {AstTransformer, AstTransformerArguments} from '@omnigen/api';
 import {OmniUtil} from '@omnigen/core';
 import {Ts} from '../';
 
@@ -10,7 +10,7 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class RemoveSuperfluousGetterTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode> {
 
-  transformAst(args: AstTransformerArguments<Ts.TsRootNode, TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<Ts.TsRootNode>): void {
 
     const gettersToRemove: Ts.FieldBackedGetter[] = [];
     const fieldsToMakePublic: Ts.Field[] = [];

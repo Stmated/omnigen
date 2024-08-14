@@ -9,7 +9,6 @@ import {
   ZodPackageOptionsContext,
   ZodRenderersContext,
   ZodTargetFeaturesContext,
-  ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
 import {
   AstTransformer,
@@ -50,11 +49,14 @@ import {
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
-  AggregateIntersectionsModelTransformer, ElevatePropertiesModelTransformer, ExecutionStatus,
+  AggregateIntersectionsModelTransformer,
+  ElevatePropertiesModelTransformer,
+  ExecutionStatus,
   InnerTypeCompressionAstTransformer,
   InterfaceExtractorModelTransformer,
   MethodToGetterCodeAstTransformer,
-  PackageResolverAstTransformer, PrettyCodeAstTransformer,
+  PackageResolverAstTransformer,
+  PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
   RemoveEnumFieldsCodeAstTransformer,
   ReorderMembersAstTransformer,
@@ -72,10 +74,6 @@ import {ConstructorRemovalOnPropertyInitCSharpAstTransformer} from './ast/Constr
 const logger = LoggerFactory.create(import.meta.url);
 
 export type CSharpAstTransformerArgs = AstTransformerArguments<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>;
-
-export const ZodParserOptionsContext = z.object({
-  parserOptions: ZodParserOptions,
-});
 
 export const ZodCSharpOptionsContext = z.object({
   csOptions: ZodCSharpOptions,
@@ -95,9 +93,7 @@ export const ZodCSharpInitContextOut = ZodModelContext
   .merge(ZodCSharpTargetContext);
 
 export const ZodCSharpContextIn = ZodModelContext
-  // .merge(ZodParserOptionsContext)
   .merge(ZodPackageOptionsContext)
-  // .merge(ZodTargetOptionsContext)
   .merge(ZodModelTransformOptionsContext)
   .merge(ZodCSharpOptionsContext)
   .merge(ZodCSharpTargetContext)
@@ -187,9 +183,7 @@ export const CSharpPlugin = createPlugin(
     const args2: OmniModelTransformer2ndPassArgs<TOpt> = {
       model: args.model,
       options: {
-        // ...ctx.parserOptions,
         ...ctx.modelTransformOptions,
-        // ...ctx.targetOptions,
         ...ctx.csOptions,
       },
       targetFeatures: CSHARP_FEATURES,
@@ -252,7 +246,6 @@ export const CSharpPlugin = createPlugin(
 
     const options: PackageOptions & TargetOptions & CSharpOptions = {
       ...ctx.packageOptions,
-      // ...ctx.targetOptions,
       ...ctx.csOptions,
     };
 

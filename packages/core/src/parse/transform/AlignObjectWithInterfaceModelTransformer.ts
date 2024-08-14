@@ -25,11 +25,7 @@ export class AlignObjectWithInterfaceModelTransformer implements OmniModel2ndPas
           n.debug = OmniUtil.addDebug(n.debug, `Adding unimplemented interface properties ${unimplementedProperties.map(it => it.name).join(', ')}`);
           n.properties = [
             ...n.properties,
-            ...unimplementedProperties.map(it => ({
-              ...it,
-              debug: OmniUtil.addDebug(it.debug, `Property added to Object to align with Interface`),
-              owner: n, // TODO: Remove the notion of `owner` someday, so we do not need to clone the property
-            })),
+            ...unimplementedProperties.map(it => OmniUtil.addDebugTo(it, `Property added to Object to align with Interface`)),
           ];
         }
       }

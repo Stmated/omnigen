@@ -184,7 +184,6 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       kind: OmniItemKind.PROPERTY,
       name: ADDITIONAL_PROPERTIES_FIELD_NAME,
       type: commonDictionary,
-      owner: newInterfaceObjectType,
     });
 
     const newDictionaryTypeNode = root.getAstUtils().createTypeNode(commonDictionary);

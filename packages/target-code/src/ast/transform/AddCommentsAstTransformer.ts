@@ -7,6 +7,7 @@ import {
   OmniModel,
   OmniOutput,
   OmniProperty,
+  OmniPropertyOwner,
   OmniType,
   OmniTypeKind,
   PackageOptions,
@@ -160,7 +161,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           if (example.result?.type === type || parameterHasType) {
 
             exampleIndex++;
-            comments.push(AddCommentsAstTransformer.getExampleComments(example, exampleIndex));
+            comments.push(AddCommentsAstTransformer.getExampleComments(model, example, exampleIndex));
           }
         }
       }
@@ -235,14 +236,19 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           .some(mapping => {
 
             if (mapping.source.propertyPath?.length) {
-              if (mapping.source.propertyPath[0]?.owner == type) {
-                return true;
+              for (const owner of AddCommentsAstTransformer.getPropertyOwners(model, mapping.source.propertyPath[0])) {
+                if (owner === type) {
+                  return true;
+                }
               }
             }
 
             if (mapping.target.propertyPath?.length) {
-              if (mapping.target.propertyPath[mapping.target.propertyPath.length - 1].owner == type) {
-                return true;
+              const property = mapping.target.propertyPath[mapping.target.propertyPath.length - 1];
+              for (const owner of AddCommentsAstTransformer.getPropertyOwners(model, property)) {
+                if (owner === type) {
+                  return true;
+                }
               }
             }
 
@@ -255,7 +261,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           comments.push(new FreeText.FreeTextSection(
             new FreeText.FreeTextHeader(2, 'Links'),
             continuation.mappings.map(mapping => {
-              return AddCommentsAstTransformer.getMappingSourceTargetComment(root, mapping, options);
+              return AddCommentsAstTransformer.getMappingSourceTargetComment(model, root, mapping, options);
             }),
           ));
         }
@@ -273,7 +279,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     );
   }
 
-  private static getExampleComments(example: OmniExamplePairing, index: number): FreeText.FriendlyFreeTextIn {
+  private static getExampleComments(model: OmniModel, example: OmniExamplePairing, index: number): FreeText.FriendlyFreeTextIn {
 
     const commentLines: FreeText.AnyFreeText[] = [];
 
@@ -283,17 +289,19 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       const lines: FreeText.FreeTextLine[] = [];
       for (const param of params) {
 
-        lines.push(new FreeText.FreeTextLine([
-          `<dt>`,
-          AddCommentsAstTransformer.getLink(param.property.owner, param.property),
-          `</dt>`,
-        ]));
+        for (const owner of AddCommentsAstTransformer.getPropertyOwners(model, param.property)) {
+          lines.push(new FreeText.FreeTextLine([
+            `<dt>`,
+            AddCommentsAstTransformer.getLink(owner, param.property),
+            `</dt>`,
+          ]));
 
-        lines.push(new FreeText.FreeTextLine([
-          `<dd>`,
-          new FreeText.FreeText(`${JSON.stringify(param.value)}`),
-          `</dd>`,
-        ]));
+          lines.push(new FreeText.FreeTextLine([
+            `<dd>`,
+            new FreeText.FreeText(`${JSON.stringify(param.value)}`),
+            `</dd>`,
+          ]));
+        }
       }
 
       if (lines.length > 0) {
@@ -359,6 +367,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
   }
 
   private static getMappingSourceTargetComment(
+    model: OmniModel,
     root: Code.CodeRootAstNode,
     mapping: OmniLinkMapping,
     options: PackageOptions & TargetOptions & CodeOptions,
@@ -374,7 +383,9 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       if (mapping.source.propertyPath) {
         const sourcePath = mapping.source.propertyPath || [];
         for (let i = 0; i < sourcePath.length; i++) {
-          sourceLinks.push(AddCommentsAstTransformer.getLink(sourcePath[i].owner, sourcePath[i]));
+          for (const owner of AddCommentsAstTransformer.getPropertyOwners(model, sourcePath[i])) {
+            sourceLinks.push(AddCommentsAstTransformer.getLink(owner, sourcePath[i]));
+          }
         }
       } else if (mapping.source.constantValue) {
         sourceLinks.push(JSON.stringify(mapping.source.constantValue));
@@ -386,31 +397,33 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       for (let i = 0; i < targetPath.length; i++) {
         const prop = targetPath[i];
 
-        const investigatedName = nameResolver.investigate({type: prop.owner, options: options});
-        const typeName = nameResolver.build({name: investigatedName, with: NameParts.FULL});
-        const propertyName = OmniUtil.getPropertyName(prop.name);
+        for (const owner of AddCommentsAstTransformer.getPropertyOwners(model, prop)) {
+          const investigatedName = nameResolver.investigate({type: owner, options: options});
+          const typeName = nameResolver.build({name: investigatedName, with: NameParts.FULL});
+          const propertyName = OmniUtil.getPropertyName(prop.name);
 
-        if (propertyName === undefined) {
-          continue;
-        }
+          if (propertyName === undefined) {
+            continue;
+          }
 
-        if (i < targetPath.length - 1) {
+          if (i < targetPath.length - 1) {
 
-          // TODO: This is wrong, since in some languages it is not a method call. Need to add a new "GetterCall" or similar abstract node
-          const memberRef = new Code.MethodCall(
-            new Code.GetterIdentifier(new Code.Identifier(propertyName), prop.type),
-            new Code.ArgumentList(),
-          );
-          targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), memberRef));
+            // TODO: This is wrong, since in some languages it is not a method call. Need to add a new "GetterCall" or similar abstract node
+            const memberRef = new Code.MethodCall(
+              new Code.GetterIdentifier(new Code.Identifier(propertyName), prop.type),
+              new Code.ArgumentList(),
+            );
+            targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), memberRef));
 
-        } else {
-          // TODO: Possible to find the *actual* setter/field and use that as the @link?
-          //       We should not need to check for immutability here, should be centralized somehow
-          if (options.immutable) {
-
-            targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), new FreeText.FreeText(propertyName)));
           } else {
-            targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), new FreeText.FreeText(propertyName)));
+            // TODO: Possible to find the *actual* setter/field and use that as the @link?
+            //       We should not need to check for immutability here, should be centralized somehow
+            if (options.immutable) {
+
+              targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), new FreeText.FreeText(propertyName)));
+            } else {
+              targetLinks.push(new FreeText.FreeTextMemberLink(new FreeText.FreeText(typeName), new FreeText.FreeText(propertyName)));
+            }
           }
         }
       }
@@ -564,13 +577,13 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       for (const mapping of continuation.mappings) {
         if (mapping.source.propertyPath?.length) {
           if (mapping.source.propertyPath[mapping.source.propertyPath.length - 1] == property) {
-            linkComments.push(AddCommentsAstTransformer.getMappingSourceTargetComment(root, mapping, options, 'target'));
+            linkComments.push(AddCommentsAstTransformer.getMappingSourceTargetComment(model, root, mapping, options, 'target'));
           }
         }
 
         if (mapping.target.propertyPath.length) {
           if (mapping.target.propertyPath[mapping.target.propertyPath.length - 1] == property) {
-            linkComments.push(AddCommentsAstTransformer.getMappingSourceTargetComment(root, mapping, options, 'source'));
+            linkComments.push(AddCommentsAstTransformer.getMappingSourceTargetComment(model, root, mapping, options, 'source'));
           }
         }
       }
@@ -581,5 +594,24 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     }
 
     return comments;
+  }
+
+  /**
+   * TODO: CACHE THIS RESULT! ONLY DO IT ONCE! (maybe???)
+   */
+  private static getPropertyOwners(model: OmniModel, property: OmniProperty | undefined): ReadonlyArray<OmniPropertyOwner> {
+
+    const owners: OmniPropertyOwner[] = [];
+    if (!property) {
+      return owners;
+    }
+
+    OmniUtil.visitTypesDepthFirst(model, ctx => {
+      if (OmniUtil.isPropertyOwner(ctx.type) && ctx.type.properties.includes(property)) {
+        owners.push(ctx.type);
+      }
+    });
+
+    return owners;
   }
 }

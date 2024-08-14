@@ -582,7 +582,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       kind: OmniItemKind.PROPERTY,
       name: 'result',
       type: resultType.type,
-      owner: responseType,
     });
 
     return {
@@ -727,7 +726,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcPropertyName,
         type: responseJsonRpcPropertyType,
-        owner: target,
       });
     }
 
@@ -770,13 +768,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       kind: OmniItemKind.PROPERTY,
       name: 'code',
       type: codeType,
-      owner: errorPropertyType,
     });
     errorPropertyType.properties.push({
       kind: OmniItemKind.PROPERTY,
       name: 'message',
       type: messageType,
-      owner: errorPropertyType,
     });
 
     if (error.data) {
@@ -791,7 +787,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
           nullable: false,
         } satisfies OmniUnknownType,
         readOnly: true,
-        owner: errorPropertyType,
         debug: ['From OpenRpcParser with data'],
       });
     } else if (error.data || !options.jsonRpcErrorDataSchema) {
@@ -804,7 +799,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
           nullable: false,
         } satisfies OmniUnknownType,
         readOnly: true,
-        owner: errorPropertyType,
         debug: ['From OpenRpcParser with no schema, so unknown'],
       });
     } else {
@@ -818,7 +812,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcErrorPropertyName,
         type: optionsErrorSchema,
-        owner: errorPropertyType,
         debug: ['From OpenRpcParser with schema'],
       });
     }
@@ -835,7 +828,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniItemKind.PROPERTY,
         name: 'name',
         type: nameType,
-        owner: errorPropertyType,
       });
     }
 
@@ -843,7 +835,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       kind: OmniItemKind.PROPERTY,
       name: 'error',
       type: errorPropertyType,
-      owner: target,
       required: true,
       debug: ['From OpenRpc'],
     };
@@ -857,7 +848,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniTypeKind.NULL,
         nullable: true,
       },
-      owner: target,
     });
 
     if (options.jsonRpcIdIncluded) {
@@ -868,7 +858,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
           kind: OmniTypeKind.STRING,
           nullable: !options.jsonRpcIdRequired,
         },
-        owner: target,
       });
     }
   }
@@ -992,7 +981,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       deprecated: descriptor.deprecated ?? false,
       required: descriptor.required ?? false,
       type: propertyType.type,
-      owner: owner,
       debug: [`From OpenRpc ContentDescriptor ${descriptor.name}`],
     };
 
@@ -1025,7 +1013,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniItemKind.PROPERTY,
         name: 'params',
         type: requestParamsType,
-        owner: objectRequestType,
       },
     ];
 
@@ -1181,7 +1168,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         name: options.jsonRpcPropertyName,
         type: requestJsonRpcType,
         required: true,
-        owner: targetObject,
       });
     }
 
@@ -1192,7 +1178,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       required: true,
       readOnly: true,
       debug: `Method literal (${method.name}) from OpenRpc Spec`,
-      owner: targetObject,
     });
 
     if (options.jsonRpcIdIncluded) {
@@ -1216,7 +1201,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         name: 'id',
         type: requestIdType,
         required: options.jsonRpcIdRequired && options.trustedClients,
-        owner: targetObject,
       });
     }
   }
@@ -1244,7 +1228,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniItemKind.PROPERTY,
         name: options.jsonRpcPropertyName,
         type: responseJsonRpcPropertyType,
-        owner: target,
         readOnly: true,
       });
     }
@@ -1256,7 +1239,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         kind: OmniTypeKind.NULL,
         nullable: true,
       },
-      owner: target,
     });
 
     if (options.jsonRpcIdIncluded) {
@@ -1267,7 +1249,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
           kind: OmniTypeKind.STRING,
           nullable: !options.jsonRpcIdRequired,
         },
-        owner: target,
       });
     }
   }

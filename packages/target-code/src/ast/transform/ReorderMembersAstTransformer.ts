@@ -1,4 +1,4 @@
-import {AstNode, AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, RootAstNode, TargetOptions} from '@omnigen/api';
+import {AstNode, AstTransformer, AstTransformerArguments, OmniType, RootAstNode, TargetOptions} from '@omnigen/api';
 import {OmniUtil, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';

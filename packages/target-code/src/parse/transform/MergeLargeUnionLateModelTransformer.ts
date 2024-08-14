@@ -1,5 +1,5 @@
 import {OmniExclusiveUnionType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, OmniUnionType, TargetFeatures} from '@omnigen/api';
-import {DefaultOmniReducerArgs, ReducerOmni, isDefined, OmniUtil, Visitor} from '@omnigen/core';
+import {OmniUtil} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

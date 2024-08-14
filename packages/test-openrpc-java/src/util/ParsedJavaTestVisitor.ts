@@ -35,7 +35,6 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
   readonly foundTypes: string[] = [];
 
   readonly classDeclarationNames: string[] = [];
-  readonly foundInnerInterfaces: string[] = [];
 
   public foundPackage: string | undefined;
 

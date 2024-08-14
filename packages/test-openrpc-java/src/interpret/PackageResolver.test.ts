@@ -25,22 +25,13 @@ describe('PackageResolver', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const javaOptions: Partial<JavaOptions> = {
-      // ...DEFAULT_TEST_TARGET_OPTIONS,
-      // ...DEFAULT_TEST_JAVA_OPTIONS,
       includeGenerated: false,
       serializationLibrary: SerializationLibrary.POJO,
       additionalPropertiesInterfaceAfterDuplicateCount: 1,
       allowCompressInterfaceToInner: false,
     };
 
-    // const targetOptions: TargetOptions = {
-    //   ...DEFAULT_TEST_TARGET_OPTIONS,
-    //   additionalPropertiesInterfaceAfterDuplicateCount: 1,
-    //   allowCompressInterfaceToInner: false,
-    // };
-
     const packageOptions: Partial<PackageOptions> = {
-      // ...DEFAULT_PACKAGE_OPTIONS,
       packageResolver: (_type, typeName) => {
         if (typeName.match(/.*Error.*/i)) {
           return 'some.base.pkg.errors';

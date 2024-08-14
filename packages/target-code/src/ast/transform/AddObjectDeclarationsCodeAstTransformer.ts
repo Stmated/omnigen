@@ -80,18 +80,6 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
         }
       }
       return res;
-
-      // if ( && !OmniUtil.isComposition(b.owner)) {
-      //   return 1;
-      // } else if (!OmniUtil.isComposition(a.owner) && OmniUtil.isComposition(b.owner)) {
-      //   return -1;
-      // } else if (OmniUtil.isPrimitive(a.owner) && !OmniUtil.isPrimitive(b.owner)) {
-      //   return 1;
-      // } else if (!OmniUtil.isPrimitive(a.owner) && OmniUtil.isPrimitive(b.owner)) {
-      //   return -1;
-      // } else {
-      //   return 0;
-      // }
     });
 
     if (namePairs.length > 0) {
@@ -100,14 +88,6 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
         pair.owner.name = CodeUtil.getSafeIdentifierName(Naming.prefixedPascalCase(pair.name));
       }
     }
-
-    // const removedTypes: OmniType[] = [];
-    // for (const type of exportableTypes.all) {
-    //   removedTypes.push(...this.simplifyTypeAndReturnUnwanted(type));
-    // }
-
-    // NOTE: Is this actually correct? Could it not delete types we actually want?
-    // exportableTypes.all = exportableTypes.all.filter(it => !removedTypes.includes(it));
 
     for (const type of exportableTypes.all) {
 
@@ -181,7 +161,6 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     const dec = this.createEnum(root, type, originalType, options);
 
-    // const packageName = JavaUtil.getPackageName(dec.type.omniType, dec.name.value, options);
     const nameResolver = root.getNameResolver();
     const investigatedName = nameResolver.investigate({type: dec.type.omniType, customName: dec.name.value, options: options});
     const packageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});

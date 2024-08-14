@@ -2,7 +2,6 @@ import {PluginAutoRegistry} from '@omnigen/core-plugin';
 import {CommonTransformPlugin, CommonTransform2Plugin, fileWriter, CorePlugin} from './CoreUtilPluginInit.ts';
 
 export * from './ast';
-export * from './equality';
 export * from './parse';
 export * from './util';
 export * from './visit';

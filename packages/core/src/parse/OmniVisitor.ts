@@ -10,6 +10,9 @@ export interface OmniVisitorDispatcher {
   visit<T extends OmniNode>(type: T | undefined, visitor: OmniVisitor): void;
 }
 
+/**
+ * TODO: Make the visitor an array of visitors, and pick the first with matching entry, or don't visit further.
+ */
 export class DefaultOmniVisitorDispatcher implements OmniVisitorDispatcher {
 
   private readonly _base: OmniVisitor;
@@ -186,7 +189,6 @@ const DEFAULT_OMNI_VISITOR: Readonly<OmniVisitor> = {
 
   PROPERTY: (t, v, d) => {
     d.visit(t.type, v);
-    d.visit(t.owner, v); // TODO: Replace with ref to owner -- so as to not have recursive visiting.
   },
 
   EXAMPLE: (t, v, d) => {

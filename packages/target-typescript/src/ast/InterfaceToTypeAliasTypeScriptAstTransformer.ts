@@ -7,7 +7,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode> {
 
-  transformAst(args: AstTransformerArguments<Ts.TsRootNode, TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<Ts.TsRootNode>): void {
 
     const defaultReducer = args.root.createReducer();
 
@@ -74,7 +74,7 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
     }
   }
 
-  private getInlinedIfNeededTypeNode(originalType: OmniType, originalTypeNode: TypeNode, args: AstTransformerArguments<Ts.TsRootNode, TargetOptions>): TypeNode {
+  private getInlinedIfNeededTypeNode(originalType: OmniType, originalTypeNode: TypeNode, args: AstTransformerArguments<Ts.TsRootNode>): TypeNode {
 
     if (originalType.inline) {
       return originalTypeNode;

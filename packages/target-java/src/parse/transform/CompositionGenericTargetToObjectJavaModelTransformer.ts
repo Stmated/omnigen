@@ -1,4 +1,4 @@
-import {OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, ParserOptions} from '@omnigen/api';
+import {OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniUtil} from '@omnigen/core';
 import {JavaUtil} from '../../util';
 
@@ -15,7 +15,7 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
   private _counter = 0;
 
-  transformModel(args: OmniModelTransformerArgs<ParserOptions>): void {
+  transformModel(args: OmniModelTransformerArgs): void {
 
     const map = new Map<OmniType, OmniType>();
 

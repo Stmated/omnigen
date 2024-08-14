@@ -27,7 +27,7 @@ export class LoggerFactory {
    * Creates a logger with the specified name.
    * Usually the node constant: import.meta.url
    *
-   * @param name A simple name, or filename. Avoid long names.
+   * @param name - A simple name, or filename. Avoid long names.
    * @returns A new logger
    */
   public static create(name: string): BaseLogger {

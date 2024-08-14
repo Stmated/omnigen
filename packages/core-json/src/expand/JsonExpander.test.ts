@@ -48,8 +48,8 @@ describe('JsonExpander', () => {
               {path: '/baz', with: 'before-$0-after'},
             ],
           } satisfies ExpandOptions,
-          'bar': 'BarValue',
-          'baz': 'BazValue',
+          bar: 'BarValue',
+          baz: 'BazValue',
         },
       ],
     };
@@ -76,8 +76,8 @@ describe('JsonExpander', () => {
               {path: '/baz', with: 'before-$1-after'},
             ],
           } satisfies ExpandOptions,
-          'bar': 'BarValue',
-          'baz': 'BazValue',
+          bar: 'BarValue',
+          baz: 'BazValue',
         },
         {
           'x-expand': {
@@ -87,8 +87,8 @@ describe('JsonExpander', () => {
               {path: '/buzz', with: 'before-$1-after', transform: 'uppercase'},
             ],
           } satisfies ExpandOptions,
-          'fizz': 'FizzValue',
-          'buzz': 'BuzzValue',
+          fizz: 'FizzValue',
+          buzz: 'BuzzValue',
         },
       ],
     };

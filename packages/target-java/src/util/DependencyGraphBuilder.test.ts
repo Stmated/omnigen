@@ -1,7 +1,10 @@
 import {
-  DEFAULT_MODEL_TRANSFORM_OPTIONS, DEFAULT_PARSER_OPTIONS,
+  DEFAULT_MODEL_TRANSFORM_OPTIONS,
+  DEFAULT_PARSER_OPTIONS,
   OmniCompositionType,
-  OmniEndpoint, OmniInterfaceOrObjectType, OmniItemKind,
+  OmniEndpoint,
+  OmniInterfaceOrObjectType,
+  OmniItemKind,
   OmniModel,
   OmniObjectType,
   OmniSuperTypeCapableType,
@@ -10,11 +13,8 @@ import {
 } from '@omnigen/api';
 import {JavaPotentialClassType, JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
-import {
-  OmniUtil,
-  SimplifyInheritanceModelTransformer,
-} from '@omnigen/core';
-import {describe, test, expect} from 'vitest';
+import {OmniUtil, SimplifyInheritanceModelTransformer} from '@omnigen/core';
+import {describe, expect, test} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -366,20 +366,17 @@ function assertMap<T extends OmniType>(expected: Map<T, T[]>, given: Map<T, T[]>
 }
 
 const inlineClassWithProp = (name: string): OmniObjectType => {
-  const inline: OmniObjectType = {
+  return {
     kind: OmniTypeKind.OBJECT,
-    properties: [],
+    properties: [
+      {
+        kind: OmniItemKind.PROPERTY,
+        name: `${name}Property`,
+        type: {kind: OmniTypeKind.INTEGER},
+      },
+    ],
     name: `${name}Class`,
   };
-  inline.properties = [
-    {
-      kind: OmniItemKind.PROPERTY,
-      name: `${name}Property`,
-      owner: inline,
-      type: {kind: OmniTypeKind.INTEGER},
-    },
-  ];
-  return inline;
 };
 
 function getAsInterface(model: OmniModel, type: OmniType): OmniInterfaceOrObjectType | undefined {

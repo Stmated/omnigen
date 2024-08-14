@@ -172,8 +172,6 @@ class CamelCase {
       input = toUpperCase(input.charAt(0)) + input.slice(1);
     }
 
-    const n = CamelCase.postProcess(input, toUpperCase);
-
-    return n;
+    return CamelCase.postProcess(input, toUpperCase);
   }
 }

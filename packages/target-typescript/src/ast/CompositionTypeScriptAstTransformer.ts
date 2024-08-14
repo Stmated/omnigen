@@ -92,9 +92,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
         const replacementNode = typesToReplace.get(n);
         if (replacementNode) {
           return replacementNode;
-        } /* else if (modelTypeReplacements.has(n.omniType)) {
-          return args.root.getAstUtils().createTypeNode(modelTypeReplacements.get(n.omniType)!);
-        }*/ else if (OmniUtil.isComposition(n.omniType)) {
+        } else if (OmniUtil.isComposition(n.omniType)) {
           return args.root.getAstUtils().createTypeNode(n.omniType);
         }
 

@@ -1,5 +1,4 @@
-import {OmniModelTransformer, OmniModelTransformerArgs, OmniTypeKind, ParserOptions} from '@omnigen/api';
-import {OmniUtil} from '@omnigen/core';
+import {OmniModelTransformer, OmniModelTransformerArgs} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

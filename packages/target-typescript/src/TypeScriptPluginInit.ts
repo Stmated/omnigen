@@ -9,7 +9,6 @@ import {
   ZodPackageOptionsContext,
   ZodRenderersContext,
   ZodTargetFeaturesContext,
-  ZodTargetOptionsContext,
 } from '@omnigen/core-plugin';
 import {
   ClassToInterfaceTypeScriptAstTransformer,
@@ -31,7 +30,6 @@ import {
   ParserOptions,
   TargetOptions,
   ZodAstNodeContext,
-  ZodParserOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
 import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
@@ -44,10 +42,12 @@ import {
   AddConstructorAstTransformer,
   AddFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
-  AddObjectDeclarationsCodeAstTransformer, ElevatePropertiesModelTransformer,
+  AddObjectDeclarationsCodeAstTransformer,
+  ElevatePropertiesModelTransformer,
   InnerTypeCompressionAstTransformer,
   MethodToGetterCodeAstTransformer,
-  PackageResolverAstTransformer, PrettyCodeAstTransformer,
+  PackageResolverAstTransformer,
+  PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
   RemoveEnumFieldsCodeAstTransformer,
   ReorderMembersAstTransformer,
@@ -64,10 +64,6 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
-
-// export const ZodParserOptionsContext = z.object({
-//   parserOptions: ZodParserOptions,
-// });
 
 export const ZodTypeScriptOptionsContext = z.object({
   tsOptions: ZodTypeScriptOptions,
@@ -202,7 +198,6 @@ export const TypeScriptPlugin = createPlugin(
 
     const options: PackageOptions & TypeScriptOptions = {
       ...ctx.tsOptions,
-      // ...ctx.targetOptions,
       ...ctx.packageOptions,
     };
 
@@ -243,7 +238,6 @@ export const TypeScriptRendererPlugin = createPlugin(
     const rootTsNode = ctx.astNode as Ts.TsRootNode;
 
     const renderer = createTypeScriptRenderer(rootTsNode, {
-      // ...DEFAULT_JAVA_OPTIONS,
       ...DEFAULT_PACKAGE_OPTIONS,
       ...DEFAULT_TARGET_OPTIONS,
       ...ctx.tsOptions,

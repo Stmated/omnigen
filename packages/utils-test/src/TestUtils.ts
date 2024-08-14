@@ -1,40 +1,17 @@
-import {
-  OmniCompositionType,
-  OmniSuperTypeCapableType,
-  OmniObjectType,
-  OmniProperty,
-  OmniPropertyOwner,
-  OmniType,
-  OmniTypeKind,
-  TypeName,
-  VisitResult, OmniItemKind,
-} from '@omnigen/api';
-import {expect} from 'vitest';
-
-type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<OmniProperty, 'owner'>>;
+import {OmniCompositionType, OmniItemKind, OmniObjectType, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TypeName} from '@omnigen/api';
 
 export type MapArg<T> = Array<[T, Array<T>]>;
 
 export class TestUtils {
 
-  public static obj(name: TypeName, extendedBy?: OmniSuperTypeCapableType, properties?: OmniPropertyOrphan[]): OmniObjectType {
-    const omniClass: OmniObjectType = {
+  public static obj(name: TypeName, extendedBy?: OmniSuperTypeCapableType, properties?: OmniProperty[]): OmniObjectType {
+
+    return {
       name: name,
       kind: OmniTypeKind.OBJECT,
       extendedBy: extendedBy,
-      properties: [],
+      properties: properties ?? [],
     };
-
-    if (properties) {
-      omniClass.properties = properties.map(it => {
-        return {
-          ...it,
-          owner: omniClass,
-        };
-      });
-    }
-
-    return omniClass;
   }
 
   public static and<T extends OmniType>(...types: T[]): OmniCompositionType<T, typeof OmniTypeKind.INTERSECTION> {
@@ -44,43 +21,12 @@ export class TestUtils {
     };
   }
 
-  public static prop(name: string, type: OmniType, owner?: OmniPropertyOwner): OmniProperty | OmniPropertyOrphan {
-    if (owner) {
-      return {
-        kind: OmniItemKind.PROPERTY,
-        name: name,
-        type: type,
-        owner: owner,
-      };
-    } else {
-      return {
-        kind: OmniItemKind.PROPERTY,
-        name: name,
-        type: type,
-      };
-    }
-  }
-
-  public static flatten<T>(result: VisitResult<T>): T | undefined {
-
-    if (!result) {
-      return undefined;
-    }
-
-    if (Array.isArray(result)) {
-      for (const item of result) {
-        if (item) {
-          const flattened = TestUtils.flatten(item);
-          if (flattened) {
-            return flattened as T;
-          }
-        }
-      }
-
-      return undefined;
-    }
-
-    return result;
+  public static prop(name: string, type: OmniType): OmniProperty {
+    return {
+      kind: OmniItemKind.PROPERTY,
+      name: name,
+      type: type,
+    };
   }
 
   public static map<T>(arg: MapArg<T>): Map<T, T[]> {
@@ -90,10 +36,5 @@ export class TestUtils {
     }
 
     return map;
-  }
-
-  public static equalsRegex(given: string[], expected: string[]): void {
-
-    expect(given).toHaveLength(expected.length);
   }
 }

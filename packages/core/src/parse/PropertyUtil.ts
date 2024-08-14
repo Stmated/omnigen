@@ -1,10 +1,9 @@
 import {
-  Arrayable,
+  OmniItemKind, OmniOwnedProperty,
   OmniProperty,
-  OmniPropertyOrphan,
   OmniPropertyOwner,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, PartialProp,
   PropertiesInformation,
 } from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.js';
@@ -16,15 +15,16 @@ type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
 
 export class PropertyUtil {
 
-  public static addProperty(owner: OmniPropertyOwner, property: OmniPropertyOrphan): OmniProperty {
+  public static addProperty(owner: OmniPropertyOwner, property: PartialProp<OmniProperty, 'kind'>, as?: OmniType): OmniProperty {
 
     let propertyWithOwner: OmniProperty;
-    if (property.owner) {
+    if (property.kind && !as) {
       propertyWithOwner = property as OmniProperty;
     } else {
       propertyWithOwner = {
         ...property,
-        owner: owner,
+        kind: property.kind ?? OmniItemKind.PROPERTY,
+        type: as ?? property.type,
       };
     }
 
@@ -59,10 +59,15 @@ export class PropertyUtil {
   ): PropertiesInformation {
 
     let commonPropertyNames: string[] | undefined = undefined;
-    const propertiesPerType = types.map(t => OmniUtil.getPropertiesOf(t));
-    for (const properties of propertiesPerType) {
+    const pairs: Array<OmniOwnedProperty[]> = types.filter(OmniUtil.isPropertyOwner).map(t => {
+      return OmniUtil.getPropertiesOf(t).map(p => ({
+        owner: t,
+        property: p,
+      }));
+    });
+    for (const properties of pairs) {
 
-      const propertyNames = properties.map(p => OmniUtil.getPropertyName(p.name)).filter(isDefined);
+      const propertyNames = properties.map(p => OmniUtil.getPropertyName(p.property.name)).filter(isDefined);
       if (commonPropertyNames == undefined) {
         commonPropertyNames = propertyNames;
       } else {
@@ -82,12 +87,12 @@ export class PropertyUtil {
 
     for (const propertyName of (commonPropertyNames || [])) {
 
-      const commonPropertiesWithSameName = propertiesPerType.flatMap(
-        perType => perType.filter(p => OmniUtil.isPropertyNameEqual(p.name, propertyName)),
+      const commonPropertiesWithSameName = pairs.flatMap(
+        perType => perType.filter(p => OmniUtil.isPropertyNameEqual(p.property.name, propertyName)),
       );
 
       const propertyEquality = this.getLowestAllowedPropertyEquality(
-        commonPropertiesWithSameName,
+        commonPropertiesWithSameName.map(it => it.property),
         bannedTypeDiff,
         bannedPropDiff,
         targetFeatures,
@@ -97,7 +102,7 @@ export class PropertyUtil {
       if (propertyEquality) {
 
         const distinctTypes = OmniUtil.getDistinctTypes(
-          commonPropertiesWithSameName.map(it => it.type),
+          commonPropertiesWithSameName.map(it => it.property.type),
           targetFeatures,
         );
 

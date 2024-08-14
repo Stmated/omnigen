@@ -82,8 +82,8 @@ test('swap-recursively', () => {
     ],
   };
 
-  obj.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.STRING}, name: 'P1', owner: obj});
-  obj.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.INTEGER}, name: 'P2', owner: obj});
+  obj.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.STRING}, name: 'P1'});
+  obj.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.INTEGER}, name: 'P2'});
 
   const model: OmniModel = {
     name: 'my-model',
@@ -129,9 +129,9 @@ test('swap-owner', () => {
     properties: [],
   };
 
-  const p1: OmniProperty = {kind: OmniItemKind.PROPERTY, type: obj2, name: 'P1', owner: obj1};
-  const p2: OmniProperty = {kind: OmniItemKind.PROPERTY, type: obj3, name: 'P2', owner: obj2};
-  const p3: OmniProperty = {kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.DOUBLE}, name: 'P3', owner: obj3};
+  const p1: OmniProperty = {kind: OmniItemKind.PROPERTY, type: obj2, name: 'P1'};
+  const p2: OmniProperty = {kind: OmniItemKind.PROPERTY, type: obj3, name: 'P2'};
+  const p3: OmniProperty = {kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.DOUBLE}, name: 'P3'};
 
   obj1.properties.push(p1);
   obj2.properties.push(p2);
@@ -154,11 +154,7 @@ test('swap-owner', () => {
       [OmniItemKind.PROPERTY]: (n, a) => {
         if (n === p1) {
           calls++;
-          return {
-            ...n,
-            owner: obj2,
-            debug: OmniUtil.addDebug(n.debug, `From call ${calls}`),
-          };
+          return OmniUtil.addDebugTo(n, `From call ${calls}`);
         }
         return a.base.PROPERTY(n, a);
       },
@@ -183,23 +179,23 @@ test('swap-owner', () => {
   const reducedObj2 = reduced?.types[1] as OmniObjectType;
   const reducedObj3 = reduced?.types[2] as OmniObjectType;
 
-  const ownerReducedObj2FromObj1 = reducedObj1.properties[0].owner as OmniObjectType;
-  const ownerReducedObj2FromObj2 = reducedObj2.properties[0].owner as OmniObjectType;
-  const ownerReducedObj3 = reducedObj3.properties[0].owner as OmniObjectType;
+  // const ownerReducedObj2FromObj1 = reducedObj1.properties[0].owner as OmniObjectType;
+  // const ownerReducedObj2FromObj2 = reducedObj2.properties[0].owner as OmniObjectType;
+  // const ownerReducedObj3 = reducedObj3.properties[0].owner as OmniObjectType;
 
   expect(reducedObj1).not.toBe(originalObj1);
   expect(reducedObj2).toBe(originalObj2);
   expect(reducedObj3).toBe(originalObj3);
 
   expect(endpointReducedObj).toBe(reducedObj1);
-  expect(ownerReducedObj2FromObj1).toBe(ownerReducedObj2FromObj2);
+  // expect(ownerReducedObj2FromObj1).toBe(ownerReducedObj2FromObj2);
 
-  expect(ownerReducedObj2FromObj2).toBe(reducedObj2);
-  expect(ownerReducedObj3).toBe(reducedObj3);
+  // expect(ownerReducedObj2FromObj2).toBe(reducedObj2);
+  // expect(ownerReducedObj3).toBe(reducedObj3);
 
   expect(endpointReducedObj.kind).toEqual(OmniTypeKind.OBJECT);
-  expect(endpointReducedObj.properties[0].owner).not.toBe(endpointReducedObj);
-  expect(endpointReducedObj.properties[0].owner).toBe(reducedObj2);
+  // expect(endpointReducedObj.properties[0].owner).not.toBe(endpointReducedObj);
+  // expect(endpointReducedObj.properties[0].owner).toBe(reducedObj2);
 
   expect(reducedObj2.properties[0].name).toBe(reducedObj2.properties[0].name);
   expect(reducedObj2.properties[0]).toBe(reducedObj2.properties[0]);
@@ -225,9 +221,9 @@ test('swap-recursively-2', () => {
     properties: [],
   };
 
-  obj1.properties.push({kind: OmniItemKind.PROPERTY, type: obj2, name: 'P1', owner: obj1});
-  obj2.properties.push({kind: OmniItemKind.PROPERTY, type: obj3, name: 'P2', owner: obj2});
-  obj3.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.DOUBLE}, name: 'P3', owner: obj3});
+  obj1.properties.push({kind: OmniItemKind.PROPERTY, type: obj2, name: 'P1'});
+  obj2.properties.push({kind: OmniItemKind.PROPERTY, type: obj3, name: 'P2'});
+  obj3.properties.push({kind: OmniItemKind.PROPERTY, type: {kind: OmniTypeKind.DOUBLE}, name: 'P3'});
 
   const model: OmniModel = {
     name: 'my-model',

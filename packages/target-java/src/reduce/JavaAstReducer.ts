@@ -21,5 +21,3 @@ export const createJavaReducer = (partial?: Partial<JavaReducer>): Readonly<Java
     ...createCodeReducer(partial),
   };
 };
-
-export const DefaultJavaReducer = createJavaReducer();

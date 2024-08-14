@@ -1,10 +1,10 @@
 import {
   AstTargetFunctions,
   AstTransformer,
-  AstTransformerArguments, OmniGenericSourceIdentifierType,
+  AstTransformerArguments,
+  OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniGenericTargetType,
-  OmniHardcodedReferenceType,
   OmniType,
   OmniTypeKind,
   TargetOptions,
@@ -32,14 +32,6 @@ export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode,
           if (n.omniType.kind === OmniTypeKind.DICTIONARY) {
 
             const type = n.omniType;
-            // const dictionaryType = new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'Record'}});
-            // const keyType = args.root.getAstUtils().createTypeNode(type.keyType, true);
-            // const valueType = args.root.getAstUtils().createTypeNode(type.valueType, true);
-            //
-            // return new Code.GenericType(type, dictionaryType, [keyType, valueType]);
-
-            // const targetKeyType: OmniType = {kind: OmniTypeKind.STRING};
-            // const targetValueType: OmniType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'any'}};
 
             const source = ToTypeScriptAstTransformer.getMapGenericSource(n.implementation ?? false);
             const genericTargetType: OmniGenericTargetType = {

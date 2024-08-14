@@ -25,7 +25,7 @@ import {
 import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from '../PropertyUtil.ts';
 import {OmniUtil} from '../OmniUtil.ts';
-import {Case, CreateMode, Sorters} from '../../util';
+import {Case, CreateMode, isDefined, Sorters} from '../../util';
 import {Naming} from '../Naming.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -164,16 +164,16 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     genericSource.sourceIdentifiers.push(genericSourceIdentifier);
 
     if (!options.generificationBoxAllowed) {
-      if (info.properties.map(it => it.type).find(it => !OmniUtil.isGenericAllowedType(it))) {
+      if (info.properties.map(it => it.property.type).find(it => !OmniUtil.isGenericAllowedType(it))) {
         logger.warn(`Skipping '${info.propertyName}' since some property types cannot be made generic`);
         return model;
       }
     }
 
-    for (const property of info.properties) {
+    for (const p of info.properties) {
 
       // Get or create the GenericTarget, which we found based on the property owner.
-      let genericTarget = ownerToGenericTargetMap.get(property.owner);
+      let genericTarget = ownerToGenericTargetMap.get(p.owner);
       if (!genericTarget) {
         genericTarget = {
           kind: OmniTypeKind.GENERIC_TARGET,
@@ -191,7 +191,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         if (ownerToGenericTargetMap.size == 0) {
 
           // TODO: This does not work, since we rebuild the whole model for every iteration, so the target identifiers are added to a dead model!
-          // TODO: Need to rethink the whole generic functionality to make it work the new reducers, to do all things in proper passes.
+          // TODO: Need to rethink the whole generic functionality to make it work with the new reducers, to do all things in proper passes.
           // const reducer = new DefaultOmniReducerDispatcher({
           //   ANY: n => {
           //     if (n === superType) {
@@ -227,29 +227,29 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
           OmniUtil.swapType(model, superType, genericSource);
         }
 
-        ownerToGenericTargetMap.set(property.owner, genericTarget);
+        ownerToGenericTargetMap.set(p.owner, genericTarget);
 
-        if ('extendedBy' in property.owner) {
+        if ('extendedBy' in p.owner) {
 
           // Replace the extended by from the original type to the generic target type.
-          property.owner.extendedBy = genericTarget;
+          p.owner.extendedBy = genericTarget;
         }
       }
 
       const targetIdentifier: OmniGenericTargetIdentifierType = {
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-        type: property.type,
+        type: p.property.type,
         sourceIdentifier: genericSourceIdentifier,
       };
       genericTarget.targetIdentifiers.push(targetIdentifier);
 
       // Remove the non-generic property from the original property owner.
-      const idx = property.owner.properties.indexOf(property);
+      const idx = p.owner.properties.indexOf(p.property);
       if (idx == -1) {
-        throw new Error(`Could not find property '${OmniUtil.getPropertyNameOrPattern(property.name)}' in owner ${OmniUtil.describe(property.owner)}, something is wrong with the generic hoisting`);
+        throw new Error(`Could not find property '${OmniUtil.getPropertyNameOrPattern(p.property.name)}' in owner ${OmniUtil.describe(p.owner)}, something is wrong with the generic hoisting`);
       }
 
-      property.owner.properties.splice(idx, 1);
+      p.owner.properties.splice(idx, 1);
     }
 
     if (genericSource.of.kind === OmniTypeKind.OBJECT) {
@@ -258,30 +258,25 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         kind: OmniItemKind.PROPERTY,
         name: info.propertyName,
         type: genericSourceIdentifier,
-        owner: genericSource.of,
         debug: OmniUtil.addDebug(
-          info.properties.flatMap(it => {
-            const debug = it.debug || [];
-            const debugArray = (typeof debug === 'string') ? [debug] : debug;
-            return debugArray.map(d => `${Naming.getNameString(it.owner)}: ${d}`);
-          }),
+          info.properties.flatMap(it => OmniUtil.prefixDebug(it.property.debug, Naming.getNameString(it.owner))).filter(isDefined),
           `Merged into one generic property`,
         ),
       };
 
-      if (info.properties.every(it => it.readOnly)) {
+      if (info.properties.every(it => it.property.readOnly)) {
         newProperty.readOnly = true;
       }
-      if (info.properties.every(it => it.writeOnly)) {
+      if (info.properties.every(it => it.property.writeOnly)) {
         newProperty.writeOnly = true;
       }
-      if (info.properties.every(it => it.required)) {
+      if (info.properties.every(it => it.property.required)) {
         newProperty.required = true;
       }
-      if (info.properties.every(it => it.deprecated)) {
+      if (info.properties.every(it => it.property.deprecated)) {
         newProperty.deprecated = true;
       }
-      if (info.properties.every(it => it.abstract)) {
+      if (info.properties.every(it => it.property.abstract)) {
         newProperty.abstract = true;
       }
 

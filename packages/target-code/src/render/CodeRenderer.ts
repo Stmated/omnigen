@@ -1,5 +1,5 @@
-import {AstNode, AstVisitor, OmniArrayKind, OmniTypeKind, RenderedCompilationUnit, Renderer, TypeUseKind, VisitResult} from '@omnigen/api';
-import {CodeOptions, CodeUtil, CodeVisitor, createCodeVisitor} from '../';
+import {AstNode, AstVisitor, OmniArrayKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/api';
+import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/CodeAst';

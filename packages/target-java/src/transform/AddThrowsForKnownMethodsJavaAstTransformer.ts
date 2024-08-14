@@ -2,7 +2,7 @@ import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJava
 import {ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniType, OmniTypeKind, RootAstNode} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil, Visitor} from '@omnigen/core';
+import {Visitor} from '@omnigen/core';
 import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver.ts';
 import {JACKSON_OBJECT_MAPPER} from './JacksonJavaAstTransformer.ts';
 
@@ -83,12 +83,7 @@ export class AddThrowsForKnownMethodsJavaAstTransformer extends AbstractJavaAstT
         }
 
         const filtered = info.exceptions.filter(it => {
-
-          if (this.hasSuperException(it, info.exceptions, nameResolver)) {
-            return false;
-          }
-
-          return true;
+          return !this.hasSuperException(it, info.exceptions, nameResolver);
         });
 
         for (const exception of filtered) {

@@ -1,8 +1,6 @@
 import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.js';
 import {AstTargetFunctions, OmniArrayKind, OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniGenericTargetType, OmniType, OmniTypeKind, UnknownKind} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
-import {assertDefined} from '@omnigen/core';
-import {render} from '@omnigen/target-code';
 
 export class ToHardCodedTypeJavaAstTransformer extends AbstractJavaAstTransformer {
 

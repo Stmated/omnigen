@@ -1,8 +1,8 @@
 import * as JavaParser from 'java-parser';
-import {AstNode, ModelTransformOptions, PackageOptions, RenderedCompilationUnit} from '@omnigen/api';
-import {createJavaVisitor, Java, JavaOptions, SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
+import {ModelTransformOptions, PackageOptions, RenderedCompilationUnit} from '@omnigen/api';
+import {JavaOptions, SerializationLibrary, ZodJavaOptions} from '@omnigen/target-java';
 import {ParsedJavaTestVisitor} from '../util';
-import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS, TestUtils} from '@omnigen/utils-test';
+import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
@@ -64,9 +64,7 @@ export class JavaTestUtils {
         ...DEFAULT_SPECIFIC_TEST_JAVA_OPTIONS,
       },
       arguments: {
-        // ...(options.parserOptions),
         ...(options.modelTransformOptions),
-        // ...(options.targetOptions),
         ...(options.packageOptions),
         ...(options.javaOptions),
         ...(options.arguments),
@@ -98,38 +96,6 @@ export class JavaTestUtils {
     visitor.visit(cst);
 
     return visitor;
-  }
-
-  public static getCompilationUnits(root: AstNode): Java.CompilationUnit[] {
-
-    const array: Java.CompilationUnit[] = [];
-    const visitor = createJavaVisitor({
-      visitCompilationUnit: node => array.push(node),
-    });
-
-    root.visit(visitor);
-
-    return array;
-  }
-
-  public static getCompilationUnit(root: AstNode, name: string): Java.CompilationUnit {
-
-    const visitor = createJavaVisitor({
-      visitCompilationUnit: node => {
-        if (node.children[0].name.value == name) {
-          return node;
-        } else {
-          return undefined;
-        }
-      },
-    });
-
-    const result = TestUtils.flatten(visitor.visit(root, visitor));
-    if (!result) {
-      throw new Error(`Could not find '${name}'`);
-    }
-
-    return result;
   }
 
   public static cuToContentMap(compilationUnits: RenderedCompilationUnit[]) {

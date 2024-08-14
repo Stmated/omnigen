@@ -10,7 +10,6 @@ test('lombok', async ({task}) => {
   const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
     modelTransformOptions: {generifyTypes: false, elevateProperties: false},
     javaOptions: {
-      // ...DEFAULT_TEST_JAVA_OPTIONS,
       fieldAccessorMode: FieldAccessorMode.LOMBOK,
       serializationLibrary: SerializationLibrary.JACKSON,
       serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
@@ -18,9 +17,6 @@ test('lombok', async ({task}) => {
       compressSoloReferencedTypes: false,
       compressUnreferencedSubTypes: false,
     },
-    // targetOptions: {
-    //   ...DEFAULT_TEST_TARGET_OPTIONS,
-    // },
   });
 
   const fileContent = fileContents.get('In.java');

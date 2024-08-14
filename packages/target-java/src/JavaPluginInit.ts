@@ -43,7 +43,8 @@ import {
   ParserOptions,
   TargetOptions,
   ZodAstNodeContext,
-  ZodParserOptions, ZodTargetOptions,
+  ZodParserOptions,
+  ZodTargetOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
 import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
@@ -59,11 +60,13 @@ import {
   AddConstructorAstTransformer,
   AddFieldsAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
-  AggregateIntersectionsModelTransformer, ElevatePropertiesModelTransformer,
+  AggregateIntersectionsModelTransformer,
+  ElevatePropertiesModelTransformer,
   InnerTypeCompressionAstTransformer,
   InterfaceExtractorModelTransformer,
   MergeLargeUnionLateModelTransformer,
-  PackageResolverAstTransformer, PrettyCodeAstTransformer,
+  PackageResolverAstTransformer,
+  PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
@@ -72,11 +75,7 @@ import {
   SimplifyUnnecessaryCompositionsModelTransformer,
   ToConstructorBodySuperCallAstTransformer,
 } from '@omnigen/target-code';
-import {SingleFileJavaAstTransformer} from './transform/SingleFileJavaAstTransformer.ts';
-import {ToJavaAstTransformer} from './transform/ToJavaAstTransformer.ts';
-import {SimplifyTypePathsJavaAstTransformer} from './transform/SimplifyTypePathsJavaAstTransformer.ts';
-import {BeanValidationJavaAstTransformer} from './transform/BeanValidationJavaAstTransformer.ts';
-import {MapMemberAccessToJavaAstTransformer} from './transform/MapMemberAccessToJavaAstTransformer.ts';
+import {BeanValidationJavaAstTransformer, MapMemberAccessToJavaAstTransformer, SimplifyTypePathsJavaAstTransformer, SingleFileJavaAstTransformer, ToJavaAstTransformer} from './transform';
 
 const logger = LoggerFactory.create(import.meta.url);
 

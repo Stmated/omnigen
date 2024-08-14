@@ -152,13 +152,7 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('additional-properties.json', {
-      // targetOptions: {
-      //   ...,
-      //
-      // },
       javaOptions: {
-        // ...DEFAULT_TEST_TARGET_OPTIONS,
-        // ...DEFAULT_TEST_JAVA_OPTIONS,
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         singleFile: true,

@@ -88,9 +88,9 @@ describe('JsonSchemaMigrator', () => {
         obj: {
           type: 'object',
           properties: {
-            name: {'type': 'string'},
-            credit_card: {'type': 'number'},
-            billing_address: {'type': 'string'},
+            name: {type: 'string'},
+            credit_card: {type: 'number'},
+            billing_address: {type: 'string'},
             age: {
               type: 'number',
               exclusiveMinimum: true,
@@ -114,14 +114,14 @@ describe('JsonSchemaMigrator', () => {
                 {$ref: '#/definitions/foo'},
                 {$ref: '#/definitions/bar'},
               ],
-              additionalItems: {'$ref': '#/definitions/baz'},
+              additionalItems: {$ref: '#/definitions/baz'},
             },
           },
           dependencies: {
             credit_card: ['name'], // Array of property names, means "name" is required when "credit_card" is present.
             name: { // JSON schema means the schema applies when "name" is present.
               properties: {
-                billing_address: {'type': 'string'},
+                billing_address: {type: 'string'},
               },
               required: ['billing_address'],
             },

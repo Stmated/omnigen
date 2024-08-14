@@ -64,8 +64,6 @@ export class CodeUtil {
 
   /**
    * Takes the given name and makes it safe and then makes it into a proper argument name.
-   *
-   * @param name
    */
   public static getPrettyParameterName(name: string): string {
 

@@ -61,22 +61,24 @@ export interface OmniPropertyNamePattern {
 
 export type OmniPropertyName = string | OmniPropertyNames | OmniPropertyNamePattern;
 
+export interface OmniOwnedProperty {
+  owner: OmniPropertyOwner;
+  property: OmniProperty;
+}
+
+export type DebugValue = string | string[] | undefined;
+
 export interface OmniProperty extends OmniItemBase<typeof OmniItemKind.PROPERTY> {
 
   name: OmniPropertyName;
 
   type: OmniType;
-  /**
-   * TODO: REMOVE! It is ugly and should not really be needed...
-   * @deprecated Find some other way of handling this per-context, like keeping an informational stack
-   */
-  owner: OmniPropertyOwner;
 
   description?: string | undefined;
   summary?: string | undefined;
   deprecated?: boolean;
 
-  debug?: string | string[] | undefined;
+  debug?: DebugValue;
 
   /**
    * TODO: This and the other booleans below should rather be part of the type, since it can have significance depending on target language
@@ -99,7 +101,7 @@ export interface OmniProperty extends OmniItemBase<typeof OmniItemKind.PROPERTY>
   annotations?: OmniAnnotation[];
 }
 
-export type OmniPropertyOrphan = Omit<OmniProperty, 'owner'> & Partial<Pick<OmniProperty, 'owner'>>;
+export type PartialProp<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 // TODO: Create an "OR" type and use that instead of types that lose information by going to a common denominator?
 
@@ -317,7 +319,7 @@ export interface OmniArrayType<Item extends OmniType = OmniType> extends OmniBas
   possiblySingle?: boolean;
 }
 
-export type OmniPropertyOwner = OmniObjectType | OmniArrayPropertiesByPositionType;
+export type OmniPropertyOwner = Extract<OmniType, Pick<OmniObjectType, 'properties'>>;
 
 /**
  * Similar to GenericArrayType, but this solves issue of having a list of types in a static order.

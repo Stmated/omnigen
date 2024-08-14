@@ -1,5 +1,4 @@
 import {RootAstNode} from '../ast';
-import {Options} from '../options';
 import {OmniModel} from '../parse';
 import {TargetFeatures, TargetOptions} from '../interpret';
 import {ExternalSyntaxTree} from './ExternalSyntaxTree';

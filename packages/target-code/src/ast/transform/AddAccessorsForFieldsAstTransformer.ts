@@ -1,5 +1,5 @@
-import {AstNode, AstTransformer, AstTransformerArguments, Direction, OmniPrimitiveType, OmniType, OmniTypeKind, ParserOptions, TargetFeatures, TargetOptions} from '@omnigen/api';
-import {AbortVisitingWithResult, Case, isDefined, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
+import {AstNode, AstTransformer, AstTransformerArguments, Direction, OmniPrimitiveType, OmniType, OmniTypeKind, TargetFeatures} from '@omnigen/api';
+import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../Code';
 import {CodeOptions, SerializationPropertyNameMode} from '../../options/CodeOptions';
@@ -200,7 +200,7 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
   private static addAccessorForConstField(
     args: AddAccessorsArgs,
     fieldComments: Code.Comment | undefined,
-    fieldType: OmniPrimitiveType & {literal: true},
+    fieldType: OmniPrimitiveType & { literal: true },
     superFields: Code.Field[] | undefined,
   ): Code.MethodDeclaration | undefined {
 
@@ -253,7 +253,7 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
     args: AddAccessorsArgs,
     superField: Code.Field,
     fieldComments: Code.Comment | undefined,
-    fieldType: OmniPrimitiveType & {literal: true},
+    fieldType: OmniPrimitiveType & { literal: true },
   ): Code.MethodDeclaration {
 
     const fieldIdentifier = CodeAstUtils.getFieldPropertyNameIdentifier(args.field);

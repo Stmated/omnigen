@@ -15,12 +15,7 @@ import {
   ZodTypeLibraryContext,
 } from '@omnigen/core-plugin';
 import {z} from 'zod';
-import {
-  ConflictingIntersectionModelTransformer,
-  GenericsModelTransformer,
-  SchemaFile,
-  SimplifyInheritanceModelTransformer,
-} from './parse';
+import {ConflictingIntersectionModelTransformer, SchemaFile, SimplifyInheritanceModelTransformer} from './parse';
 import {
   OmniModel2ndPassTransformer,
   OmniModelTransformer,

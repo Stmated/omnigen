@@ -171,8 +171,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
    * Register a custom type as if it actually existed inside the schema.
    * Can be used to make sure that the type is found when converting from an OmniModel into a syntax tree.
    *
-   * @param className The name of the class to register, it will be faked as having an uri in a document
-   * @param type The type that should be force-registered
+   * @param className - The name of the class to register, it will be faked as having an uri in a document
+   * @param type - The type that should be force-registered
    */
   public registerCustomTypeManually(className: string, type: OmniType): void {
     this._typeMap.set(`#/custom/schemas/${className}`, type);
@@ -430,7 +430,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
             name: new RegExp(propertyPattern),
           },
           type: additionalPropertiesType,
-          owner: type,
         });
       }
     }
@@ -475,7 +474,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
         kind: OmniItemKind.PROPERTY,
         name: additionalPropertiesPropertyName,
         type: additionalPropertiesType,
-        owner: type,
       });
     }
 
@@ -931,7 +929,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       kind: OmniItemKind.PROPERTY,
       name: JsonSchemaParser.getPreferredPropertyName(resolvedSchema, propertyName, this._options),
       type: propertyType.type,
-      owner: owner,
       debug: 'From JsonSchema',
       description: this.getSchemaProperty(resolvedSchema, obj => obj.description),
     };
@@ -1759,7 +1756,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
           kind: OmniItemKind.PROPERTY,
           name: key,
           type: propertyType,
-          owner: objectType,
         });
       }
 

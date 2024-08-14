@@ -1,6 +1,5 @@
 
 export * from './AbstractJavaAstTransformer.ts';
-export * from './SiblingTypeCompressionAstTransformer.ts';
 export * from './AddJakartaValidationAstTransformer.ts';
 export * from './ToHardCodedTypeJavaAstTransformer.ts';
 export * from './AddLombokAstTransformer.ts';
@@ -15,3 +14,7 @@ export * from './GroupExampleTextsToSectionAstTransformer';
 export * from './AddSubTypeHintsAstTransformer.ts';
 export * from './MapMemberAccessToJavaAstTransformer.ts';
 export * from './SimplifyGenericsJavaAstTransformer.ts';
+export * from './BeanValidationJavaAstTransformer.ts';
+export * from './SimplifyTypePathsJavaAstTransformer.ts';
+export * from './SingleFileJavaAstTransformer.ts';
+export * from './ToJavaAstTransformer.ts';

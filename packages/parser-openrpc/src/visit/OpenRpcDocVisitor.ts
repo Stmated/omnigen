@@ -1,5 +1,4 @@
-
-import {DocVisitorTransformer, ToResolved, ToSingle} from '@omnigen/parser-jsonschema';
+import {ToResolved, ToSingle} from '@omnigen/parser-jsonschema';
 import {OpenrpcDocument} from '@open-rpc/meta-schema';
 import {ToDefined} from '@omnigen/core';
 

@@ -20,6 +20,5 @@ export const ZodModelTransformOptions = ZodOptions.extend({
 
 export type IncomingModelTransformOptions = z.input<typeof ZodModelTransformOptions>;
 export type ModelTransformOptions = z.output<typeof ZodModelTransformOptions>;
-export type UnknownModelTransformOptions = IncomingModelTransformOptions | ModelTransformOptions;
 
 export const DEFAULT_MODEL_TRANSFORM_OPTIONS: Readonly<ModelTransformOptions> = ZodModelTransformOptions.parse({});

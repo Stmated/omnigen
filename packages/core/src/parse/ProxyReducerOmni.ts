@@ -1,10 +1,9 @@
 import {OmniItemKind, OmniModel, OmniNode, OmniType, OmniTypeKind} from '@omnigen/api';
-import {createProxyReducerCreator, ProxyReducerSpec} from './ProxyReducer.ts';
+import {ProxyReducer, ProxyReducerFactory, ProxyReducerSpec, ProxyReducerSpecs} from './ProxyReducer.ts';
 import {assertSuperType} from './Reducer.ts';
 import {assertDefined, assertGenericSuperType, isDefined} from '../util';
-import {ReduceReturnTypeOmni} from './ReducerOmni.ts';
 
-interface ProxyReduceReturnTypeOverride {
+interface ProxyReducerOmniNodeOverrides {
   [OmniTypeKind.BOOL]: OmniType | undefined,
   [OmniTypeKind.CHAR]: OmniType | undefined,
   [OmniTypeKind.DECIMAL]: OmniType | undefined,
@@ -37,7 +36,7 @@ interface ProxyReduceReturnTypeOverride {
   [OmniItemKind.MODEL]: OmniModel,
 }
 
-const DEFAULT_PROXY_REDUCER_OMNI_SPEC: ProxyReducerSpec<OmniNode, 'kind', ReduceReturnTypeOmni> = {
+const DEFAULT_PROXY_REDUCER_OMNI_SPEC: ProxyReducerSpec<OmniNode, 'kind', ProxyReducerOmniNodeOverrides> = {
 
   MODEL: (n, a) => {
     n.endpoints = n.endpoints.map(it => a.reducer.reduce(it)).filter(isDefined);
@@ -248,4 +247,20 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC: ProxyReducerSpec<OmniNode, 'kind', Reduce
   },
 };
 
-export const createProxyReducerOmni = createProxyReducerCreator<OmniNode, 'kind', ProxyReduceReturnTypeOverride>('kind', DEFAULT_PROXY_REDUCER_OMNI_SPEC);
+export class ProxyReducerOmni {
+
+  private static _factory?: ProxyReducerFactory<OmniNode, 'kind', ProxyReducerOmniNodeOverrides>;
+
+  public static factory(): NonNullable<typeof this._factory> {
+
+    if (!this._factory) {
+      this._factory = ProxyReducer.createFactory<OmniNode, 'kind', ProxyReducerOmniNodeOverrides>('kind', DEFAULT_PROXY_REDUCER_OMNI_SPEC);
+    }
+
+    return this._factory;
+  }
+
+  public static create(specs: ProxyReducerSpecs<OmniNode, 'kind', ProxyReducerOmniNodeOverrides>) {
+    return ProxyReducerOmni.factory()(specs);
+  }
+}

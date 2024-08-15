@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, ParserOptions, TargetOptions} from '@omnigen/api';
 import {TypeScriptOptions} from '../../options';
-import {createProxyReducerOmni, PROXY_POOL} from '@omnigen/core';
+import {ProxyReducerOmni} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -17,14 +17,16 @@ export class RemoveWildcardGenericParamTypeScriptModelTransformer implements Omn
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions>): void {
 
     // TODO: Redo back into an old visitor, since it more proven to actually work
-    const reducer = createProxyReducerOmni({
-      UNKNOWN: (n, a) => n.upperBound ? a.reducer.reduce(n.upperBound) : n,
+    const reducer = ProxyReducerOmni.create({
+      UNKNOWN: (n, a) => {
+        if (n.upperBound) {
+          return a.reducer.reduce(n.upperBound);
+        } else {
+          return n;
+        }
+      },
     });
     const original = args.model;
     args.model = reducer.reduce(original);
-    if (!PROXY_POOL.isUnused()) {
-      throw new Error(`It should be unused`);
-    }
-    // const i = 0;
   }
 }

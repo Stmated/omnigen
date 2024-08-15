@@ -1,5 +1,5 @@
 import {OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniTypeKind, OmniUnknownType, UnknownKind} from '@omnigen/api';
-import {ReducerOmni, OmniUtil} from '@omnigen/core';
+import {OmniUtil, ProxyReducerOmni} from '@omnigen/core';
 
 /**
  * If an object has no properties but has pattern properties that match anything and has any type, then it can be replaced with an `unknown` type.
@@ -8,7 +8,7 @@ export class SimplifyWildcardObjectsModelTransformer implements OmniModelTransfo
 
   transformModel(args: OmniModelTransformerArgs): void {
 
-    const reducer = new ReducerOmni({
+    const reducer = ProxyReducerOmni.create({
       OBJECT: (n, a) => {
         if (this.isEmptyOrSinglePatternProperty(n)) {
           return {
@@ -16,7 +16,7 @@ export class SimplifyWildcardObjectsModelTransformer implements OmniModelTransfo
             unknownKind: UnknownKind.OBJECT,
           } satisfies OmniUnknownType;
         }
-        return a.base.OBJECT(n, a);
+        return a.reducer.reduce(n); // .OBJECT(n, a);
       },
     });
     args.model = reducer.reduce(args.model);

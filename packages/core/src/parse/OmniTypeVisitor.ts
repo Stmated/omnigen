@@ -471,7 +471,7 @@ export class OmniTypeVisitor {
           if (OmniUtil.isPrimitive(input)) {
             break;
           }
-          throw new Error(`Do not know how to handle kind '${(input as any).kind || '?'}`);
+          throw new Error(`Do not know how to handle kind '${(input as any).kind || '?'}'`);
         }
       }
     } finally {

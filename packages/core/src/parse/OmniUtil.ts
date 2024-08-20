@@ -20,7 +20,7 @@ import {
   OmniHardcodedReferenceType,
   OmniInput,
   OmniKindComposition,
-  OmniModel,
+  OmniModel, OmniNode,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniOutput,
@@ -52,6 +52,8 @@ import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVi
 import {Naming} from './Naming';
 import {assertUnreachable, Case, CombineMode, CombineOptions, CreateMode} from '../util';
 import {PropertyUtil} from './PropertyUtil.ts';
+import {ProxyReducerOmni} from '../reducer/ProxyReducerOmni.ts';
+import {ProxyReducer} from '../reducer/ProxyReducer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -195,7 +197,7 @@ export class OmniUtil {
     return unwrapped;
   }
 
-  public static asSubType(type: OmniType | undefined): type is OmniSubTypeCapableType {
+  public static asSubType(type: OmniNode | undefined): type is OmniSubTypeCapableType {
 
     if (!type) {
       return false;
@@ -326,7 +328,7 @@ export class OmniUtil {
   /**
    * Not recursive. WARNING: Returns actual properties array reference, so do not modify it (unless that is what you want).
    */
-  public static getPropertiesOf(type: OmniType): ReadonlyArray<OmniProperty> {
+  public static getPropertiesOf(type: OmniNode): ReadonlyArray<OmniProperty> {
 
     if (OmniUtil.isPropertyOwner(type)) {
       return type.properties;
@@ -335,7 +337,7 @@ export class OmniUtil {
     return EMPTY_ARRAY;
   }
 
-  public static isPropertyOwner(type: OmniType): type is Extract<OmniType, Pick<OmniObjectType, 'properties'>> {
+  public static isPropertyOwner(type: OmniNode): type is Extract<OmniType, Pick<OmniObjectType, 'properties'>> {
     return type.kind === OmniTypeKind.OBJECT || type.kind === OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION;
   }
 
@@ -411,32 +413,73 @@ export class OmniUtil {
   public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]> {
 
     const map = new Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]>();
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-      if (!OmniUtil.asSubType(ctx.type)) {
-        return;
-      }
 
-      const subType = OmniUtil.getUnwrappedType(ctx.type);
-      if (!subType) {
-        return;
-      }
+    const visitor = ProxyReducerOmni.builder().options({immutable: true}).build({
+      true: (n, r) => {
 
-      if (OmniUtil.isComposition(subType)) {
-        // NOTE: This should likely be removed. A composition can be a subtype and/or supertype depending on target and contents.
-        return;
-      }
+        // TODO: Need a quick way to check if the node is an OmniType
+        if (!OmniUtil.asSubType(n)) {
+          return r.next(n);
+        }
 
-      if (subType.extendedBy) {
-        const superTypes = OmniUtil.getFlattenedSuperTypes(subType.extendedBy);
+        const subType = OmniUtil.getUnwrappedType(n);
+        if (!subType) {
+          return r.next(n);
+        }
 
-        const uniqueSuperTypesOfSubType = (map.has(subType) ? map : map.set(subType, [])).get(subType)!;
-        for (const superType of superTypes) {
-          if (!uniqueSuperTypesOfSubType.includes(superType)) {
-            uniqueSuperTypesOfSubType.push(superType);
+        if (OmniUtil.isComposition(subType)) {
+          // NOTE: This should likely be removed. A composition can be a subtype and/or supertype depending on target and contents.
+          return r.next(n);
+        }
+
+        if (subType.extendedBy) {
+          const superTypes = OmniUtil.getFlattenedSuperTypes(subType.extendedBy);
+
+          // TODO: MUST figure out a proper way to handle situation where we want to escape a node outside the visiting, otherwise we will leak the proxy!
+          //       But we also must be able to resolve that node at the end (if things are ever mutated)
+          //       HOWEVER! If things are immutable, and we are only visiting, then we can safely NEVER work with any proxies and only ever give back the actual node! Should be much faster :)
+
+          const actualSubType = ProxyReducer.getTarget(subType);
+          const uniqueSuperTypesOfSubType = (map.has(actualSubType) ? map : map.set(actualSubType, [])).get(actualSubType)!;
+          for (const superType of superTypes) {
+            if (!uniqueSuperTypesOfSubType.includes(superType)) {
+              uniqueSuperTypesOfSubType.push(superType);
+            }
           }
         }
-      }
+
+        return r.next(n);
+      },
     });
+
+    visitor.reduce(model);
+
+    // OmniUtil.visitTypesDepthFirst(model, ctx => {
+    //   if (!OmniUtil.asSubType(ctx.type)) {
+    //     return;
+    //   }
+    //
+    //   const subType = OmniUtil.getUnwrappedType(ctx.type);
+    //   if (!subType) {
+    //     return;
+    //   }
+    //
+    //   if (OmniUtil.isComposition(subType)) {
+    //     // NOTE: This should likely be removed. A composition can be a subtype and/or supertype depending on target and contents.
+    //     return;
+    //   }
+    //
+    //   if (subType.extendedBy) {
+    //     const superTypes = OmniUtil.getFlattenedSuperTypes(subType.extendedBy);
+    //
+    //     const uniqueSuperTypesOfSubType = (map.has(subType) ? map : map.set(subType, [])).get(subType)!;
+    //     for (const superType of superTypes) {
+    //       if (!uniqueSuperTypesOfSubType.includes(superType)) {
+    //         uniqueSuperTypesOfSubType.push(superType);
+    //       }
+    //     }
+    //   }
+    // });
 
     return map;
   }
@@ -2297,7 +2340,7 @@ export class OmniUtil {
 
     if (from.kind === OmniTypeKind.OBJECT && to.kind === OmniTypeKind.OBJECT) {
 
-      const copyTo: OmniObjectType = ({...to, properties: [...to.properties]});
+      const copyTo: OmniObjectType = {...to, properties: [...to.properties]};
 
       // First we move over any properties.
       for (const fromProperty of (from.properties || [])) {
@@ -2964,7 +3007,7 @@ export class OmniUtil {
     }
   }
 
-  public static isComposition<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, OmniKindComposition> {
+  public static isComposition<T extends OmniNode>(type: T | undefined): type is OmniTypeOf<T, OmniKindComposition> {
 
     if (!type) {
       return false;

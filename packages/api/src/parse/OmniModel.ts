@@ -3,6 +3,7 @@ import {OmniKindComposition, OmniKindPrimitive, OmniTypeKind} from './OmniTypeKi
 import {ObjectName} from '../ast';
 import {OmniItemKind} from './OmniItemKind.ts';
 import {Direction} from './ParserOptions.ts';
+import {OmniNodeKind} from './OmniNodeKind.ts';
 
 export interface OmniParameter {
   name: string;
@@ -265,13 +266,13 @@ export interface OmniBaseType<T extends OmniTypeKind> {
   examples?: OmniExample<unknown>[] | undefined;
 }
 
-export type OmniTypeOf<T extends OmniType, K extends OmniTypeKind> = Extract<T, { kind: K }>;
+export type OmniTypeOf<T extends OmniNode, K extends OmniNodeKind> = Extract<T, { kind: K }>;
 
 // TODO: Likely `NULL` should not be a primitive, and instead be its own separate type, since most properties are not relevant to `NULL`
 export type OmniPrimitiveNull = OmniTypeOf<OmniType, typeof OmniKindPrimitive.NULL>;
 
 export interface OmniCompositionTypeBase<T extends OmniType, K extends OmniKindComposition> extends OmniBaseType<K>, OmniOptionallyNamedType {
-  types: T[];
+  types: Array<T>;
 }
 
 export interface OmniIntersectionType<T extends OmniType = OmniType> extends OmniCompositionTypeBase<T, typeof OmniTypeKind.INTERSECTION> {

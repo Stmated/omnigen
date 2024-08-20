@@ -98,7 +98,10 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
-      javaOptions: {serializationLibrary: SerializationLibrary.JACKSON, serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED},
+      javaOptions: {
+        serializationLibrary: SerializationLibrary.JACKSON,
+        serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
+      },
     });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();

@@ -8,7 +8,7 @@ export class SimplifyWildcardObjectsModelTransformer implements OmniModelTransfo
 
   transformModel(args: OmniModelTransformerArgs): void {
 
-    const reducer = ProxyReducerOmni.create({
+    const reducer = ProxyReducerOmni.builder().build({
       OBJECT: (n, a) => {
         if (this.isEmptyOrSinglePatternProperty(n)) {
           return {
@@ -16,7 +16,7 @@ export class SimplifyWildcardObjectsModelTransformer implements OmniModelTransfo
             unknownKind: UnknownKind.OBJECT,
           } satisfies OmniUnknownType;
         }
-        return a.reducer.reduce(n); // .OBJECT(n, a);
+        return a.next(n);
       },
     });
     args.model = reducer.reduce(args.model);

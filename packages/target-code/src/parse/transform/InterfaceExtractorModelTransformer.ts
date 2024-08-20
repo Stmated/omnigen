@@ -1,5 +1,5 @@
 import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
-import {OmniUtil} from '@omnigen/core';
+import {OmniUtil, ProxyReducer, ProxyReducerOmni} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -18,15 +18,38 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
     const interfaceMap = new Map<OmniType, OmniInterfaceType>();
     const allTypes: OmniType[] = [];
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+    ProxyReducerOmni.builder().options({immutable: true}).build({
+      OBJECT: (n, r) => {
+        allTypes.push(ProxyReducer.getTarget(n));
+        return r.next(n);
+      },
+      DECORATING: (n, r) => {
+        allTypes.push(ProxyReducer.getTarget(n));
+        return r.next(n);
+      },
+      EXTERNAL_MODEL_REFERENCE: (n, r) => {
+        allTypes.push(ProxyReducer.getTarget(n));
+        return r.next(n);
+      },
+      INTERFACE: (n, r) => {
+        const target = ProxyReducer.getTarget(n);
+        allTypes.push(target);
+        if (n.of.kind !== OmniTypeKind.INTERFACE) {
+          interfaceMap.set(n.of, target);
+        }
+        return r.next(n);
+      },
+    }).reduce(args.model);
 
-      const type = ctx.type;
-      if (type.kind == OmniTypeKind.INTERFACE && type.of.kind != OmniTypeKind.INTERFACE) { // && !interfaceMap.has(type.of)) {
-        interfaceMap.set(type.of, type);
-      }
-
-      allTypes.push(ctx.type);
-    });
+    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+    //
+    //   const type = ctx.type;
+    //   if (type.kind == OmniTypeKind.INTERFACE && type.of.kind != OmniTypeKind.INTERFACE) { // && !interfaceMap.has(type.of)) {
+    //     interfaceMap.set(type.of, type);
+    //   }
+    //
+    //   allTypes.push(ctx.type);
+    // });
 
     const handled: OmniType[] = [];
 

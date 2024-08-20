@@ -8,4 +8,8 @@ export * from './visit';
 export * from './write';
 export * from './CoreUtilPluginInit.ts';
 
+export * from './reducer/ProxyReducer.ts';
+export * from './reducer/ProxyReducerOmni.ts';
+export type {ProxyReducerArg} from './reducer/types.ts';
+
 export default PluginAutoRegistry.register([CorePlugin, CommonTransformPlugin, CommonTransform2Plugin, fileWriter]);

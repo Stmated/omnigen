@@ -1,5 +1,5 @@
 import {OmniExclusiveUnionType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, OmniUnionType, TargetFeatures} from '@omnigen/api';
-import {OmniUtil} from '@omnigen/core';
+import {OmniUtil, ProxyReducerOmni} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -17,29 +17,34 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
       return;
     }
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-      if (ctx.type.kind === OmniTypeKind.UNION || ctx.type.kind === OmniTypeKind.EXCLUSIVE_UNION) {
-        const reduced = this.maybeReduce(ctx.type, args.targetFeatures);
-        if (reduced) {
-          ctx.replacement = reduced;
-        }
-        // const n = ctx.type;
-        // const unimplementedProperties = this.collectUnimplementedPropertiesFromInterfaces(n);
-        // if (unimplementedProperties.length > 0) {
-        //
-        //   // TODO: Add option for if we should make object abstract or actually add the property to the object
-        //
-        //   n.debug = OmniUtil.addDebug(n.debug, `Adding unimplemented interface properties ${unimplementedProperties.map(it => it.name).join(', ')}`);
-        //   n.properties = [
-        //     ...n.properties,
-        //     ...unimplementedProperties.map(it => ({
-        //       ...it,
-        //       owner: n, // TODO: Remove the notion of `owner` someday, so we do not need to clone the property
-        //     })),
-        //   ];
-        // }
-      }
-    });
+    args.model = ProxyReducerOmni.builder().build({
+      UNION: (n, r) => r.next(this.maybeMerged(n, args.targetFeatures) ?? n),
+      EXCLUSIVE_UNION: (n, r) => r.next(this.maybeMerged(n, args.targetFeatures) ?? n),
+    }).reduce(args.model);
+
+    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+    //   if (ctx.type.kind === OmniTypeKind.UNION || ctx.type.kind === OmniTypeKind.EXCLUSIVE_UNION) {
+    //     const reduced = this.maybeMerged(ctx.type, args.targetFeatures);
+    //     if (reduced) {
+    //       ctx.replacement = reduced;
+    //     }
+    //     // const n = ctx.type;
+    //     // const unimplementedProperties = this.collectUnimplementedPropertiesFromInterfaces(n);
+    //     // if (unimplementedProperties.length > 0) {
+    //     //
+    //     //   // TODO: Add option for if we should make object abstract or actually add the property to the object
+    //     //
+    //     //   n.debug = OmniUtil.addDebug(n.debug, `Adding unimplemented interface properties ${unimplementedProperties.map(it => it.name).join(', ')}`);
+    //     //   n.properties = [
+    //     //     ...n.properties,
+    //     //     ...unimplementedProperties.map(it => ({
+    //     //       ...it,
+    //     //       owner: n, // TODO: Remove the notion of `owner` someday, so we do not need to clone the property
+    //     //     })),
+    //     //   ];
+    //     // }
+    //   }
+    // });
 
     // const reducer = new ReducerOmni({
     //   UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
@@ -49,7 +54,7 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
     // args.model = reducer.reduce(args.model);
   }
 
-  private maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, features: TargetFeatures) {
+  private maybeMerged(n: OmniUnionType | OmniExclusiveUnionType, features: TargetFeatures) {
 
     const types = n.types;
     // const reduced = n.types.map(it => a.dispatcher.reduce(it)).filter(isDefined);

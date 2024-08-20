@@ -17,10 +17,10 @@ export class RemoveWildcardGenericParamTypeScriptModelTransformer implements Omn
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions>): void {
 
     // TODO: Redo back into an old visitor, since it more proven to actually work
-    const reducer = ProxyReducerOmni.create({
+    const reducer = ProxyReducerOmni.builder().build({
       UNKNOWN: (n, a) => {
         if (n.upperBound) {
-          return a.reducer.reduce(n.upperBound);
+          return a.next(n.upperBound);
         } else {
           return n;
         }

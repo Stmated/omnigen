@@ -12,9 +12,6 @@ describe('InnerTypeCompression', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
       modelTransformOptions: {generifyTypes: false, elevateProperties: false},
-      // targetOptions: {
-      //   ...DEFAULT_TEST_TARGET_OPTIONS,
-      // },
       javaOptions: {
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
@@ -34,12 +31,7 @@ describe('InnerTypeCompression', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
-      // parserOptions: {...DEFAULT_PARSER_OPTIONS, },
       modelTransformOptions: {generifyTypes: false, elevateProperties: false},
-      // targetOptions: {
-      //   ...DEFAULT_TEST_TARGET_OPTIONS,
-      //
-      // },
       javaOptions: {
         direction: Direction.OUT,
         serializationLibrary: SerializationLibrary.JACKSON,

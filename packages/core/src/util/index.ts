@@ -1,5 +1,4 @@
-import {OmniSuperGenericTypeCapableType, OmniType} from '@omnigen/api';
-import {OmniUtil} from '../parse';
+import {Simplify, Something} from './TsTypes.ts';
 
 export * from './ProtocolHandler';
 export * from './Sorters';
@@ -8,6 +7,8 @@ export * from './Case';
 export * from './Util';
 export * from './CombineTypeUtils';
 export * from './TsTypes';
+
+export * from './assertions.ts';
 
 export function assertUnreachable(x: never): never {
   throw new Error(`Unreachable code was reached, with: ${getShallowPayloadString(x)}`);
@@ -22,32 +23,7 @@ export function assertDefined<T>(x: T): Exclude<T, undefined | null | void> {
   return x;
 }
 
-type ExtractByType<T, U> = { [K in keyof T]: T[K] extends U ? K : never }[keyof T];
-type PickByType<T, U> = Pick<T, ExtractByType<T, U>>;
-
-export function assertDiscriminator<const T, const K extends keyof PickByType<NonNullable<T>, string> & string, const V extends NonNullable<T>[K]>(x: T, k: K, v: V): Extract<T, Record<K, V>> {
-  if (x === undefined || x === null) {
-    throw new Error(`A reduced node became 'undefined' when it is required.`);
-  }
-
-  if (x[k] !== v) {
-    throw new Error(`Expected ${k} to be ${v}`);
-  }
-
-  // @ts-ignore
-  return x;
-}
-
-export function assertGenericSuperType(type: OmniType | undefined): OmniSuperGenericTypeCapableType {
-  const superType = OmniUtil.asGenericSuperType(type);
-  if (superType) {
-    return superType;
-  } else {
-    throw new Error(`${OmniUtil.describe(type)} should have been generic supertype compatible`);
-  }
-}
-
-export function isDefined<T>(argument: T | undefined): argument is T {
+export function isDefined<T>(argument: T | undefined | void): argument is T {
   return argument !== undefined;
 }
 
@@ -74,7 +50,7 @@ function expectToBeInstanceOf<const T, const C extends new(...args: any[]) => T>
   }
 }
 
-export function expectToBeDefined<T>(val?: T): asserts val is NonNullable<T> {
+export function expectToBeDefined<T>(val?: T): asserts val is Simplify<Something<T>> {
   if (!val) {
     throw new Error(`Expected value ${val} to be defined`);
   }

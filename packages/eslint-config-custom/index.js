@@ -64,6 +64,7 @@ module.exports = {
     'no-unused-vars': 0,
     'no-redeclare': 0,
     'new-cap': 0,
+    camelcase: 0,
     'quote-props': ['error', 'as-needed'],
     '@typescript-eslint/ban-ts-comment': 'off',
     '@typescript-eslint/no-unused-vars': [1,

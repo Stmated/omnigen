@@ -1,5 +1,5 @@
 import {OMNI_GENERIC_FEATURES, OmniExclusiveUnionType, OmniModelTransformer, OmniModelTransformerArgs, OmniNode, OmniType, OmniUnionType, TargetFeatures} from '@omnigen/api';
-import {isDefined, OmniUtil, ReducerArgs, ReduceReturnTypeOmni, ProxyReducerOmni, ProxyReducerArgs} from '@omnigen/core';
+import {isDefined, OmniUtil, ProxyReducerOmni, ProxyReducer, ProxyReducerArg} from '@omnigen/core';
 
 /**
  * These are examples of unions that we will simplify/remove.
@@ -14,19 +14,18 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
     const lossless = true;
     const features = OMNI_GENERIC_FEATURES; // TODO: Make this use impl like JAVA_FEATURES -- need to move to 2nd pass?
 
-    const reducer = ProxyReducerOmni.create({
-      UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.reducer.reduce(n), // .base.UNION(n, a),
-      EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.reducer.reduce(n), // .base.EXCLUSIVE_UNION(n, a),
-      // INTERSECTION: (n, a) => (n.types.length === 1) ? a.dispatcher.reduce(n.types[0]) : a.base.INTERSECTION(n, a),
-      INTERSECTION: (n, a) => (n.types.length === 1) ? a.reducer.reduce(n.types[0]) : a.reducer.reduce(n), // .base.INTERSECTION(n, a),
+    const reducer = ProxyReducerOmni.builder().build({
+      UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.next(n),
+      EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.next(n),
+      INTERSECTION: (n, a) => (n.types.length === 1) ? a.next(n.types[0]) : a.next(n),
     });
 
     args.model = reducer.reduce(args.model);
   }
 
-  maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: ProxyReducerArgs<OmniNode, 'kind', ReduceReturnTypeOmni>, lossless: boolean, features: TargetFeatures): OmniType | undefined {
+  maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: ProxyReducerArg<OmniNode, 'kind', any, {}>, lossless: boolean, features: TargetFeatures): OmniType | undefined {
 
-    const reduced = n.types.map(it => a.reducer.reduce(it)).filter(isDefined);
+    const reduced = n.types.map(it => a.next(it)).filter(isDefined);
     if (reduced.length === 1) {
 
       if (OmniUtil.hasMeta(n)) {

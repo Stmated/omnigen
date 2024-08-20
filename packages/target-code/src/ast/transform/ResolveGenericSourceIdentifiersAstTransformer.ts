@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, OmniGenericSourceIdentifierType, OmniType, OmniTypeKind, TypeNode} from '@omnigen/api';
-import {OmniUtil} from '@omnigen/core';
+import {OmniUtil, ProxyReducerOmni} from '@omnigen/core';
 import * as Code from '../CodeAst';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 
@@ -88,17 +88,25 @@ export class ResolveGenericSourceIdentifiersAstTransformer implements AstTransfo
 
   private findGenericSourceIdentifiers(type: OmniType, map: Map<OmniGenericSourceIdentifierType, OmniType>): void {
 
-    OmniUtil.visitTypesDepthFirst(type, ctx => {
+    ProxyReducerOmni.builder().options({immutable: true}).build({
+      OBJECT: n => n,
+      GENERIC_SOURCE: n => n,
+      GENERIC_TARGET_IDENTIFIER: n => {
+        map.set(n.sourceIdentifier, n.type);
+      },
+    }).reduce(type);
 
-      if (ctx.type.kind === OmniTypeKind.OBJECT || ctx.type.kind == OmniTypeKind.GENERIC_SOURCE) {
-
-        ctx.skip = true;
-        return;
-      }
-      if (ctx.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-        map.set(ctx.type.sourceIdentifier, ctx.type.type);
-      }
-
-    }, undefined, true);
+    // OmniUtil.visitTypesDepthFirst(type, ctx => {
+    //
+    //   if (ctx.type.kind === OmniTypeKind.OBJECT || ctx.type.kind == OmniTypeKind.GENERIC_SOURCE) {
+    //
+    //     ctx.skip = true;
+    //     return;
+    //   }
+    //   if (ctx.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
+    //     map.set(ctx.type.sourceIdentifier, ctx.type.type);
+    //   }
+    //
+    // }, undefined, true);
   }
 }

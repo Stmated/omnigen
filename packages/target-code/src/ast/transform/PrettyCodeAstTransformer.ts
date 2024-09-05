@@ -114,7 +114,9 @@ export class PrettyCodeAstTransformer implements AstTransformer<CodeRootAstNode>
     let changes = 0;
     for (let i = array.length - 2; i >= 0; i--) {
       const child = array[i];
-      if ((child instanceof Code.MethodDeclaration) || child instanceof Code.AbstractObjectDeclaration) {
+      if (child instanceof Code.FormatNewline) {
+        // If someone else has already added a pretty newline, then we will just continue.
+      } else if ((child instanceof Code.MethodDeclaration) || child instanceof Code.AbstractObjectDeclaration) {
         changes++;
         array.splice(i + 1, 0, new Code.FormatNewline());
       } else {

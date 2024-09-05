@@ -1,13 +1,13 @@
 export type ErrorUnknown = JsonRpcErrorResponse<ErrorUnknownError>;
 export type ErrorUnknownError = JsonRpcError<number, string>;
 
-export interface JsonRpcError<TCode extends number> {
+export interface JsonRpcError<TCode extends number, TMessage extends string> {
   readonly code?: TCode | undefined;
-  readonly data?: any | undefined;
-  readonly message?: string | undefined;
+  readonly data?: unknown;
+  readonly message?: TMessage | undefined;
 }
 
-export interface JsonRpcErrorResponse<T extends JsonRpcError<number>> {
+export interface JsonRpcErrorResponse<T extends JsonRpcError<number, string>> {
   readonly error: T;
   readonly id?: string | undefined;
   readonly jsonrpc?: '2.0' | undefined;

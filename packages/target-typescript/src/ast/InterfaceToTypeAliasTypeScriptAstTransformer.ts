@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, OmniIntersectionType, OmniType, OmniTypeKind, TargetOptions, TypeNode, UnknownKind} from '@omnigen/api';
+import {AstTransformer, AstTransformerArguments, OmniIntersectionType, OmniType, OmniTypeKind, TypeNode, UnknownKind} from '@omnigen/api';
 import {Ts} from '.';
 import {OmniUtil} from '@omnigen/core';
 
@@ -52,7 +52,7 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
                   n.omniType,
                   superType.omniType,
                 ],
-                debug: OmniUtil.addDebug(superType.omniType.debug, 'Composition type to type alias'),
+                debug: OmniUtil.addDebug(superType.omniType.debug, 'Composition type to inline type alias'),
               };
 
               n.body.enclosed = true;
@@ -86,6 +86,6 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
   }
 
   private getInlinedIfNeededType(type: OmniType) {
-    return type.inline ? type : {...type, inline: true, debug: OmniUtil.addDebug(type.debug, 'Type made inline')} satisfies typeof type;
+    return type.inline ? type : {...type, inline: true, debug: OmniUtil.addDebug(type.debug, 'Type made inline for Interface -> Alias conversion')} satisfies typeof type;
   }
 }

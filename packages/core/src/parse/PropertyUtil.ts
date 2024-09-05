@@ -1,17 +1,25 @@
 import {
-  OmniItemKind, OmniOwnedProperty,
+  OmniItemKind,
+  OmniOwnedProperty,
   OmniProperty,
+  OmniPropertyName,
   OmniPropertyOwner,
   OmniType,
-  OmniTypeKind, PartialProp,
+  OmniTypeKind,
+  PartialProp,
   PropertiesInformation,
+  PropertyDifference,
+  PropertyEquality,
+  TargetFeatures,
+  TypeDiffKind,
 } from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.js';
-import {TargetFeatures} from '@omnigen/api';
-import {PropertyDifference, PropertyEquality, TypeDiffKind} from '@omnigen/api';
-import {isDefined, CreateMode, CombineOptions} from '../util';
+import {CombineOptions, CreateMode, getShallowPayloadString} from '../util';
+import {LoggerFactory} from '@omnigen/core-log';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
+
+const logger = LoggerFactory.create(import.meta.url);
 
 export class PropertyUtil {
 
@@ -58,7 +66,7 @@ export class PropertyUtil {
     ...types: OmniType[]
   ): PropertiesInformation {
 
-    let commonPropertyNames: string[] | undefined = undefined;
+    let commonPropertyNames: Array<OmniPropertyName> | undefined = undefined;
     const pairs: Array<OmniOwnedProperty[]> = types.filter(OmniUtil.isPropertyOwner).map(t => {
       return OmniUtil.getPropertiesOf(t).map(p => ({
         owner: t,
@@ -67,11 +75,11 @@ export class PropertyUtil {
     });
     for (const properties of pairs) {
 
-      const propertyNames = properties.map(p => OmniUtil.getPropertyName(p.property.name)).filter(isDefined);
+      const propertyNames = properties.map(p => p.property.name); // .filter(isDefined);
       if (commonPropertyNames == undefined) {
         commonPropertyNames = propertyNames;
       } else {
-        commonPropertyNames = commonPropertyNames.filter(name => propertyNames.includes(name));
+        commonPropertyNames = commonPropertyNames.filter(name => propertyNames.some(pn => OmniUtil.isPropertyNameEqual(pn, name))); // .includes(name));
       }
 
       if (propertyNames.length <= 0) {
@@ -80,6 +88,11 @@ export class PropertyUtil {
         break;
       }
     }
+
+    // const hasPatternProp = pairs.some(it => it.some(it2 => OmniUtil.isPatternPropertyName(it2.property.name)));
+    // if (hasPatternProp) {
+    //   logger.info(`Handling properties:\n${pairs.map(it => it.flatMap(it2 => `${OmniUtil.describe(it2.owner)} ${OmniUtil.getPropertyName(it2.property.name, true)}`).join(' + ')).join('\n')}\n-- left: ${commonPropertyNames?.map(it => OmniUtil.getPropertyName(it, true)).join(', ')}`);
+    // }
 
     const information: PropertiesInformation = {
       byPropertyName: {},
@@ -99,6 +112,10 @@ export class PropertyUtil {
         combineOpt,
       );
 
+      // if (hasPatternProp) {
+      //   logger.info(`${OmniUtil.getPropertyName(propertyName, true)} -- ${propertyEquality ? getShallowPayloadString(propertyEquality) : 'n/a'}`);
+      // }
+
       if (propertyEquality) {
 
         const distinctTypes = OmniUtil.getDistinctTypes(
@@ -106,7 +123,8 @@ export class PropertyUtil {
           targetFeatures,
         );
 
-        information.byPropertyName[propertyName] = {
+        const stringPropertyName = OmniUtil.getPropertyName(propertyName, true);
+        information.byPropertyName[stringPropertyName] = {
           propertyName: propertyName,
           properties: commonPropertiesWithSameName,
           propertyDiffs: propertyEquality.propertyDiffs,

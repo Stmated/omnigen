@@ -12,6 +12,8 @@ describe('TypeScript Rendering', () => {
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
       options: {
         singleFile: true,
+        jsonRpcResultRequired: false,
+        relaxedInspection: false,
       },
     });
 
@@ -57,6 +59,9 @@ describe('TypeScript Rendering', () => {
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('enum.json', {
       options: {
         singleFile: true,
+        relaxedInspection: false,
+        jsonRpcResultRequired: false,
+        anyAllowed: true,
       },
       arguments: {
         includeGenerated: 'false',
@@ -88,6 +93,8 @@ describe('TypeScript Rendering', () => {
       options: {
         preferInterfaces: true,
         singleFile: true,
+        anyAllowed: false,
+        relaxedInspection: false,
       },
     });
 

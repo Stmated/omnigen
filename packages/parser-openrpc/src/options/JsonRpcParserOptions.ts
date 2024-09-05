@@ -12,6 +12,8 @@ export const ZodJsonRpcParserOptionsBase = ZodOptions.extend({
   jsonRpcRequestMethodTypeSuffix: z.string().default('Request'),
   jsonRpcCallbackMethodTypeSuffix: z.string().default('Request'),
 
+  jsonRpcResultRequired: ZodCoercedBoolean.default('true'),
+
   jsonRpcErrorDataSchema: z.union([z.custom<JSONSchema9>(), z.custom<OmniType>()]).optional()
     .transform((v, ctx) => {
 

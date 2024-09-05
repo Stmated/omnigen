@@ -11,7 +11,7 @@ export interface TargetFeatures {
   literalTypes: boolean;
 
   /**
-   * If true, then primitives can be used as generics for objects. Such as List<int>
+   * If true, then primitives can be used as generics for objects. Such as `List<int>`.
    */
   primitiveGenerics: boolean;
 

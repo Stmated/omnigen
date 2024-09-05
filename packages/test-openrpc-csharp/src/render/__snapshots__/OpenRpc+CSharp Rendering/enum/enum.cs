@@ -139,7 +139,8 @@ namespace generated.omnigen
         public string Id { get; }
         [JsonProperty("jsonrpc")]
         public string Jsonrpc { get; } = "2.0";
-        [JsonProperty("result")]
+        [JsonProperty("result", Required = Required.Always)]
+        [Required]
         public IList<Thing> Result { get; }
 
         public JsonRpcResponse(string id, IList<Thing> result)

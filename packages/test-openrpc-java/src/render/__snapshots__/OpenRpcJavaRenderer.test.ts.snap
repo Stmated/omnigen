@@ -86,6 +86,12 @@ exports[`Java Rendering > generic_params 1`] = `
 ]
 `;
 
+exports[`Java Rendering > method-in-response 1`] = `
+[
+  "method_in_response.java",
+]
+`;
+
 exports[`Java Rendering > primitive-generics 1`] = `
 [
   "ErrorUnknown.java",

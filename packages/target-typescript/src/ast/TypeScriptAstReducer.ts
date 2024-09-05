@@ -18,6 +18,7 @@ export const createTypeScriptAstReducer = (partial?: Partial<Reducer<TypeScriptV
       assertDefined(n.name.reduce(r)),
       assertDefined(n.of.reduce(r)),
       n.modifiers?.reduce(r),
+      n.comments?.reduce(r),
     ),
     reduceGetter: (n, r) => new Ts.Getter(
       assertDefined(n.identifier.reduce(r)),

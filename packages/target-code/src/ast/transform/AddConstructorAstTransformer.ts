@@ -143,10 +143,11 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
     const superLiteralArguments: Code.Literal[] = [];
     for (const superParameter of superConstructorParameters) {
 
-      const type = superParameter.type.omniType;
-
       // Create a new node instance from the given type.
-      const typeNode = superParameter.type;
+      const fieldName = superParameter.identifier.original ?? superParameter.identifier.value;
+      const property = OmniUtil.getPropertiesOf(subClassDec.omniType).find(it => OmniUtil.isPropertyNameMatching(fieldName, it.name));
+      const typeNode = property?.type ?? superParameter.type;
+      const type = property?.type ?? superParameter.type.omniType;
 
       if (OmniUtil.isPrimitive(type) && type.literal) {
         // Super parameter requires a literal value, so we give it as argument
@@ -154,7 +155,7 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
         superConstructorArguments.push(new Code.Literal(literalValue));
       } else {
 
-        const literalValue = this.getLiteral(subClassDec.omniType, superParameter.identifier.original ?? superParameter.identifier.value);
+        const literalValue = this.getLiteral(subClassDec.omniType, fieldName);
         if (literalValue !== undefined) {
 
           // Or subtype has this parameter as a literal value, so we give it as argument.

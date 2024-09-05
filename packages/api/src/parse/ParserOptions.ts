@@ -59,6 +59,8 @@ export const ZodParserOptions = ZodOptions.extend({
     }),
 
   literalUnionMaxCount: z.number().default(5),
+
+  debug: ZodCoercedBoolean.default('false'),
 });
 
 export type IncomingParserOptions = z.input<typeof ZodParserOptions>;

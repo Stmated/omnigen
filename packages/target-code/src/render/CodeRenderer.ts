@@ -1,5 +1,5 @@
 import {AstNode, AstVisitor, OmniArrayKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/api';
-import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
+import {CodeAstUtils, CodeOptions, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/CodeAst';
@@ -122,6 +122,7 @@ const visitCommonTypeDeclaration = (
   node: Code.AbstractObjectDeclaration,
   typeString: string,
   objectDecStack: Code.AbstractObjectDeclaration[],
+  options: CodeOptions,
 ): VisitResult<string> => {
 
   try {
@@ -145,9 +146,16 @@ const visitCommonTypeDeclaration = (
       typeDeclarationContent.push('\n');
     }
 
+    if (options.debug) {
+      for (const property of OmniUtil.getPropertiesOf(node.type.omniType)) {
+        if (property.hidden) {
+          typeDeclarationContent.push(`// Hidden Property: ${OmniUtil.getPropertyName(property.name, true)}: ${OmniUtil.describe(property.type)}\n`);
+        }
+      }
+    }
+
     typeDeclarationContent.push(`${modifiers} ${typeString} ${name}${genericsString}${classExtension}${classImplementations}`);
     typeDeclarationContent.push(visitor.visitObjectDeclarationBody(node, visitor));
-    // typeDeclarationContent.push('\n');
 
     return typeDeclarationContent;
   } finally {
@@ -282,9 +290,9 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       }
     },
 
-    visitClassDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'class', ctx.objectDecStack),
-    visitInterfaceDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'interface', ctx.objectDecStack),
-    visitEnumDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'enum', ctx.objectDecStack),
+    visitClassDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'class', ctx.objectDecStack, options),
+    visitInterfaceDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'interface', ctx.objectDecStack, options),
+    visitEnumDeclaration: (n, v) => visitCommonTypeDeclaration(v, n, 'enum', ctx.objectDecStack, options),
 
     visitGenericTypeDeclaration(n, v) {
 
@@ -354,7 +362,17 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
         unitName = VisitResultFlattener.visitWithSingularResult(visitor, n, '');
 
         if (!unitName) {
-          unitName = n.children[0].name.value;
+          for (const child of n.children) {
+            if ('name' in child && typeof child.name === 'object') {
+              const identifier = child.name as Code.Identifier; // TODO: Ugly cast. Make this type-safe either through helper or better name-handling.
+              unitName = identifier.value;
+              break;
+            }
+          }
+        }
+
+        if (!unitName) {
+          unitName = 'UnknownName';
         }
       }
 
@@ -519,6 +537,13 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     visitEdgeType: n => {
       const localName = n.getLocalName();
       if (localName) {
+        if (options.debug) {
+          const value = OmniUtil.getSpecifiedValue(n.omniType);
+          if (value !== undefined) {
+            return `${localName} /*${value[1] === 'constant' ? '=' : 'default='}${OmniUtil.literalToGeneralPrettyString(value[0])}*/`;
+          }
+        }
+
         return localName;
       } else {
         const path = ctx.objectDecStack.map(it => it.name.value).join(' -> ');
@@ -558,15 +583,8 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       const baseTypeString = render(node.baseType, visitor);
       const genericArgumentStrings = node.genericArguments.map(it => render(it, visitor));
 
-      // if (genericArgumentStrings.length == 0) {
-      //
-      //   // There is a possibility that the generic arguments have been filtered away by a transformer.
-      //   // But it was never replaced with a RegularType. But we'll be nice and just render it as one.
-      //   return baseTypeString;
-      // } else {
       const genericArgumentsString = genericArgumentStrings.join(', ');
       return `${baseTypeString}<${genericArgumentsString}>`;
-      // }
     },
 
     visitModifierList: (node, visitor) => {

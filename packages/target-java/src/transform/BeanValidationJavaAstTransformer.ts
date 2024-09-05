@@ -51,7 +51,7 @@ export class BeanValidationJavaAstTransformer implements AstTransformer<JavaAstR
         }
 
         if (tempAnnotations.length > 0) {
-          fieldToAnnotations.set(n.id, tempAnnotations);
+          fieldToAnnotations.set(n.id, [...tempAnnotations]);
         }
 
         return n;
@@ -132,6 +132,8 @@ export class BeanValidationJavaAstTransformer implements AstTransformer<JavaAstR
           if (typesWithValidations.has(type.upperBound.source) || typesWithValidations.has(type.upperBound.source.of)) {
             return true;
           }
+        } else if (type.upperBound.kind === OmniTypeKind.OBJECT || type.upperBound.kind === OmniTypeKind.INTERFACE) {
+          return true;
         }
       } else {
         // There is no upper bound, it can be anything, hence also possibly validate-able.

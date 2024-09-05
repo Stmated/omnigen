@@ -11,6 +11,7 @@ describe('jsonschema-typescript-render', () => {
 
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/discriminator.json'), {
       singleFile: false,
+      relaxedInspection: false,
     });
     const fileContents = getFileContents(rendered);
 
@@ -29,6 +30,7 @@ describe('jsonschema-typescript-render', () => {
       strictUndefined: false,
       includeGenerated: false,
       singleFileName: 'Schema',
+      relaxedInspection: false,
     });
     const fileContents = getFileContents(rendered);
 
@@ -47,6 +49,7 @@ describe('jsonschema-typescript-render', () => {
       strictUndefined: true,
       includeGenerated: false,
       singleFileName: 'Schema',
+      relaxedInspection: false,
     });
     const fileContents = getFileContents(rendered);
 
@@ -63,6 +66,7 @@ describe('jsonschema-typescript-render', () => {
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/dynamic_ref.json'), {
       includeGenerated: false,
       singleFile: true,
+      relaxedInspection: false,
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
@@ -86,6 +90,7 @@ describe('jsonschema-typescript-render', () => {
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-openapi/schemas/openapi-v31.json'), {
       includeGenerated: false,
       singleFile: true,
+      relaxedInspection: false,
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
@@ -101,6 +106,7 @@ describe('jsonschema-typescript-render', () => {
       singleFile: true,
       orderObjectsByName: true,
       orderObjectsByDependency: false,
+      relaxedInspection: false,
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);

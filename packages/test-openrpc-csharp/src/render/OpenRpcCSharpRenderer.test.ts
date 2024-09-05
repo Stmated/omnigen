@@ -36,6 +36,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFile: true,
     singleFileName: task.name,
     orderObjectsByDependency: true,
+    jsonRpcResultRequired: false,
   })));
 
   test('compressable-types', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -44,12 +45,14 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFileName: task.name,
     orderObjectsByName: true,
     orderObjectsByDependency: false,
+    jsonRpcResultRequired: false,
   })));
 
   test('inherited-construction_no_init', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
     singleFileName: task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.NO_SETTER,
+    jsonRpcResultRequired: false,
   })));
 
   test('inherited-construction', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {

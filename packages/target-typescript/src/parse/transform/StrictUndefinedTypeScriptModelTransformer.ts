@@ -107,9 +107,12 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
           continue;
         }
 
-        if (property.type.kind === OmniTypeKind.UNKNOWN && property.type.unknownKind === UnknownKind.ANY) {
-          // `any` can be `undefined` so no need for `undefined`.
-          continue;
+        if (property.type.kind === OmniTypeKind.UNKNOWN) {
+          const unknownKind = property.type.unknownKind ?? args.options.unknownType;
+          if (unknownKind === UnknownKind.ANY || unknownKind === UnknownKind.WILDCARD || unknownKind === UnknownKind.DYNAMIC) {
+            // `any` can be `undefined` so no need for `undefined`.
+            continue;
+          }
         }
 
         const compositionType: OmniCompositionType = {

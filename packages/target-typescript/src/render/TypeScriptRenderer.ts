@@ -2,8 +2,9 @@ import {OmniTypeKind, PackageOptions, Renderer, TargetOptions} from '@omnigen/ap
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core';
-import {Code, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, render} from '@omnigen/target-code';
+import {Code, CodeRenderContext, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, FreeTextUtils, render} from '@omnigen/target-code';
 import {Ts} from '../ast';
+import {CommentKind} from '@omnigen/target-code/ast';
 
 export type TypeScriptRenderer = TypeScriptVisitor<string> & Renderer;
 
@@ -12,16 +13,18 @@ export const DefaultTypeScriptRendererOptions: CodeRendererOptions = {
   fileExtension: 'ts',
 };
 
-// TODO:
-//  * extend modifiers so there is 'export' to differentiate it from 'public'
-
 export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOptions & TargetOptions & TypeScriptOptions): TypeScriptRenderer => {
 
   let bodyDepth = 0;
 
+  const ctx: CodeRenderContext = {
+    objectDecStack: [],
+    units: [],
+  };
+
   const parentRenderer = {
     ...createTypeScriptVisitor(),
-    ...createCodeRenderer(root, options, DefaultTypeScriptRendererOptions),
+    ...createCodeRenderer(root, options, DefaultTypeScriptRendererOptions, ctx),
   } satisfies TypeScriptVisitor<string>;
 
   return {
@@ -134,9 +137,13 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
      * Should perhaps be replaced by a TS-specific node
      */
     visitFieldBackedSetter: (n, v) => {
-      const field = root.resolveNodeRef(n.fieldRef);
-      const type = render(field.type, v);
-      return `set ${field.identifier.value}(value: ${type}) { this.${field.identifier.value} = value; }\n`;
+      try {
+        const field = root.resolveNodeRef(n.fieldRef);
+        const type = render(field.type, v);
+        return `set ${field.identifier.value}(value: ${type}) { this.${field.identifier.value} = value; }\n`;
+      } catch (ex) {
+        return `// FieldBackedSetter: ${ex} - ${n.identifier?.visit(v)} - ${n.comments?.visit(v)}\n`;
+      }
     },
 
     visitGetter: (n, v) => {
@@ -171,10 +178,12 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
     visitModifier: (node, visitor) => {
 
-      if (bodyDepth === 0 && node.kind === Code.ModifierKind.PUBLIC) {
+      if (node.kind === Code.ModifierKind.PUBLIC) {
 
-        // TODO: Wrong -- used one way for making object declarations public, and another for members inside the objects -- need to separate them or make it context sensitive
-        return 'export';
+        if (bodyDepth === 0) {
+          // TODO: Wrong -- used one way for making object declarations public, and another for members inside the objects -- need to separate them or make it context sensitive
+          return 'export';
+        }
       }
 
       if (node.kind === Code.ModifierKind.FINAL) {
@@ -266,8 +275,12 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
     visitTypeAliasDeclaration: (n, v) => {
 
       const modifiers = n.modifiers ? n.modifiers.visit(v) : `let`;
-
-      return `${modifiers} type ${n.name.visit(v)} = ${n.of.visit(v)};\n`;
+      let comments = n.comments ? `${n.comments.visit(v)}\n` : '';
+      if (options.debug && n.omniType.debug) {
+        const tempCommentNode = new Code.Comment(FreeTextUtils.fromFriendlyFreeText(n.omniType.debug), CommentKind.MULTI);
+        comments += `${tempCommentNode.visit(v)}\n`;
+      }
+      return `${comments}${modifiers} type ${n.name.visit(v)} = ${n.of.visit(v)};\n`;
     },
 
     visitLiteral: (n, v) => {

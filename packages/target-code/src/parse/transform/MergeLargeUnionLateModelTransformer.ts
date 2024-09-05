@@ -11,15 +11,15 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
-    if (args.targetFeatures.unions) {
+    if (args.features.unions) {
 
       // The target language supports unions, so it would be weird to make this lossy conversion.
       return;
     }
 
     args.model = ProxyReducerOmni.builder().build({
-      UNION: (n, r) => r.next(this.maybeMerged(n, args.targetFeatures) ?? n),
-      EXCLUSIVE_UNION: (n, r) => r.next(this.maybeMerged(n, args.targetFeatures) ?? n),
+      UNION: (n, r) => r.next(this.maybeMerged(n, args.features) ?? n),
+      EXCLUSIVE_UNION: (n, r) => r.next(this.maybeMerged(n, args.features) ?? n),
     }).reduce(args.model);
 
     // OmniUtil.visitTypesDepthFirst(args.model, ctx => {

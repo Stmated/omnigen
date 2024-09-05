@@ -17,13 +17,16 @@
       <sourceFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/src/render/__snapshots__/jsonschema-java-render/one_of_same_type" isTestSource="false" packagePrefix="generated.omnigen" />
       <sourceFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/src/render/__snapshots__/jsonschema-java-render/string_union" isTestSource="false" packagePrefix="generated.omnigen" />
       <sourceFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/src/render/__snapshots__/jsonschema-java-render/x-enum-varnames" isTestSource="false" packagePrefix="generated.omnigen" />
-      <sourceFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/interpret/__snapshots__/PackageResolver/FromCode" isTestSource="false" packagePrefix="some.base.pkg" />
-      <sourceFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/interpret/__snapshots__/PackageResolver/FromSchema" isTestSource="false" packagePrefix="com.company.out.directory2" />
-      <sourceFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/render/__snapshots__/Java Rendering" isTestSource="false" packagePrefix="generated.omnigen" />
-      <sourceFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__/InnerTypeCompression/CompressNo" isTestSource="false" packagePrefix="generated.omnigen" />
-      <sourceFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__/InnerTypeCompression/CompressYes" isTestSource="false" packagePrefix="generated.omnigen" />
-      <sourceFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__/InnerTypeCompression/CompressYes-error-structure+generics" isTestSource="false" packagePrefix="generated.omnigen" />
-      <sourceFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__/lombok" isTestSource="false" packagePrefix="generated.omnigen" />
+      <excludeFolder url="file://$MODULE_DIR$/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-csharp/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/interpret/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-typescript/src/render/__snapshots__" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

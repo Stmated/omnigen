@@ -3,7 +3,7 @@ import {ObjectPool} from '../util/ObjectPool.ts';
 import {ProxyHolder, ProxyHolderHandler} from './ProxyHolder.ts';
 import {PROP_KEY_HOLDER, PROP_KEY_IS_PROXY, PROP_KEY_RECURSION_DEPTH} from './symbols.ts';
 import {ProxyReducerDiscriminatorBuilder, ProxyReducerOptionsBuilder} from './ProxyReducerBuilder.ts';
-import {ProxyReducerTrackMode} from './proxyReducerTrackMode.ts';
+import {ProxyReducerTrackMode} from './ProxyReducerTrackMode.ts';
 import {NextRet, ProxyReducerInterface, ReduceRet, Spec, SpecFn, SpecRet} from './types.ts';
 import {ReducerOpt} from './ReducerOpt.ts';
 import {ProxyReducerTrackingSource} from './ProxyReducerTrackingSource.ts';
@@ -58,15 +58,15 @@ export interface Options<N, D extends keyof N, O, InOpt extends ReducerOpt> {
 /**
  * Unique ID of this object, a new one will be set after each generation.
  */
-const PROP_KEY_ID = Symbol('ID');
+export const PROP_KEY_ID = Symbol('ID');
 /**
  * How many changes this object has gone through.
  */
-const PROP_KEY_GENERATION = Symbol('Generation');
+export const PROP_KEY_GENERATION = Symbol('Generation');
 /**
  * ID of the reducer that created the change to the given object.
  */
-const PROP_KEY_REDUCER_ID = Symbol('ReducerID');
+export const PROP_KEY_REDUCER_ID = Symbol('ReducerID');
 
 
 /**

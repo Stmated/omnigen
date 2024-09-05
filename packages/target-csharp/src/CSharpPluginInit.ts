@@ -28,7 +28,13 @@ import {
   ZodTargetOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SpreadResolvedWildcardGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
+import {
+  AlignObjectWithInterfaceModelTransformer,
+  GenericsModelTransformer,
+  SimplifyGenericsModelTransformer,
+  SpreadResolvedWildcardGenericsModelTransformer,
+  ZodCompilationUnitsContext,
+} from '@omnigen/core';
 import {createCSharpRenderer} from './render';
 import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -58,7 +64,7 @@ import {
   PackageResolverAstTransformer,
   PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
-  RemoveEnumFieldsCodeAstTransformer,
+  RemoveEnumFieldsCodeAstTransformer, RemoveUnnecessaryPropertyModelTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyAndCleanAstTransformer,
@@ -186,7 +192,7 @@ export const CSharpPlugin = createPlugin(
         ...ctx.modelTransformOptions,
         ...ctx.csOptions,
       },
-      targetFeatures: CSHARP_FEATURES,
+      features: CSHARP_FEATURES,
     };
 
     const transformers2: OmniModel2ndPassTransformer<TOpt>[] = [
@@ -194,9 +200,11 @@ export const CSharpPlugin = createPlugin(
       // new RemoveWildcardGenericParamTypeScriptModelTransformer(),
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
+      new RemoveUnnecessaryPropertyModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
       new SpreadResolvedWildcardGenericsModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),
+      new SimplifyGenericsModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -220,11 +228,9 @@ export const CSharpPlugin = createPlugin(
       // new SiblingTypeCompressionAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
       new NamespaceCompressionCSharpAstTransformer(),
-
       // new AddThrowsForKnownMethodsAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
-
       new MethodToGetterCodeAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
       new RemoveEnumFieldsCodeAstTransformer(),
@@ -234,7 +240,6 @@ export const CSharpPlugin = createPlugin(
       new DelegatesToCSharpAstTransformer(),
       new AddCommentsCSharpAstTransformer(),
       new ConstructorRemovalOnPropertyInitCSharpAstTransformer(),
-
       new NonNumericEnumToConstClassAstTransformer(),
       new PackageResolverAstTransformer(),
       new SimplifyTypePathsCSharpAstTransformer(),

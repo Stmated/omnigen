@@ -20,6 +20,8 @@ describe('Java Rendering', () => {
     // TODO: Do this both with and without compressing types -- create different versions and output them in a structure!
     // TODO: Would it be crazy or cool to take ALL the types of all the models and create one HUGE output with common types?
 
+    const errors: Error[] = [];
+
     for (const schemaName of OpenRpcTestUtils.getKnownSchemaNames()) {
 
       let fileNames: string[];
@@ -45,7 +47,8 @@ describe('Java Rendering', () => {
           try {
             baseDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
           } catch (ex) {
-            throw new Error(`Could not resolve path of ${fileName}`, {cause: ex});
+            errors.push(new Error(`Could not resolve path of ${fileName}`, {cause: ex}));
+            continue;
           }
 
           for (const cu of result.compilationUnits) {
@@ -64,7 +67,8 @@ describe('Java Rendering', () => {
             try {
               fs.writeFileSync(outPath, cu.content);
             } catch (ex) {
-              throw new Error(`Could not write '${outPath}' of '${fileName}': ${ex}`, {cause: ex});
+              errors.push(new Error(`Could not write '${outPath}' of '${fileName}': ${ex}`, {cause: ex}));
+              continue;
             }
 
             let cst: JavaParser.CstNode;
@@ -72,7 +76,8 @@ describe('Java Rendering', () => {
               cst = JavaParser.parse(cu.content);
               expect(cst).toBeDefined();
             } catch (ex) {
-              throw new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}\n\n${cu.content}\n\n`, {cause: ex});
+              errors.push(new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}\n\n${cu.content}\n\n`, {cause: ex}));
+              continue;
             }
 
             // Visit the syntax tree, but do nothing with the result.
@@ -85,9 +90,13 @@ describe('Java Rendering', () => {
           fs.rmSync(targetTestDir, {recursive: true, force: true});
 
         } catch (ex) {
-          throw LoggerFactory.formatError(ex, `File ${fileName}`);
+          errors.push(LoggerFactory.formatError(ex, `File ${fileName}`));
         }
       }
+    }
+
+    if (errors.length > 0) {
+      expect.fail(`Rendering errors:\n* ${errors.map(it => `${it.message}:\n${it.stack}`).join('\n\n* ')}`);
     }
   }, {
     timeout: 30_000,
@@ -141,6 +150,7 @@ describe('Java Rendering', () => {
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         singleFile: true,
         singleFileName: task.name,
+        // debug: true,
       },
     });
 
@@ -218,7 +228,6 @@ describe('Java Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const result = await JavaTestUtils.getResultFromFilePath(Util.getPathFromRoot(`./packages/test-openrpc-java/examples/generic_params.json`), {
-      // parserOptions: {...DEFAULT_PARSER_OPTIONS, },
       javaOptions: {
         defaultAdditionalProperties: false,
         serializationLibrary: SerializationLibrary.JACKSON,
@@ -230,6 +239,23 @@ describe('Java Rendering', () => {
     }, ZodCompilationUnitsContext);
 
     const fileContents = await JavaTestUtils.cuToContentMap(result.compilationUnits);
+
+    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    for (const [fileName, fileContent] of fileContents) {
+      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+    }
+  });
+
+  test('method-in-response', async ({task}) => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('method-in-response.json', {
+      javaOptions: {
+        singleFile: true,
+        singleFileName: task.name,
+      },
+    });
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {

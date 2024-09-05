@@ -3,11 +3,11 @@ import {ModelTransformOptions, PackageOptions, ParserOptions, RenderedCompilatio
 import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
 import {PluginManager} from '@omnigen/plugin';
 import {TypeScriptOptions, TypeScriptPlugins} from '@omnigen/target-typescript';
-import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
+import {JsonRpcParserOptions, OpenRpcPlugins} from '@omnigen/parser-openrpc';
 import {z} from 'zod';
 import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 
-export type TypeScriptTestOptions = ParserOptions & ModelTransformOptions & TargetOptions & PackageOptions & TypeScriptOptions
+export type TypeScriptTestOptions = ParserOptions & JsonRpcParserOptions & ModelTransformOptions & TargetOptions & PackageOptions & TypeScriptOptions
 
 export interface TypeScriptTestUtilsOptions {
   options?: Partial<TypeScriptTestOptions>;
@@ -40,7 +40,7 @@ export class OpenRpcTypeScriptTestUtils {
     const result = await pm.execute({ctx: ctx, debug: true, stopAt: undefined});
     const last = result.results[result.results.length - 1];
 
-    const parsedResult = ZodCompilationUnitsContext.parse(last.ctx) as z.output<typeof ZodCompilationUnitsContext>; // z.output<ZodCompilationUnitsContext>;
+    const parsedResult = ZodCompilationUnitsContext.parse(last.ctx) as z.output<typeof ZodCompilationUnitsContext>;
 
     return OpenRpcTypeScriptTestUtils.cuToContentMap(parsedResult.compilationUnits);
   }

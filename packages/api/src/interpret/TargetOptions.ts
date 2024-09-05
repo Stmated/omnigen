@@ -53,8 +53,6 @@ export const ZodTargetOptions = ZodParserOptions.extend({
 
   orderObjectsByName: ZodCoercedBoolean.default('true'),
   orderObjectsByDependency: ZodCoercedBoolean.default('true'),
-
-  debug: ZodCoercedBoolean.default('false'),
 });
 
 export type TargetOptions = z.infer<typeof ZodTargetOptions>;

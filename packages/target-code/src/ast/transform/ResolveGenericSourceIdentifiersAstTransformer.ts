@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, OmniGenericSourceIdentifierType, OmniType, OmniTypeKind, TypeNode} from '@omnigen/api';
-import {OmniUtil, ProxyReducerOmni} from '@omnigen/core';
+import {ProxyReducerOmni} from '@omnigen/core';
 import * as Code from '../CodeAst';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 

@@ -32,7 +32,7 @@ import {
   ZodAstNodeContext,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SimplifyGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -49,7 +49,7 @@ import {
   PackageResolverAstTransformer,
   PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
-  RemoveEnumFieldsCodeAstTransformer,
+  RemoveEnumFieldsCodeAstTransformer, RemoveUnnecessaryPropertyModelTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyGenericsAstTransformer,
@@ -62,6 +62,8 @@ import {TypeScriptAstTransformerArgs} from './ast/TypeScriptAstVisitor';
 import {RemoveWildcardGenericParamTypeScriptModelTransformer, StrictUndefinedTypeScriptModelTransformer} from './parse';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTransformer.ts';
+import {AnyToUnknownTypeScriptModelTransformer} from './parse/transform/AnyToUnknownTypeScriptModelTransformer.ts';
+import {FileHeaderTypeScriptAstTransformer} from './ast/FileHeaderTypeScriptAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -149,15 +151,18 @@ export const TypeScriptPlugin = createPlugin(
     const modelArgs2: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions> = {
       model: modelArgs.model,
       options: {...ctx.modelTransformOptions, ...ctx.tsOptions},
-      targetFeatures: TYPESCRIPT_FEATURES,
+      features: TYPESCRIPT_FEATURES,
     };
 
     const transformers2 = [
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
+      new RemoveUnnecessaryPropertyModelTransformer(),
       new StrictUndefinedTypeScriptModelTransformer(),
       new RemoveWildcardGenericParamTypeScriptModelTransformer(),
+      new AnyToUnknownTypeScriptModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),
+      new SimplifyGenericsModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -191,8 +196,10 @@ export const TypeScriptPlugin = createPlugin(
       new SingleFileTypeScriptAstTransformer(),
       new RemoveEnumFieldsCodeAstTransformer(),
       new PackageResolverAstTransformer(),
+      // new SimplifyGenericsAstTransformer(),
       new ReorderMembersAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
+      new FileHeaderTypeScriptAstTransformer(),
       new PrettyCodeAstTransformer(),
     ] as const;
 
@@ -245,7 +252,7 @@ export const TypeScriptRendererPlugin = createPlugin(
     const rendered = renderer.executeRender(ctx.astNode, renderer);
 
     const singleFileName = ctx.tsOptions.singleFileName;
-    if (rendered.length == 1 && singleFileName) {
+    if (rendered.length === 1 && singleFileName) {
 
       if (singleFileName.includes('.')) {
         rendered[0].fileName = singleFileName;

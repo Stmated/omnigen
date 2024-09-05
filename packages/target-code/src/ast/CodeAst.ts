@@ -1046,13 +1046,13 @@ export interface Typed<T extends OmniType = OmniType> extends AstNode {
   omniType: T;
 }
 
-export class CompilationUnit extends AbstractCodeNode implements AstNodeWithChildren<Identifiable> {
-  children: Identifiable[];
+export class CompilationUnit extends AbstractCodeNode implements AstNodeWithChildren<AstNode> {
+  children: AstNode[];
   packageDeclaration: PackageDeclaration;
   imports: ImportList;
   name?: string;
 
-  constructor(packageDeclaration: PackageDeclaration, imports: ImportList, ...children: Identifiable[]) {
+  constructor(packageDeclaration: PackageDeclaration, imports: ImportList, ...children: AstNode[]) {
     super();
     this.packageDeclaration = packageDeclaration;
     this.imports = imports;

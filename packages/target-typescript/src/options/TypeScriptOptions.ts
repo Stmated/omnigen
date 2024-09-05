@@ -12,6 +12,8 @@ export const ZodTypeScriptOptions = ZodCodeOptions.extend({
   strictUndefined: ZodCoercedBoolean.default('f'),
   singleFile: ZodCoercedBoolean.default('t'),
   singleFileName: z.string().optional(),
+  anyAllowed: ZodCoercedBoolean.default('t'),
+  relaxedInspection: ZodCoercedBoolean.default('t'),
 });
 
 export type TypeScriptOptions = z.infer<typeof ZodTypeScriptOptions>;

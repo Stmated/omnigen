@@ -27,7 +27,7 @@ export class TsRootNode extends Code.CodeRootAstNode implements RootAstNode, Ast
   }
 
   getAstUtils(): AstTargetFunctions {
-    return TsRootNode._TS_AST_UTILS; // TsRootNode._TS_AST_UTILS;
+    return TsRootNode._TS_AST_UTILS;
   }
 
   getFunctions(): TargetFunctions {

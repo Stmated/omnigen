@@ -23,7 +23,7 @@ export class SingleFileTypeScriptAstTransformer implements AstTransformer<TsRoot
 
     const newRoot = args.root.reduce({
       ...defaultReducer,
-      reduceCompilationUnit: (n, r) => {
+      reduceCompilationUnit: n => {
 
         if (firstUnit === undefined) {
 

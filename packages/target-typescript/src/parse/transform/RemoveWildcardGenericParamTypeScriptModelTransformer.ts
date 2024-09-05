@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, ParserOptions, TargetOptions} from '@omnigen/api';
 import {TypeScriptOptions} from '../../options';
-import {ProxyReducerOmni} from '@omnigen/core';
+import {ProxyReducerOmni, ProxyReducerOmni2} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -17,16 +17,17 @@ export class RemoveWildcardGenericParamTypeScriptModelTransformer implements Omn
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions>): void {
 
     // TODO: Redo back into an old visitor, since it more proven to actually work
-    const reducer = ProxyReducerOmni.builder().build({
-      UNKNOWN: (n, a) => {
+    const reducer = ProxyReducerOmni2.builder().build({
+      UNKNOWN: (n, r) => {
         if (n.upperBound) {
-          return a.next(n.upperBound);
+          return r.persist(r.reduce(n.upperBound)).next();
         } else {
           return n;
         }
       },
     });
     const original = args.model;
-    args.model = reducer.reduce(original);
+    const reduced = reducer.reduce(original);
+    args.model = reduced;
   }
 }

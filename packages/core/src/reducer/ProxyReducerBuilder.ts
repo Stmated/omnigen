@@ -1,5 +1,5 @@
 import {Environment} from '@omnigen/api';
-import {ProxyReducerTrackMode} from './proxyReducerTrackMode.ts';
+import {ProxyReducerTrackMode} from './ProxyReducerTrackMode.ts';
 
 import {Spec} from './types.ts';
 import {ProxyReducerTrackingSource} from './ProxyReducerTrackingSource.ts';

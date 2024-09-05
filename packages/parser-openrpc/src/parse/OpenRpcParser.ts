@@ -582,6 +582,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       kind: OmniItemKind.PROPERTY,
       name: 'result',
       type: resultType.type,
+      required: this._options.jsonRpcResultRequired,
     });
 
     return {
@@ -759,7 +760,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const messageType: OmniPrimitiveType = {
       kind: OmniTypeKind.STRING,
-      nullable: true, // isUnknownCode,
+      nullable: true,
       value: error.message,
       literal: false,
     };

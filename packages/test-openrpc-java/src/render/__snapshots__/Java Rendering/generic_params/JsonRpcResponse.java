@@ -1,5 +1,6 @@
 package generated.omnigen;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Generated;
 
@@ -10,10 +11,11 @@ import jakarta.annotation.Generated;
 public class JsonRpcResponse<T> {
   @JsonProperty(value = "id")
   private final String id;
-  @JsonProperty(value = "result")
+  @JsonProperty(value = "result", required = true)
+  @JsonInclude
   private final T result;
 
-  public JsonRpcResponse(@JsonProperty(value = "id") String id, @JsonProperty(value = "result") T result) {
+  public JsonRpcResponse(@JsonProperty(value = "id") String id, @JsonProperty(value = "result", required = true) T result) {
     this.id = id;
     this.result = result;
   }

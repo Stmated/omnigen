@@ -11,6 +11,7 @@ import {
   OmniModelTransformer2ndPassArgs,
   OmniModelTransformerArgs,
   OmniProperty,
+  OmniPropertyName,
   OmniPropertyOwner,
   OmniSubTypeCapableType,
   OmniSuperGenericTypeCapableType,
@@ -37,7 +38,7 @@ const logger = LoggerFactory.create(import.meta.url);
 export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
-    this.transform(args, args.targetFeatures);
+    this.transform(args, args.features);
   }
 
   private transform(args: OmniModelTransformerArgs, targetFeatures: TargetFeatures) {
@@ -115,9 +116,11 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         continue;
       }
 
-      if (info.typeDiffs?.includes(TypeDiffKind.POLYMORPHIC_LITERAL) && !features.literalTypes && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? it.literal : false)) {
-        continue;
-      }
+      // if (info.typeDiffs?.includes(TypeDiffKind.POLYMORPHIC_LITERAL) && !features.literalTypes && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? it.literal : false)) {
+      //
+      //   logger.trace(`Will not generify '${propertyName}' of ${info.properties.map(it => OmniUtil.describe(it.owner)).join(', ')} since target does not support literal types`);
+      //   // continue;
+      // }
 
       model = this.attemptHoistPropertyToGeneric(
         superType,
@@ -128,6 +131,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         sourceToTargets,
         model,
         options,
+        features,
       );
     }
 
@@ -143,11 +147,18 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     sourceToTargets: Map<OmniGenericSourceType, OmniGenericTargetType[]>,
     model: OmniModel,
     options: ModelTransformOptions,
+    features: TargetFeatures,
   ): OmniModel {
 
-    const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(info.propertyName)}`;
+    // If true, then the target does not allow generics like `Foo<'Bar'>` and instead need to widen it into `Foo<String>`.
+    // But by using tricks, like hiding properties, we can try to keep as much information as possible.
+    const widenedPolymorphicLiteral = info.typeDiffs?.some(it => it === TypeDiffKind.POLYMORPHIC_LITERAL || it === TypeDiffKind.CONCRETE_VS_ABSTRACT) // .includes(TypeDiffKind.POLYMORPHIC_LITERAL)
+      && !features.literalTypes
+      && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? (it.value !== undefined) : false);
 
-    const upperBound = this.toGenericUpperBoundType(info);
+    const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(OmniUtil.getPropertyName(info.propertyName, true))}`;
+
+    const upperBound = this.toGenericUpperBoundType(info, features);
 
     const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
@@ -190,38 +201,6 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
         if (ownerToGenericTargetMap.size == 0) {
 
-          // TODO: This does not work, since we rebuild the whole model for every iteration, so the target identifiers are added to a dead model!
-          // TODO: Need to rethink the whole generic functionality to make it work with the new reducers, to do all things in proper passes.
-          // const reducer = new DefaultOmniReducerDispatcher({
-          //   ANY: n => {
-          //     if (n === superType) {
-          //       return genericSource;
-          //     }
-          //
-          //     return undefined;
-          //   },
-          //   OBJECT: (n, a) => {
-          //
-          //     const extendedBy = n.extendedBy ? a.dispatcher.reduce(n.extendedBy) : undefined;
-          //     let extendedSuper: OmniSuperTypeCapableType | undefined;
-          //     if (extendedBy) {
-          //       if (!OmniUtil.asSuperType(extendedBy)) {
-          //         logger.warn(`Cannot replace '${OmniUtil.describe(n.extendedBy)}' with '${OmniUtil.describe(extendedBy)}' since it is not a valid supertype`);
-          //       } else {
-          //         extendedSuper = extendedBy;
-          //       }
-          //     }
-          //
-          //     return {
-          //       ...n,
-          //       properties: n.properties.map(it => a.dispatcher.reduce(it)).filter(isDefined),
-          //       extendedBy: extendedSuper,
-          //     } satisfies OmniObjectType;
-          //   },
-          // });
-          //
-          // model = reducer.reduce(model);
-
           // Swap all places that uses the superType with the new GenericSource.
           // We do this for the first time we alter the GenericTarget, to do it as late as possible.
           OmniUtil.swapType(model, superType, genericSource);
@@ -236,20 +215,34 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         }
       }
 
+      let targetIdentifierType: OmniType;
+      if (widenedPolymorphicLiteral) {
+
+        p.property.hidden = true;
+        targetIdentifierType = {
+          ...p.property.type,
+          // kind: OmniTypeKind.STRING,
+          debug: OmniUtil.addDebug(p.property.type.debug, `Created as a generic placeholder for a widened polymorphic literal (since generic literals are not supported)`),
+        };
+
+      } else {
+        targetIdentifierType = p.property.type;
+
+        // Remove the non-generic property from the original property owner.
+        const idx = p.owner.properties.indexOf(p.property);
+        if (idx == -1) {
+          throw new Error(`Could not find property '${OmniUtil.getPropertyNameOrPattern(p.property.name)}' in owner ${OmniUtil.describe(p.owner)}, something is wrong with the generic hoisting`);
+        }
+
+        p.owner.properties.splice(idx, 1);
+      }
+
       const targetIdentifier: OmniGenericTargetIdentifierType = {
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-        type: p.property.type,
+        type: targetIdentifierType,
         sourceIdentifier: genericSourceIdentifier,
       };
       genericTarget.targetIdentifiers.push(targetIdentifier);
-
-      // Remove the non-generic property from the original property owner.
-      const idx = p.owner.properties.indexOf(p.property);
-      if (idx == -1) {
-        throw new Error(`Could not find property '${OmniUtil.getPropertyNameOrPattern(p.property.name)}' in owner ${OmniUtil.describe(p.owner)}, something is wrong with the generic hoisting`);
-      }
-
-      p.owner.properties.splice(idx, 1);
     }
 
     if (genericSource.of.kind === OmniTypeKind.OBJECT) {
@@ -309,7 +302,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
   private maybeWildcardUpperBound(
     upperBound: OmniType | undefined,
     genericSource: OmniGenericSourceType,
-    propertyName: string,
+    propertyName: OmniPropertyName,
   ): void {
 
     if (!upperBound || upperBound.kind !== OmniTypeKind.GENERIC_TARGET) {
@@ -350,7 +343,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     }
   }
 
-  private toGenericUpperBoundType(info: PropertyInformation): OmniType | undefined {
+  private toGenericUpperBoundType(info: PropertyInformation, features: TargetFeatures): OmniType | undefined {
 
     if (info.commonType.kind == OmniTypeKind.UNKNOWN) {
       return undefined;
@@ -361,6 +354,10 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
       // If the type difference is fundamental, then we cannot have an upper bound set, since some have nothing in-common.
       return undefined;
+    }
+
+    if (info.commonType && !features.primitiveGenerics && OmniUtil.isPrimitive(info.commonType)) {
+      return OmniUtil.toReferenceType(info.commonType, CreateMode.ANY);
     }
 
     return info.commonType;

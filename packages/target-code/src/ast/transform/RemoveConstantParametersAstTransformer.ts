@@ -1,7 +1,10 @@
 import {AstNode, AstTransformer, AstTransformerArguments, OmniPrimitiveBaseType, OmniType} from '@omnigen/api';
-import {OmniUtil} from '@omnigen/core';
+import {OmniUtil, ReferenceNodeNotFoundError} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
 import * as Code from '../CodeAst';
+import {LoggerFactory} from '@omnigen/core-log';
+
+const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * If a function has the signature `foo(bar: 'baz')` ie. `bar` can only ever take `'baz'`, then we should remove it and fix all callers.
@@ -12,7 +15,7 @@ export class RemoveConstantParametersAstTransformer implements AstTransformer<Co
 
     const defaultReducer = args.root.createReducer();
     const toBeInlined: AstNode[] = [];
-    // TODO: This should also handle the replacement of default-value literals! So that they are properly replace with something like `original ? original : default`
+
     const newRoot = args.root.reduce({
       ...defaultReducer,
       reduceParameter: (n, r) => {
@@ -46,7 +49,16 @@ export class RemoveConstantParametersAstTransformer implements AstTransformer<Co
       reduceDeclarationReference: (n, r) => {
 
         // Inline value if is literal
-        const resolved = n.resolve(args.root);
+        let resolved: Code.VariableDeclaration | Code.Parameter;
+        try {
+          resolved = n.resolve(args.root);
+        } catch (ex) {
+          if (ex instanceof ReferenceNodeNotFoundError) {
+            logger.warn(`Could not find declaration reference target ${n.targetId}, something is wrong with how declarations are made, but will simply remove and move on`);
+            return undefined;
+          }
+          throw ex;
+        }
 
         if (resolved.type && resolved instanceof Code.Parameter) {
 
@@ -58,13 +70,10 @@ export class RemoveConstantParametersAstTransformer implements AstTransformer<Co
 
             const def = this.getDefault(resolved.type.omniType);
             if (def !== undefined && OmniUtil.isNullableType(resolved.type.omniType)) {
-
-              // NOTE: This keeps the original param and ref.
-              // In theory if this transformer was ran twice it would exponentially create ternary expressions.
-              // So make sure this is only ran once.
               return new Code.TernaryExpression(
                 new Code.BinaryExpression(n, Code.TokenKind.EQUALS, new Code.Literal(null)),
-                new Code.Literal(def), n,
+                new Code.Literal(def),
+                n,
               );
             }
           }

@@ -929,7 +929,6 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       kind: OmniItemKind.PROPERTY,
       name: JsonSchemaParser.getPreferredPropertyName(resolvedSchema, propertyName, this._options),
       type: propertyType.type,
-      debug: 'From JsonSchema',
       description: this.getSchemaProperty(resolvedSchema, obj => obj.description),
     };
 
@@ -1413,9 +1412,12 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     if (schema.allOf) {
       for (const entry of schema.allOf) {
         const resolved = this._refResolver.resolve(entry);
-        const preferredName = this.getPreferredName(entry, resolved, name); // {name: name, prefix: `IntersectionFor`});
+        const preferredName = this.getPreferredName(entry, resolved, name);
         const omniType = this.jsonSchemaToType(preferredName, resolved).type;
         omniType.inline = (resolved === entry);
+        if (this._options.debug && omniType.inline) {
+          omniType.debug = OmniUtil.addDebug(omniType.debug, `Made inline since the 'allOf' entry was inline in the spec`);
+        }
         compositionsAllOfAnd.push(omniType);
       }
     }
@@ -1652,13 +1654,13 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     // The type is a JSONSchema7, though the type system seems unsure of that fact.
     let derefJsonSchema = this._refResolver.resolve(schema);
     if (!derefJsonSchema.$id) {
-      derefJsonSchema.$id = name;
+      derefJsonSchema.$id = derefJsonSchema.title ?? name;
     }
 
     derefJsonSchema = JsonSchemaParser.preProcessJsonSchema(undefined, derefJsonSchema);
 
-    const omniType = this.jsonSchemaToType(name, derefJsonSchema).type;
-    logger.debug(`Using the from jsonschema converted omni type '${OmniUtil.describe(omniType)}'`);
+    const omniType = this.jsonSchemaToType(undefined, derefJsonSchema).type;
+    logger.debug(`Using the from jsonschema converted OmniType '${OmniUtil.describe(omniType)}'`);
     return omniType;
   }
 

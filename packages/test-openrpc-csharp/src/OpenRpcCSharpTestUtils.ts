@@ -2,7 +2,7 @@ import {BaseContext, FileContext, TargetContext} from '@omnigen/core-plugin';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {z} from 'zod';
 import {PluginManager} from '@omnigen/plugin';
-import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
+import {JsonRpcParserOptions, OpenRpcPlugins} from '@omnigen/parser-openrpc';
 import {CSharpOptions, CSharpPlugins} from '@omnigen/target-csharp';
 import {LoggerFactory} from '@omnigen/core-log';
 import {ModelTransformOptions, PackageOptions, ParserOptions, TargetOptions} from '@omnigen/api';
@@ -10,7 +10,7 @@ import {DEFAULT_SPECIFIC_TEST_TARGET_OPTIONS} from '@omnigen/utils-test';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export type AllCSharpOptions = ParserOptions & ModelTransformOptions & PackageOptions & TargetOptions & CSharpOptions;
+export type AllCSharpOptions = ParserOptions & JsonRpcParserOptions & ModelTransformOptions & PackageOptions & TargetOptions & CSharpOptions;
 
 export class OpenRpcCSharpTestUtils {
 

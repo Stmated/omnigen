@@ -19,7 +19,8 @@ namespace generated.omnigen
         public string Id { get; init; }
         [JsonProperty("jsonrpc")]
         public string Jsonrpc { get; init; } = "2.0";
-        [JsonProperty("result")]
+        [JsonProperty("result", Required = Required.Always)]
+        [Required]
         public Out Result { get; init; }
     }
 

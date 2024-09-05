@@ -102,9 +102,7 @@ export interface Contact extends SpecificationExtensions {
   readonly url?: string | undefined;
 }
 
-export interface ContentAdditionalProperties extends Examples {
-  readonly [key: string /* Pattern: "^x-" */]: any;
-}
+export type ContentAdditionalProperties = Examples;
 
 export interface EncodingHeaders {
   readonly [key: string]: EncodingHeadersAdditionalProperties | undefined;
@@ -131,6 +129,7 @@ export interface Examples {
   readonly example?: any;
   readonly examples?: ExamplesExamples | undefined;
   readonly schema?: MediaTypeSchemaMeta | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface ExamplesExamples {
@@ -316,13 +315,11 @@ export interface ResponseLinks {
 
 export type ResponseLinksAdditionalProperties = Reference | Link;
 export type ResponseOrReference = Reference | Response;
-
-export interface Responses extends ResponsesThen {
-  readonly [key: string /* Pattern: "^[1-5](?:[0-9]{2}|XX)$" */]: ResponseOrReference | undefined;
-}
+export type Responses = ResponsesThen;
 
 export interface ResponsesThen {
   readonly default?: ResponseOrReference | undefined;
+  readonly [key: string /* Pattern: "^[1-5](?:[0-9]{2}|XX)$" */]: ResponseOrReference | undefined;
 }
 
 export type Schema = Schemaobject | boolean;
@@ -333,7 +330,7 @@ export interface SecurityRequirement {
 }
 
 export interface SecurityScheme extends TypeHttp, TypeHttpBearer, TypeOauth2, TypeOidc, TypeApikey {
-  readonly [key: string /* Pattern: "^x-" */]: any;
+
 }
 
 export enum SecuritySchemeType {
@@ -389,6 +386,7 @@ export interface TypeApikeyThen {
   readonly in: TypeApikeyIn;
   readonly name: string;
   readonly type: SecuritySchemeType;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type TypeHttp = TypeHttpThen;

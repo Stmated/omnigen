@@ -836,11 +836,19 @@ export class OmniUtil {
     return false;
   }
 
-  public static getSpecifiedConstantValue(type: OmniType): OmniPrimitiveConstantValue | null | undefined {
+  public static getSpecifiedConstantValue(type: OmniType): OmniPrimitiveConstantValue | undefined {
     if (OmniUtil.isPrimitive(type)) {
       if (type.literal === true) {
         return type.value;
       }
+    }
+
+    return undefined;
+  }
+
+  public static getSpecifiedValue(type: OmniType): [OmniPrimitiveConstantValue, 'constant' | 'default'] | undefined {
+    if (OmniUtil.isPrimitive(type) && type.value !== undefined) {
+      return [type.value, type.literal ? 'constant' : 'default'];
     }
 
     return undefined;
@@ -1012,25 +1020,6 @@ export class OmniUtil {
     return type;
   }
 
-  public static toNonNullableType<T extends OmniType>(type: T): T {
-
-    if (OmniUtil.isPrimitive(type)) {
-      if (!type.literal && type.value !== undefined) {
-        return {
-          ...type,
-          // Make it not-nullable and remove the Default-value.
-          // NOTE: Perhaps the Default-value should be kept, for the sake of
-          nullable: false,
-          literal: false,
-          value: undefined,
-          debug: OmniUtil.addDebug(type.debug, `Nullable non-literal made non-nullable (value was: ${type.value})`),
-        } satisfies OmniPrimitiveType;
-      }
-    }
-
-    return type;
-  }
-
   /**
    * Iterates through a type and all its related types, and replaces all found needles with the given replacement.
    *
@@ -1050,9 +1039,9 @@ export class OmniUtil {
   public static swapType<T extends OmniType, R extends OmniType>(
     parent: TypeOwner,
     from: T,
-    to: R,
+    to: R | null,
     maxDepth = 10,
-  ): R | undefined {
+  ): R | undefined | null {
 
     if (parent == from) {
       return to;
@@ -1077,7 +1066,7 @@ export class OmniUtil {
    * TODO: Replace with a tree-folding traverser/visitor instead
    * @deprecated Instead use `ProxyReducerOmni` (it needs to be fixed first, but prematurely deprecating so that there are lots of warnings to remind me to work on it)
    */
-  private static swapTypeInsideType<T extends OmniType, R extends OmniType>(parent: OmniType, from: T, to: R, maxDepth: number): void {
+  private static swapTypeInsideType<T extends OmniType, R extends OmniType>(parent: OmniType, from: T, to: R | null, maxDepth: number): void {
 
     switch (parent.kind) {
       case OmniTypeKind.UNION:
@@ -1086,8 +1075,14 @@ export class OmniUtil {
       case OmniTypeKind.NEGATION: {
         for (let i = 0; i < parent.types.length; i++) {
           const found = OmniUtil.swapType(parent.types[i], from, to, maxDepth - 1);
-          if (found) {
-            parent.types.splice(i, 1, to);
+          if (found === null) {
+            parent.types.splice(i, 1);
+          } else if (found) {
+            if (to) {
+              parent.types.splice(i, 1, to);
+            } else {
+              parent.types.splice(i, 1);
+            }
           }
         }
         break;
@@ -1097,9 +1092,11 @@ export class OmniUtil {
           // We do not decrease the max depth if it's a composition, since it is an invisible wrapper
           const decrementDepthBy = (OmniUtil.isComposition(parent.extendedBy)) ? 0 : 1;
           const found = OmniUtil.swapType(parent.extendedBy, from, to, maxDepth - decrementDepthBy);
-          if (found) {
-            if (OmniUtil.asSuperType(to)) {
-              parent.extendedBy = to;
+          if (found === null) {
+            parent.extendedBy = undefined;
+          } else if (found) {
+            if (OmniUtil.asSuperType(found)) {
+              parent.extendedBy = found;
             } else {
 
               // If the replacement is not a potential supertype, then we will not swap it.
@@ -1112,17 +1109,22 @@ export class OmniUtil {
 
         for (const property of parent.properties) {
           const found = OmniUtil.swapType(property.type, from, to, maxDepth - 1);
-          if (found) {
-            property.type = to;
+          if (found === null) {
+            throw new Error(`Cannot remove the type of the property. Perhaps this should simply remove the property?`);
+          } else if (found) {
+            property.type = found;
           }
         }
         break;
       }
       case OmniTypeKind.INTERFACE: {
         const found = OmniUtil.swapType(parent.of, from, to, maxDepth - 1);
-        if (found) {
-          if (OmniUtil.asSuperType(to)) {
-            parent.of = to;
+        if (found === null) {
+          throw new Error(`Cannot remove 'of' from the interface. Perhaps the interface should simply be removed?`);
+          // parent.of = undefined;
+        } else if (found) {
+          if (OmniUtil.asSuperType(found)) {
+            parent.of = found;
           } else {
             throw new Error(`Cannot replace, since the interface requires a replacement that is inheritable`);
           }
@@ -1134,7 +1136,10 @@ export class OmniUtil {
 
           const identifier = parent.targetIdentifiers[i];
           const found = OmniUtil.swapType(identifier, from, to, maxDepth);
-          if (found) {
+          if (found === null) {
+            parent.targetIdentifiers.splice(i, 1);
+            i--;
+          } else if (found) {
             if (found.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
               parent.targetIdentifiers[i] = found;
             } else {
@@ -1154,6 +1159,10 @@ export class OmniUtil {
         break;
       }
       case OmniTypeKind.GENERIC_TARGET_IDENTIFIER: {
+        // if (from === parent.sourceIdentifier) {
+        //   throw new Error(`If the source is removed, then we should remove the target identifier too?`);
+        // }
+
         const found = OmniUtil.swapType(parent.type, from, to, maxDepth - 1);
         if (found) {
           parent.type = found;
@@ -1164,7 +1173,10 @@ export class OmniUtil {
         for (let i = 0; i < parent.sourceIdentifiers.length; i++) {
           const identifier = parent.sourceIdentifiers[i];
           const found = OmniUtil.swapType(identifier, from, to, maxDepth);
-          if (found) {
+          if (found === null) {
+            parent.sourceIdentifiers.splice(i, 1);
+            i--;
+          } else if (found) {
             if (found.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
               parent.sourceIdentifiers[i] = found;
             } else {
@@ -1187,13 +1199,17 @@ export class OmniUtil {
       case OmniTypeKind.GENERIC_SOURCE_IDENTIFIER: {
         if (parent.lowerBound) {
           const found = OmniUtil.swapType(parent.lowerBound, from, to, maxDepth - 1);
-          if (found) {
+          if (found === null) {
+            parent.lowerBound = undefined;
+          } else if (found) {
             parent.lowerBound = found;
           }
         }
         if (parent.upperBound) {
           const found = OmniUtil.swapType(parent.upperBound, from, to, maxDepth - 1);
-          if (found) {
+          if (found === null) {
+            parent.upperBound = undefined;
+          } else if (found) {
             parent.upperBound = found;
           }
         }
@@ -1201,7 +1217,10 @@ export class OmniUtil {
           for (let i = 0; i < parent.knownEdgeTypes.length; i++) {
             const edge = parent.knownEdgeTypes[i];
             const found = OmniUtil.swapType(edge, from, to, maxDepth);
-            if (found) {
+            if (found === null) {
+              parent.knownEdgeTypes.splice(i, 1);
+              i--;
+            } else if (found) {
               parent.knownEdgeTypes[i] = found;
             }
           }
@@ -1223,7 +1242,9 @@ export class OmniUtil {
       case OmniTypeKind.TUPLE: {
         for (let i = 0; i < parent.types.length; i++) {
           const found = OmniUtil.swapType(parent.types[i], from, to, maxDepth - 1);
-          if (found) {
+          if (found === null) {
+            parent.types.splice(i, 1);
+          } else if (found) {
             parent.types.splice(i, 1, found);
           }
         }
@@ -1251,7 +1272,7 @@ export class OmniUtil {
   private static swapTypeInsideTypeOwner<T extends OmniType, R extends OmniType>(
     parent: OmniInput | OmniOutput | OmniProperty,
     from: T,
-    to: R,
+    to: R | null,
     maxDepth: number,
   ): void {
 
@@ -1264,7 +1285,7 @@ export class OmniUtil {
   private static swapTypeInsideModel<T extends OmniType, R extends OmniType>(
     parent: OmniModel,
     from: T,
-    to: R,
+    to: R | null,
     maxDepth: number,
   ): void {
 
@@ -1978,7 +1999,7 @@ export class OmniUtil {
   public static getDistinctTypes(
     types: OmniType[],
     targetFeatures: TargetFeatures,
-    allowedDiffPredicate: (diff: TypeDiffKind) => boolean = () => false,
+    allowedDiffPredicate: (diff: TypeDiffKind) => boolean = (() => false),
   ) {
 
     const distinctTypes: OmniType[] = [];
@@ -2872,6 +2893,8 @@ export class OmniUtil {
 
     if (typeof aResolved === 'string' && typeof bResolved === 'string') {
       return aResolved === bResolved;
+    } else if (aResolved instanceof RegExp && bResolved instanceof RegExp) {
+      return aResolved.source === bResolved.source;
     } else {
       return false;
     }
@@ -2918,11 +2941,7 @@ export class OmniUtil {
     if (typeof name === 'string') {
       return name;
     } else {
-      if (name.isPattern) {
-        return name.name;
-      } else {
-        return name.name;
-      }
+      return name.name;
     }
   }
 
@@ -3066,7 +3085,15 @@ export class OmniUtil {
         // The field is not a literal but has a default value.
         // This means that the field itself should not have the same type as for example the constructor parameter.
         // Because it will be up to the constructor to set the field with the default value if a value is not given.
-        return OmniUtil.toNonNullableType(type);
+        return {
+          ...type,
+          // Make it not-nullable and remove the Default-value.
+          // NOTE: Perhaps the Default-value should be kept, for the sake of preservation?
+          nullable: false,
+          literal: false,
+          value: undefined,
+          debug: OmniUtil.addDebug(type.debug, `Nullable non-literal made non-nullable (value was: ${type.value})`),
+        };
       }
     }
 

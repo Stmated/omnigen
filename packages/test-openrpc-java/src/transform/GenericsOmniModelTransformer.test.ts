@@ -38,7 +38,7 @@ describe('Generics', () => {
     transformer.transformModel2ndPass({
       model: model,
       options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS, ...DEFAULT_TARGET_OPTIONS},
-      targetFeatures: OMNI_GENERIC_FEATURES,
+      features: OMNI_GENERIC_FEATURES,
     });
 
     expect(model.types).toHaveLength(1);
@@ -93,7 +93,7 @@ describe('Generics', () => {
     transformer.transformModel2ndPass({
       model: model,
       options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS, ...DEFAULT_TARGET_OPTIONS},
-      targetFeatures: OMNI_GENERIC_FEATURES,
+      features: OMNI_GENERIC_FEATURES,
     });
 
     expect(model.types).toHaveLength(3);

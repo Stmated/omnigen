@@ -6,6 +6,7 @@ import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
 import {JavaVisitor} from '../visit';
 import {FieldAccessorMode, JavaOptions} from '../options';
 import {ModifierKind} from '../ast/JavaAst';
+import {LOMBOK_SINGULAR} from './PatternPropertiesToMapJavaAstTransformer.ts';
 
 export interface StackInfo {
   cu: Java.AbstractObjectDeclaration;
@@ -110,10 +111,31 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
             }
           } else {
 
-            // We only add the @Default annotation if there is an initializer.
-            annotations.children.push(new Java.Annotation(
-              new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'Builder'], edgeName: 'Default'}}),
-            ));
+            // TODO: If has `Singular` then we cannot use `Default` -- instead make it final!
+
+            const hasSingular = annotations.children.find(it => {
+              if (it instanceof Java.Annotation) {
+                if (it.type.omniType.kind === OmniTypeKind.HARDCODED_REFERENCE) {
+                  return nameResolver.isEqual(it.type.omniType.fqn, LOMBOK_SINGULAR);
+                }
+              }
+              return false;
+            });
+
+            if (hasSingular) {
+
+              // Cannot mix @Default and @Singular for @SuperBuilder -- need to make the @Singular field into `final` without the initializer.
+              // if (!node.modifiers.children.some(it => it.kind === Java.ModifierKind.FINAL)) {
+              //   node.modifiers.children.push(new Java.Modifier(Java.ModifierKind.FINAL));
+              // }
+              delete node.initializer;
+            } else {
+
+              // We only add the @Default annotation if there is an initializer.
+              annotations.children.push(new Java.Annotation(
+                new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'Builder'], edgeName: 'Default'}}),
+              ));
+            }
           }
         }
 

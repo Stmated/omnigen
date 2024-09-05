@@ -1,5 +1,5 @@
 import {AstNode, AstTransformer, AstTransformerArguments, OmniType, RootAstNode, TargetOptions} from '@omnigen/api';
-import {OmniUtil, Visitor} from '@omnigen/core';
+import {OmniUtil, ReferenceNodeNotFoundError, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
 import {CodeRootAstNode} from '../CodeRootAstNode.ts';
@@ -56,15 +56,23 @@ export class SortVisitorRegistry {
 
 SortVisitorRegistry.INSTANCE.register((root, a, b, options) => {
 
-  const aWeight = getWeight(a, root, options);
-  const bWeight = getWeight(b, root, options);
+  try {
+    const aWeight = getWeight(a, root, options);
+    const bWeight = getWeight(b, root, options);
 
-  let result = bWeight[0] - aWeight[0];
-  if (result == 0 && (aWeight[1] || bWeight[1])) {
-    result = (aWeight[1] ?? '').localeCompare(bWeight[1] ?? '');
+    let result = bWeight[0] - aWeight[0];
+    if (result == 0 && (aWeight[1] || bWeight[1])) {
+      result = (aWeight[1] ?? '').localeCompare(bWeight[1] ?? '');
+    }
+
+    return result;
+  } catch (ex) {
+    if (ex instanceof ReferenceNodeNotFoundError) {
+      return 0;
+    } else {
+      throw ex;
+    }
   }
-
-  return result;
 });
 
 const getWeight = (node: AstNode, root: RootAstNode, options: TargetOptions): [number, string | undefined] => {

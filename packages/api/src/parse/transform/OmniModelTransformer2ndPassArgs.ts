@@ -6,5 +6,5 @@ import {OmniModelTransformerArgs} from './OmniModelTransformerArgs';
 export interface OmniModelTransformer2ndPassArgs<TOpt extends ParserOptions & TargetOptions = ParserOptions & TargetOptions> extends OmniModelTransformerArgs<TOpt> {
 
   options: TOpt & ModelTransformOptions;
-  targetFeatures: TargetFeatures;
+  features: TargetFeatures;
 }

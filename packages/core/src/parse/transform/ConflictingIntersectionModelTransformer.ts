@@ -17,7 +17,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
     const reducer = ProxyReducerOmni.builder().build({
-      INTERSECTION: (n, a) => this.replaceIntersection(n, args.targetFeatures) ?? a.next(n),
+      INTERSECTION: (n, a) => this.replaceIntersection(n, args.features) ?? a.next(n),
     });
     args.model = reducer.reduce(args.model);
   }

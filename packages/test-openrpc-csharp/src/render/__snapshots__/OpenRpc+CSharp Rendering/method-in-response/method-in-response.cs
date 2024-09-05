@@ -123,7 +123,8 @@ namespace generated.openrpc
         public string Id { get; }
         [JsonProperty("jsonrpc")]
         public string Jsonrpc { get; } = "2.0";
-        [JsonProperty("result")]
+        [JsonProperty("result", Required = Required.Always)]
+        [Required]
         public T Result { get; }
 
         public JsonRpcResponse(string id, T result)
@@ -150,6 +151,8 @@ namespace generated.openrpc
 
     public abstract class AbstractRequestData
     {
+        [JsonExtensionData]
+        public JToken AdditionalProperties { get; }
         [JsonProperty("Password", Required = Required.Always)]
         [Required]
         public string Password { get; }
@@ -157,17 +160,16 @@ namespace generated.openrpc
         [Required]
         public string Username { get; }
 
-        public AbstractRequestData(string username, string password)
+        public AbstractRequestData(string username, string password, JToken additionalProperties)
         {
             this.Username = username;
             this.Password = password;
+            this.AdditionalProperties = additionalProperties;
         }
     }
 
     public class RefundRequestData : AbstractRequestData
     {
-        [JsonExtensionData]
-        public JToken AdditionalProperties { get; }
         [JsonProperty("Amount", Required = Required.Always)]
         [Required]
         public string Amount { get; }
@@ -175,11 +177,10 @@ namespace generated.openrpc
         [Required]
         public string OrderID { get; }
 
-        public RefundRequestData(string username, string password, string orderId, string amount, JToken additionalProperties) : base(username, password)
+        public RefundRequestData(string username, string password, JToken additionalProperties, string orderId, string amount) : base(username, password, additionalProperties)
         {
             this.OrderID = orderId;
             this.Amount = amount;
-            this.AdditionalProperties = additionalProperties;
         }
     }
 
@@ -241,16 +242,13 @@ namespace generated.openrpc
 
     public class DepositRequestData : AbstractRequestData
     {
-        [JsonExtensionData]
-        public JToken AdditionalProperties { get; }
         [JsonProperty("NotificationURL", Required = Required.Always)]
         [Required]
         public string NotificationURL { get; }
 
-        public DepositRequestData(string username, string password, string notificationUrl, JToken additionalProperties) : base(username, password)
+        public DepositRequestData(string username, string password, JToken additionalProperties, string notificationUrl) : base(username, password, additionalProperties)
         {
             this.NotificationURL = notificationUrl;
-            this.AdditionalProperties = additionalProperties;
         }
     }
 

@@ -47,7 +47,7 @@ import {
   ZodTargetOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SimplifyGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
 import * as Java from './ast/JavaAst';
 import {CodeRootAstNode} from './ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -67,7 +67,7 @@ import {
   MergeLargeUnionLateModelTransformer,
   PackageResolverAstTransformer,
   PrettyCodeAstTransformer,
-  RemoveConstantParametersAstTransformer,
+  RemoveConstantParametersAstTransformer, RemoveUnnecessaryPropertyModelTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyAndCleanAstTransformer,
@@ -166,14 +166,16 @@ export const JavaPlugin = createPlugin(
     const modelTransformer2Args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & JavaOptions> = {
       model: transformerArgs.model,
       options: {...ctx.parserOptions, ...ctx.modelTransformOptions, ...ctx.targetOptions, ...ctx.javaOptions},
-      targetFeatures: JAVA_FEATURES,
+      features: JAVA_FEATURES,
     };
 
     const transformers2: OmniModel2ndPassTransformer[] = [
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
+      new RemoveUnnecessaryPropertyModelTransformer(),
       new MergeLargeUnionLateModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),
+      new SimplifyGenericsModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
@@ -191,12 +193,13 @@ export const JavaPlugin = createPlugin(
       // TODO: Move to much later, so things like generic normalization/simplification has been done?
       astTransformers.push(new AddConstructorAstTransformer());
     }
+    astTransformers.push(new PatternPropertiesToMapJavaAstTransformer());
     astTransformers.push(new AddLombokAstTransformer());
     astTransformers.push(new AddAdditionalPropertiesInterfaceAstTransformer());
     astTransformers.push(new AddJakartaValidationAstTransformer());
     astTransformers.push(new AddSubTypeHintsAstTransformer());
     astTransformers.push(new InnerTypeCompressionAstTransformer());
-    astTransformers.push(new PatternPropertiesToMapJavaAstTransformer());
+
     astTransformers.push(new SingleFileJavaAstTransformer());
     astTransformers.push(new ResolveGenericSourceIdentifiersAstTransformer());
     astTransformers.push(new SimplifyGenericsAstTransformer());

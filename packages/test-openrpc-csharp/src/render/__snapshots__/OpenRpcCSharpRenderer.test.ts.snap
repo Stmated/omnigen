@@ -12,12 +12,6 @@ exports[`OpenRpc+CSharp Rendering > compressable-types 1`] = `
 ]
 `;
 
-exports[`OpenRpc+CSharp Rendering > compressable-types_init 1`] = `
-[
-  "JsonRpcRequest.cs",
-]
-`;
-
 exports[`OpenRpc+CSharp Rendering > enum 1`] = `
 [
   "enum.cs",

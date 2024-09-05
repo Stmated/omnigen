@@ -1,10 +1,8 @@
 import {DistributeReadOnly, DistributeWriteable} from '@omnigen/api';
 import {ReducerOpt} from './ReducerOpt.ts';
+import {IsExactly} from '../util';
 
-export type IsExactly<T, Condition, True, False> = [T] extends [Condition] ? True : False;
 export type IfImmutable<InOpt extends ReducerOpt, True, False> = IsExactly<InOpt['immutable'], true, True, False>;
-
-export type Simplify<T> = {[KeyType in keyof T]: T[KeyType]} & {};
 
 export type ReduceRet<N, D extends keyof N, O, Opt extends ReducerOpt> = IfImmutable<Opt, void, (N[D] extends keyof O ? O[N[D]] : N)>;
 export type NextRet<N, D extends keyof N, O, Opt extends ReducerOpt> = IfImmutable<Opt, void, (N[D] extends keyof O ? O[N[D]] : (undefined | N))>;

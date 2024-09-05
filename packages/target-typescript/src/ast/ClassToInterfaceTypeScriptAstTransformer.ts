@@ -126,6 +126,14 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
           return n;
         }
       },
+      reduceFieldBackedSetter: n => {
+        if (fieldNamesStack.length > 0) {
+          const field = args.root.resolveNodeRef(n.fieldRef);
+          return this.toUniqueField(field, fieldNamesStack[fieldNamesStack.length - 1]);
+        } else {
+          return n;
+        }
+      },
       reduceGetter: n => {
 
         const field = new Code.Field(

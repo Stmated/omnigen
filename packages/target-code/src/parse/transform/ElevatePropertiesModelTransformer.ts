@@ -16,6 +16,7 @@ import {
 } from '@omnigen/api';
 import {CodeOptions, ZodCodeOptions} from '../../options/CodeOptions.ts';
 import {CreateMode, OmniUtil, PropertyUtil, Sorters} from '@omnigen/core';
+import {LoggerFactory} from '@omnigen/core-log';
 
 const defaultBannedTypeDifferences: ReadonlyArray<TypeDiffKind> = [
   TypeDiffKind.FUNDAMENTAL_TYPE,
@@ -30,6 +31,8 @@ const defaultBannedPropDifferences: ReadonlyArray<PropertyDifference> = [
 ];
 
 const DEFAULT_CODE_OPTIONS: Readonly<CodeOptions> = ZodCodeOptions.parse({});
+
+const logger = LoggerFactory.create(import.meta.url);
 
 // TODO: This transformer should be split into two, one early that can be ran inside `CoreUtilPluginInit` and then one that can run after we know which target it is.
 // TODO: As well as separating it to one that can handle elevating generic properties (if the need arises)
@@ -62,7 +65,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
   }
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & CodeOptions>): void {
-    this.transformInner(args, 2, args.targetFeatures);
+    this.transformInner(args, 2, args.features);
   }
 
   transformInner(args: OmniModelTransformerArgs<ParserOptions & CodeOptions>, stage: 1 | 2, targetFeatures?: TargetFeatures): void {
@@ -110,18 +113,15 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
       ...subTypes,
     );
 
-    for (const propertyName in properties.byPropertyName) {
-      if (!(propertyName in properties.byPropertyName)) {
-        continue;
-      }
+    for (const info of Object.values(properties.byPropertyName)) {
 
-      if (superType.properties.find(it => OmniUtil.isPropertyNameEqual(it.name, propertyName))) {
+      if (superType.properties.find(it => OmniUtil.isPropertyNameEqual(it.name, info.propertyName))) {
 
         // The superType already has a property with that name.
+        logger.info(`SuperType ${OmniUtil.describe(superType)} already has property '${OmniUtil.getPropertyNameOrPattern(info.propertyName)}'`);
         continue;
       }
 
-      const info = properties.byPropertyName[propertyName]!;
       const propertyToElevate = info.properties[0];
       const uniqueDiffs = [...new Set(info.typeDiffs ?? [])];
 
@@ -150,9 +150,13 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
           superType.properties.push(abstractProperty);
         } else {
 
-          const commonType: OmniType = (features.unions && info.distinctTypes.length < options.maxAutoUnionSize)
-            ? {kind: OmniTypeKind.EXCLUSIVE_UNION, types: info.distinctTypes, inline: true}
-            : info.commonType;
+          let commonType: OmniType;
+          if (features.unions && info.distinctTypes.length < options.maxAutoUnionSize) {
+            commonType = {kind: OmniTypeKind.EXCLUSIVE_UNION, types: info.distinctTypes, inline: true};
+            commonType.debug = OmniUtil.addDebug(commonType.debug, `Made inline since unions are target-supported and distinct types are few`);
+          } else {
+            commonType = info.commonType;
+          }
 
           const allSubTypesAreConstants = !features.unions && (info.properties.every(it => OmniUtil.getSpecifiedConstantValue(it.property.type) !== undefined));
 

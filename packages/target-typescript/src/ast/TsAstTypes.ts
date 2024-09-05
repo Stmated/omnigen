@@ -1,4 +1,4 @@
-import {AstNode, OmniType, Reducer, ReducerResult, TypeNode, VisitResult} from '@omnigen/api';
+import {AstNode, OmniCompositionType, OmniType, Reducer, ReducerResult, TypeNode, VisitResult} from '@omnigen/api';
 import {TypeScriptVisitor} from '../visit';
 import {Code} from '@omnigen/target-code';
 import {GetterIdentifier, SetterIdentifier} from '@omnigen/target-code/ast';
@@ -14,10 +14,10 @@ export abstract class AbstractTypeScriptNode extends Code.AbstractCodeNode imple
 
 export class CompositionType extends AbstractTypeScriptNode implements TypeNode {
 
-  omniType: OmniType;
+  omniType: OmniCompositionType;
   typeNodes: AstNode[];
 
-  constructor(omniType: OmniType, typeNodes: AstNode[]) {
+  constructor(omniType: OmniCompositionType, typeNodes: AstNode[]) {
     super();
     this.omniType = omniType;
     this.typeNodes = typeNodes;
@@ -27,7 +27,7 @@ export class CompositionType extends AbstractTypeScriptNode implements TypeNode 
     return visitor.visitCompositionType(this, visitor);
   }
 
-  reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<CompositionType> {
+  reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<TypeNode> {
     return reducer.reduceCompositionType(this, reducer);
   }
 }
@@ -37,16 +37,18 @@ export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Code
   readonly name: Code.Identifier;
   readonly of: TypeNode;
   readonly modifiers?: Code.ModifierList | undefined;
+  readonly comments?: Code.Comment | undefined;
 
   get omniType() {
     return this.of.omniType;
   }
 
-  constructor(identifier: Code.Identifier, of: TypeNode, modifiers?: Code.ModifierList) {
+  constructor(identifier: Code.Identifier, of: TypeNode, modifiers?: Code.ModifierList, comments?: Code.Comment) {
     super();
     this.name = identifier;
     this.of = of;
     this.modifiers = modifiers;
+    this.comments = comments;
   }
 
   visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {

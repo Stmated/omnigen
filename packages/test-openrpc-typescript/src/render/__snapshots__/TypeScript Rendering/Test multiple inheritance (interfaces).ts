@@ -29,7 +29,7 @@ export type In = { readonly in_type?: string | undefined; } & UnionOfAB;
 
 export interface JsonRpcError {
   readonly code?: number | undefined;
-  readonly data?: any | undefined;
+  readonly data?: unknown;
   readonly message?: string | undefined;
 }
 

@@ -39,5 +39,6 @@ export * from './parse/transform/InterfaceExtractorModelTransformer.ts';
 export * from './parse/transform/AggregateIntersectionsModelTransformer.ts';
 export * from './parse/transform/MergeLargeUnionLateModelTransformer.ts';
 export * from './parse/transform/ElevatePropertiesModelTransformer.ts';
+export * from './parse/transform/RemoveUnnecessaryPropertyModelTransformer.ts';
 
 export * as Code from './ast/Code';

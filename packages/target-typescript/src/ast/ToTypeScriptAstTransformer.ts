@@ -26,33 +26,31 @@ export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode,
 
     const reducer: TypeScriptAstReducer = {
       ...defaultReducer,
-      ...{
-        reduceEdgeType: (n, r) => {
+      reduceEdgeType: (n, r) => {
 
-          if (n.omniType.kind === OmniTypeKind.DICTIONARY) {
+        if (n.omniType.kind === OmniTypeKind.DICTIONARY) {
 
-            const type = n.omniType;
+          const type = n.omniType;
 
-            const source = ToTypeScriptAstTransformer.getMapGenericSource(n.implementation ?? false);
-            const genericTargetType: OmniGenericTargetType = {
-              kind: OmniTypeKind.GENERIC_TARGET,
-              source: source,
-              targetIdentifiers: [
-                {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: type.keyType, sourceIdentifier: source.sourceIdentifiers[0]},
-                {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: type.valueType, sourceIdentifier: source.sourceIdentifiers[1]},
-              ],
-            };
+          const source = ToTypeScriptAstTransformer.getMapGenericSource(n.implementation ?? false);
+          const genericTargetType: OmniGenericTargetType = {
+            kind: OmniTypeKind.GENERIC_TARGET,
+            source: source,
+            targetIdentifiers: [
+              {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: type.keyType, sourceIdentifier: source.sourceIdentifiers[0]},
+              {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: type.valueType, sourceIdentifier: source.sourceIdentifiers[1]},
+            ],
+          };
 
-            return astUtils.createTypeNode(genericTargetType, n.implementation);
+          return astUtils.createTypeNode(genericTargetType, n.implementation);
 
-          } else {
-            return defaultReducer.reduceEdgeType(n, r);
-          }
-        },
+        } else {
+          return defaultReducer.reduceEdgeType(n, r);
+        }
+      },
 
-        reduceWildcardType: n => {
-          return ToTypeScriptAstTransformer.getUnknownClassName(n.omniType.unknownKind ?? args.options.unknownType, n.implementation, astUtils).setId(n.id);
-        },
+      reduceWildcardType: n => {
+        return ToTypeScriptAstTransformer.getUnknownClassName(n.omniType.unknownKind ?? args.options.unknownType, n.implementation, astUtils).setId(n.id);
       },
     };
 
@@ -86,12 +84,13 @@ export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode,
 
         return astUtils.createTypeNode(genericTargetType, implementation);
       }
-      case UnknownKind.DYNAMIC_NATIVE:
-      case UnknownKind.DYNAMIC:
+
       case UnknownKind.ANY:
         return new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'any'}}, implementation);
       case UnknownKind.OBJECT:
         return new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'object'}}, implementation);
+      case UnknownKind.DYNAMIC_NATIVE:
+      case UnknownKind.DYNAMIC:
       case UnknownKind.WILDCARD:
         return new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'unknown'}}, implementation);
     }

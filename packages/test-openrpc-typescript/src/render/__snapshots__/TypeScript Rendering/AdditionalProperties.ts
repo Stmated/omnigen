@@ -1,3 +1,5 @@
+// noinspection JSUnusedGlobalSymbols
+
 export type ErrorUnknown = JsonRpcErrorResponse;
 export type ErrorUnknownError = JsonRpcError;
 
@@ -6,7 +8,7 @@ export type ErrorUnknownError = JsonRpcError;
  */
 export interface JsonRpcError {
   readonly code?: number | undefined;
-  readonly data?: any | undefined;
+  readonly data?: unknown;
   readonly message?: string | undefined;
 }
 
@@ -30,7 +32,7 @@ export interface JsonRpcResponse {
   readonly error?: null | undefined;
   readonly id?: string | undefined;
   readonly jsonrpc?: '2.0' | undefined;
-  readonly result?: ReadonlyArray<Thing> | undefined;
+  readonly result: ReadonlyArray<Thing>;
 }
 
 export type ListThingsRequest = JsonRpcRequest;

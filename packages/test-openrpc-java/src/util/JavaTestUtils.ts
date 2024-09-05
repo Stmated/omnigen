@@ -24,9 +24,7 @@ export const DEFAULT_TEST_JAVA_OPTIONS: JavaOptions = {
 };
 
 export interface JavaTestUtilsOptions {
-  // parserOptions?: Partial<ParserOptions>,
   modelTransformOptions?: Partial<ModelTransformOptions>,
-  // targetOptions?: Partial<TargetOptions>,
   packageOptions?: Partial<PackageOptions>,
   javaOptions?: Partial<JavaOptions>,
   arguments?: Record<string, any>,

@@ -56,7 +56,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs) {
 
-    if (args.targetFeatures.primitiveInheritance) {
+    if (args.features.primitiveInheritance) {
       return;
     }
 

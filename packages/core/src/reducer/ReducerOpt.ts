@@ -1,4 +1,4 @@
-import {ProxyReducerTrackMode} from './proxyReducerTrackMode.ts';
+import {ProxyReducerTrackMode} from './ProxyReducerTrackMode.ts';
 import {ProxyReducerTrackingSource} from './ProxyReducerTrackingSource.ts';
 
 export interface ReducerOpt {

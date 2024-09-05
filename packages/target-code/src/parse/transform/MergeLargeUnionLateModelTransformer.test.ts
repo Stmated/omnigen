@@ -50,7 +50,7 @@ test('Test Merge', () => {
     new GenericsModelTransformer(),
   ] as const;
 
-  const args: OmniModelTransformer2ndPassArgs = {model, options, targetFeatures: OMNI_GENERIC_FEATURES};
+  const args: OmniModelTransformer2ndPassArgs = {model, options, features: OMNI_GENERIC_FEATURES};
   for (const transformer of transformers) {
     transformer.transformModel2ndPass(args);
   }
@@ -62,7 +62,7 @@ test('Test Merge', () => {
 
   const features: TargetFeatures = {...OMNI_GENERIC_FEATURES, unions: false};
 
-  const args2: OmniModelTransformer2ndPassArgs = {model: args.model, options, targetFeatures: features};
+  const args2: OmniModelTransformer2ndPassArgs = {model: args.model, options, features: features};
   for (const transformer of transformers2) {
     transformer.transformModel2ndPass(args2);
   }

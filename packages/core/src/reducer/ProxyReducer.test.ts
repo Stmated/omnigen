@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'vitest';
 import {ProxyReducer} from './ProxyReducer.ts';
 import {assertDiscriminator, expectTs, isDefined} from '../util';
-import {ProxyReducerTrackMode} from './proxyReducerTrackMode.ts';
+import {ProxyReducerTrackMode} from './ProxyReducerTrackMode.ts';
 import {SpecFn} from './types.ts';
 import {ProxyReducerTrackingSource} from './ProxyReducerTrackingSource.ts';
 

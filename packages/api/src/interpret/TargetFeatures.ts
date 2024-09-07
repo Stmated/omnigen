@@ -54,6 +54,8 @@ export interface TargetFeatures {
    * For example in `TypeScript` the accessor for `name` would be `name()` and the backing-field would be `_name` or similar.
    */
   transparentAccessors: boolean;
+
+  explodedGenerics: boolean;
 }
 
 /**
@@ -70,6 +72,7 @@ export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   staticInnerTypes: StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE,
   unions: true,
   transparentAccessors: false,
+  explodedGenerics: false,
 };
 
 export const OMNI_RESTRICTIVE_GENERIC_FEATURES: TargetFeatures = {
@@ -82,4 +85,5 @@ export const OMNI_RESTRICTIVE_GENERIC_FEATURES: TargetFeatures = {
   staticInnerTypes: StaticInnerTypeKind.DEFAULT_STATIC,
   unions: false,
   transparentAccessors: false,
+  explodedGenerics: false,
 };

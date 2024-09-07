@@ -22,11 +22,15 @@ export class NamespaceWrapperAstTransformer implements AstTransformer<CSharpRoot
         const namespaceIdentifier = new Code.Identifier(n.packageDeclaration.fqn);
         const namespace = new Code.Namespace(namespaceIdentifier, namespaceBlock);
 
-        return new Code.CompilationUnit(
+        const unit = new Code.CompilationUnit(
           assertDefined(n.packageDeclaration.reduce(r)),
           assertDefined(n.imports.reduce(r)),
           namespace,
         ).withIdFrom(n);
+
+        unit.comments = n.comments?.reduce(r);
+
+        return unit;
       },
     });
 

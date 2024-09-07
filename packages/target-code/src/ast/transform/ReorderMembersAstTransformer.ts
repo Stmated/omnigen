@@ -263,9 +263,9 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
       if (forObjects && args.options.orderObjectsByDependency) {
 
         // Then sort it by dependencies, so that Declarations are before any Use (as best we can)
-        this.topologicalSort(
+        ReorderMembersAstTransformer.topologicalSort(
           children,
-          (a, b) => this.getSortValue(args.root, a, b, nodeToTypes),
+          (a, b) => ReorderMembersAstTransformer.getSortValue(args.root, a, b, nodeToTypes),
           (a, b) => comparator.compare(args.root, a, b, args.options),
         );
       } else {
@@ -320,7 +320,7 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
     }));
   }
 
-  private getSortValue(
+  public static getSortValue(
     root: Code.CodeRootAstNode,
     a: Code.AstNode,
     b: Code.AstNode,
@@ -341,7 +341,7 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
     return 0;
   }
 
-  private topologicalSort<T>(
+  public static topologicalSort<T>(
     items: T[],
     dependencyCompare: (a: T, b: T) => number,
     defaultCompare: (a: T, b: T) => number,

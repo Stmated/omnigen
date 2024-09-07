@@ -1,7 +1,7 @@
 import {
   Arrayable,
   CommonDenominatorType, DebugValue,
-  DEFAULT_UNKNOWN_KIND, Direction,
+  DEFAULT_UNKNOWN_KIND, Direction, FirstDefined,
   Namespace,
   NamespaceArrayItem,
   ObjectEdgeName,
@@ -2792,6 +2792,36 @@ export class OmniUtil {
     }
 
     return to;
+  }
+
+  public static debugToString(value: DebugValue, mapper?: ((v: string) => string), separator = ', '): string | undefined {
+
+    if (!value) {
+      return undefined;
+    }
+
+    if (!Array.isArray(value)) {
+      value = [value];
+    }
+
+    if (mapper) {
+      return value.map(it => mapper(it)).join(separator);
+    } else {
+      return value.join(separator);
+    }
+  }
+
+  public static debugToStrings<R>(value: DebugValue, mapper: ((v: string) => R)): ReadonlyArray<R> {
+
+    if (!value) {
+      return [];
+    }
+
+    if (!Array.isArray(value)) {
+      value = [value];
+    }
+
+    return value.map(it => mapper(it));
   }
 
   /**

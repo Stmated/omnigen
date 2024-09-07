@@ -392,11 +392,14 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       if (children.length == 0) {
         return undefined;
       }
-      return new Code.CompilationUnit(
+
+      const unit = new Code.CompilationUnit(
         assertDefined(n.packageDeclaration.reduce(r)),
         assertDefined(n.imports.reduce(r)),
         ...children,
       ).withIdFrom(n);
+      unit.comments = n.comments?.reduce(r);
+      return unit;
     },
     reduceConstructor: (n, r) => {
 

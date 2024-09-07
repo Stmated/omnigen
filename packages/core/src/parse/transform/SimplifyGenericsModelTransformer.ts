@@ -12,6 +12,10 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
+    // if (true) {
+    //   return;
+    // }
+
     type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<OmniType> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 

@@ -152,7 +152,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
     // If true, then the target does not allow generics like `Foo<'Bar'>` and instead need to widen it into `Foo<String>`.
     // But by using tricks, like hiding properties, we can try to keep as much information as possible.
-    const widenedPolymorphicLiteral = info.typeDiffs?.some(it => it === TypeDiffKind.POLYMORPHIC_LITERAL || it === TypeDiffKind.CONCRETE_VS_ABSTRACT) // .includes(TypeDiffKind.POLYMORPHIC_LITERAL)
+    const widenedPolymorphicLiteral = info.typeDiffs?.some(it => it === TypeDiffKind.POLYMORPHIC_LITERAL || it === TypeDiffKind.CONCRETE_VS_ABSTRACT)
       && !features.literalTypes
       && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? (it.value !== undefined) : false);
 

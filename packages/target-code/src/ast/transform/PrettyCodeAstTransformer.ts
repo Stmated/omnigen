@@ -67,6 +67,8 @@ export class PrettyCodeAstTransformer implements AstTransformer<CodeRootAstNode>
               ...newChildren,
             ).withIdFrom(reduced);
 
+            unit.comments = reduced.comments;
+
             if (reduced.name) {
               unit.name = reduced.name;
             }

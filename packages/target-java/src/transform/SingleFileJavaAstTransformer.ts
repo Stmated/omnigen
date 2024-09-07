@@ -40,7 +40,7 @@ export class SingleFileJavaAstTransformer implements AstTransformer<JavaAstRootN
         if (!target) {
 
           logger.debug(`Creating ${unitClassName} unit for package ${packageFqn}`);
-          const created = this.createClass(unitClassName, packageFqn);
+          const created = this.createClass(unitClassName, packageFqn, args.options);
 
           packageToClass.set(packageFqn, created);
         }
@@ -114,7 +114,7 @@ export class SingleFileJavaAstTransformer implements AstTransformer<JavaAstRootN
     return n;
   }
 
-  private createClass(unitClassName: string, packageFqn: string): [Code.CompilationUnit, Code.ClassDeclaration] {
+  private createClass(unitClassName: string, packageFqn: string, options: JavaOptions): [Code.CompilationUnit, Code.ClassDeclaration] {
 
     const unit = new Code.CompilationUnit(
       new Code.PackageDeclaration(packageFqn),
@@ -128,21 +128,22 @@ export class SingleFileJavaAstTransformer implements AstTransformer<JavaAstRootN
       new Code.Block(),
       new Code.ModifierList(
         new Code.Modifier(Code.ModifierKind.PUBLIC),
-        // new Code.Modifier(Code.ModifierKind.STATIC),
       ),
     );
 
-    classDec.annotations = new Code.AnnotationList(
-      new Code.Annotation(
-        new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'SuppressWarnings'}}),
-        new Code.AnnotationKeyValuePairList(
-          new Code.AnnotationKeyValuePair(
-            undefined,
-            new Code.Literal('unused'),
+    if (options.relaxedInspection) {
+      classDec.annotations = new Code.AnnotationList(
+        new Code.Annotation(
+          new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'SuppressWarnings'}}),
+          new Code.AnnotationKeyValuePairList(
+            new Code.AnnotationKeyValuePair(
+              undefined,
+              new Code.Literal('unused'),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
 
     unit.children.push(classDec);
 

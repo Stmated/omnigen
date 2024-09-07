@@ -14,6 +14,7 @@ describe('TypeScript Rendering', () => {
         singleFile: true,
         jsonRpcResultRequired: false,
         relaxedInspection: false,
+        includeGeneratedInFileHeader: false,
       },
     });
 
@@ -30,6 +31,7 @@ describe('TypeScript Rendering', () => {
       options: {
         generifyTypes: false,
         singleFile: true,
+        includeGeneratedInFileHeader: false,
       },
     });
 
@@ -46,6 +48,7 @@ describe('TypeScript Rendering', () => {
         preferInterfaces: false,
         strictUndefined: true,
         orderObjectsByDependency: true,
+        includeGeneratedInFileHeader: false,
       },
     });
 
@@ -79,6 +82,7 @@ describe('TypeScript Rendering', () => {
       options: {
         additionalPropertiesInterfaceAfterDuplicateCount: 1,
         singleFile: true,
+        includeGeneratedInFileHeader: false,
       },
     });
 
@@ -95,6 +99,7 @@ describe('TypeScript Rendering', () => {
         singleFile: true,
         anyAllowed: false,
         relaxedInspection: false,
+        includeGeneratedInFileHeader: false,
       },
     });
 

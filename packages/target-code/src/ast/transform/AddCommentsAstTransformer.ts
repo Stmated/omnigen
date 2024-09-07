@@ -62,12 +62,12 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
 
         if (args.options.debug) {
           if (n.type.omniType.debug) {
-            const paragraph = FreeTextUtils.fromFriendlyFreeText(n.type.omniType.debug);
+            const paragraph = new Code.FreeTexts(...OmniUtil.debugToStrings(n.type.omniType.debug, v => new Code.FreeTextLine(v)));
             n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, paragraph), n.comments?.kind);
           }
 
           if (n.property?.debug) {
-            const paragraph = FreeTextUtils.fromFriendlyFreeText(n.property.debug);
+            const paragraph = new Code.FreeTexts(...OmniUtil.debugToStrings(n.property.debug, v => new Code.FreeTextLine(v)));
             n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, paragraph), n.comments?.kind);
           }
         }

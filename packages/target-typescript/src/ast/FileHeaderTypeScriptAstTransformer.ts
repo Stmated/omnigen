@@ -1,8 +1,9 @@
 import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/api';
 import {Ts} from '../ast';
 import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
-import {Code} from '@omnigen/target-code';
+import {Code, FreeTextUtils} from '@omnigen/target-code';
 import {TypeScriptOptions} from '../options';
+import {FreeTextLine} from '@omnigen/target-code/ast';
 
 export class FileHeaderTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode, TargetOptions & TypeScriptOptions> {
 
@@ -18,18 +19,10 @@ export class FileHeaderTypeScriptAstTransformer implements AstTransformer<Ts.TsR
     const defaultReducer = args.root.createReducer();
     const reducer: TypeScriptAstReducer = {
       ...defaultReducer,
-      reduceCompilationUnit: (n, r) => {
+      reduceCompilationUnit: n => {
 
-        const reduced = defaultReducer.reduceCompilationUnit(n, r);
-        if (reduced) {
-          reduced.children.splice(
-            0, 0,
-            new Code.Comment(`noinspection JSUnusedGlobalSymbols`, Code.CommentKind.SINGLE),
-            new Code.FormatNewline(),
-          );
-        }
-
-        return reduced;
+        n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, new FreeTextLine(`noinspection JSUnusedGlobalSymbols`)), n.comments?.kind ?? Code.CommentKind.SINGLE);
+        return n;
       },
     };
 

@@ -32,7 +32,7 @@ import {
   AlignObjectWithInterfaceModelTransformer,
   GenericsModelTransformer,
   SimplifyGenericsModelTransformer,
-  SpreadResolvedWildcardGenericsModelTransformer,
+  SpreadGenericsModelTransformer,
   ZodCompilationUnitsContext,
 } from '@omnigen/core';
 import {createCSharpRenderer} from './render';
@@ -202,9 +202,9 @@ export const CSharpPlugin = createPlugin(
       new GenericsModelTransformer(),
       new RemoveUnnecessaryPropertyModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
-      new SpreadResolvedWildcardGenericsModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),
       new SimplifyGenericsModelTransformer(),
+      new SpreadGenericsModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {

@@ -10,7 +10,9 @@ describe('jsonschema-csharp-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/string_union.json'));
+    const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/string_union.json'), {
+      includeGeneratedInFileHeader: false,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -24,7 +26,9 @@ describe('jsonschema-csharp-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json'));
+    const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json'), {
+      includeGeneratedInFileHeader: false,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -39,6 +43,7 @@ describe('jsonschema-csharp-render', () => {
 
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/decorated_types.json'), {
       compressSoloReferencedTypes: false,
+      includeGeneratedInFileHeader: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -55,6 +60,7 @@ describe('jsonschema-csharp-render', () => {
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/enum_string_composition.json'), {
       compressSoloReferencedTypes: false,
       typeCommentsOnProperties: PropertyTypeCommentMode.ALWAYS,
+      includeGeneratedInFileHeader: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -71,6 +77,7 @@ describe('jsonschema-csharp-render', () => {
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/interface_order.json'), {
       compressSoloReferencedTypes: false,
       serializationLibrary: SerializationLibrary.NONE,
+      includeGeneratedInFileHeader: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -90,6 +97,7 @@ describe('jsonschema-csharp-render', () => {
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
       singleFile: false,
+      includeGeneratedInFileHeader: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -108,6 +116,7 @@ describe('jsonschema-csharp-render', () => {
       compressUnreferencedSubTypes: false,
       serializationLibrary: SerializationLibrary.NEWTONSOFT,
       includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
+      includeGeneratedInFileHeader: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -121,7 +130,9 @@ describe('jsonschema-csharp-render', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/enum_inheritance.json'));
+    const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/enum_inheritance.json'), {
+      includeGeneratedInFileHeader: false,
+    });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     expect([...fileContents.keys()].sort()).toMatchSnapshot();
@@ -137,6 +148,7 @@ describe('jsonschema-csharp-render', () => {
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/one_of_same_type.json'), {
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
+      includeGeneratedInFileHeader: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -153,6 +165,7 @@ describe('jsonschema-csharp-render', () => {
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/discriminator.json'), {
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
+      includeGeneratedInFileHeader: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 

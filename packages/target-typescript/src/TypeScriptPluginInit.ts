@@ -198,8 +198,8 @@ export const TypeScriptPlugin = createPlugin(
       new PackageResolverAstTransformer(),
       // new SimplifyGenericsAstTransformer(),
       new ReorderMembersAstTransformer(),
-      new AddGeneratedCommentAstTransformer(),
       new FileHeaderTypeScriptAstTransformer(),
+      new AddGeneratedCommentAstTransformer(),
       new PrettyCodeAstTransformer(),
     ] as const;
 

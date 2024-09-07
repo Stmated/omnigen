@@ -22,6 +22,7 @@
       <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/coverage" />
       <excludeFolder url="file://$MODULE_DIR$/apps/omnigen-cli/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-typescript/src/render/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-csharp/src/render/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/interpret/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/render/__snapshots__" />

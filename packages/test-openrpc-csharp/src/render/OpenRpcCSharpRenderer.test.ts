@@ -37,6 +37,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFileName: task.name,
     orderObjectsByDependency: true,
     jsonRpcResultRequired: false,
+    includeGeneratedInFileHeader: false,
   })));
 
   test('compressable-types', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -46,6 +47,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     orderObjectsByName: true,
     orderObjectsByDependency: false,
     jsonRpcResultRequired: false,
+    includeGeneratedInFileHeader: false,
   })));
 
   test('inherited-construction_no_init', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -53,6 +55,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFileName: task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.NO_SETTER,
     jsonRpcResultRequired: false,
+    includeGeneratedInFileHeader: false,
   })));
 
   test('inherited-construction', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -60,6 +63,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFileName: task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.INIT,
     orderObjectsByDependency: true,
+    includeGeneratedInFileHeader: false,
   })));
 
   test('enum', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -85,11 +89,13 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFile: true,
     singleFileName: task.name,
     orderObjectsByDependency: true,
+    includeGeneratedInFileHeader: false,
   })));
 
   test('method-in-response', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
     singleFile: true,
     singleFileName: task.name,
     orderObjectsByDependency: true,
+    includeGeneratedInFileHeader: false,
   })));
 });

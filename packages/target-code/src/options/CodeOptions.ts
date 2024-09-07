@@ -40,9 +40,10 @@ export const ZodCodeOptions = ZodTargetOptions.extend({
   commentsOnGetters: ZodCoercedBoolean.default('true'),
   commentsOnConstructors: ZodCoercedBoolean.default('true'),
   includeExampleCommentsMode: z.enum(getEnumValues(IncludeExampleCommentsMode)).default(IncludeExampleCommentsMode.ALWAYS),
-  typeCommentsOnProperties: z.enum(getEnumValues(PropertyTypeCommentMode)).default(PropertyTypeCommentMode.NEVER), // ZodCoercedBoolean.default('false'),
+  typeCommentsOnProperties: z.enum(getEnumValues(PropertyTypeCommentMode)).default(PropertyTypeCommentMode.NEVER),
 
   includeGenerated: ZodCoercedBoolean.default('true'),
+  includeGeneratedInFileHeader: ZodCoercedBoolean.default('true'),
 
   includeAlwaysNullProperties: ZodCoercedBoolean.default('false'),
 
@@ -55,6 +56,9 @@ export const ZodCodeOptions = ZodTargetOptions.extend({
    * If we need to merge some types, then if the language supports unions, this is the max size of that union or we will find the common denominator.
    */
   maxAutoUnionSize: z.number().default(5),
+
+  relaxedInspection: ZodCoercedBoolean.default('t')
+    .describe(`If inspection is relaxed, then the auto-generated code might have file headers or similar added which ignores things such as unused declarations`),
 });
 
 export type CodeOptions = z.infer<typeof ZodCodeOptions>;

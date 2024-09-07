@@ -299,10 +299,16 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       let str = render(n.name, v);
       if (n.upperBounds) {
         str += ` extends ${render(n.upperBounds, v)}`;
+        if (options.debug && n.upperBounds.omniType.debug) {
+          str += `/*${OmniUtil.debugToString(n.upperBounds.omniType.debug)}*/`;
+        }
       }
 
       if (n.lowerBounds) {
         str += ` super ${render(n.lowerBounds, v)}`;
+        if (options.debug && n.lowerBounds.omniType.debug) {
+          str += `/*${OmniUtil.debugToString(n.lowerBounds.omniType.debug)}*/`;
+        }
       }
 
       return str;
@@ -341,7 +347,10 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitCompilationUnit: (n, v) => {
 
+      const comments = n.comments ? `${n.comments.visit(v)}\n\n` : '';
+
       const content = join([
+        comments,
         n.packageDeclaration.visit(v),
         n.imports.visit(v),
         n.children.map(it => it.visit(v)),

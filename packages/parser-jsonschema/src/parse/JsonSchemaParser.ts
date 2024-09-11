@@ -519,12 +519,13 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
    */
   private normalizeAdditionalPropertiesType(type: OmniType): OmniType {
 
-    // TODO: Reintroduce this conversion, but only for Java? Because that is where it is used? Or should this simply be removed?
-    // if (type.kind === OmniTypeKind.UNKNOWN && type.unknownKind === UnknownKind.ANY) {
-    //   return {...type, unknownKind: UnknownKind.DYNAMIC_OBJECT};
-    // } else {
-    return type;
-    // }
+    if (type.kind === OmniTypeKind.UNKNOWN && type.unknownKind === UnknownKind.ANY) {
+      // AdditionalProperties cannot be a primitive, it is always known to be an object of perhaps unknown contents.
+      // So it is more accurate to say that it is a DYNAMIC_OBJECT rather than `ANY`
+      return {...type, unknownKind: UnknownKind.DYNAMIC_OBJECT};
+    } else {
+      return type;
+    }
   }
 
   private jsonSchemaToNonObjectType(

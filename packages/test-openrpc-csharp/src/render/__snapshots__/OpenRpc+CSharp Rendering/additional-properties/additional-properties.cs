@@ -9,12 +9,12 @@ namespace generated.omnigen
     public class Thing
     {
         [JsonExtensionData]
-        public JToken AdditionalProperties { get; }
+        public JObject AdditionalProperties { get; }
         [JsonProperty("id", Required = Required.Always)]
         [Required]
         public string Id { get; }
 
-        public Thing(string id, JToken additionalProperties)
+        public Thing(string id, JObject additionalProperties)
         {
             this.Id = id;
             this.AdditionalProperties = additionalProperties;

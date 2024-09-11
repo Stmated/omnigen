@@ -169,7 +169,7 @@ namespace generated.omnigen
     /// </summary>
     public class JsonRpcErrorResponse
     {
-        [JsonProperty("error", Required = Required.Always)]
+        [JsonProperty("error", Required = Required.Always, NullValueHandling = NullValueHandling.Include)]
         [Required]
         public ErrorUnknownError Error { get; }
         [JsonProperty("id")]
@@ -191,10 +191,10 @@ namespace generated.omnigen
     {
         [JsonProperty("id")]
         public string Id { get; }
-        [JsonProperty("jsonrpc")]
+        [JsonProperty("jsonrpc", NullValueHandling = NullValueHandling.Include)]
         [Required]
         public string Jsonrpc { get; } = "2.0";
-        [JsonProperty("method", Required = Required.Always)]
+        [JsonProperty("method", Required = Required.Always, NullValueHandling = NullValueHandling.Include)]
         [Required]
         public string Method { get; }
 

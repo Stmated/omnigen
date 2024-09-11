@@ -50,7 +50,8 @@ export const ZodCodeOptions = ZodTargetOptions.extend({
   serializationPropertyNameMode: z.enum(getEnumValues(SerializationPropertyNameMode)).default(SerializationPropertyNameMode.ALWAYS)
     .describe(`Useful to change to 'IF_REQUIRED' if you have enabled compiler flag '-parameters' and registered 'jackson-module-parameter-names'`),
 
-  serializationEnsureRequiredFieldExistence: ZodCoercedBoolean.default('true'),
+  serializationEnsureRequiredFieldExistence: ZodCoercedBoolean.default('true')
+    .describe(`If enabled, then required fields are ensured to exist in the serialized payload, even if null/undefined/similar`),
 
   /**
    * If we need to merge some types, then if the language supports unions, this is the max size of that union or we will find the common denominator.

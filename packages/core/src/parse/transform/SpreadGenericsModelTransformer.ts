@@ -33,11 +33,6 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs) {
 
-    // if (true) {
-    //   return;
-    // }
-
-    // const sourceToUpdateWith = new Map<OmniGenericSourceType, Map<OmniGenericSourceIdentifierType, Replacement>>();
     const replacements: Replacement[] = [];
 
     OmniUtil.visitTypesDepthFirst(args.model, ctxSource => {
@@ -85,14 +80,6 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
                 path: [sourceSourceId, targetSourceId],
               });
 
-              // map.set(sourceSourceId, {
-              //   newSourceId: newSourceId,
-              //   paths: [[sourceSourceId, targetSourceId]],
-              // });
-
-              // TODO: DO NOT MAKE ANY CHANGE HERE! ONLY REGISTER THINGS TO BE MAPPED;
-              //  AND THEN WE WILL GO THROUGH AGAIN AND MODIFY/REPLACE! BUT AFTER WE HAVE ORDERED THEM ACCORDING TO DEPENDENCY GRAPH!
-
               ctxTargetId.replacement = newTargetId;
               ctxTargetId.skip = true;
             }
@@ -123,8 +110,6 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
           return;
         }
 
-        logger.info(`sourceMatches: ${sourceMatches.map(it => `${it.oldSourceId.placeholderName} -> ${it.newSourceId.placeholderName}`)}`);
-
         for (let i = 0; i < target.targetIdentifiers.length; i++) {
 
           const targetId = target.targetIdentifiers[i];
@@ -132,8 +117,6 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
           if (sourceIdMatches.length === 0) {
             continue;
           }
-
-          logger.info(`sourceIdMatches: ${sourceIdMatches.map(it => `${it.oldSourceId.placeholderName} -> ${it.newSourceId.placeholderName}`)}`);
 
           for (const replacement of sourceIdMatches) {
             let pointer: OmniType | undefined = target;

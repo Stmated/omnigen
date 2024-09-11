@@ -64,6 +64,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTransformer.ts';
 import {AnyToUnknownTypeScriptModelTransformer} from './parse/transform/AnyToUnknownTypeScriptModelTransformer.ts';
 import {FileHeaderTypeScriptAstTransformer} from './ast/FileHeaderTypeScriptAstTransformer.ts';
+import {PatternPropertyAnyTypeScriptModelTransformer} from './parse/transform/PatternPropertyAnyTypeScriptModelTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -158,9 +159,10 @@ export const TypeScriptPlugin = createPlugin(
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
       new RemoveUnnecessaryPropertyModelTransformer(),
+      new PatternPropertyAnyTypeScriptModelTransformer(),
+      new AnyToUnknownTypeScriptModelTransformer(),
       new StrictUndefinedTypeScriptModelTransformer(),
       new RemoveWildcardGenericParamTypeScriptModelTransformer(),
-      new AnyToUnknownTypeScriptModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),
       new SimplifyGenericsModelTransformer(),
     ] as const;

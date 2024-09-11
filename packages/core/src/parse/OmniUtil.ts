@@ -332,6 +332,8 @@ export class OmniUtil {
 
     if (OmniUtil.isPropertyOwner(type)) {
       return type.properties;
+    } else if (type.kind === OmniTypeKind.INTERFACE) {
+      return OmniUtil.getPropertiesOf(type.of);
     }
 
     return EMPTY_ARRAY;
@@ -1289,7 +1291,7 @@ export class OmniUtil {
     maxDepth: number,
   ): void {
 
-    [...parent.types].forEach(t => {
+    parent.types.forEach(t => {
 
       const swapped = OmniUtil.swapType(t, from, to, maxDepth);
       if (swapped) {

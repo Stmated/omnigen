@@ -152,7 +152,7 @@ namespace generated.openrpc
     public abstract class AbstractRequestData
     {
         [JsonExtensionData]
-        public JToken AdditionalProperties { get; }
+        public JObject AdditionalProperties { get; }
         [JsonProperty("Password", Required = Required.Always)]
         [Required]
         public string Password { get; }
@@ -160,7 +160,7 @@ namespace generated.openrpc
         [Required]
         public string Username { get; }
 
-        public AbstractRequestData(string username, string password, JToken additionalProperties)
+        public AbstractRequestData(string username, string password, JObject additionalProperties)
         {
             this.Username = username;
             this.Password = password;
@@ -177,7 +177,7 @@ namespace generated.openrpc
         [Required]
         public string OrderID { get; }
 
-        public RefundRequestData(string username, string password, JToken additionalProperties, string orderId, string amount) : base(username, password, additionalProperties)
+        public RefundRequestData(string username, string password, JObject additionalProperties, string orderId, string amount) : base(username, password, additionalProperties)
         {
             this.OrderID = orderId;
             this.Amount = amount;
@@ -246,7 +246,7 @@ namespace generated.openrpc
         [Required]
         public string NotificationURL { get; }
 
-        public DepositRequestData(string username, string password, JToken additionalProperties, string notificationUrl) : base(username, password, additionalProperties)
+        public DepositRequestData(string username, string password, JObject additionalProperties, string notificationUrl) : base(username, password, additionalProperties)
         {
             this.NotificationURL = notificationUrl;
         }

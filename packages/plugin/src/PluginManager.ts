@@ -137,7 +137,7 @@ export class PluginManager {
 
   public getPlugins(): Plugin2[] {
 
-    const plugins = [...this._pluginImports.values()].map(it => it.plugin);
+    const plugins = [...this._pluginImports.values().map(it => it.plugin)];
     plugins.push(...this._plugins);
 
     if (this._options.includeAuto) {

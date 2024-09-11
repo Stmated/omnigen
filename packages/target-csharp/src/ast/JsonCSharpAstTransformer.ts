@@ -9,11 +9,12 @@ import {
   OmniTypeKind,
   OmniUnknownType,
   TargetOptions,
+  TypeUseKind,
   UnknownKind,
 } from '@omnigen/api';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Code, CodeAstUtils, SerializationPropertyNameMode} from '@omnigen/target-code';
+import {Code, CodeAstUtils, CodeOptions, SerializationPropertyNameMode} from '@omnigen/target-code';
 import {CSharpOptions, SerializationLibrary} from '../options';
 import {Cs} from '../ast';
 
@@ -41,8 +42,8 @@ const NewtonsoftJsonAttributes: Readonly<JsonAttributes> = Object.freeze({
   JSON_VALUE: {name: undefined}, // `JsonConverter` needed, no @JsonValue equivalent
   // JSON_VALUE: {name: {namespace: ['Newtonsoft', 'Json'], edgeName: {onUse: 'JsonProperty', onImport: 'JsonPropertyAttribute'}}}, // `JsonConverter` needed!
   JSON_CREATOR: {name: {namespace: ['Newtonsoft', 'Json'], edgeName: {onUse: 'JsonConstructor', onImport: 'JsonConstructorAttribute'}}},
-  JSON_INCLUDE: {name: {namespace: ['Newtonsoft', 'Json'], edgeName: {onUse: 'JsonProperty', onImport: 'JsonPropertyAttribute'}}}, // [JsonProperty(PropertyName = "property", NullValueHandling = NullValueHandling.Include)]
-  JSON_INCLUDE_PROP: {name: undefined}, // No equivalent
+  JSON_INCLUDE: {name: undefined}, // [JsonProperty(PropertyName = "property", NullValueHandling = NullValueHandling.Include)]
+  JSON_INCLUDE_PROP: {name: {namespace: ['Newtonsoft', 'Json'], edgeName: 'NullValueHandling'}}, // No equivalent
   JSON_ANY_GETTER: {name: {namespace: ['Newtonsoft', 'Json'], edgeName: {onUse: 'JsonExtensionData', onImport: 'JsonExtensionDataAttribute'}}}, // No equivalent
   JSON_ANY_SETTER: {name: undefined}, // No equivalent
   JSON_SERIALIZER: {name: {namespace: ['Newtonsoft', 'Json'], edgeName: 'JsonSerializer'}}, // Method `JsonConvert.DeserializeObject<MyClass>(dto)` or `JsonConvert.SerializeObject`
@@ -233,7 +234,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
           // Check key and value and make the appropriate decision for what Jackson type might be the best one!
           const type = n.omniType;
 
-          if (OmniUtil.isPrimitive(type.keyType) && type.keyType.kind == OmniTypeKind.STRING) {
+          if (type.keyType.kind == OmniTypeKind.STRING) {
             const nodeName = attributes.JSON_NODE.name;
             if (type.valueType.kind == OmniTypeKind.UNKNOWN || (type.valueType.kind == OmniTypeKind.HARDCODED_REFERENCE && OmniUtil.isEqualObjectName(type.valueType.fqn, nodeName))) {
               return args.root.getAstUtils().createTypeNode(type, n.implementation).reduce(r);
@@ -452,7 +453,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
 
     const annotations: Code.Annotation[] = [];
 
-    const jsonProperty = JsonCSharpAstTransformer.createPropertyAnnotations(attributes, fieldIdentifier, property, direction, requiresName);
+    const jsonProperty = JsonCSharpAstTransformer.createPropertyAnnotations(attributes, property, direction, requiresName, targetOptions);
     if (jsonProperty.length > 0) {
       annotations.push(...jsonProperty);
     }
@@ -493,16 +494,14 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
 
   private static createPropertyAnnotations(
     attributes: JsonAttributes,
-    fieldIdentifier: Cs.Identifier | Cs.PropertyIdentifier | Cs.GetterIdentifier,
     property: OmniProperty,
     direction: Direction,
     requiresName: boolean,
+    options: TargetOptions & CodeOptions,
   ): Code.Annotation[] {
 
     const annotations: Code.Annotation[] = [];
 
-    // logger.info(`ADDING THE REQUIRED ATTRIBUTE!`);
-    //
     // TODO: This attribute should be added by another transformer, one that deals with general C# and not with JSON
     if (property.required) {
       annotations.push(new Code.Annotation(
@@ -537,6 +536,18 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
           ),
           new Code.Identifier('Always'),
         )));
+    }
+
+    if (options.serializationEnsureRequiredFieldExistence) {
+      if (property.required && (direction == Direction.BOTH || direction == Direction.OUT) && attributes.JSON_INCLUDE_PROP.name) {
+        annotationArguments.children.push(new Code.AnnotationKeyValuePair(
+          new Code.Identifier(OmniUtil.resolveObjectEdgeName(attributes.JSON_INCLUDE_PROP.name.edgeName, TypeUseKind.CONCRETE)),
+          new Code.StaticMemberReference(
+            new Code.ClassName(new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: attributes.JSON_INCLUDE_PROP.name})),
+            new Code.Identifier('Include'),
+          ),
+        ));
+      }
     }
 
     if (annotationArguments.children.length > 0 && attributes.JSON_PROPERTY.name) {

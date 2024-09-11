@@ -38,6 +38,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     orderObjectsByDependency: true,
     jsonRpcResultRequired: false,
     includeGeneratedInFileHeader: false,
+    serializationEnsureRequiredFieldExistence: false,
   })));
 
   test('compressable-types', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -56,6 +57,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.NO_SETTER,
     jsonRpcResultRequired: false,
     includeGeneratedInFileHeader: false,
+    serializationEnsureRequiredFieldExistence: false,
   })));
 
   test('inherited-construction', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -64,6 +66,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.INIT,
     orderObjectsByDependency: true,
     includeGeneratedInFileHeader: false,
+    serializationEnsureRequiredFieldExistence: false,
   })));
 
   test('enum', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -71,6 +74,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFileName: task.name,
     includeGenerated: false,
     orderObjectsByDependency: true,
+    serializationEnsureRequiredFieldExistence: false,
   })));
 
   // test('sui-openrpc', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -90,6 +94,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFileName: task.name,
     orderObjectsByDependency: true,
     includeGeneratedInFileHeader: false,
+    serializationEnsureRequiredFieldExistence: false,
   })));
 
   test('method-in-response', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -97,5 +102,6 @@ describe('OpenRpc+CSharp Rendering', () => {
     singleFileName: task.name,
     orderObjectsByDependency: true,
     includeGeneratedInFileHeader: false,
+    serializationEnsureRequiredFieldExistence: false,
   })));
 });

@@ -50,6 +50,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
     const dependencySorter = Sorters.byDependencies(args.model);
 
+    // Will sort superTypes in the order of top supertypes first, and subtypes later.
     const superTypes = [...superTypeToSubTypes.keys()].sort((a, b) => {
       const aSubType = (superTypeToSubTypes.get(a) || [])[0];
       const bSubType = (superTypeToSubTypes.get(b) || [])[0];
@@ -115,12 +116,6 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         // There are 1 or less distinct types, so we will not replace it with generics.
         continue;
       }
-
-      // if (info.typeDiffs?.includes(TypeDiffKind.POLYMORPHIC_LITERAL) && !features.literalTypes && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? it.literal : false)) {
-      //
-      //   logger.trace(`Will not generify '${propertyName}' of ${info.properties.map(it => OmniUtil.describe(it.owner)).join(', ')} since target does not support literal types`);
-      //   // continue;
-      // }
 
       model = this.attemptHoistPropertyToGeneric(
         superType,

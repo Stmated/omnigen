@@ -20,7 +20,7 @@ export class ToJavaAstTransformer extends AbstractJavaAstTransformer {
         const constIndex = n.children.findIndex(it => it.kind === Java.ModifierKind.CONST);
         if (constIndex !== -1) {
 
-          const altered = [...n.children].filter(it => it.kind === Java.ModifierKind.CONST || it.kind === Java.ModifierKind.STATIC || it.kind === Java.ModifierKind.FINAL);
+          const altered = n.children.filter(it => it.kind === Java.ModifierKind.CONST || it.kind === Java.ModifierKind.STATIC || it.kind === Java.ModifierKind.FINAL);
 
           altered.push(new Java.Modifier(Java.ModifierKind.STATIC));
           altered.push(new Java.Modifier(Java.ModifierKind.FINAL));

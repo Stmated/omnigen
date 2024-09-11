@@ -44,6 +44,7 @@ describe('jsonschema-csharp-render', () => {
     const rendered = await JsonSchemaToCSharpTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/decorated_types.json'), {
       compressSoloReferencedTypes: false,
       includeGeneratedInFileHeader: false,
+      serializationEnsureRequiredFieldExistence: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -61,6 +62,7 @@ describe('jsonschema-csharp-render', () => {
       compressSoloReferencedTypes: false,
       typeCommentsOnProperties: PropertyTypeCommentMode.ALWAYS,
       includeGeneratedInFileHeader: false,
+      serializationEnsureRequiredFieldExistence: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -117,6 +119,7 @@ describe('jsonschema-csharp-render', () => {
       serializationLibrary: SerializationLibrary.NEWTONSOFT,
       includeExampleCommentsMode: IncludeExampleCommentsMode.SKIP,
       includeGeneratedInFileHeader: false,
+      serializationEnsureRequiredFieldExistence: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
@@ -166,6 +169,7 @@ describe('jsonschema-csharp-render', () => {
       compressSoloReferencedTypes: true,
       compressUnreferencedSubTypes: true,
       includeGeneratedInFileHeader: false,
+      serializationEnsureRequiredFieldExistence: false,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 

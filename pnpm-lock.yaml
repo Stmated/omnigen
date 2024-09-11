@@ -22,7 +22,7 @@ importers:
         version: 2.0.5(vitest@2.0.5)
       madge:
         specifier: ^7.0.0
-        version: 7.0.0(typescript@5.5.4)
+        version: 7.0.0(typescript@5.6.2)
       pino-pretty:
         specifier: ^10.3.1
         version: 10.3.1
@@ -31,13 +31,13 @@ importers:
         version: 3.2.5
       syncpack:
         specifier: ^12.3.0
-        version: 12.3.0(typescript@5.5.4)
+        version: 12.3.0(typescript@5.6.2)
       turbo:
         specifier: ^1.13.3
         version: 1.13.3
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
       vite:
         specifier: ^5.3.5
         version: 5.3.5(@types/node@18.13.0)
@@ -97,8 +97,8 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   apps/omnigen-cli:
     dependencies:
@@ -167,8 +167,8 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/api:
     dependencies:
@@ -377,8 +377,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/core-log:
     dependencies:
@@ -399,8 +399,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/core-plugin:
     dependencies:
@@ -433,8 +433,8 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/eslint-config-custom:
     dependencies:
@@ -559,8 +559,8 @@ importers:
         specifier: ^4.7.2
         version: 4.7.2
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/parser-openrpc:
     dependencies:
@@ -882,8 +882,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/test-jsonschema-java:
     dependencies:
@@ -928,8 +928,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/test-jsonschema-typescript:
     dependencies:
@@ -1014,8 +1014,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/test-openrpc-java:
     dependencies:
@@ -1063,8 +1063,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/test-openrpc-typescript:
     dependencies:
@@ -1112,8 +1112,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       typescript:
-        specifier: ^5.5.4
-        version: 5.5.4
+        specifier: ^5.6.2
+        version: 5.6.2
 
   packages/utils-test:
     dependencies:
@@ -3546,6 +3546,11 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  typescript@5.6.2:
+    resolution: {integrity: sha512-NW8ByodCSNCwZeghjN3o+JX5OFH0Ojg6sadjEKY4huZ52TqbJTJnDo5+Tw98lSy63NZvi4n+ez5m2u5d4PkZyw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
     engines: {node: '>=18'}
@@ -4248,7 +4253,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/typescript-estree@5.62.0(typescript@5.5.4)':
+  '@typescript-eslint/typescript-estree@5.62.0(typescript@5.6.2)':
     dependencies:
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/visitor-keys': 5.62.0
@@ -4256,9 +4261,9 @@ snapshots:
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.5.4
-      tsutils: 3.21.0(typescript@5.5.4)
+      tsutils: 3.21.0(typescript@5.6.2)
     optionalDependencies:
-      typescript: 5.5.4
+      typescript: 5.6.2
     transitivePeerDependencies:
       - supports-color
 
@@ -4577,14 +4582,14 @@ snapshots:
       tslib: 2.5.0
       upper-case: 2.0.2
 
-  cosmiconfig@9.0.0(typescript@5.5.4):
+  cosmiconfig@9.0.0(typescript@5.6.2):
     dependencies:
       env-paths: 2.2.1
       import-fresh: 3.3.0
       js-yaml: 4.1.0
       parse-json: 5.2.0
     optionalDependencies:
-      typescript: 5.5.4
+      typescript: 5.6.2
 
   cross-spawn@7.0.3:
     dependencies:
@@ -4623,7 +4628,7 @@ snapshots:
       commander: 10.0.1
       filing-cabinet: 4.2.0
       precinct: 11.0.5
-      typescript: 5.5.4
+      typescript: 5.6.2
     transitivePeerDependencies:
       - supports-color
 
@@ -4665,10 +4670,10 @@ snapshots:
 
   detective-typescript@11.2.0:
     dependencies:
-      '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.5.4)
+      '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.6.2)
       ast-module-types: 5.0.0
       node-source-walk: 6.0.2
-      typescript: 5.5.4
+      typescript: 5.6.2
     transitivePeerDependencies:
       - supports-color
 
@@ -4985,7 +4990,7 @@ snapshots:
       sass-lookup: 5.0.1
       stylus-lookup: 5.0.1
       tsconfig-paths: 4.2.0
-      typescript: 5.5.4
+      typescript: 5.6.2
 
   fill-range@7.0.1:
     dependencies:
@@ -5342,7 +5347,7 @@ snapshots:
     dependencies:
       yallist: 4.0.0
 
-  madge@7.0.0(typescript@5.5.4):
+  madge@7.0.0(typescript@5.6.2):
     dependencies:
       chalk: 4.1.2
       commander: 7.2.0
@@ -5358,7 +5363,7 @@ snapshots:
       ts-graphviz: 1.8.2
       walkdir: 0.4.1
     optionalDependencies:
-      typescript: 5.5.4
+      typescript: 5.6.2
     transitivePeerDependencies:
       - supports-color
 
@@ -5941,12 +5946,12 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  syncpack@12.3.0(typescript@5.5.4):
+  syncpack@12.3.0(typescript@5.6.2):
     dependencies:
       '@effect/schema': 0.56.1(effect@2.0.0-next.62)(fast-check@3.15.0)
       chalk: 4.1.2
       commander: 11.1.0
-      cosmiconfig: 9.0.0(typescript@5.5.4)
+      cosmiconfig: 9.0.0(typescript@5.6.2)
       effect: 2.0.0-next.62
       enquirer: 2.4.1
       fast-check: 3.15.0
@@ -6025,6 +6030,11 @@ snapshots:
       tslib: 1.14.1
       typescript: 5.5.4
 
+  tsutils@3.21.0(typescript@5.6.2):
+    dependencies:
+      tslib: 1.14.1
+      typescript: 5.6.2
+
   tsx@4.7.1:
     dependencies:
       esbuild: 0.19.12
@@ -6075,6 +6085,8 @@ snapshots:
   typescript@4.9.5: {}
 
   typescript@5.5.4: {}
+
+  typescript@5.6.2: {}
 
   unicorn-magic@0.1.0: {}
 

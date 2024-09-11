@@ -357,6 +357,9 @@ export interface OmniDecoratingType<T extends OmniType = OmniType> extends OmniB
 
 }
 
+/**
+ * TODO: Need to add more forms of unknown values, like `MAP_NATIVE` which should be `IDictionary<string, object>` in C#, or `MAP_DYNAMIC` for `IDictionary<string, JToken>`
+ */
 export const UnknownKind = {
 
   /**

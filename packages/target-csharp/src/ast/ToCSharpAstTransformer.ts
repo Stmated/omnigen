@@ -35,14 +35,14 @@ export class ToCSharpAstTransformer implements AstTransformer<CSharpRootNode, Ta
     const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
       ...defaultReducer,
-      reduceModifierList: (n, r) => {
+      reduceModifierList: n => {
 
         const isStatic = n.children.some(it => it.kind === Code.ModifierKind.STATIC);
         const isFinal = n.children.some(it => it.kind === Code.ModifierKind.FINAL);
 
         if (isStatic && isFinal) {
 
-          const altered = [...n.children].filter(it => it.kind !== Code.ModifierKind.CONST && it.kind !== Code.ModifierKind.STATIC && it.kind !== Code.ModifierKind.FINAL);
+          const altered = n.children.filter(it => it.kind !== Code.ModifierKind.CONST && it.kind !== Code.ModifierKind.STATIC && it.kind !== Code.ModifierKind.FINAL);
 
           altered.push(new Code.Modifier(Code.ModifierKind.CONST));
 
@@ -97,7 +97,7 @@ export class ToCSharpAstTransformer implements AstTransformer<CSharpRootNode, Ta
         return reduced;
       },
 
-      reducePropertyIdentifier: (n, r) => {
+      reducePropertyIdentifier: n => {
 
         // Properties should not be possible to have reserved words, since the keywords are lowercase and properties pascal-case
         return n;

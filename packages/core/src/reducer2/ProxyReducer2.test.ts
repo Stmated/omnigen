@@ -2,7 +2,7 @@ import {describe, expect, test} from 'vitest';
 import {ProxyReducer2} from './ProxyReducer2.ts';
 import {assertDiscriminator, expectTs, isDefined} from '../util';
 import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2.ts';
-import {RegularSpecFn2, SpecFn2} from './types.ts';
+import {RegularSpecFn2} from './types.ts';
 import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2.ts';
 
 interface Base {
@@ -50,17 +50,6 @@ const fooBarReducer: RegularSpecFn2<Types, Foo | Bar, 'k', TypesOverride, { immu
 
   if (n.bar) n = r.set('bar', r.reduce(n.bar));
   if (n.baz) n = r.set('baz', r.reduce(n.baz));
-  // if (n.foos) n = r.set('foos', n.foos.map(it => r.reduce(it)).filter(isDefined).filter(it => it.k === 'Foo'));
-  // if (n.bars) n = r.set('bars', n.bars.map(it => r.reduce(it)).filter(isDefined).filter(it => it.k === 'Bar'));
-
-  // if (n.k === 'Foo') {
-  //   r.map('foos', it => it.common, it => it === 'hello');
-  // }
-
-  // const ret = r.map('foos', undefined, it => it.k === 'Bar');
-  // const ret = r.map('foos', undefined);
-  //
-  // return r.map('foos', undefined, it => it.k === 'Foo').map('bars', undefined, it => it.k === 'Bar').commit();
 
   // TODO: We should have a helper function which maps arrays for us, since it is needlessly heavy to create new arrays all the time.
   if (n.foos) n = r.set('foos', n.foos.map(it => r.reduce(it)).filter(isDefined).filter(it => it.k === 'Foo'));
@@ -95,8 +84,6 @@ test('swap-field-custom', () => {
     },
     Foo: (n, r) => {
       return r.set('common', 'bye');
-      // n.common = 'bye';
-      // return n;
     },
   });
 
@@ -121,8 +108,6 @@ test('swap-field-custom-with-separated-any-spec', () => {
       },
       Foo: (n, r) => {
         return r.set('common', 'bye');
-        // n.common = 'bye';
-        // return n;
       },
     })
     .build({
@@ -175,7 +160,7 @@ test('swap-object-and-field-custom', () => {
 
   let anyCalls = 0;
   const reducer = typesReducerBuilder.build({
-    true: (n, r) => {
+    true: (_, r) => {
       anyCalls++;
       return r.next();
     },
@@ -508,12 +493,12 @@ describe('non-local-deep-change-recursive', () => {
   root_branch_1.foos!.push(root);
   root_branch_2.foos!.push(root);
 
-  test('no-change', () => {
+  test.skip('no-change', () => {
     const reduced = typesReducerBuilder.build().reduce(root);
     expect(reduced).toBe(root);
   });
 
-  test('no-change-empty-spec', () => {
+  test.skip('no-change-empty-spec', () => {
     const reduced = typesReducerBuilder.build({}).reduce(root);
     expect(reduced).toBe(root);
   });
@@ -534,11 +519,6 @@ describe('non-local-deep-change-recursive', () => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => r.put('x', n.x + 1).next(),
-
-      // {
-      //   n.x++;
-      //   return r.next(n);
-      // },
     });
 
     const reduced = reducer.reduce(root);

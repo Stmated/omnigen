@@ -1432,12 +1432,12 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
 
     // TODO: This is wrong -- it needs to be done in order
-    if (schema.not !== undefined) {
-
-      const resolved = this._refResolver.resolve(schema.not);
-      const preferredName = this.getPreferredName(schema.not, resolved, name);
-      compositionsNot = (this.jsonSchemaToType(preferredName, resolved)).type;
-    }
+    // if (schema.not !== undefined) {
+    //
+    //   const resolved = this._refResolver.resolve(schema.not);
+    //   const preferredName = this.getPreferredName(schema.not, resolved, name);
+    //   compositionsNot = (this.jsonSchemaToType(preferredName, resolved)).type;
+    // }
 
     const composition = CompositionUtil.getCompositionOrExtensionType(
       compositionsAnyOfOr,

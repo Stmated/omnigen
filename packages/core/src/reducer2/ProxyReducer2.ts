@@ -1,5 +1,5 @@
 import {Arrayable} from '@omnigen/api';
-import {PROP_KEY_IS_PROXY, PROP_KEY_PROXY_ORIGINAL, PROP_KEY_PROXY_REPLACEMENT} from './symbols.ts';
+import {PROP_KEY_HOLDER_2, PROP_KEY_IS_PROXY_2, PROP_KEY_PROXY_ORIGINAL_2, PROP_KEY_PROXY_REPLACEMENT_2, PROP_KEY_MARKER} from './symbols.ts';
 import {ProxyReducerDiscriminatorBuilder, ProxyReducerOptionsBuilder} from './ProxyReducerBuilder2.ts';
 import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2.ts';
 import {MaybeFunction, MutableProxyReducerInterface, NextRet, ReduceRet, ResolvedRet, Spec2, SpecFn2} from './types.ts';
@@ -24,10 +24,14 @@ export interface Options2<N extends object, D extends keyof N, O, InOpt extends 
 }
 
 export interface RecursiveValue<T> {
+  id: number;
   original: Readonly<T>;
   replacement?: T;
   recursionDepth: number;
+  changeCount: number;
 }
+
+type Replacement<O extends RecursiveValue<any> = RecursiveValue<any>> = {owner?: O, prop?: keyof O, index?: number, replacement: any};
 
 /**
  * A reducer which can transform an object structure, and uses proxies to safeguard against recursive access.
@@ -54,6 +58,8 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
   public readonly options: Options2<N, D, O, Opt> & Opt;
 
+  private _id: number = 0;
+
   private readonly _visited: RecursiveValue<N>[] = [];
   private _persisted: Map<N, RecursiveValue<N>> | undefined;
 
@@ -67,6 +73,11 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     return this._visited.length - 1;
   }
 
+  get parent(): Readonly<N> | undefined {
+    const ptr = this._visited[this._visited.length - 2];
+    return ptr?.replacement ?? ptr?.original;
+  }
+
   set<P extends keyof FN, V extends FN[P]>(prop: P, value: MaybeFunction<FN, V>): FN {
     const ongoing = this._visited[this._visited.length - 1]! as RecursiveValue<FN>;
     return this.putInternal(ongoing, prop, value);
@@ -77,59 +88,6 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     this.putInternal(ongoing, prop, value);
     return this;
   }
-
-  // map<
-  //   P extends ArrayKeys<FN>,
-  //   M extends Mapper<N, FN, D, O, P>,
-  //   Mapped extends ReturnType<M>,
-  //   S extends Mapped & ToArrayItem<FN[P]>
-  // >(prop: P, mapper?: M | undefined, filter?: Filter<Mapped, S>): this {
-  //   const ongoing = this._visited[this._visited.length - 1]! as RecursiveValue<FN>;
-  //
-  //   const original = (ongoing.replacement ?? ongoing.original)[prop] as (Array<ToArrayItem<FN[P]>> | undefined);
-  //   if (!original) {
-  //     return this;
-  //   }
-  //
-  //   let modified = original;
-  //
-  //   for (let i = 0; i < original.length; i++) {
-  //
-  //     let reduced: ResolvedRet<N, D, O, ToArrayItem<FN[P]>>;
-  //     if (mapper) {
-  //       reduced = mapper(original[i]);
-  //     } else {
-  //       reduced = this.reduce(original[i]);
-  //     }
-  //
-  //     if (filter && !filter(reduced)) {
-  //       if (modified === original) {
-  //         modified = original.toSpliced(0, i);
-  //       } else {
-  //         continue;
-  //       }
-  //     }
-  //
-  //     if (ProxyReducer2.isProxy(reduced)) {
-  //
-  //       // This is a proxy that is being placed inside one of our arrays...
-  //       // We need to resolve/replace it later once the recursive object is fully created.
-  //       const i = 0;
-  //     }
-  //
-  //     if (!this.isEqual(original[i], reduced)) {
-  //       if (modified === original) {
-  //         modified = original.toSpliced(0, i, reduced);
-  //       } else {
-  //         modified.push(reduced);
-  //       }
-  //     } else if (modified !== original) {
-  //       modified.push(reduced);
-  //     }
-  //   }
-  //
-  //   return this;
-  // }
 
   persist(replacement?: ResolvedRet<FN, D, O, FN>): this {
 
@@ -146,8 +104,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     this._persisted.set(ongoing.original, ongoing);
 
     return this;
-    // return ongoing.replacement ?? ongoing.original;
   }
+
+  // TODO: Remove all return types, add a new "replace" function
 
   commit(): FN {
     const ongoing = this._visited[this._visited.length - 1]! as RecursiveValue<FN>;
@@ -159,17 +118,23 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const existingObj = (ongoing.replacement ?? ongoing.original);
     const existingValue = existingObj[prop];
 
-    let value: V;
-    if (typeof valueOrFn === 'function') {
-      value = (valueOrFn as any)(existingObj); // TODO: Ugly. Fix by adding new functions like `putLazy`
-    } else {
-      value = valueOrFn;
+    const value = typeof valueOrFn === 'function' ? (valueOrFn as any)(existingObj) : valueOrFn;
+
+    const equalObj = this.isEqual(existingValue, value, r => {
+      this._replacements.push({...r, owner: ongoing, prop: prop as any} satisfies Replacement);
+    });
+
+    if (equalObj === true) {
+      return existingObj; // TODO: If the `equals` is between a proxy, then we need to register another replacement?
     }
 
-    // TODO: isEqual must check if any of the new values is a proxy, and if it is then we must register it for post-process replacement!
+    // TODO: If `value` is an object and it does not have an ID, then should we automatically add one?
+    //        Seems good, otherwise it will be difficult to know what is new or not! Also get IDs propagated earlier
 
-    if (this.isEqual(existingValue, value)) {
-      return existingObj;
+    if (equalObj !== 'proxy') {
+      for (let i = this._visited.length - 1; i >= 0; i--) {
+        this._visited[i].changeCount++;
+      }
     }
 
     if (ongoing.replacement) {
@@ -255,27 +220,77 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
         //        Then we should be able to, after-the-fact to replace things... or something! This requires a solution!
 
         return new Proxy<N>(recursive.original, new RecursiveProxyHandler2(recursive)) as any;
-
-        // return this.cloneAndReturnNew(recursive as RecursiveValue<FN>) as ReduceRet<Local, D, O, Opt>;
       }
     }
 
+    const visited: RecursiveValue<Local> = {
+      id: ++this._id,
+      original: original,
+      recursionDepth: 0,
+      changeCount: 0,
+    };
+
+    // TODO: Add change counter to RecursiveValue, so we can know when we are done if we should throw away temp replacement?
+
+    let ret: ReduceRet<Local, D, O, Opt>;
     try {
-
-      const visited: RecursiveValue<Local> = {
-        original: original,
-        recursionDepth: 0,
-      };
-
       this._visited.push(visited);
-      return this.reduceInternal(visited);
+      ret = this.reduceInternal(visited);
+      if (ret && ret != visited.original) {
+        visited.replacement = ret as Local;
 
+        for (let i = this._visited.length - 1; i >= 0; i--) {
+          this._visited[i].changeCount++;
+        }
+      }
+
+      if (visited.changeCount === 0) {
+        return visited.original as ReduceRet<Local, D, O, Opt>;
+      }
     } finally {
       this._visited.pop();
-      if (this._persisted && this._visited.length == 0) {
-        this._persisted.clear();
+    }
+
+    for (let i = this._replacements.length - 1; i >= 0; i--) {
+      const replacement = this._replacements[i];
+      const original = this.getOriginal(replacement.replacement);
+      if (original === visited.original) {
+        this._replacements.splice(i, 1);
+        if (replacement.owner && replacement.prop) {
+          const actual = this.getTarget(replacement.replacement) ?? replacement.replacement; // this.getOriginal(replacement.replacement);
+          if (replacement.index !== undefined) {
+
+            const target = (replacement.owner.replacement ?? replacement.owner.original);
+            const targetArray = target[replacement.prop];
+
+            if (target.replacement) {
+              targetArray[replacement.index] = actual;
+            } else {
+
+              if (targetArray[replacement.index] !== actual) {
+                const copiedArray = [...targetArray];
+                copiedArray[replacement.index] = actual;
+
+                // TODO: Get rid of the `as any` -- make `cloneAndReturnNew` decoupled from the class generics
+                this.cloneAndReturnNew(replacement.owner, replacement.prop as any, copiedArray);
+              }
+            }
+
+          } else {
+            this.putInternal(replacement.owner, replacement.prop as any, actual);
+          }
+        }
       }
     }
+
+    if (this._visited.length == 0) {
+      this._persisted?.clear();
+      if (this._replacements.length > 0) {
+        throw new Error(`There are ${this._replacements.length} remaining replacements after all reductions, something is weird`);
+      }
+    }
+
+    return ret;
   }
 
   private reduceInternal<Local extends N>(visited: RecursiveValue<Local>) {
@@ -283,9 +298,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const current = visited.replacement ?? visited.original;
     const discriminator = current[this.options.discriminator];
 
-    for (let i = visited.recursionDepth; i < this.options.specs.length; i++) {
+    for (; visited.recursionDepth < this.options.specs.length; visited.recursionDepth++) {
 
-      const spec = this.options.specs[i];
+      const spec = this.options.specs[visited.recursionDepth];
       let fn: SpecFn2<N, Local, D, O, Opt> | undefined = (spec as any)[discriminator];
       if (!fn) {
         fn = (spec as any)[`true`];
@@ -295,10 +310,6 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       }
 
       const result = fn(current as any, this as any);
-      // if (current !== result) {
-      //   visited.changeCount++; // TODO: This is wrong. Nothing has necessarily changed.
-      // }
-
       return result as ReduceRet<Local, D, O, Opt>;
     }
 
@@ -340,47 +351,90 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     return obj[PROP_KEY_REDUCER_ID];
   }
 
+  public static getObjectId(obj: any): number | undefined {
+    return obj[PROP_KEY_ID];
+  }
+
   public getOriginal<T extends N>(obj: T): N {
     if (ProxyReducer2.isProxy(obj)) {
-      return (obj as any)[PROP_KEY_PROXY_ORIGINAL];
+      return (obj as any)[PROP_KEY_PROXY_ORIGINAL_2];
     }
 
-    const ongoing = this._visited.find(it => it.original === obj || it.replacement === obj);
+    const ongoing = this._visited.find(it => it.original === obj || it.replacement === obj); // TODO: Only keep `original` comparison
     return ongoing?.original ?? obj;
   }
 
   public getTarget<T extends N>(obj: T): N {
     if (ProxyReducer2.isProxy(obj)) {
-      return (obj as any)[PROP_KEY_PROXY_REPLACEMENT];
+      return (obj as any)[PROP_KEY_PROXY_REPLACEMENT_2];
     }
 
-    const ongoing = this._visited.find(it => it.original === obj || it.replacement === obj);
+    const ongoing = this._visited.find(it => it.original === obj || it.replacement === obj); // TODO: Only keep `original` comparison
     return ongoing?.replacement ?? obj;
+  }
+
+  public getTargetOnly<T extends N>(obj: T): N | undefined {
+    if (ProxyReducer2.isProxy(obj)) {
+      return (obj as any)[PROP_KEY_PROXY_REPLACEMENT_2];
+    }
+
+    return undefined;
+  }
+
+  public static getHolder(obj: any): RecursiveValue<unknown> | undefined {
+    if (!obj) {
+      return undefined;
+    }
+    return obj[PROP_KEY_HOLDER_2];
   }
 
   public static isProxy(obj: any): boolean {
     if (!obj) {
       return false;
     }
-    return !!obj[PROP_KEY_IS_PROXY];
+    return !!obj[PROP_KEY_IS_PROXY_2];
   }
 
-  private isEqual(a: any, b: any): boolean {
+  private readonly _replacements: Replacement[] = [];
+
+  private isEqual(a: any, b: any, replacementCallback: (r: Replacement) => void): boolean | 'proxy' {
+
+    // const recursive = this._visited.find(it => it.original === b);
+
     if (a === b) return true;
     if (typeof a !== typeof b) return false;
 
     if (Array.isArray(a) && Array.isArray(b)) {
       const length = a.length;
-      if (length !== b.length) return false;
+      const sameLength = (length === b.length);
+      let itemsAreEqual: boolean | 'proxy' = true;
+
       for (let i = length; i-- !== 0;) {
-        if (!this.isEqual(a[i], b[i])) {
-          return false;
+        const equal = this.isEqual(a[i], b[i], r => replacementCallback({...r, index: i}));
+        if (!equal) {
+          // We must go through all array items even if we've found an early diff.
+          // This is because we need to find all proxies, so they can be deferred.
+          itemsAreEqual = false;
+        } else if (itemsAreEqual === true && equal === 'proxy') {
+          itemsAreEqual = 'proxy';
         }
       }
 
-      return true;
+      if (!sameLength) {
+        return false;
+        // return (sameLength && itemsAreEqual);
+      } else {
+        return itemsAreEqual;
+      }
+
     } else if (ProxyReducer2.isProxy(b)) {
-      return this.isEqual(a, this.getTarget(b) ?? this.getOriginal(b));
+
+      // There is no point in checking equality between a real object and a proxy.
+      // Because the proxy means the object is not completely built yet; we cannot know its final state.
+      if (this.getOriginal(b) === a) {
+        replacementCallback({replacement: b});
+        return 'proxy';
+      }
     }
 
     return false;

@@ -117,12 +117,12 @@ export enum EncodingStyle {
   DEEP_OBJECT = 'deepObject',
 }
 
-export type Example = { readonly summary?: string | undefined;
+export interface Example extends SpecificationExtensions {
   readonly description?: string | undefined;
-  readonly value?: any;
   readonly externalValue?: string | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any; } & NegationOfExampleObject;
-export type ExampleObject = object;
+  readonly summary?: string | undefined;
+  readonly value?: any;
+}
 
 export interface Examples {
   readonly encoding?: MediaTypeEncoding | undefined;

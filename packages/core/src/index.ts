@@ -16,4 +16,6 @@ export * from './reducer2/ProxyReducer2.ts';
 export * from './reducer2/ProxyReducerOmni2.ts';
 export type {ProxyReducerArg2} from './reducer2/types.ts';
 
+export {PROP_KEY_MARKER} from './reducer2/symbols.ts';
+
 export default PluginAutoRegistry.register([CorePlugin, CommonTransformPlugin, CommonTransform2Plugin, fileWriter]);

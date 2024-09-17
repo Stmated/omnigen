@@ -126,6 +126,7 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
     return r.next();
   },
   UNKNOWN: (n, r) => {
+    if (n.upperBound) r.set('upperBound', r.reduce(n.upperBound));
     if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
     return r.next();
   },
@@ -163,22 +164,22 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
   UNION: (n, r) => {
     n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    return r.persist().commit();
   },
   EXCLUSIVE_UNION: (n, r) => {
     n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    return r.persist().commit();
   },
   INTERSECTION: (n, r) => {
     n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    return r.persist().commit();
   },
   NEGATION: (n, r) => {
     n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    return r.persist().commit();
   },
 
   EXTERNAL_MODEL_REFERENCE: (n, r) => {
@@ -186,7 +187,6 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
     n = r.set('model', assertDefined(r.reduce(n.model)));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
     return r.next();
-
   },
   GENERIC_SOURCE: (n, r) => {
     n = r.set('of', assertGenericSuperType(r.reduce(n.of)));
@@ -199,7 +199,7 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
     if (n.lowerBound) n = r.set('lowerBound', r.reduce(n.lowerBound));
     if (n.knownEdgeTypes) n = r.set('knownEdgeTypes', n.knownEdgeTypes.map(it => r.reduce(it)).filter(isDefined));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    return r.persist().next();
   },
   GENERIC_TARGET: (n, r) => {
     const source = assertDefined(r.reduce(n.source));
@@ -210,7 +210,7 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
     n = r.set('source', source);
     n = r.set('targetIdentifiers', n.targetIdentifiers.map(it => r.reduce(it)).filter(isDefined));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    return r.persist().next();
   },
   GENERIC_TARGET_IDENTIFIER: (n, r) => {
 
@@ -227,7 +227,7 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
     n = r.set('of', assertProxySuperType2(assertDefined(r.reduce(n.of))));
     if (n.extendedBy) n = r.set('extendedBy', assertProxySuperType2(r.reduce(n.extendedBy)));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    return r.persist().next();
   },
 
   OBJECT: (n, r) => {
@@ -235,7 +235,7 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
     if (n.extendedBy) n = r.set('extendedBy', assertProxySuperType2(r.reduce(n.extendedBy)));
     if (n.subTypeHints) n = r.set('subTypeHints', n.subTypeHints?.map(it => r.reduce(it)).filter(isDefined));
     if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().commit();
+    return r.persist().next();
   },
   SUBTYPE_HINT: (n, r) => {
     n = r.set('type', assertDefined(r.reduce(n.type)));
@@ -250,7 +250,7 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
   },
 
   PROPERTY: (n, r) => {
-    n = r.set('type', assertDefined(r.reduce(n.type)));
+    r.set('type', assertDefined(r.reduce(n.type)));
     return r.next();
   },
 

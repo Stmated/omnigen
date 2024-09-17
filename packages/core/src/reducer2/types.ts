@@ -1,6 +1,7 @@
 import {ArrayKeys, DistributeReadOnly, ToArrayItem} from '@omnigen/api';
 import {ReducerOpt2} from './ReducerOpt2.ts';
 import {IsExactly} from '../util';
+import {RecursiveValue} from './ProxyReducer2.ts';
 
 export type IfImmutable<InOpt extends ReducerOpt2, True, False> = IsExactly<InOpt['immutable'], true, True, False>;
 
@@ -14,6 +15,8 @@ export interface ProxyReducerInterface<N extends object, D extends keyof N, O, O
   depth: number;
   /**
    * Entrypoint. Never call recursively or inside a reducer spec.
+   *
+   * TODO: Should add some kind of check that we do not call it recursively inside its own spec
    */
   reduce<Local extends N>(original: Local): ReduceRet<Local, D, O, Opt>;
 }
@@ -42,14 +45,16 @@ export interface MutableProxyReducerInterface<N extends object, FN extends N, D 
 
   /**
    * Call this to persist this object to a map which will be used to not visit this object again and instead return the object in its now persisted state.
+   *
+   * TODO: Need a way to say that we do not want to persist, and make any parent spec `persist` into no-op -- so we can mark that it should be separately replaced for each call-site
    */
   persist(replacement?: ResolvedRet<FN, D, O, FN>): this;
 
   commit(): FN;
-}
 
-// map<P extends ArrayKeys<FN>,I extends ToArrayItem<FN[P]>,M extends Mapper<N, FN, D, O, P, I>,MR extends ReturnType<M>,S extends MR & ToArrayItem<FN[P]>>(prop: P, mapper: OptionalMapper<N, FN, D, O, P, I, M>, filter?: Filter<MR, S>): this;
-// filter<S extends T>(predicate: (value: T, index: number, array: T[]) => value is S, thisArg?: any): S[];
+  parent: Readonly<N> | undefined;
+  // parents: ReadonlyArray<RecursiveValue<Readonly<N>>>;
+}
 
 export type ProxyReducerArg2<N extends object, FN extends N, D extends keyof N, O, Opt extends ReducerOpt2> = IfImmutable<Opt,
   StatefulProxyReducerInterface<N, FN, D, O, Opt>,

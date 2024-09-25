@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.ComponentModel.DataAnnotations;
 
 namespace generated.omnigen
@@ -74,7 +75,7 @@ namespace generated.omnigen
         [JsonProperty("code")]
         public int Code { get; init; }
         [JsonProperty("data")]
-        public dynamic Data { get; init; }
+        public JToken Data { get; init; }
         [JsonProperty("message")]
         public string Message { get; init; }
 

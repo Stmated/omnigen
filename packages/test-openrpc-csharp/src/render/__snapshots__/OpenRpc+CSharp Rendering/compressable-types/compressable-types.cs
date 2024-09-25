@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.ComponentModel.DataAnnotations;
 
 namespace generated.omnigen
@@ -53,7 +54,7 @@ namespace generated.omnigen
 
     public class ErrorUnknownError : JsonRpcError
     {
-        public ErrorUnknownError(int? code, string message, dynamic data) : base(code ?? -1, message ?? "Unknown Error", data) { }
+        public ErrorUnknownError(int? code, string message, JToken data) : base(code ?? -1, message ?? "Unknown Error", data) { }
     }
 
     public class GiveIn1GetOut1Request : JsonRpcRequest
@@ -152,11 +153,11 @@ namespace generated.omnigen
         [JsonProperty("code")]
         public int Code { get; }
         [JsonProperty("data")]
-        public dynamic Data { get; }
+        public JToken Data { get; }
         [JsonProperty("message")]
         public string Message { get; }
 
-        public JsonRpcError(int? code, string message, dynamic data)
+        public JsonRpcError(int? code, string message, JToken data)
         {
             this.Code = code ?? -1;
             this.Message = message ?? "Unknown Error";

@@ -1,5 +1,5 @@
 using Newtonsoft.Json;
-using System;
+using Newtonsoft.Json.Linq;
 using System.ComponentModel.DataAnnotations;
 
 namespace generated.omnigen
@@ -43,11 +43,11 @@ namespace generated.omnigen
         [JsonProperty("code")]
         public int Code { get; }
         [JsonProperty("data")]
-        public dynamic Data { get; }
+        public JToken Data { get; }
         [JsonProperty("message")]
         public string Message { get; }
 
-        public JsonRpcError(int? code, string message, dynamic data)
+        public JsonRpcError(int? code, string message, JToken data)
         {
             this.Code = code ?? -1;
             this.Message = message ?? "Unknown Error";
@@ -72,7 +72,7 @@ namespace generated.omnigen
 
     public class ErrorUnknownError : JsonRpcError
     {
-        public ErrorUnknownError(int? code, string message, dynamic data) : base(code ?? -1, message ?? "Unknown Error", data) { }
+        public ErrorUnknownError(int? code, string message, JToken data) : base(code ?? -1, message ?? "Unknown Error", data) { }
     }
 
     /// <summary>
@@ -144,35 +144,36 @@ namespace generated.omnigen
         }
     }
 
+    [JsonConverter(typeof(WrapperConverter<UnionOfAB>), "Raw")]
     public class UnionOfAB
     {
         private A _a;
         private B _b;
 
-        public UnionOfAB(dynamic raw)
+        public UnionOfAB(JToken raw)
         {
             this.Raw = raw;
         }
 
-        public A GetA(Func<dynamic, A> transformer)
+        public A GetA(JsonSerializer transformer)
         {
             if (this._a != null)
             {
                 return this._a;
             }
-            return this._a = transformer(this.Raw);
+            return this._a = this.Raw.ToObject<A>(transformer);
         }
 
-        public B GetB(Func<dynamic, B> transformer)
+        public B GetB(JsonSerializer transformer)
         {
             if (this._b != null)
             {
                 return this._b;
             }
-            return this._b = transformer(this.Raw);
+            return this._b = this.Raw.ToObject<B>(transformer);
         }
 
-        public dynamic Raw { get; }
+        public JToken Raw { get; }
     }
 
     public class Out2 : A, IB, IC
@@ -199,7 +200,7 @@ namespace generated.omnigen
         [JsonProperty("in_type")]
         public string InType { get; }
 
-        public In(dynamic raw, string inType) : base(raw)
+        public In(JToken raw, string inType) : base(raw)
         {
             this.InType = inType;
         }

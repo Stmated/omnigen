@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -61,6 +62,7 @@ namespace generated.omnigen
         SPECIES_B,
     }
 
+    [JsonConverter(typeof(WrapperConverter<TagOrSpeciesOrString>), "Value")]
     public class TagOrSpeciesOrString
     {
         private const IDictionary<Object, TagOrSpeciesOrString> _values = new Dictionary<Object, TagOrSpeciesOrString>();
@@ -211,11 +213,11 @@ namespace generated.omnigen
         [JsonProperty("code")]
         public int Code { get; }
         [JsonProperty("data")]
-        public dynamic Data { get; }
+        public JToken Data { get; }
         [JsonProperty("message")]
         public string Message { get; }
 
-        public JsonRpcError(dynamic data, string message, int code)
+        public JsonRpcError(JToken data, string message, int code)
         {
             this.Data = data;
             this.Message = message;
@@ -225,7 +227,7 @@ namespace generated.omnigen
 
     public class ListThingsError100Error : JsonRpcError
     {
-        public ListThingsError100Error(dynamic data, string message) : base(data, message ?? "Server is busy", 100) { }
+        public ListThingsError100Error(JToken data, string message) : base(data, message ?? "Server is busy", 100) { }
     }
 
     /// <summary>
@@ -256,7 +258,7 @@ namespace generated.omnigen
 
     public class ErrorUnknownError : JsonRpcError
     {
-        public ErrorUnknownError(dynamic data, string message, int? code) : base(data, message ?? "Unknown Error", code ?? -1) { }
+        public ErrorUnknownError(JToken data, string message, int? code) : base(data, message ?? "Unknown Error", code ?? -1) { }
     }
 
     public class ErrorUnknown : JsonRpcErrorResponse<ErrorUnknownError>

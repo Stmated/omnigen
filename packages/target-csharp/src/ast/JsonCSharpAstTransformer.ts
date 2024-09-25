@@ -2,13 +2,13 @@ import {
   AstTransformer,
   AstTransformerArguments,
   Direction,
-  ObjectName,
-  OmniHardcodedReferenceType,
+  ObjectName, OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniGenericTargetType,
+  OmniHardcodedReferenceType, OmniKindPrimitive,
   OmniProperty,
-  OmniPropertyName,
+  OmniPropertyName, OmniType,
   OmniTypeKind,
-  OmniUnknownType,
-  TargetOptions,
+  OmniUnknownType, PackageOptions,
+  TargetOptions, TypeNode,
   TypeUseKind,
   UnknownKind,
 } from '@omnigen/api';
@@ -17,6 +17,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {Code, CodeAstUtils, CodeOptions, SerializationPropertyNameMode} from '@omnigen/target-code';
 import {CSharpOptions, SerializationLibrary} from '../options';
 import {Cs} from '../ast';
+import {Kinds, VirtualAnnotationKind} from '@omnigen/target-code/ast';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -66,10 +67,12 @@ const SystemJsonAttributes: Readonly<JsonAttributes> = Object.freeze({
 
 /**
  * NOTE: This is a work in progress. It only supports a small subset of what is needed for full C# support.
- */
+ *
+ * NOTE: This is mostly quickly copied over from the Java version of JSON-handling. Some code is never used, or not applicable or badly structured. Needs a targeted C# rewrite.
+ * */
 export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAstNode, TargetOptions & CSharpOptions> {
 
-  transformAst(args: AstTransformerArguments<Cs.CSharpRootNode, TargetOptions & CSharpOptions>): void {
+  transformAst(args: AstTransformerArguments<Cs.CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>): void {
 
     if (args.options.serializationLibrary === SerializationLibrary.NONE) {
       return;
@@ -80,6 +83,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
     type FieldStackEntry = { annotate: Array<Code.Field | Cs.PropertyNode>, skip: Array<Code.Field | Cs.PropertyNode> };
     const fieldsStack: FieldStackEntry[] = [];
     const objectDecStack: Code.AbstractObjectDeclaration[] = [];
+    const converterStack: Array<{type?: OmniType, fieldName?: Cs.PropertyIdentifier | Code.Identifier}> = [];
 
     const delegateToObjectMapperNode = new Map<number, Code.TypeNode>();
 
@@ -94,10 +98,45 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
           objectDecStack.push(node);
           hasAnnotatedConstructor.push(false);
           fieldsStack.push({annotate: [], skip: []});
+          converterStack.push({});
           return defaultVisitor.visitObjectDeclaration(node, visitor);
         } finally {
 
           objectDecStack.pop();
+          const converter = converterStack.pop();
+
+          if (converter && converter.fieldName) {
+
+            if (!node.annotations) {
+              node.annotations = new Code.AnnotationList();
+            }
+
+            // This will create a reference to class `WrapperConverter` of the same namespace as the object.
+            // TODO: This class will of course not exists, so we need to add code that generates this class, or just expect the end-user to create their version of it.
+            const namespace = args.root.getNameResolver().parseNamespace(args.options.package);
+            const converterTypeNode = new Code.GenericType(
+              node.omniType,
+              new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: namespace, edgeName: `WrapperConverter`}}),
+              [node.type],
+            );
+
+            node.annotations.children.push(new Code.Annotation(
+              new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['Newtonsoft', 'Json'], edgeName: {onUse: 'JsonConverter', onImport: 'JsonConverterAttribute'}}}),
+              new Code.AnnotationKeyValuePairList(
+                new Code.AnnotationKeyValuePair(
+                  undefined,
+                  new Code.MethodCall(
+                    new Code.HardCoded('typeof'),
+                    new Code.ArgumentList(converterTypeNode),
+                  ),
+                ),
+                new Code.AnnotationKeyValuePair(
+                  undefined,
+                  new Code.Literal(converter.fieldName, OmniKindPrimitive.STRING),
+                ),
+              ),
+            ));
+          }
 
           // Need to do this *after* the object declaration has been visited.
           // Otherwise we will not have had time to find the constructor, or other influencing members.
@@ -148,23 +187,32 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
         }
 
         // A JsonValue field should not have any JsonProperty added to it.
-        const jsonValueAnnotation = n.annotations?.children.find(
-          it => (it instanceof Code.Annotation) && (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) && OmniUtil.isEqualObjectName(it.type.omniType.fqn, attributes.JSON_VALUE.name),
-        );
+        // const annotations = ;
+        const jsonValueAnnotation = this.getJsonValueAnnotation(n.annotations, attributes);
 
-        if (!jsonValueAnnotation && this.shouldAddJsonPropertyAnnotation(n.identifier.value, n.identifier.original, args.options)) {
-          fieldsStack[fieldsStack.length - 1].annotate.push(n);
+        if (!jsonValueAnnotation) {
+          if (this.shouldAddJsonPropertyAnnotation(n.identifier.value, n.identifier.original, args.options)) {
+            fieldsStack[fieldsStack.length - 1].annotate.push(n);
+          }
+        } else {
+
+          // The field has a "JsonValue" attribute, so we should register it and add a `JsonConverter` to the class to properly serialize/deserialize.
+          const converter = converterStack[converterStack.length - 1];
+          converter.fieldName = n.identifier;
+          converter.type = n.type.omniType;
         }
       },
 
       visitProperty: n => {
 
-        const jsonValueAnnotation = n.annotations?.children.find(
-          it => (it instanceof Code.Annotation) && (it.type.omniType.kind == OmniTypeKind.HARDCODED_REFERENCE) && OmniUtil.isEqualObjectName(it.type.omniType.fqn, attributes.JSON_VALUE.name),
-        );
+        const jsonValueAnnotation = this.getJsonValueAnnotation(n.annotations, attributes);
 
         if (!jsonValueAnnotation) { // } && this.shouldAddJsonPropertyAnnotation(n.identifier.identifier.value, n.property?.name, args.options)) {
           fieldsStack[fieldsStack.length - 1].annotate.push(n);
+        } else {
+          const converter = converterStack[converterStack.length - 1];
+          converter.fieldName = n.identifier;
+          converter.type = n.type.omniType;
         }
 
         return n;
@@ -215,9 +263,6 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
     const defaultReducer = args.root.createReducer();
     const newRoot = args.root.reduce({
       ...defaultReducer,
-      reduceField: (n, r) => {
-        return defaultReducer.reduceField(n, r);
-      },
       reduceWildcardType: (n, r) => {
 
         const converted = this.wildcardToJsonType(attributes, n.omniType, args.options);
@@ -328,12 +373,27 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
     }
   }
 
+  private getJsonValueAnnotation(annotations: Code.AnnotationList | undefined, attributes: JsonAttributes) {
+    return annotations?.children.find(
+      it => {
+        if (it instanceof Code.Annotation) {
+          return (it.type.omniType.kind === OmniTypeKind.HARDCODED_REFERENCE) && OmniUtil.isEqualObjectName(it.type.omniType.fqn, attributes.JSON_VALUE.name);
+        } else {
+          return it.value.kind === VirtualAnnotationKind.SERIALIZATION_VALUE;
+        }
+      },
+    );
+  }
+
   private wildcardToJsonType(attributes: JsonAttributes, n: OmniUnknownType, options: CSharpOptions): OmniHardcodedReferenceType | undefined {
 
     const unknownKind = n.unknownKind ?? options.unknownType;
-    if (unknownKind == UnknownKind.DYNAMIC_OBJECT && attributes.JSON_OBJECT.name) {
+    if (unknownKind === UnknownKind.DYNAMIC_OBJECT && attributes.JSON_OBJECT.name) {
+      // Maybe JObject
       return {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: attributes.JSON_OBJECT.name};
-    } else if (unknownKind == UnknownKind.ANY && attributes.JSON_NODE.name) {
+    } else if ((unknownKind === UnknownKind.ANY || unknownKind === UnknownKind.DYNAMIC) && attributes.JSON_NODE.name) {
+      // Maybe JToken
+      // TODO: There should be another `unknownKind` to differentiate between `dynamic` and `JToken` since they have different use-cases
       return {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: attributes.JSON_NODE.name};
     }
 

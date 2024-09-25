@@ -156,6 +156,9 @@ export class BoundedType extends AbstractCodeNode implements TypeNode {
   }
 }
 
+/**
+ * TODO: Remove `omniType` so that it is easier to manually create a generic type node even for types that might be hardcoded
+ */
 export class GenericType<
   T extends OmniType = OmniType,
   BT extends OmniType = OmniType

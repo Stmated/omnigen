@@ -73,7 +73,6 @@ export class PluginManager {
     try {
 
       // Try to load the plugin. This is all *very* ugly, but temporary until core functionality is stable.
-      logger.info(process.cwd());
       logger.info(`Importing ${qualifier.packageName}`);
       const packageContents = await import(`@omnigen/${qualifier.packageName}`)
         .catch(e => {
@@ -85,13 +84,13 @@ export class PluginManager {
         .catch(e => {
           logger.info(process.cwd());
           const resolved = ioPath.resolve(`../../packages/parser-${qualifier.packageName}/src/index.ts`);
-          logger.info(`2: ${qualifier.packageName}} @ ${resolved} (${e})`);
+          logger.info(`2: ${qualifier.packageName} @ ${resolved} (from attempt 1: ${e})`);
           return import(resolved);
         })
         .catch(e => {
           logger.info(process.cwd());
           const resolved = ioPath.resolve(`../../packages/target-${qualifier.packageName}/src/index.ts`);
-          logger.info(`3: ${qualifier.packageName}} ${resolved} (${e})`);
+          logger.info(`3: ${qualifier.packageName} @ ${resolved} (from attempt 2: ${e})`);
           return import(resolved);
         })
       ;

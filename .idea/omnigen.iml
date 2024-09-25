@@ -28,6 +28,9 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/render/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-java/src/transform/__snapshots__" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-openrpc-typescript/src/render/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/coverage" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

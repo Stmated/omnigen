@@ -1,8 +1,8 @@
 import {AstNode, AstVisitor, OmniArrayKind, RenderedCompilationUnit, Renderer, VisitResult} from '@omnigen/api';
-import {CodeAstUtils, CodeOptions, CodeVisitor, createCodeVisitor} from '../';
+import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
-import * as Code from '../ast/CodeAst';
+import * as Code from '../ast/Code';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -498,7 +498,15 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitVirtualAnnotationNode: n => `[General annotation node ${JSON.stringify(n.value)} must be replaced with something target-specific or be removed]`,
 
-    visitLiteral: n => OmniUtil.literalToGeneralPrettyString(n.value, n.primitiveKind),
+    visitLiteral: (n, v) => {
+      if (n.value instanceof Code.AbstractCodeNode) {
+        // TODO: This feels like a hack, that it transparently falls under `object` of the `Literal` node -- perhaps be explicit, or have a special node for a "rendering code literal"?
+        const rendered = render(n.value, v);
+        return OmniUtil.literalToGeneralPrettyString(rendered, n.primitiveKind);
+      } else {
+        return OmniUtil.literalToGeneralPrettyString(n.value, n.primitiveKind);
+      }
+    },
 
     visitField: (n, v) => {
       const comments = n.comments ? `${render(n.comments, v)}\n` : '';

@@ -363,7 +363,7 @@ export interface OmniDecoratingType<T extends OmniType = OmniType> extends OmniB
 export const UnknownKind = {
 
   /**
-   * Java: `JsonNode` (if Jackson), TypeScript: `unknown`, C#: `dynamic`
+   * Java: `JsonNode` (if Jackson), TypeScript: `unknown`, C#: `dynamic` (or `JToken` if Newtonsoft)
    */
   DYNAMIC: 'DYNAMIC',
 

@@ -13,7 +13,7 @@ import {
 } from '@omnigen/core-plugin';
 import {JAVA_FEATURES, JavaPlugins, ZodJavaOptions} from './index';
 import {PluginManager} from '@omnigen/plugin';
-import {test, expect} from 'vitest';
+import {test} from 'vitest';
 import {z} from 'zod';
 import {ZodJavaContextIn} from './JavaPluginInit.ts';
 
@@ -58,7 +58,7 @@ const fakePropertiesPlugin = createPlugin(
     } as const;
   });
 
-test('Java Plugin Hooks', async () => {
+test.concurrent('Java Plugin Hooks', async ctx => {
 
   const manager = new PluginManager({includeAuto: false});
   manager.addPlugin(JavaPlugins.default);
@@ -77,6 +77,6 @@ test('Java Plugin Hooks', async () => {
     ctx: runOptions,
   });
 
-  expect(executions.result.ctx).toHaveProperty('renderers');
+  ctx.expect(executions.result.ctx).toHaveProperty('renderers');
 });
 

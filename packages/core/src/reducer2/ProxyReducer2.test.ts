@@ -1,4 +1,4 @@
-import {describe, expect, test} from 'vitest';
+import {describe, test} from 'vitest';
 import {ProxyReducer2} from './ProxyReducer2.ts';
 import {assertDiscriminator, expectTs, isDefined} from '../util';
 import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2.ts';
@@ -72,7 +72,7 @@ const typesReducerBuilder = typesReducerBaseBuilder.spec({
   },
 });
 
-test('swap-field-custom', () => {
+test.concurrent('swap-field-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
 
@@ -89,12 +89,12 @@ test('swap-field-custom', () => {
 
   const reduced = reducer.reduce(foo);
 
-  expect(reduced).not.toBe(foo);
-  expect(reduced?.common).toBe('bye');
-  expect(anyCalls).toBe(0);
+  ctx.expect(reduced).not.toBe(foo);
+  ctx.expect(reduced?.common).toBe('bye');
+  ctx.expect(anyCalls).toBe(0);
 });
 
-test('swap-field-custom-with-separated-any-spec', () => {
+test.concurrent('swap-field-custom-with-separated-any-spec', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
 
@@ -119,13 +119,13 @@ test('swap-field-custom-with-separated-any-spec', () => {
 
   const reduced = reducer.reduce(foo);
 
-  expect(reduced).not.toBe(foo);
-  expect(reduced?.common).toBe('bye');
-  expect(anyCalls1).toBe(1);
-  expect(anyCalls2).toBe(0);
+  ctx.expect(reduced).not.toBe(foo);
+  ctx.expect(reduced?.common).toBe('bye');
+  ctx.expect(anyCalls1).toBe(1);
+  ctx.expect(anyCalls2).toBe(0);
 });
 
-test('swap-object-custom', () => {
+test.concurrent('swap-object-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
   const foo2: Foo = {k: 'Foo', x: 20, y: 30, common: 'yo'};
@@ -142,17 +142,17 @@ test('swap-object-custom', () => {
   const reduced = reducer.reduce(foo);
 
   expectTs.toBeDefined(reduced);
-  expect(reduced).not.toBe(foo);
-  expect(reduced, 'Should be same, since we returned it as such (we say we manage it)').toBe(foo2);
+  ctx.expect(reduced).not.toBe(foo);
+  ctx.expect(reduced, 'Should be same, since we returned it as such (we say we manage it)').toBe(foo2);
   expectTs.propertyToBe(reduced, 'k', 'Foo');
 
-  expect(reduced.x).toBe(20);
-  expect(reduced.y).toBe(30);
-  expect(reduced.common).toBe('yo');
-  expect(anyCalls).toBe(0); // Not called, since `Foo` is matched
+  ctx.expect(reduced.x).toBe(20);
+  ctx.expect(reduced.y).toBe(30);
+  ctx.expect(reduced.common).toBe('yo');
+  ctx.expect(anyCalls).toBe(0); // Not called, since `Foo` is matched
 });
 
-test('swap-object-and-field-custom', () => {
+test.concurrent('swap-object-and-field-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
   const foo2: Foo = {k: 'Foo', x: 34, y: 40, common: 'yo'};
@@ -175,16 +175,16 @@ test('swap-object-and-field-custom', () => {
 
   const reduced = reducer.reduce(foo);
 
-  expect(reduced).not.toBe(foo);
-  expect(reduced, 'Should be same, since we returned it as such (we say we manage it)').toBe(bar);
+  ctx.expect(reduced).not.toBe(foo);
+  ctx.expect(reduced, 'Should be same, since we returned it as such (we say we manage it)').toBe(bar);
   expectTs.propertyToBe(reduced, 'k', 'Bar');
-  expect(reduced?.a).toBe(50);
-  expect(reduced?.b).toBe(60);
-  expect(reduced?.common).toBe('hi');
-  expect(anyCalls).toBe(1);
+  ctx.expect(reduced?.a).toBe(50);
+  ctx.expect(reduced?.b).toBe(60);
+  ctx.expect(reduced?.common).toBe('hi');
+  ctx.expect(anyCalls).toBe(1);
 });
 
-test('swap-custom', () => {
+test.concurrent('swap-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
 
@@ -196,11 +196,11 @@ test('swap-custom', () => {
 
   const reduced = reducer.reduce(foo);
 
-  expect(reduced).not.toBe(foo);
-  expect(reduced?.common).toBe('bye');
+  ctx.expect(reduced).not.toBe(foo);
+  ctx.expect(reduced?.common).toBe('bye');
 });
 
-test('reuse-branch', () => {
+test.concurrent('reuse-branch', ctx => {
 
   const foo_common: Foo = {k: 'Foo', x: 666, y: 666};
 
@@ -220,7 +220,7 @@ test('reuse-branch', () => {
 
   const reducerNoOp = typesReducerBuilder.build();
 
-  expect(reducerNoOp.reduce(foo)).toBe(foo);
+  ctx.expect(reducerNoOp.reduce(foo)).toBe(foo);
 
   const reducerIncrementX = typesReducerBuilder.build({
     Foo: (n, r) => {
@@ -230,10 +230,10 @@ test('reuse-branch', () => {
   });
 
   const reduced = reducerIncrementX.reduce(foo);
-  expect(reduced).not.toBe(foo);
+  ctx.expect(reduced).not.toBe(foo);
 });
 
-test('increment-generation', () => {
+test.concurrent('increment-generation', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 10};
 
@@ -259,37 +259,37 @@ test('increment-generation', () => {
   const xInc3 = reducerIncX.reduce(xInc2)!;
   const xInc4 = reducerIncX.reduce(xInc3)!;
 
-  expect(foo).not.toBe(xInc);
-  expect(xInc).not.toBe(xInc2);
-  expect(xInc2).not.toBe(xInc3);
-  expect(xInc3).not.toBe(xInc4);
+  ctx.expect(foo).not.toBe(xInc);
+  ctx.expect(xInc).not.toBe(xInc2);
+  ctx.expect(xInc2).not.toBe(xInc3);
+  ctx.expect(xInc3).not.toBe(xInc4);
 
-  expect(reducerIncX.getId(foo)).toBeUndefined();
-  expect(reducerIncX.getId(xInc)).toEqual(1);
-  expect(reducerIncX.getId(xInc2)).toEqual(2);
-  expect(reducerIncX.getId(xInc3)).toEqual(3);
-  expect(reducerIncX.getId(xInc4)).toEqual(4);
+  ctx.expect(reducerIncX.getId(foo)).toBeUndefined();
+  ctx.expect(reducerIncX.getId(xInc)).toEqual(1);
+  ctx.expect(reducerIncX.getId(xInc2)).toEqual(2);
+  ctx.expect(reducerIncX.getId(xInc3)).toEqual(3);
+  ctx.expect(reducerIncX.getId(xInc4)).toEqual(4);
 
-  expect(ProxyReducer2.getReducerId(xInc)).toEqual(1);
-  expect(ProxyReducer2.getReducerId(xInc2)).toEqual(1);
-  expect(ProxyReducer2.getReducerId(xInc3)).toEqual(1);
-  expect(ProxyReducer2.getReducerId(xInc4)).toEqual(1);
+  ctx.expect(ProxyReducer2.getReducerId(xInc)).toEqual(1);
+  ctx.expect(ProxyReducer2.getReducerId(xInc2)).toEqual(1);
+  ctx.expect(ProxyReducer2.getReducerId(xInc3)).toEqual(1);
+  ctx.expect(ProxyReducer2.getReducerId(xInc4)).toEqual(1);
 
-  expect(ProxyReducer2.getGeneration(xInc)).toEqual(1);
-  expect(ProxyReducer2.getGeneration(xInc2)).toEqual(2);
-  expect(ProxyReducer2.getGeneration(xInc3)).toEqual(3);
-  expect(ProxyReducer2.getGeneration(xInc4)).toEqual(4);
+  ctx.expect(ProxyReducer2.getGeneration(xInc)).toEqual(1);
+  ctx.expect(ProxyReducer2.getGeneration(xInc2)).toEqual(2);
+  ctx.expect(ProxyReducer2.getGeneration(xInc3)).toEqual(3);
+  ctx.expect(ProxyReducer2.getGeneration(xInc4)).toEqual(4);
 
   expectTs.propertyToBe(xInc, 'k', 'Foo');
   expectTs.propertyToBe(xInc2, 'k', 'Foo');
   expectTs.propertyToBe(xInc3, 'k', 'Foo');
   expectTs.propertyToBe(xInc4, 'k', 'Foo');
 
-  expect(foo.x).toEqual(10);
-  expect(xInc.x).toEqual(11);
-  expect(xInc2.x).toEqual(12);
-  expect(xInc3.x).toEqual(13);
-  expect(xInc4.x).toEqual(14);
+  ctx.expect(foo.x).toEqual(10);
+  ctx.expect(xInc.x).toEqual(11);
+  ctx.expect(xInc2.x).toEqual(12);
+  ctx.expect(xInc3.x).toEqual(13);
+  ctx.expect(xInc4.x).toEqual(14);
 
   // Then increment y for some of them individually
 
@@ -298,41 +298,41 @@ test('increment-generation', () => {
   const yInc_xInc4 = reducerIncY.reduce(xInc4)!;
   const yInc_yInc_xInc4 = reducerIncY.reduce(yInc_xInc4)!;
 
-  expect(foo).not.toBe(yInc);
-  expect(xInc).not.toBe(yInc_xInc);
-  expect(xInc4).not.toBe(yInc_xInc4);
-  expect(yInc_xInc4).not.toBe(yInc_yInc_xInc4);
+  ctx.expect(foo).not.toBe(yInc);
+  ctx.expect(xInc).not.toBe(yInc_xInc);
+  ctx.expect(xInc4).not.toBe(yInc_xInc4);
+  ctx.expect(yInc_xInc4).not.toBe(yInc_yInc_xInc4);
 
   expectTs.propertyToBe(yInc, 'k', 'Foo');
   expectTs.propertyToBe(yInc_xInc, 'k', 'Foo');
   expectTs.propertyToBe(yInc_xInc4, 'k', 'Foo');
   expectTs.propertyToBe(yInc_yInc_xInc4, 'k', 'Foo');
 
-  expect(reducerIncX.getId(yInc)).toEqual(5);
-  expect(reducerIncX.getId(yInc_xInc)).toEqual(6);
-  expect(reducerIncX.getId(yInc_xInc4)).toEqual(7);
-  expect(reducerIncX.getId(yInc_yInc_xInc4)).toEqual(8);
+  ctx.expect(reducerIncX.getId(yInc)).toEqual(5);
+  ctx.expect(reducerIncX.getId(yInc_xInc)).toEqual(6);
+  ctx.expect(reducerIncX.getId(yInc_xInc4)).toEqual(7);
+  ctx.expect(reducerIncX.getId(yInc_yInc_xInc4)).toEqual(8);
 
-  expect(ProxyReducer2.getReducerId(yInc)).toEqual(2);
-  expect(ProxyReducer2.getReducerId(yInc_xInc)).toEqual(2);
-  expect(ProxyReducer2.getReducerId(yInc_yInc_xInc4)).toEqual(2);
+  ctx.expect(ProxyReducer2.getReducerId(yInc)).toEqual(2);
+  ctx.expect(ProxyReducer2.getReducerId(yInc_xInc)).toEqual(2);
+  ctx.expect(ProxyReducer2.getReducerId(yInc_yInc_xInc4)).toEqual(2);
 
-  expect(ProxyReducer2.getGeneration(yInc)).toEqual(1);
-  expect(ProxyReducer2.getGeneration(yInc_xInc)).toEqual(2);
-  expect(ProxyReducer2.getGeneration(yInc_xInc4)).toEqual(5);
-  expect(ProxyReducer2.getGeneration(yInc_yInc_xInc4)).toEqual(6);
+  ctx.expect(ProxyReducer2.getGeneration(yInc)).toEqual(1);
+  ctx.expect(ProxyReducer2.getGeneration(yInc_xInc)).toEqual(2);
+  ctx.expect(ProxyReducer2.getGeneration(yInc_xInc4)).toEqual(5);
+  ctx.expect(ProxyReducer2.getGeneration(yInc_yInc_xInc4)).toEqual(6);
 
-  expect(yInc.x).toEqual(foo.x);
-  expect(yInc.y).toEqual(11);
+  ctx.expect(yInc.x).toEqual(foo.x);
+  ctx.expect(yInc.y).toEqual(11);
 
-  expect(yInc_xInc.x).toEqual(xInc.x);
-  expect(yInc_xInc.y).toEqual(11);
+  ctx.expect(yInc_xInc.x).toEqual(xInc.x);
+  ctx.expect(yInc_xInc.y).toEqual(11);
 
-  expect(yInc_xInc4.x).toEqual(xInc4.x);
-  expect(yInc_xInc4.y).toEqual(11);
+  ctx.expect(yInc_xInc4.x).toEqual(xInc4.x);
+  ctx.expect(yInc_xInc4.y).toEqual(11);
 
-  expect(yInc_yInc_xInc4.x).toEqual(xInc4.x);
-  expect(yInc_yInc_xInc4.y).toEqual(12);
+  ctx.expect(yInc_yInc_xInc4.x).toEqual(xInc4.x);
+  ctx.expect(yInc_yInc_xInc4.y).toEqual(12);
 
   // Then we run another reducer with isolated stats, which will give other tracking
 
@@ -340,37 +340,37 @@ test('increment-generation', () => {
   const xDec_yInc_xInc = isolatedReducerDec10X.reduce(yInc_xInc)!;
   const xDec_yInc_yInc_xInc4 = isolatedReducerDec10X.reduce(yInc_yInc_xInc4)!;
 
-  expect(foo).not.toBe(xDec);
-  expect(yInc_xInc).not.toBe(xDec_yInc_xInc);
-  expect(yInc_yInc_xInc4).not.toBe(xDec_yInc_yInc_xInc4);
+  ctx.expect(foo).not.toBe(xDec);
+  ctx.expect(yInc_xInc).not.toBe(xDec_yInc_xInc);
+  ctx.expect(yInc_yInc_xInc4).not.toBe(xDec_yInc_yInc_xInc4);
 
   expectTs.propertyToBe(xDec, 'k', 'Foo');
   expectTs.propertyToBe(xDec_yInc_xInc, 'k', 'Foo');
   expectTs.propertyToBe(xDec_yInc_yInc_xInc4, 'k', 'Foo');
 
-  expect(reducerIncX.getId(xDec)).toEqual(1001);
-  expect(reducerIncX.getId(xDec_yInc_xInc)).toEqual(1002);
-  expect(reducerIncX.getId(xDec_yInc_yInc_xInc4)).toEqual(1003);
+  ctx.expect(reducerIncX.getId(xDec)).toEqual(1001);
+  ctx.expect(reducerIncX.getId(xDec_yInc_xInc)).toEqual(1002);
+  ctx.expect(reducerIncX.getId(xDec_yInc_yInc_xInc4)).toEqual(1003);
 
-  expect(ProxyReducer2.getReducerId(xDec)).toEqual(1001);
-  expect(ProxyReducer2.getReducerId(xDec_yInc_xInc)).toEqual(1001);
-  expect(ProxyReducer2.getReducerId(xDec_yInc_yInc_xInc4)).toEqual(1001);
+  ctx.expect(ProxyReducer2.getReducerId(xDec)).toEqual(1001);
+  ctx.expect(ProxyReducer2.getReducerId(xDec_yInc_xInc)).toEqual(1001);
+  ctx.expect(ProxyReducer2.getReducerId(xDec_yInc_yInc_xInc4)).toEqual(1001);
 
-  expect(ProxyReducer2.getGeneration(xDec)).toEqual(1);
-  expect(ProxyReducer2.getGeneration(xDec_yInc_xInc)).toEqual(3);
-  expect(ProxyReducer2.getGeneration(xDec_yInc_yInc_xInc4)).toEqual(7);
+  ctx.expect(ProxyReducer2.getGeneration(xDec)).toEqual(1);
+  ctx.expect(ProxyReducer2.getGeneration(xDec_yInc_xInc)).toEqual(3);
+  ctx.expect(ProxyReducer2.getGeneration(xDec_yInc_yInc_xInc4)).toEqual(7);
 
-  expect(xDec.x).toEqual(0);
-  expect(xDec.y).toEqual(foo.y);
+  ctx.expect(xDec.x).toEqual(0);
+  ctx.expect(xDec.y).toEqual(foo.y);
 
-  expect(xDec_yInc_xInc.x).toEqual(1);
-  expect(xDec_yInc_xInc.y).toEqual(yInc_xInc.y);
+  ctx.expect(xDec_yInc_xInc.x).toEqual(1);
+  ctx.expect(xDec_yInc_xInc.y).toEqual(yInc_xInc.y);
 
-  expect(xDec_yInc_yInc_xInc4.x).toEqual(4);
-  expect(xDec_yInc_yInc_xInc4.y).toEqual(yInc_yInc_xInc4.y);
+  ctx.expect(xDec_yInc_yInc_xInc4.x).toEqual(4);
+  ctx.expect(xDec_yInc_yInc_xInc4.y).toEqual(yInc_yInc_xInc4.y);
 });
 
-test('track-multiple-reducers', () => {
+test.concurrent('track-multiple-reducers', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 10};
 
@@ -388,10 +388,10 @@ test('track-multiple-reducers', () => {
   const yInc_xInc = reducerIncY.reduce(xInc)!;
   const xInc_yInc_xInc = reducerIncX.reduce(yInc_xInc)!;
 
-  expect(ProxyReducer2.getReducerId(foo)).toBeUndefined();
-  expect(ProxyReducer2.getReducerId(xInc)).toEqual(1);
-  expect(ProxyReducer2.getReducerId(yInc_xInc)).toEqual([1, 2]);
-  expect(ProxyReducer2.getReducerId(xInc_yInc_xInc)).toEqual(1); // Overwrites with LAST again.
+  ctx.expect(ProxyReducer2.getReducerId(foo)).toBeUndefined();
+  ctx.expect(ProxyReducer2.getReducerId(xInc)).toEqual(1);
+  ctx.expect(ProxyReducer2.getReducerId(yInc_xInc)).toEqual([1, 2]);
+  ctx.expect(ProxyReducer2.getReducerId(xInc_yInc_xInc)).toEqual(1); // Overwrites with LAST again.
 });
 
 describe('non-local-deep-change-not-recursive', () => {
@@ -404,7 +404,7 @@ describe('non-local-deep-change-not-recursive', () => {
 
   const root: Foo = {k: 'Foo', x: 0, y: 0, common: 'root', foos: [foo1, foo2]};
 
-  test('stop-visiting', () => {
+  test.concurrent('stop-visiting', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -420,17 +420,17 @@ describe('non-local-deep-change-not-recursive', () => {
 
     const reduced = reducer.reduce(root);
 
-    expect(reduced).not.toBe(root);
-    expect(reduced.foos![0].x).toEqual(1);
-    expect(reduced.foos![0].foos![0].x).toEqual(3);
-    expect(reduced.foos![0].foos![0].foos).toBeUndefined();
-    expect(reduced.foos![0].foos![0].foo?.x).toEqual(123);
+    ctx.expect(reduced).not.toBe(root);
+    ctx.expect(reduced.foos![0].x).toEqual(1);
+    ctx.expect(reduced.foos![0].foos![0].x).toEqual(3);
+    ctx.expect(reduced.foos![0].foos![0].foos).toBeUndefined();
+    ctx.expect(reduced.foos![0].foos![0].foo?.x).toEqual(123);
 
-    expect(reduced.foos![0].foos![0].foo?.foo?.x).toEqual(5); // 5, since we stopped visiting
-    expect(reduced.foos![1].foo?.foo?.x).toEqual(6); // 6, since this was a regular visit
+    ctx.expect(reduced.foos![0].foos![0].foo?.foo?.x).toEqual(5); // 5, since we stopped visiting
+    ctx.expect(reduced.foos![1].foo?.foo?.x).toEqual(6); // 6, since this was a regular visit
   });
 
-  test('keep-visiting-without-recursive-persist', () => {
+  test.concurrent('keep-visiting-without-recursive-persist', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -446,16 +446,16 @@ describe('non-local-deep-change-not-recursive', () => {
 
     const reduced = reducer.reduce(root);
 
-    expect(reduced).not.toBe(root);
+    ctx.expect(reduced).not.toBe(root);
 
-    expect(reduced.foos![0].foos![0].foo?.foo?.x).toEqual(6);
-    expect(reduced.foos![1].foo?.foo?.x).toEqual(6);
+    ctx.expect(reduced.foos![0].foos![0].foo?.foo?.x).toEqual(6);
+    ctx.expect(reduced.foos![1].foo?.foo?.x).toEqual(6);
 
     // Every reduction of `foo3` will become a unique object.
-    expect(reduced.foos![0].foos![0].foo?.foo).not.toBe(reduced.foos![1].foo?.foo);
+    ctx.expect(reduced.foos![0].foos![0].foo?.foo).not.toBe(reduced.foos![1].foo?.foo);
   });
 
-  test('keep-visiting-WITH-recursive-persist', () => {
+  test.concurrent('keep-visiting-WITH-recursive-persist', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -471,12 +471,12 @@ describe('non-local-deep-change-not-recursive', () => {
 
     const reduced = reducer.reduce(root);
 
-    expect(reduced).not.toBe(root);
+    ctx.expect(reduced).not.toBe(root);
 
-    expect(reduced.foos![0].foos![0].foo?.foo?.x).toEqual(6);
-    expect(reduced.foos![1].foo?.foo?.x).toEqual(6);
+    ctx.expect(reduced.foos![0].foos![0].foo?.foo?.x).toEqual(6);
+    ctx.expect(reduced.foos![1].foo?.foo?.x).toEqual(6);
 
-    expect(reduced.foos![0].foos![0].foo?.foo).toBe(reduced.foos![1].foo?.foo);
+    ctx.expect(reduced.foos![0].foos![0].foo?.foo).toBe(reduced.foos![1].foo?.foo);
   });
 });
 
@@ -493,43 +493,43 @@ describe('non-local-deep-change-recursive', () => {
   root_branch_1.foos!.push(root);
   root_branch_2.foos!.push(root);
 
-  test.skip('no-change', () => {
+  test.skip('no-change', ctx => {
     const reduced = typesReducerBuilder.build().reduce(root);
-    expect(reduced).toBe(root);
+    ctx.expect(reduced).toBe(root);
   });
 
-  test.skip('no-change-empty-spec', () => {
+  test.skip('no-change-empty-spec', ctx => {
     const reduced = typesReducerBuilder.build({}).reduce(root);
-    expect(reduced).toBe(root);
+    ctx.expect(reduced).toBe(root);
   });
 
-  test('change-no-next', () => {
+  test.concurrent('change-no-next', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => r.set('x', n.x + 1),
     });
 
     const reduced = reducer.reduce(root);
-    expect(reduced).not.toBe(root);
-    expect(reduced.foos![0]).toBe(root.foos![0]);
-    expect(reduced.foos![1]).toBe(root.foos![1]);
+    ctx.expect(reduced).not.toBe(root);
+    ctx.expect(reduced.foos![0]).toBe(root.foos![0]);
+    ctx.expect(reduced.foos![1]).toBe(root.foos![1]);
   });
 
-  test('change-with-next', () => {
+  test.concurrent('change-with-next', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => r.put('x', n.x + 1).next(),
     });
 
     const reduced = reducer.reduce(root);
-    expect(reduced.foos![0]).not.toBe(root.foos![0]);
-    expect(reduced.foos![1]).not.toBe(root.foos![1]);
+    ctx.expect(reduced.foos![0]).not.toBe(root.foos![0]);
+    ctx.expect(reduced.foos![1]).not.toBe(root.foos![1]);
 
-    expect(reduced.foos![0].foos![1]).toBe(reduced);
-    expect(reduced.foos![1].foos![1]).toBe(reduced);
+    ctx.expect(reduced.foos![0].foos![1]).toBe(reduced);
+    ctx.expect(reduced.foos![1].foos![1]).toBe(reduced);
 
-    expect(reduced.foos![0].foos![0].foos![0]).toBe(reduced);
-    expect(reduced.foos![1].foos![0].foos![0]).toBe(reduced);
+    ctx.expect(reduced.foos![0].foos![0].foos![0]).toBe(reduced);
+    ctx.expect(reduced.foos![1].foos![0].foos![0]).toBe(reduced);
   });
 });
 
@@ -542,7 +542,7 @@ describe('struct-recursive', () => {
   const bar1: Bar = {k: 'Bar', a: 1, b: 11, foo: foo2};
   const bar2: Bar = {k: 'Bar', a: 2, b: 22, foo: foo1, bar: bar1};
 
-  test('struct-recursive_reducer-!recursive', () => {
+  test.concurrent('struct-recursive_reducer-!recursive', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (_, r) => r.put('common', 'bye').set('x', c => c.x + 1),
@@ -550,17 +550,17 @@ describe('struct-recursive', () => {
 
     const reduced = reducer.reduce(bar2);
 
-    expect(reduced).not.toBe(bar2);
-    expect(reduced?.foo?.common).toEqual('bye');
-    expect(reduced?.foo?.x).toEqual(2);
-    expect(reduced?.foo?.y).toEqual(11);
-    expect(reduced?.foo?.baz?.v).toEqual(1);
-    expect(reduced?.bar?.foo?.foo?.common).toEqual('hello1'); // Kept, since Foo reducer does not recurse
-    expect(reduced?.bar?.foo?.x).toEqual(3); // Changed, since Foo inside Bar is recursed into
-    expect(reduced?.bar?.foo?.y).toEqual(22);
+    ctx.expect(reduced).not.toBe(bar2);
+    ctx.expect(reduced?.foo?.common).toEqual('bye');
+    ctx.expect(reduced?.foo?.x).toEqual(2);
+    ctx.expect(reduced?.foo?.y).toEqual(11);
+    ctx.expect(reduced?.foo?.baz?.v).toEqual(1);
+    ctx.expect(reduced?.bar?.foo?.foo?.common).toEqual('hello1'); // Kept, since Foo reducer does not recurse
+    ctx.expect(reduced?.bar?.foo?.x).toEqual(3); // Changed, since Foo inside Bar is recursed into
+    ctx.expect(reduced?.bar?.foo?.y).toEqual(22);
   });
 
-  test('struct-recursive_reducer-recursive', () => {
+  test.concurrent('struct-recursive_reducer-recursive', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -574,14 +574,14 @@ describe('struct-recursive', () => {
 
     const reduced = reducer.reduce(bar2);
 
-    expect(reduced).not.toBe(bar2);
-    expect(reduced?.foo?.common).toEqual('bye1');
-    expect(reduced?.foo?.x).toEqual(2);
-    expect(reduced?.foo?.y).toEqual(11);
-    expect(reduced?.foo?.baz?.v).toEqual(1);
-    expect(reduced?.bar?.foo?.common).toEqual('bye2');
-    expect(reduced?.bar?.foo?.foo?.common).toEqual('bye1');
-    expect(reduced?.bar?.foo?.x).toEqual(3);
-    expect(reduced?.bar?.foo?.y).toEqual(22);
+    ctx.expect(reduced).not.toBe(bar2);
+    ctx.expect(reduced?.foo?.common).toEqual('bye1');
+    ctx.expect(reduced?.foo?.x).toEqual(2);
+    ctx.expect(reduced?.foo?.y).toEqual(11);
+    ctx.expect(reduced?.foo?.baz?.v).toEqual(1);
+    ctx.expect(reduced?.bar?.foo?.common).toEqual('bye2');
+    ctx.expect(reduced?.bar?.foo?.foo?.common).toEqual('bye1');
+    ctx.expect(reduced?.bar?.foo?.x).toEqual(3);
+    ctx.expect(reduced?.bar?.foo?.y).toEqual(22);
   });
 });

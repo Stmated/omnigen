@@ -1,8 +1,8 @@
-import {expect, test} from 'vitest';
+import {test} from 'vitest';
 import {OmniItemKind, OmniModel, OmniObjectType, OmniTypeKind, OmniUnionType} from '@omnigen/api';
 import {ProxyReducerOmni} from './ProxyReducerOmni.ts';
 
-test('change-field', () => {
+test.concurrent('change-field', ctx => {
 
   const model: OmniModel = {
     kind: OmniItemKind.MODEL,
@@ -18,13 +18,13 @@ test('change-field', () => {
   });
   const reduced = reducer.reduce(model);
 
-  expect(reduced).not.toBe(model);
-  expect(reduced?.description).toBe('Hello');
+  ctx.expect(reduced).not.toBe(model);
+  ctx.expect(reduced?.description).toBe('Hello');
 
-  expect(model.description).toBeUndefined();
+  ctx.expect(model.description).toBeUndefined();
 });
 
-test('swap-recursively-3', () => {
+test.concurrent('swap-recursively-3', ctx => {
 
   const obj1: OmniObjectType = {
     kind: OmniTypeKind.OBJECT,
@@ -82,14 +82,14 @@ test('swap-recursively-3', () => {
 
   const reduced = reducer.reduce(model);
 
-  expect(reduced).not.toBe(model);
-  expect(reduced?.name).toEqual('my-model');
-  expect(reduced?.endpoints[0].request.type.kind).toEqual(OmniTypeKind.FLOAT);
-  expect(reduced?.types).toHaveLength(2);
-  expect(reduced?.types[0].kind).toEqual(OmniTypeKind.FLOAT);
-  expect(reduced?.types[0].summary).toEqual('A Summary');
+  ctx.expect(reduced).not.toBe(model);
+  ctx.expect(reduced?.name).toEqual('my-model');
+  ctx.expect(reduced?.endpoints[0].request.type.kind).toEqual(OmniTypeKind.FLOAT);
+  ctx.expect(reduced?.types).toHaveLength(2);
+  ctx.expect(reduced?.types[0].kind).toEqual(OmniTypeKind.FLOAT);
+  ctx.expect(reduced?.types[0].summary).toEqual('A Summary');
 
-  expect(propertyReduceCount).toBe(0);
+  ctx.expect(propertyReduceCount).toBe(0);
 
-  expect(model?.types[0].kind).toEqual(OmniTypeKind.OBJECT);
+  ctx.expect(model?.types[0].kind).toEqual(OmniTypeKind.OBJECT);
 });

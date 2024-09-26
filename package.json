@@ -25,17 +25,17 @@
     ]
   },
   "devDependencies": {
-    "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/config-typescript": "workspace:*",
-    "prettier": "^3.2.5",
-    "turbo": "^1.13.3",
-    "syncpack": "^12.3.0",
+    "@omnigen/eslint-config-custom": "workspace:*",
+    "@vitest/coverage-v8": "^2.1.1",
+    "@vitest/ui": "^2.1.1",
+    "madge": "^7.0.0",
     "pino-pretty": "^10.3.1",
-    "vite": "^5.3.5",
-    "vitest": "^2.0.5",
-    "@vitest/ui": "^2.0.5",
-    "@vitest/coverage-v8": "^2.0.5",
+    "prettier": "^3.2.5",
+    "syncpack": "^12.3.0",
+    "turbo": "^2.1.2",
     "typescript": "^5.6.2",
-    "madge": "^7.0.0"
+    "vite": "^5.4.8",
+    "vitest": "^2.1.1"
   }
 }

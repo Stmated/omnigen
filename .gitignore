@@ -20,3 +20,4 @@ target
 .profiling
 .test
 coverage/
+.DS_Store

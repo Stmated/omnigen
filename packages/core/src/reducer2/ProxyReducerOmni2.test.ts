@@ -1,9 +1,9 @@
-import {expect, test} from 'vitest';
+import {test} from 'vitest';
 import {OmniItemKind, OmniModel, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind, OmniUnionType, OmniUnknownType, UnknownKind} from '@omnigen/api';
 import {ProxyReducerOmni2} from './ProxyReducerOmni2.ts';
 import {expectTs} from '../util';
 
-test('change-field', () => {
+test.concurrent('change-field', ctx => {
 
   const model: OmniModel = {
     kind: OmniItemKind.MODEL,
@@ -19,13 +19,13 @@ test('change-field', () => {
   });
   const reduced = reducer.reduce(model);
 
-  expect(reduced).not.toBe(model);
-  expect(reduced?.description).toBe('Hello');
+  ctx.expect(reduced).not.toBe(model);
+  ctx.expect(reduced?.description).toBe('Hello');
 
-  expect(model.description).toBeUndefined();
+  ctx.expect(model.description).toBeUndefined();
 });
 
-test('swap-recursively-3', () => {
+test.concurrent('swap-recursively-3', ctx => {
 
   const obj1: OmniObjectType = {
     kind: OmniTypeKind.OBJECT,
@@ -86,19 +86,19 @@ test('swap-recursively-3', () => {
 
   const reduced = reducer.reduce(model);
 
-  expect(reduced).not.toBe(model);
-  expect(reduced?.name).toEqual('my-model');
-  expect(reduced?.endpoints[0].request.type.kind).toEqual(OmniTypeKind.FLOAT);
-  expect(reduced?.types).toHaveLength(2);
-  expect(reduced?.types[0].kind).toEqual(OmniTypeKind.FLOAT);
-  expect(reduced?.types[0].summary).toEqual('A Summary');
+  ctx.expect(reduced).not.toBe(model);
+  ctx.expect(reduced?.name).toEqual('my-model');
+  ctx.expect(reduced?.endpoints[0].request.type.kind).toEqual(OmniTypeKind.FLOAT);
+  ctx.expect(reduced?.types).toHaveLength(2);
+  ctx.expect(reduced?.types[0].kind).toEqual(OmniTypeKind.FLOAT);
+  ctx.expect(reduced?.types[0].summary).toEqual('A Summary');
 
-  expect(propertyReduceCount).toBe(0);
+  ctx.expect(propertyReduceCount).toBe(0);
 
-  expect(model?.types[0].kind).toEqual(OmniTypeKind.OBJECT);
+  ctx.expect(model?.types[0].kind).toEqual(OmniTypeKind.OBJECT);
 });
 
-test('recursive-union', () => {
+test.concurrent('recursive-union', ctx => {
 
   const unknownType: OmniUnknownType = {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.DYNAMIC_OBJECT};
   const unknownProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'value', type: unknownType, required: true};
@@ -118,19 +118,19 @@ test('recursive-union', () => {
   expectTs.toBeDefined(reduced);
   expectTs.propertyToBe(reduced, 'kind', OmniTypeKind.UNION);
 
-  expect(reduced).not.toBe(unionType);
-  expect(reduced.types).toHaveLength(2);
+  ctx.expect(reduced).not.toBe(unionType);
+  ctx.expect(reduced.types).toHaveLength(2);
   expectTs.propertyToBe(reduced, 'kind', OmniTypeKind.UNION);
   expectTs.propertyToBe(unionType, 'kind', OmniTypeKind.UNION);
 
-  expect(reduced.types).toHaveLength(2);
-  expect(reduced.types[0]).toBe(unionType.types[0]); // Still same, not changed
-  expect(reduced.types[1]).not.toBe(unionType.types[1]); // Changed, since property 'value' type has changed
+  ctx.expect(reduced.types).toHaveLength(2);
+  ctx.expect(reduced.types[0]).toBe(unionType.types[0]); // Still same, not changed
+  ctx.expect(reduced.types[1]).not.toBe(unionType.types[1]); // Changed, since property 'value' type has changed
 
   expectTs.propertyToBe(reduced.types[1], 'kind', OmniTypeKind.OBJECT);
-  expect(reduced.types[1].name).toEqual('Obj');
-  expect(reduced.types[1].properties).toHaveLength(2);
-  expect(reduced.types[1].properties[0].name).toEqual('value');
-  expect(reduced.types[1].properties[1].name).toEqual('relation');
-  expect(reduced.types[1].properties[1].type).toBe(reduced.types[1]); // Should be recursively replaced/resolved
+  ctx.expect(reduced.types[1].name).toEqual('Obj');
+  ctx.expect(reduced.types[1].properties).toHaveLength(2);
+  ctx.expect(reduced.types[1].properties[0].name).toEqual('value');
+  ctx.expect(reduced.types[1].properties[1].name).toEqual('relation');
+  ctx.expect(reduced.types[1].properties[1].type).toBe(reduced.types[1]); // Should be recursively replaced/resolved
 });

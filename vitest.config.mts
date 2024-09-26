@@ -6,6 +6,18 @@ const isReport = process.env.REPORT === 'true';
 
 export default defineConfig({
   test: {
+    isolate: false,
+    poolOptions: {
+      threads: {
+        useAtomics: true,
+        isolate: false,
+      },
+      forks: {
+        isolate: false,
+      }
+    },
+    pool: 'threads',
+    fileParallelism: true,
     watch: false,
     silent: isCI,
     passWithNoTests: true,

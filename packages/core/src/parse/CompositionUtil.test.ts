@@ -1,28 +1,28 @@
 import {OmniType, OmniTypeKind} from '@omnigen/api';
 import {CompositionUtil} from './CompositionUtil';
-import {describe, test, expect} from 'vitest';
+import {describe, test} from 'vitest';
 
 describe('Test Composition Types', () => {
 
-  test('Merging no composition types', async () => {
+  test.concurrent('Merging no composition types', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType();
-    expect(result).toBeUndefined();
+    ctx.expect(result).toBeUndefined();
   });
 
-  test('Merging empty composition types', async () => {
+  test.concurrent('Merging empty composition types', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [], []);
-    expect(result).toBeUndefined();
+    ctx.expect(result).toBeUndefined();
   });
 
-  test('Merge primitive 1', async () => {
+  test.concurrent('Merge primitive 1', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [{
       kind: OmniTypeKind.NUMBER,
     }]);
 
-    expect(result?.kind).toEqual(OmniTypeKind.NUMBER);
+    ctx.expect(result?.kind).toEqual(OmniTypeKind.NUMBER);
   });
 
-  test('Merge Number or String', async () => {
+  test.concurrent('Merge Number or String', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [
       // This is invalid, it is not possible to be a Number AND String, but this method should not validate.
       {kind: OmniTypeKind.NUMBER},
@@ -33,7 +33,7 @@ describe('Test Composition Types', () => {
       throw new Error(`Should have a result`);
     }
 
-    expect(result).toMatchObject<Partial<OmniType>>({
+    ctx.expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
         {kind: OmniTypeKind.NUMBER},
@@ -42,13 +42,13 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test('allOf1+anyOf1', async () => {
+  test.concurrent('allOf1+anyOf1', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [{kind: OmniTypeKind.STRING}],
       [{kind: OmniTypeKind.NUMBER}],
     );
 
-    expect(result).toMatchObject<Partial<OmniType>>({
+    ctx.expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
         {kind: OmniTypeKind.STRING},
@@ -57,7 +57,7 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test('allOf1+anyOf2', async () => {
+  test.concurrent('allOf1+anyOf2', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [
         {kind: OmniTypeKind.STRING},
@@ -66,7 +66,7 @@ describe('Test Composition Types', () => {
       [{kind: OmniTypeKind.NUMBER}],
     );
 
-    expect(result).toMatchObject<Partial<OmniType>>({
+    ctx.expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
         {
@@ -81,7 +81,7 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test('allOf1+oneOf2', async () => {
+  test.concurrent('allOf1+oneOf2', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
       [{kind: OmniTypeKind.NUMBER}],
@@ -91,7 +91,7 @@ describe('Test Composition Types', () => {
       ],
     );
 
-    expect(result).toMatchObject<Partial<OmniType>>({
+    ctx.expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
         {kind: OmniTypeKind.NUMBER},
@@ -106,7 +106,7 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test('allOf1+oneOf2+not', async () => {
+  test.concurrent('allOf1+oneOf2+not', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
       [{kind: OmniTypeKind.NUMBER}],
@@ -117,7 +117,7 @@ describe('Test Composition Types', () => {
       {kind: OmniTypeKind.FLOAT},
     );
 
-    expect(result).toMatchObject<Partial<OmniType>>({
+    ctx.expect(result).toMatchObject<Partial<OmniType>>({
       kind: OmniTypeKind.INTERSECTION,
       types: [
         {

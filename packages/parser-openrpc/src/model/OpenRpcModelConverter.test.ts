@@ -1,4 +1,4 @@
-import {describe, test, expect} from 'vitest';
+import {describe, test} from 'vitest';
 import {OpenRpcModelConverter} from './OpenRpcModelConverter.ts';
 import * as fs from 'fs';
 import {OpenrpcDocument} from '@open-rpc/meta-schema';
@@ -7,7 +7,7 @@ import {Util} from '@omnigen/core';
 
 describe('OpenRpcModelConverter', () => {
 
-  test('test-isomorphism', async () => {
+  test.concurrent('test-isomorphism', async ctx => {
 
     const converter = new OpenRpcModelConverter();
 
@@ -16,7 +16,7 @@ describe('OpenRpcModelConverter', () => {
 
     const converted = converter.transform(openRpcDocument);
 
-    expect(converted).toBeDefined();
+    ctx.expect(converted).toBeDefined();
 
     converted.visit({
       ...DefaultOmnigenOpenRpcVisitor,

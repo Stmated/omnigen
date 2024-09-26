@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as JavaParser from 'java-parser';
 import {JavaTestUtils, OpenRpcTestUtils, ParsedJavaTestVisitor} from '../util';
-import {describe, expect, test, vi} from 'vitest';
+import {describe, test, vi} from 'vitest';
 import {OmniTypeKind} from '@omnigen/api';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -13,7 +13,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 describe('Java Rendering', () => {
 
-  test('renderAll', async ({task}) => {
+  test.concurrent('renderAll', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -74,7 +74,7 @@ describe('Java Rendering', () => {
             let cst: JavaParser.CstNode;
             try {
               cst = JavaParser.parse(cu.content);
-              expect(cst).toBeDefined();
+              ctx.expect(cst).toBeDefined();
             } catch (ex) {
               errors.push(new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}\n\n${cu.content}\n\n`, {cause: ex}));
               continue;
@@ -102,7 +102,7 @@ describe('Java Rendering', () => {
     timeout: 30_000,
   });
 
-  test('Test multiple inheritance (interfaces)', async ({task}) => {
+  test.concurrent('Test multiple inheritance (interfaces)', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -113,13 +113,13 @@ describe('Java Rendering', () => {
       },
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('Type compressions', async ({task}) => {
+  test.concurrent('Type compressions', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -135,13 +135,13 @@ describe('Java Rendering', () => {
       },
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('Enum', async ({task}) => {
+  test.concurrent('Enum', async ctx => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json', {
       javaOptions: {
@@ -149,18 +149,18 @@ describe('Java Rendering', () => {
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         singleFile: true,
-        singleFileName: task.name,
+        singleFileName: ctx.task.name,
         // debug: true,
       },
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${fileName}`);
     }
   });
 
-  test('AdditionalProperties', async ({task}) => {
+  test.concurrent('AdditionalProperties', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -169,18 +169,18 @@ describe('Java Rendering', () => {
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         singleFile: true,
-        singleFileName: task.name,
+        singleFileName: ctx.task.name,
         additionalPropertiesInterfaceAfterDuplicateCount: 1,
       },
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${fileName}`);
     }
   });
 
-  test('description-inheritance', async ({task}) => {
+  test.concurrent('description-inheritance', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -191,25 +191,25 @@ describe('Java Rendering', () => {
       },
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${fileName}`);
     }
   });
 
-  test('PetStore-Expanded-ClassNames', async () => {
+  test.concurrent('PetStore-Expanded-ClassNames', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('petstore-expanded.json');
     const filenames = [...fileContents.keys()];
 
-    expect(filenames).toContain('Pet.java');
-    expect(filenames).toContain('DeletePetByIdResponse.java');
-    expect(filenames).not.toContain('Pet1.java');
+    ctx.expect(filenames).toContain('Pet.java');
+    ctx.expect(filenames).toContain('DeletePetByIdResponse.java');
+    ctx.expect(filenames).not.toContain('Pet1.java');
   });
 
-  test('primitive-generics', async () => {
+  test.concurrent('primitive-generics', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -217,13 +217,13 @@ describe('Java Rendering', () => {
       javaOptions: {preferNumberType: OmniTypeKind.DOUBLE, serializationLibrary: SerializationLibrary.POJO},
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
-    expect(fileContents.get('GiveNumberGetCharRequestParams.java')).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect(fileContents.get('GiveNumberGetCharRequestParams.java')).toMatchSnapshot();
 
     // TODO: Add more exact checks for all generic types, making sure they have the correct amount of generics and whatever
   });
 
-  test('generic_params', async ({task}) => {
+  test.concurrent('generic_params', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -240,26 +240,26 @@ describe('Java Rendering', () => {
 
     const fileContents = await JavaTestUtils.cuToContentMap(result.compilationUnits);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('method-in-response', async ({task}) => {
+  test.concurrent('method-in-response', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('method-in-response.json', {
       javaOptions: {
         singleFile: true,
-        singleFileName: task.name,
+        singleFileName: ctx.task.name,
       },
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 

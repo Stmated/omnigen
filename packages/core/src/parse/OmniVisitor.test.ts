@@ -1,6 +1,6 @@
 import {test} from 'vitest';
 
-test('visit', () => {
+test.concurrent('visit', ctx => {
 
 
 });

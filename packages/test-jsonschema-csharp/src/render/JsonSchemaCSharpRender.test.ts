@@ -1,4 +1,4 @@
-import {describe, expect, test, vi} from 'vitest';
+import {describe, test, vi} from 'vitest';
 import {JsonSchemaToCSharpTestUtil} from './JsonSchemaToCSharpTestUtil.ts';
 import {Util} from '@omnigen/core';
 import {SerializationLibrary} from '@omnigen/target-csharp';
@@ -6,7 +6,7 @@ import {IncludeExampleCommentsMode, PropertyTypeCommentMode} from '@omnigen/targ
 
 describe('jsonschema-csharp-render', () => {
 
-  test('string_union', async ({task}) => {
+  test.concurrent('string_union', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -15,14 +15,14 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu).toHaveLength(1);
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu).toHaveLength(1);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('x-enum-varnames', async ({task}) => {
+  test.concurrent('x-enum-varnames', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -31,13 +31,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('decorated_types', async ({task}) => {
+  test.concurrent('decorated_types', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -48,13 +48,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('enum_string_composition', async ({task}) => {
+  test.concurrent('enum_string_composition', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -66,13 +66,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('interface_order', async ({task}) => {
+  test.concurrent('interface_order', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -83,13 +83,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('inline_boolean', async ({task}) => {
+  test.concurrent('inline_boolean', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -103,13 +103,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('class_union', async ({task}) => {
+  test.concurrent('class_union', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -123,13 +123,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('enum_inheritance', async ({task}) => {
+  test.concurrent('enum_inheritance', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -138,13 +138,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('one_of_same_type', async ({task}) => {
+  test.concurrent('one_of_same_type', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -155,13 +155,13 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('discriminator', async ({task}) => {
+  test.concurrent('discriminator', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -173,9 +173,9 @@ describe('jsonschema-csharp-render', () => {
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 });

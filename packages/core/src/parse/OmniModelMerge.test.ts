@@ -1,26 +1,26 @@
 import {OmniItemKind, OmniObjectType, OmniPrimitiveTangibleKind, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniModelMerge, Replacement} from './OmniModelMerge';
 import {OmniUtil} from './OmniUtil';
-import {expect, test} from 'vitest';
+import {test} from 'vitest';
 
-test('Not Similar', async () => {
+test.concurrent('Not Similar', async ctx => {
 
   const a = createObject('a');
   const b = createObject('b');
 
   const replacements = OmniModelMerge.getReplacements(a, b);
-  expect(replacements).toHaveLength(0);
+  ctx.expect(replacements).toHaveLength(0);
 });
 
-test('Same Identity', async () => {
+test.concurrent('Same Identity', async ctx => {
 
   const a = createObject('a');
 
   const replacements = OmniModelMerge.getReplacements(a, a);
-  expect(replacements).toHaveLength(0);
+  ctx.expect(replacements).toHaveLength(0);
 });
 
-test('Similar (Empty)', async () => {
+test.concurrent('Similar (Empty)', async ctx => {
 
   const a1 = createObject('a');
   const a2 = createObject('a');
@@ -31,13 +31,13 @@ test('Similar (Empty)', async () => {
   ]);
 });
 
-test('Similar (Same Properties)', async () => {
+test.concurrent('Similar (Same Properties)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));
 
   const replacements = OmniModelMerge.getReplacements(a1, a2);
-  expect(replacements).toHaveLength(4);
+  ctx.expect(replacements).toHaveLength(4);
 
   const objectReplacements = replacements.filter(byObjects);
 
@@ -47,25 +47,25 @@ test('Similar (Same Properties)', async () => {
   ]);
 });
 
-test('Similar (Diff Property Names)', async () => {
+test.concurrent('Similar (Diff Property Names)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('y'));
 
   const replacements = OmniModelMerge.getReplacements(a1, a2).filter(byObjects);
-  expect(replacements).toHaveLength(0);
+  ctx.expect(replacements).toHaveLength(0);
 });
 
-test('Similar (Diff Property Types)', async () => {
+test.concurrent('Similar (Diff Property Types)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x', OmniTypeKind.DOUBLE));
   const a2 = createObject('a', undefined, createPrimitive('x', OmniTypeKind.INTEGER));
 
   const replacements = OmniModelMerge.getReplacements(a1, a2).filter(byObjects);
-  expect(replacements).toHaveLength(0);
+  ctx.expect(replacements).toHaveLength(0);
 });
 
-test('Supertype (Same Supertype)', async () => {
+test.concurrent('Supertype (Same Supertype)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));
@@ -81,7 +81,7 @@ test('Supertype (Same Supertype)', async () => {
   ]);
 });
 
-test('Supertype (Diff Supertype)', async () => {
+test.concurrent('Supertype (Diff Supertype)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));
@@ -95,7 +95,7 @@ test('Supertype (Diff Supertype)', async () => {
   ]);
 });
 
-test('Supertype (Diff levels)', async () => {
+test.concurrent('Supertype (Diff levels)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));
@@ -114,7 +114,7 @@ test('Supertype (Diff levels)', async () => {
 function compare(expected: Replacement<OmniType>[], given: Partial<Replacement<OmniType>>[]): void {
 
   if (expected.length != given.length) {
-    expect(expected).toEqual(given);
+    ctx.expect(expected).toEqual(given);
   }
 
   for (let i = 0; i < expected.length; i++) {

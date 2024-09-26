@@ -1,25 +1,25 @@
-import {describe, test, expect} from 'vitest';
+import {describe, test} from 'vitest';
 import {FreeTextUtils, Java} from '../';
 import {expectTs} from '@omnigen/core';
 
 describe('FreeTextUtils', () => {
 
-  test('summary+summary', () => {
+  test.concurrent('summary+summary', ctx => {
 
     const a = new Java.FreeTextSummary('foo');
     const b = new Java.FreeTextSummary('bar');
 
     const result = FreeTextUtils.add(a, b);
 
-    expect(result).toBeDefined();
-    expect(result).toBeInstanceOf(Java.FreeTexts);
+    ctx.expect(result).toBeDefined();
+    ctx.expect(result).toBeInstanceOf(Java.FreeTexts);
 
-    expect((result as Java.FreeTexts).children).toHaveLength(2);
-    expect((result as Java.FreeTexts).children[0]).toBeInstanceOf(Java.FreeTextSummary);
-    expect((result as Java.FreeTexts).children[1]).toBeInstanceOf(Java.FreeTextRemark);
+    ctx.expect((result as Java.FreeTexts).children).toHaveLength(2);
+    ctx.expect((result as Java.FreeTexts).children[0]).toBeInstanceOf(Java.FreeTextSummary);
+    ctx.expect((result as Java.FreeTexts).children[1]).toBeInstanceOf(Java.FreeTextRemark);
   });
 
-  test('lines', () => {
+  test.concurrent('lines', ctx => {
 
     let text: Java.AnyFreeText | undefined = undefined;
     for (let i = 0; i < 5; i++) {
@@ -30,7 +30,7 @@ describe('FreeTextUtils', () => {
     }
 
     expectTs.toBeInstanceOf(text, Java.FreeTexts);
-    expect(text.children.length).toBe(14);
+    ctx.expect(text.children.length).toBe(14);
 
     expectTs.toBeInstanceOf(text.children[0], Java.FreeTextLine);
     expectTs.toBeInstanceOf(text.children[1], Java.FreeTextLine);

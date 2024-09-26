@@ -1,38 +1,38 @@
-import {describe, expect, test} from 'vitest';
+import {describe, test} from 'vitest';
 import {JsonSchemaMigrator} from './JsonSchemaMigrator.ts';
 
 describe('JsonSchemaMigrator', () => {
 
   const migrator = new JsonSchemaMigrator();
-  test('basic', () => {
+  test.concurrent('basic', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-07/schema',
     });
 
-    expect(migrated.$schema).toEqual('https://json-schema.org/draft/2020-12/schema');
+    ctx.expect(migrated.$schema).toEqual('https://json-schema.org/draft/2020-12/schema');
   });
 
-  test('missed id to $id', () => {
+  test.concurrent('missed id to $id', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-07/schema',
       id: 'foo',
     });
 
-    expect(migrated).not.toHaveProperty('$id');
-    expect(migrated.id).toEqual('foo');
+    ctx.expect(migrated).not.toHaveProperty('$id');
+    ctx.expect(migrated.id).toEqual('foo');
   });
 
-  test('id to $id', () => {
+  test.concurrent('id to $id', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-05/schema',
       id: 'foo',
     });
 
-    expect(migrated).not.toHaveProperty('id');
-    expect(migrated.$id).toEqual('foo');
+    ctx.expect(migrated).not.toHaveProperty('id');
+    ctx.expect(migrated.$id).toEqual('foo');
   });
 
-  test('nested-inner-missed', () => {
+  test.concurrent('nested-inner-missed', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-05/schema',
       id: 'foo',
@@ -44,7 +44,7 @@ describe('JsonSchemaMigrator', () => {
       },
     });
 
-    expect(migrated).toEqual({
+    ctx.expect(migrated).toEqual({
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       $id: 'foo',
       properties: {
@@ -56,7 +56,7 @@ describe('JsonSchemaMigrator', () => {
     });
   });
 
-  test('nested-outer-missed', () => {
+  test.concurrent('nested-outer-missed', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-07/schema',
       id: 'foo',
@@ -68,7 +68,7 @@ describe('JsonSchemaMigrator', () => {
       },
     });
 
-    expect(migrated).toEqual({
+    ctx.expect(migrated).toEqual({
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       id: 'foo',
       properties: {
@@ -80,7 +80,7 @@ describe('JsonSchemaMigrator', () => {
     });
   });
 
-  test('nested-advanced', () => {
+  test.concurrent('nested-advanced', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-05/schema',
       id: 'foo',
@@ -144,7 +144,7 @@ describe('JsonSchemaMigrator', () => {
       },
     });
 
-    expect(migrated).toEqual({
+    ctx.expect(migrated).toEqual({
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       $id: 'foo',
       properties: {

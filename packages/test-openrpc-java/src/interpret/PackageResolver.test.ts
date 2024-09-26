@@ -1,11 +1,11 @@
 import {OmniKindPrimitive, PackageOptions} from '@omnigen/api';
 import {JavaTestUtils} from '../util';
 import {JavaOptions, SerializationLibrary} from '@omnigen/target-java';
-import {describe, expect, test, vi} from 'vitest';
+import {describe, test, vi} from 'vitest';
 
 describe('PackageResolver', () => {
 
-  test('FromSchema', async ({task}) => {
+  test.concurrent('FromSchema', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -14,13 +14,13 @@ describe('PackageResolver', () => {
       javaOptions: {preferNumberType: OmniKindPrimitive.DOUBLE},
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('FromCode', async ({task}) => {
+  test.concurrent('FromCode', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -48,9 +48,9 @@ describe('PackageResolver', () => {
       packageOptions: packageOptions,
     });
 
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 });

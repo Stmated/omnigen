@@ -1,4 +1,4 @@
-import {test, expect} from 'vitest';
+import {test} from 'vitest';
 import {ReorderMembersAstTransformer} from './ReorderMembersAstTransformer.ts';
 import {
   DEFAULT_TARGET_OPTIONS,
@@ -99,7 +99,7 @@ class TestCodeRootAstNode extends Code.CodeRootAstNode {
   }
 }
 
-test('test order', () => {
+test.concurrent('test order', ctx => {
 
   const transformer = new ReorderMembersAstTransformer();
 
@@ -149,8 +149,8 @@ test('test order', () => {
 
   root.children.push(unit);
 
-  expect(unit.children[0]).toEqual(b);
-  expect(unit.children[1]).toEqual(a);
+  ctx.expect(unit.children[0]).toEqual(b);
+  ctx.expect(unit.children[1]).toEqual(a);
 
   transformer.transformAst({
     model: model,
@@ -160,6 +160,6 @@ test('test order', () => {
     externals: [],
   });
 
-  expect(unit.children[0]).toEqual(a);
-  expect(unit.children[1]).toEqual(b);
+  ctx.expect(unit.children[0]).toEqual(a);
+  ctx.expect(unit.children[1]).toEqual(b);
 });

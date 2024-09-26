@@ -1,4 +1,4 @@
-import {describe, expect, test} from 'vitest';
+import {describe, test} from 'vitest';
 import {DefaultJsonSchema9Visitor} from './DefaultJsonSchema9Visitor.ts';
 import * as fs from 'fs';
 import {JsonSchema9Visitor} from './JsonSchema9Visitor.ts';
@@ -9,14 +9,14 @@ import {JSONSchema9Definition} from '../definitions';
 import {JsonSchemaMigrator} from '../migrate';
 
 describe('jsonschema-7-visit', () => {
-  test('unchanged', async () => {
+  test.concurrent('unchanged', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visited = DefaultJsonSchema9Visitor.visit(content, DefaultJsonSchema9Visitor);
 
-    expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
+    ctx.expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
   });
 
-  test('count', async () => {
+  test.concurrent('count', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
 
     let callCount = 0;
@@ -31,10 +31,10 @@ describe('jsonschema-7-visit', () => {
     };
 
     visitor.visit(content, visitor);
-    expect(callCount).toEqual(2);
+    ctx.expect(callCount).toEqual(2);
   });
 
-  test('alter_maximum', async ({task}) => {
+  test.concurrent('alter_maximum', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -43,10 +43,10 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  test('remove_descriptions', async ({task}) => {
+  test.concurrent('remove_descriptions', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -55,20 +55,20 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  // test('normalize_defs', async ({task}) => {
+  // test.concurrent('normalize_defs', async ctx => {
   //   const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet_defs_and_definitions.json')).toString('utf-8'));
   //   // const visitor = new NormalizeDefsJsonSchemaTransformerFactory().create();
   //   let visited = content;
   //   visited = new JsonSchemaMigrator().migrate(visited);
   //   // visited = visitor.visit(content, visitor);
   //
-  //   expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);
+  //   ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   // });
 
-  test('keep_enum_var_names', async ({task}) => {
+  test.concurrent('keep_enum_var_names', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json')).toString('utf-8'));
     const visitors = [new SimplifyJsonSchemaTransformerFactory().create()];
 
@@ -78,10 +78,10 @@ describe('jsonschema-7-visit', () => {
       visited = visitor.visit(content, visitor);
     }
 
-    expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
+    ctx.expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
   });
 
-  test('visit_into_unknown_without_redirect', async ({task}) => {
+  test.concurrent('visit_into_unknown_without_redirect', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/visit_unknown_properties.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -90,10 +90,10 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  test('visit_into_unknown_with_redirect', async ({task}) => {
+  test.concurrent('visit_into_unknown_with_redirect', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/visit_unknown_properties.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -114,10 +114,10 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  test('normalize_ids', async ({task}) => {
+  test.concurrent('normalize_ids', async ctx => {
     const schemaFile = new SchemaFile(Util.getPathFromRoot('./packages/parser-jsonschema/examples/needs_absolute_ids.json'));
     const schemaContent = await schemaFile.asObject<JSONSchema9Definition>();
 
@@ -125,6 +125,6 @@ describe('jsonschema-7-visit', () => {
     const visitor = new ApplyIdJsonSchemaTransformerFactory('/fake/path').create();
     const visited = visitor.visit(schemaContent, visitor);
 
-    expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${task.suite.name}/${task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 });

@@ -1,17 +1,17 @@
-import {describe, test, expect} from 'vitest';
+import {describe, test} from 'vitest';
 import {ExpandOptions, JsonExpander} from './JsonExpander.ts';
 
 describe('JsonExpander', () => {
 
   const expander = new JsonExpander();
 
-  test('noop', () => {
+  test.concurrent('noop', ctx => {
 
     const obj = {foo: 'bar'};
-    expect(expander.expand(obj)).toBe(obj);
+    ctx.expect(expander.expand(obj)).toBe(obj);
   });
 
-  test('find-path', () => {
+  test.concurrent('find-path', ctx => {
 
     const obj = {
       foo: 'a',
@@ -25,7 +25,7 @@ describe('JsonExpander', () => {
         },
       ],
     };
-    expect(expander.expand(obj)).toEqual({
+    ctx.expect(expander.expand(obj)).toEqual({
       foo: 'a',
       array: [
         {baz: 'x'},
@@ -35,7 +35,7 @@ describe('JsonExpander', () => {
     });
   });
 
-  test('find-path-key', () => {
+  test.concurrent('find-path-key', ctx => {
 
     const obj = {
       foo: 'a',
@@ -53,7 +53,7 @@ describe('JsonExpander', () => {
         },
       ],
     };
-    expect(expander.expand(obj)).toEqual({
+    ctx.expect(expander.expand(obj)).toEqual({
       foo: 'a',
       array: [
         {bar: 'Pre-x-Post', baz: 'before-x-after'},
@@ -63,7 +63,7 @@ describe('JsonExpander', () => {
     });
   });
 
-  test('double-replace', () => {
+  test.concurrent('double-replace', ctx => {
 
     const obj = {
       foo: 'a',
@@ -93,7 +93,7 @@ describe('JsonExpander', () => {
       ],
     };
 
-    expect(expander.expand(obj)).toEqual({
+    ctx.expect(expander.expand(obj)).toEqual({
       foo: 'a',
       array: [
         {bar: 'Pre-x-Post', baz: 'before-x-after'},

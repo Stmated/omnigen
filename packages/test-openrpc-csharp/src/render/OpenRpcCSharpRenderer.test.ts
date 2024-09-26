@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, TaskContext, test, vi} from 'vitest';
+import {beforeEach, describe, TaskContext, TestContext, test, vi} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OpenRpcCSharpTestUtils} from '../OpenRpcCSharpTestUtils.ts';
 import {RenderedCompilationUnit} from '@omnigen/api';
@@ -12,18 +12,18 @@ describe('OpenRpc+CSharp Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
   });
 
-  function verify(task: TaskContext['task'], units: RenderedCompilationUnit[]) {
+  function verify(ctx: TaskContext & TestContext, units: RenderedCompilationUnit[]) {
     const fileContents = new Map<string, string>();
     for (const cu of units) {
       fileContents.set(cu.fileName, cu.content);
-      expect(cu.content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${cu.fileName}`);
+      ctx.expect(cu.content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${cu.fileName}`);
     }
-    expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
   }
 
-  function getFileName(task: TaskContext['task']): string {
+  function getFileName(ctx: TaskContext & TestContext): string {
 
-    const taskName = task.name;
+    const taskName = ctx.task.name;
     const underscoreIdx = taskName.indexOf('_');
     if (underscoreIdx === -1) {
       return `${taskName}.json`;
@@ -32,52 +32,52 @@ describe('OpenRpc+CSharp Rendering', () => {
     }
   }
 
-  test('multiple-inheritance', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  test.concurrent('multiple-inheritance', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {
     singleFile: true,
-    singleFileName: task.name,
+    singleFileName: ctx.task.name,
     orderObjectsByDependency: true,
     jsonRpcResultRequired: false,
     includeGeneratedInFileHeader: false,
     serializationEnsureRequiredFieldExistence: false,
   })));
 
-  test('compressable-types', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  test.concurrent('compressable-types', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {
     generifyTypes: false,
     singleFile: true,
-    singleFileName: task.name,
+    singleFileName: ctx.task.name,
     orderObjectsByName: true,
     orderObjectsByDependency: false,
     jsonRpcResultRequired: false,
     includeGeneratedInFileHeader: false,
   })));
 
-  test('inherited-construction_no_init', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  test.concurrent('inherited-construction_no_init', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {
     singleFile: true,
-    singleFileName: task.name,
+    singleFileName: ctx.task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.NO_SETTER,
     jsonRpcResultRequired: false,
     includeGeneratedInFileHeader: false,
     serializationEnsureRequiredFieldExistence: false,
   })));
 
-  test('inherited-construction', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  test.concurrent('inherited-construction', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {
     singleFile: true,
-    singleFileName: task.name,
+    singleFileName: ctx.task.name,
     csharpReadonlyPropertySetterMode: ReadonlyPropertyMode.INIT,
     orderObjectsByDependency: true,
     includeGeneratedInFileHeader: false,
     serializationEnsureRequiredFieldExistence: false,
   })));
 
-  test('enum', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  test.concurrent('enum', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {
     singleFile: true,
-    singleFileName: task.name,
+    singleFileName: ctx.task.name,
     includeGenerated: false,
     orderObjectsByDependency: true,
     serializationEnsureRequiredFieldExistence: false,
   })));
 
-  // test('sui-openrpc', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  // test.concurrent('sui-openrpc', async ctx => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
   //   singleFile: true,
   //   includeGenerated: false,
   //   csharpReadonlyPropertySetterMode: 'INIT',
@@ -88,18 +88,18 @@ describe('OpenRpc+CSharp Rendering', () => {
   //   singleFileName: 'sui',
   // })));
 
-  test('additional-properties', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  test.concurrent('additional-properties', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {
     additionalPropertiesInterfaceAfterDuplicateCount: 1,
     singleFile: true,
-    singleFileName: task.name,
+    singleFileName: ctx.task.name,
     orderObjectsByDependency: true,
     includeGeneratedInFileHeader: false,
     serializationEnsureRequiredFieldExistence: false,
   })));
 
-  test('method-in-response', async ({task}) => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
+  test.concurrent('method-in-response', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {
     singleFile: true,
-    singleFileName: task.name,
+    singleFileName: ctx.task.name,
     orderObjectsByDependency: true,
     includeGeneratedInFileHeader: false,
     serializationEnsureRequiredFieldExistence: false,

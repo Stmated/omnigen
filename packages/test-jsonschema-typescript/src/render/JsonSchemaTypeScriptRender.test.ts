@@ -1,11 +1,11 @@
-import {describe, expect, test, vi} from 'vitest';
+import {describe, test, vi} from 'vitest';
 import {Util} from '@omnigen/core';
 import {JsonSchemaToTypeScriptTestUtil} from './JsonSchemaToTypeScriptTestUtil.ts';
 import {RenderedCompilationUnit} from '@omnigen/api';
 
 describe('jsonschema-typescript-render', () => {
 
-  test('discriminator', async ({task}) => {
+  test.concurrent('discriminator', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -15,13 +15,13 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
 
-    expect(Object.keys(fileContents).sort()).toMatchSnapshot();
+    ctx.expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('jsonschema7-lax-undefined', async ({task}) => {
+  test.concurrent('jsonschema7-lax-undefined', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -34,13 +34,13 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
 
-    expect(Object.keys(fileContents).sort()).toMatchSnapshot();
+    ctx.expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      await expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      await ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('jsonschema7-strict-undefined', async ({task}) => {
+  test.concurrent('jsonschema7-strict-undefined', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -53,13 +53,13 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
 
-    expect(Object.keys(fileContents).sort()).toMatchSnapshot();
+    ctx.expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      await expect(content).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}/${fileName}`);
+      await ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
-  test('dynamic-ref', async ({task}) => {
+  test.concurrent('dynamic-ref', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -70,7 +70,7 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
-    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
+    await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
   /**
@@ -83,7 +83,7 @@ describe('jsonschema-typescript-render', () => {
    *
    * TODO: Currently incorrect output -- it refers to types that does not exist, like `SpecificationExtensions`. Something is wrong and needs narrower test cases.
    */
-  test('openapi', async ({task}) => {
+  test.concurrent('openapi', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -94,10 +94,10 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
-    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
+    await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
-  test('if-then-else', async ({task}) => {
+  test.concurrent('if-then-else', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -110,7 +110,7 @@ describe('jsonschema-typescript-render', () => {
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
-    await expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${task.suite?.name}/${task.name}.ts`);
+    await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 });
 

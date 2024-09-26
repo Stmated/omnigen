@@ -9,13 +9,13 @@ import {
 import {PropertyUtil} from './PropertyUtil';
 import {OMNI_GENERIC_FEATURES} from '@omnigen/api';
 import {PropertyDifference, TypeDiffKind} from '@omnigen/api';
-import {describe, test, expect} from 'vitest';
+import {describe, test} from 'vitest';
 
 describe('Test PropertyUtil', () => {
 
   const f = OMNI_GENERIC_FEATURES;
 
-  test('EqualityLevel Primitives', async () => {
+  test.concurrent('EqualityLevel Primitives', async ctx => {
 
     const a: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
@@ -47,21 +47,21 @@ describe('Test PropertyUtil', () => {
     const cy = addPrim(c, 'y', OmniTypeKind.INTEGER);
     const cz = addPrim(c, 'z', OmniTypeKind.DOUBLE, 'baz');
 
-    expect(PropertyUtil.getPropertyEquality(ax, ay, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
-    expect(PropertyUtil.getPropertyEquality(az, by, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
+    ctx.expect(PropertyUtil.getPropertyEquality(ax, ay, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
+    ctx.expect(PropertyUtil.getPropertyEquality(az, by, f).propertyDiffs).toEqual([PropertyDifference.NAME]);
 
-    expect(PropertyUtil.getPropertyEquality(by, cy, f).typeDiffs).toEqual([TypeDiffKind.SIZE, TypeDiffKind.PRECISION]);
-    expect(PropertyUtil.getPropertyEquality(by, cy, f).propertyDiffs).toEqual([PropertyDifference.META]);
+    ctx.expect(PropertyUtil.getPropertyEquality(by, cy, f).typeDiffs).toEqual([TypeDiffKind.SIZE, TypeDiffKind.PRECISION]);
+    ctx.expect(PropertyUtil.getPropertyEquality(by, cy, f).propertyDiffs).toEqual([PropertyDifference.META]);
 
-    expect(PropertyUtil.getPropertyEquality(ay, cy, f).typeDiffs).toEqual([TypeDiffKind.ISOMORPHIC_TYPE]);
-    expect(PropertyUtil.getPropertyEquality(ay, cy, f).propertyDiffs).toEqual([]);
+    ctx.expect(PropertyUtil.getPropertyEquality(ay, cy, f).typeDiffs).toEqual([TypeDiffKind.ISOMORPHIC_TYPE]);
+    ctx.expect(PropertyUtil.getPropertyEquality(ay, cy, f).propertyDiffs).toEqual([]);
 
-    expect(PropertyUtil.getPropertyEquality(ax, bx, f).propertyDiffs).toEqual([PropertyDifference.META]);
-    expect(PropertyUtil.getPropertyEquality(bz, cz, f).propertyDiffs).toEqual([PropertyDifference.META]);
+    ctx.expect(PropertyUtil.getPropertyEquality(ax, bx, f).propertyDiffs).toEqual([PropertyDifference.META]);
+    ctx.expect(PropertyUtil.getPropertyEquality(bz, cz, f).propertyDiffs).toEqual([PropertyDifference.META]);
 
-    expect(PropertyUtil.getPropertyEquality(ax, cx, f).propertyDiffs).toEqual([]);
+    ctx.expect(PropertyUtil.getPropertyEquality(ax, cx, f).propertyDiffs).toEqual([]);
 
-    expect(PropertyUtil.getPropertyEquality(ax, ax, f).propertyDiffs ?? []).toEqual([]);
+    ctx.expect(PropertyUtil.getPropertyEquality(ax, ax, f).propertyDiffs ?? []).toEqual([]);
   });
 });
 

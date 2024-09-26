@@ -14,7 +14,7 @@ import {
 import {JavaPotentialClassType, JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 import {OmniUtil, SimplifyInheritanceModelTransformer} from '@omnigen/core';
-import {describe, expect, test} from 'vitest';
+import {describe, test, TaskContext, TestContext} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -68,77 +68,77 @@ describe('Test CompositionDependencyUtil', () => {
     };
   };
 
-  test('Empty', async () => {
+  test.concurrent('Empty', ctx => {
     const model = createModel([]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(0);
-    // expect(result.abstracts).toHaveLength(0);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(0);
+    // ctx.expect(result.abstracts).toHaveLength(0);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test('One Primitive', async () => {
+  test.concurrent('One Primitive', ctx => {
     const model = createModel([{
       kind: OmniTypeKind.NUMBER,
     }]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(0);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test('One Class', async () => {
+  test.concurrent('One Class', ctx => {
     const model = createModel([obj('A')]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(1);
-    // expect(result.abstracts).toHaveLength(0);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(1);
+    // ctx.expect(result.abstracts).toHaveLength(0);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test('Two Classes', async () => {
+  test.concurrent('Two Classes', ctx => {
     const model = createModel([obj('A'), obj('B')]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(2);
-    // expect(result.abstracts).toHaveLength(0);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(2);
+    // ctx.expect(result.abstracts).toHaveLength(0);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(0);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test('A extends B, B', async () => {
+  test.concurrent('A extends B, B', ctx => {
     const b = obj('B');
     const model = createModel([obj('A', b), b]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(2);
-    // expect(result.abstracts).toHaveLength(0);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(2);
+    // ctx.expect(result.abstracts).toHaveLength(0);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
   });
 
-  test('A extends B', async () => {
+  test.concurrent('A extends B', ctx => {
 
     const model = createModel([obj('A', obj('B'))]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(2);
-    expect(getConcreteClasses(model)).toHaveLength(1);
-    // expect(result.abstracts).toHaveLength(1);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(2);
+    ctx.expect(getConcreteClasses(model)).toHaveLength(1);
+    // ctx.expect(result.abstracts).toHaveLength(1);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
   });
 
-  test('A extends B, C extends D', async () => {
+  test.concurrent('A extends B, C extends D', ctx => {
 
     const model = createModel([
       obj('A', obj('B')),
@@ -146,41 +146,41 @@ describe('Test CompositionDependencyUtil', () => {
     ]);
 
     // TODO: Should we introduce interfaces since B and D have the same contract?
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(4);
-    expect(getConcreteClasses(model)).toHaveLength(2);
-    // expect(result.abstracts).toHaveLength(2);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(2);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(4);
+    ctx.expect(getConcreteClasses(model)).toHaveLength(2);
+    // ctx.expect(result.abstracts).toHaveLength(2);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(2);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
-  test('A extends B, C extends B', async () => {
+  test.concurrent('A extends B, C extends B', ctx => {
     const b = obj('B');
     const model = createModel([obj('C', b), obj('C', b)]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(3);
-    expect(getConcreteClasses(model)).toHaveLength(2);
-    // expect(result.abstracts).toHaveLength(1);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(3);
+    ctx.expect(getConcreteClasses(model)).toHaveLength(2);
+    // ctx.expect(result.abstracts).toHaveLength(1);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
-  test('A extends B, C extends B, B', async () => {
+  test.concurrent('A extends B, C extends B, B', ctx => {
     const b = obj('B');
     const model = createModel([obj('A', b), obj('C', b), b]);
 
-    expect(model).toBeDefined();
-    expect(getInterfaces(model)).toHaveLength(0);
-    expect(JavaUtil.getClasses(model)).toHaveLength(3);
-    // expect(result.abstracts).toHaveLength(0);
-    expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
-    expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
+    ctx.expect(model).toBeDefined();
+    ctx.expect(getInterfaces(model)).toHaveLength(0);
+    ctx.expect(JavaUtil.getClasses(model)).toHaveLength(3);
+    // ctx.expect(result.abstracts).toHaveLength(0);
+    ctx.expect(JavaUtil.getSuperTypeToSubTypesMap(model).size).toEqual(1);
+    ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
-  test('A extends B & C, D extends B & C, B', async () => {
+  test.concurrent('A extends B & C, D extends B & C, B', ctx => {
     const b = obj('B');
     const c = obj('C');
     const bc1 = and(b, c);
@@ -190,16 +190,16 @@ describe('Test CompositionDependencyUtil', () => {
 
     const model = createModel([a, d, b, c]);
 
-    assertTypes(getInterfaces(model), [c]);
-    assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
-    assertTypes(getConcreteClasses(model), [a, d, b, c]);
-    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+    assertTypes(ctx, getInterfaces(model), [c]);
+    assertTypes(ctx, JavaUtil.getClasses(model), [a, b, c, d]);
+    assertTypes(ctx, getConcreteClasses(model), [a, d, b, c]);
+    assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [a, [b, c]],
       [d, [b, c]],
     ]));
   });
 
-  test('A extends B & C, D extends C & B, B', async () => {
+  test.concurrent('A extends B & C, D extends C & B, B', ctx => {
     const b = obj('B');
     const c = obj('C');
     const bc = and(b, c);
@@ -211,16 +211,16 @@ describe('Test CompositionDependencyUtil', () => {
 
     // B is found before C, because A -> B (and B used as interface for D -> C & B)
     // This would change if the search was done breadth-first vs depth-first.
-    assertTypes(getInterfaces(model), [b, c]);
-    assertTypes(JavaUtil.getClasses(model), [a, b, c, d]);
-    assertTypes(getConcreteClasses(model), [a, d, b, c]);
-    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+    assertTypes(ctx, getInterfaces(model), [b, c]);
+    assertTypes(ctx, JavaUtil.getClasses(model), [a, b, c, d]);
+    assertTypes(ctx, getConcreteClasses(model), [a, d, b, c]);
+    assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [a, [b, c]],
       [d, [c, b]],
     ]));
   });
 
-  test('ABCDEF w/o simplification', async () => {
+  test.concurrent('ABCDEF w/o simplification', ctx => {
 
     const dInline = inlineClassWithProp('DInline');
 
@@ -235,16 +235,16 @@ describe('Test CompositionDependencyUtil', () => {
     const model = createModel([A, B, C, D, E, F]);
 
     // This would change if the search was done breadth-first vs depth-first.
-    assertTypes(getInterfaces(model), [D, C, dInline]);
-    assertTypes(JavaUtil.getClasses(model), [A, B, C, D, E, F]);
-    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+    assertTypes(ctx, getInterfaces(model), [D, C, dInline]);
+    assertTypes(ctx, JavaUtil.getClasses(model), [A, B, C, D, E, F]);
+    assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [D, [C, dInline]],
       [E, [C, D]],
       [F, [B, D]],
     ]));
   });
 
-  test('ABCDEF w/ simplification', async () => {
+  test.concurrent('ABCDEF w/ simplification', ctx => {
 
     const dInline = inlineClassWithProp('DInline');
 
@@ -264,9 +264,9 @@ describe('Test CompositionDependencyUtil', () => {
     });
 
     // This would change if the search was done breadth-first vs depth-first.
-    assertTypes(getInterfaces(model), [D, C, dInline]);
-    assertTypes(JavaUtil.getClasses(model), [A, B, C, D, E, F]);
-    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+    assertTypes(ctx, getInterfaces(model), [D, C, dInline]);
+    assertTypes(ctx, JavaUtil.getClasses(model), [A, B, C, D, E, F]);
+    assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [D, [C, dInline]],
       [E, [D]],
       [F, [B, D]],
@@ -275,7 +275,7 @@ describe('Test CompositionDependencyUtil', () => {
 
   // TODO: A test case where we expect 'dInline' to not an interface, and inline it because it is single use non-edge type?
 
-  test('Ancestry w/o simplification', async () => {
+  test.concurrent('Ancestry w/o simplification', ctx => {
 
     const A = obj('A');
     const B = obj('B', A);
@@ -285,19 +285,19 @@ describe('Test CompositionDependencyUtil', () => {
 
     // Since we do not simplify the model, we will think that B needs to be an interface..
     // And A is also an interface, since if B is an interface and uses A, then A also needs to have an interface.
-    assertTypes(getInterfaces(model), [B, A]);
+    assertTypes(ctx, getInterfaces(model), [B, A]);
 
     // And since B is never actually used other than supertype #2 for C, it will only be an interface and not a class.
     // TODO: Maybe this is wrong? B should also be available as a class? Make it an option "javaAddSuperfluousClass?"
-    assertTypes(JavaUtil.getClasses(model), [A, C]);
-    assertTypes(getConcreteClasses(model), [A, C]);
-    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+    assertTypes(ctx, JavaUtil.getClasses(model), [A, C]);
+    assertTypes(ctx, getConcreteClasses(model), [A, C]);
+    assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [C, [A, B]],
       [B, [A]],
     ]));
   });
 
-  test('Ancestry w/ simplification', async () => {
+  test.concurrent('Ancestry w/ simplification', ctx => {
 
     const A = obj('A');
     const B = obj('B', A);
@@ -313,10 +313,10 @@ describe('Test CompositionDependencyUtil', () => {
       options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS},
     });
 
-    expect(getInterfaces(model)).toEqual([]);
-    expect(JavaUtil.getClasses(model)).toEqual([A, B, C]);
-    expect(getConcreteClasses(model)).toEqual([A, B, C]);
-    assertMap(JavaUtil.getSubTypeToSuperTypesMap(model), map([
+    ctx.expect(getInterfaces(model)).toEqual([]);
+    ctx.expect(JavaUtil.getClasses(model)).toEqual([A, B, C]);
+    ctx.expect(getConcreteClasses(model)).toEqual([A, B, C]);
+    assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [C, [B]],
       [B, [A]],
     ]));
@@ -335,15 +335,15 @@ function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, typeof O
   return TestUtils.and(...types);
 }
 
-function assertTypes<T extends OmniType>(expected: T[], given: T[]) {
+function assertTypes<T extends OmniType>(ctx: TaskContext & TestContext, expected: T[], given: T[]) {
 
   const expectedDescriptions = expected.map(it => OmniUtil.describe(it)).join(', ');
   const givenDescriptions = given.map(it => OmniUtil.describe(it)).join(', ');
 
-  expect(expectedDescriptions).toEqual(givenDescriptions);
+  ctx.expect(expectedDescriptions).toEqual(givenDescriptions);
 }
 
-function assertMap<T extends OmniType>(expected: Map<T, T[]>, given: Map<T, T[]>) {
+function assertMap<T extends OmniType>(ctx: TaskContext & TestContext, expected: Map<T, T[]>, given: Map<T, T[]>) {
 
   for (const e of expected.entries()) {
     const givenValues = given.get(e[0]);
@@ -355,7 +355,7 @@ function assertMap<T extends OmniType>(expected: Map<T, T[]>, given: Map<T, T[]>
     const expectedDescriptions = e[1].map(it => OmniUtil.describe(it)).join(', ');
     const givenDescriptions = givenValues.map(it => OmniUtil.describe(it)).join(', ');
 
-    expect(`${keyDescription}: ${expectedDescriptions}`).toEqual(`${keyDescription}: ${givenDescriptions}`);
+    ctx.expect(`${keyDescription}: ${expectedDescriptions}`).toEqual(`${keyDescription}: ${givenDescriptions}`);
   }
 
   for (const e of given.entries()) {

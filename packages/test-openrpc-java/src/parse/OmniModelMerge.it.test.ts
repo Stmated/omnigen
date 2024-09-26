@@ -1,7 +1,7 @@
 import {JavaOptions, JavaPlugins} from '@omnigen/target-java';
 import {ModelTransformOptions, OmniModelParserResult, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/api';
 import {Naming, OmniModelMerge, OmniUtil, Util} from '@omnigen/core';
-import {describe, expect, test, vi} from 'vitest';
+import {describe, test, vi} from 'vitest';
 import {PluginManager} from '@omnigen/plugin';
 import {BaseContext, FileContext, TargetContext, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
 import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
@@ -19,7 +19,7 @@ describe('merge-documents', () => {
 
   const pm = new PluginManager({includeAuto: true});
 
-  test('jsonschema', async ({task}) => {
+  test.concurrent('jsonschema', async ctx => {
 
     const exec = await pm.execute({
       ctx: {
@@ -34,7 +34,7 @@ describe('merge-documents', () => {
     //  * Primitive should have a name: PetId -- dependant on target language if it is actually output or just inlined everywhere
 
     const model = exec.result.ctx.model;
-    expect(model.types).toHaveLength(3);
+    ctx.expect(model.types).toHaveLength(3);
 
     if (model.types[0].kind !== OmniTypeKind.INTEGER) {
       throw new Error(`Wrong kind`);
@@ -46,23 +46,23 @@ describe('merge-documents', () => {
       throw new Error(`Wrong kind`);
     }
 
-    expect(Naming.unwrap(model.types[0].name ?? '')).toEqual(`PetId`);
-    expect(Naming.unwrap(model.types[1].name ?? '')).toEqual(`PetAge`);
+    ctx.expect(Naming.unwrap(model.types[0].name ?? '')).toEqual(`PetId`);
+    ctx.expect(Naming.unwrap(model.types[1].name ?? '')).toEqual(`PetAge`);
 
-    expect(Naming.unwrap(model.types[2].name)).toEqual(`Pet`);
-    expect(model.types[2].description).toEqual('Description about the Pet');
-    expect(model.types[2].properties).toHaveLength(4);
+    ctx.expect(Naming.unwrap(model.types[2].name)).toEqual(`Pet`);
+    ctx.expect(model.types[2].description).toEqual('Description about the Pet');
+    ctx.expect(model.types[2].properties).toHaveLength(4);
 
-    expect(model.types[2].properties.map(it => OmniUtil.getPropertyName(it.name, true))).toEqual(['id', 'age', 'name', 'tag']);
-    expect(model.types[2].properties[1].type.description).toEqual('Overriding age description of the Pet');
+    ctx.expect(model.types[2].properties.map(it => OmniUtil.getPropertyName(it.name, true))).toEqual(['id', 'age', 'name', 'tag']);
+    ctx.expect(model.types[2].properties[1].type.description).toEqual('Overriding age description of the Pet');
   });
 });
 
 describe('merge-models', () => {
 
-  test('find-equivalent-models-error-structure-1.0+1.1', async () => {
+  test.concurrent('find-equivalent-models-error-structure-1.0+1.1', async ctx => {
 
-    expect(OpenRpcPlugins.OpenRpcPlugin, 'Here to make sure OpenRPC plugins are registered').toBeDefined();
+    ctx.expect(OpenRpcPlugins.OpenRpcPlugin, 'Here to make sure OpenRPC plugins are registered').toBeDefined();
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -124,15 +124,15 @@ describe('merge-models', () => {
     // It is up to each respective model to output itself as normally, but to be aware that types are common.
     // This can for example be done at the file writing stage, where if the other model has already written
     // the common type to disk, then we do not need to do so again if we encounter it.
-    expect(resultMerged).toBeDefined();
+    ctx.expect(resultMerged).toBeDefined();
 
-    expect(resultMerged.model.endpoints).toHaveLength(0);
+    ctx.expect(resultMerged.model.endpoints).toHaveLength(0);
 
     resultMerged.model.types.sort((a, b) => OmniUtil.describe(a).localeCompare(OmniUtil.describe(b)));
 
     const typeNames = resultMerged.model.types.map(it => Naming.unwrap(OmniUtil.getTypeName(it) || ''));
-    expect(typeNames).toContain('JsonRpcRequestParams');
-    expect(typeNames).toContain('ListThingsRequestParams');
-    expect(typeNames).toContain('Thing');
+    ctx.expect(typeNames).toContain('JsonRpcRequestParams');
+    ctx.expect(typeNames).toContain('ListThingsRequestParams');
+    ctx.expect(typeNames).toContain('Thing');
   });
 });

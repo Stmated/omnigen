@@ -13,12 +13,12 @@ import {
   PackageOptions,
 } from '@omnigen/api';
 import {GenericsModelTransformer, OmniUtil} from '@omnigen/core';
-import {describe, expect, test} from 'vitest';
+import {describe, test} from 'vitest';
 import {DEFAULT_TEST_JAVA_OPTIONS} from '../util';
 
 describe('Generics', () => {
 
-  test('ensureNothingChanges', async () => {
+  test.concurrent('ensureNothingChanges', async ctx => {
 
     const transformer = new GenericsModelTransformer();
 
@@ -41,20 +41,20 @@ describe('Generics', () => {
       features: OMNI_GENERIC_FEATURES,
     });
 
-    expect(model.types).toHaveLength(1);
+    ctx.expect(model.types).toHaveLength(1);
 
     const type = model.types[0];
 
     const nameResolver = new JavaObjectNameResolver();
     const nameOptions: PackageOptions & JavaOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
 
-    expect(nameResolver.build({name: nameResolver.investigate({type: type, options: nameOptions}), with: NameParts.NAME})).toEqual('A');
+    ctx.expect(nameResolver.build({name: nameResolver.investigate({type: type, options: nameOptions}), with: NameParts.NAME})).toEqual('A');
     if (type.kind != OmniTypeKind.OBJECT) throw new Error(`Should be an object`);
 
-    expect(type.properties).toEqual([]);
+    ctx.expect(type.properties).toEqual([]);
   });
 
-  test('ensureGenericsAdded', async () => {
+  test.concurrent('ensureGenericsAdded', async ctx => {
 
     const transformer = new GenericsModelTransformer();
 
@@ -96,7 +96,7 @@ describe('Generics', () => {
       features: OMNI_GENERIC_FEATURES,
     });
 
-    expect(model.types).toHaveLength(3);
+    ctx.expect(model.types).toHaveLength(3);
 
     if (model.types[0].kind != OmniTypeKind.GENERIC_SOURCE) {
       throw new Error(`Should be generic source not ${OmniUtil.describe(model.types[0])}`);
@@ -107,25 +107,25 @@ describe('Generics', () => {
     const nameResolver = new JavaObjectNameResolver();
     const nameOptions: PackageOptions & JavaOptions = {...DEFAULT_PACKAGE_OPTIONS, ...DEFAULT_TEST_JAVA_OPTIONS};
 
-    expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0], options: nameOptions}), with: NameParts.NAME})).toEqual('A');
-    expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0].of, options: nameOptions}), with: NameParts.NAME})).toEqual('A');
-    expect(model.types[0].of).toEqual(a);
+    ctx.expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0], options: nameOptions}), with: NameParts.NAME})).toEqual('A');
+    ctx.expect(nameResolver.build({name: nameResolver.investigate({type: model.types[0].of, options: nameOptions}), with: NameParts.NAME})).toEqual('A');
+    ctx.expect(model.types[0].of).toEqual(a);
 
     if (model.types[1].extendedBy?.kind != OmniTypeKind.GENERIC_TARGET) throw new Error(`Wrong kind`);
     if (model.types[2].extendedBy?.kind != OmniTypeKind.GENERIC_TARGET) throw new Error(`Wrong kind`);
 
-    expect(model.types[1].extendedBy.source).toEqual(model.types[0]);
-    expect(model.types[2].extendedBy.source).toEqual(model.types[0]);
+    ctx.expect(model.types[1].extendedBy.source).toEqual(model.types[0]);
+    ctx.expect(model.types[2].extendedBy.source).toEqual(model.types[0]);
 
     if (!OmniUtil.isPrimitive(model.types[1].extendedBy.targetIdentifiers[0].type)) throw new Error(`Wrong kind`);
     if (!OmniUtil.isPrimitive(model.types[2].extendedBy.targetIdentifiers[0].type)) throw new Error(`Wrong kind`);
 
-    expect(model.types[1].extendedBy.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.INTEGER);
-    expect(model.types[2].extendedBy.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.DOUBLE);
+    ctx.expect(model.types[1].extendedBy.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.INTEGER);
+    ctx.expect(model.types[2].extendedBy.targetIdentifiers[0].type.kind).toEqual(OmniTypeKind.DOUBLE);
 
     if (!model.types[0].sourceIdentifiers[0].upperBound) throw new Error(`No upper bound`);
     if (!OmniUtil.isPrimitive(model.types[0].sourceIdentifiers[0].upperBound)) throw new Error(`Wrong kind`);
 
-    expect(model.types[0].sourceIdentifiers[0].upperBound.kind).toEqual(OmniTypeKind.DOUBLE);
+    ctx.expect(model.types[0].sourceIdentifiers[0].upperBound.kind).toEqual(OmniTypeKind.DOUBLE);
   });
 });

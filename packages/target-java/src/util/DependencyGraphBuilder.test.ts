@@ -68,7 +68,7 @@ describe('Test CompositionDependencyUtil', () => {
     };
   };
 
-  test.concurrent('Empty', ctx => {
+  test('Empty', ctx => {
     const model = createModel([]);
 
     ctx.expect(model).toBeDefined();
@@ -79,7 +79,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test.concurrent('One Primitive', ctx => {
+  test('One Primitive', ctx => {
     const model = createModel([{
       kind: OmniTypeKind.NUMBER,
     }]);
@@ -91,7 +91,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test.concurrent('One Class', ctx => {
+  test('One Class', ctx => {
     const model = createModel([obj('A')]);
 
     ctx.expect(model).toBeDefined();
@@ -102,7 +102,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test.concurrent('Two Classes', ctx => {
+  test('Two Classes', ctx => {
     const model = createModel([obj('A'), obj('B')]);
 
     ctx.expect(model).toBeDefined();
@@ -113,7 +113,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(0);
   });
 
-  test.concurrent('A extends B, B', ctx => {
+  test('A extends B, B', ctx => {
     const b = obj('B');
     const model = createModel([obj('A', b), b]);
 
@@ -125,7 +125,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
   });
 
-  test.concurrent('A extends B', ctx => {
+  test('A extends B', ctx => {
 
     const model = createModel([obj('A', obj('B'))]);
 
@@ -138,7 +138,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(1);
   });
 
-  test.concurrent('A extends B, C extends D', ctx => {
+  test('A extends B, C extends D', ctx => {
 
     const model = createModel([
       obj('A', obj('B')),
@@ -155,7 +155,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
-  test.concurrent('A extends B, C extends B', ctx => {
+  test('A extends B, C extends B', ctx => {
     const b = obj('B');
     const model = createModel([obj('C', b), obj('C', b)]);
 
@@ -168,7 +168,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
-  test.concurrent('A extends B, C extends B, B', ctx => {
+  test('A extends B, C extends B, B', ctx => {
     const b = obj('B');
     const model = createModel([obj('A', b), obj('C', b), b]);
 
@@ -180,7 +180,7 @@ describe('Test CompositionDependencyUtil', () => {
     ctx.expect(JavaUtil.getSubTypeToSuperTypesMap(model).size).toEqual(2);
   });
 
-  test.concurrent('A extends B & C, D extends B & C, B', ctx => {
+  test('A extends B & C, D extends B & C, B', ctx => {
     const b = obj('B');
     const c = obj('C');
     const bc1 = and(b, c);
@@ -199,7 +199,7 @@ describe('Test CompositionDependencyUtil', () => {
     ]));
   });
 
-  test.concurrent('A extends B & C, D extends C & B, B', ctx => {
+  test('A extends B & C, D extends C & B, B', ctx => {
     const b = obj('B');
     const c = obj('C');
     const bc = and(b, c);
@@ -220,7 +220,7 @@ describe('Test CompositionDependencyUtil', () => {
     ]));
   });
 
-  test.concurrent('ABCDEF w/o simplification', ctx => {
+  test('ABCDEF w/o simplification', ctx => {
 
     const dInline = inlineClassWithProp('DInline');
 
@@ -244,7 +244,7 @@ describe('Test CompositionDependencyUtil', () => {
     ]));
   });
 
-  test.concurrent('ABCDEF w/ simplification', ctx => {
+  test('ABCDEF w/ simplification', ctx => {
 
     const dInline = inlineClassWithProp('DInline');
 
@@ -275,7 +275,7 @@ describe('Test CompositionDependencyUtil', () => {
 
   // TODO: A test case where we expect 'dInline' to not an interface, and inline it because it is single use non-edge type?
 
-  test.concurrent('Ancestry w/o simplification', ctx => {
+  test('Ancestry w/o simplification', ctx => {
 
     const A = obj('A');
     const B = obj('B', A);
@@ -297,7 +297,7 @@ describe('Test CompositionDependencyUtil', () => {
     ]));
   });
 
-  test.concurrent('Ancestry w/ simplification', ctx => {
+  test('Ancestry w/ simplification', ctx => {
 
     const A = obj('A');
     const B = obj('B', A);

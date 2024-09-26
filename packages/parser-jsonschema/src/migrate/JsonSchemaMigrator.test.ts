@@ -4,7 +4,7 @@ import {JsonSchemaMigrator} from './JsonSchemaMigrator.ts';
 describe('JsonSchemaMigrator', () => {
 
   const migrator = new JsonSchemaMigrator();
-  test.concurrent('basic', ctx => {
+  test('basic', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-07/schema',
     });
@@ -12,7 +12,7 @@ describe('JsonSchemaMigrator', () => {
     ctx.expect(migrated.$schema).toEqual('https://json-schema.org/draft/2020-12/schema');
   });
 
-  test.concurrent('missed id to $id', ctx => {
+  test('missed id to $id', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-07/schema',
       id: 'foo',
@@ -22,7 +22,7 @@ describe('JsonSchemaMigrator', () => {
     ctx.expect(migrated.id).toEqual('foo');
   });
 
-  test.concurrent('id to $id', ctx => {
+  test('id to $id', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-05/schema',
       id: 'foo',
@@ -32,7 +32,7 @@ describe('JsonSchemaMigrator', () => {
     ctx.expect(migrated.$id).toEqual('foo');
   });
 
-  test.concurrent('nested-inner-missed', ctx => {
+  test('nested-inner-missed', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-05/schema',
       id: 'foo',
@@ -56,7 +56,7 @@ describe('JsonSchemaMigrator', () => {
     });
   });
 
-  test.concurrent('nested-outer-missed', ctx => {
+  test('nested-outer-missed', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-07/schema',
       id: 'foo',
@@ -80,7 +80,7 @@ describe('JsonSchemaMigrator', () => {
     });
   });
 
-  test.concurrent('nested-advanced', ctx => {
+  test('nested-advanced', ctx => {
     const migrated = migrator.migrate({
       $schema: 'http://json-schema.org/draft-05/schema',
       id: 'foo',

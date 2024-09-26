@@ -31,6 +31,8 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/.test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-java/coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/target-impl-java-http/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/target-java/.turbo" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

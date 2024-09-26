@@ -9,14 +9,14 @@ import {JSONSchema9Definition} from '../definitions';
 import {JsonSchemaMigrator} from '../migrate';
 
 describe('jsonschema-7-visit', () => {
-  test.concurrent('unchanged', async ctx => {
+  test('unchanged', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visited = DefaultJsonSchema9Visitor.visit(content, DefaultJsonSchema9Visitor);
 
     ctx.expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
   });
 
-  test.concurrent('count', async ctx => {
+  test('count', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
 
     let callCount = 0;
@@ -34,7 +34,7 @@ describe('jsonschema-7-visit', () => {
     ctx.expect(callCount).toEqual(2);
   });
 
-  test.concurrent('alter_maximum', async ctx => {
+  test('alter_maximum', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -46,7 +46,7 @@ describe('jsonschema-7-visit', () => {
     ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  test.concurrent('remove_descriptions', async ctx => {
+  test('remove_descriptions', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -58,7 +58,7 @@ describe('jsonschema-7-visit', () => {
     ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  // test.concurrent('normalize_defs', async ctx => {
+  // test('normalize_defs', async ctx => {
   //   const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet_defs_and_definitions.json')).toString('utf-8'));
   //   // const visitor = new NormalizeDefsJsonSchemaTransformerFactory().create();
   //   let visited = content;
@@ -68,7 +68,7 @@ describe('jsonschema-7-visit', () => {
   //   ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   // });
 
-  test.concurrent('keep_enum_var_names', async ctx => {
+  test('keep_enum_var_names', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json')).toString('utf-8'));
     const visitors = [new SimplifyJsonSchemaTransformerFactory().create()];
 
@@ -81,7 +81,7 @@ describe('jsonschema-7-visit', () => {
     ctx.expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
   });
 
-  test.concurrent('visit_into_unknown_without_redirect', async ctx => {
+  test('visit_into_unknown_without_redirect', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/visit_unknown_properties.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -93,7 +93,7 @@ describe('jsonschema-7-visit', () => {
     ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  test.concurrent('visit_into_unknown_with_redirect', async ctx => {
+  test('visit_into_unknown_with_redirect', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/visit_unknown_properties.json')).toString('utf-8'));
     const visitor: JsonSchema9Visitor = {
       ...DefaultJsonSchema9Visitor,
@@ -117,7 +117,7 @@ describe('jsonschema-7-visit', () => {
     ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
   });
 
-  test.concurrent('normalize_ids', async ctx => {
+  test('normalize_ids', async ctx => {
     const schemaFile = new SchemaFile(Util.getPathFromRoot('./packages/parser-jsonschema/examples/needs_absolute_ids.json'));
     const schemaContent = await schemaFile.asObject<JSONSchema9Definition>();
 

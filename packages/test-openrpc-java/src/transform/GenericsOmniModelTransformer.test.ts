@@ -18,7 +18,7 @@ import {DEFAULT_TEST_JAVA_OPTIONS} from '../util';
 
 describe('Generics', () => {
 
-  test.concurrent('ensureNothingChanges', async ctx => {
+  test('ensureNothingChanges', async ctx => {
 
     const transformer = new GenericsModelTransformer();
 
@@ -54,7 +54,7 @@ describe('Generics', () => {
     ctx.expect(type.properties).toEqual([]);
   });
 
-  test.concurrent('ensureGenericsAdded', async ctx => {
+  test('ensureGenericsAdded', async ctx => {
 
     const transformer = new GenericsModelTransformer();
 

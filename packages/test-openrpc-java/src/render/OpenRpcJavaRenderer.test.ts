@@ -13,7 +13,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 describe('Java Rendering', () => {
 
-  test.concurrent('renderAll', async ctx => {
+  test('renderAll', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -102,7 +102,7 @@ describe('Java Rendering', () => {
     timeout: 30_000,
   });
 
-  test.concurrent('Test multiple inheritance (interfaces)', async ctx => {
+  test('Test multiple inheritance (interfaces)', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -119,7 +119,7 @@ describe('Java Rendering', () => {
     }
   });
 
-  test.concurrent('Type compressions', async ctx => {
+  test('Type compressions', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -141,7 +141,7 @@ describe('Java Rendering', () => {
     }
   });
 
-  test.concurrent('Enum', async ctx => {
+  test('Enum', async ctx => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('enum.json', {
       javaOptions: {
@@ -160,7 +160,7 @@ describe('Java Rendering', () => {
     }
   });
 
-  test.concurrent('AdditionalProperties', async ctx => {
+  test('AdditionalProperties', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -180,7 +180,7 @@ describe('Java Rendering', () => {
     }
   });
 
-  test.concurrent('description-inheritance', async ctx => {
+  test('description-inheritance', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -197,7 +197,7 @@ describe('Java Rendering', () => {
     }
   });
 
-  test.concurrent('PetStore-Expanded-ClassNames', async ctx => {
+  test('PetStore-Expanded-ClassNames', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -209,7 +209,7 @@ describe('Java Rendering', () => {
     ctx.expect(filenames).not.toContain('Pet1.java');
   });
 
-  test.concurrent('primitive-generics', async ctx => {
+  test('primitive-generics', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -223,7 +223,7 @@ describe('Java Rendering', () => {
     // TODO: Add more exact checks for all generic types, making sure they have the correct amount of generics and whatever
   });
 
-  test.concurrent('generic_params', async ctx => {
+  test('generic_params', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -246,7 +246,7 @@ describe('Java Rendering', () => {
     }
   });
 
-  test.concurrent('method-in-response', async ctx => {
+  test('method-in-response', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

@@ -5,7 +5,7 @@ import {RenderedCompilationUnit} from '@omnigen/api';
 
 describe('jsonschema-typescript-render', () => {
 
-  test.concurrent('discriminator', async ctx => {
+  test('discriminator', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -21,7 +21,7 @@ describe('jsonschema-typescript-render', () => {
     }
   });
 
-  test.concurrent('jsonschema7-lax-undefined', async ctx => {
+  test('jsonschema7-lax-undefined', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -40,7 +40,7 @@ describe('jsonschema-typescript-render', () => {
     }
   });
 
-  test.concurrent('jsonschema7-strict-undefined', async ctx => {
+  test('jsonschema7-strict-undefined', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -59,7 +59,7 @@ describe('jsonschema-typescript-render', () => {
     }
   });
 
-  test.concurrent('dynamic-ref', async ctx => {
+  test('dynamic-ref', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -83,7 +83,7 @@ describe('jsonschema-typescript-render', () => {
    *
    * TODO: Currently incorrect output -- it refers to types that does not exist, like `SpecificationExtensions`. Something is wrong and needs narrower test cases.
    */
-  test.concurrent('openapi', async ctx => {
+  test('openapi', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -97,7 +97,7 @@ describe('jsonschema-typescript-render', () => {
     await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
-  test.concurrent('if-then-else', async ctx => {
+  test('if-then-else', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

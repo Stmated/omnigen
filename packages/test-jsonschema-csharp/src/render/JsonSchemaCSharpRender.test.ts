@@ -6,7 +6,7 @@ import {IncludeExampleCommentsMode, PropertyTypeCommentMode} from '@omnigen/targ
 
 describe('jsonschema-csharp-render', () => {
 
-  test.concurrent('string_union', async ctx => {
+  test('string_union', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -22,7 +22,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('x-enum-varnames', async ctx => {
+  test('x-enum-varnames', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -37,7 +37,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('decorated_types', async ctx => {
+  test('decorated_types', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -54,7 +54,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('enum_string_composition', async ctx => {
+  test('enum_string_composition', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -72,7 +72,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('interface_order', async ctx => {
+  test('interface_order', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -89,7 +89,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('inline_boolean', async ctx => {
+  test('inline_boolean', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -109,7 +109,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('class_union', async ctx => {
+  test('class_union', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -129,7 +129,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('enum_inheritance', async ctx => {
+  test('enum_inheritance', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -144,7 +144,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('one_of_same_type', async ctx => {
+  test('one_of_same_type', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -161,7 +161,7 @@ describe('jsonschema-csharp-render', () => {
     }
   });
 
-  test.concurrent('discriminator', async ctx => {
+  test('discriminator', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

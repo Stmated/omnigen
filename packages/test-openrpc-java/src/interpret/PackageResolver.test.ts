@@ -5,7 +5,7 @@ import {describe, test, vi} from 'vitest';
 
 describe('PackageResolver', () => {
 
-  test.concurrent('FromSchema', async ctx => {
+  test('FromSchema', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -20,7 +20,7 @@ describe('PackageResolver', () => {
     }
   });
 
-  test.concurrent('FromCode', async ctx => {
+  test('FromCode', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

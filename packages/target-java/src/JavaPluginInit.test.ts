@@ -58,7 +58,7 @@ const fakePropertiesPlugin = createPlugin(
     } as const;
   });
 
-test.concurrent('Java Plugin Hooks', async ctx => {
+test('Java Plugin Hooks', async ctx => {
 
   const manager = new PluginManager({includeAuto: false});
   manager.addPlugin(JavaPlugins.default);

@@ -99,7 +99,7 @@ class TestCodeRootAstNode extends Code.CodeRootAstNode {
   }
 }
 
-test.concurrent('test order', ctx => {
+test('test order', ctx => {
 
   const transformer = new ReorderMembersAstTransformer();
 

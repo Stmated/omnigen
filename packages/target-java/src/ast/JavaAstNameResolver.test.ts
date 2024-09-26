@@ -7,13 +7,13 @@ describe('JavaAstNameResolver', () => {
 
   const resolver = new JavaObjectNameResolver();
 
-  test.concurrent('reserved', ctx => {
+  test('reserved', ctx => {
 
     assert.isFalse(resolver.isReservedWord('foo'));
     assert.isTrue(resolver.isReservedWord('this'));
   });
 
-  test.concurrent('abs and rel', ctx => {
+  test('abs and rel', ctx => {
 
     const tFoo: OmniType = {
       kind: OmniTypeKind.OBJECT,

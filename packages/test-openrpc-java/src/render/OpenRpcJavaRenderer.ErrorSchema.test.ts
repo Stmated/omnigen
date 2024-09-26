@@ -5,7 +5,7 @@ import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
 describe('Error-Schema', () => {
 
-  test.concurrent('ErrorStructure', async ctx => {
+  test('ErrorStructure', async ctx => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', {
       modelTransformOptions: {elevateProperties: false, generifyTypes: true},
@@ -44,7 +44,7 @@ describe('Error-Schema', () => {
     ctx.expect(jsonRpcError.foundFields).toEqual(['code', 'message']);
   });
 
-  test.concurrent('ErrorStructure-1.1', async ctx => {
+  test('ErrorStructure-1.1', async ctx => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-1.1.json', {
       javaOptions: {
@@ -72,7 +72,7 @@ describe('Error-Schema', () => {
     ctx.expect(error100.foundTypes).toContain('String');
   });
 
-  test.concurrent('ErrorStructure-Custom', async ctx => {
+  test('ErrorStructure-Custom', async ctx => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure-custom.json', {});
     const filenames = [...fileContents.keys()];

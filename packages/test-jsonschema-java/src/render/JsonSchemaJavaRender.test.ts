@@ -6,7 +6,7 @@ import {IncludeExampleCommentsMode} from '@omnigen/target-code';
 
 describe('jsonschema-java-render', () => {
 
-  test.concurrent('string_union', async ctx => {
+  test('string_union', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -22,7 +22,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('x-enum-varnames', async ctx => {
+  test('x-enum-varnames', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -37,7 +37,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('decorated_types', async ctx => {
+  test('decorated_types', async ctx => {
 
     // TODO: Fix so that the "default value" ternary expression is not added if the Direction is `in` or something similar -- non-nullable boolean can never be null
 
@@ -57,7 +57,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('enum_string_composition', async ctx => {
+  test('enum_string_composition', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -74,7 +74,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('interface_order', async ctx => {
+  test('interface_order', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -90,7 +90,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('inline_boolean', async ctx => {
+  test('inline_boolean', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -108,7 +108,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('class_union', async ctx => {
+  test('class_union', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -127,7 +127,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('enum_inheritance', async ctx => {
+  test('enum_inheritance', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -142,7 +142,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('one_of_same_type', async ctx => {
+  test('one_of_same_type', async ctx => {
 
     // TODO: Fix so that it either prints it as a String, or creates a composition type -- right now it tries to print the *object* DateOfBirthOrOrganization
     //        Something is likely wrong with some asSuperType/asSubType after type guard changes
@@ -163,7 +163,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('discriminator', async ctx => {
+  test('discriminator', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -181,7 +181,7 @@ describe('jsonschema-java-render', () => {
     }
   });
 
-  test.concurrent('3-generic', async ctx => {
+  test('3-generic', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

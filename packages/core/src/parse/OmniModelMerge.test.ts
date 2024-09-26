@@ -3,7 +3,7 @@ import {OmniModelMerge, Replacement} from './OmniModelMerge';
 import {OmniUtil} from './OmniUtil';
 import {test} from 'vitest';
 
-test.concurrent('Not Similar', async ctx => {
+test('Not Similar', async ctx => {
 
   const a = createObject('a');
   const b = createObject('b');
@@ -12,7 +12,7 @@ test.concurrent('Not Similar', async ctx => {
   ctx.expect(replacements).toHaveLength(0);
 });
 
-test.concurrent('Same Identity', async ctx => {
+test('Same Identity', async ctx => {
 
   const a = createObject('a');
 
@@ -20,7 +20,7 @@ test.concurrent('Same Identity', async ctx => {
   ctx.expect(replacements).toHaveLength(0);
 });
 
-test.concurrent('Similar (Empty)', async ctx => {
+test('Similar (Empty)', async ctx => {
 
   const a1 = createObject('a');
   const a2 = createObject('a');
@@ -31,7 +31,7 @@ test.concurrent('Similar (Empty)', async ctx => {
   ]);
 });
 
-test.concurrent('Similar (Same Properties)', async ctx => {
+test('Similar (Same Properties)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));
@@ -47,7 +47,7 @@ test.concurrent('Similar (Same Properties)', async ctx => {
   ]);
 });
 
-test.concurrent('Similar (Diff Property Names)', async ctx => {
+test('Similar (Diff Property Names)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('y'));
@@ -56,7 +56,7 @@ test.concurrent('Similar (Diff Property Names)', async ctx => {
   ctx.expect(replacements).toHaveLength(0);
 });
 
-test.concurrent('Similar (Diff Property Types)', async ctx => {
+test('Similar (Diff Property Types)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x', OmniTypeKind.DOUBLE));
   const a2 = createObject('a', undefined, createPrimitive('x', OmniTypeKind.INTEGER));
@@ -65,7 +65,7 @@ test.concurrent('Similar (Diff Property Types)', async ctx => {
   ctx.expect(replacements).toHaveLength(0);
 });
 
-test.concurrent('Supertype (Same Supertype)', async ctx => {
+test('Supertype (Same Supertype)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));
@@ -81,7 +81,7 @@ test.concurrent('Supertype (Same Supertype)', async ctx => {
   ]);
 });
 
-test.concurrent('Supertype (Diff Supertype)', async ctx => {
+test('Supertype (Diff Supertype)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));
@@ -95,7 +95,7 @@ test.concurrent('Supertype (Diff Supertype)', async ctx => {
   ]);
 });
 
-test.concurrent('Supertype (Diff levels)', async ctx => {
+test('Supertype (Diff levels)', async ctx => {
 
   const a1 = createObject('a', undefined, createPrimitive('x'));
   const a2 = createObject('a', undefined, createPrimitive('x'));

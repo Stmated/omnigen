@@ -3,7 +3,7 @@ import {OmniItemKind, OmniModel, OmniObjectType, OmniPrimitiveType, OmniProperty
 import {ProxyReducerOmni2} from './ProxyReducerOmni2.ts';
 import {expectTs} from '../util';
 
-test.concurrent('change-field', ctx => {
+test('change-field', ctx => {
 
   const model: OmniModel = {
     kind: OmniItemKind.MODEL,
@@ -25,7 +25,7 @@ test.concurrent('change-field', ctx => {
   ctx.expect(model.description).toBeUndefined();
 });
 
-test.concurrent('swap-recursively-3', ctx => {
+test('swap-recursively-3', ctx => {
 
   const obj1: OmniObjectType = {
     kind: OmniTypeKind.OBJECT,
@@ -98,7 +98,7 @@ test.concurrent('swap-recursively-3', ctx => {
   ctx.expect(model?.types[0].kind).toEqual(OmniTypeKind.OBJECT);
 });
 
-test.concurrent('recursive-union', ctx => {
+test('recursive-union', ctx => {
 
   const unknownType: OmniUnknownType = {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.DYNAMIC_OBJECT};
   const unknownProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'value', type: unknownType, required: true};

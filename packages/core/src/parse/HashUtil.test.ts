@@ -2,7 +2,7 @@ import {HashUtil} from './HashUtil';
 import {OmniTypeKind} from '@omnigen/api';
 import {test} from 'vitest';
 
-test.concurrent('Unknown', async ctx => {
+test('Unknown', async ctx => {
 
   const hash1 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.UNKNOWN});
   const hash2 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.UNKNOWN});
@@ -10,7 +10,7 @@ test.concurrent('Unknown', async ctx => {
   ctx.expect(hash1).toEqual(hash2);
 });
 
-test.concurrent('Object w/ same name', async ctx => {
+test('Object w/ same name', async ctx => {
 
   const hash1 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.OBJECT, properties: [], name: 'a'});
   const hash2 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.OBJECT, properties: [], name: 'a'});
@@ -18,7 +18,7 @@ test.concurrent('Object w/ same name', async ctx => {
   ctx.expect(hash1).toEqual(hash2);
 });
 
-test.concurrent('Object w/ diff name', async ctx => {
+test('Object w/ diff name', async ctx => {
 
   const hash1 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.OBJECT, properties: [], name: 'a'});
   const hash2 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.OBJECT, properties: [], name: 'b'});
@@ -26,7 +26,7 @@ test.concurrent('Object w/ diff name', async ctx => {
   ctx.expect(hash1).not.toEqual(hash2);
 });
 
-test.concurrent('Object w/ same nested name', async ctx => {
+test('Object w/ same nested name', async ctx => {
 
   const hash1 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.OBJECT, properties: [], name: ['a']});
   const hash2 = HashUtil.getStructuralHashOf({kind: OmniTypeKind.OBJECT, properties: [], name: ['a', 'b']});
@@ -34,7 +34,7 @@ test.concurrent('Object w/ same nested name', async ctx => {
   ctx.expect(hash1).toEqual(hash2);
 });
 
-test.concurrent('Object w/ diff nested name', async ctx => {
+test('Object w/ diff nested name', async ctx => {
 
   // The hashing only considers the FIRST resolved name.
   // This is for SPEED and SIMPLICITY. But is a good area to explore later someday to support any name matching.

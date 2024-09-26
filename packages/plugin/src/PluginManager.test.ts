@@ -5,7 +5,7 @@ import {describe, test} from 'vitest';
 
 describe('object conversions', () => {
 
-  test.concurrent('basic', ctx => {
+  test('basic', ctx => {
 
     const values: Partial<Record<keyof TargetOptions, any>> = {
       compressSoloReferencedTypes: 'true',
@@ -25,7 +25,7 @@ describe('object conversions', () => {
     ctx.expect(result.compressTypeNaming).toEqual(CompressTypeNaming.EXACT);
   });
 
-  test.concurrent('basic2', ctx => {
+  test('basic2', ctx => {
 
     const values: Partial<Record<keyof TargetOptions, any>> = {
       compressSoloReferencedTypes: 't',
@@ -48,7 +48,7 @@ describe('object conversions', () => {
 
 describe('plugin path', () => {
 
-  test.concurrent('no match', async ctx => {
+  test('no match', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('a', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
@@ -56,7 +56,7 @@ describe('plugin path', () => {
     await ctx.expect(pm.execute({ctx: {x: 'foo'}})).rejects.toThrow(`There was no plugin execution path found`);
   });
 
-  test.concurrent('match', async ctx => {
+  test('match', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('a', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
@@ -67,7 +67,7 @@ describe('plugin path', () => {
     ctx.expect(result.results[0].ctx).toEqual({a: 'foo', b: 'foobar'});
   });
 
-  test.concurrent('match 2 steps', async ctx => {
+  test('match 2 steps', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('p1', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
@@ -79,7 +79,7 @@ describe('plugin path', () => {
     ctx.expect(result.results[1].ctx).toEqual({a: 'foo', b: 'foobar', c: 'foobarbaz'});
   });
 
-  test.concurrent('match 2 steps, replace', async ctx => {
+  test('match 2 steps, replace', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('p1', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
@@ -91,7 +91,7 @@ describe('plugin path', () => {
     ctx.expect(result.results[1].ctx).toEqual({a: 'foo', b: 'foobarbaz'});
   });
 
-  test.concurrent('match 2 steps, 1 runtime', async ctx => {
+  test('match 2 steps, 1 runtime', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('p1', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}bar`}));
@@ -103,7 +103,7 @@ describe('plugin path', () => {
     ctx.expect(result.results[1].ctx).toMatchObject({c: 'foobarbaz'});
   });
 
-  test.concurrent('match and rank by score, without runtime/pathing', async ctx => {
+  test('match and rank by score, without runtime/pathing', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('p1', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}1`}));
@@ -120,7 +120,7 @@ describe('plugin path', () => {
     ctx.expect(result.results[3].ctx).toMatchObject({d: '0123', e: '014'});
   });
 
-  test.concurrent('match and rank by score, with runtime/pathing', async ctx => {
+  test('match and rank by score, with runtime/pathing', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('p1_2', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}1`}));
@@ -135,7 +135,7 @@ describe('plugin path', () => {
     ctx.expect(result.results[2].ctx).toMatchObject({d: '0123'});
   });
 
-  test.concurrent('match and rank by score, with multiple matching runtime/pathing', async ctx => {
+  test('match and rank by score, with multiple matching runtime/pathing', async ctx => {
 
     const pm = new PluginManager({includeAuto: false});
     pm.createPlugin('p1_2', z.object({a: z.string()}), z.object({b: z.string()}), async ctx => ({b: `${ctx.a}1`}));

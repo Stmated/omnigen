@@ -9,7 +9,7 @@ const obj5 = {};
 const obj6 = {};
 const obj7 = {};
 
-test.concurrent('Single', async ctx => {
+test('Single', async ctx => {
 
   ctx.expect(Naming.unwrap('a')).toEqual('A');
   ctx.expect(() => Naming.unwrap([])).toThrowError();
@@ -19,7 +19,7 @@ test.concurrent('Single', async ctx => {
   ctx.expect(Naming.unwrap(['b', 'a', 'c'])).toEqual('B');
 });
 
-test.concurrent('Fallback', async ctx => {
+test('Fallback', async ctx => {
   ctx.expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a', 'b']},
     {owner: obj2, name: ['a', 'b']},
@@ -31,7 +31,7 @@ test.concurrent('Fallback', async ctx => {
 
 
 // We also test that the owner has no impact on what names we get.
-test.concurrent('Owner-No-Impact', async ctx => {
+test('Owner-No-Impact', async ctx => {
   ctx.expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
     {owner: obj1, name: ['b']},
@@ -41,7 +41,7 @@ test.concurrent('Owner-No-Impact', async ctx => {
   ]);
 });
 
-test.concurrent('Indexed', async ctx => {
+test('Indexed', async ctx => {
   ctx.expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
     {owner: obj2, name: ['a']},
@@ -51,7 +51,7 @@ test.concurrent('Indexed', async ctx => {
   ]);
 });
 
-test.concurrent('Indexed-Many', async ctx => {
+test('Indexed-Many', async ctx => {
 
   ctx.expect(Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
@@ -70,7 +70,7 @@ test.concurrent('Indexed-Many', async ctx => {
   ]);
 });
 
-test.concurrent('Indexed-Overflow', async ctx => {
+test('Indexed-Overflow', async ctx => {
 
   const overflow = Naming.unwrapPairs([
     {owner: obj1, name: ['a']},
@@ -86,7 +86,7 @@ test.concurrent('Indexed-Overflow', async ctx => {
   ctx.expect(overflow[6].name).toMatch(/A_[0-9a-z]{40}/);
 });
 
-test.concurrent('Prefix', async ctx => {
+test('Prefix', async ctx => {
 
   ctx.expect(Naming.unwrap({prefix: 'PRE', name: 'a'})).toEqual('PREa');
   ctx.expect(() => Naming.unwrap({prefix: 'PRE', name: []})).toThrowError();
@@ -94,7 +94,7 @@ test.concurrent('Prefix', async ctx => {
   ctx.expect(Naming.unwrap({prefix: 'PRE', name: ['b', 'a', 'c']})).toEqual('PREb');
 });
 
-test.concurrent('Suffix', async ctx => {
+test('Suffix', async ctx => {
 
   ctx.expect(Naming.unwrap({suffix: 'SUF', name: 'a'})).toEqual('ASUF');
   ctx.expect(() => Naming.unwrap({suffix: 'SUF', name: []})).toThrowError();
@@ -102,7 +102,7 @@ test.concurrent('Suffix', async ctx => {
   ctx.expect(Naming.unwrap({suffix: 'SUF', name: ['b', 'a', 'c']})).toEqual('BSUF');
 });
 
-test.concurrent('Prefix+Suffix', async ctx => {
+test('Prefix+Suffix', async ctx => {
 
   ctx.expect(Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: 'a'})).toEqual('PREaSUF');
   ctx.expect(() => Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: []})).toThrowError();
@@ -110,7 +110,7 @@ test.concurrent('Prefix+Suffix', async ctx => {
   ctx.expect(Naming.unwrap({prefix: 'PRE', suffix: 'SUF', name: ['b', 'a', 'c']})).toEqual('PREbSUF');
 });
 
-test.concurrent('Slashes', async ctx => {
+test('Slashes', async ctx => {
 
   ctx.expect(Naming.unwrapPairs([
     {owner: obj1, name: ['components/a']},
@@ -123,7 +123,7 @@ test.concurrent('Slashes', async ctx => {
   ]);
 });
 
-test.concurrent('Slashes With Case-Insensitivity', async ctx => {
+test('Slashes With Case-Insensitivity', async ctx => {
 
   ctx.expect(Naming.unwrapPairs([
     {owner: obj1, name: ['components/a']},
@@ -136,7 +136,7 @@ test.concurrent('Slashes With Case-Insensitivity', async ctx => {
   ]);
 });
 
-test.concurrent('Prefix-Different', async ctx => {
+test('Prefix-Different', async ctx => {
 
   ctx.expect(Naming.unwrapPairs([
     {owner: obj1, name: {prefix: 'a', name: ['a']}},
@@ -155,7 +155,7 @@ test.concurrent('Prefix-Different', async ctx => {
   ]);
 });
 
-test.concurrent('Prefix-Multi', async ctx => {
+test('Prefix-Multi', async ctx => {
 
   // Test that the fallback is properly ordered if we have multiple prefixes.
   ctx.expect(Naming.unwrapPairs([
@@ -191,7 +191,7 @@ test.concurrent('Prefix-Multi', async ctx => {
   ]);
 });
 
-test.concurrent('Common words', async ctx => {
+test('Common words', async ctx => {
 
   ctx.expect(Naming.getCommonName(['Foo', 'Bar', 'Baz'])).toBeUndefined();
   ctx.expect(Naming.getCommonName(['Foo'])).toEqual('Foo');
@@ -204,7 +204,7 @@ test.concurrent('Common words', async ctx => {
   ctx.expect(Naming.getCommonName(['SomeInTheMiddleWord', 'AnotherInTheMiddleToken'])).toEqual('InTheMiddle');
 });
 
-test.concurrent('Common words with diff prefix', async ctx => {
+test('Common words with diff prefix', async ctx => {
 
   ctx.expect(Naming.getCommonName([
     'ThisHasSomeWordsInsideOfIt',
@@ -213,7 +213,7 @@ test.concurrent('Common words with diff prefix', async ctx => {
   ])).toEqual('HasSomeWordsInsideOfIt');
 });
 
-test.concurrent('Common words by total length', async ctx => {
+test('Common words by total length', async ctx => {
 
   ctx.expect(Naming.getCommonName([
     'CatDogDuck',
@@ -222,7 +222,7 @@ test.concurrent('Common words by total length', async ctx => {
   ], 1)).toEqual('Duck');
 });
 
-test.concurrent('Common words by total length with prefix', async ctx => {
+test('Common words by total length with prefix', async ctx => {
 
   ctx.expect(Naming.getCommonName([
     'PrefixCatDogDuck',
@@ -231,7 +231,7 @@ test.concurrent('Common words by total length with prefix', async ctx => {
   ], 1)).toEqual('PrefixDuck');
 });
 
-test.concurrent('Common words by total length with suffix', async ctx => {
+test('Common words by total length with suffix', async ctx => {
 
   ctx.expect(Naming.getCommonName([
     'CatDogDuckSuffix',
@@ -240,7 +240,7 @@ test.concurrent('Common words by total length with suffix', async ctx => {
   ], 1)).toEqual('DuckSuffix');
 });
 
-test.concurrent('Common words by total length with prefix and suffix', async ctx => {
+test('Common words by total length with prefix and suffix', async ctx => {
 
   ctx.expect(Naming.getCommonName([
     'PrefixCatDogDuckSuffix',
@@ -249,7 +249,7 @@ test.concurrent('Common words by total length with prefix and suffix', async ctx
   ], 1)).toEqual('PrefixDuckSuffix');
 });
 
-test.concurrent('Common words by total length with prefix repeated prefix and suffix', async ctx => {
+test('Common words by total length with prefix repeated prefix and suffix', async ctx => {
 
   ctx.expect(Naming.getCommonName([
     'PrefixCatDogPrefixDuckSuffixSuffix',

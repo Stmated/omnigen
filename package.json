@@ -1,41 +1,40 @@
 {
-  "name": "omnigen",
-  "packageManager": "pnpm@9.10.0",
-  "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "clean": "turbo run clean",
-    "test": "vitest run",
-    "test-report": "REPORT=true vitest run",
-    "test:watch": "vitest",
-    "lint": "turbo run lint",
-    "dev": "turbo run dev --parallel",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "sync:prepare": "syncpack list-mismatches",
-    "sync:execute": "syncpack fix-mismatches"
-  },
-  "syncpack": {
-    "versionGroups": [
-      {
-        "label": "Use workspace protocol when developing local packages",
-        "dependencies": ["$LOCAL"],
-        "dependencyTypes": ["dev"],
-        "pinVersion": "workspace:*"
-      }
-    ]
-  },
-  "devDependencies": {
-    "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
-    "@vitest/coverage-v8": "^2.1.1",
-    "@vitest/ui": "^2.1.1",
-    "madge": "^7.0.0",
-    "pino-pretty": "^10.3.1",
-    "prettier": "^3.2.5",
-    "syncpack": "^12.3.0",
-    "turbo": "^2.1.2",
-    "typescript": "^5.6.2",
-    "vite": "^5.4.8",
-    "vitest": "^2.1.1"
-  }
+	"name": "omnigen",
+	"packageManager": "pnpm@9.10.0",
+	"private": true,
+	"scripts": {
+		"build": "turbo run build",
+		"clean": "turbo run clean",
+		"test": "vitest run",
+		"test-report": "REPORT=true vitest run",
+		"test:watch": "vitest",
+		"lint": "turbo run lint",
+		"dev": "turbo run dev --parallel",
+		"format": "prettier --write \"**/*.{ts,tsx,md}\"",
+		"sync:prepare": "syncpack list-mismatches",
+		"sync:execute": "syncpack fix-mismatches"
+	},
+	"syncpack": {
+		"versionGroups": [
+			{
+				"label": "Use workspace protocol when developing local packages",
+				"dependencies": ["$LOCAL"],
+				"dependencyTypes": ["dev"],
+				"pinVersion": "workspace:*"
+			}
+		]
+	},
+	"devDependencies": {
+		"@omnigen/config-typescript": "workspace:*",
+		"@omnigen/eslint-config-custom": "workspace:*",
+		"@vitest/coverage-v8": "^2.1.1",
+		"@vitest/ui": "^2.1.1",
+		"madge": "^7.0.0",
+		"pino-pretty": "^10.3.1",
+		"syncpack": "^12.3.0",
+		"turbo": "^2.1.2",
+		"typescript": "^5.6.2",
+		"vite": "^5.4.8",
+		"vitest": "^2.1.1"
+	}
 }

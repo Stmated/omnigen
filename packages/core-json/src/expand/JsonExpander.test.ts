@@ -5,13 +5,13 @@ describe('JsonExpander', () => {
 
   const expander = new JsonExpander();
 
-  test.concurrent('noop', ctx => {
+  test('noop', ctx => {
 
     const obj = {foo: 'bar'};
     ctx.expect(expander.expand(obj)).toBe(obj);
   });
 
-  test.concurrent('find-path', ctx => {
+  test('find-path', ctx => {
 
     const obj = {
       foo: 'a',
@@ -35,7 +35,7 @@ describe('JsonExpander', () => {
     });
   });
 
-  test.concurrent('find-path-key', ctx => {
+  test('find-path-key', ctx => {
 
     const obj = {
       foo: 'a',
@@ -63,7 +63,7 @@ describe('JsonExpander', () => {
     });
   });
 
-  test.concurrent('double-replace', ctx => {
+  test('double-replace', ctx => {
 
     const obj = {
       foo: 'a',

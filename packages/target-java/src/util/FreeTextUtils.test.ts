@@ -4,7 +4,7 @@ import {expectTs} from '@omnigen/core';
 
 describe('FreeTextUtils', () => {
 
-  test.concurrent('summary+summary', ctx => {
+  test('summary+summary', ctx => {
 
     const a = new Java.FreeTextSummary('foo');
     const b = new Java.FreeTextSummary('bar');
@@ -19,7 +19,7 @@ describe('FreeTextUtils', () => {
     ctx.expect((result as Java.FreeTexts).children[1]).toBeInstanceOf(Java.FreeTextRemark);
   });
 
-  test.concurrent('lines', ctx => {
+  test('lines', ctx => {
 
     let text: Java.AnyFreeText | undefined = undefined;
     for (let i = 0; i < 5; i++) {

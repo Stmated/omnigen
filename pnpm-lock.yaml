@@ -26,9 +26,6 @@ importers:
       pino-pretty:
         specifier: ^10.3.1
         version: 10.3.1
-      prettier:
-        specifier: ^3.2.5
-        version: 3.2.5
       syncpack:
         specifier: ^12.3.0
         version: 12.3.0(typescript@5.6.2)
@@ -3114,11 +3111,6 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier@3.2.5:
-    resolution: {integrity: sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   pretty-ms@7.0.1:
     resolution: {integrity: sha512-973driJZvxiGOQ5ONsFhOF/DtzPMOMtgC11kCpUrPGMTgqp2q/1gwzCquocrN33is0VZ5GFHXZYMM9l6h67v2Q==}
     engines: {node: '>=10'}
@@ -5656,8 +5648,6 @@ snapshots:
       - supports-color
 
   prelude-ls@1.2.1: {}
-
-  prettier@3.2.5: {}
 
   pretty-ms@7.0.1:
     dependencies:

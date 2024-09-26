@@ -4,17 +4,17 @@ import {describe, test} from 'vitest';
 
 describe('Test Composition Types', () => {
 
-  test.concurrent('Merging no composition types', async ctx => {
+  test('Merging no composition types', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType();
     ctx.expect(result).toBeUndefined();
   });
 
-  test.concurrent('Merging empty composition types', async ctx => {
+  test('Merging empty composition types', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [], []);
     ctx.expect(result).toBeUndefined();
   });
 
-  test.concurrent('Merge primitive 1', async ctx => {
+  test('Merge primitive 1', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [{
       kind: OmniTypeKind.NUMBER,
     }]);
@@ -22,7 +22,7 @@ describe('Test Composition Types', () => {
     ctx.expect(result?.kind).toEqual(OmniTypeKind.NUMBER);
   });
 
-  test.concurrent('Merge Number or String', async ctx => {
+  test('Merge Number or String', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType([], [
       // This is invalid, it is not possible to be a Number AND String, but this method should not validate.
       {kind: OmniTypeKind.NUMBER},
@@ -42,7 +42,7 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test.concurrent('allOf1+anyOf1', async ctx => {
+  test('allOf1+anyOf1', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [{kind: OmniTypeKind.STRING}],
       [{kind: OmniTypeKind.NUMBER}],
@@ -57,7 +57,7 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test.concurrent('allOf1+anyOf2', async ctx => {
+  test('allOf1+anyOf2', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [
         {kind: OmniTypeKind.STRING},
@@ -81,7 +81,7 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test.concurrent('allOf1+oneOf2', async ctx => {
+  test('allOf1+oneOf2', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
       [{kind: OmniTypeKind.NUMBER}],
@@ -106,7 +106,7 @@ describe('Test Composition Types', () => {
     });
   });
 
-  test.concurrent('allOf1+oneOf2+not', async ctx => {
+  test('allOf1+oneOf2+not', async ctx => {
     const result = CompositionUtil.getCompositionOrExtensionType(
       [],
       [{kind: OmniTypeKind.NUMBER}],

@@ -2,7 +2,7 @@ import {test} from 'vitest';
 import {OmniItemKind, OmniModel, OmniObjectType, OmniTypeKind, OmniUnionType} from '@omnigen/api';
 import {ProxyReducerOmni} from './ProxyReducerOmni.ts';
 
-test.concurrent('change-field', ctx => {
+test('change-field', ctx => {
 
   const model: OmniModel = {
     kind: OmniItemKind.MODEL,
@@ -24,7 +24,7 @@ test.concurrent('change-field', ctx => {
   ctx.expect(model.description).toBeUndefined();
 });
 
-test.concurrent('swap-recursively-3', ctx => {
+test('swap-recursively-3', ctx => {
 
   const obj1: OmniObjectType = {
     kind: OmniTypeKind.OBJECT,

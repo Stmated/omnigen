@@ -19,7 +19,7 @@ describe('merge-documents', () => {
 
   const pm = new PluginManager({includeAuto: true});
 
-  test.concurrent('jsonschema', async ctx => {
+  test('jsonschema', async ctx => {
 
     const exec = await pm.execute({
       ctx: {
@@ -60,7 +60,7 @@ describe('merge-documents', () => {
 
 describe('merge-models', () => {
 
-  test.concurrent('find-equivalent-models-error-structure-1.0+1.1', async ctx => {
+  test('find-equivalent-models-error-structure-1.0+1.1', async ctx => {
 
     ctx.expect(OpenRpcPlugins.OpenRpcPlugin, 'Here to make sure OpenRPC plugins are registered').toBeDefined();
 

@@ -15,7 +15,7 @@ import {
 } from '@omnigen/api';
 import {GenericsModelTransformer, Naming, PropertyUtil} from '@omnigen/core';
 
-test.concurrent('Test Merge', ctx => {
+test('Test Merge', ctx => {
 
   const superType: OmniObjectType = {kind: OmniTypeKind.OBJECT, name: 'Super', properties: []};
 

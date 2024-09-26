@@ -3,7 +3,7 @@ import {JavaTestUtils} from '../util';
 import {test, vi} from 'vitest';
 import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
-test.concurrent('lombok', async ctx => {
+test('lombok', async ctx => {
 
   vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

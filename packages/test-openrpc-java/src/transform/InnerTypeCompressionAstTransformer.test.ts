@@ -6,7 +6,7 @@ import {SerializationPropertyNameMode} from '@omnigen/target-code';
 
 describe('InnerTypeCompression', () => {
 
-  test.concurrent('CompressNo', async ctx => {
+  test('CompressNo', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -26,7 +26,7 @@ describe('InnerTypeCompression', () => {
     }
   });
 
-  test.concurrent('CompressYes', async ctx => {
+  test('CompressYes', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -50,7 +50,7 @@ describe('InnerTypeCompression', () => {
     //        Need to create some other way of handling this, like splitting into many different classes with unique parents
   });
 
-  test.concurrent('CompressYes-error-structure', async ctx => {
+  test('CompressYes-error-structure', async ctx => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', {
       modelTransformOptions: {generifyTypes: false, elevateProperties: false},
@@ -68,7 +68,7 @@ describe('InnerTypeCompression', () => {
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
   });
 
-  test.concurrent('CompressYes-error-structure+generics', async ctx => {
+  test('CompressYes-error-structure+generics', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 

@@ -6,7 +6,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 describe('TypeScript Rendering', () => {
 
-  test.concurrent('Test multiple inheritance (interfaces)', async ctx => {
+  test('Test multiple inheritance (interfaces)', async ctx => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('multiple-inheritance.json', {
@@ -22,7 +22,7 @@ describe('TypeScript Rendering', () => {
     ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
-  test.concurrent('Type compressions', async ctx => {
+  test('Type compressions', async ctx => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     // TODO: This must pass when all other have been fixed!
@@ -39,7 +39,7 @@ describe('TypeScript Rendering', () => {
     ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
-  test.concurrent('compressable-types_classes', async ctx => {
+  test('compressable-types_classes', async ctx => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('compressable-types.json', {
@@ -56,7 +56,7 @@ describe('TypeScript Rendering', () => {
     ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
-  test.concurrent('Enum', async ctx => {
+  test('Enum', async ctx => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('enum.json', {
@@ -75,7 +75,7 @@ describe('TypeScript Rendering', () => {
     ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
-  test.concurrent('AdditionalProperties', async ctx => {
+  test('AdditionalProperties', async ctx => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('additional-properties.json', {
@@ -90,7 +90,7 @@ describe('TypeScript Rendering', () => {
     ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
-  test.concurrent('method-in-response', async ctx => {
+  test('method-in-response', async ctx => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('method-in-response.json', {

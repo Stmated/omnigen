@@ -15,7 +15,7 @@ describe('Test PropertyUtil', () => {
 
   const f = OMNI_GENERIC_FEATURES;
 
-  test.concurrent('EqualityLevel Primitives', async ctx => {
+  test('EqualityLevel Primitives', async ctx => {
 
     const a: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,

@@ -4,7 +4,7 @@ import {describe, test, TaskContext, TestContext} from 'vitest';
 
 describe('OmniUtil', () => {
 
-  test.concurrent('EqualityLevel Primitives', async ctx => {
+  test('EqualityLevel Primitives', async ctx => {
 
     ctx.expect(expectCommon(
       {kind: OmniTypeKind.STRING},
@@ -53,7 +53,7 @@ describe('OmniUtil', () => {
     );
   });
 
-  test.concurrent('primitive diff', ctx => {
+  test('primitive diff', ctx => {
 
     let diff = OmniUtil.getDiff(
       {kind: OmniTypeKind.STRING},
@@ -101,7 +101,7 @@ describe('OmniUtil', () => {
   const bFloatProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', type: {kind: OmniTypeKind.FLOAT}};
   const bDoubleProp: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'pb', type: {kind: OmniTypeKind.DOUBLE}};
 
-  test.concurrent('object diff', ctx => {
+  test('object diff', ctx => {
 
     let diff = OmniUtil.getDiff(
       {kind: OmniTypeKind.OBJECT, name: 'a', properties: []},
@@ -159,7 +159,7 @@ describe('OmniUtil', () => {
     ctx.expect(diff[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies PropertyTypeDiff);
   });
 
-  test.concurrent('unique diffs', ctx => {
+  test('unique diffs', ctx => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [
@@ -173,7 +173,7 @@ describe('OmniUtil', () => {
     ctx.expect(uniqueDiffs[1]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies Diff);
   });
 
-  test.concurrent('unique diffs, 2 same others', ctx => {
+  test('unique diffs, 2 same others', ctx => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [
@@ -189,7 +189,7 @@ describe('OmniUtil', () => {
     ctx.expect(uniqueDiffs[1]).toEqual({kind: DiffKind.MISSING_PROPERTY, propertyName: OmniUtil.getPropertyName(bIntProp.name, true)} satisfies Diff);
   });
 
-  test.concurrent('unique diffs, 2 different others', ctx => {
+  test('unique diffs, 2 different others', ctx => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [
@@ -204,7 +204,7 @@ describe('OmniUtil', () => {
     ctx.expect(uniqueDiffs[0]).toEqual({kind: DiffKind.PROPERTY_TYPE, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
   });
 
-  test.concurrent('unique diffs, different fundamental types', ctx => {
+  test('unique diffs, different fundamental types', ctx => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [
@@ -223,7 +223,7 @@ describe('OmniUtil', () => {
     ctx.expect(uniqueDiffs[1]).toEqual({kind: DiffKind.TYPE, typeDiffs: [TypeDiffKind.FUNDAMENTAL_TYPE]} satisfies Diff);
   });
 
-  test.concurrent('unique diffs, mixed types', ctx => {
+  test('unique diffs, mixed types', ctx => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [
@@ -237,7 +237,7 @@ describe('OmniUtil', () => {
     ctx.expect(uniqueDiffs[0]).toEqual({kind: DiffKind.EXTRA_PROPERTY, propertyName: OmniUtil.getPropertyName(aIntProp.name, true)} satisfies Diff);
   });
 
-  test.concurrent('literal diffs', ctx => {
+  test('literal diffs', ctx => {
 
     const baseline: OmniType = {kind: OmniTypeKind.OBJECT, name: 'a', properties: [aIntProp]};
     const others: OmniType[] = [

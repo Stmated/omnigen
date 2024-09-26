@@ -7,17 +7,8 @@ const isReport = process.env.REPORT === 'true';
 export default defineConfig({
   test: {
     isolate: false,
-    poolOptions: {
-      threads: {
-        useAtomics: true,
-        isolate: false,
-      },
-      forks: {
-        isolate: false,
-      }
-    },
     pool: 'threads',
-    fileParallelism: true,
+    fileParallelism: false,
     watch: false,
     silent: isCI,
     passWithNoTests: true,
@@ -25,8 +16,8 @@ export default defineConfig({
       html: '.test/html/index.html',
     },
     reporters: isGithub ? ['dot', 'github-actions']
-      :isReport ? ['default', 'html']
-        :['basic' /* 'hanging-process' */],
+      : isReport ? ['default', 'html']
+        : ['basic' /* 'hanging-process' */],
 
     coverage: {
       all: true,
@@ -35,7 +26,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['**/*.ts'],
       reporter: isReport ? [['lcov', {}]]
-        :['lcovonly'],
+        : ['lcovonly'],
       reportsDirectory: '.test/coverage',
     },
     // benchmark: {

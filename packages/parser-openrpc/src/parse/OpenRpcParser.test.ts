@@ -12,7 +12,7 @@ describe('Test Generic Model Creation', () => {
 
   const parserBootstrapFactory = new OpenRpcParserBootstrapFactory();
 
-  test.concurrent('Test basic loading', async ctx => {
+  test('Test basic loading', async ctx => {
     const dirPath = Util.getPathFromRoot('./packages/parser-openrpc/examples/');
     const files = await fs.readdir(dirPath, {withFileTypes: true});
     for (const file of files) {
@@ -35,7 +35,7 @@ describe('Test Generic Model Creation', () => {
     }
   }, {timeout: 5_000});
 
-  test.concurrent('PetStore should create expected model', async ctx => {
+  test('PetStore should create expected model', async ctx => {
 
     const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
       new SchemaFile(Util.getPathFromRoot('./packages/parser-openrpc/examples/petstore-expanded.json')),

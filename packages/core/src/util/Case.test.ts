@@ -3,7 +3,7 @@ import {describe, test} from 'vitest';
 
 describe('Case', () => {
 
-  test.concurrent('camelCase', ctx => {
+  test('camelCase', ctx => {
     ctx.expect(Case.camel('test string')).toEqual('testString');
     ctx.expect(Case.camel('foo-bar')).toEqual('fooBar');
     ctx.expect(Case.camel('foo_bar')).toEqual('fooBar');
@@ -19,7 +19,7 @@ describe('Case', () => {
     ctx.expect(Case.camel('lorem-ipsum', {locale: 'en-US'})).toEqual('loremIpsum');
   });
 
-  test.concurrent('PascalCase', ctx => {
+  test('PascalCase', ctx => {
     ctx.expect(Case.pascal('a')).toEqual('A');
     ctx.expect(Case.pascal('foo bar baz')).toEqual('FooBarBaz');
     ctx.expect(Case.pascal('  foo bar baz  ')).toEqual('FooBarBaz');

@@ -5,33 +5,33 @@ import {Compat, ZodUtils} from './ZodUtils.ts';
 
 describe('type comparisons', () => {
 
-  test.concurrent('same', ctx => {
+  test('same', ctx => {
     ctx.expect(ZodUtils.isCompatibleWith(ZodTargetOptions, ZodTargetOptions).v).toEqual(Compat.SAME);
   });
 
-  test.concurrent('supertype supports subtype', ctx => {
+  test('supertype supports subtype', ctx => {
     ctx.expect(ZodUtils.isCompatibleWith(ZodOptions, ZodTargetOptions).v).toEqual(Compat.SAME);
   });
 
-  test.concurrent('subtype does not support supertype', ctx => {
+  test('subtype does not support supertype', ctx => {
     ctx.expect(ZodUtils.isCompatibleWith(ZodTargetOptions, ZodOptions).v).toEqual(Compat.DIFF);
   });
 
-  test.concurrent('one supported by union', ctx => {
+  test('one supported by union', ctx => {
     ctx.expect(ZodUtils.isCompatibleWith(ZodTargetOptions, ZodModelTransformOptions.or(ZodTargetOptions)).v).toEqual(Compat.SAME);
   });
 
-  test.concurrent('one supported by merge', ctx => {
+  test('one supported by merge', ctx => {
     ctx.expect(ZodUtils.isCompatibleWith(ZodTargetOptions, ZodModelTransformOptions.merge(ZodTargetOptions)).v).toEqual(Compat.SAME);
   });
 
-  test.concurrent('one supported by intersection', ctx => {
+  test('one supported by intersection', ctx => {
     const intersection = ZodModelTransformOptions.and(ZodTargetOptions);
     ctx.expect(ZodUtils.isCompatibleWith(ZodTargetOptions, intersection).v).toEqual(Compat.SAME);
     ctx.expect(ZodUtils.isCompatibleWith(ZodTargetOptions, intersection).v).toEqual(Compat.SAME);
   });
 
-  test.concurrent('base type supported by literal', ctx => {
+  test('base type supported by literal', ctx => {
     ctx.expect(
       ZodUtils.isCompatibleWith(
         z.object({value: z.string()}),
@@ -40,7 +40,7 @@ describe('type comparisons', () => {
     ).toEqual(Compat.SAME);
   });
 
-  test.concurrent('literal vs base type needs runtime eval', ctx => {
+  test('literal vs base type needs runtime eval', ctx => {
     ctx.expect(
       ZodUtils.isCompatibleWith(
         z.object({value: z.literal('string')}),

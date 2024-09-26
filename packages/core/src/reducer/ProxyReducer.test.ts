@@ -61,7 +61,7 @@ const typesReducerBuilder = typesReducerBaseBuilder.spec({
   },
 });
 
-test.concurrent('swap-field-custom', ctx => {
+test('swap-field-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
 
@@ -82,7 +82,7 @@ test.concurrent('swap-field-custom', ctx => {
   ctx.expect(anyCalls).toBe(0);
 });
 
-test.concurrent('swap-field-custom-with-separated-any-spec', ctx => {
+test('swap-field-custom-with-separated-any-spec', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
 
@@ -112,7 +112,7 @@ test.concurrent('swap-field-custom-with-separated-any-spec', ctx => {
   ctx.expect(anyCalls2).toBe(0);
 });
 
-test.concurrent('swap-object-custom', ctx => {
+test('swap-object-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
   const foo2: Foo = {k: 'Foo', x: 20, y: 30, common: 'yo'};
@@ -138,7 +138,7 @@ test.concurrent('swap-object-custom', ctx => {
   ctx.expect(anyCalls).toBe(0); // Not called, since `Foo` is matched
 });
 
-test.concurrent('swap-object-and-field-custom', ctx => {
+test('swap-object-and-field-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
   const foo2: Foo = {k: 'Foo', x: 34, y: 40, common: 'yo'};
@@ -170,7 +170,7 @@ test.concurrent('swap-object-and-field-custom', ctx => {
   ctx.expect(anyCalls).toBe(1);
 });
 
-test.concurrent('swap-custom', ctx => {
+test('swap-custom', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 20, common: 'hello'};
 
@@ -186,7 +186,7 @@ test.concurrent('swap-custom', ctx => {
   ctx.expect(reduced?.common).toBe('bye');
 });
 
-test.concurrent('reuse-branch', ctx => {
+test('reuse-branch', ctx => {
 
   const foo_common: Foo = {k: 'Foo', x: 666, y: 666};
 
@@ -218,7 +218,7 @@ test.concurrent('reuse-branch', ctx => {
   ctx.expect(reduced).not.toBe(foo);
 });
 
-test.concurrent('increment-generation', ctx => {
+test('increment-generation', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 10};
 
@@ -361,7 +361,7 @@ test.concurrent('increment-generation', ctx => {
   ctx.expect(xDec_yInc_yInc_xInc4.y).toEqual(yInc_yInc_xInc4.y);
 });
 
-test.concurrent('track-multiple-reducers', ctx => {
+test('track-multiple-reducers', ctx => {
 
   const foo: Foo = {k: 'Foo', x: 10, y: 10};
 
@@ -399,7 +399,7 @@ describe('non-local-deep-change-not-recursive', () => {
 
   const root: Foo = {k: 'Foo', x: 0, y: 0, common: 'root', foos: [foo1, foo2]};
 
-  test.concurrent('stop-visiting', ctx => {
+  test('stop-visiting', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -428,7 +428,7 @@ describe('non-local-deep-change-not-recursive', () => {
     ctx.expect(reduced.foos![1].foo?.foo?.x).toEqual(6); // 6, since this was a regular visit
   });
 
-  test.concurrent('keep-visiting', ctx => {
+  test('keep-visiting', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -469,17 +469,15 @@ describe('non-local-deep-change-recursive', () => {
   root_branch_1.foos!.push(root);
   root_branch_2.foos!.push(root);
 
-  test.concurrent('no-change', ctx => {
+  test('no-change', ctx => {
 
-    const reducer = typesReducerBuilder.build({
-
-    });
+    const reducer = typesReducerBuilder.build({});
 
     const reduced = reducer.reduce(root);
     ctx.expect(reduced).toBe(root);
   });
 
-  test.concurrent('change-no-next', ctx => {
+  test('change-no-next', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -493,7 +491,7 @@ describe('non-local-deep-change-recursive', () => {
     ctx.expect(reduced.foos![1]).toBe(root.foos![1]);
   });
 
-  test.concurrent('change-with-next', ctx => {
+  test('change-with-next', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
@@ -524,7 +522,7 @@ describe('struct-recursive', () => {
   const bar1: Bar = {k: 'Bar', a: 1, b: 11, foo: foo2};
   const bar2: Bar = {k: 'Bar', a: 2, b: 22, foo: foo1, bar: bar1};
 
-  test.concurrent('struct-recursive_reducer-!recursive', ctx => {
+  test('struct-recursive_reducer-!recursive', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: n => {
@@ -545,7 +543,7 @@ describe('struct-recursive', () => {
     ctx.expect(reduced?.bar?.foo?.y).toEqual(22);
   });
 
-  test.concurrent('struct-recursive_reducer-recursive', ctx => {
+  test('struct-recursive_reducer-recursive', ctx => {
 
     const reducer = typesReducerBuilder.build({
       Foo: (n, a) => {

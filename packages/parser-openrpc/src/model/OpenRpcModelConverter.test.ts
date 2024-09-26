@@ -7,7 +7,7 @@ import {Util} from '@omnigen/core';
 
 describe('OpenRpcModelConverter', () => {
 
-  test.concurrent('test-isomorphism', async ctx => {
+  test('test-isomorphism', async ctx => {
 
     const converter = new OpenRpcModelConverter();
 

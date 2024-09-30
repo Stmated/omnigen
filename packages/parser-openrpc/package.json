@@ -19,7 +19,7 @@
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/core-json": "workspace:*",
-    "@omnigen/json-expander": "workspace:*",
+    "@omnigen-org/json-expander": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@open-rpc/meta-schema": "1.14.2",
     "@open-rpc/schema-utils-js": "^1.16.1",

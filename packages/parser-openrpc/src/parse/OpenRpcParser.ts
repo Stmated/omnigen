@@ -71,7 +71,7 @@ import {
   SimplifyJsonSchemaTransformerFactory,
 } from '@omnigen/parser-jsonschema';
 import {DocumentStore, JsonPathFetcher, ObjectReducer} from '@omnigen/core-json';
-import {JsonExpander} from '@omnigen/json-expander';
+import {JsonExpander} from '@omnigen-org/json-expander';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
 import {OpenAPIV3_1 as OpenApi} from 'openapi-types';

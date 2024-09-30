@@ -537,6 +537,9 @@ importers:
 
   packages/parser-jsonschema:
     dependencies:
+      '@omnigen-org/json-expander':
+        specifier: workspace:*
+        version: link:../json-expander
       '@omnigen/api':
         specifier: workspace:*
         version: link:../api
@@ -552,9 +555,6 @@ importers:
       '@omnigen/core-plugin':
         specifier: workspace:*
         version: link:../core-plugin
-      '@omnigen/json-expander':
-        specifier: workspace:*
-        version: link:../json-expander
       ajv:
         specifier: ^8.12.0
         version: 8.12.0
@@ -635,6 +635,9 @@ importers:
 
   packages/parser-openrpc:
     dependencies:
+      '@omnigen-org/json-expander':
+        specifier: workspace:*
+        version: link:../json-expander
       '@omnigen/api':
         specifier: workspace:*
         version: link:../api
@@ -650,9 +653,6 @@ importers:
       '@omnigen/core-plugin':
         specifier: workspace:*
         version: link:../core-plugin
-      '@omnigen/json-expander':
-        specifier: workspace:*
-        version: link:../json-expander
       '@omnigen/parser-jsonschema':
         specifier: workspace:*
         version: link:../parser-jsonschema

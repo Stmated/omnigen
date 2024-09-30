@@ -24,9 +24,8 @@ import {
   TypeName,
   UnknownKind,
 } from '@omnigen/api';
-import {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
-import {DiscriminatorAware} from './DiscriminatorAware.js'; // TODO: Move into OpenApiJsonSchemaParser
+import {DiscriminatorAware} from './DiscriminatorAware.js';
 import {Case, CompositionUtil, getShallowPayloadString, isDefined, Naming, OmniUtil, SchemaFile, ToDefined} from '@omnigen/core';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {ExternalDocumentsFinder, RefResolver, ToSingle} from '../visit';
@@ -34,7 +33,7 @@ import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
 import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';
 import {DocumentStore, JsonPathFetcher} from '@omnigen/core-json';
-import {JsonExpander} from '@omnigen/json-expander';
+import {JsonExpander} from '@omnigen-org/json-expander';
 
 const logger = LoggerFactory.create(import.meta.url);
 

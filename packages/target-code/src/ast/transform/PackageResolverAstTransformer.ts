@@ -150,7 +150,8 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     if (firstTypedChild) {
       return nameResolver.investigate({type: firstTypedChild, options: args.options}).namespace;
     } else {
-      const name = unit.name || `Owner of ${unit.children.map(it => it.name.value).join(', ')}`;
+
+      const name = unit.name || `Owner of ${unit.children.map(it => OmniUtil.describe(CodeAstUtils.getOmniType(args.root, it))).join(', ')}`;
       throw new Error(`No named object declaration found inside ${name}`);
     }
   }

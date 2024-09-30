@@ -19,7 +19,7 @@
           "Refund"
         ],
         "at": [
-          "/name",
+          {"path": "/name"},
           {"path": "/params/1/schema/$ref", "with": "#/components/schemas/$0RequestData"},
           {"path": "/result/name", "with": "$0Result"},
           {"path": "/result/schema/title", "with": "$0ResponseResult"},

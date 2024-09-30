@@ -6,7 +6,7 @@ export * from './IPackageResolver.ts';
 export * from './PackageOptions.ts';
 export * from './OptionsSource.ts';
 
-const ZodAstNode = z.custom<AstNode>(d => d != undefined && typeof d == 'object' && 'visit' in d);
+const ZodAstNode = z.custom<AstNode>(d => d != undefined && typeof d === 'object' && ('visit' satisfies keyof AstNode) in d);
 
 export const ZodAstNodeContext = z.object({
   astNode: ZodAstNode,

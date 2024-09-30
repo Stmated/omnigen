@@ -1,6 +1,6 @@
 import pointer, {JsonObject} from 'json-pointer';
 import {getShallowPayloadString, ProtocolHandler} from '@omnigen/core';
-import {JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
+import {DocumentStore, JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -26,11 +26,12 @@ export class ExternalDocumentsFinder {
   private readonly _uri: string;
   private readonly _jsonSchema: JsonObject;
 
-  private readonly _documents = new Map<string, JsonObject>();
+  private readonly _documents: DocumentStore; // = new Map<string, JsonObject>();
 
-  constructor(uri: string, jsonSchema: JsonObject) {
+  constructor(uri: string, jsonSchema: JsonObject, docStore?: DocumentStore) {
     this._uri = uri;
     this._jsonSchema = jsonSchema;
+    this._documents = docStore ?? new DocumentStore();
   }
 
   get documents() {
@@ -138,7 +139,7 @@ export class ExternalDocumentsFinder {
   private static searchInto(
     schema: JsonObject,
     parentUri: JsonItemAbsoluteUri,
-    documents: Map<string, JsonObject>,
+    documents: DocumentStore,
   ): NewDocument[] {
 
     const newDocuments: NewDocument[] = [];
@@ -244,7 +245,7 @@ export class ExternalDocumentsFinder {
         : undefined;
   }
 
-  private static relativeRefToAbsolute(obj: string, parentUri: JsonItemAbsoluteUri, documents: Map<string, JsonObject>, newDocuments: NewDocument[]): string {
+  private static relativeRefToAbsolute(obj: string, parentUri: JsonItemAbsoluteUri, documents: DocumentStore, newDocuments: NewDocument[]): string {
 
     const absoluteUri = JsonPathResolver.toAbsoluteUriParts(parentUri, obj);
 

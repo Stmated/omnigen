@@ -70,7 +70,7 @@ import {
   SchemaToTypeResult,
   SimplifyJsonSchemaTransformerFactory,
 } from '@omnigen/parser-jsonschema';
-import {JsonExpander, ObjectReducer} from '@omnigen/core-json';
+import {DocumentStore, JsonExpander, JsonPathFetcher, ObjectReducer} from '@omnigen/core-json';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
 import {OpenAPIV3_1 as OpenApi} from 'openapi-types';
@@ -84,13 +84,17 @@ type TypeAndProperties = { type: OmniType; properties: OmniProperty[] | undefine
 
 export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<JsonRpcParserOptions & ParserOptions> {
 
-  async createParserBootstrap(schemaSource: SchemaSource): Promise<ParserBootstrap<JsonRpcParserOptions & ParserOptions>> {
+  async createParserBootstrap(schemaSource: SchemaSource, docStore?: DocumentStore): Promise<ParserBootstrap<JsonRpcParserOptions & ParserOptions>> {
 
     // TODO: Write own models for OpenRPC -- the one that is available as a package does for example not have ExampleObject#externalValue
 
+    if (!docStore) {
+      docStore = new DocumentStore();
+    }
+
     const schemaObject = await schemaSource.asObject<OpenrpcDocument>();
 
-    const expander = new JsonExpander();
+    const expander = new JsonExpander(uri => JsonPathFetcher.get(uri, docStore));
     expander.expand(schemaObject, schemaSource.getAbsolutePath());
 
     const document = await parseOpenRPCDocument(schemaObject, {
@@ -115,7 +119,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
     const transform = (doc: JSONSchema9) => {
       for (const transformer of transformers) {
         const transformed = transformer.visit(doc, transformer);
-        if (transformed && typeof transformed == 'object') {
+        if (transformed && typeof transformed === 'object') {
           doc = transformed;
         }
       }
@@ -125,12 +129,12 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
 
     // TODO: Need to create a new ApplyIdSchemaTransformer for OpenRpc, and only re-use the JsonSchema one where applicable
 
-    const documentFinder = new ExternalDocumentsFinder(absolutePath, document);
+    const documentFinder = new ExternalDocumentsFinder(absolutePath, document, docStore);
     const refResolver = await (documentFinder.create());
 
     for (const doc of documentFinder.documents) {
 
-      // TODO: lol, completely wrong. Needs to be replaced eventually.
+      // TODO: Could be wrong? Or are the JSONSchema auto-migration always true and complete? Is simple casting always true?
       transform(doc as JSONSchema9);
 
       // TODO: This whole thing needs to be done much easier and faster. It's a mess.
@@ -229,7 +233,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
       });
     }
 
-    return new OpenRpcParserBootstrap(document, refResolver);
+    return new OpenRpcParserBootstrap(document, refResolver, docStore);
   }
 }
 
@@ -237,10 +241,12 @@ export class OpenRpcParserBootstrap implements ParserBootstrap<JsonRpcParserOpti
 
   private readonly _doc: OpenrpcDocument;
   private readonly _deref: RefResolver;
+  private readonly _docStore: DocumentStore;
 
-  constructor(doc: OpenrpcDocument, deref: RefResolver) {
+  constructor(doc: OpenrpcDocument, deref: RefResolver, docStore: DocumentStore) {
     this._doc = doc;
     this._deref = deref;
+    this._docStore = docStore;
   }
 
   getIncomingOptions(): z.infer<typeof ZodArguments> | undefined {
@@ -274,7 +280,7 @@ export class OpenRpcParserBootstrap implements ParserBootstrap<JsonRpcParserOpti
   }
 
   createParser(options: JsonRpcParserOptions & ParserOptions): Parser<JsonRpcParserOptions & ParserOptions> {
-    return new OpenRpcParser(this._deref, this._doc, options);
+    return new OpenRpcParser(this._deref, this._doc, options, this._docStore);
   }
 }
 
@@ -304,21 +310,23 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
   private readonly _doc: OpenrpcDocument;
   private readonly _refResolver: RefResolver;
+  private readonly _docStore: DocumentStore;
 
   /**
    * TODO: Remove! Should delegate to some central thing which can decide if it can handle the given URI/Object
    */
-  private readonly _jsonSchemaParser: JsonSchemaParser<OpenrpcDocument, JsonRpcParserOptions & ParserOptions>;
+  private readonly _jsonSchemaParser: JsonSchemaParser<JsonRpcParserOptions & ParserOptions>;
 
   private get doc(): OpenrpcDocument {
     return this._doc;
   }
 
-  constructor(refResolver: RefResolver, doc: OpenrpcDocument, options: JsonRpcParserOptions & ParserOptions) {
+  constructor(refResolver: RefResolver, doc: OpenrpcDocument, options: JsonRpcParserOptions & ParserOptions, docStore: DocumentStore) {
     this._doc = doc;
     this._refResolver = refResolver;
     this._options = options;
     this._jsonSchemaParser = new JsonSchemaParser(refResolver, this._options);
+    this._docStore = docStore;
   }
 
   parse(): OmniModelParserResult<JsonRpcParserOptions & ParserOptions> {
@@ -897,7 +905,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
 
     // const jsonSchemaParser = new JsonSchemaParser<JSONSchema9, JsonRpcParserOptions & ParserOptions>(refResolver, openrpcParserOptions);
-    return this._jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', source);
+    return this._jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', source, this._docStore);
   }
 
   private exampleParamToGenericExampleParam(

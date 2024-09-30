@@ -96,7 +96,7 @@ describe('Java Rendering', () => {
     }
 
     if (errors.length > 0) {
-      expect.fail(`Rendering errors:\n* ${errors.map(it => `${it.message}:\n${it.stack}`).join('\n\n* ')}`);
+      ctx.expect.fail(`Rendering errors:\n* ${errors.map(it => `${it.message}:\n${it.stack}`).join('\n\n* ')}`);
     }
   }, {
     timeout: 30_000,

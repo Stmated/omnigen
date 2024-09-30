@@ -24,17 +24,10 @@ import {
   TargetOptions,
   ZodAstNodeContext,
   ZodPackageOptions,
-  ZodParserOptions,
   ZodTargetOptions,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {
-  AlignObjectWithInterfaceModelTransformer,
-  GenericsModelTransformer,
-  SimplifyGenericsModelTransformer,
-  SpreadGenericsModelTransformer,
-  ZodCompilationUnitsContext,
-} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SimplifyGenericsModelTransformer, SpreadGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createCSharpRenderer} from './render';
 import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -64,7 +57,8 @@ import {
   PackageResolverAstTransformer,
   PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
-  RemoveEnumFieldsCodeAstTransformer, RemoveUnnecessaryPropertyModelTransformer,
+  RemoveEnumFieldsCodeAstTransformer,
+  RemoveUnnecessaryPropertyModelTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyAndCleanAstTransformer,

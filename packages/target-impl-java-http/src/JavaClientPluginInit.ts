@@ -1,12 +1,12 @@
-import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
-import {Java, JavaPlugins} from '@omnigen/target-java';
-import {ZodImplementationOptions} from './ImplementationOptions';
-import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/api';
-import {JavaHttpImplementationGenerator} from './JavaHttpImplementationGenerator';
 import {z} from 'zod';
+import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsContext, ZodTargetOptionsContext} from '@omnigen/core-plugin';
+import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/api';
+import {Java, JavaPlugins} from '@omnigen/target-java';
+import {LoggerFactory} from '@omnigen/core-log';
+import {ZodImplementationOptions} from './client/ImplementationOptions.ts';
+import {JavaHttpImplementationGenerator} from './client/JavaHttpImplementationGenerator.ts';
 
-export * from './ImplementationOptions';
-export * from './JavaHttpImplementationGenerator';
+const logger = LoggerFactory.create(import.meta.url);
 
 export const ZodImplementationOptionsContext = z.object({
   implementationOptions: ZodImplementationOptions,
@@ -24,7 +24,6 @@ export const JavaHttpClientPlugin = createPlugin(
   async ctx => {
 
     const generator = new JavaHttpImplementationGenerator();
-
     const nodes = await generator.generate({
       model: ctx.model,
       root: ctx.astNode as Java.JavaAstRootNode,
@@ -34,9 +33,11 @@ export const JavaHttpClientPlugin = createPlugin(
     });
 
     return {
-      astNodes: nodes,
+      ...ctx,
+      astNodes: [ctx.astNode, ...nodes],
     };
   },
 );
 
+logger.info(`Registering Java Client plugins`);
 export default PluginAutoRegistry.register([JavaHttpClientPlugin]);

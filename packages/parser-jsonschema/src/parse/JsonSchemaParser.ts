@@ -33,7 +33,7 @@ import {ExternalDocumentsFinder, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
 import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';
-import {JsonExpander} from '@omnigen/core-json';
+import {DocumentStore, JsonExpander, JsonPathFetcher} from '@omnigen/core-json';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -71,8 +71,9 @@ export class DefaultJsonSchemaParser implements Parser {
 
   async parse(): Promise<OmniModelParserResult<ParserOptions>> {
 
+    const docStore = new DocumentStore();
     let root = await this._schemaFile.asObject<AnyJSONSchema>();
-    root = JsonSchemaParser.preProcessJsonSchema(this._schemaFile.getAbsolutePath(), root);
+    root = JsonSchemaParser.preProcessJsonSchema(this._schemaFile.getAbsolutePath(), root, docStore);
 
     const model: OmniModel = {
       kind: OmniItemKind.MODEL,
@@ -144,7 +145,7 @@ export class DefaultJsonSchemaParser implements Parser {
  * TODO: This class needs some refactoring after being split out from OpenRpcParser
  *        It should be easy to use the JsonSchemaParser from other parsers; right now quite clumsy and locked to OpenRpc.
  */
-export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptions> {
+export class JsonSchemaParser<TOpt extends ParserOptions> {
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typeMap = new Map<string, OmniType>();
@@ -315,11 +316,11 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     };
   }
 
-  public static preProcessJsonSchema(absolutePath: string | undefined, root: AnyJSONSchema): typeof root {
+  public static preProcessJsonSchema(absolutePath: string | undefined, root: AnyJSONSchema, docStore: DocumentStore): typeof root {
 
     // TODO: Add schema version migration, should support from 04 -> 2020
 
-    const expander = new JsonExpander();
+    const expander = new JsonExpander(uri => JsonPathFetcher.get(uri, docStore));
     expander.expand(root, absolutePath);
 
     const migrator = new JsonSchemaMigrator();
@@ -654,7 +655,8 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     } /* else if (schema.properties || schema.additionalProperties || schema.propertyNames || schema.patternProperties) {
       // Only objects can have properties
       return undefined;
-    } else*/ if (schemaType !== 'object') {
+    } else*/
+    if (schemaType !== 'object') {
 
       const investigatedType = this.investigateSchemaType(schema, extendedBy, defaultType, schemaType);
       if (!investigatedType) {
@@ -1646,7 +1648,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
     }
   }
 
-  public transformErrorDataSchemaToOmniType(name: string, schema: AnyJSONSchema | undefined): OmniType | undefined {
+  public transformErrorDataSchemaToOmniType(name: string, schema: AnyJSONSchema | undefined, docStore: DocumentStore): OmniType | undefined {
 
     if (!schema) {
       return schema;
@@ -1658,7 +1660,7 @@ export class JsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptio
       derefJsonSchema.$id = derefJsonSchema.title ?? name;
     }
 
-    derefJsonSchema = JsonSchemaParser.preProcessJsonSchema(undefined, derefJsonSchema);
+    derefJsonSchema = JsonSchemaParser.preProcessJsonSchema(undefined, derefJsonSchema, docStore);
 
     const omniType = this.jsonSchemaToType(undefined, derefJsonSchema).type;
     logger.debug(`Using the from jsonschema converted OmniType '${OmniUtil.describe(omniType)}'`);

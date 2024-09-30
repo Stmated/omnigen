@@ -1,9 +1,9 @@
 import pointer from 'json-pointer';
-import {LoggerFactory} from '@omnigen/core-log';
-import {Case} from '@omnigen/core';
 import JsonUri from './JsonUri.ts';
+import * as ChangeCase from 'change-case';
+import {createDebugLogger} from '../util/DebugUtil.ts';
 
-const logger = LoggerFactory.create(import.meta.url);
+const logger = createDebugLogger(import.meta.url);
 
 /**
  * Default value if non other set is 'exists'
@@ -274,7 +274,7 @@ export class JsonExpander {
     } else if (transform === 'uppercase') {
       return value.toUpperCase();
     } else if (transform === 'pascal') {
-      return Case.pascal(value);
+      return ChangeCase.pascalCase(value);
     } else {
       throw new Error(`Invalid expansion transform ${transform}`);
     }

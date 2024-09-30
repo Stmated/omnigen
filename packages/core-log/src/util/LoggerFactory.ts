@@ -1,4 +1,6 @@
-import pino, {BaseLogger, LoggerOptions, DestinationStream} from 'pino';
+import pino, {BaseLogger, DestinationStream, LoggerOptions} from 'pino';
+import {default as Debug} from 'debug';
+import stripAnsi from 'strip-ansi';
 // import punycode from "punycode/";
 
 export type ModifierCallback = (options: LoggerOptions | DestinationStream) => LoggerOptions | DestinationStream;
@@ -10,6 +12,7 @@ export type ModifierCallback = (options: LoggerOptions | DestinationStream) => L
  * Both of these must be done before any logger is created.
  */
 export class LoggerFactory {
+  private static _started = false;
   private static _pretty: boolean | undefined = undefined;
   private static _transport: LoggerOptions['transport'] | undefined = undefined;
 
@@ -21,6 +24,42 @@ export class LoggerFactory {
 
   public static enablePrettyPrint() {
     LoggerFactory._pretty = true;
+  }
+
+  public static consumeDebug() {
+    if (!LoggerFactory._started) {
+
+      const facades = new Map<string, BaseLogger>();
+      Debug.log = (...args) => {
+        const [namespace, ...message] = args;
+
+        // Strip any ANSI color codes, let `pino` re-color.
+        const cleanNamespace = namespace ? stripAnsi(namespace) : 'debug';
+        const cleanMessages = message.map(it => (typeof it === 'string') ? stripAnsi(it) : it);
+
+        let logger = facades.get(cleanNamespace);
+        if (!logger) {
+          logger = LoggerFactory.create(cleanNamespace);
+          facades.set(cleanNamespace, logger);
+        }
+
+        if (cleanNamespace.endsWith(':error')) {
+          logger.error(cleanMessages);
+        } else if (cleanNamespace.endsWith(':warn')) {
+          logger.warn(cleanMessages);
+        } else if (cleanNamespace.endsWith(':info')) {
+          logger.info(cleanMessages);
+        } else if (cleanNamespace.endsWith(':trace')) {
+          logger.trace(cleanMessages);
+        } else if (cleanNamespace.endsWith(':silent')) {
+          logger.silent(cleanMessages);
+        } else {
+          logger.debug(cleanMessages);
+        }
+      };
+
+      LoggerFactory._started = true;
+    }
   }
 
   /**

@@ -18,6 +18,7 @@
     "json-pointer": "^0.6.2",
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core": "workspace:*",
+    "@omnigen-org/json-expander": "workspace:*",
     "sync-fetch": "^0.5.2",
     "change-case": "^5.4.4",
     "debug": "^4.3.7"

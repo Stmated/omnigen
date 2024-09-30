@@ -1,12 +1,12 @@
 import * as path from 'node:path';
-import {URL} from 'url';
+import {URL} from 'node:url';
 
 type ParsedUri = { protocol?: string | undefined, guessedProtocol?: string | undefined, filePath?: string | undefined, hash?: string | undefined };
 
 /**
  * Helper class for working with a URI to a section of a file. Helps with resolving relative and absolute paths.
  */
-export default class JsonUri {
+export class JsonUri {
 
   public static readonly EMPTY = new JsonUri(undefined, undefined, []);
 

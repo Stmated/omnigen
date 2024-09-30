@@ -1,7 +1,7 @@
 import pointer from 'json-pointer';
-import JsonUri from './JsonUri.ts';
 import {pascalCase} from 'change-case';
 import {createDebugLogger} from '@omnigen/core-debug';
+import {JsonUri} from './JsonUri.ts';
 
 const logger = createDebugLogger(import.meta.url);
 

@@ -2,7 +2,7 @@ import fetch from 'sync-fetch';
 import fs from 'fs';
 import pointer, {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
-import JsonUri from '../expand/JsonUri.ts';
+import {JsonUri} from '@omnigen-org/json-expander';
 
 const logger = LoggerFactory.create(import.meta.url);
 

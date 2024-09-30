@@ -1,4 +1,3 @@
-import {Util} from '@omnigen/core';
 import * as path from 'node:path';
 import {URL} from 'url';
 
@@ -34,7 +33,7 @@ export default class JsonUri {
       const newProtocol = extra.protocol ?? extra.guessedProtocol ?? this.protocol;
       const newFilePath = this.resolvePath(extra.filePath, newProtocol, extra);
       const isAbsoluteHash = extra.hash !== undefined ? extra.hash.startsWith('/') : false;
-      const parsedHashParts = extra.hash !== undefined ? Util.trimAny(extra.hash, '/').split('/') : undefined;
+      const parsedHashParts = extra.hash !== undefined ? JsonUri.trimAny(extra.hash, '/').split('/') : undefined;
 
       if (parsedHashParts && isAbsoluteHash) {
         return new JsonUri(newProtocol, newFilePath, parsedHashParts);
@@ -260,5 +259,21 @@ export default class JsonUri {
     }
 
     return this.absolutePath;
+  }
+
+  private static trimAny(str: string, chars: string | string[], trimStart = true, trimEnd = true) {
+
+    let start = 0;
+    let end = str.length;
+
+    while (trimStart && start < end && chars.indexOf(str[start]) >= 0) {
+      ++start;
+    }
+
+    while (trimEnd && end > start && chars.indexOf(str[end - 1]) >= 0) {
+      --end;
+    }
+
+    return (start > 0 || end < str.length) ? str.substring(start, end) : str;
   }
 }

@@ -33,7 +33,8 @@ import {ExternalDocumentsFinder, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
 import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';
-import {DocumentStore, JsonExpander, JsonPathFetcher} from '@omnigen/core-json';
+import {DocumentStore, JsonPathFetcher} from '@omnigen/core-json';
+import {JsonExpander} from '@omnigen/json-expander';
 
 const logger = LoggerFactory.create(import.meta.url);
 

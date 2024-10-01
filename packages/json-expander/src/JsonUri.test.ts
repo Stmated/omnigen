@@ -1,5 +1,5 @@
 import {describe, test} from 'vitest';
-import {JsonUri} from './JsonUri.ts';
+import {JsonUri} from './JsonUri';
 import * as path from 'node:path';
 
 describe('JsonPath', () => {

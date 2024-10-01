@@ -20,6 +20,9 @@ importers:
       '@vitest/ui':
         specifier: ^2.1.1
         version: 2.1.1(vitest@2.1.1)
+      esbuild:
+        specifier: ^0.24.0
+        version: 0.24.0
       madge:
         specifier: ^7.0.0
         version: 7.0.0(typescript@5.6.2)
@@ -352,9 +355,6 @@ importers:
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
-      typescript:
-        specifier: ^5.6.2
-        version: 5.6.2
 
   packages/core-json:
     dependencies:
@@ -509,12 +509,18 @@ importers:
 
   packages/json-expander:
     dependencies:
-      '@omnigen/core-debug':
+      '@commander-js/extra-typings':
+        specifier: ^12.1.0
+        version: 12.1.0(commander@12.1.0)
+      '@omnigen-org/core-debug':
         specifier: workspace:*
         version: link:../core-debug
       change-case:
         specifier: ^5.4.4
         version: 5.4.4
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
       debug:
         specifier: ^4.3.7
         version: 4.3.7(supports-color@9.4.0)
@@ -534,12 +540,9 @@ importers:
       '@types/json-pointer':
         specifier: ^1.0.34
         version: 1.0.34
-      esbuild:
-        specifier: ^0.24.0
-        version: 0.24.0
-      typescript:
-        specifier: ^5.6.2
-        version: 5.6.2
+      json-stringify-pretty-compact:
+        specifier: ^4.0.0
+        version: 4.0.0
 
   packages/parser-jsonschema:
     dependencies:
@@ -1285,6 +1288,11 @@ packages:
     resolution: {integrity: sha512-7zGCwtRKOJ978LCuEZbQ9ZmLdrRkNNASphEO5i9MZb6HfOk7KfsA3f4oXqYDhko4tNrU3GmZTlHqQ/nRlYtYSw==}
     peerDependencies:
       commander: ~12.0.0
+
+  '@commander-js/extra-typings@12.1.0':
+    resolution: {integrity: sha512-wf/lwQvWAA0goIghcb91dQYpkLBcyhOhQNqG/VgWhnKzgt+UOMvra7EX/2fv70arm5RW+PUHoQHHDa6/p77Eqg==}
+    peerDependencies:
+      commander: ~12.1.0
 
   '@dependents/detective-less@4.1.0':
     resolution: {integrity: sha512-KrkT6qO5NxqNfy68sBl6CTSoJ4SNDIS5iQArkibhlbGU4LaDukZ3q2HIkh8aUKDio6o4itU4xDR7t82Y2eP1Bg==}
@@ -2338,6 +2346,10 @@ packages:
     resolution: {integrity: sha512-MwVNWlYjDTtOjX5PiD7o5pK0UrFU/OYgcJfjjK4RaHZETNtjJqrZa9Y9ds88+A+f+d5lv+561eZ+yCKoS3gbAA==}
     engines: {node: '>=18'}
 
+  commander@12.1.0:
+    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
+    engines: {node: '>=18'}
+
   commander@7.2.0:
     resolution: {integrity: sha512-QrWXB+ZQSVPmIWIhtEO9H+gwHaMGYiF5ChvoJ+K9ZGHG/sVsa6yiesAD1GC/x46sET00Xlwo1u49RVVVzvcSkw==}
     engines: {node: '>= 10'}
@@ -2987,6 +2999,9 @@ packages:
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
+
+  json-stringify-pretty-compact@4.0.0:
+    resolution: {integrity: sha512-3CNZ2DnrpByG9Nqj6Xo8vqbjT4F6N+tb4Gb28ESAZjYZ5yqvmc56J+/kuIwkaAMOyblTQhUW7PxMkUb8Q36N3Q==}
 
   json-stringify-safe@5.0.1:
     resolution: {integrity: sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==}
@@ -3955,6 +3970,10 @@ snapshots:
     dependencies:
       commander: 12.0.0
 
+  '@commander-js/extra-typings@12.1.0(commander@12.1.0)':
+    dependencies:
+      commander: 12.1.0
+
   '@dependents/detective-less@4.1.0':
     dependencies:
       gonzales-pe: 4.3.0
@@ -4815,6 +4834,8 @@ snapshots:
 
   commander@12.0.0: {}
 
+  commander@12.1.0: {}
+
   commander@7.2.0: {}
 
   commander@9.5.0: {}
@@ -5532,6 +5553,8 @@ snapshots:
   json-schema@0.4.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
+
+  json-stringify-pretty-compact@4.0.0: {}
 
   json-stringify-safe@5.0.1: {}
 

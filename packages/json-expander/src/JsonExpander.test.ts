@@ -1,5 +1,5 @@
 import {describe, test} from 'vitest';
-import {ExpandConfig, JsonExpander} from './JsonExpander.ts';
+import {ExpandConfig, JsonExpander} from './JsonExpander';
 import pointer from 'json-pointer';
 
 describe('JsonExpander', () => {

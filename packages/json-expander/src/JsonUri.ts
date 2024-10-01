@@ -3,10 +3,19 @@ import {URL} from 'node:url';
 
 type ParsedUri = { protocol?: string | undefined, guessedProtocol?: string | undefined, filePath?: string | undefined, hash?: string | undefined };
 
+export type PathFunctions = {
+  resolve: typeof path.resolve;
+  isAbsolute: typeof path.isAbsolute;
+  extname: typeof path.extname;
+  parse: typeof path.parse;
+}
+
 /**
  * Helper class for working with a URI to a section of a file. Helps with resolving relative and absolute paths.
  */
 export class JsonUri {
+
+  public static PATH_FUNCTIONS: PathFunctions = path;
 
   public static readonly EMPTY = new JsonUri(undefined, undefined, []);
 
@@ -69,7 +78,7 @@ export class JsonUri {
 
     if (!newFilePath) {
       if (!this._filePath) {
-        return path.resolve('');
+        return JsonUri.PATH_FUNCTIONS.resolve('');
       }
 
       return this._filePath;
@@ -77,26 +86,26 @@ export class JsonUri {
 
     if (newProtocol === 'file') {
 
-      if (!path.isAbsolute(newFilePath)) {
+      if (!JsonUri.PATH_FUNCTIONS.isAbsolute(newFilePath)) {
 
         if (JsonUri.isWebProtocol(this._protocol)) {
           throw new Error(`Cannot switch from '${this._protocol}' to '${newProtocol}' with a relative path`);
         }
 
-        if (this._filePath && path.extname(this._filePath)) {
+        if (this._filePath && JsonUri.PATH_FUNCTIONS.extname(this._filePath)) {
 
-          const parsedFilePath = path.parse(newFilePath);
+          const parsedFilePath = JsonUri.PATH_FUNCTIONS.parse(newFilePath);
           if (!parsedFilePath.dir && parsedFilePath.ext) {
 
             // The path might be `/a/b/c.txt` and we give `d.txt`, then we want `/a/b/d.txt`.
-            const parsedCurrent = path.parse(this._filePath);
-            return path.resolve(parsedCurrent.dir, newFilePath);
+            const parsedCurrent = JsonUri.PATH_FUNCTIONS.parse(this._filePath);
+            return JsonUri.PATH_FUNCTIONS.resolve(parsedCurrent.dir, newFilePath);
           }
         }
 
-        return this._filePath ? path.resolve(this._filePath, newFilePath) : path.resolve(newFilePath);
+        return this._filePath ? JsonUri.PATH_FUNCTIONS.resolve(this._filePath, newFilePath) : JsonUri.PATH_FUNCTIONS.resolve(newFilePath);
       } else {
-        return path.resolve(newFilePath);
+        return JsonUri.PATH_FUNCTIONS.resolve(newFilePath);
       }
     } else if (!parsed.protocol && JsonUri.isWebProtocol(this._protocol)) {
 
@@ -254,11 +263,16 @@ export class JsonUri {
 
   public toString(): string {
 
-    if (!this._filePath && this._hashParts.length === 0) {
-      return '<EMPTY>';
-    }
+    const currentFilePath = this.absoluteFilePath ?? '<EMPTY>';
+    const currentHash = this.hash;
+    const currentPathAndHash = currentHash ? `${currentFilePath}#/${currentHash}` : currentFilePath;
+    const currentProtocol = this.protocol;
 
-    return this.absolutePath;
+    if (JsonUri.isWebProtocol(currentProtocol)) {
+      return `${currentProtocol}://${currentPathAndHash}`;
+    } else {
+      return `${currentProtocol}:${currentPathAndHash}`;
+    }
   }
 
   private static trimAny(str: string, chars: string | string[], trimStart = true, trimEnd = true) {

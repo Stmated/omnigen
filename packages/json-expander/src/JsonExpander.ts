@@ -1,9 +1,9 @@
 import pointer from 'json-pointer';
 import {pascalCase} from 'change-case';
-import {createDebugLogger} from '@omnigen/core-debug';
-import {JsonUri} from './JsonUri.ts';
+import {createDebugLogger} from '@omnigen-org/core-debug';
+import {JsonUri} from './JsonUri.js';
 
-const logger = createDebugLogger(import.meta.url);
+const logger = createDebugLogger('JsonExpander');
 
 /**
  * Default value if non other set is 'exists'
@@ -124,17 +124,21 @@ export class JsonExpander {
               for (let i = 0; i < findItem.with.length; i++) {
 
                 const attempt = findItem.with[i];
+                let attemptSource: string;
                 let found = false;
                 if (typeof attempt === 'string') {
 
+                  attemptSource = attempt;
                   found = this.updateItem({path: findItem.path, with: attempt, transform: findItem.transform}, source, clone);
 
                 } else {
+
+                  attemptSource = attempt.attempt;
                   const replacer: Replacer = newPath => {
 
                     if (attempt.as === undefined || attempt.as === 'path') {
                       const resolvedPath = path.resolve(newPath);
-                      logger.silent(`ResolvedPath: ${JSON.stringify(resolvedPath)}`);
+                      logger.silent(`ResolvedPath: ${resolvedPath.toString()}`);
 
                       if (!path.isSameFile(resolvedPath)) {
 
@@ -155,11 +159,10 @@ export class JsonExpander {
                 }
 
                 if (found) {
-                  logger.silent(`Found as attempt ${i} for ${findItem.path}`);
+                  logger.silent(`Found as attempt #${i} (${attemptSource}) for '${findItem.path}'`);
                   break;
                 } else {
-                  const attemptString = JSON.stringify(attempt);
-                  logger.silent(`Could not find '${attemptString}' for ${findItem.path}`);
+                  logger.silent(`Could not find '${attemptSource}' for '${findItem.path}'`);
                 }
               }
 
@@ -226,7 +229,7 @@ export class JsonExpander {
       }
     }
 
-    logger.silent(`Setting '${findItem.path}' to '${changedValue}`);
+    logger.silent(`Setting '${findItem.path}' to '${changedValue}'`);
     pointer.set(clone, findItem.path, changedValue);
     return true;
   }
@@ -238,7 +241,7 @@ export class JsonExpander {
       if (typeof meta.with === 'string') {
         const array = Array.isArray(source) ? source : [source];
         source = meta.with.replace(/\$(\d)/g, (_, group) => {
-          const sourceIndex = Math.min(Number.parseInt(group), array.length - 1);
+          const sourceIndex = Math.min(parseInt(group), array.length - 1);
           let sourceValue = array[sourceIndex];
 
           // We possibly translate the source; we do not want to transform the whole `meta.with` string.

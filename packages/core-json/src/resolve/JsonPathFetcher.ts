@@ -30,7 +30,7 @@ export class JsonPathFetcher {
 
   public static get(path: JsonUri, store?: DocumentStore): JsonObject | undefined {
 
-    const jsonPath = path.absoluteHash; // `/${path.path.join('/')}`;
+    const jsonPath = path.absoluteHash;
 
     if (!path.absoluteFilePath) {
       throw new Error(`Given path must have an absolute file path`);

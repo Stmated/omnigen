@@ -14,9 +14,11 @@ export const createDebugLogger = (name: string) => {
 
   const logger_base = Debug(`omnigen:${name}`);
   return {
+    silent: logger_base.extend('silent'),
+    trace: logger_base.extend('trace'),
     debug: logger_base.extend('debug'),
     info: logger_base.extend('info'),
-    trace: logger_base.extend('trace'),
-    silent: logger_base.extend('silent'),
+    warn: logger_base.extend('warn'),
+    error: logger_base.extend('error'),
   };
 };

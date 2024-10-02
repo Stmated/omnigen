@@ -1,7 +1,7 @@
 import {AstNameBuildArgs, NameParts, ObjectName, OmniPrimitiveKinds, OmniPrimitiveType, OmniTypeKind, OmniUnknownType, PackageOptions, TargetOptions, TypeUseKind, UnknownKind} from '@omnigen/api';
 import {AbstractObjectNameResolver, assertUnreachable} from '@omnigen/core';
 import {CSharpOptions} from '../options';
-import {CSharpUtil} from '../util/CSharpUtil.ts';
+import {CSharpUtil} from '../util/CSharpUtil';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

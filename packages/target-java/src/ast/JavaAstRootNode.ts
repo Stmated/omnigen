@@ -1,6 +1,6 @@
 import {Code, CodeVisitor} from '@omnigen/target-code';
 import {ObjectNameResolver, Reducer, ReducerResult, TargetFunctions} from '@omnigen/api';
-import {JavaObjectNameResolver} from './JavaObjectNameResolver.ts';
+import {JavaObjectNameResolver} from './JavaObjectNameResolver';
 import {isDefined} from '@omnigen/core';
 import {JavaModelFunctions} from '../parse/JavaModelFunctions';
 

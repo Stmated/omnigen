@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import * as Java from '../ast/JavaAst';
 import {TokenKind} from '../ast/JavaAst';
 import {CodeAstUtils} from '@omnigen/target-code';

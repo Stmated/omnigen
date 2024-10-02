@@ -17,7 +17,7 @@ import {
   OmnigenOpenRpcServerVariable,
   OmnigenOpenRpcTag,
   OmnigenOpenRpcVisitorFn,
-} from './OmnigenOpenRpcDocument.ts';
+} from './OmnigenOpenRpcDocument';
 
 /**
  * NOTE: Not used yet, just an experiment

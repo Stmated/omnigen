@@ -1,4 +1,4 @@
-import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
+import {AbstractJavaAstTransformer, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {JavaUtil} from '../util';
 import {OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TypeNode} from '@omnigen/api';
 import {OmniUtil} from '@omnigen/core';

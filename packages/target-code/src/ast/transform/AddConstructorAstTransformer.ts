@@ -2,9 +2,9 @@ import {AstTransformer, AstTransformerArguments, OmniModel, OmniPrimitiveConstan
 import {isDefined, OmniUtil, Visitor} from '@omnigen/core';
 import * as Code from '../Code';
 import {CodeRootAstNode} from '../CodeRootAstNode';
-import {CodeOptions} from '../../options/CodeOptions.ts';
-import {CodeUtil} from '../../util/CodeUtil.ts';
-import {AbstractCodeNode} from '../AbstractCodeNode.ts';
+import {CodeOptions} from '../../options/CodeOptions';
+import {CodeUtil} from '../../util/CodeUtil';
+import {AbstractCodeNode} from '../AbstractCodeNode';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

@@ -1,4 +1,4 @@
-import {AnyDoc, Migrator} from './Migrator.ts';
+import {AnyDoc, Migrator} from './Migrator';
 import {ObjectVisitor} from '@omnigen/core-json';
 
 export class JSONSchema5to6 implements Migrator {

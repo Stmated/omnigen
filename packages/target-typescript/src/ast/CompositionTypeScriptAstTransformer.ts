@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, NameParts, OmniType, PackageOptions, TargetOptions, TypeNode} from '@omnigen/api';
-import {TsRootNode} from './TsRootNode.ts';
+import {TsRootNode} from './TsRootNode';
 import {DefaultTypeScriptVisitor} from '../visit';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '@omnigen/core';

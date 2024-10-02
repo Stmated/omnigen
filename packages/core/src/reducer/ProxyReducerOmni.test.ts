@@ -1,6 +1,6 @@
 import {test} from 'vitest';
 import {OmniItemKind, OmniModel, OmniObjectType, OmniTypeKind, OmniUnionType} from '@omnigen/api';
-import {ProxyReducerOmni} from './ProxyReducerOmni.ts';
+import {ProxyReducerOmni} from './ProxyReducerOmni';
 
 test('change-field', ctx => {
 

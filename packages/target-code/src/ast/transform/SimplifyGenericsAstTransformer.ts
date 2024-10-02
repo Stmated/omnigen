@@ -13,7 +13,7 @@ import {
 import {OmniUtil, Visitor} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 import {LoggerFactory} from '@omnigen/core-log';
-import * as Code from '../CodeAst.ts';
+import * as Code from '../CodeAst';
 
 const logger = LoggerFactory.create(import.meta.url);
 

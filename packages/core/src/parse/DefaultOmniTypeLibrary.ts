@@ -1,5 +1,5 @@
 import {OmniType, OmniTypeLibrary} from '@omnigen/api';
-import {OmniUtil} from './OmniUtil.ts';
+import {OmniUtil} from './OmniUtil';
 
 export class DefaultOmniTypeLibrary implements OmniTypeLibrary {
 

@@ -1,4 +1,4 @@
-import {Plugin2} from './Plugin2.ts';
+import {Plugin2} from './Plugin2';
 
 interface PluginRegistryStore {
   plugins: Plugin2[];

@@ -1,2 +1,1 @@
-
-export * from './Renderer.ts';
+export * from './Renderer';

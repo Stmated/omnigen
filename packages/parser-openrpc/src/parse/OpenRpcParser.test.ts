@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import {DEFAULT_PARSER_OPTIONS, OmniType} from '@omnigen/api';
 import {OmniTypeKind} from '@omnigen/api';
-import {OpenRpcParserBootstrapFactory} from './OpenRpcParser.ts';
+import {OpenRpcParserBootstrapFactory} from './OpenRpcParser';
 import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core';
 import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
 import {describe, test} from 'vitest';

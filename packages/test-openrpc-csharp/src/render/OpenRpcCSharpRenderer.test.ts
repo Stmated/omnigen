@@ -1,6 +1,6 @@
 import {beforeEach, describe, TaskContext, TestContext, test, vi} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OpenRpcCSharpTestUtils} from '../OpenRpcCSharpTestUtils.ts';
+import {OpenRpcCSharpTestUtils} from '../OpenRpcCSharpTestUtils';
 import {RenderedCompilationUnit} from '@omnigen/api';
 import {ReadonlyPropertyMode} from '@omnigen/target-csharp';
 

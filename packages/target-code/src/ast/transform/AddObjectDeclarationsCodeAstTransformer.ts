@@ -22,10 +22,10 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core';
 import * as Code from '../CodeAst';
 import * as FreeText from '../FreeText';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
-import {CodeAstUtils} from '../CodeAstUtils.ts';
-import {CodeOptions} from '../../options/CodeOptions.ts';
-import {CodeUtil} from '../../util/CodeUtil.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
+import {CodeAstUtils} from '../CodeAstUtils';
+import {CodeOptions} from '../../options/CodeOptions';
+import {CodeUtil} from '../../util/CodeUtil';
 
 const logger = LoggerFactory.create(import.meta.url);
 

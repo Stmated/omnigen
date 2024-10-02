@@ -10,8 +10,8 @@ import {
 } from '@omnigen/api';
 import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/CodeAst';
-import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
-import {FreeTextUtils} from './FreeTextUtils.ts';
+import {CodeRootAstNode} from '../ast/CodeRootAstNode';
+import {FreeTextUtils} from './FreeTextUtils';
 
 export class CodeUtil {
 

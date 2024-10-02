@@ -3,7 +3,7 @@ import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/Code';
-import {CodeRootAstNode} from '../ast/CodeRootAstNode.ts';
+import {CodeRootAstNode} from '../ast/CodeRootAstNode';
 
 const logger = LoggerFactory.create(import.meta.url);
 

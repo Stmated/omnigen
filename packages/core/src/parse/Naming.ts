@@ -4,7 +4,7 @@ import {NamePair} from './NamePair';
 import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
 import {Case} from '../util';
-import {OmniUtil} from './OmniUtil.ts';
+import {OmniUtil} from './OmniUtil';
 
 const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation) => {
   if (keepPunctuation) {

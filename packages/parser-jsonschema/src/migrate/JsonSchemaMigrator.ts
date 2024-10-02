@@ -1,11 +1,11 @@
-import {Migrator} from './Migrator.ts';
-import {JSONSchema3to4} from './JSONSchema3to4.ts';
-import {JSONSchema4to5} from './JSONSchema4to5.ts';
-import {JSONSchema5to6} from './JSONSchema5to6.ts';
-import {JSONSchema6to7} from './JSONSchema6to7.ts';
-import {JSONSchema7to8} from './JSONSchema7to8.ts';
-import {JSONSchema8to9} from './JSONSchema8to9.ts';
-import {JSONSchema9ToCleanup} from './JSONSchema9ToCleanup.ts';
+import {Migrator} from './Migrator';
+import {JSONSchema3to4} from './JSONSchema3to4';
+import {JSONSchema4to5} from './JSONSchema4to5';
+import {JSONSchema5to6} from './JSONSchema5to6';
+import {JSONSchema6to7} from './JSONSchema6to7';
+import {JSONSchema7to8} from './JSONSchema7to8';
+import {JSONSchema8to9} from './JSONSchema8to9';
+import {JSONSchema9ToCleanup} from './JSONSchema9ToCleanup';
 import {ObjectVisitor} from '@omnigen/core-json';
 
 /**

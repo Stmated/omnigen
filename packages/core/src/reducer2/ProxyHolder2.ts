@@ -1,4 +1,4 @@
-import {RecursiveValue} from './ProxyReducer2.ts';
+import {RecursiveValue} from './ProxyReducer2';
 
 
 // export class ProxyHolderHandler<T extends object> implements ProxyHandler<T> {

@@ -1,2 +1,1 @@
-
-export * from './CSharpVisitor.ts';
+export * from './CSharpVisitor';

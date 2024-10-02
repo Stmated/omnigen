@@ -2,8 +2,8 @@ import {ActionKind, Plugin2, Plugin2ExecuteResult, PluginAutoRegistry, PluginOrP
 import * as ioPath from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AnyZodObject, z, ZodError, ZodObject, ZodType} from 'zod';
-import {Compat, CompatResult, ZodUtils} from './ZodUtils.ts';
-import {PluginUtil} from './PluginUtil.ts';
+import {Compat, CompatResult, ZodUtils} from './ZodUtils';
+import {PluginUtil} from './PluginUtil';
 
 const logger = LoggerFactory.create(import.meta.url);
 

@@ -1,7 +1,7 @@
-import {AbstractCodeNode} from './AbstractCodeNode.ts';
-import {CodeVisitor} from '../visitor/CodeVisitor.ts';
+import {AbstractCodeNode} from './AbstractCodeNode';
+import {CodeVisitor} from '../visitor/CodeVisitor';
 import {Reducer, ReducerResult, VisitResult} from '@omnigen/api';
-import {Annotation} from './CodeAst.ts';
+import {Annotation} from './CodeAst';
 
 export enum VirtualAnnotationKind {
   SERIALIZATION_VALUE = 'SERIALIZATION_VALUE',
@@ -20,13 +20,13 @@ export interface DeserializationCreator extends VirtualAnnotation<VirtualAnnotat
 }
 
 export interface SerializationAlias extends VirtualAnnotation<VirtualAnnotationKind.SERIALIZATION_ALIAS> {
-  name: string
+  name: string;
 }
 
 export type Kinds = SerializationValue
   | SerializationAlias
   | DeserializationCreator
-;
+  ;
 
 export class VirtualAnnotationNode extends AbstractCodeNode {
   value: Kinds;

@@ -1,9 +1,9 @@
 import {describe, test} from 'vitest';
-import {ProxyReducer2} from './ProxyReducer2.ts';
+import {ProxyReducer2} from './ProxyReducer2';
 import {assertDiscriminator, expectTs, isDefined} from '../util';
-import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2.ts';
-import {RegularSpecFn2} from './types.ts';
-import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2.ts';
+import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
+import {RegularSpecFn2} from './types';
+import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';
 
 interface Base {
   readonly foo?: Foo | undefined;

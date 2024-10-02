@@ -1,2 +1,1 @@
-
-export * from './TypeScriptRenderer.ts';
+export * from './TypeScriptRenderer';

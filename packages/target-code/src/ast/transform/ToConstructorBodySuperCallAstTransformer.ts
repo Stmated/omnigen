@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments} from '@omnigen/api';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../CodeAst';
 
 /**

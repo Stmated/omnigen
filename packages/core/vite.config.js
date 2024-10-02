@@ -13,13 +13,14 @@ export default defineConfig({
     },
     rollupOptions: {
       // make sure to externalize deps that shouldn't be bundled into your library
-      external: ['node-fetch', 'promisify', 'node:fs', 'node:url', 'find-up'],
+      external: ['node-fetch', 'promisify', 'node:fs', 'node:url', 'find-up', 'fs/promises', 'fs'],
       output: {
         // Provide global variables to use in the UMD build for externalized deps
         // globals: {
         //   vue: 'Vue',
         // },
       },
+      treeshake: 'smallest',
     },
   },
 });

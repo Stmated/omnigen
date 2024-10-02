@@ -1,13 +1,12 @@
-
-export * from './CompositionUtil.ts';
-export * from './OmniModelMerge.ts';
-export * from './OmniUtil.ts';
-export * from './Naming.ts';
-export * from './PropertyUtil.ts';
+export * from './CompositionUtil';
+export * from './OmniModelMerge';
+export * from './OmniUtil';
+export * from './Naming';
+export * from './PropertyUtil';
 
 export * from './transform';
-export * from './NamePair.ts';
-export * from './ResolvedNamePair.ts';
-export * from './NameCallback.ts';
+export * from './NamePair';
+export * from './ResolvedNamePair';
+export * from './NameCallback';
 
-export * from './SchemaFile.ts';
+export * from './SchemaFile';

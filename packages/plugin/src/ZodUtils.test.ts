@@ -1,7 +1,7 @@
 import {test, describe} from 'vitest';
 import {ZodModelTransformOptions, ZodOptions, ZodTargetOptions} from '@omnigen/api';
 import {z} from 'zod';
-import {Compat, ZodUtils} from './ZodUtils.ts';
+import {Compat, ZodUtils} from './ZodUtils';
 
 describe('type comparisons', () => {
 

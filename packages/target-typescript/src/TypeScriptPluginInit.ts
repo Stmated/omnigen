@@ -61,10 +61,10 @@ import {TYPESCRIPT_FEATURES} from './features';
 import {TypeScriptAstTransformerArgs} from './ast/TypeScriptAstVisitor';
 import {RemoveWildcardGenericParamTypeScriptModelTransformer, StrictUndefinedTypeScriptModelTransformer} from './parse';
 import {LoggerFactory} from '@omnigen/core-log';
-import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTransformer.ts';
-import {AnyToUnknownTypeScriptModelTransformer} from './parse/transform/AnyToUnknownTypeScriptModelTransformer.ts';
-import {FileHeaderTypeScriptAstTransformer} from './ast/FileHeaderTypeScriptAstTransformer.ts';
-import {PatternPropertyAnyTypeScriptModelTransformer} from './parse/transform/PatternPropertyAnyTypeScriptModelTransformer.ts';
+import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTransformer';
+import {AnyToUnknownTypeScriptModelTransformer} from './parse/transform/AnyToUnknownTypeScriptModelTransformer';
+import {FileHeaderTypeScriptAstTransformer} from './ast/FileHeaderTypeScriptAstTransformer';
+import {PatternPropertyAnyTypeScriptModelTransformer} from './parse/transform/PatternPropertyAnyTypeScriptModelTransformer';
 
 const logger = LoggerFactory.create(import.meta.url);
 

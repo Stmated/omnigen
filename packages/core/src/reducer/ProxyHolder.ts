@@ -1,5 +1,5 @@
-import {PROP_KEY_HOLDER, PROP_KEY_IS_PROXY, PROP_KEY_RECURSION_DEPTH} from './symbols.ts';
-import {ProxyReducer} from './ProxyReducer.ts';
+import {PROP_KEY_HOLDER, PROP_KEY_IS_PROXY, PROP_KEY_RECURSION_DEPTH} from './symbols';
+import {ProxyReducer} from './ProxyReducer';
 
 interface ProxyReplacement {
   holder: ProxyHolder;
@@ -106,7 +106,7 @@ export class ProxyHolderHandler<T extends object> implements ProxyHandler<T> {
     // try {
     //   return Reflect.ownKeys(this.holder.target);
     // } catch (e) {
-      return Object.keys(this.holder.target);
+    return Object.keys(this.holder.target);
     // }
   }
 

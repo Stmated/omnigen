@@ -1,5 +1,5 @@
 import {describe, test, vi} from 'vitest';
-import {JsonSchemaToCSharpTestUtil} from './JsonSchemaToCSharpTestUtil.ts';
+import {JsonSchemaToCSharpTestUtil} from './JsonSchemaToCSharpTestUtil';
 import {Util} from '@omnigen/core';
 import {SerializationLibrary} from '@omnigen/target-csharp';
 import {IncludeExampleCommentsMode, PropertyTypeCommentMode} from '@omnigen/target-code';

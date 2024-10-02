@@ -1,10 +1,10 @@
 import {OmniItemKind, OmniModel, OmniNode, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
-import {ProxyReducer2} from './ProxyReducer2.ts';
+import {ProxyReducer2} from './ProxyReducer2';
 import {assertDefined, assertGenericSuperType, isDefined} from '../util';
-import {ProxyReducerBuilder2} from './ProxyReducerBuilder2.ts';
+import {ProxyReducerBuilder2} from './ProxyReducerBuilder2';
 
-import {Spec2} from './types.ts';
-import {ReducerOpt2} from './ReducerOpt2.ts';
+import {Spec2} from './types';
+import {ReducerOpt2} from './ReducerOpt2';
 import {OmniUtil} from '../parse';
 
 interface ProxyReducerOmniNodeOverrides2 {

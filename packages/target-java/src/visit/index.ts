@@ -1,2 +1,1 @@
-
-export * from './JavaVisitor.ts';
+export * from './JavaVisitor';

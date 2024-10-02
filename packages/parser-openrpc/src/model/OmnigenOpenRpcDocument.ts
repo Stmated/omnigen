@@ -1,4 +1,4 @@
-import {OmnigenOpenRpcVisitor} from './OmnigenOpenRpcVisitor.ts';
+import {OmnigenOpenRpcVisitor} from './OmnigenOpenRpcVisitor';
 import {VisitResult} from '@omnigen/api';
 import {
   Components,

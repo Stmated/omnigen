@@ -1,5 +1,5 @@
 import {assert, test} from 'vitest';
-import {MergeLargeUnionLateModelTransformer} from './MergeLargeUnionLateModelTransformer.ts';
+import {MergeLargeUnionLateModelTransformer} from './MergeLargeUnionLateModelTransformer';
 import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
   DEFAULT_PARSER_OPTIONS,

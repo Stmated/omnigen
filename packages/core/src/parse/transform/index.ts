@@ -1,7 +1,6 @@
-
-export * from './SimplifyInheritanceModelTransformer.ts';
-export * from './GenericsModelTransformer.ts';
-export * from './ConflictingIntersectionModelTransformer.ts';
-export * from './SpreadGenericsModelTransformer.ts';
-export * from './AlignObjectWithInterfaceModelTransformer.ts';
-export * from './SimplifyGenericsModelTransformer.ts';
+export * from './SimplifyInheritanceModelTransformer';
+export * from './GenericsModelTransformer';
+export * from './ConflictingIntersectionModelTransformer';
+export * from './SpreadGenericsModelTransformer';
+export * from './AlignObjectWithInterfaceModelTransformer';
+export * from './SimplifyGenericsModelTransformer';

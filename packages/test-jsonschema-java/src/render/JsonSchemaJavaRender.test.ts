@@ -1,8 +1,9 @@
 import {describe, test, vi} from 'vitest';
-import {JsonSchemaToJavaTestUtil} from './JsonSchemaToJavaTestUtil.ts';
+import {JsonSchemaToJavaTestUtil} from './JsonSchemaToJavaTestUtil';
 import {SerializationLibrary} from '@omnigen/target-java';
 import {Util} from '@omnigen/core';
 import {IncludeExampleCommentsMode} from '@omnigen/target-code';
+import {LoggerFactory} from '@omnigen/core-log';
 
 describe('jsonschema-java-render', () => {
 
@@ -200,5 +201,19 @@ describe('jsonschema-java-render', () => {
     for (const [fileName, cu] of fileContents) {
       ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
+  });
+
+  test('logging', () => {
+
+
+    const logger = LoggerFactory.create('SomeLogger');
+
+    logger.info(`A message`);
+    logger.info(`A message with error`, new Error(`Some thrown error`));
+    logger.info(`A message with error and cause`, new Error(`Some thrown error`, {cause: new Error(`The cause!`)}));
+
+    logger.error(`An error message`);
+    logger.error(`An error message with error`, new Error(`Some thrown error`));
+    logger.error(`An error message with error and cause`, new Error(`Some thrown error`, {cause: new Error(`The cause!`)}));
   });
 });

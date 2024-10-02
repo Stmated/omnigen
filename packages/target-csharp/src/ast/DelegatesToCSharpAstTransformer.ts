@@ -1,9 +1,9 @@
 import {Code, CodeUtil} from '@omnigen/target-code';
 import {AstTransformer, OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TargetOptions, TypeNode} from '@omnigen/api';
 import {OmniUtil} from '@omnigen/core';
-import {CSharpRootNode} from './CSharpRootNode.ts';
+import {CSharpRootNode} from './CSharpRootNode';
 import {CSharpOptions} from '../options';
-import {CSharpAstTransformerArguments} from './index.ts';
+import {CSharpAstTransformerArguments} from './index';
 
 /**
  * Replace higher level "delegate" with C#-specific interfaces and call-sites.

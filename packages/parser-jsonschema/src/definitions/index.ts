@@ -1,3 +1,2 @@
-
-export * from './JsonSchema8.ts';
-export * from './JsonSchema9.ts';
+export * from './JsonSchema8';
+export * from './JsonSchema9';

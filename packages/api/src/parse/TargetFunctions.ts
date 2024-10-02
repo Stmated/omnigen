@@ -1,4 +1,4 @@
-import {OmniInterfaceOrObjectType, OmniModel, OmniSubTypeCapableType, OmniSuperTypeCapableType, OmniType} from './OmniModel.ts';
+import {OmniInterfaceOrObjectType, OmniModel, OmniSubTypeCapableType, OmniSuperTypeCapableType, OmniType} from './OmniModel';
 
 export interface TargetFunctions {
 

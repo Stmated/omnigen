@@ -1,5 +1,5 @@
-import * as path from 'node:path';
-import {URL} from 'node:url';
+import * as path from 'path';
+import {URL} from 'url';
 
 type ParsedUri = { protocol?: string | undefined, guessedProtocol?: string | undefined, filePath?: string | undefined, hash?: string | undefined };
 

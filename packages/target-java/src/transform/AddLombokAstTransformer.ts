@@ -1,12 +1,12 @@
-import {JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer.ts';
+import {JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {AstTransformer, OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
 import {OmniUtil, Visitor} from '@omnigen/core';
-import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer.ts';
+import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer';
 import {JavaVisitor} from '../visit';
 import {FieldAccessorMode, JavaOptions} from '../options';
 import {ModifierKind} from '../ast/JavaAst';
-import {LOMBOK_SINGULAR} from './PatternPropertiesToMapJavaAstTransformer.ts';
+import {LOMBOK_SINGULAR} from './PatternPropertiesToMapJavaAstTransformer';
 
 export interface StackInfo {
   cu: Java.AbstractObjectDeclaration;

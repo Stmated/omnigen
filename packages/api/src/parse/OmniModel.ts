@@ -1,9 +1,9 @@
 import {TypeName} from './TypeName';
-import {OmniKindComposition, OmniKindPrimitive, OmniTypeKind} from './OmniTypeKind.ts';
+import {OmniKindComposition, OmniKindPrimitive, OmniTypeKind} from './OmniTypeKind';
 import {ObjectName} from '../ast';
-import {OmniItemKind} from './OmniItemKind.ts';
-import {Direction} from './ParserOptions.ts';
-import {OmniNodeKind} from './OmniNodeKind.ts';
+import {OmniItemKind} from './OmniItemKind';
+import {Direction} from './ParserOptions';
+import {OmniNodeKind} from './OmniNodeKind';
 
 export interface OmniParameter {
   name: string;

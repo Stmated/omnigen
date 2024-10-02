@@ -1,4 +1,4 @@
-import {OmniType} from './OmniModel.ts';
+import {OmniType} from './OmniModel';
 
 export interface OmniTypeLibrary {
   get(absoluteUri: string): OmniType | undefined;

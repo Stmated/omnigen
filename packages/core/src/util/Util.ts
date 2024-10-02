@@ -1,5 +1,8 @@
-import nodePath from 'path';
-import * as findUp from 'find-up';
+import path from 'path';
+import fs from 'fs';
+import url from 'url';
+
+// import * as findUp from 'find-up';
 
 export class Util {
 
@@ -19,19 +22,54 @@ export class Util {
     return (start > 0 || end < str.length) ? str.substring(start, end) : str;
   }
 
+  public static getWorkingDirectory() {
+
+    try {
+      const filename = url.fileURLToPath(import.meta.url);
+      return path.dirname(filename);
+    } catch {
+      return __dirname;
+    }
+  }
+
   /**
    * Warning! Only use for test cases
    */
   public static getPathFromRoot(relative: string) {
 
-    let path: string | undefined = __dirname;
-    path = findUp.findUpSync('turbo.json', {cwd: path});
-    path = path ? nodePath.dirname(path) : undefined;
+    // const filename = url.fileURLToPath(import.meta.url);
+    // const dirname = path.dirname(filename);
 
-    if (!path) {
-      return relative;
+    let dir = Util.getWorkingDirectory(); // dirname ?? __dirname;
+
+    for (let maxSteps = 10; maxSteps >= 0; maxSteps--) {
+
+      const file = path.resolve(dir, 'turbo.json');
+      if (fs.existsSync(file)) {
+        return path.resolve(dir, relative);
+      } else {
+        const newDir = path.dirname(dir);
+        if (dir === newDir) {
+          break;
+        }
+        dir = newDir;
+      }
     }
 
-    return nodePath.resolve(path, relative);
+    throw new Error(`Could not find 'turbo.json'`);
+
+    //  (dir) {
+    //
+    //   dir = path.dirname(dir.dir
+    // }
+    //
+    // path = findUp.findUpSync('turbo.json', {cwd: path});
+    // path = path ? path.dirname(path) : undefined;
+    //
+    // if (!path) {
+    //   return relative;
+    // }
+    //
+    // return path.resolve(path, relative);
   }
 }

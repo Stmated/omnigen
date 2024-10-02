@@ -1,6 +1,6 @@
 import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, ParserOptions} from '@omnigen/api';
-import {CreateMode, getShallowPayloadString, OmniUtil, PropertyUtil} from '@omnigen/core';
-import {CodeOptions} from '../../options/CodeOptions.ts';
+import {CreateMode, OmniUtil, PropertyUtil} from '@omnigen/core';
+import {CodeOptions} from '../../options/CodeOptions';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

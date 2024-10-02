@@ -39,11 +39,9 @@
     "@types/json-pointer": "^1.0.31",
     "@types/json-schema": "^7.0.15",
     "@types/node": "^18.13.0",
-    "@types/node-fetch": "^2.6.11",
     "@types/object-hash": "^2.2.1",
     "@types/string-similarity": "^4.0.0",
     "colors": "^1.4.0",
-    "find-up": "^7.0.0",
     "nock": "^13.3.0",
     "typescript": "^5.5.4"
   }

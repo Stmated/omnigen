@@ -1,2 +1,1 @@
-
-export * from './OpenRpcDocVisitor.ts';
+export * from './OpenRpcDocVisitor';

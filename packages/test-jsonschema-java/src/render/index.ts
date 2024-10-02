@@ -1,2 +1,1 @@
-
-export * from './JsonSchemaToJavaTestUtil.ts';
+export * from './JsonSchemaToJavaTestUtil';

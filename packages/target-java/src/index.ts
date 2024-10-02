@@ -7,9 +7,9 @@ export * from './util';
 export * from './render';
 export * from './parse';
 export * from './reduce';
-export * as JavaPlugins from './JavaPluginInit.ts';
+export * as JavaPlugins from './JavaPluginInit';
 
-export * from './ast/JavaAstRootNode.ts';
+export * from './ast/JavaAstRootNode';
 
 export * as Java from './ast/JavaAst';
 

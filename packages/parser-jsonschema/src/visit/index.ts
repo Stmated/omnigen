@@ -1,3 +1,3 @@
-export * from './ExternalDocumentsFinder.ts';
-export * from './helpers.ts';
+export * from './ExternalDocumentsFinder';
+export * from './helpers';
 

@@ -1,8 +1,8 @@
 import {describe, test} from 'vitest';
-import {OpenRpcModelConverter} from './OpenRpcModelConverter.ts';
+import {OpenRpcModelConverter} from './OpenRpcModelConverter';
 import * as fs from 'fs';
 import {OpenrpcDocument} from '@open-rpc/meta-schema';
-import {DefaultOmnigenOpenRpcVisitor} from './OmnigenOpenRpcVisitor.ts';
+import {DefaultOmnigenOpenRpcVisitor} from './OmnigenOpenRpcVisitor';
 import {Util} from '@omnigen/core';
 
 describe('OpenRpcModelConverter', () => {

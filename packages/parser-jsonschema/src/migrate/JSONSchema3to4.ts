@@ -1,4 +1,4 @@
-import {AnyDoc, Migrator} from './Migrator.ts';
+import {AnyDoc, Migrator} from './Migrator';
 
 export class JSONSchema3to4 implements Migrator {
 

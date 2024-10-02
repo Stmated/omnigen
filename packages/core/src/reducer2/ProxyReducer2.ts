@@ -1,13 +1,13 @@
 import {Arrayable} from '@omnigen/api';
-import {PROP_KEY_HOLDER_2, PROP_KEY_IS_PROXY_2, PROP_KEY_PROXY_ORIGINAL_2, PROP_KEY_PROXY_REPLACEMENT_2, PROP_KEY_MARKER} from './symbols.ts';
-import {ProxyReducerDiscriminatorBuilder, ProxyReducerOptionsBuilder} from './ProxyReducerBuilder2.ts';
-import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2.ts';
-import {MaybeFunction, MutableProxyReducerInterface, NextRet, ReduceRet, ResolvedRet, Spec2, SpecFn2} from './types.ts';
-import {ReducerOpt2} from './ReducerOpt2.ts';
-import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2.ts';
+import {PROP_KEY_HOLDER_2, PROP_KEY_IS_PROXY_2, PROP_KEY_PROXY_ORIGINAL_2, PROP_KEY_PROXY_REPLACEMENT_2, PROP_KEY_MARKER} from './symbols';
+import {ProxyReducerDiscriminatorBuilder, ProxyReducerOptionsBuilder} from './ProxyReducerBuilder2';
+import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
+import {MaybeFunction, MutableProxyReducerInterface, NextRet, ReduceRet, ResolvedRet, Spec2, SpecFn2} from './types';
+import {ReducerOpt2} from './ReducerOpt2';
+import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';
 import {IsExactly} from '../util';
-import {RecursiveProxyHandler2} from './RecursiveProxyHandler2.ts';
-import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID} from '../reducer/ProxyReducer.ts';
+import {RecursiveProxyHandler2} from './RecursiveProxyHandler2';
+import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID} from '../reducer/ProxyReducer';
 
 export interface Options2<N extends object, D extends keyof N, O, InOpt extends ReducerOpt2> {
   readonly discriminator: D;
@@ -31,7 +31,7 @@ export interface RecursiveValue<T> {
   changeCount: number;
 }
 
-type Replacement<O extends RecursiveValue<any> = RecursiveValue<any>> = {owner?: O, prop?: keyof O, index?: number, replacement: any};
+type Replacement<O extends RecursiveValue<any> = RecursiveValue<any>> = { owner?: O, prop?: keyof O, index?: number, replacement: any };
 
 /**
  * A reducer which can transform an object structure, and uses proxies to safeguard against recursive access.

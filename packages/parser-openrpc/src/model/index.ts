@@ -1,4 +1,3 @@
-
-export * from './OmnigenOpenRpcDocument.ts';
-export * from './OmnigenOpenRpcVisitor.ts';
-export * from './OpenRpcModelConverter.ts';
+export * from './OmnigenOpenRpcDocument';
+export * from './OmnigenOpenRpcVisitor';
+export * from './OpenRpcModelConverter';

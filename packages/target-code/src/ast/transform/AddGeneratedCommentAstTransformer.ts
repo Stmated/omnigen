@@ -1,9 +1,9 @@
 import {Visitor} from '@omnigen/core';
 import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/api';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../CodeAst';
-import {CodeOptions} from '../../options/CodeOptions.ts';
-import {FreeTextUtils} from '../../util/FreeTextUtils.ts';
+import {CodeOptions} from '../../options/CodeOptions';
+import {FreeTextUtils} from '../../util/FreeTextUtils';
 import {FreeTextLine, FreeTextRemark} from '../FreeText';
 
 export class AddGeneratedCommentAstTransformer implements AstTransformer<CodeRootAstNode, TargetOptions & CodeOptions> {

@@ -1,11 +1,11 @@
 import {AstTransformer, AstTransformerArguments, OmniType, OmniTypeKind, StaticInnerTypeKind, TargetFeatures, TargetOptions} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../CodeAst';
-import {CodeOptions} from '../../options/CodeOptions.ts';
-import {CodeUtil} from '../../util/CodeUtil.ts';
-import {CodeVisitor} from '../../visitor/CodeVisitor.ts';
+import {CodeOptions} from '../../options/CodeOptions';
+import {CodeUtil} from '../../util/CodeUtil';
+import {CodeVisitor} from '../../visitor/CodeVisitor';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -147,10 +147,14 @@ export class InnerTypeCompressionAstTransformer implements AstTransformer<CodeRo
       },
 
       // We do not want texts with links to count as "references"
-      visitFreeTextLine: () => {},
-      visitFreeTextTypeLink: () => {},
-      visitFreeTextMemberLink: () => {},
-      visitFreeTextPropertyLink: () => {},
+      visitFreeTextLine: () => {
+      },
+      visitFreeTextTypeLink: () => {
+      },
+      visitFreeTextMemberLink: () => {
+      },
+      visitFreeTextPropertyLink: () => {
+      },
 
       visitEdgeType: node => {
 

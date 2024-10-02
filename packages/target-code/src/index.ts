@@ -1,10 +1,9 @@
-
 export * from './options/CodeOptions';
 
 export * from './ast/CodeAstUtils';
 
-export * from './ast/transform/AddObjectDeclarationsCodeAstTransformer.ts';
-export * from './ast/transform/AddConstructorAstTransformer.ts';
+export * from './ast/transform/AddObjectDeclarationsCodeAstTransformer';
+export * from './ast/transform/AddConstructorAstTransformer';
 export * from './ast/transform/AddAdditionalPropertiesInterfaceAstTransformer';
 export * from './ast/transform/InnerTypeCompressionAstTransformer';
 export * from './ast/transform/PackageResolverAstTransformer';
@@ -18,11 +17,11 @@ export * from './ast/transform/SimplifyGenericsAstTransformer';
 export * from './ast/transform/ResolveGenericSourceIdentifiersAstTransformer';
 export * from './ast/transform/RemoveConstantParametersAstTransformer';
 export * from './ast/transform/ToConstructorBodySuperCallAstTransformer';
-export * from './ast/transform/RemoveEnumFieldsCodeAstTransformer.ts';
-export * from './ast/transform/MethodToGetterCodeAstTransformer.ts';
-export * from './ast/transform/AddCompositionMembersCodeAstTransformer.ts';
-export * from './ast/transform/SimplifyAndCleanAstTransformer.ts';
-export * from './ast/transform/PrettyCodeAstTransformer.ts';
+export * from './ast/transform/RemoveEnumFieldsCodeAstTransformer';
+export * from './ast/transform/MethodToGetterCodeAstTransformer';
+export * from './ast/transform/AddCompositionMembersCodeAstTransformer';
+export * from './ast/transform/SimplifyAndCleanAstTransformer';
+export * from './ast/transform/PrettyCodeAstTransformer';
 
 export * from './visitor/CodeVisitor';
 export * from './visitor/FreeTextVisitor';
@@ -34,11 +33,11 @@ export * from './render/CodeRenderer';
 
 export * from './reduce/CodeAstReducer';
 
-export * from './parse/transform/SimplifyUnnecessaryCompositionsModelTransformer.ts';
-export * from './parse/transform/InterfaceExtractorModelTransformer.ts';
-export * from './parse/transform/AggregateIntersectionsModelTransformer.ts';
-export * from './parse/transform/MergeLargeUnionLateModelTransformer.ts';
-export * from './parse/transform/ElevatePropertiesModelTransformer.ts';
-export * from './parse/transform/RemoveUnnecessaryPropertyModelTransformer.ts';
+export * from './parse/transform/SimplifyUnnecessaryCompositionsModelTransformer';
+export * from './parse/transform/InterfaceExtractorModelTransformer';
+export * from './parse/transform/AggregateIntersectionsModelTransformer';
+export * from './parse/transform/MergeLargeUnionLateModelTransformer';
+export * from './parse/transform/ElevatePropertiesModelTransformer';
+export * from './parse/transform/RemoveUnnecessaryPropertyModelTransformer';
 
 export * as Code from './ast/Code';

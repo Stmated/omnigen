@@ -1,2 +1,1 @@
-
-export * from './PluginManager.ts';
+export * from './PluginManager';

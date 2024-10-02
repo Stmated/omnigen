@@ -1,1 +1,1 @@
-export * as OpenApiPlugins from './OpenApiPluginInit.ts';
+export * as OpenApiPlugins from './OpenApiPluginInit';

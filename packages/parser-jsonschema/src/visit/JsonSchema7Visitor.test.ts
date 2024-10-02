@@ -1,7 +1,7 @@
 import {describe, test} from 'vitest';
-import {DefaultJsonSchema9Visitor} from './DefaultJsonSchema9Visitor.ts';
+import {DefaultJsonSchema9Visitor} from './DefaultJsonSchema9Visitor';
 import * as fs from 'fs';
-import {JsonSchema9Visitor} from './JsonSchema9Visitor.ts';
+import {JsonSchema9Visitor} from './JsonSchema9Visitor';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {z} from 'zod';
 import {SchemaFile, Util} from '@omnigen/core';

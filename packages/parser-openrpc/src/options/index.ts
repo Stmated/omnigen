@@ -1,3 +1,2 @@
-
-export * from './JsonRpcParserOptions.ts';
-export * from './OpenRpcOptions.ts';
+export * from './JsonRpcParserOptions';
+export * from './OpenRpcOptions';

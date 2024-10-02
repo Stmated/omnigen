@@ -1,4 +1,4 @@
-import {OmniModel} from './OmniModel.ts';
+import {OmniModel} from './OmniModel';
 
 export interface OmniModelLibrary {
   get(absoluteUri: string): OmniModel | undefined;

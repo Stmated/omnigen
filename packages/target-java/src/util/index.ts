@@ -1,3 +1,2 @@
-
-export * from './JavaUtil.ts';
-export * from './FreeTextUtils.ts';
+export * from './JavaUtil';
+export * from './FreeTextUtils';

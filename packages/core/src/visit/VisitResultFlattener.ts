@@ -1,5 +1,5 @@
 import {AstNode, AstVisitor, VisitResult} from '@omnigen/api';
-import {Visitor} from './Visitor.ts';
+import {Visitor} from './Visitor';
 
 export class VisitResultFlattener {
 

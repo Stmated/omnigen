@@ -1,5 +1,5 @@
 import {describe, test} from 'vitest';
-import {JsonSchemaMigrator} from './JsonSchemaMigrator.ts';
+import {JsonSchemaMigrator} from './JsonSchemaMigrator';
 
 describe('JsonSchemaMigrator', () => {
 

@@ -1,8 +1,8 @@
 import {AstTransformer, AstTransformerArguments, OmniTypeKind, TargetOptions} from '@omnigen/api';
 import {OmniUtil, Visitor} from '@omnigen/core';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
-import {CodeAstUtils} from '../CodeAstUtils.ts';
-import {CodeOptions} from '../../options/CodeOptions.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
+import {CodeAstUtils} from '../CodeAstUtils';
+import {CodeOptions} from '../../options/CodeOptions';
 
 export class AddFieldsAstTransformer implements AstTransformer<CodeRootAstNode, TargetOptions & CodeOptions> {
   transformAst(args: AstTransformerArguments<CodeRootAstNode, TargetOptions & CodeOptions>): void {

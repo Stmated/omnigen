@@ -1,8 +1,8 @@
 import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniObjectType, OmniProperty} from '@omnigen/api';
-import {OmniUtil} from '../OmniUtil.ts';
+import {OmniUtil} from '../OmniUtil';
 import {LoggerFactory} from '@omnigen/core-log';
-import {ProxyReducerOmni} from '../../reducer/ProxyReducerOmni.ts';
-import {ProxyReducer} from '../../reducer/ProxyReducer.ts';
+import {ProxyReducerOmni} from '../../reducer/ProxyReducerOmni';
+import {ProxyReducer} from '../../reducer/ProxyReducer';
 
 const logger = LoggerFactory.create(import.meta.url);
 

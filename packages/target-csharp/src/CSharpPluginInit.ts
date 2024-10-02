@@ -33,12 +33,12 @@ import {CSharpOptions, ZodCSharpOptions} from './options';
 import {LoggerFactory} from '@omnigen/core-log';
 import {CSHARP_FEATURES} from './features';
 import {Cs, CSharpRootNode} from './ast';
-import {AddPropertyAccessorCSharpAstTransformer} from './ast/AddPropertyAccessorCSharpAstTransformer.ts';
-import {NamespaceWrapperAstTransformer} from './ast/NamespaceWrapperAstTransformer.ts';
-import {DelegatesToCSharpAstTransformer} from './ast/DelegatesToCSharpAstTransformer.ts';
-import {NonNumericEnumToConstClassAstTransformer} from './ast/NonNumericEnumToConstClassAstTransformer.ts';
-import {ToCSharpAstTransformer} from './ast/ToCSharpAstTransformer.ts';
-import {NamespaceCompressionCSharpAstTransformer} from './ast/NamespaceCompressionCSharpAstTransformer.ts';
+import {AddPropertyAccessorCSharpAstTransformer} from './ast/AddPropertyAccessorCSharpAstTransformer';
+import {NamespaceWrapperAstTransformer} from './ast/NamespaceWrapperAstTransformer';
+import {DelegatesToCSharpAstTransformer} from './ast/DelegatesToCSharpAstTransformer';
+import {NonNumericEnumToConstClassAstTransformer} from './ast/NonNumericEnumToConstClassAstTransformer';
+import {ToCSharpAstTransformer} from './ast/ToCSharpAstTransformer';
+import {NamespaceCompressionCSharpAstTransformer} from './ast/NamespaceCompressionCSharpAstTransformer';
 import {
   AddAbstractAccessorsAstTransformer,
   AddAdditionalPropertiesInterfaceAstTransformer,
@@ -66,10 +66,10 @@ import {
   SimplifyUnnecessaryCompositionsModelTransformer,
   SortVisitorRegistry,
 } from '@omnigen/target-code';
-import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer.ts';
-import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer.ts';
-import {JsonCSharpAstTransformer} from './ast/JsonCSharpAstTransformer.ts';
-import {ConstructorRemovalOnPropertyInitCSharpAstTransformer} from './ast/ConstructorRemovalOnPropertyInitCSharpAstTransformer.ts';
+import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSharpAstTransformer';
+import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer';
+import {JsonCSharpAstTransformer} from './ast/JsonCSharpAstTransformer';
+import {ConstructorRemovalOnPropertyInitCSharpAstTransformer} from './ast/ConstructorRemovalOnPropertyInitCSharpAstTransformer';
 
 const logger = LoggerFactory.create(import.meta.url);
 

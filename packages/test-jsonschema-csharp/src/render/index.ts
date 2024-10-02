@@ -1,2 +1,1 @@
-
-export * from './JsonSchemaToCSharpTestUtil.ts';
+export * from './JsonSchemaToCSharpTestUtil';

@@ -3,8 +3,8 @@ import {ObjectName, ObjectNameResolver, OmniHardcodedReferenceType, OmniType, Om
 import * as Java from '../ast/JavaAst';
 import {LoggerFactory} from '@omnigen/core-log';
 import {Visitor} from '@omnigen/core';
-import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver.ts';
-import {JACKSON_OBJECT_MAPPER} from './JacksonJavaAstTransformer.ts';
+import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver';
+import {JACKSON_OBJECT_MAPPER} from './JacksonJavaAstTransformer';
 
 const logger = LoggerFactory.create(import.meta.url);
 

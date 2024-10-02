@@ -1,4 +1,3 @@
-
-export * from './JavaTestUtils.ts';
-export * from './OpenRpcTestUtils.ts';
-export * from './ParsedJavaTestVisitor.ts';
+export * from './JavaTestUtils';
+export * from './OpenRpcTestUtils';
+export * from './ParsedJavaTestVisitor';

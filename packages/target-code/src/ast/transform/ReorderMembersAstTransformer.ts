@@ -2,8 +2,8 @@ import {AstNode, AstTransformer, AstTransformerArguments, OmniType, RootAstNode,
 import {OmniUtil, ReferenceNodeNotFoundError, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
-import {CodeAstUtils} from '../CodeAstUtils.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
+import {CodeAstUtils} from '../CodeAstUtils';
 
 const logger = LoggerFactory.create(import.meta.url);
 

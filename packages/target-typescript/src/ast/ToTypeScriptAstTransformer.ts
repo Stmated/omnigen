@@ -11,7 +11,7 @@ import {
   UnknownKind,
 } from '@omnigen/api';
 import {Ts} from '../ast';
-import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
+import {TypeScriptAstReducer} from './TypeScriptAstReducer';
 import {Code} from '@omnigen/target-code';
 import {TypeScriptOptions} from '../options';
 

@@ -7,7 +7,7 @@ import {JavaOptions, SerializationConstructorAnnotationMode, SerializationLibrar
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '@omnigen/target-code/ast';
 import {SerializationPropertyNameMode} from '@omnigen/target-code';
-import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver.ts';
+import {JavaObjectNameResolver} from '../ast/JavaObjectNameResolver';
 
 const logger = LoggerFactory.create(import.meta.url);
 

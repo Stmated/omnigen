@@ -1,16 +1,35 @@
 #! /usr/bin/env node
+'use strict';
 
 import {LoggerFactory} from '@omnigen/core-log';
 import {Command} from '@commander-js/extra-typings';
-import figlet from 'figlet';
 import {BaseContext, FileContext} from '@omnigen/core-plugin';
 import {PluginManager} from '@omnigen/plugin';
 
+import {JsonSchemaPlugins} from '@omnigen/parser-jsonschema';
+import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
+import {JavaPlugins} from '@omnigen/target-java';
+import {TypeScriptPlugins} from '@omnigen/target-typescript';
+import {CSharpPlugins} from '@omnigen/target-csharp';
+import {CorePlugins} from '@omnigen/core';
+
+import figlet from 'figlet';
+// @ts-ignore
+import chunky from 'figlet/importable-fonts/Chunky.js';
+
 LoggerFactory.enablePrettyPrint();
+LoggerFactory.consumeDebug();
 
 const logger = LoggerFactory.create(import.meta.url);
 
-logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
+try {
+  figlet.parseFont('Chunky', chunky);
+  logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
+} catch (ex) {
+  logger.info(`Omnigen`);
+}
+
+console.log(`Loaded: ${[CorePlugins, JsonSchemaPlugins, OpenRpcPlugins, JavaPlugins, TypeScriptPlugins, CSharpPlugins].length} plugins`);
 
 (async () => {
 
@@ -37,12 +56,6 @@ logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
     console.table(options);
   }
 
-  // TODO: Maybe possible to make plugin able to register their arguments?
-  //        And prepend them with something? Or should design rely on their being no duplicate keys allowed?
-
-  console.log(`Args:`);
-  console.log(options.args);
-
   const args: Record<string, string> = {};
   for (const [key, value] of (options.args ?? []).map(it => it.split('='))) {
     args[key] = value;
@@ -66,8 +79,6 @@ logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
   if (options.output) {
     args['outputFiles'] = 'true';
   }
-
-  console.log(args);
 
   const startTime = new Date();
   const runOptions: BaseContext & FileContext = {

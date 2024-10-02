@@ -1,3 +1,2 @@
-
-export * from './StrictUndefinedTypeScriptModelTransformer.ts';
-export * from './RemoveWildcardGenericParamTypeScriptModelTransformer.ts';
+export * from './StrictUndefinedTypeScriptModelTransformer';
+export * from './RemoveWildcardGenericParamTypeScriptModelTransformer';

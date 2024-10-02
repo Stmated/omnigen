@@ -1,5 +1,5 @@
 import {DistributeReadOnly, DistributeWriteable} from '@omnigen/api';
-import {ReducerOpt} from './ReducerOpt.ts';
+import {ReducerOpt} from './ReducerOpt';
 import {IsExactly} from '../util';
 
 export type IfImmutable<InOpt extends ReducerOpt, True, False> = IsExactly<InOpt['immutable'], true, True, False>;

@@ -1,2 +1,1 @@
-
-export * from './CSharpRenderer.ts';
+export * from './CSharpRenderer';

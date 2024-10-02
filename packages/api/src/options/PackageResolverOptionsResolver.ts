@@ -1,4 +1,4 @@
-import {IPackageResolver} from './IPackageResolver.ts';
+import {IPackageResolver} from './IPackageResolver';
 
 export class PackageResolverOptionsResolver {
 

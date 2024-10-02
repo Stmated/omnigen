@@ -1,6 +1,6 @@
 import {describe, test, vi} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OpenRpcTypeScriptTestUtils} from '../utils/OpenRpcTypeScriptTestUtils.ts';
+import {OpenRpcTypeScriptTestUtils} from '../utils/OpenRpcTypeScriptTestUtils';
 
 const logger = LoggerFactory.create(import.meta.url);
 

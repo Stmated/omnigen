@@ -26,9 +26,9 @@ import {
   ZodParserOptions,
   ZodTargetOptions,
 } from '@omnigen/api';
-import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary.ts';
+import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary';
 import {FileWriter} from './write';
-import {DefaultOmniModelLibrary} from './parse/DefaultOmniModelLibrary.ts';
+import {DefaultOmniModelLibrary} from './parse/DefaultOmniModelLibrary';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

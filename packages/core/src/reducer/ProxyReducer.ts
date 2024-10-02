@@ -1,12 +1,12 @@
 import {Arrayable} from '@omnigen/api';
-import {ObjectPool} from '../util/ObjectPool.ts';
-import {ProxyHolder, ProxyHolderHandler} from './ProxyHolder.ts';
-import {PROP_KEY_HOLDER, PROP_KEY_IS_PROXY, PROP_KEY_RECURSION_DEPTH} from './symbols.ts';
-import {ProxyReducerDiscriminatorBuilder, ProxyReducerOptionsBuilder} from './ProxyReducerBuilder.ts';
-import {ProxyReducerTrackMode} from './ProxyReducerTrackMode.ts';
-import {NextRet, ProxyReducerInterface, ReduceRet, Spec, SpecFn, SpecRet} from './types.ts';
-import {ReducerOpt} from './ReducerOpt.ts';
-import {ProxyReducerTrackingSource} from './ProxyReducerTrackingSource.ts';
+import {ObjectPool} from '../util/ObjectPool';
+import {ProxyHolder, ProxyHolderHandler} from './ProxyHolder';
+import {PROP_KEY_HOLDER, PROP_KEY_IS_PROXY, PROP_KEY_RECURSION_DEPTH} from './symbols';
+import {ProxyReducerDiscriminatorBuilder, ProxyReducerOptionsBuilder} from './ProxyReducerBuilder';
+import {ProxyReducerTrackMode} from './ProxyReducerTrackMode';
+import {NextRet, ProxyReducerInterface, ReduceRet, Spec, SpecFn, SpecRet} from './types';
+import {ReducerOpt} from './ReducerOpt';
+import {ProxyReducerTrackingSource} from './ProxyReducerTrackingSource';
 
 const MAP_POOL = new ObjectPool<Map<any, any>>({
   factory: () => new Map<any, any>(),
@@ -224,7 +224,8 @@ export class ProxyReducer<N, const D extends keyof N, O, const Opt extends Reduc
           if (replacement.holder.refCount === 0) {
             PROXY_POOL.release(replacement.holder);
           }
-        } proxyHolder.replacements.length = 0;
+        }
+        proxyHolder.replacements.length = 0;
       }
 
       if (proxyHolder.original !== proxyHolder.target && this.options.track !== ProxyReducerTrackMode.NONE) {

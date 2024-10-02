@@ -14,7 +14,7 @@ import {
   TargetFeatures,
   TypeDiffKind,
 } from '@omnigen/api';
-import {CodeOptions, ZodCodeOptions} from '../../options/CodeOptions.ts';
+import {CodeOptions, ZodCodeOptions} from '../../options/CodeOptions';
 import {CreateMode, OmniUtil, PropertyUtil, Sorters} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 

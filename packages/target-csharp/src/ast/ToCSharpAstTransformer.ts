@@ -12,7 +12,7 @@ import {
   TargetOptions,
   UnknownKind,
 } from '@omnigen/api';
-import {CSharpAstTransformerArguments, CSharpRootNode} from './index.ts';
+import {CSharpAstTransformerArguments, CSharpRootNode} from './index';
 import {CSharpOptions} from '../options';
 import {TokenKind} from '@omnigen/target-code/ast';
 

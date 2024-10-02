@@ -1,5 +1,5 @@
 import {IPackageResolver, ZodOptions} from '../options';
-import {PackageResolverOptionsResolver} from './PackageResolverOptionsResolver.ts';
+import {PackageResolverOptionsResolver} from './PackageResolverOptionsResolver';
 import {z} from 'zod';
 
 export const ZodPackageOptions = ZodOptions.extend({

@@ -1,5 +1,5 @@
 import {AstNode, AstVisitor, VisitResult} from '@omnigen/api';
-import {AbortVisitingWithResult} from './AbortVisitingWithResult.ts';
+import {AbortVisitingWithResult} from './AbortVisitingWithResult';
 
 export class Visitor {
 

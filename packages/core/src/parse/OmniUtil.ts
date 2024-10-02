@@ -51,9 +51,9 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
 import {Naming} from './Naming';
 import {assertUnreachable, Case, CombineMode, CombineOptions, CreateMode} from '../util';
-import {PropertyUtil} from './PropertyUtil.ts';
-import {ProxyReducerOmni} from '../reducer/ProxyReducerOmni.ts';
-import {ProxyReducer} from '../reducer/ProxyReducer.ts';
+import {PropertyUtil} from './PropertyUtil';
+import {ProxyReducerOmni} from '../reducer/ProxyReducerOmni';
+import {ProxyReducer} from '../reducer/ProxyReducer';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -2833,7 +2833,7 @@ export class OmniUtil {
     return OmniUtil.addTo(previous, add);
   }
 
-  public static addDebugTo<T extends {debug?: DebugValue}>(obj: T, add: DebugValue): T {
+  public static addDebugTo<T extends { debug?: DebugValue }>(obj: T, add: DebugValue): T {
 
     const newDebug = OmniUtil.addTo(obj.debug, add);
     if (newDebug === obj.debug) {

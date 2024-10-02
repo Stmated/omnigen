@@ -3,10 +3,10 @@ import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} 
 import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../Code';
 import {CodeOptions, SerializationPropertyNameMode} from '../../options/CodeOptions';
-import {CodeAstUtils} from '../CodeAstUtils.ts';
-import {CodeVisitor} from '../../visitor/CodeVisitor.ts';
+import {CodeAstUtils} from '../CodeAstUtils';
+import {CodeVisitor} from '../../visitor/CodeVisitor';
 import {LoggerFactory} from '@omnigen/core-log';
-import {CodeUtil} from '../../util/CodeUtil.ts';
+import {CodeUtil} from '../../util/CodeUtil';
 
 const logger = LoggerFactory.create(import.meta.url);
 

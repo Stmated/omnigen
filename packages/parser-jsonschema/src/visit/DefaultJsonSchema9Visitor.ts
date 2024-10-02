@@ -1,7 +1,7 @@
-import {JsonSchema9Visitor} from './JsonSchema9Visitor.ts';
+import {JsonSchema9Visitor} from './JsonSchema9Visitor';
 import {LoggerFactory} from '@omnigen/core-log';
 import {z} from 'zod';
-import {DocVisitorTransformer, DocVisitorUnknownTransformer, safeSet, visitUniformArray, visitUniformObject} from './helpers.ts';
+import {DocVisitorTransformer, DocVisitorUnknownTransformer, safeSet, visitUniformArray, visitUniformObject} from './helpers';
 import {JSONSchema9} from '../definitions';
 
 const logger = LoggerFactory.create(import.meta.url);

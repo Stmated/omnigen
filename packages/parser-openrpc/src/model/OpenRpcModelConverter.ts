@@ -10,7 +10,7 @@ import {
   OmnigenOpenRpcMethod, OmnigenOpenRpcRef,
   OmnigenOpenRpcServerObject,
   OmnigenOpenRpcServerVariable, OmnigenOpenRpcTag,
-} from './OmnigenOpenRpcDocument.ts';
+} from './OmnigenOpenRpcDocument';
 
 /**
  * NOTE: Not used yet, just an experiment

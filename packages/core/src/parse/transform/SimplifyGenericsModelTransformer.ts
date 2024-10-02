@@ -1,6 +1,6 @@
 import {OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, TypeDiffKind} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil} from '../OmniUtil.ts';
+import {OmniUtil} from '../OmniUtil';
 
 const logger = LoggerFactory.create(import.meta.url);
 

@@ -1,7 +1,7 @@
 import * as FreeText from '../ast/FreeText';
 import {Visitor} from '@omnigen/core';
-import {createCodeFreeTextVisitor} from '../visitor/FreeTextVisitor.ts';
-import {createCodeFreeTextReducer} from '../reduce/CodeAstReducer.ts';
+import {createCodeFreeTextVisitor} from '../visitor/FreeTextVisitor';
+import {createCodeFreeTextReducer} from '../reduce/CodeAstReducer';
 import {FreeTextLine} from '../ast/FreeText';
 
 export class FreeTextUtils {

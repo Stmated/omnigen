@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/api';
-import {CSharpRootNode} from './CSharpRootNode.ts';
+import {CSharpRootNode} from './CSharpRootNode';
 import {CSharpOptions} from '../options';
 
 /**

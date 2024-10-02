@@ -1,2 +1,1 @@
-
-export * from './Reducer.ts';
+export * from './Reducer';

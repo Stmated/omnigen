@@ -1,2 +1,1 @@
-
-export * from './CompositionGenericTargetToObjectJavaModelTransformer.ts';
+export * from './CompositionGenericTargetToObjectJavaModelTransformer';

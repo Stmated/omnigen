@@ -1,5 +1,5 @@
-import {RecursiveValue} from './ProxyReducer2.ts';
-import {PROP_KEY_HOLDER_2, PROP_KEY_IS_PROXY_2, PROP_KEY_PROXY_ORIGINAL_2, PROP_KEY_PROXY_REPLACEMENT_2} from './symbols.ts';
+import {RecursiveValue} from './ProxyReducer2';
+import {PROP_KEY_HOLDER_2, PROP_KEY_IS_PROXY_2, PROP_KEY_PROXY_ORIGINAL_2, PROP_KEY_PROXY_REPLACEMENT_2} from './symbols';
 
 export class RecursiveProxyHandler2<T extends object> implements ProxyHandler<T> {
 

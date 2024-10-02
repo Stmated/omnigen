@@ -1,2 +1,1 @@
-
-export * from './TypeScriptVisitor.ts';
+export * from './TypeScriptVisitor';

@@ -1,4 +1,4 @@
-import {Simplify, Something} from './TsTypes.ts';
+import {Simplify, Something} from './TsTypes';
 
 export * from './ProtocolHandler';
 export * from './Sorters';
@@ -8,7 +8,7 @@ export * from './Util';
 export * from './CombineTypeUtils';
 export * from './TsTypes';
 
-export * from './assertions.ts';
+export * from './assertions';
 
 export function assertUnreachable(x: never): never {
   throw new Error(`Unreachable code was reached, with: ${getShallowPayloadString(x)}`);

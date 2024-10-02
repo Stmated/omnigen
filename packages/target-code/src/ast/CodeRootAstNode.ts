@@ -1,9 +1,9 @@
 import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ObjectNameResolver, Reducer, ReducerResult, Reference, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/api';
 import {ReferenceNodeNotFoundError} from '@omnigen/core';
-import {CodeAstUtils} from './CodeAstUtils.ts';
-import {CodeVisitor, createCodeVisitor} from '../visitor/CodeVisitor.ts';
-import {CodeReducer, DefaultCodeReducer} from '../reduce/CodeAstReducer.ts';
-import {AbstractCodeNode} from './AbstractCodeNode.ts';
+import {CodeAstUtils} from './CodeAstUtils';
+import {CodeVisitor, createCodeVisitor} from '../visitor/CodeVisitor';
+import {CodeReducer, DefaultCodeReducer} from '../reduce/CodeAstReducer';
+import {AbstractCodeNode} from './AbstractCodeNode';
 
 export abstract class CodeRootAstNode extends AbstractCodeNode implements RootAstNode, AstNodeWithChildren {
 

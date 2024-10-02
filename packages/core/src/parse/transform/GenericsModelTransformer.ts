@@ -24,10 +24,10 @@ import {
   TypeDiffKind,
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {PropertyUtil} from '../PropertyUtil.ts';
-import {OmniUtil} from '../OmniUtil.ts';
+import {PropertyUtil} from '../PropertyUtil';
+import {OmniUtil} from '../OmniUtil';
 import {Case, CreateMode, isDefined, Sorters} from '../../util';
-import {Naming} from '../Naming.ts';
+import {Naming} from '../Naming';
 
 const logger = LoggerFactory.create(import.meta.url);
 

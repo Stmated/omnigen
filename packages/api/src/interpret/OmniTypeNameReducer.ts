@@ -1,4 +1,4 @@
-import {CompressTypeNaming} from './CompressTypeNaming.ts';
+import {CompressTypeNaming} from './CompressTypeNaming';
 import {z} from 'zod';
 
 export const ZodOmniTypeNameReducer = z.function()

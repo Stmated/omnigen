@@ -1,7 +1,6 @@
 import {ArrayKeys, DistributeReadOnly, ToArrayItem} from '@omnigen/api';
-import {ReducerOpt2} from './ReducerOpt2.ts';
+import {ReducerOpt2} from './ReducerOpt2';
 import {IsExactly} from '../util';
-import {RecursiveValue} from './ProxyReducer2.ts';
 
 export type IfImmutable<InOpt extends ReducerOpt2, True, False> = IsExactly<InOpt['immutable'], true, True, False>;
 

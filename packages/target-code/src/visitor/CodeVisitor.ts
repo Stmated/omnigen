@@ -1,7 +1,7 @@
 import {AstNode, AstVisitor, VisitFn, VisitResult} from '@omnigen/api';
 import {createCodeFreeTextVisitor} from '../';
 import * as Code from '../ast/Code';
-import {AstFreeTextVisitor} from './FreeTextVisitor.ts';
+import {AstFreeTextVisitor} from './FreeTextVisitor';
 
 export type CodeVisitFn<N extends AstNode, R> = VisitFn<N, R, CodeVisitor<R>>;
 

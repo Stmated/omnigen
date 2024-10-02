@@ -1,19 +1,43 @@
 {
-  "name": "@omnigen/omnigen-cli",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@omnigen-org/omnigen-cli",
+  "version": "0.0.10",
+  "private": false,
   "license": "MIT",
   "type": "module",
-  "main": "./src/index.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/omnigen-cli.js",
+      "require": "./dist/omnigen-cli.umd.cjs"
+    }
+  },
   "bin": {
-    "omnigen": "./src/index.ts"
+    "omnigen-cli": "dist/omnigen-cli.js"
   },
   "scripts": {
-    "build": "npx tsc",
     "dev": "npx tsc -w",
-    "bin": "tsx src/index.ts"
+    "bin": "tsx src/index.ts",
+    "build": "vite build",
+    "build-tsc": "rm -rf ./dist && tsc --project ./tsconfig.build.json",
+    "publish": "pnpm publish --access public --no-git-checks=true"
   },
   "dependencies": {
+
+    "commander": "^12.1.0",
+    "@commander-js/extra-typings": "^12.1.0",
+    "figlet": "^1.7.0",
+    "json-schema": "^0.4.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@omnigen/config-typescript": "workspace:*",
+    "@omnigen/eslint-config-custom": "workspace:*",
+    "@types/node": "^18.13.0",
+    "@types/figlet": "^1.5.8",
+    "typescript": "^5.6.2",
+    "tsx": "^4.7.1",
+
     "@omnigen/api": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/core-log": "workspace:*",
@@ -22,21 +46,10 @@
     "@omnigen/parser-openrpc": "workspace:*",
     "@omnigen/target-java": "workspace:*",
     "@omnigen/target-typescript": "workspace:*",
+    "@omnigen/target-csharp": "workspace:*",
     "@omnigen/plugin": "workspace:*",
-    "@omnigen/omnigen": "workspace:*",
-    "commander": "^12.0.0",
-    "@commander-js/extra-typings": "^12.0.0",
-    "figlet": "^1.5.2",
-    "json-schema": "^0.4.0",
-    "zod": "^3.22.4"
-  },
-  "devDependencies": {
-    "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
-    "@types/node": "^18.13.0",
-    "@types/figlet": "1.5.2",
-    "typescript": "^5.6.2",
-    "pino-pretty": "^10.3.1",
-    "tsx": "^4.7.1"
+
+    "@rollup/plugin-esm-shim": "^0.1.7",
+    "@rollup/plugin-replace": "^6.0.1"
   }
 }

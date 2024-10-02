@@ -1,9 +1,9 @@
 import {Environment} from '@omnigen/api';
-import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2.ts';
-import {Spec2} from './types.ts';
-import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2.ts';
-import {ReducerOpt2} from './ReducerOpt2.ts';
-import {ProxyReducer2} from './ProxyReducer2.ts';
+import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
+import {Spec2} from './types';
+import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';
+import {ReducerOpt2} from './ReducerOpt2';
+import {ProxyReducer2} from './ProxyReducer2';
 
 const GLOBAL_TRACKING_STATS: ProxyReducerTrackingSource2 = {
   idCounter: 0,

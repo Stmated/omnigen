@@ -1,4 +1,4 @@
-import {OmniTypeKind} from './OmniTypeKind.ts';
-import {OmniItemKind} from './OmniItemKind.ts';
+import {OmniTypeKind} from './OmniTypeKind';
+import {OmniItemKind} from './OmniItemKind';
 
 export type OmniNodeKind = OmniTypeKind | OmniItemKind;

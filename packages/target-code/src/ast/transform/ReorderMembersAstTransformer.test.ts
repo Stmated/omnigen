@@ -1,5 +1,5 @@
 import {test} from 'vitest';
-import {ReorderMembersAstTransformer} from './ReorderMembersAstTransformer.ts';
+import {ReorderMembersAstTransformer} from './ReorderMembersAstTransformer';
 import {
   DEFAULT_TARGET_OPTIONS,
   ObjectName,
@@ -20,9 +20,9 @@ import {
   UnknownKind,
 } from '@omnigen/api';
 import * as Code from '../Code';
-import {CodeVisitor} from 'visitor/CodeVisitor.ts';
+import {CodeVisitor} from 'visitor/CodeVisitor';
 import {AbstractObjectNameResolver, isDefined, OmniUtil} from '@omnigen/core';
-import {CodeUtil} from '../../util/CodeUtil.ts';
+import {CodeUtil} from '../../util/CodeUtil';
 
 type NameResolverOptions = PackageOptions & TargetOptions & Options;
 

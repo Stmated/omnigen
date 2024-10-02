@@ -1,3 +1,2 @@
-
-export * from './ReferenceNodeNotFoundError.ts';
-export * from './AbstractObjectNameResolver.ts';
+export * from './ReferenceNodeNotFoundError';
+export * from './AbstractObjectNameResolver';

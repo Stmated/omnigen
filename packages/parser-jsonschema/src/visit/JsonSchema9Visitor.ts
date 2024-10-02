@@ -1,5 +1,5 @@
 import {AnyJSONSchema} from '../parse';
-import {DocVisitorTransformer, DocVisitorUnknownTransformer, Entry, ToArray, ToSingle} from './helpers.ts';
+import {DocVisitorTransformer, DocVisitorUnknownTransformer, Entry, ToArray, ToSingle} from './helpers';
 import {ToDefined} from '@omnigen/core';
 
 export interface JsonSchema9Visitor<S extends AnyJSONSchema = AnyJSONSchema> {
@@ -85,4 +85,4 @@ type JsonSchemaDefinitionArray<S extends AnyJSONSchema> = ToDefined<ToArray<ToDe
 type JsonSchemaDefinitionObject<S extends AnyJSONSchema> = Exclude<Extract<ToDefined<S['const']>, object>, Array<any>>;
 type JsonSchemaDefinitionPrimitive<S extends AnyJSONSchema> = Exclude<ToDefined<S['const']>, JsonSchemaDefinitionObject<S> | JsonSchemaDefinitionArray<S>>;
 
-export type ArrayItem<T> = {idx: number, value: T};
+export type ArrayItem<T> = { idx: number, value: T };

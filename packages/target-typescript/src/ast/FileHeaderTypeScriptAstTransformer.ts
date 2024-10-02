@@ -1,6 +1,6 @@
 import {AstTransformer, AstTransformerArguments, TargetOptions} from '@omnigen/api';
 import {Ts} from '../ast';
-import {TypeScriptAstReducer} from './TypeScriptAstReducer.ts';
+import {TypeScriptAstReducer} from './TypeScriptAstReducer';
 import {Code, FreeTextUtils} from '@omnigen/target-code';
 import {TypeScriptOptions} from '../options';
 import {FreeTextLine} from '@omnigen/target-code/ast';

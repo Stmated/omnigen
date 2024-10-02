@@ -1,2 +1,1 @@
-
-export * from './CSharpOptions.ts';
+export * from './CSharpOptions';

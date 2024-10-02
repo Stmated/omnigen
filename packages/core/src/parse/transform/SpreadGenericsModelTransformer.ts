@@ -7,7 +7,7 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/api';
-import {OmniUtil} from '../OmniUtil.ts';
+import {OmniUtil} from '../OmniUtil';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);

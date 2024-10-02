@@ -1,2 +1,1 @@
-
-export * from './JavaAstReducer.ts';
+export * from './JavaAstReducer';

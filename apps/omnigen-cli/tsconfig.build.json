@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@omnigen/config-typescript/build.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "baseUrl": "./src",
+    "outDir": "./dist",
+    "noEmit": false,
+    "allowImportingTsExtensions": false
+  },
+  "include": ["./src/**/*.ts"]
+}

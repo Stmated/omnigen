@@ -1,8 +1,8 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, OmniInterfaceType, OmniType, OmniTypeKind, RootAstNode, TypeNode} from '@omnigen/api';
 import {Code, CodeAstUtils, CodeUtil} from '@omnigen/target-code';
-import {TsRootNode} from './TsRootNode.ts';
-import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor.ts';
+import {TsRootNode} from './TsRootNode';
+import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor';
 import {Case, OmniUtil} from '@omnigen/core';
 import {ModifierKind} from '@omnigen/target-code/ast';
 

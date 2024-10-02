@@ -2,7 +2,7 @@ import {AstVisitor, VisitResult} from '../visit';
 import {Reducer, ReducerResult} from '../reduce';
 import {AstTargetFunctions} from './AstTargetFunctions';
 import {AstNodeWithChildren} from './AstNodeWithChildren';
-import {ObjectNameResolver} from './ObjectNameResolver.ts';
+import {ObjectNameResolver} from './ObjectNameResolver';
 import {TargetFunctions} from '../parse';
 
 /**

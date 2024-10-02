@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/api';
 import {Code} from '@omnigen/target-code';
-import {TsRootNode} from './TsRootNode.ts';
+import {TsRootNode} from './TsRootNode';
 import {TypeScriptOptions} from '../options';
 
 const logger = LoggerFactory.create(import.meta.url);

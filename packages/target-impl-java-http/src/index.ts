@@ -1,1 +1,1 @@
-export * as JavaClientPlugins from './JavaClientPluginInit.ts';
+export * as JavaClientPlugins from './JavaClientPluginInit';

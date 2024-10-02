@@ -20,10 +20,10 @@ import {
 import {Case, Naming, OmniUtil, Visitor} from '@omnigen/core';
 import {CodeAstUtils, CodeOptions, CodeUtil} from '../../';
 import {LoggerFactory} from '@omnigen/core-log';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../Code';
 import {DelegateKind, VirtualAnnotationKind} from '../Code';
-import {AbstractCodeNode} from '../AbstractCodeNode.ts';
+import {AbstractCodeNode} from '../AbstractCodeNode';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -190,7 +190,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
 
         const isDiff = OmniUtil.getDiffAmount(commonDenominator.diffs) > 0;
 
-        logger.trace(`Diffs ${isDiff} for ${OmniUtil.describe(it)} vs ${OmniUtil.describe(type)}: ${commonDenominator.diffs}}`);
+        logger.silent(`Diffs ${isDiff} for ${OmniUtil.describe(it)} vs ${OmniUtil.describe(type)}: ${commonDenominator.diffs}}`);
         return !isDiff;
       });
 

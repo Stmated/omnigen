@@ -1,3 +1,2 @@
-
-export * from './ApplyIdJsonSchemaTransformerFactory.ts';
-export * from './SimplifyJsonSchemaTransformerFactory.ts';
+export * from './ApplyIdJsonSchemaTransformerFactory';
+export * from './SimplifyJsonSchemaTransformerFactory';

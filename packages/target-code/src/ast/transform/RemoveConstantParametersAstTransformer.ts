@@ -1,6 +1,6 @@
 import {AstNode, AstTransformer, AstTransformerArguments, OmniPrimitiveBaseType, OmniType} from '@omnigen/api';
 import {OmniUtil, ReferenceNodeNotFoundError} from '@omnigen/core';
-import {CodeRootAstNode} from '../CodeRootAstNode.ts';
+import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../CodeAst';
 import {LoggerFactory} from '@omnigen/core-log';
 

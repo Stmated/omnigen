@@ -3,8 +3,8 @@ import {createPlugin, PluginAutoRegistry, ZodModelContext, ZodPackageOptionsCont
 import {ZodAstNodeContext, ZodAstNodesContext} from '@omnigen/api';
 import {Java, JavaPlugins} from '@omnigen/target-java';
 import {LoggerFactory} from '@omnigen/core-log';
-import {ZodImplementationOptions} from './client/ImplementationOptions.ts';
-import {JavaHttpImplementationGenerator} from './client/JavaHttpImplementationGenerator.ts';
+import {ZodImplementationOptions} from './client/ImplementationOptions';
+import {JavaHttpImplementationGenerator} from './client/JavaHttpImplementationGenerator';
 
 const logger = LoggerFactory.create(import.meta.url);
 

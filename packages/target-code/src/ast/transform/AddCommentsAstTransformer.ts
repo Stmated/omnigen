@@ -19,7 +19,7 @@ import * as Code from '../Code';
 import * as FreeText from '../FreeText';
 import {CodeOptions, IncludeExampleCommentsMode} from '../../options/CodeOptions';
 import {FreeTextUtils} from '../../util/FreeTextUtils';
-import {CodeAstUtils} from '../CodeAstUtils.ts';
+import {CodeAstUtils} from '../CodeAstUtils';
 
 const logger = LoggerFactory.create(import.meta.url);
 

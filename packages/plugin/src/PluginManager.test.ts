@@ -1,5 +1,5 @@
 import {CompressTypeLevel, CompressTypeNaming, TargetOptions, ZodTargetOptions} from '@omnigen/api';
-import {PluginManager} from './PluginManager.ts';
+import {PluginManager} from './PluginManager';
 import {z} from 'zod';
 import {describe, test} from 'vitest';
 

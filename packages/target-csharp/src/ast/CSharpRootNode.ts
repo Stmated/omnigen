@@ -4,7 +4,7 @@ import {isDefined} from '@omnigen/core';
 import {Code} from '@omnigen/target-code';
 import {CSharpAstReducer, DefaultCSharpAstReducer} from './CSharpAstReducer';
 import {CsAstUtils} from './CsAstUtils';
-import {CSharpObjectNameResolver} from './CSharpObjectNameResolver.ts';
+import {CSharpObjectNameResolver} from './CSharpObjectNameResolver';
 import {CSharpModelFunctions} from '../parse';
 
 export class CSharpRootNode extends Code.CodeRootAstNode implements RootAstNode, AstNodeWithChildren {

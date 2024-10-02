@@ -1,5 +1,5 @@
 import {OmniType} from '../parse';
-import {TypeNode} from './TypeNode.ts';
+import {TypeNode} from './TypeNode';
 
 export interface AstTargetFunctions {
 

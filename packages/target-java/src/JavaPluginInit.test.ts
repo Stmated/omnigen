@@ -15,7 +15,7 @@ import {JAVA_FEATURES, JavaPlugins, ZodJavaOptions} from './index';
 import {PluginManager} from '@omnigen/plugin';
 import {test} from 'vitest';
 import {z} from 'zod';
-import {ZodJavaContextIn} from './JavaPluginInit.ts';
+import {ZodJavaContextIn} from './JavaPluginInit';
 
 const createEmptyOmniModel = (name: string): OmniModel => {
 

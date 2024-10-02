@@ -23,8 +23,8 @@ import {OmniUtil} from '@omnigen/core';
 import {AnyFreeText, FriendlyFreeTextIn} from './FreeText';
 import {CodeVisitor} from '../visitor/CodeVisitor';
 import {FreeTextUtils} from '../util/FreeTextUtils';
-import {AbstractCodeNode} from './AbstractCodeNode.ts';
-import {VirtualAnnotationNode} from './VirtualAnnotationNode.ts';
+import {AbstractCodeNode} from './AbstractCodeNode';
+import {VirtualAnnotationNode} from './VirtualAnnotationNode';
 
 export enum TokenKind {
   ASSIGN,

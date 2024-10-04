@@ -44,13 +44,9 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       packageName = options.package;
     }
 
-    if (!packageName) {
-      throw new Error(`Not allowed to have an empty package name for ${OmniUtil.describe(type)}`);
-    }
-
     return {
       edgeName: edgeName,
-      namespace: packageName.split(this.namespaceSeparator),
+      namespace: !packageName ? [] : packageName.split(this.namespaceSeparator),
     };
   }
 
@@ -168,7 +164,11 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     let ns: string | undefined;
     if (args.with === NameParts.NAMESPACE || args.with === NameParts.FULL) {
       const namespaceParts = Array.isArray(args.name) ? args.name : args.name.namespace;
-      ns = this.relativize(namespaceParts, args.relativeTo, args.with, args.use);
+      if (namespaceParts.length === 0) {
+        ns = undefined;
+      } else {
+        ns = this.relativize(namespaceParts, args.relativeTo);
+      }
     } else {
       ns = undefined;
     }
@@ -184,8 +184,9 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       return `${ns}${this.namespaceSeparator}${name}`;
     } else if (args.with === NameParts.FULL && name && !ns) {
       return name;
-    } else if (args.with === NameParts.NAMESPACE && ns) {
-      return ns;
+    } else if (args.with === NameParts.NAMESPACE) {
+      // It is possible to have no namespace at all, depending on the target.
+      return ns ?? '';
     } else if (args.with === NameParts.NAME && name) {
       return name;
     }
@@ -193,7 +194,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
     throw new Error(`Could not get any name for ${JSON.stringify(args)}`);
   }
 
-  protected relativize(namespaceParts: Namespace, relativeTo: Namespace | undefined, w: NameParts, u: TypeUseKind | undefined): string {
+  protected relativize(namespaceParts: Namespace, relativeTo: Namespace | undefined): string {
 
     // TODO: Make this work properly for TypeScript -- it should not always do relative paths just because given a `relativeTo`, it is up to the target language and how it is used
 

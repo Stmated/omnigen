@@ -1,6 +1,6 @@
 {
   "name": "@omnigen-org/omnigen-cli",
-  "version": "0.0.10",
+  "version": "0.0.12",
   "private": false,
   "license": "MIT",
   "type": "module",
@@ -8,8 +8,7 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./dist/omnigen-cli.js",
-      "require": "./dist/omnigen-cli.umd.cjs"
+      "import": "./dist/omnigen-cli.js"
     }
   },
   "bin": {
@@ -19,11 +18,9 @@
     "dev": "npx tsc -w",
     "bin": "tsx src/index.ts",
     "build": "vite build",
-    "build-tsc": "rm -rf ./dist && tsc --project ./tsconfig.build.json",
     "publish": "pnpm publish --access public --no-git-checks=true"
   },
   "dependencies": {
-
     "commander": "^12.1.0",
     "@commander-js/extra-typings": "^12.1.0",
     "figlet": "^1.7.0",

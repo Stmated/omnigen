@@ -29,7 +29,7 @@ export class CSharpObjectNameResolver extends AbstractObjectNameResolver<Package
       // In C# you import namespaces, and not the whole type path.
       // In theory this could cause type conflicts, and in the future there might be a need to check for those and create type aliases.
       const namespaceParts = Array.isArray(args.name) ? args.name : args.name.namespace;
-      return this.relativize(namespaceParts, args.relativeTo, args.with, args.use);
+      return this.relativize(namespaceParts, args.relativeTo);
     }
 
     return super.build(args);

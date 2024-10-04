@@ -24,6 +24,9 @@ export interface ObjectNameResolver<TOpt extends PackageOptions & TargetOptions 
   parse(fqn: string): ObjectName;
   parseNamespace(namespace: string): Namespace;
 
+  /**
+   * If you are asking for the namespace but there is no namespace, then this will return an empty string.
+   */
   build(args: AstNameBuildArgs): string;
 }
 
@@ -102,7 +105,7 @@ export type Namespace = Array<NamespaceArrayItem>;
 
 export type ObjectEdgeName =
   string
-  | {onUse: string; onImport: string;}
+  | { onUse: string; onImport: string; }
   ;
 
 

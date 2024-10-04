@@ -40,6 +40,25 @@ describe('jsonschema-typescript-render', () => {
     }
   });
 
+  test('output-without-package', async ctx => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.001Z')});
+
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/test-jsonschema-typescript/examples/jsonschema-draft-07.json'), {
+      strictUndefined: false,
+      includeGenerated: false,
+      singleFileName: 'Schema',
+      relaxedInspection: false,
+      package: '',
+    });
+
+    const fileContents = getFileContents(rendered);
+    const fileNames = Object.keys(fileContents).sort();
+
+    ctx.expect(fileNames).toHaveLength(1);
+    ctx.expect(fileNames[0]).toEqual('Schema.ts');
+  });
+
   test('jsonschema7-strict-undefined', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});

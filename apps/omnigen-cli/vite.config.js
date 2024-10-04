@@ -15,7 +15,6 @@ export default defineConfig({
     },
     rollupOptions: {
       // make sure to externalize deps that shouldn't be bundled into your library
-      //external: ['node-fetch', 'promisify', 'node:fs', 'node:url', 'find-up'],
       external: [
         ...builtinModules,
         ...builtinModules.map(it => `node:${it}`),
@@ -48,14 +47,6 @@ export default defineConfig({
   ],
   optimizeDeps: {
     noDiscovery: true,
-    include: [
-      'figlet',
-      // '@omnigen/plugin',
-      // '@omnigen/parser-jsonschema',
-      // '@omnigen/parser-openrpc',
-      // '@omnigen/target-java',
-      // '@omnigen/target-typescript',
-      // '@omnigen/target-csharp',
-    ],
+    include: [],
   },
 });

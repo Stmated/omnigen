@@ -1,8 +1,9 @@
 import {default as Debug} from 'debug';
 import stripAnsi from 'strip-ansi';
-import * as colors from 'colors';
+import chalk from 'chalk';
 import PrettyError from 'pretty-error';
 import * as process from 'node:process';
+import hsl from 'color-space/hsl.js';
 
 const pe = new PrettyError();
 
@@ -10,8 +11,32 @@ const RealDate = Date;
 
 const LogLevelStrings: readonly string[] = ['silent', 'trace', 'debug', 'info', 'warn', 'error', 'fatal'];
 
-const BR_L = colors.dim('[');
-const BR_R = colors.dim(']');
+const chalkLightGray = chalk.rgb(180, 180, 180);
+const chalkLighterGray = chalk.rgb(220, 220, 220);
+
+const BR_L = chalkLighterGray('[');
+const BR_R = chalkLighterGray(']');
+
+const baseColors = [
+  chalk.white,
+  chalk.red,
+  chalk.green,
+  chalk.yellow,
+  chalk.blue,
+  chalk.magenta,
+  chalk.cyan,
+  chalk.gray,
+
+  chalk.redBright,
+  chalk.greenBright,
+  chalk.yellowBright,
+  chalk.blueBright,
+  chalk.magentaBright,
+  chalk.cyanBright,
+  chalk.whiteBright,
+];
+
+const namespaceColorMap = new Map<string, string>();
 
 /**
  * TODO: Do not expose the "...args"? And instead only expose the specific ones?
@@ -189,6 +214,7 @@ class DefaultLogger implements Logger {
 
   constructor(name: string) {
     this._name = name;
+
     this._shortName = this._name;
     if (this._shortName.length > DefaultLogger._MAX_LOGGER_NAME_WIDTH) {
       this._shortName = this._shortName.substring(this._shortName.length - DefaultLogger._MAX_LOGGER_NAME_WIDTH);
@@ -196,35 +222,73 @@ class DefaultLogger implements Logger {
       this._shortName = this._shortName.padEnd(DefaultLogger._MAX_LOGGER_NAME_WIDTH, ' ');
     }
 
-    this._shortName = colors.dim(this._shortName);
+    let coloredName = namespaceColorMap.get(this._shortName);
+    if (!coloredName) {
+
+      if (chalk.level === 3) {
+
+        // We can use `rgb` here. Much more free range of colors. Not sure how well it works, since I have not been able to test it.
+        const halfSaturation = Math.floor(hsl.max[1] / 2);
+        const halfLightness = Math.floor(hsl.max[2] / 2);
+
+        const h = (137.508 * namespaceColorMap.size) % hsl.max[0];
+
+        const calculatedHsl = [
+          h,
+          halfSaturation + (Math.random() * halfSaturation),
+          halfLightness + (Math.random() * halfLightness),
+        ];
+
+        const rgb = hsl.rgb(calculatedHsl);
+
+        const newNamespaceColor = chalk.rgb(rgb[0], rgb[1], rgb[2]);
+        coloredName = newNamespaceColor(this._shortName);
+
+      } else if (chalk.level === 2) {
+
+        // 0 = black,
+        // 1..231 = Readable colors
+        // 232..255 = grayscale
+        const newNamespaceColor = chalk.ansi256((namespaceColorMap.size % 230) + 1);
+        coloredName = newNamespaceColor(this._shortName);
+      } else {
+
+        const newNamespaceColor = baseColors[namespaceColorMap.size % baseColors.length];
+        coloredName = newNamespaceColor(this._shortName);
+      }
+
+      namespaceColorMap.set(this._shortName, coloredName);
+    }
+
+    this._shortName = coloredName;
   }
 
   silent(...args: any[]): void {
-    this.log(0, colors.gray, args);
+    this.log(0, s => chalk.dim(chalk.gray(s)), args);
   }
 
   trace(...args: any[]): void {
-    this.log(1, colors.gray, args);
+    this.log(1, chalk.gray, args);
   }
 
   debug(...args: any[]): void {
-    this.log(2, colors.magenta, args);
+    this.log(2, chalk.magenta, args);
   }
 
   info(...args: any[]): void {
-    this.log(3, colors.blue, args);
+    this.log(3, chalk.blue, args);
   }
 
   warn(...args: any[]): void {
-    this.log(4, colors.yellow, args);
+    this.log(4, chalk.yellow, args);
   }
 
   error(...args: any[]): void {
-    this.log(5, colors.red, args);
+    this.log(5, chalk.red, args);
   }
 
   fatal(...args: any[]): void {
-    this.log(6, colors.red, args);
+    this.log(6, chalk.redBright, args);
   }
 
   private log(levelIndex: keyof typeof LogLevelStrings & number, colorFn: (str: string) => string, args: any[]): void {
@@ -246,9 +310,9 @@ class DefaultLogger implements Logger {
     const error = args.length > 0 && args[args.length - 1] instanceof Error ? args[args.length - 1] as Error : undefined;
     const errorMessage = error ? ` ${pe.render(error, false, true)}` : '';
 
-    let date = `${BR_L}${colors.gray(new RealDate().toISOString())}${BR_R}`;
+    let date = `${BR_L}${chalkLightGray(new RealDate().toISOString())}${BR_R}`;
     if (RealDate !== Date) {
-      date += ` ${BR_L}${colors.gray(new Date().toISOString())}${BR_R}`;
+      date += ` ${BR_L}${chalk.gray(new Date().toISOString())}${BR_R}`;
     }
 
     console.log(`${date} ${BR_L}${colorFn(level.padEnd(6, ' '))}${BR_R} ${BR_L}${this._shortName}${BR_R} ${colorFn(message)}${errorMessage}`);

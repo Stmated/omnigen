@@ -23,7 +23,7 @@ export interface Options2<N extends object, D extends keyof N, O, InOpt extends 
 export interface RecursiveValue<T> {
   id: number;
   original: StrictReadonly<T>;
-  replacement?: T;
+  replacement?: T | null;
   recursionDepth: number;
   changeCount: number;
 }
@@ -126,6 +126,12 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     throw new Error(`Not yet implemented to forget`);
   }
 
+  remove(): this {
+    const ongoing = this._visited[this._visited.length - 1]! as RecursiveValue<FN>;
+    ongoing.replacement = null;
+    return this;
+  }
+
   private putInternal<P extends keyof FN, V extends FN[P], RV extends RecursiveValue<FN>>(ongoing: RV, prop: P, valueOrFn: MaybeFunction<FN, V>): void {
 
     if (this.options.immutable) {
@@ -199,6 +205,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       ongoing.recursionDepth--;
     }
 
+    if (ongoing.replacement === null) {
+      return undefined as YieldRet<FN, D, O, Opt>;
+    }
     return (ongoing.replacement ?? ongoing.original) as YieldRet<FN, D, O, Opt>;
   }
 
@@ -212,6 +221,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
       const persisted = this._persisted.get(original);
       if (persisted) {
+        if (persisted.replacement === null) {
+          return undefined as ReduceRet<Local, D, O, Opt, S>;
+        }
         return (persisted.replacement ?? persisted.original) as ReduceRet<Local, D, O, Opt, S>;
       }
     }
@@ -225,8 +237,8 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
         return recursive.original as ReduceRet<Local, D, O, Opt, S>;
       }
 
-      if (recursive.replacement) {
-        return recursive.replacement as ReduceRet<Local, D, O, Opt, S>;
+      if (recursive.replacement !== undefined) {
+        return (recursive.replacement ?? undefined) as ReduceRet<Local, D, O, Opt, S>;
       } else {
 
         // TODO: Need some way of having a lazy callback from the reduction, where we register a listener for recursive root completion!
@@ -272,6 +284,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       }
     }
 
+    if (visited.replacement === null) {
+      return undefined as ReduceRet<Local, D, O, Opt, S>;
+    }
     return (visited.replacement ?? visited.original) as ReduceRet<Local, D, O, Opt, S>;
   }
 

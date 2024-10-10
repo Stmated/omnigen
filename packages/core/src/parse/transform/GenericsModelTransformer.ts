@@ -28,6 +28,8 @@ import {PropertyUtil} from '../PropertyUtil';
 import {OmniUtil} from '../OmniUtil';
 import {Case, CreateMode, isDefined, Sorters} from '../../util';
 import {Naming} from '../Naming';
+import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2.ts';
+import {ANY_KIND} from '../../reducer2/types.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -355,6 +357,6 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       return OmniUtil.toReferenceType(info.commonType, CreateMode.ANY);
     }
 
-    return info.commonType;
+    return OmniUtil.asWriteable(info.commonType);
   }
 }

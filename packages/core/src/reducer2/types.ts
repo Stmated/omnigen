@@ -52,6 +52,8 @@ export interface MutableProxyReducerInterface<N extends object, FN extends N, D 
 
   forget(): this;
 
+  remove(): this;
+
   parent: StrictReadonly<N> | undefined;
 }
 

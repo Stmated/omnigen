@@ -1,29 +1,20 @@
 import {OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, StrictReadonly, TypeDiffKind} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil';
+import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-/**
- * Takes an OmniModel, and tries to modify it to use generics where possible.
- * This will remove the need for a lot of extra types, and make code more readable.
- */
 export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransformer {
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
-    // if (true) {
-    //   return;
-    // }
-
     type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<StrictReadonly<OmniType>> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-
-      if (ctx.type.kind === OmniTypeKind.GENERIC_TARGET) {
-
-        for (const target of ctx.type.targetIdentifiers) {
+    ProxyReducerOmni2.builder().reduce(args.model, {immutable: true}, {
+      GENERIC_TARGET: (n, r) => {
+        for (const target of n.targetIdentifiers) {
 
           const sourceIdentifier = target.sourceIdentifier;
           if (target.type.kind === OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
@@ -34,13 +25,13 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
           const info = (
             sourceIdentifierToTargetsMap.has(sourceIdentifier)
               ? sourceIdentifierToTargetsMap
-              : sourceIdentifierToTargetsMap.set(sourceIdentifier, {source: ctx.type.source, targetTypes: new Set()})
+              : sourceIdentifierToTargetsMap.set(sourceIdentifier, {source: n.source, targetTypes: new Set()})
           ).get(sourceIdentifier)!;
 
-          // const normalizedType = OmniUtil.asNonNullableIfHasDefault(target.type, args.features);
           info.targetTypes.add(target.type);
         }
-      }
+        r.callBase();
+      },
     });
 
     const allowedDiffs: TypeDiffKind[] = [];
@@ -85,6 +76,7 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
       }
     }
 
+    // TODO: Rewrite to use the Reducer
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
       if (ctx.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
         const replacement = sourceIdentifierReplacements.get(ctx.type.sourceIdentifier);

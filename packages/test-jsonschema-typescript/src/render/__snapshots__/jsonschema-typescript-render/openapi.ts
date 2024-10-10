@@ -1,14 +1,17 @@
-export type _20221007 = { readonly openapi: string;
+export interface _20221007 extends _202210070 {
+  readonly components?: Components | undefined;
+  readonly externalDocs?: ExternalDocumentation | undefined;
   readonly info: Info;
   readonly jsonSchemaDialect?: string | undefined;
-  readonly servers?: ReadonlyArray<Server> | undefined;
+  readonly openapi: string;
   readonly paths?: Paths | undefined;
-  readonly webhooks?: _20221007Webhooks | undefined;
-  readonly components?: Components | undefined;
   readonly security?: ReadonlyArray<SecurityRequirement> | undefined;
+  readonly servers?: ReadonlyArray<Server> | undefined;
   readonly tags?: ReadonlyArray<Tag> | undefined;
-  readonly externalDocs?: ExternalDocumentation | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any; } & UnionOf202210070202210071202210072;
+  readonly webhooks?: _20221007Webhooks | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
+}
+
 export type _202210070 = object;
 export type _202210071 = object;
 export type _202210072 = object;
@@ -143,12 +146,15 @@ export interface ExternalDocumentation extends SpecificationExtensions {
   readonly url: string;
 }
 
-export type Header = { readonly description?: string | undefined;
-  readonly required?: boolean | undefined;
-  readonly deprecated?: boolean | undefined;
-  readonly schema?: HeaderSchemaMeta | undefined;
+export interface Header extends HeaderObject {
   readonly content?: HeaderContent | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any; } & UnionOfHeaderObjectHeader1;
+  readonly deprecated?: boolean | undefined;
+  readonly description?: string | undefined;
+  readonly required?: boolean | undefined;
+  readonly schema?: HeaderSchemaMeta | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
+}
+
 export type Header1 = object;
 export type HeaderContent = Content;
 export type HeaderObject = object;
@@ -176,13 +182,16 @@ export interface License extends SpecificationExtensions {
   readonly url?: string | undefined;
 }
 
-export type Link = { readonly operationRef?: string | undefined;
+export interface Link extends LinkObject {
+  readonly body?: Server | undefined;
+  readonly description?: string | undefined;
   readonly operationId?: string | undefined;
+  readonly operationRef?: string | undefined;
   readonly parameters?: MapOfStrings | undefined;
   readonly requestBody?: any;
-  readonly description?: string | undefined;
-  readonly body?: Server | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any; } & UnionOfLinkObjectLink1;
+  readonly [key: string /* Pattern: "^x-" */]: any;
+}
+
 export type Link1 = object;
 export type LinkObject = object;
 
@@ -194,12 +203,15 @@ export interface MediaTypeEncoding {
   readonly [key: string]: MediaTypeEncodingAdditionalProperties | undefined;
 }
 
-export type MediaTypeEncodingAdditionalProperties = { readonly contentType?: string | undefined;
+export interface MediaTypeEncodingAdditionalProperties extends StylesForFormThen {
+  readonly allowReserved?: boolean | undefined;
+  readonly contentType?: string | undefined;
+  readonly explode?: boolean | undefined;
   readonly headers?: EncodingHeaders | undefined;
   readonly style?: EncodingStyle | undefined;
-  readonly explode?: boolean | undefined;
-  readonly allowReserved?: boolean | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any; } & StylesForForm;
+  readonly [key: string /* Pattern: "^x-" */]: any;
+}
+
 export type MediaTypeSchemaMeta = object;
 
 export interface OauthFlows extends SpecificationExtensions {

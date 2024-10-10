@@ -237,15 +237,15 @@ export class OmniUtil {
       return undefined;
     }
 
-    if (type.kind == OmniTypeKind.OBJECT) {
+    if (type.kind === OmniTypeKind.OBJECT) {
       return type;
     }
 
-    if (type.kind == OmniTypeKind.INTERFACE) {
+    if (type.kind === OmniTypeKind.INTERFACE) {
       return type;
     }
 
-    if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+    if (type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
 
       const externalGenericSuper = OmniUtil.asGenericSuperType(type.of);
       if (externalGenericSuper) {
@@ -717,6 +717,8 @@ export class OmniUtil {
    * @param from Type to replace from, the needle
    * @param to Type to replace with, the replacement
    * @param maxDepth How deep into a type structure we will search
+   *
+   * @deprecated Do not use this function, instead use the Reducer pattern. Migrate all solutions that rely on inline changes to the reducer.
    */
   public static swapType<T extends OmniType, R extends OmniType>(
     parent: TypeOwner,

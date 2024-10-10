@@ -12,6 +12,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from './OmniUtil.js';
 import {TypeOwner} from '@omnigen/api';
 import {ProxyReducerOmni2} from '../reducer2/ProxyReducerOmni2.ts';
+import {ANY_KIND} from '../reducer2/types.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -197,7 +198,13 @@ export class OmniModelMerge {
         },
       };
 
-      OmniUtil.swapType(replacement.root, replacement.from, toExternal);
+      common = ProxyReducerOmni2.builder().reduce(common, {}, {
+        [ANY_KIND]: (n, r) => {
+          if (n === replacement.from) {
+            r.replace(toExternal);
+          }
+        },
+      });
     }
 
     const externalReplacements: [number] = [0];

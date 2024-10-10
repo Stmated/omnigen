@@ -353,7 +353,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
           const existing = typeNameMap.get(omniType)!;
           const newPath = outerTypes.map(it => it.name.value).join('.');
           const existingPath = existing.outerTypes.map(it => it.name.value).join('.');
-          throw new Error(`Has encountered duplicate declaration\nof: ${OmniUtil.describe(omniType)}'\nnew at: '${newPath}'\nexisting at: ${existingPath}`);
+          throw new Error(`Has encountered duplicate declaration\nof: '${OmniUtil.describe(omniType)}'\nnew at: '${newPath}'\nexisting at: '${existingPath}'`);
         }
 
         // TODO: This is likely wrong -- it should be added as option to AstNameResolver

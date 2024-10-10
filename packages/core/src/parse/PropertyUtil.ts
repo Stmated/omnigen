@@ -23,7 +23,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class PropertyUtil {
 
-  public static addProperty(owner: OmniPropertyOwner, property: PartialProp<OmniProperty, 'kind'>, as?: StrictReadonly<OmniType>): OmniProperty {
+  public static addProperty(owner: OmniPropertyOwner, property: PartialProp<OmniProperty, 'kind'>, as?: OmniType): OmniProperty {
 
     let propertyWithOwner: OmniProperty;
     if (property.kind && !as) {

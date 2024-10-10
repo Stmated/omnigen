@@ -1,4 +1,4 @@
-import {assert, test} from 'vitest';
+import {test} from 'vitest';
 import {MergeLargeUnionLateModelTransformer} from './MergeLargeUnionLateModelTransformer';
 import {
   DEFAULT_MODEL_TRANSFORM_OPTIONS,
@@ -67,17 +67,17 @@ test('Test Merge', ctx => {
     transformer.transformModel2ndPass(args2);
   }
 
-  assert.isTrue(a.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET);
-  assert.isTrue(b.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET);
-  assert.isTrue(c.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET);
+  ctx.expect(a.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET).toBeTruthy();
+  ctx.expect(b.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET).toBeTruthy();
+  ctx.expect(c.extendedBy?.kind === OmniTypeKind.GENERIC_TARGET).toBeTruthy();
 
-  assert.equal(args2.model.types.length, 5);
-  assert.equal(union.types.length, 3);
+  ctx.expect(args2.model.types.length).toEqual(5);
+  ctx.expect(union.types.length).toEqual(3);
 
-  assert.equal(union.kind, OmniTypeKind.UNION);
+  ctx.expect(union.kind).toEqual(OmniTypeKind.UNION);
 
   const modelUnion = args2.model.types.find(it => it.kind === OmniTypeKind.OBJECT && Naming.unwrap(it.name) === 'Union')!;
-  assert.isDefined(modelUnion);
+  ctx.expect(modelUnion).toBeDefined();
 
   // TODO: More validations, that make sure that the structure is what we expect -- ie. A, B, C not changed, but the union type has been changed
 });

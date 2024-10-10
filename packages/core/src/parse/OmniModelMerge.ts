@@ -11,6 +11,7 @@ import {HashUtil} from './HashUtil.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from './OmniUtil.js';
 import {TypeOwner} from '@omnigen/api';
+import {ProxyReducerOmni2} from '../reducer2/ProxyReducerOmni2.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -142,7 +143,7 @@ export class OmniModelMerge {
       return results[0];
     }
 
-    const common: OmniModel = {
+    let common: OmniModel = {
       kind: OmniItemKind.MODEL,
       name: results.map(it => it.model.name).join(' & '),
       endpoints: [],
@@ -203,16 +204,31 @@ export class OmniModelMerge {
     do {
 
       externalReplacements[0] = 0;
-      OmniUtil.visitTypesDepthFirst(common, ctx => {
 
-        if (ctx.type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      common = ProxyReducerOmni2.builder().reduce(common, {}, {
+        EXTERNAL_MODEL_REFERENCE: (_, r) => {
 
           // If the common model has an external model reference, then we should resolve it to the true type.
           // This removes some chance of recursive models, and simplifies the model.
-          ctx.replacement = ctx.type.of;
+          const reduced = r.yieldBase();
+          if (reduced && reduced.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+            r.replace(reduced.of);
+          }
           externalReplacements[0]++;
-        }
-      }, undefined, false);
+        },
+      });
+
+      // // REMOVE;
+      // OmniUtil.visitTypesDepthFirst(common, ctx => {
+      //
+      //   if (ctx.type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      //
+      //     // If the common model has an external model reference, then we should resolve it to the true type.
+      //     // This removes some chance of recursive models, and simplifies the model.
+      //     ctx.replacement = ctx.type.of;
+      //     externalReplacements[0]++;
+      //   }
+      // }, undefined, false);
 
       logger.debug(`Swapped out ${externalReplacements[0]} types from external references to resolved type`);
 

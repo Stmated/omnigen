@@ -4,7 +4,7 @@ import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
 import {ANY_KIND, MaybeFunction, MutableProxyReducerInterface, YieldRet, ReduceRet, ResolvedRet, Spec2, SpecFn2} from './types';
 import {ReducerOpt2} from './ReducerOpt2';
 import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';
-import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID} from '../reducer/ProxyReducer';
+import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID} from './symbols';
 
 export interface Options2<N extends object, D extends keyof N, O, InOpt extends ReducerOpt2, S extends ReadonlyArray<Spec2<N, D, O, InOpt>>> {
   readonly discriminator: D;

@@ -2732,19 +2732,19 @@ export class OmniUtil {
     return undefined;
   }
 
-  public static isUnion<T extends OmniType>(type: OmniType | undefined): type is OmniTypeOf<T, typeof OmniTypeKind.EXCLUSIVE_UNION | typeof OmniTypeKind.UNION> {
-
-    if (!type) {
-      return false;
-    }
-
-    switch (type.kind) {
-      case OmniTypeKind.UNION:
-      case OmniTypeKind.EXCLUSIVE_UNION:
-        return true;
-      default:
-        return false;
-    }
+  public static isUnion(type: OmniType) { // : type is OmniTypeOf<T, typeof OmniTypeKind.EXCLUSIVE_UNION | typeof OmniTypeKind.UNION> {
+    return type.kind === OmniTypeKind.UNION || type.kind === OmniTypeKind.EXCLUSIVE_UNION;
+    // if (!type) {
+    //   return false;
+    // }
+    //
+    // switch (type.kind) {
+    //   case OmniTypeKind.UNION:
+    //   case OmniTypeKind.EXCLUSIVE_UNION:
+    //     return true;
+    //   default:
+    //     return false;
+    // }
   }
 
   public static isComposition(type: StrictReadonly<OmniNode> | undefined) {

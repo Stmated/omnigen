@@ -1,5 +1,5 @@
 import {OmniExclusiveUnionType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, OmniUnionType, TargetFeatures} from '@omnigen/api';
-import {OmniUtil, ProxyReducerOmni} from '@omnigen/core';
+import {OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -17,11 +17,28 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
       return;
     }
 
-    args.model = ProxyReducerOmni.builder().build({
-      UNION: (n, r) => r.next(this.maybeMerged(n, args.features) ?? n),
-      EXCLUSIVE_UNION: (n, r) => r.next(this.maybeMerged(n, args.features) ?? n),
-    }).reduce(args.model);
+    args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+      UNION: (_, r) => {
+        const reduced = OmniUtil.asWriteable(r.yieldBase());
+        if (reduced && OmniUtil.isUnion(reduced)) {
+          const merged = this.maybeMerged(reduced, args.features);
+          if (merged) {
+            r.replace(merged);
+          }
+        }
+      },
+      EXCLUSIVE_UNION: (_, r) => {
+        const reduced = OmniUtil.asWriteable(r.yieldBase());
+        if (reduced && OmniUtil.isUnion(reduced)) {
+          const merged = this.maybeMerged(reduced, args.features);
+          if (merged) {
+            r.replace(merged);
+          }
+        }
+      },
+    });
 
+    // // REMOVE
     // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
     //   if (ctx.type.kind === OmniTypeKind.UNION || ctx.type.kind === OmniTypeKind.EXCLUSIVE_UNION) {
     //     const reduced = this.maybeMerged(ctx.type, args.targetFeatures);
@@ -57,11 +74,9 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
   private maybeMerged(n: OmniUnionType | OmniExclusiveUnionType, features: TargetFeatures) {
 
     const types = n.types;
-    // const reduced = n.types.map(it => a.dispatcher.reduce(it)).filter(isDefined);
     const distinctTypes = OmniUtil.getDistinctTypes(types, features);
     if (distinctTypes.length > 2 && distinctTypes.every(it => (it.kind === OmniTypeKind.OBJECT))) {
 
-      // const types = n.types;
       let target = {...types[0]};
       OmniUtil.mergeTypeMeta(n, target, false, true);
       OmniUtil.copyName(n, target);
@@ -74,7 +89,5 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
     }
 
     return undefined;
-
-    // return {...n, types: reduced};
   }
 }

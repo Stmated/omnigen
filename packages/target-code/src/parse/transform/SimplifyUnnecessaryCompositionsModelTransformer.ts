@@ -1,5 +1,5 @@
 import {OMNI_GENERIC_FEATURES, OmniExclusiveUnionType, OmniModelTransformer, OmniModelTransformerArgs, OmniNode, OmniType, OmniUnionType, TargetFeatures} from '@omnigen/api';
-import {isDefined, OmniUtil, ProxyReducerOmni, ProxyReducer, ProxyReducerArg} from '@omnigen/core';
+import {isDefined, OmniUtil, ProxyReducerOmni2, ProxyReducerArg2} from '@omnigen/core';
 
 /**
  * These are examples of unions that we will simplify/remove.
@@ -14,23 +14,47 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
     const lossless = true;
     const features = OMNI_GENERIC_FEATURES; // TODO: Make this use impl like JAVA_FEATURES -- need to move to 2nd pass?
 
-    const reducer = ProxyReducerOmni.builder().build({
-      UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.next(n),
-      EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, lossless, features) ?? a.next(n),
-      INTERSECTION: (n, a) => (n.types.length === 1) ? a.next(n.types[0]) : a.next(n),
+    args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+      UNION: (_, r) => {
+        const reduced = r.yieldBase();
+        const merged = this.maybeReduce(OmniUtil.asWriteable(reduced), r, lossless, features);
+        if (merged) {
+          r.replace(merged);
+        }
+      },
+      EXCLUSIVE_UNION: (_, r) => {
+        const reduced = r.yieldBase();
+        const merged = this.maybeReduce(OmniUtil.asWriteable(reduced), r, lossless, features);
+        if (merged) {
+          r.replace(merged);
+        }
+      },
+      INTERSECTION: (_, r) => {
+        const reduced = OmniUtil.asWriteable(r.yieldBase());
+        if (reduced && OmniUtil.isUnion(reduced) && reduced.types.length === 1) {
+          r.replace(reduced.types[0]);
+        }
+      },
     });
-
-    args.model = reducer.reduce(args.model);
   }
 
-  maybeReduce(n: OmniUnionType | OmniExclusiveUnionType, a: ProxyReducerArg<OmniNode, 'kind', any, {}>, lossless: boolean, features: TargetFeatures): OmniType | undefined {
+  private maybeReduce(
+    n: OmniType | undefined,
+    r: ProxyReducerArg2<OmniNode, OmniUnionType | OmniExclusiveUnionType, 'kind', any, {}, any>,
+    lossless: boolean,
+    features: TargetFeatures,
+  ): OmniType | undefined {
 
-    const reduced = n.types.map(it => a.next(it)).filter(isDefined);
+    if (!n || !OmniUtil.isUnion(n)) {
+      return undefined;
+    }
+
+    const reduced = n.types.map(it => r.reduce(it)).filter(isDefined);
     if (reduced.length === 1) {
 
       if (OmniUtil.hasMeta(n)) {
 
-        // The composition/owner has meta information. Need to create a new type.
+        // The composition/owner has meta information. Need to create r new type.
         const target = {...reduced[0]};
         OmniUtil.mergeTypeMeta(n, target, false, false, true);
         return target;

@@ -1,5 +1,5 @@
 import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, StrictReadonly} from '@omnigen/api';
-import {OmniUtil, ProxyReducer, ProxyReducerOmni} from '@omnigen/core';
+import {OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -18,29 +18,29 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
     const interfaceMap = new Map<StrictReadonly<OmniType>, OmniInterfaceType>();
     const allTypes: OmniType[] = [];
 
-    ProxyReducerOmni.builder().options({immutable: true}).build({
+    ProxyReducerOmni2.builder().options({immutable: true}).build({
       OBJECT: (n, r) => {
-        allTypes.push(ProxyReducer.getTarget(n));
-        return r.next(n);
+        allTypes.push(OmniUtil.asWriteable(n));
+        r.callBase();
       },
       DECORATING: (n, r) => {
-        allTypes.push(ProxyReducer.getTarget(n));
-        return r.next(n);
+        allTypes.push(n);
+        r.callBase();
       },
       EXTERNAL_MODEL_REFERENCE: (n, r) => {
-        allTypes.push(ProxyReducer.getTarget(n));
-        return r.next(n);
+        allTypes.push(n);
+        r.callBase();
       },
       INTERFACE: (n, r) => {
-        const target = ProxyReducer.getTarget(n);
-        allTypes.push(target);
+        allTypes.push(n);
         if (n.of.kind !== OmniTypeKind.INTERFACE) {
-          interfaceMap.set(n.of, target);
+          interfaceMap.set(n.of, n);
         }
-        return r.next(n);
+        r.callBase();
       },
     }).reduce(args.model);
 
+    // // REMOVE
     // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
     //
     //   const type = ctx.type;

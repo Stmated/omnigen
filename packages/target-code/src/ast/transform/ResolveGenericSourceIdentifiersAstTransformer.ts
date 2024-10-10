@@ -1,5 +1,5 @@
 import {AstTransformer, AstTransformerArguments, OmniGenericSourceIdentifierType, OmniType, OmniTypeKind, TypeNode} from '@omnigen/api';
-import {ProxyReducerOmni} from '@omnigen/core';
+import {ProxyReducerOmni2} from '@omnigen/core';
 import * as Code from '../CodeAst';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 
@@ -88,14 +88,17 @@ export class ResolveGenericSourceIdentifiersAstTransformer implements AstTransfo
 
   private findGenericSourceIdentifiers(type: OmniType, map: Map<OmniGenericSourceIdentifierType, OmniType>): void {
 
-    ProxyReducerOmni.builder().options({immutable: true}).build({
-      OBJECT: n => n,
-      GENERIC_SOURCE: n => n,
+    ProxyReducerOmni2.builder().reduce(type, {immutable: true}, {
+      OBJECT: () => {
+      },
+      GENERIC_SOURCE: () => {
+      },
       GENERIC_TARGET_IDENTIFIER: n => {
         map.set(n.sourceIdentifier, n.type);
       },
-    }).reduce(type);
+    });
 
+    // // REMOVE
     // OmniUtil.visitTypesDepthFirst(type, ctx => {
     //
     //   if (ctx.type.kind === OmniTypeKind.OBJECT || ctx.type.kind == OmniTypeKind.GENERIC_SOURCE) {

@@ -1,7 +1,7 @@
 import {OmniEnumMember, OmniExample, OmniIntersectionType, OmniItemKind, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, TargetFeatures} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil';
-import {ProxyReducerOmni} from '../../reducer/ProxyReducerOmni';
+import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -16,10 +16,17 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
-    const reducer = ProxyReducerOmni.builder().build({
-      INTERSECTION: (n, a) => this.replaceIntersection(n, args.features) ?? a.next(n),
+    args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+      INTERSECTION: (_, r) => {
+        const reduced = r.yieldBase();
+        if (reduced && reduced.kind === OmniTypeKind.INTERSECTION) {
+          const replacement = this.replaceIntersection(OmniUtil.asWriteable(reduced), args.features);
+          if (replacement) {
+            r.replace(replacement);
+          }
+        }
+      },
     });
-    args.model = reducer.reduce(args.model);
   }
 
   private replaceIntersection(type: OmniIntersectionType, features: TargetFeatures): OmniType | undefined {

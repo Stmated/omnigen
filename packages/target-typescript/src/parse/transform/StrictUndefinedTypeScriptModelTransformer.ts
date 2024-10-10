@@ -4,13 +4,12 @@ import {
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
   OmniPrimitiveType,
-  OmniType,
   OmniTypeKind,
   ParserOptions,
   TargetOptions, UnknownKind,
 } from '@omnigen/api';
 import {TypeScriptOptions} from '../../options';
-import {assertDefined, OmniUtil, ProxyReducer, ProxyReducer2, ProxyReducerOmni, ProxyReducerOmni2} from '@omnigen/core';
+import {assertDefined, OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 

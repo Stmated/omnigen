@@ -113,7 +113,10 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const ongoing = this._visited[this._visited.length - 1]! as RecursiveValue<ResolvedRet<FN, D, O>>;
     if ((ongoing.replacement && ongoing.replacement !== replacement) || (!ongoing.replacement && ongoing.original !== replacement)) {
       ongoing.replacement = replacement;
-      ongoing.changeCount++;
+      // ongoing.changeCount++;
+      for (let i = this._visited.length - 1; i >= 0; i--) {
+        this._visited[i].changeCount++;
+      }
     }
 
     return this;

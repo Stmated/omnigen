@@ -247,7 +247,7 @@ public class description_inheritance {
     }
   }
 
-  public static class RequestParamSchema extends SchemasAbstractOther {
+  public static class RequestParamSchema extends AbstractOther {
     public RequestParamSchema(Integer abstractOnePropertyA, String abstractOnePropertyB, String abstractOtherPropertyB) {
       super(abstractOnePropertyA, abstractOnePropertyB, abstractOtherPropertyB);
     }
@@ -281,25 +281,6 @@ public class description_inheritance {
 
     public void setResultSchemaPropertyA(String resultSchemaPropertyA) {
       resultSchemaPropertyA = resultSchemaPropertyA;
-    }
-  }
-
-  /**
-   * components_schemas_AbstractOther_description
-   */
-  public static class SchemasAbstractOther extends AbstractOne {
-    private final String abstractOtherPropertyB;
-
-    public SchemasAbstractOther(Integer abstractOnePropertyA, String abstractOnePropertyB, String abstractOtherPropertyB) {
-      super(abstractOnePropertyA, abstractOnePropertyB);
-      this.abstractOtherPropertyB = abstractOtherPropertyB;
-    }
-
-    /**
-     * components_schemas_AbstractOne_properties_AbstractOtherPropertyB_description
-     */
-    public String getAbstractOtherPropertyB() {
-      return this.abstractOtherPropertyB;
     }
   }
 }

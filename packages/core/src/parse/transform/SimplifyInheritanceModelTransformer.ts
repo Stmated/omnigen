@@ -55,6 +55,17 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
         }
       }
     });
+
+    if (args.options.simplifyTypeHierarchy) {
+
+      args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+        INTERSECTION: (n, r) => {
+          if (n.types.length == 1) {
+            r.replace(n.types[0]);
+          }
+        },
+      });
+    }
   }
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs) {
@@ -177,9 +188,9 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
       }
     }
 
-    if (composition.types.length == 1) {
-      OmniUtil.swapType(model, composition, composition.types[0], 10);
-    }
+    // if (composition.types.length == 1) {
+    //   OmniUtil.swapType(model, composition, composition.types[0], 10);
+    // }
 
     return model;
   }

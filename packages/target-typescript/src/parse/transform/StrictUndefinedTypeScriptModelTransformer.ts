@@ -10,7 +10,7 @@ import {
   TargetOptions, UnknownKind,
 } from '@omnigen/api';
 import {TypeScriptOptions} from '../../options';
-import {OmniUtil, ProxyReducer, ProxyReducerOmni} from '@omnigen/core';
+import {assertDefined, OmniUtil, ProxyReducer, ProxyReducer2, ProxyReducerOmni, ProxyReducerOmni2} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -29,89 +29,39 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
       return;
     }
 
-    const typeToUndefinedMap = new Map<OmniType, OmniCompositionType>();
+    const typeToUndefinedMap = new Map<number, OmniCompositionType>();
 
-    // args.model = ProxyReducerOmni.builder().build({
-    //   PROPERTY: (n, r) => {
-    //
-    //     if (n.required) {
-    //       return r.next(n);
-    //     }
-    //
-    //     // if (ProxyReducer.isProxy(n.type)) {
-    //     //   const i = 0;
-    //     // }
-    //
-    //     // const existing = typeToUndefinedMap.get(n.type);
-    //     // if (existing) {
-    //     //   // TODO: Move to an "any"?
-    //     //   n.type = existing;
-    //     //   return r.next(n);
-    //     // }
-    //
-    //     if (OmniUtil.isComposition(n.type)) {
-    //       if (n.type.types.find(it => OmniUtil.isUndefined(it))) {
-    //         return r.next(n);
-    //       }
-    //     } else if (OmniUtil.isUndefined(n.type)) {
-    //       return r.next(n);
-    //     }
-    //
-    //     if (n.type.kind === OmniTypeKind.UNKNOWN && n.type.unknownKind === UnknownKind.ANY) {
-    //       // `any` can be `undefined` so no need for `undefined`.
-    //       return r.next(n);
-    //     }
-    //
-    //     const compositionType: OmniCompositionType = {
-    //       kind: OmniTypeKind.EXCLUSIVE_UNION,
-    //       types: [r.next(n.type)!, StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE],
-    //       inline: true,
-    //       debug: OmniUtil.addDebug(n.type.debug, `Strict undefined made it an inline exclusive union of '${OmniUtil.describe(n.type)} | undefined'`),
-    //     };
-    //
-    //     n.type = compositionType;
-    //
-    //     // const reduced = r.next(compositionType)!;
-    //     // if (ProxyReducer.isProxy(reduced)) {
-    //     //   const i = 0;
-    //     // }
-    //     // if (reduced.kind === OmniTypeKind.EXCLUSIVE_UNION) {
-    //     //   typeToUndefinedMap.set(n.type, reduced);
-    //     // }
-    //     //
-    //     // n.type = reduced;
-    //     return r.next(n);
-    //   },
-    // }).reduce(args.model);
+    args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+      PROPERTY: (property, r) => {
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+        // Yield and replace with a reduced property, in case things are recursive.
+        property = assertDefined(r.yieldBase());
 
-      const properties = OmniUtil.getPropertiesOf(ctx.type);
-      for (const property of properties) {
         if (property.required) {
-          continue;
+          return;
         }
 
-        const existing = typeToUndefinedMap.get(property.type);
+        const propertyTypeId = r.getId(property.type);
+        const existing = typeToUndefinedMap.get(propertyTypeId);
         if (existing) {
 
-          property.type = existing;
-          continue;
+          r.put('type', existing);
+          return;
         }
 
         if (OmniUtil.isComposition(property.type)) {
           if (property.type.types.find(it => OmniUtil.isUndefined(it))) {
-            continue;
+            return;
           }
         } else if (OmniUtil.isUndefined(property.type)) {
-          continue;
+          return;
         }
 
         if (property.type.kind === OmniTypeKind.UNKNOWN) {
           const unknownKind = property.type.unknownKind ?? args.options.unknownType;
           if (unknownKind === UnknownKind.ANY || unknownKind === UnknownKind.WILDCARD || unknownKind === UnknownKind.DYNAMIC) {
             // `any` can be `undefined` so no need for `undefined`.
-            continue;
+            return;
           }
         }
 
@@ -122,10 +72,55 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
           debug: OmniUtil.addDebug(property.type.debug, `Strict undefined made it an inline exclusive union of '${OmniUtil.describe(property.type)} | undefined'`),
         };
 
-        typeToUndefinedMap.set(property.type, compositionType);
+        typeToUndefinedMap.set(propertyTypeId, compositionType);
 
-        property.type = compositionType;
-      }
+        r.put('type', compositionType);
+      },
     });
+
+    // // REMOVE
+    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+    //
+    //   const properties = OmniUtil.getPropertiesOf(ctx.type);
+    //   for (const property of properties) {
+    //     if (property.required) {
+    //       continue;
+    //     }
+    //
+    //     const existing = typeToUndefinedMap.get(property.type);
+    //     if (existing) {
+    //
+    //       property.type = existing;
+    //       continue;
+    //     }
+    //
+    //     if (OmniUtil.isComposition(property.type)) {
+    //       if (property.type.types.find(it => OmniUtil.isUndefined(it))) {
+    //         continue;
+    //       }
+    //     } else if (OmniUtil.isUndefined(property.type)) {
+    //       continue;
+    //     }
+    //
+    //     if (property.type.kind === OmniTypeKind.UNKNOWN) {
+    //       const unknownKind = property.type.unknownKind ?? args.options.unknownType;
+    //       if (unknownKind === UnknownKind.ANY || unknownKind === UnknownKind.WILDCARD || unknownKind === UnknownKind.DYNAMIC) {
+    //         // `any` can be `undefined` so no need for `undefined`.
+    //         continue;
+    //       }
+    //     }
+    //
+    //     const compositionType: OmniCompositionType = {
+    //       kind: OmniTypeKind.EXCLUSIVE_UNION,
+    //       types: [property.type, StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE],
+    //       inline: true,
+    //       debug: OmniUtil.addDebug(property.type.debug, `Strict undefined made it an inline exclusive union of '${OmniUtil.describe(property.type)} | undefined'`),
+    //     };
+    //
+    //     typeToUndefinedMap.set(property.type, compositionType);
+    //
+    //     property.type = compositionType;
+    //   }
+    // });
   }
 }

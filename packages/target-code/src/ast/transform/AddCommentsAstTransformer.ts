@@ -13,7 +13,7 @@ import {
   PackageOptions,
   TargetOptions,
 } from '@omnigen/api';
-import {OmniUtil, Util, Visitor} from '@omnigen/core';
+import {ANY_KIND, OmniUtil, ProxyReducerOmni2, Util, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
 import * as FreeText from '../FreeText';
@@ -606,11 +606,19 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       return owners;
     }
 
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-      if (OmniUtil.isPropertyOwner(ctx.type) && ctx.type.properties.includes(property)) {
-        owners.push(ctx.type);
+    ProxyReducerOmni2.builder().options({immutable: true}).any((n, r) => {
+      if (OmniUtil.isPropertyOwner(n) && n.properties.includes(property)) {
+        owners.push(n);
       }
-    });
+      r.yieldBase();
+    }).build().reduce(model);
+
+    // // REMOVE
+    // OmniUtil.visitTypesDepthFirst(model, ctx => {
+    //   if (OmniUtil.isPropertyOwner(ctx.type) && ctx.type.properties.includes(property)) {
+    //     owners.push(ctx.type);
+    //   }
+    // });
 
     return owners;
   }

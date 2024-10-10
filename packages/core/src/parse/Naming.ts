@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import {OmniType, OmniTypeKind, TypeName} from '@omnigen/api';
+import {OmniType, OmniTypeKind, StrictReadonly, TypeName} from '@omnigen/api';
 import {NamePair} from './NamePair';
 import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
@@ -312,7 +312,7 @@ export class Naming {
     return name ? this.unwrap(name) : undefined;
   }
 
-  public static getName(type: OmniType): TypeName | undefined {
+  public static getName(type: StrictReadonly<OmniType>): TypeName | undefined {
 
     if (type.kind === OmniTypeKind.GENERIC_TARGET) {
       return Naming.getName(type.source);

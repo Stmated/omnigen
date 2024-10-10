@@ -15,7 +15,7 @@ import {
   OmniTypeKind,
   PackageOptions,
   Reference,
-  RootAstNode,
+  RootAstNode, StrictReadonly,
   TargetOptions,
   TypeName,
   TypeNode,
@@ -214,7 +214,7 @@ export class CodeAstUtils implements AstTargetFunctions {
     }
   }
 
-  public static getOmniType(root: RootAstNode, node: AstNode): OmniType | undefined {
+  public static getOmniType(root: RootAstNode, node: AstNode): StrictReadonly<OmniType> | undefined {
 
     if (node instanceof Code.AbstractObjectDeclaration) {
       return node.omniType;

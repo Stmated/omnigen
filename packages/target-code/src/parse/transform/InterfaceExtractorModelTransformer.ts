@@ -1,4 +1,4 @@
-import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
+import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, StrictReadonly} from '@omnigen/api';
 import {OmniUtil, ProxyReducer, ProxyReducerOmni} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -15,7 +15,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
 
   transformModel(args: OmniModelTransformerArgs): void {
 
-    const interfaceMap = new Map<OmniType, OmniInterfaceType>();
+    const interfaceMap = new Map<StrictReadonly<OmniType>, OmniInterfaceType>();
     const allTypes: OmniType[] = [];
 
     ProxyReducerOmni.builder().options({immutable: true}).build({
@@ -76,7 +76,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
 
   private makeExtensionsInterfaces(
     type: OmniType,
-    interfaceMap: Map<OmniType, OmniInterfaceType>,
+    interfaceMap: Map<StrictReadonly<OmniType>, StrictReadonly<OmniInterfaceType>>,
     startConvertingAt = 0,
     depth = 0,
   ): void {
@@ -109,7 +109,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
   private getOrCreateInterfaceType(
     type: NotInterface,
     originator: OmniType,
-    interfaceMap: Map<OmniType, OmniInterfaceType>,
+    interfaceMap: Map<StrictReadonly<OmniType>, StrictReadonly<OmniInterfaceType>>,
   ): [OmniInterfaceType, 'existed' | 'new'] {
 
     const existing = interfaceMap.get(type);
@@ -141,7 +141,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
         if (type.extendedBy.kind == OmniTypeKind.INTERSECTION) {
 
           // It is already an AND, that makes it a bit easy.
-          type.extendedBy.types.push(interfaceType);
+          type.extendedBy.types = [...type.extendedBy.types, interfaceType];
 
         } else {
 

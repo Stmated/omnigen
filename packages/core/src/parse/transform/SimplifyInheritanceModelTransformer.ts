@@ -14,12 +14,15 @@ import {
 } from '@omnigen/api';
 import {OmniUtil} from '../OmniUtil';
 import {LoggerFactory} from '@omnigen/core-log';
+import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2';
 
 const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Takes an OmniModel and tries to simplify the inheritance hierarchy non-destructively.
  * It does this by seeing if types have common ancestors and skipping the superfluously stated ones.
+ *
+ * TODO: Needs to be rewritten to use the new reducer pattern instead of these inline changes
  */
 export class SimplifyInheritanceModelTransformer implements OmniModelTransformer, OmniModel2ndPassTransformer {
 
@@ -62,17 +65,36 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
     logger.silent(`Language does not support primitive inheritance, so will look for replacements. Looking inside '${args.model.name}'`);
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-      if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && OmniUtil.isPrimitive(ctx.type.extendedBy)) {
+    args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+      OBJECT: (_, r) => {
 
-        if (ctx.type.properties.length > 0) {
-          throw new Error(`Cannot make object ${OmniUtil.describe(ctx.type)} which extends primitive ${OmniUtil.describe(ctx.type.extendedBy)} into the primitive since we would lose properties`);
+        const reduced = r.yieldBase();
+        if (reduced && reduced.kind === OmniTypeKind.OBJECT && reduced.extendedBy && OmniUtil.isPrimitive(reduced.extendedBy)) {
+          if (reduced.properties.length > 0) {
+            throw new Error(`Cannot make object ${OmniUtil.describe(reduced)} which extends primitive ${OmniUtil.describe(reduced.extendedBy)} into the primitive since we would lose properties`);
+          }
+
+          // Replace ourself with the extension.
+          r.replace(OmniUtil.cloneAndCopyTypeMeta(reduced.extendedBy, OmniUtil.asWriteable(reduced)));
+          r.persist();
         }
 
-        // Replace ourself with the extension.
-        ctx.replacement = OmniUtil.cloneAndCopyTypeMeta(ctx.type.extendedBy, ctx.type);
-      }
+        // ctx.replacement = OmniUtil.cloneAndCopyTypeMeta(ctx.type.extendedBy, ctx.type);
+      },
     });
+
+    // // REMOVE
+    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+    //   if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && OmniUtil.isPrimitive(ctx.type.extendedBy)) {
+    //
+    //     if (ctx.type.properties.length > 0) {
+    //       throw new Error(`Cannot make object ${OmniUtil.describe(ctx.type)} which extends primitive ${OmniUtil.describe(ctx.type.extendedBy)} into the primitive since we would lose properties`);
+    //     }
+    //
+    //     // Replace ourself with the extension.
+    //     ctx.replacement = OmniUtil.cloneAndCopyTypeMeta(ctx.type.extendedBy, ctx.type);
+    //   }
+    // });
   }
 
   private static simplifyComposition(

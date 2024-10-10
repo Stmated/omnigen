@@ -4,6 +4,7 @@ import {ObjectName} from '../ast';
 import {OmniItemKind} from './OmniItemKind';
 import {Direction} from './ParserOptions';
 import {OmniNodeKind} from './OmniNodeKind';
+import {Arrayable, MaybeReadonly, StrictReadonly} from '../util';
 
 export interface OmniParameter {
   name: string;
@@ -69,11 +70,11 @@ export interface OmniOwnedProperty {
 
 export type DebugValue = string | string[] | undefined;
 
-export interface OmniProperty extends OmniItemBase<typeof OmniItemKind.PROPERTY> {
+export interface OmniProperty<T extends OmniType = OmniType> extends OmniItemBase<typeof OmniItemKind.PROPERTY> {
 
   name: OmniPropertyName;
 
-  type: OmniType;
+  type: T;
 
   description?: string | undefined;
   summary?: string | undefined;
@@ -196,7 +197,7 @@ export type OmniType =
 
 export type UnwrappableTypes<Inner extends OmniType> = (OmniExternalModelReferenceType<Inner> | OmniDecoratingType<Inner>) & OmniTypeWithInnerType<Inner>;
 
-export type SmartUnwrappedType<T extends OmniType | undefined> =
+export type SmartUnwrappedType<T extends OmniNode | undefined> =
   T extends undefined
     ? undefined
     : T extends UnwrappableTypes<infer R>
@@ -221,7 +222,7 @@ export interface OmniNamedType extends OmniOptionallyNamedType {
   name: TypeName;
 }
 
-export interface OmniTypeWithInnerType<T extends OmniType | OmniType[] = OmniType> {
+export interface OmniTypeWithInnerType<T extends Arrayable<OmniType> = OmniType> {
   of: T;
 }
 
@@ -266,7 +267,7 @@ export interface OmniBaseType<T extends OmniTypeKind> {
   examples?: OmniExample<unknown>[] | undefined;
 }
 
-export type OmniTypeOf<T extends OmniNode, K extends OmniNodeKind> = Extract<T, { kind: K }>;
+export type OmniTypeOf<T extends MaybeReadonly<OmniNode>, K extends OmniNodeKind> = Extract<T, { kind: K }>;
 
 // TODO: Likely `NULL` should not be a primitive, and instead be its own separate type, since most properties are not relevant to `NULL`
 export type OmniPrimitiveNull = OmniTypeOf<OmniType, typeof OmniKindPrimitive.NULL>;

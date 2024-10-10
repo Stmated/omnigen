@@ -1,9 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {DEFAULT_PARSER_OPTIONS, OmniType} from '@omnigen/api';
+import {DEFAULT_PARSER_OPTIONS, OmniType, StrictReadonly} from '@omnigen/api';
 import {OmniTypeKind} from '@omnigen/api';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser';
-import {Naming, OmniUtil, SchemaFile, Util} from '@omnigen/core';
+import {ANY_KIND, Naming, OmniUtil, ProxyReducerOmni2, SchemaFile, Util} from '@omnigen/core';
 import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
 import {describe, test} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -76,10 +76,22 @@ describe('Test Generic Model Creation', () => {
       'result',
     ]); // The others are in abstract supertype
 
-    const allTypes: OmniType[] = [];
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-      allTypes.push(ctx.type);
+    const allTypes: Array<StrictReadonly<OmniType>> = [];
+    ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
+      [ANY_KIND]: (n, r) => {
+        if (OmniUtil.isType(n)) {
+
+          console.log(n);
+          allTypes.push(n);
+        }
+        r.callBase();
+      },
     });
+
+    // // REMOVE
+    // OmniUtil.visitTypesDepthFirst(model, ctx => {
+    //   allTypes.push(ctx.type);
+    // });
 
     ctx.expect(allTypes.map(it => {
       const typeName = OmniUtil.getTypeName(it);

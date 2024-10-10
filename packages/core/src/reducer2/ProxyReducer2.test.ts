@@ -1,8 +1,8 @@
 import {describe, test} from 'vitest';
 import {ProxyReducer2} from './ProxyReducer2';
-import {assertDiscriminator, expectTs, isDefined} from '../util';
+import {expectTs, isDefined} from '../util';
 import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
-import {RegularSpecFn2} from './types';
+import {ANY_KIND, SpecFn2} from './types';
 import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';
 
 interface Base {
@@ -37,39 +37,30 @@ type TypesOverride = { Foo: Foo | Bar };
 
 const typesReducerBaseBuilder = ProxyReducer2.builder<Types, TypesOverride>().discriminator('k').options({immutable: false});
 
-const fooBarReducer: RegularSpecFn2<Types, Foo | Bar, 'k', TypesOverride, { immutable: false }> = (n, r) => {
+const fooBarReducer: SpecFn2<Types, Foo | Bar, 'k', TypesOverride, { immutable: false }, []> = (n, r) => {
 
   if (n.foo) {
     const reduced = r.reduce(n.foo);
     if (reduced.k === 'Foo') {
-      n = r.set('foo', reduced);
+      r.put('foo', reduced);
     } else {
-      n = r.set('bar', reduced);
+      r.put('bar', reduced);
     }
   }
 
-  if (n.bar) n = r.set('bar', r.reduce(n.bar));
-  if (n.baz) n = r.set('baz', r.reduce(n.baz));
+  if (n.bar) r.put('bar', r.reduce(n.bar));
+  if (n.baz) r.put('baz', r.reduce(n.baz));
 
   // TODO: We should have a helper function which maps arrays for us, since it is needlessly heavy to create new arrays all the time.
-  if (n.foos) n = r.set('foos', n.foos.map(it => r.reduce(it)).filter(isDefined).filter(it => it.k === 'Foo'));
-  if (n.bars) n = r.set('bars', n.bars.map(it => r.reduce(it)).filter(isDefined).filter(it => it.k === 'Bar'));
+  if (n.foos) r.put('foos', n.foos.map(it => r.reduce(it)).filter(isDefined).filter(it => it.k === 'Foo'));
+  if (n.bars) r.put('bars', n.bars.map(it => r.reduce(it)).filter(isDefined).filter(it => it.k === 'Bar'));
 
-  return n;
+  // return n;
 };
 
 const typesReducerBuilder = typesReducerBaseBuilder.spec({
-  Foo: (n, r) => {
-    const ret = fooBarReducer(n, r);
-    if (!ret) {
-      throw new Error(`Foo is not allowed to be undefined`);
-    }
-    return ret;
-  },
-  Bar: (n, r) => {
-    const reduced = fooBarReducer(n, r);
-    return reduced ? assertDiscriminator(reduced, 'k', 'Bar') : undefined;
-  },
+  Foo: (n, r) => fooBarReducer(n, r),
+  Bar: (n, r) => fooBarReducer(n, r),
 });
 
 test('swap-field-custom', ctx => {
@@ -78,18 +69,18 @@ test('swap-field-custom', ctx => {
 
   let anyCalls = 0;
   const reducer = typesReducerBuilder.build({
-    true: n => {
+    [ANY_KIND]: () => {
       anyCalls++;
-      return n;
     },
-    Foo: (n, r) => {
-      return r.set('common', 'bye');
+    Foo: (_, r) => {
+      r.put('common', 'bye');
     },
   });
 
   const reduced = reducer.reduce(foo);
 
   ctx.expect(reduced).not.toBe(foo);
+  ctx.expect(reduced).toBeDefined();
   ctx.expect(reduced?.common).toBe('bye');
   ctx.expect(anyCalls).toBe(0);
 });
@@ -102,18 +93,17 @@ test('swap-field-custom-with-separated-any-spec', ctx => {
   let anyCalls2 = 0;
   const reducer = typesReducerBuilder
     .spec({
-      true: (n, r) => {
+      [ANY_KIND]: (_, r) => {
         anyCalls2++; // Never called, since 'Foo' will be matched first.
-        return n;
       },
-      Foo: (n, r) => {
-        return r.set('common', 'bye');
+      Foo: (_, r) => {
+        r.put('common', 'bye');
       },
     })
     .build({
-      true: (n, r) => {
+      [ANY_KIND]: (_, r) => {
         anyCalls1++;
-        return r.next();
+        r.yieldBase();
       },
     });
 
@@ -132,11 +122,8 @@ test('swap-object-custom', ctx => {
 
   let anyCalls = 0;
   const reducer = typesReducerBuilder.build({
-    true: n => {
-      anyCalls++;
-      return n;
-    },
-    Foo: () => foo2,
+    [ANY_KIND]: () => anyCalls++,
+    Foo: (_, r) => r.replace(foo2),
   });
 
   const reduced = reducer.reduce(foo);
@@ -160,17 +147,11 @@ test('swap-object-and-field-custom', ctx => {
 
   let anyCalls = 0;
   const reducer = typesReducerBuilder.build({
-    true: (_, r) => {
+    [ANY_KIND]: (_, r) => {
       anyCalls++;
-      return r.next();
+      r.yieldBase();
     },
-    Foo: (n, r) => {
-      if (n === foo) {
-        return r.reduce(foo2);
-      }
-
-      return r.reduce(bar);
-    },
+    Foo: (n, r) => r.replace(r.reduce((n === foo) ? foo2 : bar)),
   });
 
   const reduced = reducer.reduce(foo);
@@ -190,7 +171,7 @@ test('swap-custom', ctx => {
 
   const reducer = typesReducerBuilder.build({
     Foo: (n, r) => {
-      return r.set('common', 'bye'); // n.common = 'bye';
+      r.put('common', 'bye'); // n.common = 'bye';
     },
   });
 
@@ -224,7 +205,7 @@ test('reuse-branch', ctx => {
 
   const reducerIncrementX = typesReducerBuilder.build({
     Foo: (n, r) => {
-      return r.set('x', n.x + 1); // n.x++;
+      r.put('x', n.x + 1); // n.x++;
       // return n;
     },
   });
@@ -240,16 +221,16 @@ test('increment-generation', ctx => {
   const statsSource: ProxyReducerTrackingSource2 = {idCounter: 0, reducerIdCounter: 0};
 
   const reducerIncX = typesReducerBuilder.options({track: true, trackingStatsSource: statsSource}).build({
-    Foo: (n, r) => r.set('x', n.x + 1),
+    Foo: (n, r) => r.put('x', n.x + 1),
   });
 
   const reducerIncY = typesReducerBuilder.options({track: true, trackingStatsSource: statsSource}).build({
-    Foo: (n, r) => r.set('y', n.y + 1), // n.y++,
+    Foo: (n, r) => r.put('y', n.y + 1), // n.y++,
   });
 
   // Uses its own tracking source, that starts at 1_000
   const isolatedReducerDec10X = typesReducerBuilder.options({track: true, trackingStatsSource: {idCounter: 1_000, reducerIdCounter: 1_000}}).build({
-    Foo: (n, r) => r.set('x', n.x - 10), // n.x -= 10,
+    Foo: (n, r) => r.put('x', n.x - 10), // n.x -= 10,
   });
 
   // First increment x multiple time in sequence
@@ -264,7 +245,7 @@ test('increment-generation', ctx => {
   ctx.expect(xInc2).not.toBe(xInc3);
   ctx.expect(xInc3).not.toBe(xInc4);
 
-  ctx.expect(reducerIncX.getId(foo)).toBeUndefined();
+  ctx.expect(reducerIncX.getId(foo)).toEqual(5);
   ctx.expect(reducerIncX.getId(xInc)).toEqual(1);
   ctx.expect(reducerIncX.getId(xInc2)).toEqual(2);
   ctx.expect(reducerIncX.getId(xInc3)).toEqual(3);
@@ -308,10 +289,10 @@ test('increment-generation', ctx => {
   expectTs.propertyToBe(yInc_xInc4, 'k', 'Foo');
   expectTs.propertyToBe(yInc_yInc_xInc4, 'k', 'Foo');
 
-  ctx.expect(reducerIncX.getId(yInc)).toEqual(5);
-  ctx.expect(reducerIncX.getId(yInc_xInc)).toEqual(6);
-  ctx.expect(reducerIncX.getId(yInc_xInc4)).toEqual(7);
-  ctx.expect(reducerIncX.getId(yInc_yInc_xInc4)).toEqual(8);
+  ctx.expect(reducerIncX.getId(yInc)).toEqual(6);
+  ctx.expect(reducerIncX.getId(yInc_xInc)).toEqual(7);
+  ctx.expect(reducerIncX.getId(yInc_xInc4)).toEqual(8);
+  ctx.expect(reducerIncX.getId(yInc_yInc_xInc4)).toEqual(9);
 
   ctx.expect(ProxyReducer2.getReducerId(yInc)).toEqual(2);
   ctx.expect(ProxyReducer2.getReducerId(yInc_xInc)).toEqual(2);
@@ -377,11 +358,11 @@ test('track-multiple-reducers', ctx => {
   const statsSource: ProxyReducerTrackingSource2 = {idCounter: 0, reducerIdCounter: 0};
 
   const reducerIncX = typesReducerBuilder.options({track: true, trackingStatsSource: statsSource}).build({
-    Foo: (n, r) => r.set('x', n.x + 1),
+    Foo: (n, r) => r.put('x', n.x + 1),
   });
 
   const reducerIncY = typesReducerBuilder.options({track: ProxyReducerTrackMode2.MULTIPLE, trackingStatsSource: statsSource}).build({
-    Foo: (n, r) => r.set('y', n.y + 1),
+    Foo: (n, r) => r.put('y', n.y + 1),
   });
 
   const xInc = reducerIncX.reduce(foo)!;
@@ -409,11 +390,11 @@ describe('non-local-deep-change-not-recursive', () => {
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
         if (n.x === 3 && n.foos && n.foos[0].x === 5) {
-          return r.put('foo', {k: 'Foo', x: 123, y: 123, foo: n.foos[0]}).set('foos', undefined);
+          r.put('foo', {k: 'Foo', x: 123, y: 123, foo: n.foos[0]}).put('foos', undefined);
         } else if (n.x === 5) {
-          return r.set('x', n.x + 1);
+          r.put('x', n.x + 1);
         } else {
-          return r.next();
+          r.yieldBase();
         }
       },
     });
@@ -435,11 +416,11 @@ describe('non-local-deep-change-not-recursive', () => {
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
         if (n.x === 3 && n.foos && n.foos[0].x === 5) {
-          return r.put('foo', {k: 'Foo', x: 123, y: 123, foo: n.foos[0]}).put('foos', undefined).next();
+          r.put('foo', {k: 'Foo', x: 123, y: 123, foo: n.foos[0]}).put('foos', undefined).yieldBase();
         } else if (n.x === 5) {
-          return r.set('x', n.x + 1);
+          r.put('x', n.x + 1);
         } else {
-          return r.next();
+          r.yieldBase();
         }
       },
     });
@@ -460,11 +441,11 @@ describe('non-local-deep-change-not-recursive', () => {
     const reducer = typesReducerBuilder.build({
       Foo: (n, r) => {
         if (n.x === 3 && n.foos && n.foos[0].x === 5) {
-          return r.put('foo', {k: 'Foo', x: 123, y: 123, foo: n.foos[0]}).put('foos', undefined).next();
+          r.put('foo', {k: 'Foo', x: 123, y: 123, foo: n.foos[0]}).put('foos', undefined).yieldBase();
         } else if (n.x === 5) {
-          return r.put('x', n.x + 1).persist().commit();
+          r.put('x', n.x + 1).persist(); // .commit();
         } else {
-          return r.next();
+          r.yieldBase();
         }
       },
     });
@@ -506,7 +487,7 @@ describe('non-local-deep-change-recursive', () => {
   test('change-no-next', ctx => {
 
     const reducer = typesReducerBuilder.build({
-      Foo: (n, r) => r.set('x', n.x + 1),
+      Foo: (n, r) => r.put('x', n.x + 1),
     });
 
     const reduced = reducer.reduce(root);
@@ -518,7 +499,7 @@ describe('non-local-deep-change-recursive', () => {
   test('change-with-next', ctx => {
 
     const reducer = typesReducerBuilder.build({
-      Foo: (n, r) => r.put('x', n.x + 1).next(),
+      Foo: (n, r) => r.put('x', n.x + 1).yieldBase(),
     });
 
     const reduced = reducer.reduce(root);
@@ -545,7 +526,7 @@ describe('struct-recursive', () => {
   test('struct-recursive_reducer-!recursive', ctx => {
 
     const reducer = typesReducerBuilder.build({
-      Foo: (_, r) => r.put('common', 'bye').set('x', c => c.x + 1),
+      Foo: (_, r) => r.put('common', 'bye').put('x', c => c.x + 1),
     });
 
     const reduced = reducer.reduce(bar2);
@@ -567,8 +548,8 @@ describe('struct-recursive', () => {
 
         // First we change some properties, then do the "default" reducing.
         const common = n.common ?? '';
-        n = r.set('common', 'bye' + common.substring(common.length - 1));
-        return r.put('x', n.x + 1).next();
+        r.put('common', 'bye' + common.substring(common.length - 1));
+        r.put('x', n.x + 1).yieldBase();
       },
     });
 

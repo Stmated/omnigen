@@ -1,7 +1,7 @@
 import {test} from 'vitest';
 import {OmniItemKind, OmniModel, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind, OmniUnionType, OmniUnknownType, UnknownKind} from '@omnigen/api';
 import {ProxyReducerOmni2} from './ProxyReducerOmni2';
-import {expectTs} from '../util';
+import {expectTs, Simplify} from '../util';
 
 test('change-field', ctx => {
 
@@ -14,9 +14,14 @@ test('change-field', ctx => {
 
   const reducer = ProxyReducerOmni2.builder().build({
     MODEL: (n, r) => {
-      return r.set('description', 'Hello'); // n.description = 'Hello';
+      r.put('description', 'Hello'); // n.description = 'Hello';
     },
   });
+
+  // type simp = Simplify<typeof reducer>;
+  //
+  // const s: simp = {};
+
   const reduced = reducer.reduce(model);
 
   ctx.expect(reduced).not.toBe(model);
@@ -70,17 +75,19 @@ test('swap-recursively-3', ctx => {
   let propertyReduceCount = 0;
   const reducer = ProxyReducerOmni2.builder().build({
     OBJECT: (n, r) => {
+
       const reduced = r.reduce({kind: OmniTypeKind.FLOAT, description: `Description #${++objectReduceCount}`});
-      r.persist(reduced);
-      return reduced;
+      r.replace(reduced);
+      // r.persist(reduced);
+      // return reduced;
     },
     PROPERTY: (n, r) => {
       propertyReduceCount++;
-      r.set('description', 'Should not happen, since object type is removed');
-      return r.next();
+      r.put('description', 'Should not happen, since object type is removed');
+      r.yieldBase();
     },
     FLOAT: (n, r) => {
-      return r.set('summary', 'A Summary');
+      r.put('summary', 'A Summary');
     },
   });
 
@@ -111,7 +118,7 @@ test('recursive-union', ctx => {
 
   // Replace `DYNAMIC_OBJECT` with `ANY`.
   const reducer = ProxyReducerOmni2.builder().build({
-    UNKNOWN: n => ({...n, unknownKind: UnknownKind.ANY}),
+    UNKNOWN: (n, r) => r.replace({...n, unknownKind: UnknownKind.ANY}),
   });
 
   const reduced = reducer.reduce(unionType);
@@ -133,4 +140,36 @@ test('recursive-union', ctx => {
   ctx.expect(reduced.types[1].properties[0].name).toEqual('value');
   ctx.expect(reduced.types[1].properties[1].name).toEqual('relation');
   ctx.expect(reduced.types[1].properties[1].type).toBe(reduced.types[1]); // Should be recursively replaced/resolved
+});
+
+test('immutable-return', ctx => {
+
+  const unknownProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'unknown', type: {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.DYNAMIC_OBJECT}, required: true};
+  const stringProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'string', type: {kind: OmniTypeKind.STRING}, required: true};
+  const boolProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'bool', type: {kind: OmniTypeKind.BOOL}, required: true};
+  const objType: OmniObjectType = {kind: OmniTypeKind.OBJECT, name: 'Obj', properties: [unknownProperty, stringProperty, boolProperty]};
+
+  const ret = ProxyReducerOmni2.builder().options({immutable: true}).build({
+    UNKNOWN: () => 10,
+  }).reduce(objType);
+
+  ctx.expect(ret).toEqual(10);
+});
+
+test('immutable-return-multi', ctx => {
+
+  const unknownProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'unknown', type: {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.DYNAMIC_OBJECT}, required: true};
+  const stringProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'string', type: {kind: OmniTypeKind.STRING}, required: true};
+  const boolProperty: OmniProperty = {kind: OmniItemKind.PROPERTY, name: 'bool', type: {kind: OmniTypeKind.BOOL}, required: true};
+  const objType: OmniObjectType = {kind: OmniTypeKind.OBJECT, name: 'Obj', properties: [stringProperty, unknownProperty, boolProperty]};
+
+  const ret = ProxyReducerOmni2.builder().options({immutable: true})
+    .spec({
+      UNKNOWN: () => 10,
+    })
+    .build({
+      STRING: () => 'hello' as const,
+    }).reduce(objType);
+
+  ctx.expect(ret).toEqual('hello');
 });

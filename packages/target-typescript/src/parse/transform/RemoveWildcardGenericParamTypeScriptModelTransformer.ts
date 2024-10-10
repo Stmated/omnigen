@@ -1,7 +1,7 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, ParserOptions, TargetOptions} from '@omnigen/api';
 import {TypeScriptOptions} from '../../options';
-import {ProxyReducerOmni} from '@omnigen/core';
+import {ProxyReducerOmni2} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -16,30 +16,30 @@ export class RemoveWildcardGenericParamTypeScriptModelTransformer implements Omn
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs<ParserOptions & TargetOptions & TypeScriptOptions>): void {
 
-    // const reducer = ProxyReducerOmni2.builder().build({
-    //   UNKNOWN: (n, r) => {
+    args.model = ProxyReducerOmni2.builder().build({
+      UNKNOWN: (n, r) => {
+        if (n.upperBound) {
+          r.replace(r.reduce(n.upperBound)).yieldBase();
+        }
+      },
+    }).reduce(args.model);
+
+    // // REMOVE
+    // const original = ;
+    // args.model = reducer;
+    // args.model = reduced;
+
+    // TODO: Replace with ProxyReducerOmni2 once it has been improved
+    // const reducer = ProxyReducerOmni.builder().build({
+    //   UNKNOWN: (n, a) => {
     //     if (n.upperBound) {
-    //       return r.persist(r.reduce(n.upperBound)).next();
+    //       return a.next(n.upperBound);
     //     } else {
     //       return n;
     //     }
     //   },
     // });
     // const original = args.model;
-    // const reduced = reducer.reduce(original);
-    // args.model = reduced;
-
-    // TODO: Replace with ProxyReducerOmni2 once it has been improved
-    const reducer = ProxyReducerOmni.builder().build({
-      UNKNOWN: (n, a) => {
-        if (n.upperBound) {
-          return a.next(n.upperBound);
-        } else {
-          return n;
-        }
-      },
-    });
-    const original = args.model;
-    args.model = reducer.reduce(original);
+    // args.model = reducer.reduce(original);
   }
 }

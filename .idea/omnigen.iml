@@ -41,6 +41,8 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/json-expander/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/packages/json-expander/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/utils-test/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/core-json/.test" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/core-json/.turbo" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

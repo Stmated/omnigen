@@ -1,4 +1,4 @@
-import {OmniModel, OmniPrimitiveType, OmniType, OmniTypeKind, TypeOwner} from '@omnigen/api';
+import {Arrayable, OmniModel, OmniPrimitiveType, OmniType, OmniTypeKind, StrictReadonly, TypeOwner} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from './OmniUtil.js';
 import {getShallowPayloadString} from '../util';
@@ -295,7 +295,7 @@ export class OmniTypeVisitor {
   }
 
   private visitTypesDepthFirstInternal<R>(
-    input: OmniType | OmniType[] | undefined,
+    input: Arrayable<OmniType> | undefined,
     ctx: DFSTraverseContext,
     onDown?: DFSTraverseCallback<R>,
     onUp?: DFSTraverseCallback<R>,

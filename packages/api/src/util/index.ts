@@ -1,3 +1,5 @@
+import {infer} from 'zod';
+
 export * from './Environment';
 
 export type ToDefined<T> = T extends any ? ((Exclude<T, undefined>) | (T & {})) : never;
@@ -24,13 +26,22 @@ export type NonFunctionProperties<T> = {
   [K in keyof T as T[K] extends (...args: any[]) => any ? never : K]: T[K];
 };
 
-export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+export type Writeable<T> = T extends StrictReadonly<infer V> ? V : {
+  -readonly [P in keyof T]: T[P] extends ReadonlyArray<infer U> ? Array<U> : T[P]
+};
+
+export type MaybeReadonly<T> = T | StrictReadonly<T>;
+
+/**
+ * TODO: Remove most usage of this utility type after the base types are made inherently readonly, so that this type would give no effect.
+ */
 export type StrictReadonly<T> = {
   readonly [K in keyof T]: T[K] extends (infer U)[] ? ReadonlyArray<U> : T[K];
 };
 
 export type DistributeWriteable<T> = T extends any ? Writeable<T> : never;
 export type DistributeReadOnly<T> = T extends any ? Readonly<T> : never;
+export type DistributeStrictReadOnly<T> = T extends any ? StrictReadonly<T> : never;
 
 export type ObjectToUnion<T> = { [K in keyof T]: { [P in K]: T[K] } }[keyof T];
 export type ConditionalPartial<T, Full> = T extends ObjectToUnion<Full> ? Full : T;

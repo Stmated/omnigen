@@ -1,4 +1,4 @@
-import {OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, TypeDiffKind} from '@omnigen/api';
+import {OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, StrictReadonly, TypeDiffKind} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil';
 
@@ -16,7 +16,7 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
     //   return;
     // }
 
-    type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<OmniType> };
+    type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<StrictReadonly<OmniType>> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 
     OmniUtil.visitTypesDepthFirst(args.model, ctx => {
@@ -56,10 +56,10 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
       // allowedDiffs.push(TypeDiffKind.POLYMORPHIC_LITERAL);
     }
 
-    const sourceIdentifierReplacements = new Map<OmniGenericSourceIdentifierType, OmniType>();
+    const sourceIdentifierReplacements = new Map<OmniGenericSourceIdentifierType, StrictReadonly<OmniType>>();
     for (const [sourceIdentifier, info] of sourceIdentifierToTargetsMap.entries()) {
 
-      let replacement: OmniType | undefined = undefined;
+      let replacement: StrictReadonly<OmniType> | undefined = undefined;
       if (info.targetTypes.size == 1) {
         // replacement = [...info.targetTypes.values()][0];
       } else {
@@ -94,7 +94,7 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
       } else if (ctx.type.kind === OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
         const replacement = sourceIdentifierReplacements.get(ctx.type);
         if (replacement) {
-          ctx.replacement = replacement;
+          ctx.replacement = OmniUtil.asWriteable(replacement);
         }
       } else if (ctx.type.kind === OmniTypeKind.GENERIC_SOURCE) {
         for (let i = ctx.type.sourceIdentifiers.length - 1; i >= 0; i--) {

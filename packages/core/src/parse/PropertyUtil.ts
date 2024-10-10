@@ -9,12 +9,12 @@ import {
   PartialProp,
   PropertiesInformation,
   PropertyDifference,
-  PropertyEquality,
+  PropertyEquality, StrictReadonly,
   TargetFeatures,
   TypeDiffKind,
 } from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.js';
-import {CombineOptions, CreateMode, getShallowPayloadString} from '../util';
+import {CombineOptions, CreateMode} from '../util';
 import {LoggerFactory} from '@omnigen/core-log';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
@@ -23,7 +23,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class PropertyUtil {
 
-  public static addProperty(owner: OmniPropertyOwner, property: PartialProp<OmniProperty, 'kind'>, as?: OmniType): OmniProperty {
+  public static addProperty(owner: OmniPropertyOwner, property: PartialProp<OmniProperty, 'kind'>, as?: StrictReadonly<OmniType>): OmniProperty {
 
     let propertyWithOwner: OmniProperty;
     if (property.kind && !as) {
@@ -67,7 +67,7 @@ export class PropertyUtil {
   ): PropertiesInformation {
 
     let commonPropertyNames: Array<OmniPropertyName> | undefined = undefined;
-    const pairs: Array<OmniOwnedProperty[]> = types.filter(OmniUtil.isPropertyOwner).map(t => {
+    const pairs: Array<StrictReadonly<OmniOwnedProperty>[]> = types.filter(OmniUtil.isPropertyOwner).map(t => {
       return OmniUtil.getPropertiesOf(t).map(p => ({
         owner: t,
         property: p,
@@ -154,11 +154,16 @@ export class PropertyUtil {
 
     if (properties.length == 1) {
 
-      propertyEquality.type = properties[0].type;
-      return propertyEquality;
+      return {
+        ...propertyEquality,
+        type: properties[0].type,
+      };
+
+      // propertyEquality.type = properties[0].type;
+      // return propertyEquality;
     }
 
-    const possiblePropertyTypes: OmniType[] = [];
+    const possiblePropertyTypes: Array<StrictReadonly<OmniType>> = [];
     for (let i = 0; i < properties.length; i++) {
 
       // NOTE: Need good test cases for this, to check that it really finds the lowest equality level

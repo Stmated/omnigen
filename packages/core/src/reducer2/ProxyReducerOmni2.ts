@@ -1,11 +1,10 @@
 import {OmniItemKind, OmniModel, OmniNode, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {ProxyReducer2} from './ProxyReducer2';
 import {assertDefined, assertGenericSuperType, isDefined} from '../util';
-import {ProxyReducerBuilder2} from './ProxyReducerBuilder2';
-
 import {Spec2} from './types';
 import {ReducerOpt2} from './ReducerOpt2';
-import {OmniUtil} from '../parse';
+import {OmniTypeUtil} from '../parse/OmniTypeUtil.ts';
+import {OmniDescribeUtils} from '../parse/OmniDescribeUtils.ts';
 
 interface ProxyReducerOmniNodeOverrides2 {
   [OmniTypeKind.BOOL]: OmniType | undefined,
@@ -49,157 +48,154 @@ export function assertProxySuperType2(type: OmniType | undefined): OmniSuperType
     return undefined;
   }
 
-  // NOTE: The special case could be a lie, but should hopefully be true.
-  //        The real solution is to have stricter generics and resolving the type everywhere.
-  if (OmniUtil.asSuperType(type, true, t => ProxyReducer2.isProxy(t) ? true : undefined)) {
+  if (OmniTypeUtil.asSuperType(type, true)) {
     return type;
   } else {
-    throw new Error(`${OmniUtil.describe(type)} should have been supertype compatible`);
+    throw new Error(`${OmniDescribeUtils.describe(type)} should have been supertype compatible`);
   }
 }
-
 
 const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmniNodeOverrides2, ReducerOpt2> = {
 
   MODEL: (n, r) => {
-    n = r.set('endpoints', n.endpoints.map(it => r.reduce(it)).filter(isDefined));
+    r.put('endpoints', n.endpoints.map(it => r.reduce(it)).filter(isDefined));
 
-    if (n.contact) n = r.set('contact', r.reduce(n.contact));
-    if (n.license) n = r.set('license', r.reduce(n.license));
-    if (n.continuations) n = r.set('continuations', n.continuations?.map(it => r.reduce(it)).filter(isDefined));
-    if (n.externalDocumentations) n = r.set('externalDocumentations', n.externalDocumentations.map(it => r.reduce(it)).filter(isDefined));
-    if (n.servers) n = r.set('servers', n.servers.map(it => r.reduce(it)).filter(isDefined));
-    if (n.types) n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    if (n.contact) r.put('contact', r.reduce(n.contact));
+    if (n.license) r.put('license', r.reduce(n.license));
+    if (n.continuations) r.put('continuations', n.continuations?.map(it => r.reduce(it)).filter(isDefined));
+    if (n.externalDocumentations) r.put('externalDocumentations', n.externalDocumentations.map(it => r.reduce(it)).filter(isDefined));
+    if (n.servers) r.put('servers', n.servers.map(it => r.reduce(it)).filter(isDefined));
+    if (n.types) r.put('types', n.types.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
 
   BOOL: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   CHAR: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   DECIMAL: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   INTEGER: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   INTEGER_SMALL: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   LONG: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   NUMBER: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   DOUBLE: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   FLOAT: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   STRING: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   VOID: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   UNDEFINED: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   NULL: (n, r) => {
-    if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   UNKNOWN: (n, r) => {
-    if (n.upperBound) r.set('upperBound', r.reduce(n.upperBound));
+    if (n.upperBound) r.put('upperBound', r.reduce(n.upperBound));
     if (n.examples) n.examples.map(it => r.reduce(it)).filter(isDefined);
-    return r.next();
+    r.yieldBase();
   },
 
   DECORATING: (n, r) => {
-    n = r.set('of', assertDefined(r.reduce(n.of)));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('of', assertDefined(r.reduce(n.of)));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
 
   ARRAY: (n, r) => {
-    n = r.set('of', assertDefined(r.reduce(n.of)));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('of', assertDefined(r.reduce(n.of)));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   ARRAY_PROPERTIES_BY_POSITION: (n, r) => {
-    n = r.set('properties', n.properties.map(it => r.reduce(it)).filter(isDefined));
-    if (n.commonDenominator) n = r.set('commonDenominator', r.reduce(n?.commonDenominator));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('properties', n.properties.map(it => r.reduce(it)).filter(isDefined));
+    if (n.commonDenominator) r.put('commonDenominator', r.reduce(n?.commonDenominator));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   DICTIONARY: (n, r) => {
-    n = r.set('valueType', assertDefined(r.reduce(n.valueType)));
-    n = r.set('keyType', assertDefined(r.reduce(n.keyType)));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('valueType', assertDefined(r.reduce(n.valueType)));
+    r.put('keyType', assertDefined(r.reduce(n.keyType)));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
 
   ENUM: (n, r) => {
-    n = r.set('members', n.members?.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('members', n.members?.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
 
   UNION: (n, r) => {
-    n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().commit();
+    r.put('types', n.types.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist();
   },
   EXCLUSIVE_UNION: (n, r) => {
-    n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().commit();
+    r.put('types', n.types.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist();
   },
   INTERSECTION: (n, r) => {
-    n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().commit();
+    r.put('types', n.types.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist();
   },
   NEGATION: (n, r) => {
-    n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().commit();
+    r.put('types', n.types.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist();
   },
 
   EXTERNAL_MODEL_REFERENCE: (n, r) => {
-    n = r.set('of', assertDefined(r.reduce(n.of)));
-    n = r.set('model', assertDefined(r.reduce(n.model)));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('of', assertDefined(r.reduce(n.of)));
+    r.put('model', assertDefined(r.reduce(n.model)));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   GENERIC_SOURCE: (n, r) => {
-    n = r.set('of', assertGenericSuperType(r.reduce(n.of)));
-    n = r.set('sourceIdentifiers', n.sourceIdentifiers.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().next();
+    r.put('of', assertGenericSuperType(r.reduce(n.of)));
+    r.put('sourceIdentifiers', n.sourceIdentifiers.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist().yieldBase();
   },
   GENERIC_SOURCE_IDENTIFIER: (n, r) => {
-    if (n.upperBound) n = r.set('upperBound', r.reduce(n.upperBound));
-    if (n.lowerBound) n = r.set('lowerBound', r.reduce(n.lowerBound));
-    if (n.knownEdgeTypes) n = r.set('knownEdgeTypes', n.knownEdgeTypes.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().next();
+    if (n.upperBound) r.put('upperBound', r.reduce(n.upperBound));
+    if (n.lowerBound) r.put('lowerBound', r.reduce(n.lowerBound));
+    if (n.knownEdgeTypes) r.put('knownEdgeTypes', n.knownEdgeTypes.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist().yieldBase();
   },
   GENERIC_TARGET: (n, r) => {
     const source = assertDefined(r.reduce(n.source));
@@ -207,128 +203,119 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
       throw new Error(`Reduced GenericSource must still be a GenericSource when given to a GenericTarget`);
     }
 
-    n = r.set('source', source);
-    n = r.set('targetIdentifiers', n.targetIdentifiers.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().next();
+    r.put('source', source);
+    r.put('targetIdentifiers', n.targetIdentifiers.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist().yieldBase();
   },
   GENERIC_TARGET_IDENTIFIER: (n, r) => {
 
-    n = r.set('type', assertDefined(r.reduce(n.type)));
-    n = r.set('sourceIdentifier', assertDefined(r.reduce(n.sourceIdentifier)));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('type', assertDefined(r.reduce(n.type)));
+    r.put('sourceIdentifier', assertDefined(r.reduce(n.sourceIdentifier)));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   HARDCODED_REFERENCE: (n, r) => {
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   INTERFACE: (n, r) => {
-    n = r.set('of', assertProxySuperType2(assertDefined(r.reduce(n.of))));
-    if (n.extendedBy) n = r.set('extendedBy', assertProxySuperType2(r.reduce(n.extendedBy)));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().next();
+    r.put('of', assertProxySuperType2(assertDefined(r.reduce(n.of))));
+    if (n.extendedBy) r.put('extendedBy', assertProxySuperType2(r.reduce(n.extendedBy)));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist().yieldBase();
   },
-
   OBJECT: (n, r) => {
-    n = r.set('properties', n.properties.map(it => r.reduce(it)).filter(isDefined));
-    if (n.extendedBy) n = r.set('extendedBy', assertProxySuperType2(r.reduce(n.extendedBy)));
-    if (n.subTypeHints) n = r.set('subTypeHints', n.subTypeHints?.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.persist().next();
+    r.put('properties', n.properties.map(it => r.reduce(it)).filter(isDefined));
+    if (n.extendedBy) r.put('extendedBy', assertProxySuperType2(r.reduce(n.extendedBy)));
+    if (n.subTypeHints) r.put('subTypeHints', n.subTypeHints?.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.persist().yieldBase();
   },
   SUBTYPE_HINT: (n, r) => {
-    n = r.set('type', assertDefined(r.reduce(n.type)));
-    n = r.set('qualifiers', n.qualifiers.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('type', assertDefined(r.reduce(n.type)));
+    r.put('qualifiers', n.qualifiers.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   TUPLE: (n, r) => {
-    n = r.set('types', n.types.map(it => r.reduce(it)).filter(isDefined));
-    if (n.commonDenominator) n = r.set('commonDenominator', r.reduce(n.commonDenominator));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('types', n.types.map(it => r.reduce(it)).filter(isDefined));
+    if (n.commonDenominator) r.put('commonDenominator', r.reduce(n.commonDenominator));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
 
-  PROPERTY: (n, r) => {
-    r.set('type', assertDefined(r.reduce(n.type)));
-    return r.next();
-  },
+  PROPERTY: (n, r) => r.put('type', assertDefined(r.reduce(n.type))).callBase(),
 
   EXAMPLE_PAIRING: (n, r) => {
-    if (n.params) n = r.set('params', n.params?.map(it => r.reduce(it)).filter(isDefined));
-    if (n.result) n = r.set('result', assertDefined(r.reduce(n.result)));
-    return r.next();
+    if (n.params) r.put('params', n.params?.map(it => r.reduce(it)).filter(isDefined));
+    if (n.result) r.put('result', assertDefined(r.reduce(n.result)));
+    r.yieldBase();
   },
   EXAMPLE_PARAM: (n, r) => {
-    n = r.set('property', assertDefined(r.reduce(n.property)));
-    n = r.set('type', assertDefined(r.reduce(n.type)));
-    return r.next();
+    r.put('property', assertDefined(r.reduce(n.property)));
+    r.put('type', assertDefined(r.reduce(n.type)));
+    r.yieldBase();
   },
   EXAMPLE_RESULT: (n, r) => {
-    n = r.set('type', assertDefined(r.reduce(n.type)));
-    return r.next();
+    r.put('type', assertDefined(r.reduce(n.type)));
+    r.yieldBase();
   },
 
   ENDPOINT: (n, r) => {
-    n = r.set('callbacks', n.callbacks?.map(it => r.reduce(it)).filter(isDefined));
-    n = r.set('externalDocumentations', n.externalDocumentations?.map(it => r.reduce(it)).filter(isDefined));
-    n = r.set('request', assertDefined(r.reduce(n.request)));
-    n = r.set('responses', n.responses.map(it => r.reduce(it)).filter(isDefined));
-    n = r.set('requestQualifiers', n.requestQualifiers?.map(it => r.reduce(it)).filter(isDefined));
-    n = r.set('transports', n.transports.map(it => r.reduce(it)).filter(isDefined));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('callbacks', n.callbacks?.map(it => r.reduce(it)).filter(isDefined));
+    r.put('externalDocumentations', n.externalDocumentations?.map(it => r.reduce(it)).filter(isDefined));
+    r.put('request', assertDefined(r.reduce(n.request)));
+    r.put('responses', n.responses.map(it => r.reduce(it)).filter(isDefined));
+    r.put('requestQualifiers', n.requestQualifiers?.map(it => r.reduce(it)).filter(isDefined));
+    r.put('transports', n.transports.map(it => r.reduce(it)).filter(isDefined));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   LINK_SOURCE_PARAMETER: (n, r) => {
-    if (n.propertyPath) n = r.set('propertyPath', n.propertyPath?.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    if (n.propertyPath) r.put('propertyPath', n.propertyPath?.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   LINK_TARGET_PARAMETER: (n, r) => {
-    n = r.set('propertyPath', n.propertyPath.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('propertyPath', n.propertyPath.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
   LINK_MAPPING: (n, r) => {
-    n = r.set('source', assertDefined(r.reduce(n.source)));
-    n = r.set('target', assertDefined(r.reduce(n.target)));
-    return r.next();
+    r.put('source', assertDefined(r.reduce(n.source)));
+    r.put('target', assertDefined(r.reduce(n.target)));
+    r.yieldBase();
   },
   LINK: (n, r) => {
-    n = r.set('mappings', n.mappings.map(it => r.reduce(it)).filter(isDefined));
-    if (n.server) n = r.set('server', r.reduce(n.server));
-    if (n.sourceModel) n = r.set('sourceModel', r.reduce(n.sourceModel));
-    if (n.targetModel) n = r.set('targetModel', r.reduce(n.targetModel));
-    return r.next();
+    r.put('mappings', n.mappings.map(it => r.reduce(it)).filter(isDefined));
+    if (n.server) r.put('server', r.reduce(n.server));
+    if (n.sourceModel) r.put('sourceModel', r.reduce(n.sourceModel));
+    if (n.targetModel) r.put('targetModel', r.reduce(n.targetModel));
+    r.yieldBase();
   },
   INPUT: (n, r) => {
-    n = r.set('type', assertDefined(r.reduce(n.type)));
-    return r.next();
+    r.put('type', assertDefined(r.reduce(n.type)));
+    r.yieldBase();
   },
   OUTPUT: (n, r) => {
-    n = r.set('qualifiers', n.qualifiers.map(it => r.reduce(it)).filter(isDefined));
-    n = r.set('type', assertDefined(r.reduce(n.type)));
-    return r.next();
+    r.put('qualifiers', n.qualifiers.map(it => r.reduce(it)).filter(isDefined));
+    r.put('type', assertDefined(r.reduce(n.type)));
+    r.yieldBase();
   },
   CALLBACK: (n, r) => {
-    n = r.set('request', assertDefined(r.reduce(n.request)));
-    n = r.set('responses', n.responses.map(it => r.reduce(it)).filter(isDefined));
-    n = r.set('transport', assertDefined(r.reduce(n.transport)));
-    if (n.examples) n = r.set('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
-    return r.next();
+    r.put('request', assertDefined(r.reduce(n.request)));
+    r.put('responses', n.responses.map(it => r.reduce(it)).filter(isDefined));
+    r.put('transport', assertDefined(r.reduce(n.transport)));
+    if (n.examples) r.put('examples', n.examples.map(it => r.reduce(it)).filter(isDefined));
+    r.yieldBase();
   },
 };
 
 export class ProxyReducerOmni2 {
 
-  private static _builder?: ProxyReducerBuilder2<OmniNode, 'kind', ProxyReducerOmniNodeOverrides2, {}>;
+  private static _builder = ProxyReducer2.builder<OmniNode, ProxyReducerOmniNodeOverrides2>()
+    .discriminator('kind')
+    .spec(DEFAULT_PROXY_REDUCER_OMNI_SPEC2);
 
   public static builder() {
-
-    if (!this._builder) {
-      this._builder = ProxyReducer2.builder<OmniNode, ProxyReducerOmniNodeOverrides2>()
-        .discriminator('kind')
-        .spec(DEFAULT_PROXY_REDUCER_OMNI_SPEC2);
-    }
-
     return this._builder;
   }
 }

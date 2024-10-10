@@ -4,7 +4,7 @@ import {
   OmniIntersectionType,
   OmniKindComposition,
   OmniModel,
-  OmniNegationType,
+  OmniNegationType, OmniNode,
   OmniObjectType,
   OmniPrimitiveType,
   OmniSubTypeCapableType,
@@ -14,7 +14,7 @@ import {
   OmniUnionType,
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Case, OmniUtil} from '@omnigen/core';
+import {ANY_KIND, Case, OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 import {CodeUtil} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -103,45 +103,46 @@ export class JavaUtil {
 
     // This is a type that we need to investigate if it is ever used as a class somewhere else.
     // We do this by checking if any type uses 'type' as a first extension.
-    return OmniUtil.visitTypesDepthFirst(model, ctx => {
-
-      const uw = OmniUtil.getUnwrappedType(ctx.type);
-      if (uw.kind == OmniTypeKind.ENUM || uw.kind == OmniTypeKind.INTERFACE) {
-        return;
-      }
-
-      if ('extendedBy' in uw && uw.extendedBy) {
-        if (uw.extendedBy == unwrapped) {
-          return unwrapped;
+    return ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
+      [ANY_KIND]: (n, r) => {
+        const uw = OmniUtil.getUnwrappedType(n);
+        if (uw.kind === OmniTypeKind.ENUM || uw.kind === OmniTypeKind.INTERFACE) {
+          return undefined;
         }
 
-        if (uw.extendedBy.kind == OmniTypeKind.INTERSECTION && uw.extendedBy.types.length > 0 && uw.extendedBy.types[0] === unwrapped) {
-          return unwrapped;
+        if ('extendedBy' in uw && uw.extendedBy) {
+          if (uw.extendedBy === unwrapped) {
+            return unwrapped;
+          }
+
+          if (uw.extendedBy.kind == OmniTypeKind.INTERSECTION && uw.extendedBy.types.length > 0 && uw.extendedBy.types[0] === unwrapped) {
+            return unwrapped;
+          }
         }
-      }
 
-      return;
-    });
-  }
-
-  public static getClasses(model: OmniModel): JavaPotentialClassType[] {
-
-    const checked: OmniType[] = [];
-    const classes: JavaPotentialClassType[] = [];
-
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-      if (checked.includes(ctx.type)) {
-        return;
-      }
-      checked.push(ctx.type);
-
-      const asClass = JavaUtil.getAsClass(model, ctx.type);
-      if (asClass && !classes.includes(asClass)) {
-        classes.push(asClass);
-      }
+        r.yieldBase();
+        return undefined;
+      },
     });
 
-    return classes;
+    // // REMOVE
+    // return OmniUtil.visitTypesDepthFirst(model, ctx => {
+    //
+    //   const uw = OmniUtil.getUnwrappedType(ctx.type);
+    //   if (uw.kind == OmniTypeKind.ENUM || uw.kind == OmniTypeKind.INTERFACE) {
+    //     return;
+    //   }
+    //
+    //   if ('extendedBy' in uw && uw.extendedBy) {
+    //     if (uw.extendedBy == unwrapped) {
+    //       return unwrapped;
+    //     }
+    //
+    //     if (uw.extendedBy.kind == OmniTypeKind.INTERSECTION && uw.extendedBy.types.length > 0 && uw.extendedBy.types[0] === unwrapped) {
+    //       return unwrapped;
+    //     }
+    //   }
+    // });
   }
 
   public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]> {

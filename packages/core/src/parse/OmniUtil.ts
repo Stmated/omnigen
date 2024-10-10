@@ -1,7 +1,9 @@
 import {
   Arrayable,
-  CommonDenominatorType, DebugValue,
-  DEFAULT_UNKNOWN_KIND, Direction, FirstDefined,
+  CommonDenominatorType,
+  DebugValue,
+  DEFAULT_UNKNOWN_KIND,
+  Direction, MaybeReadonly,
   Namespace,
   NamespaceArrayItem,
   ObjectEdgeName,
@@ -13,14 +15,15 @@ import {
   OmniDecoratingType,
   OmniDictionaryType,
   OmniEnumMember,
-  OmniEnumType, OmniExclusiveUnionType,
+  OmniEnumType,
+  OmniExclusiveUnionType,
   OmniExternalModelReferenceType,
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
   OmniInput,
-  OmniKindComposition,
-  OmniModel, OmniNode,
+  OmniModel,
+  OmniNode,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniOutput,
@@ -40,20 +43,24 @@ import {
   OmniTypeOf,
   OmniUnknownType,
   SmartUnwrappedType,
+  StrictReadonly,
   TargetFeatures,
   TypeDiffKind,
   TypeName,
   TypeOwner,
   TypeUseKind,
   UnknownKind,
+  Writeable,
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
 import {Naming} from './Naming';
 import {assertUnreachable, Case, CombineMode, CombineOptions, CreateMode} from '../util';
 import {PropertyUtil} from './PropertyUtil';
-import {ProxyReducerOmni} from '../reducer/ProxyReducerOmni';
-import {ProxyReducer} from '../reducer/ProxyReducer';
+import {ProxyReducerOmni2} from '../reducer2/ProxyReducerOmni2.ts';
+import {ANY_KIND} from '../reducer2/types.ts';
+import {OmniTypeUtil} from './OmniTypeUtil.ts';
+import {OmniDescribeUtils} from './OmniDescribeUtils.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -88,7 +95,7 @@ export class OmniUtil {
    * TODO: Remove in favor of OmniModel visitor (make types into classes)
    */
   public static visitTypesBreadthFirst<R>(
-    input: TypeOwner | TypeOwner[] | undefined,
+    input: Arrayable<TypeOwner> | undefined,
     onDown: BFSTraverseCallback<R>,
     visitOnce = true,
   ): R | undefined {
@@ -168,12 +175,12 @@ export class OmniUtil {
    *
    * @param type what to unwrap
    */
-  public static getUnwrappedType<T extends OmniType | undefined>(type: T): SmartUnwrappedType<T> {
+  public static getUnwrappedType<T extends OmniNode | undefined>(type: T): SmartUnwrappedType<T> {
 
     if (type) {
-      if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
+      if (type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
         return OmniUtil.getUnwrappedType(type.of) as SmartUnwrappedType<T>;
-      } else if (type.kind == OmniTypeKind.DECORATING) {
+      } else if (type.kind === OmniTypeKind.DECORATING) {
         return OmniUtil.getUnwrappedType(type.of) as SmartUnwrappedType<T>;
       }
     }
@@ -197,13 +204,13 @@ export class OmniUtil {
     return unwrapped;
   }
 
-  public static asSubType(type: OmniNode | undefined): type is OmniSubTypeCapableType {
+  public static asSubType(type: MaybeReadonly<OmniNode> | undefined): type is OmniSubTypeCapableType {
 
     if (!type) {
       return false;
     }
 
-    if (type.kind == OmniTypeKind.OBJECT || type.kind == OmniTypeKind.ENUM || type.kind == OmniTypeKind.INTERFACE) {
+    if (type.kind === OmniTypeKind.OBJECT || type.kind === OmniTypeKind.ENUM || type.kind === OmniTypeKind.INTERFACE) {
       return true;
     }
 
@@ -250,61 +257,7 @@ export class OmniUtil {
   }
 
   public static asSuperType(type: OmniType | undefined, silent = true, special?: (t: OmniType) => boolean | undefined): type is OmniSuperTypeCapableType {
-
-    if (!type) {
-      return false;
-    }
-
-    if (special) {
-      const isSpecial = special(type);
-      if (isSpecial !== undefined) {
-        return isSpecial;
-      }
-    }
-
-    if (type.kind == OmniTypeKind.OBJECT
-      || type.kind == OmniTypeKind.GENERIC_TARGET
-      || type.kind == OmniTypeKind.ENUM
-      || type.kind == OmniTypeKind.INTERFACE
-      || type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-      return true;
-    }
-
-    if (OmniUtil.isPrimitive(type) && !type.nullable && type.kind !== OmniTypeKind.VOID && type.kind !== OmniTypeKind.NULL) {
-      return true;
-    }
-
-    if (type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      return OmniUtil.asSuperType(type.of, silent, special);
-    }
-
-    if (type.kind === OmniTypeKind.DECORATING) {
-      return OmniUtil.asSuperType(type.of, silent, special);
-    }
-
-    if (OmniUtil.isComposition(type)) {
-
-      // This seems like an unnecessary operation to do, but cannot figure out a better way yet.
-      for (const child of type.types) {
-        const childSuperType = OmniUtil.asSuperType(child, silent, special);
-        if (!childSuperType) {
-
-          // This might seem confusing, when you call "asSuperType" on a composition but get back undefined.
-          // This method is supposed to be safe to call with anything though, but we log this occasion.
-          const message = `There is a non-supertype type (${OmniUtil.describe(child)}) inside composition '${OmniUtil.describe(type)}'`;
-          if (silent) {
-            logger.debug(message);
-            return false;
-          } else {
-            throw new Error(message);
-          }
-        }
-      }
-
-      return true;
-    }
-
-    return false;
+    return OmniTypeUtil.asSuperType(type, silent, special);
   }
 
   public static isGenericSuperType(type: OmniSuperTypeCapableType): type is OmniSuperGenericTypeCapableType {
@@ -349,7 +302,7 @@ export class OmniUtil {
 
     OmniUtil.visitTypesBreadthFirst(model, ctx => {
 
-      if (ctx.type.kind == OmniTypeKind.OBJECT) {
+      if (ctx.type.kind === OmniTypeKind.OBJECT) {
         if (ctx.type.extendedBy == type) {
           types.push(ctx.type);
         }
@@ -363,7 +316,7 @@ export class OmniUtil {
 
     if (OmniUtil.isComposition(type)) {
 
-      if (type.kind == OmniTypeKind.INTERSECTION) {
+      if (type.kind === OmniTypeKind.INTERSECTION) {
         return type.types.flatMap(it => {
           return OmniUtil.getFlattenedSuperTypes(it);
         });
@@ -416,33 +369,28 @@ export class OmniUtil {
 
     const map = new Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]>();
 
-    const visitor = ProxyReducerOmni.builder().options({immutable: true}).build({
-      true: (n, r) => {
+    const visitor = ProxyReducerOmni2.builder().options({immutable: true}).build({
+      [ANY_KIND]: (n, r) => {
 
-        // TODO: Need a quick way to check if the node is an OmniType
         if (!OmniUtil.asSubType(n)) {
-          return r.next(n);
+          return r.callBase();
         }
 
         const subType = OmniUtil.getUnwrappedType(n);
         if (!subType) {
-          return r.next(n);
+          return r.callBase();
         }
 
         if (OmniUtil.isComposition(subType)) {
           // NOTE: This should likely be removed. A composition can be a subtype and/or supertype depending on target and contents.
-          return r.next(n);
+          return r.callBase();
         }
 
         if (subType.extendedBy) {
           const superTypes = OmniUtil.getFlattenedSuperTypes(subType.extendedBy);
 
-          // TODO: MUST figure out a proper way to handle situation where we want to escape a node outside the visiting, otherwise we will leak the proxy!
-          //       But we also must be able to resolve that node at the end (if things are ever mutated)
-          //       HOWEVER! If things are immutable, and we are only visiting, then we can safely NEVER work with any proxies and only ever give back the actual node! Should be much faster :)
-
-          const actualSubType = ProxyReducer.getTarget(subType);
-          const uniqueSuperTypesOfSubType = (map.has(actualSubType) ? map : map.set(actualSubType, [])).get(actualSubType)!;
+          // const actualSubType = ProxyReducer.getTarget(subType);
+          const uniqueSuperTypesOfSubType = (map.has(subType) ? map : map.set(subType, [])).get(subType)!;
           for (const superType of superTypes) {
             if (!uniqueSuperTypesOfSubType.includes(superType)) {
               uniqueSuperTypesOfSubType.push(superType);
@@ -450,7 +398,8 @@ export class OmniUtil {
           }
         }
 
-        return r.next(n);
+        return r.callBase();
+        // return r.next(n);
       },
     });
 
@@ -625,11 +574,11 @@ export class OmniUtil {
     return false;
   }
 
-  public static isNull<T extends OmniType>(type: T): type is OmniTypeOf<T, typeof OmniTypeKind.NULL> {
+  public static isNull(type: StrictReadonly<OmniType>) {
     return type.kind === OmniTypeKind.NULL;
   }
 
-  public static isUndefined(type: OmniType): type is OmniTypeOf<OmniPrimitiveType, typeof OmniTypeKind.UNDEFINED> {
+  public static isUndefined(type: StrictReadonly<OmniType>) {
     return type.kind === OmniTypeKind.UNDEFINED;
   }
 
@@ -642,35 +591,7 @@ export class OmniUtil {
    * @param nullable
    */
   public static getVirtualPrimitiveKindName(kind: OmniPrimitiveKinds, nullable: boolean): string {
-
-    switch (kind) {
-      case OmniTypeKind.BOOL:
-        return nullable ? 'Boolean' : 'bool';
-      case OmniTypeKind.VOID:
-        return 'void';
-      case OmniTypeKind.CHAR:
-        return nullable ? 'Character' : 'char';
-      case OmniTypeKind.STRING:
-        return nullable ? 'String' : 'string';
-      case OmniTypeKind.FLOAT:
-        return nullable ? 'Float' : 'float';
-      case OmniTypeKind.INTEGER:
-        return nullable ? 'Integer' : 'int';
-      case OmniTypeKind.INTEGER_SMALL:
-        return nullable ? 'Short' : 'short';
-      case OmniTypeKind.LONG:
-        return nullable ? 'Long' : 'long';
-      case OmniTypeKind.DECIMAL:
-        return nullable ? 'Decimal' : 'decimal';
-      case OmniTypeKind.DOUBLE:
-        return nullable ? 'Double' : 'double';
-      case OmniTypeKind.NUMBER:
-        return nullable ? 'Number' : 'number';
-      case OmniTypeKind.NULL:
-        return 'null';
-      case OmniTypeKind.UNDEFINED:
-        return 'undefined';
-    }
+    return OmniDescribeUtils.getVirtualPrimitiveKindName(kind, nullable);
   }
 
   /**
@@ -679,110 +600,8 @@ export class OmniUtil {
    *
    * @param type
    */
-  public static describe(type: OmniType | undefined): string {
-
-    if (!type) {
-      return '[undefined]';
-    }
-
-    if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-      const parts: string[] = [];
-      if (type.upperBound) {
-        parts.push(`upper=${OmniUtil.describe(type.upperBound)}`);
-      }
-      if (type.lowerBound) {
-        parts.push(`lower=${OmniUtil.describe(type.lowerBound)}`);
-      }
-
-      if (parts.length > 0) {
-        return `${type.placeholderName}: ${parts.join(', ')}`;
-      } else {
-        return type.placeholderName;
-      }
-
-    } else if (type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-      if (type.placeholderName) {
-        return `${type.placeholderName} -> ${type.sourceIdentifier.placeholderName}: ${OmniUtil.describe(type.type)}`;
-      } else {
-        return `${type.sourceIdentifier.placeholderName}: ${OmniUtil.describe(type.type)}`;
-      }
-    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      return `Target:${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.targetIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
-    } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-      return `Source:${this.simplifyTypeName(OmniUtil.getTypeName(type))}<${type.sourceIdentifiers.map(identifier => OmniUtil.describe(identifier))}>`;
-    } else if (type.kind == OmniTypeKind.DICTIONARY) {
-      return `Dictionary<${OmniUtil.describe(type.keyType)}, ${OmniUtil.describe(type.valueType)}>`;
-    } else if (type.kind == OmniTypeKind.UNKNOWN) {
-      const upperBound = type.upperBound ? ` : ${OmniUtil.describe(type.upperBound)}` : '';
-      return `?${(type.unknownKind ?? DEFAULT_UNKNOWN_KIND)}?${upperBound}`;
-    }
-
-    const baseName = OmniUtil.simplifyTypeName(OmniUtil.getVirtualTypeName(type));
-
-    if (type.kind === OmniTypeKind.ENUM) {
-      return `${baseName}${OmniUtil.describeNullable(type.nullable)} [${type.kind}]`;
-    }
-
-    if (type.kind === OmniTypeKind.OBJECT) {
-      if (type.extendedBy) {
-        return `${baseName} : ${OmniUtil.describe(type.extendedBy)}`;
-      } else {
-        return `${baseName}`;
-      }
-    }
-
-    if (OmniUtil.isPrimitive(type)) {
-      let suffix = '';
-
-      if (type.value) {
-        const resolvedString = OmniUtil.primitiveConstantValueToString(type.value);
-        suffix = `=${resolvedString}`;
-      }
-
-      return `${baseName} [${type.kind}${OmniUtil.describeNullable(type.nullable)}${suffix}]`;
-    }
-
-    return `${baseName} [${type.kind}${OmniUtil.describeNullable(type.nullable)}]`;
-  }
-
-  private static describeNullable(isNullable?: boolean): string {
-    if (isNullable === undefined) {
-      return '';
-    }
-
-    return isNullable ? '?' : '!';
-  }
-
-  private static simplifyTypeName(type: TypeName | undefined): string {
-
-    if (!type) {
-      return 'N/A';
-    }
-
-    let baseName = Naming.unwrapWithCallback(type, (name, parts) => {
-      if (parts && parts.length > 0) {
-        return `${parts.join('')}${name}`;
-      } else {
-        return name;
-      }
-    });
-
-    if (baseName) {
-      const slashIndex = baseName.lastIndexOf('/');
-      if (slashIndex !== -1) {
-        baseName = baseName.substring(slashIndex + 1);
-      }
-    }
-
-    return baseName ?? 'N/A';
-  }
-
-  public static primitiveConstantValueToString(value: OmniPrimitiveConstantValue): string {
-    if (typeof value == 'string') {
-      return value;
-    } else {
-      return String(value);
-    }
+  public static describe(type: StrictReadonly<OmniType> | undefined): string {
+    return OmniDescribeUtils.describe(type);
   }
 
   /**
@@ -790,41 +609,12 @@ export class OmniUtil {
    *
    * @param type The type to try and find a name for
    */
-  public static getTypeName(type: OmniType): TypeName | undefined {
-
-    if ('name' in type && type.name) {
-      return type.name;
-    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      return OmniUtil.getTypeName(type.source);
-    } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
-      return OmniUtil.getTypeName(type.of);
-    } else if (type.kind == OmniTypeKind.INTERFACE) {
-      return type.name || OmniUtil.getTypeName(type.of);
-    } else if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      return type.name || OmniUtil.getTypeName(type.of);
-    }
-
-    return undefined;
+  public static getTypeName(type: StrictReadonly<OmniType>): TypeName | undefined {
+    return OmniDescribeUtils.getTypeName(type);
   }
 
-  public static isNullableType(type: OmniType, features?: TargetFeatures): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
-
-    if (OmniUtil.isPrimitive(type)) {
-      if (/* type.kind == OmniTypeKind.STRING ||*/ type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
-        return true;
-      }
-
-      if (type.literal) {
-        if (type.value === null) {
-          return true;
-        }
-      }
-
-      // In some languages a string is always nullable, but that is up to the target language to handle somehow.
-      return type.nullable ?? false;
-    }
-
-    return type.nullable ?? true;
+  public static isNullableType(type: OmniType | StrictReadonly<OmniType>, features?: TargetFeatures): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
+    return OmniTypeUtil.isNullableType(type, features);
   }
 
   public static hasSpecifiedConstantValue(type: OmniType): type is OmniPrimitiveType & { literal: true } {
@@ -861,118 +651,8 @@ export class OmniUtil {
    *
    * NOT to be relied upon or used for naming output classes or types.
    */
-  public static getVirtualTypeName(type: OmniType, depth?: number): TypeName {
-
-    depth = depth ?? 0;
-    if (depth >= 10) {
-      return `TYPE-DEPTH-EXCEEDED:${depth}`;
-    }
-
-    if (type.kind == OmniTypeKind.ARRAY) {
-      return {
-        prefix: 'ArrayOf',
-        name: OmniUtil.getVirtualTypeName(type.of, depth + 1),
-      };
-    } else if (type.kind == OmniTypeKind.TUPLE) {
-      return {
-        prefix: 'TupleOf',
-        name: type.types.map(it => OmniUtil.getVirtualTypeName(it, depth + 1)).join(''),
-      };
-    } else if (type.kind == OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION) {
-      return {
-        prefix: 'PropertiesByPositionOf',
-        name: type.properties.map(it => Case.pascal(String(OmniUtil.getPropertyNameOrPattern(it.name)))).join(''),
-      };
-    } else if (OmniUtil.isPrimitive(type)) {
-      return OmniUtil.getVirtualPrimitiveKindName(type.kind, OmniUtil.isNullableType(type));
-    } else if (type.kind === OmniTypeKind.UNKNOWN) {
-      if (type.valueDefault != undefined) {
-        return OmniUtil.primitiveConstantValueToString(type.valueDefault);
-      }
-      switch (type.unknownKind ?? UnknownKind.WILDCARD) {
-        case UnknownKind.DYNAMIC_OBJECT:
-          return '_dynamic_object';
-        case UnknownKind.DYNAMIC:
-          return '_dynamic';
-        case UnknownKind.DYNAMIC_NATIVE:
-          return '_dynamic_native';
-        case UnknownKind.OBJECT:
-          return '_object';
-        case UnknownKind.WILDCARD:
-          return '_wildcard';
-        case UnknownKind.ANY:
-          return '_any';
-        default:
-          throw new Error(`Unknown UnknownType '${type.unknownKind}`);
-      }
-
-    } else if (type.kind == OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      return {
-        prefix: OmniUtil.getVirtualTypeName(type.of, depth + 1),
-        name: 'From',
-        suffix: type.model.name ?? type.model.schemaType ?? 'External',
-      };
-    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
-      const genericTypes = type.targetIdentifiers.map(it => OmniUtil.getVirtualTypeName(it, depth + 1));
-      const genericTypeString = genericTypes.join(', ');
-      return {
-        name: OmniUtil.getTypeName(type) ?? 'N/A',
-        suffix: `<${genericTypeString}>`,
-      };
-    } else if (type.kind == OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-      return type.placeholderName || type.sourceIdentifier.placeholderName;
-    } else if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-      return type.placeholderName;
-    } else if (type.kind == OmniTypeKind.DECORATING) {
-      return `Decorated(${OmniUtil.getVirtualTypeName(type.of)})`;
-    } else if (type.kind == OmniTypeKind.DICTIONARY) {
-
-      // TODO: Convert this into a generic type instead! Do NOT rely on this UGLY hardcoded string method!
-      const keyName = OmniUtil.getVirtualTypeName(type.keyType, depth + 1);
-      const valueName = OmniUtil.getVirtualTypeName(type.valueType, depth + 1);
-      return {
-        prefix: `[`,
-        name: {
-          prefix: keyName,
-          name: ': ',
-          suffix: valueName,
-        },
-        suffix: ']',
-      };
-    } else if (type.kind == OmniTypeKind.HARDCODED_REFERENCE) {
-      // NOTE: Perhaps use another path delimiter character to differentiate it from things some target languages
-      return `${type.fqn.namespace.map(it => OmniUtil.resolveNamespacePart(it)).join('.')}.${type.fqn.edgeName}`;
-    } else if (OmniUtil.isComposition(type)) {
-
-      let prefix: TypeName;
-      if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
-        prefix = ['UnionOf', 'ExclusiveUnionOf'];
-      } else if (type.kind == OmniTypeKind.UNION) {
-        prefix = 'UnionOf';
-      } else if (type.kind == OmniTypeKind.INTERSECTION) {
-        prefix = 'IntersectionOf';
-      } else if (type.kind == OmniTypeKind.NEGATION) {
-        prefix = 'NegationOf';
-      } else {
-        assertUnreachable(type);
-      }
-
-      return {
-        prefix: prefix,
-        name: {
-          prefix: '(',
-          name: type.types.map(it => OmniUtil.getVirtualTypeName(it, depth + 1)).join(','),
-        },
-        suffix: `)`,
-      };
-    }
-
-    const typeName = OmniUtil.getTypeName(type);
-    if (typeName) {
-      return Naming.unwrap(typeName);
-    }
-
-    return (`[ERROR: ADD VIRTUAL TYPE NAME FOR ${String(type.kind)}]`);
+  public static getVirtualTypeName(type: StrictReadonly<OmniType>, depth?: number): TypeName {
+    return OmniDescribeUtils.getVirtualTypeName(type, depth);
   }
 
   public static toReferenceType<T extends OmniType>(type: T): T;
@@ -996,10 +676,10 @@ export class OmniUtil {
       } satisfies OmniDecoratingType) as T;
     }
 
-    // NOTE: If changed, make sure isNullable is updated
+    // NOTE: If changed, make sure OmniUtil#isNullable is updated
     if (OmniUtil.isPrimitive(type)) {
 
-      if (type.kind == OmniTypeKind.NULL || type.kind == OmniTypeKind.VOID) {
+      if (type.kind === OmniTypeKind.NULL || type.kind === OmniTypeKind.VOID) {
 
         // NOTE: The string part is NOT always true, this should be moved to code for the specific language
         return type;
@@ -1066,9 +746,14 @@ export class OmniUtil {
 
   /**
    * TODO: Replace with a tree-folding traverser/visitor instead
-   * @deprecated Instead use `ProxyReducerOmni` (it needs to be fixed first, but prematurely deprecating so that there are lots of warnings to remind me to work on it)
+   * @deprecated Instead use `ProxyReducerOmni2` (it needs to be fixed first, but prematurely deprecating so that there are lots of warnings to remind me to work on it)
    */
-  private static swapTypeInsideType<T extends OmniType, R extends OmniType>(parent: OmniType, from: T, to: R | null, maxDepth: number): void {
+  private static swapTypeInsideType<T extends OmniType, R extends OmniType>(
+    parent: OmniType,
+    from: T,
+    to: R | null,
+    maxDepth: number,
+  ): void {
 
     switch (parent.kind) {
       case OmniTypeKind.UNION:
@@ -1389,11 +1074,18 @@ export class OmniUtil {
     return 0;
   }
 
-  public static getCommonDenominator(options: TargetFeatures | CommonDenominatorOptions, types: OmniType[]): CommonDenominatorType | undefined {
+  /**
+   * This function should not be necessary, but we have it for now until all models are readonly and `StrictReadOnly` can be stripped out.
+   */
+  public static asWriteable<T>(value: T): Writeable<T> {
+    return value as Writeable<T>;
+  }
 
-    if (types.length == 1) {
+  public static getCommonDenominator(options: TargetFeatures | CommonDenominatorOptions, types: ReadonlyArray<StrictReadonly<OmniType>>): CommonDenominatorType | undefined {
+
+    if (types.length === 1) {
       return {
-        type: types[0],
+        type: OmniUtil.asWriteable(types[0]),
       };
     }
 
@@ -1401,7 +1093,7 @@ export class OmniUtil {
 
     let commonDiffAmount = 0;
     let common: CommonDenominatorType = {
-      type: types[0],
+      type: OmniUtil.asWriteable(types[0]),
     };
 
     for (let i = 1; i < types.length; i++) {
@@ -1421,7 +1113,7 @@ export class OmniUtil {
     return common;
   }
 
-  public static isNameable(type: OmniType): type is Extract<OmniType, { name?: TypeName | undefined }> {
+  public static isNameable(type: StrictReadonly<OmniType>) {
 
     return type.kind === OmniTypeKind.OBJECT
       || type.kind === OmniTypeKind.INTERFACE
@@ -1429,8 +1121,6 @@ export class OmniUtil {
       || type.kind === OmniTypeKind.ARRAY
       || type.kind === OmniTypeKind.DECORATING
       || OmniUtil.isPrimitive(type);
-
-
   }
 
   /**
@@ -1445,14 +1135,14 @@ export class OmniUtil {
    * @param opt - What level of things are allowed to be created to fulfill a non-undefined result, and how to solve the resolution of the two types.
    */
   public static getCommonDenominatorBetween(
-    a: OmniType,
-    b: OmniType,
+    a: StrictReadonly<OmniType>,
+    b: StrictReadonly<OmniType>,
     features: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
 
     if (a == b) {
-      return {type: a};
+      return {type: OmniUtil.asWriteable(a)};
     }
 
     if ((a.kind == OmniTypeKind.NULL || a.kind == OmniTypeKind.VOID) && b.kind == a.kind) {
@@ -1508,8 +1198,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenExclusiveUnionAndOther(
-    a: OmniExclusiveUnionType,
-    b: OmniType,
+    a: StrictReadonly<OmniExclusiveUnionType>,
+    b: StrictReadonly<OmniType>,
     features: TargetFeatures,
   ): CommonDenominatorType | undefined {
 
@@ -1521,7 +1211,11 @@ export class OmniUtil {
     return common;
   }
 
-  private static getCommonDenominatorBetweenUnknowns(a: OmniUnknownType, b: OmniUnknownType, opt?: CombineOptions): CommonDenominatorType | undefined {
+  private static getCommonDenominatorBetweenUnknowns(
+    a: OmniUnknownType,
+    b: OmniUnknownType,
+    opt?: CombineOptions,
+  ): CommonDenominatorType | undefined {
 
     if (a.unknownKind === b.unknownKind) {
       return {type: a};
@@ -1569,7 +1263,11 @@ export class OmniUtil {
     return undefined;
   }
 
-  private static getCommonDenominatorBetweenEnumAndPrimitive(a: OmniEnumType, b: OmniPrimitiveType, opt?: CombineOptions): CommonDenominatorType | undefined {
+  private static getCommonDenominatorBetweenEnumAndPrimitive(
+    a: StrictReadonly<OmniEnumType>,
+    b: StrictReadonly<OmniPrimitiveType>,
+    opt?: CombineOptions,
+  ): CommonDenominatorType | undefined {
 
     if (b.literal) {
       return undefined;
@@ -1583,8 +1281,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenGenericTargets(
-    a: OmniGenericTargetType,
-    b: OmniGenericTargetType,
+    a: StrictReadonly<OmniGenericTargetType>,
+    b: StrictReadonly<OmniGenericTargetType>,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType<OmniGenericTargetType> | undefined {
@@ -1652,14 +1350,14 @@ export class OmniUtil {
   }
 
   public static getMatchingTargetIdentifiers(
-    a: OmniGenericTargetIdentifierType[],
-    b: OmniGenericTargetIdentifierType[],
+    a: ReadonlyArray<OmniGenericTargetIdentifierType>,
+    b: ReadonlyArray<OmniGenericTargetIdentifierType>,
   ): Array<TargetIdentifierTuple> {
 
     const result: Array<TargetIdentifierTuple> = [];
     for (const aIdentifier of a) {
       for (const bIdentifier of b) {
-        if (aIdentifier.sourceIdentifier == bIdentifier.sourceIdentifier) {
+        if (aIdentifier.sourceIdentifier === bIdentifier.sourceIdentifier) {
           result.push({
             a: aIdentifier,
             b: bIdentifier,
@@ -1673,8 +1371,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenObjectAndOther(
-    a: OmniType,
-    b: OmniType,
+    a: StrictReadonly<OmniType>,
+    b: StrictReadonly<OmniType>,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
@@ -1713,8 +1411,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenPropertiesByPosition(
-    a: OmniArrayPropertiesByPositionType,
-    b: OmniArrayPropertiesByPositionType,
+    a: StrictReadonly<OmniArrayPropertiesByPositionType>,
+    b: StrictReadonly<OmniArrayPropertiesByPositionType>,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType<OmniArrayPropertiesByPositionType> | undefined {
@@ -1739,7 +1437,7 @@ export class OmniUtil {
 
       // TODO: Return something else here instead, which is actually the common denominators between the two
       return {
-        type: a,
+        type: OmniUtil.asWriteable(a),
         diffs: diffs,
       };
     }
@@ -1999,12 +1697,12 @@ export class OmniUtil {
    * TODO: This could probably be improved by a whole lot; there are likely an unnecessary amount of comparisons
    */
   public static getDistinctTypes(
-    types: OmniType[],
+    types: ReadonlyArray<StrictReadonly<OmniType>>,
     targetFeatures: TargetFeatures,
     allowedDiffPredicate: (diff: TypeDiffKind) => boolean = (() => false),
   ) {
 
-    const distinctTypes: OmniType[] = [];
+    const distinctTypes: Array<OmniType> = [];
     for (const type of types) {
 
       const sameType = distinctTypes.find(it => {
@@ -2027,7 +1725,7 @@ export class OmniUtil {
       });
 
       if (!sameType) {
-        distinctTypes.push(type);
+        distinctTypes.push(OmniUtil.asWriteable(type));
       }
     }
 
@@ -2053,7 +1751,7 @@ export class OmniUtil {
 
     if (OmniUtil.isPrimitive(type) && type.value !== undefined && OmniUtil.canCreate(create, CreateMode.SIMPLE)) {
 
-      const generalizedPrimitive: T = {
+      const generalizedPrimitive: typeof type = {
         ...type,
       };
       delete generalizedPrimitive.value;
@@ -2070,9 +1768,9 @@ export class OmniUtil {
     if (create === undefined) {
       return match === CreateMode.SIMPLE;
     } else if (create === CreateMode.SIMPLE) {
-      return (match === CreateMode.SIMPLE); // || (match === CreateMode.ANY);
+      return (match === CreateMode.SIMPLE);
     } else {
-      return (create === CreateMode.ANY); // && (match === CreateMode.SIMPLE);
+      return (create === CreateMode.ANY);
     }
   }
 
@@ -2094,8 +1792,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenObjects(
-    a: OmniObjectType,
-    b: OmniObjectType,
+    a: StrictReadonly<OmniObjectType>,
+    b: StrictReadonly<OmniObjectType>,
     features: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
@@ -2234,7 +1932,7 @@ export class OmniUtil {
   }
 
   public static resolveNamespacePart(item: NamespaceArrayItem): string {
-    return (typeof item === 'string') ? item : item.name;
+    return OmniDescribeUtils.resolveNamespacePart(item);
   }
 
   public static resolveObjectEdgeName(name: ObjectEdgeName, use: TypeUseKind | undefined): string {
@@ -2247,8 +1945,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenEnums(
-    a: OmniEnumType,
-    b: OmniEnumType,
+    a: StrictReadonly<OmniEnumType>,
+    b: StrictReadonly<OmniEnumType>,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
 
@@ -2274,7 +1972,7 @@ export class OmniUtil {
     }
 
     if (extra.length == 0 && missing.length == 0) {
-      return {type: a};
+      return {type: OmniUtil.asWriteable(a)};
     }
 
 
@@ -2451,31 +2149,16 @@ export class OmniUtil {
 
   private static mapTargetIdentifier(
     it: OmniGenericTargetIdentifierType,
-    matching: TargetIdentifierTuple[],
+    matching: ReadonlyArray<TargetIdentifierTuple>,
     features: TargetFeatures,
     combineOpt?: CombineOptions,
-  ) {
+  ): OmniGenericTargetIdentifierType {
 
     const foundMatches = matching.find(m => m.a.sourceIdentifier === it.sourceIdentifier);
     if (foundMatches) {
 
-      let skipSelf = false;
-      let union: OmniCompositionType;
-      if (it.type.kind === OmniTypeKind.UNION) {
-        union = {...it.type, types: [...it.type.types]};
-        skipSelf = true;
-      } else {
-
-        union = {
-          kind: OmniTypeKind.UNION,
-          types: [],
-        };
-      }
-
-      const targetId: OmniGenericTargetIdentifierType = {
-        ...it,
-        type: union,
-      };
+      const skipSelf = (it.type.kind === OmniTypeKind.UNION);
+      const unionTypes: Array<OmniType> = (it.type.kind === OmniTypeKind.UNION) ? [...it.type.types] : [];
 
       for (const toAdd of [foundMatches.a, foundMatches.b]) {
 
@@ -2484,22 +2167,32 @@ export class OmniUtil {
           continue;
         }
 
-        const found = union.types.find(t => OmniUtil.getCommonDenominatorBetween(t, toAdd.type, features, combineOpt)?.type === t);
+        const found = unionTypes.find(t => OmniUtil.getCommonDenominatorBetween(t, toAdd.type, features, combineOpt)?.type === t);
         if (!found) {
-          union.types.push(toAdd.type);
+          unionTypes.push(toAdd.type);
         } else {
           logger.trace(`Not adding ${OmniUtil.describe(toAdd)} since it is already part of the union of he generic`);
         }
       }
 
-      const commonName = Naming.getCommonName(union.types.map(it => Naming.getName(it)));
+      const commonName = Naming.getCommonName(unionTypes.map(it => Naming.getName(it)));
 
       // logger.info(`Common of all = ${JSON.stringify(commonName, undefined, 2)}`);
-      if (commonName) {
-        union.name = commonName;
+      // if (commonName) {
+      //   union.name = commonName;
+      // }
+
+      let union: StrictReadonly<OmniCompositionType>;
+      if (it.type.kind === OmniTypeKind.UNION) {
+        union = {...it.type, name: commonName ?? it.type.name, types: unionTypes};
+      } else {
+        union = {kind: OmniTypeKind.UNION, name: commonName, types: unionTypes};
       }
 
-      return targetId;
+      return {
+        ...it,
+        type: OmniUtil.asWriteable(union),
+      };
 
     } else {
 
@@ -2970,11 +2663,7 @@ export class OmniUtil {
   }
 
   public static getPropertyNameOrPattern(name: OmniPropertyName): string | RegExp {
-    if (typeof name === 'string') {
-      return name;
-    } else {
-      return name.name;
-    }
+    return OmniDescribeUtils.getPropertyNameOrPattern(name);
   }
 
   public static isPatternPropertyName(name: OmniPropertyName): name is OmniPropertyNamePattern {
@@ -3058,24 +2747,15 @@ export class OmniUtil {
     }
   }
 
-  public static isComposition<T extends OmniNode>(type: T | undefined): type is OmniTypeOf<T, OmniKindComposition> {
-
-    if (!type) {
-      return false;
-    }
-
-    switch (type.kind) {
-      case OmniTypeKind.UNION:
-      case OmniTypeKind.EXCLUSIVE_UNION:
-      case OmniTypeKind.INTERSECTION:
-      case OmniTypeKind.NEGATION:
-        return true;
-      default:
-        return false;
-    }
+  public static isComposition(type: StrictReadonly<OmniNode> | undefined) {
+    return OmniTypeUtil.isComposition(type);
   }
 
-  public static isAbstract(type: OmniType): boolean {
+  public static isType(type: StrictReadonly<OmniNode>): type is Extract<OmniType, { kind: typeof type.kind }> {
+    return (type.kind in OmniTypeKind);
+  }
+
+  public static isAbstract(type: StrictReadonly<OmniType>): boolean {
     if (type.kind === OmniTypeKind.OBJECT) {
       return !!type.abstract;
     }
@@ -3083,33 +2763,11 @@ export class OmniUtil {
     return false;
   }
 
-  public static isPrimitive<T extends OmniType>(type: T | undefined): type is OmniTypeOf<T, OmniPrimitiveKinds> {
-
-    if (!type) {
-      return false;
-    }
-
-    switch (type.kind) {
-      case OmniTypeKind.NUMBER:
-      case OmniTypeKind.INTEGER:
-      case OmniTypeKind.INTEGER_SMALL:
-      case OmniTypeKind.DECIMAL:
-      case OmniTypeKind.DOUBLE:
-      case OmniTypeKind.FLOAT:
-      case OmniTypeKind.LONG:
-      case OmniTypeKind.STRING:
-      case OmniTypeKind.CHAR:
-      case OmniTypeKind.BOOL:
-      case OmniTypeKind.VOID:
-      case OmniTypeKind.NULL:
-      case OmniTypeKind.UNDEFINED:
-        return true;
-      default:
-        return false;
-    }
+  public static isPrimitive<T extends StrictReadonly<OmniType>>(type: T | undefined): type is OmniTypeOf<T, OmniPrimitiveKinds> {
+    return OmniTypeUtil.isPrimitive(type);
   }
 
-  public static asNonNullableIfHasDefault(type: OmniType, features: TargetFeatures): OmniType {
+  public static asNonNullableIfHasDefault<T extends MaybeReadonly<OmniType>>(type: T, features: TargetFeatures) {
 
     if (OmniUtil.isNullableType(type, features)) {
       if (!type.literal && type.value !== undefined) {

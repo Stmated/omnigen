@@ -6,6 +6,7 @@ import {
   OmniModelTransformer2ndPassArgs,
   OmniType,
   OmniTypeKind,
+  StrictReadonly,
 } from '@omnigen/api';
 import {OmniUtil} from '../OmniUtil';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -13,10 +14,9 @@ import {LoggerFactory} from '@omnigen/core-log';
 const logger = LoggerFactory.create(import.meta.url);
 
 type SourceIdentifierPath = Array<OmniGenericSourceIdentifierType>;
-// type SourceIdentifierPaths = Array<SourceIdentifierPath>;
 
 type Replacement = {
-  source: OmniGenericSourceType;
+  source: StrictReadonly<OmniGenericSourceType>;
   oldSourceId: OmniGenericSourceIdentifierType;
   newSourceId: OmniGenericSourceIdentifierType;
   path: SourceIdentifierPath
@@ -28,6 +28,8 @@ type Replacement = {
  * But languages like C# requires it to be expanded/spread/resolved, so that the wildcard generic is converted into a generic parameter with no bound, and given explicitly.
  *
  * Will take `Foo extends Bar<?>` and turn it into `Foo<T> extends Bar<T>`
+ *
+ * TODO: Need to use the new reduce pattern, so we can get rid of `visitTypesDepthFirst`
  */
 export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransformer {
 
@@ -45,7 +47,7 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
         for (const sourceSourceId of source.sourceIdentifiers) {
 
           OmniUtil.visitTypesDepthFirst(sourceSourceId, ctxTargetId => {
-            if (ctxTargetId.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) { // } && ctxTargetId.type.type.kind === OmniTypeKind.UNKNOWN) {
+            if (ctxTargetId.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
               const targetId = ctxTargetId.type;
               const targetSourceId = targetId.sourceIdentifier;
 
@@ -95,7 +97,6 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
           logger.debug(`NOT adding any source identifiers to ${OmniUtil.describe(source)}`);
         }
 
-        // sourceToUpdateWith.set(source, map);
         ctxSource.skip = true;
       }
     });

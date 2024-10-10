@@ -1,7 +1,7 @@
 import {OmniItemKind, OmniObjectType, OmniPrimitiveTangibleKind, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniModelMerge, Replacement} from './OmniModelMerge';
 import {OmniUtil} from './OmniUtil';
-import {test} from 'vitest';
+import {TaskContext, test, TestContext} from 'vitest';
 
 test('Not Similar', async ctx => {
 
@@ -28,7 +28,7 @@ test('Similar (Empty)', async ctx => {
   compare(OmniModelMerge.getReplacements(a1, a2), [
     {root: a1, from: a1, to: a1},
     {root: a2, from: a2, to: a1},
-  ]);
+  ], ctx);
 });
 
 test('Similar (Same Properties)', async ctx => {
@@ -44,7 +44,7 @@ test('Similar (Same Properties)', async ctx => {
   compare(objectReplacements, [
     {root: a1, from: a1, to: a1},
     {root: a2, from: a2, to: a1},
-  ]);
+  ], ctx);
 });
 
 test('Similar (Diff Property Names)', async ctx => {
@@ -78,7 +78,7 @@ test('Supertype (Same Supertype)', async ctx => {
     {from: a2, to: a1},
     {from: b1, to: b1},
     {from: b2, to: b1},
-  ]);
+  ], ctx);
 });
 
 test('Supertype (Diff Supertype)', async ctx => {
@@ -92,7 +92,7 @@ test('Supertype (Diff Supertype)', async ctx => {
   compare(OmniModelMerge.getReplacements(b1, b2).filter(byObjects), [
     {from: a1, to: a1},
     {from: a2, to: a1},
-  ]);
+  ], ctx);
 });
 
 test('Supertype (Diff levels)', async ctx => {
@@ -108,10 +108,10 @@ test('Supertype (Diff levels)', async ctx => {
   compare(OmniModelMerge.getReplacements(c1, c2).filter(byObjects), [
     {root: c1, from: a1, to: a1},
     {root: c2, from: a2, to: a1},
-  ]);
+  ], ctx);
 });
 
-function compare(expected: Replacement<OmniType>[], given: Partial<Replacement<OmniType>>[]): void {
+function compare(expected: Replacement<OmniType>[], given: Partial<Replacement<OmniType>>[], ctx: TaskContext & TestContext): void {
 
   if (expected.length != given.length) {
     ctx.expect(expected).toEqual(given);

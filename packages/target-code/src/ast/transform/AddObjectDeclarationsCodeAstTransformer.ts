@@ -7,7 +7,7 @@ import {
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
   OmniInterfaceType,
-  OmniModel,
+  OmniModel, OmniNodeKind,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniPrimitiveType,
@@ -19,7 +19,7 @@ import {
   TypeUseKind,
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {Case, NamePair, Naming, OmniUtil} from '@omnigen/core';
+import {ANY_KIND, Case, NamePair, Naming, OmniUtil, ProxyReducerOmni2, TypeCollection} from '@omnigen/core';
 import * as Code from '../CodeAst';
 import * as FreeText from '../FreeText';
 import {CodeRootAstNode} from '../CodeRootAstNode';
@@ -28,6 +28,17 @@ import {CodeOptions} from '../../options/CodeOptions';
 import {CodeUtil} from '../../util/CodeUtil';
 
 const logger = LoggerFactory.create(import.meta.url);
+
+const transparentKinds: OmniNodeKind[] = [
+  OmniTypeKind.ARRAY,
+  OmniTypeKind.DICTIONARY,
+  OmniTypeKind.NEGATION,
+  OmniTypeKind.UNION,
+  OmniTypeKind.EXCLUSIVE_UNION,
+  OmniTypeKind.INTERSECTION,
+  OmniTypeKind.GENERIC_SOURCE,
+  OmniTypeKind.GENERIC_TARGET,
+];
 
 /**
  * Supposed to be the first and relatively simple transformer that adds the object (class, interface, enum, et cetera) declarations.
@@ -43,7 +54,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
   transformAst(args: AstTransformerArguments<CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>): void {
 
     // TODO: Remove this "getAllExportableTypes" and instead use a visitor pattern where we find the relevant types for our first pass
-    const exportableTypes = OmniUtil.getAllExportableTypes(args.model);
+    const exportableTypes = AddObjectDeclarationsCodeAstTransformer.getAllExportableTypes(args.model);
 
     const nameResolver = args.root.getNameResolver();
 
@@ -428,43 +439,67 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     return new Code.ClassDeclaration(javaType, javaClassIdentifier, body, modifiers);
   }
 
-  // /**
-  //  * TODO: Remove and do this in another transformer (is it not already?)
-  //  */
-  // private simplifyTypeAndReturnUnwanted(type: OmniType): OmniType[] {
-  //
-  //   if (type.kind === OmniTypeKind.EXCLUSIVE_UNION && type.types.length == 2) {
-  //
-  //     const nullType = type.types.find(it => it.kind == OmniTypeKind.NULL);
-  //     if (nullType) {
-  //       const otherType = type.types.find(it => it.kind != OmniTypeKind.NULL);
-  //       if (otherType && OmniUtil.isPrimitive(otherType)) {
-  //
-  //         // Clear. then assign all the properties of the Other (plus nullable: true) to target type.
-  //         this.clearProperties(type);
-  //         Object.assign(type, {
-  //           ...otherType,
-  //           nullable: true,
-  //         });
-  //         return [otherType];
-  //       } else if (otherType && otherType.kind == OmniTypeKind.OBJECT) {
-  //
-  //         // For Java, any object can always be null.
-  //         // TODO: Perhaps we should find all the places that use the type, and say {required: false}? Or is that not the same thing?
-  //         this.clearProperties(type);
-  //         Object.assign(type, otherType);
-  //         return [otherType];
-  //       }
-  //     }
-  //   }
-  //
-  //   return [];
-  // }
-  //
-  // private clearProperties(type: OmniType): void {
-  //   for (const key of Object.keys(type)) {
-  //     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  //     delete (type as any)[key];
-  //   }
-  // }
+  public static getAllExportableTypes(model: OmniModel): TypeCollection {
+
+    const set = new Set<OmniType>();
+    const setEdge = new Set<OmniType>();
+
+    const typeDepths: number[] = [0];
+    ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
+      [ANY_KIND]: (n, r) => {
+
+        if (OmniUtil.isType(n)) {
+
+          if (set.has(n)) {
+            if (typeDepths[typeDepths.length - 1] === 0 || model.types.includes(n)) {
+              setEdge.add(n);
+            }
+            return;
+          }
+
+          if (n.kind !== OmniTypeKind.GENERIC_SOURCE) {
+            if (r.parent && (r.parent.kind === OmniTypeKind.GENERIC_SOURCE || r.parent.kind === OmniTypeKind.GENERIC_TARGET)) {
+
+              // The type that is inside the generic type is not itself exportable, only the generic class actually is.
+              // TODO: This special handling is confusing and brittle when it comes to how `AddObjectDeclarationsCodeAstTransformer` works.
+              //        Would be better to just let that transformer visit the whole model recursively and let it decide when to create something or not.
+              r.callBase();
+              return;
+            }
+          }
+
+          set.add(n);
+          if (typeDepths[typeDepths.length - 1] === 0 || model.types.includes(n)) {
+            setEdge.add(n);
+          }
+
+          // TODO: Need special handling for objects' properties? They should count as edge types!
+          //        Should this fix be inside AddObjectDeclarations? So it makes sure the type of properties get their AST node created?
+
+          const increaseBy = transparentKinds.includes(n.kind) ? 0 : 1;
+
+          typeDepths[typeDepths.length - 1] += increaseBy;
+          r.callBase();
+          typeDepths[typeDepths.length - 1] -= increaseBy;
+
+        } else {
+          r.callBase();
+        }
+      },
+      PROPERTY: (n, r) => {
+        try {
+          typeDepths.push(0);
+          r.callBase();
+        } finally {
+          typeDepths.pop();
+        }
+      },
+    });
+
+    return {
+      all: [...set],
+      edge: [...setEdge],
+      named: [],
+    };
+  }
 }

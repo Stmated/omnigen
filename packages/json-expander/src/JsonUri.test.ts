@@ -9,10 +9,11 @@ describe('JsonPath', () => {
 
   test('reference-to-node-behavior', ctx => {
 
-    ctx.expect(path.resolve('/a/b/c.txt')).toEqual(`/a/b/c.txt`);
-    ctx.expect(path.resolve('/a/b/c.txt', '/d/e/f.txt')).toEqual('/d/e/f.txt');
-    ctx.expect(path.resolve('/a/b/c.txt', 'd.txt')).toEqual('/a/b/c.txt/d.txt');
-    ctx.expect(path.resolve('/a/b/c.txt', '../d.txt')).toEqual('/a/b/d.txt');
+    const root = path.resolve('/');
+    ctx.expect(path.resolve('/a/b/c.txt')).toEqual(`${root}a${path.sep}b${path.sep}c.txt`);
+    ctx.expect(path.resolve('/a/b/c.txt', '/d/e/f.txt')).toEqual(`${root}d${path.sep}e${path.sep}f.txt`);
+    ctx.expect(path.resolve('/a/b/c.txt', 'd.txt')).toEqual(`${root}a${path.sep}b${path.sep}c.txt${path.sep}d.txt`);
+    ctx.expect(path.resolve('/a/b/c.txt', '../d.txt')).toEqual(`${root}a${path.sep}b${path.sep}d.txt`);
   });
 
   test('empty', ctx => {
@@ -25,16 +26,16 @@ describe('JsonPath', () => {
   test('file', ctx => {
 
     const resource = jsonPath.resolve('some/file.txt');
-    ctx.expect(resource.absolutePath).toEqual(`file:${wd}/some/file.txt`);
+    ctx.expect(resource.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}file.txt`);
 
     const parent = resource.parentPath!;
-    ctx.expect(parent.absolutePath).toEqual(`file:${wd}/some`);
+    ctx.expect(parent.absolutePath).toEqual(`file:${wd}${path.sep}some`);
 
     const grandparent = parent.parentPath!;
     ctx.expect(grandparent.absolutePath).toEqual(`file:${wd}`);
 
     const other = resource.resolve('another_file.txt');
-    ctx.expect(other.absolutePath).toEqual(`file:${wd}/some/another_file.txt`);
+    ctx.expect(other.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}another_file.txt`);
   });
 
   test('url', ctx => {
@@ -55,47 +56,48 @@ describe('JsonPath', () => {
   test('hash', ctx => {
 
     const resource = jsonPath.resolve('some/path/to/file.txt');
-    ctx.expect(resource.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt`);
+    ctx.expect(resource.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt`);
 
     const resourceWithRelativeHash = resource.resolve('#a');
-    ctx.expect(resourceWithRelativeHash.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a`);
+    ctx.expect(resourceWithRelativeHash.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a`);
 
     const resourceWithAbsoluteHash = resource.resolve('#/a');
-    ctx.expect(resourceWithAbsoluteHash.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a`);
+    ctx.expect(resourceWithAbsoluteHash.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a`);
 
     const childRelativeHash = resourceWithAbsoluteHash.resolve('#b/c/d');
-    ctx.expect(childRelativeHash.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a/b/c/d`);
+    ctx.expect(childRelativeHash.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a/b/c/d`);
 
     const childParentHash = childRelativeHash.resolve('#..');
-    ctx.expect(childParentHash.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a/b/c`);
+    ctx.expect(childParentHash.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a/b/c`);
 
     const childGrandparentHash = childRelativeHash.resolve('#../..');
-    ctx.expect(childGrandparentHash.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a/b`);
+    ctx.expect(childGrandparentHash.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a/b`);
 
     const childGrandparentByArrayHash = childRelativeHash.resolve(['#..', '#..']);
-    ctx.expect(childGrandparentByArrayHash.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a/b`);
+    ctx.expect(childGrandparentByArrayHash.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a/b`);
 
     const bothParent = childRelativeHash.resolve('..#..');
-    ctx.expect(bothParent.absolutePath).toEqual(`file:${wd}/some/path/to#/a/b/c`);
+    ctx.expect(bothParent.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to#/a/b/c`);
 
     const bothGrandparent = childRelativeHash.resolve('../..#../..');
-    ctx.expect(bothGrandparent.absolutePath).toEqual(`file:${wd}/some/path#/a/b`);
+    ctx.expect(bothGrandparent.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path#/a/b`);
 
     const bothGrandparentByArray = childRelativeHash.resolve(['..#..', '..#..']);
-    ctx.expect(bothGrandparentByArray.absolutePath).toEqual(`file:${wd}/some/path#/a/b`);
+    ctx.expect(bothGrandparentByArray.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path#/a/b`);
   });
 
   test('absolute-switch', ctx => {
 
     const file = jsonPath.resolve('some/path/to/file.txt#a/b/c');
-    ctx.expect(file.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a/b/c`);
+    ctx.expect(file.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a/b/c`);
 
     const url = jsonPath.resolve('www.somewhere.com/here/file.txt#a/b/c');
     ctx.expect(url.absolutePath).toEqual(`https://www.somewhere.com/here/file.txt#/a/b/c`);
 
 
     const fileNewAbsolute = file.resolve('file:/other/path/to/file.txt');
-    ctx.expect(fileNewAbsolute.absolutePath).toEqual(`file:/other/path/to/file.txt`);
+    const root = path.resolve('/');
+    ctx.expect(fileNewAbsolute.absolutePath).toEqual(`file:${root}other${path.sep}path${path.sep}to${path.sep}file.txt`);
 
     const urlNewAbsolute = url.resolve('www.elsewhere.com/there/file.txt');
     ctx.expect(urlNewAbsolute.absolutePath).toEqual(`https://www.elsewhere.com/there/file.txt`);
@@ -104,7 +106,7 @@ describe('JsonPath', () => {
   test('protocol-switch', ctx => {
 
     const resource1 = jsonPath.resolve('some/path/to/file.txt#a/b/c');
-    ctx.expect(resource1.absolutePath).toEqual(`file:${wd}/some/path/to/file.txt#/a/b/c`);
+    ctx.expect(resource1.absolutePath).toEqual(`file:${wd}${path.sep}some${path.sep}path${path.sep}to${path.sep}file.txt#/a/b/c`);
 
     const resource2 = jsonPath.resolve('www.somewhere.com/here/file.txt#a/b/c');
     ctx.expect(resource2.absolutePath).toEqual(`https://www.somewhere.com/here/file.txt#/a/b/c`);

@@ -22,22 +22,30 @@ export class JsonPathResolver {
     const protocolIndex = uriString.indexOf(':');
     const hashIndex = uriString.indexOf('#');
 
-    const protocol = (protocolIndex != -1) ? uriString.substring(0, protocolIndex).toLowerCase() : undefined;
+    // It is only a potential protocol if it is longer than 1 character (otherwise likely a windows drive)
+    let protocol = (protocolIndex > 1)
+      ? uriString.substring(0, protocolIndex).toLowerCase()
+      : undefined;
 
     let documentUri = uriString;
     if (hashIndex != -1) {
       documentUri = documentUri.substring(0, hashIndex);
     }
-    if (protocolIndex != -1 && protocol == 'file') {
+    if (protocolIndex !== -1 && protocol === 'file') {
       // Remove the "file:" part of the document uri for files
       documentUri = documentUri.substring(protocolIndex + 1);
     }
 
-    if (protocol != 'https' && protocol != 'http' && protocol != 'file' && protocol != undefined) {
+    if (!protocol && protocolIndex === 1) {
+      // Very likely a windows drive, so the protocol is file.
+      protocol = 'file';
+    }
+
+    if (protocol !== 'https' && protocol !== 'http' && protocol !== 'file' && protocol !== undefined) {
       throw new Error(`Unknown protocol ${protocol}`);
     }
 
-    const path = (hashIndex != -1) ? uriString.substring(hashIndex + 1) : undefined;
+    const path = (hashIndex !== -1) ? uriString.substring(hashIndex + 1) : undefined;
 
     return {
       protocol: protocol,

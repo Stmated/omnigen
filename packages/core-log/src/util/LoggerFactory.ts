@@ -11,8 +11,13 @@ const RealDate = Date;
 
 const LogLevelStrings: readonly string[] = ['silent', 'trace', 'debug', 'info', 'warn', 'error', 'fatal'];
 
-const chalkLightGray = chalk.rgb(180, 180, 180);
-const chalkLighterGray = chalk.rgb(220, 220, 220);
+const chalkLightGray = (chalk.level >= 3)
+  ? chalk.rgb(180, 180, 180)
+  : chalk.gray;
+
+const chalkLighterGray = (chalk.level >= 3)
+  ? chalk.rgb(220, 220, 220)
+  : chalk.gray;
 
 const BR_L = chalkLighterGray('[');
 const BR_R = chalkLighterGray(']');
@@ -225,7 +230,8 @@ class DefaultLogger implements Logger {
     let coloredName = namespaceColorMap.get(this._shortName);
     if (!coloredName) {
 
-      if (chalk.level === 3) {
+      const level = chalk.level;
+      if (chalk.level >= 3) {
 
         // We can use `rgb` here. Much more free range of colors. Not sure how well it works, since I have not been able to test it.
         const halfSaturation = Math.floor(hsl.max[1] / 2);
@@ -235,13 +241,17 @@ class DefaultLogger implements Logger {
 
         const calculatedHsl = [
           h,
-          halfSaturation + (Math.random() * halfSaturation),
-          halfLightness + (Math.random() * halfLightness),
+          Math.round(halfSaturation + (Math.random() * halfSaturation)),
+          Math.round(halfLightness + (Math.random() * halfLightness)),
         ];
 
         const rgb = hsl.rgb(calculatedHsl);
 
-        const newNamespaceColor = chalk.rgb(rgb[0], rgb[1], rgb[2]);
+        const newNamespaceColor = chalk.rgb(
+          Math.floor(rgb[0]),
+          Math.floor(rgb[1]),
+          Math.floor(rgb[2]),
+        );
         coloredName = newNamespaceColor(this._shortName);
 
       } else if (chalk.level === 2) {

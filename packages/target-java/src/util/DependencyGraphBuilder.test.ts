@@ -16,6 +16,7 @@ import {MapArg, TestUtils} from '@omnigen/utils-test';
 import {ANY_KIND, OmniUtil, ProxyReducerOmni2, SimplifyInheritanceModelTransformer} from '@omnigen/core';
 import {describe, test, TaskContext, TestContext} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
+import {AddObjectDeclarationsCodeAstTransformer} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -454,8 +455,7 @@ function getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
 
 function getConcreteClasses(model: OmniModel): JavaPotentialClassType[] {
 
-  // TODO: It should be an option or not whether concrete vs abstract classes should exist, or all just be classes.
-  const edgeTypes = OmniUtil.getAllExportableTypes(model).edge;
+  const edgeTypes = AddObjectDeclarationsCodeAstTransformer.getAllExportableTypes(model).edge;
 
   const concreteClasses: JavaPotentialClassType[] = [];
   for (const edgeType of edgeTypes) {

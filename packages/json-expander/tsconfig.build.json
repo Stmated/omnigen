@@ -4,7 +4,9 @@
   "compilerOptions": {
     "rootDir": "./src",
     "baseUrl": "./src",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "noEmit": false,
+    "allowImportingTsExtensions": false
   },
   "exclude": [
     "**/*.test.*"

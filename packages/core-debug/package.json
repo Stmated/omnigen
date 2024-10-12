@@ -8,11 +8,11 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./dist/index.js"
+      "import": "./src/index.ts"
     }
   },
   "scripts": {
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rimraf ./.turbo && rimraf ./node_modules && rimraf dist",
     "dev": "tsc -w",
     "lint": "TIMING=1 eslint src/**/*.ts* --fix",
     "test": "vitest run",
@@ -25,6 +25,7 @@
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
-    "@types/debug": "^4.1.12"
+    "@types/debug": "^4.1.12",
+    "rimraf": "^6.0.1"
   }
 }

@@ -21,6 +21,7 @@
     "@omnigen/target-java": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",
+    "@omnigen-org/json-expander": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

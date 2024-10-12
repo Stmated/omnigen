@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-import {JsonExpander} from './JsonExpander.js';
+import {JsonExpander} from './JsonExpander';
 import {Command} from '@commander-js/extra-typings';
 import * as fs from 'fs';
 import * as path from 'path';

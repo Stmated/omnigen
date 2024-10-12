@@ -3,7 +3,7 @@ import {OmniUtil} from '../parse';
 
 export class Sorters {
 
-  public static byDependencies(_model: OmniModel): {(a: OmniType, b: OmniType): number} {
+  public static byDependencies(_model: OmniModel): { (a: OmniType, b: OmniType): number } {
 
     // TODO: Could this be cached and re-used between different sorts? Cache inside the OmniModel?
     const typeCache = new Map<OmniType, OmniType[]>();
@@ -13,7 +13,7 @@ export class Sorters {
       let aDependencies = typeCache.get(a);
       if (!aDependencies) {
         const dependencies: OmniType[] = [];
-        OmniUtil.visitTypesBreadthFirst(a, ctx => {
+        OmniUtil.visitTypesDepthFirst(a, ctx => {
           dependencies.push(ctx.type);
         });
         aDependencies = dependencies;
@@ -22,7 +22,7 @@ export class Sorters {
       let bDependencies = typeCache.get(b);
       if (!bDependencies) {
         const dependencies: OmniType[] = [];
-        OmniUtil.visitTypesBreadthFirst(b, ctx => {
+        OmniUtil.visitTypesDepthFirst(b, ctx => {
           dependencies.push(ctx.type);
         });
         bDependencies = dependencies;

@@ -192,7 +192,7 @@ describe('Test CompositionDependencyUtil', () => {
 
     assertTypes(ctx, getInterfaces(model), [c]);
     assertTypes(ctx, getClasses(model), [a, b, c, d]);
-    assertTypes(ctx, getConcreteClasses(model), [a, d, b, c]);
+    assertTypes(ctx, getConcreteClasses(model), [a, b, c, d]);
     assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [a, [b, c]],
       [d, [b, c]],
@@ -213,7 +213,7 @@ describe('Test CompositionDependencyUtil', () => {
     // This would change if the search was done breadth-first vs depth-first.
     assertTypes(ctx, getInterfaces(model), [b, c]);
     assertTypes(ctx, getClasses(model), [a, b, c, d]);
-    assertTypes(ctx, getConcreteClasses(model), [a, d, b, c]);
+    assertTypes(ctx, getConcreteClasses(model), [a, b, c, d]);
     assertMap(ctx, JavaUtil.getSubTypeToSuperTypesMap(model), map([
       [a, [b, c]],
       [d, [c, b]],
@@ -407,20 +407,6 @@ function getAsInterface(model: OmniModel, type: OmniNode): OmniInterfaceOrObject
     },
   });
 
-  // // REMOVE
-  // const subTypeOfOurType = OmniUtil.visitTypesDepthFirst(model, ctx => {
-  //   if ('extendedBy' in ctx.type && ctx.type.extendedBy) {
-  //
-  //     const flattened = OmniUtil.getFlattenedSuperTypes(ctx.type.extendedBy);
-  //     const usedAtIndex = flattened.indexOf(unwrapped);
-  //     if (usedAtIndex > 0) {
-  //       return ctx.type;
-  //     }
-  //   }
-  //
-  //   return;
-  // });
-
   if (subTypeOfOurType) {
 
     const typeName = OmniUtil.describe(unwrapped);
@@ -439,7 +425,7 @@ function getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
   ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
     [ANY_KIND]: (n, r) => {
 
-      const asInterface = getAsInterface(model, n);
+      const asInterface = getAsInterface(model, OmniUtil.asWriteable(n));
       if (asInterface && !interfaces.includes(asInterface)) {
         interfaces.push(asInterface);
 
@@ -462,29 +448,6 @@ function getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
       r.callBase();
     },
   });
-
-  // // REMOVE
-  // OmniUtil.visitTypesDepthFirst(model, ctx => {
-  //   const asInterface = getAsInterface(model, ctx.type);
-  //   if (asInterface && !interfaces.includes(asInterface)) {
-  //     interfaces.push(asInterface);
-  //
-  //     // TODO: THIS IS WRONG! MOVE THIS INTO "getAsInterface"! It must be *central* to how it is decided!
-  //
-  //     // If this is an interface, then we also need to add *all* supertypes as interfaces.
-  //     // This is because an interface cannot inherit from a class, so all needs to be interfaces.
-  //     for (const superClass of JavaUtil.getSuperClassHierarchy(model, asInterface)) {
-  //
-  //       // getAsInterface is costly. So do a quicker check here.
-  //       // The check might desync from the definition of an interface in getAsInterface, so keep heed here.
-  //       if (superClass.kind == OmniTypeKind.OBJECT || superClass.kind == OmniTypeKind.INTERFACE) {
-  //         if (!interfaces.includes(superClass)) {
-  //           interfaces.push(superClass);
-  //         }
-  //       }
-  //     }
-  //   }
-  // });
 
   return interfaces;
 }
@@ -530,19 +493,6 @@ function getClasses(model: OmniModel): JavaPotentialClassType[] {
       r.callBase();
     },
   });
-
-  // // REMOVE
-  // OmniUtil.visitTypesDepthFirst(model, ctx => {
-  //   if (checked.includes(ctx.type)) {
-  //     return;
-  //   }
-  //   checked.push(ctx.type);
-  //
-  //   const asClass = JavaUtil.getAsClass(model, ctx.type);
-  //   if (asClass && !classes.includes(asClass)) {
-  //     classes.push(asClass);
-  //   }
-  // });
 
   return classes;
 }

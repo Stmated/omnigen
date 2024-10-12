@@ -2,8 +2,8 @@ import {
   Arrayable,
   CommonDenominatorType,
   DebugValue,
-  DEFAULT_UNKNOWN_KIND,
-  Direction, MaybeReadonly,
+  Direction,
+  MaybeReadonly,
   Namespace,
   NamespaceArrayItem,
   ObjectEdgeName,
@@ -23,7 +23,7 @@ import {
   OmniHardcodedReferenceType,
   OmniInput,
   OmniModel,
-  OmniNode,
+  OmniNode, OmniNodeKind,
   OmniObjectType,
   OmniOptionallyNamedType,
   OmniOutput,
@@ -53,9 +53,9 @@ import {
   Writeable,
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {BFSTraverseCallback, BFSTraverseContext, DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
+import {DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
 import {Naming} from './Naming';
-import {assertUnreachable, Case, CombineMode, CombineOptions, CreateMode} from '../util';
+import {assertUnreachable, CombineMode, CombineOptions, CreateMode} from '../util';
 import {PropertyUtil} from './PropertyUtil';
 import {ProxyReducerOmni2} from '../reducer2/ProxyReducerOmni2.ts';
 import {ANY_KIND} from '../reducer2/types.ts';
@@ -80,7 +80,7 @@ const EMPTY_ARRAY: ReadonlyArray<any> = Object.freeze([]);
 export class OmniUtil {
 
   /**
-   * TODO: Remove in favor of OmniModel visitor (make types into classes)
+   * TODO: Remove in favor of reducer
    */
   public static visitTypesDepthFirst<R>(
     input: TypeOwner | undefined,
@@ -92,36 +92,76 @@ export class OmniUtil {
   }
 
   /**
-   * TODO: Remove in favor of OmniModel visitor (make types into classes)
+   * TODO: Rewrite and use the reducer visitor instead! This is the last holdout for `visitTypesBreadthFirst`! So would be great to get rid of! :)
    */
-  public static visitTypesBreadthFirst<R>(
-    input: Arrayable<TypeOwner> | undefined,
-    onDown: BFSTraverseCallback<R>,
-    visitOnce = true,
-  ): R | undefined {
-    return new OmniTypeVisitor().visitTypesBreadthFirst(input, onDown, visitOnce);
-  }
+  public static getAllExportableTypes(model: OmniModel): TypeCollection {
 
-  /**
-   * TODO: Remove in favor of OmniModel visitor (make types into classes)
-   */
-  public static getAllExportableTypes(model: OmniModel, refTypes?: OmniType[]): TypeCollection {
-
-    // TODO: Should be an option to do a deep dive or a quick dive!
     const set = new Set<OmniType>();
     const setEdge = new Set<OmniType>();
-    if (refTypes) {
 
-      // TODO: Need to check if this whole thing can be skipped -- remove "refTypes", it is just confusing
-      for (const refType of refTypes) {
-        OmniUtil.visitTypesBreadthFirst(refType, ctx => {
-          this.addExportableType(set, ctx, setEdge);
-        });
-      }
-    }
+    // TODO: Need to replace this with a proper visitor, so we can get rid of the whole breadth-first visitor!
 
-    OmniUtil.visitTypesBreadthFirst(model, ctx => {
-      this.addExportableType(set, ctx, setEdge);
+    const transparentKinds: OmniNodeKind[] = [
+      OmniTypeKind.ARRAY,
+      OmniTypeKind.DICTIONARY,
+      OmniTypeKind.NEGATION,
+      OmniTypeKind.UNION,
+      OmniTypeKind.EXCLUSIVE_UNION,
+      OmniTypeKind.INTERSECTION,
+      OmniTypeKind.GENERIC_SOURCE,
+      OmniTypeKind.GENERIC_TARGET,
+    ];
+
+    const typeDepths: number[] = [0];
+    ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
+      [ANY_KIND]: (n, r) => {
+
+        if (OmniUtil.isType(n)) {
+
+          if (set.has(n)) {
+            if (typeDepths[typeDepths.length - 1] === 0 || model.types.includes(n)) {
+              setEdge.add(n);
+            }
+            return;
+          }
+
+          if (n.kind !== OmniTypeKind.GENERIC_SOURCE) {
+            if (r.parent && (r.parent.kind == OmniTypeKind.GENERIC_SOURCE || r.parent.kind == OmniTypeKind.GENERIC_TARGET)) {
+
+              // The type that is inside the generic type is not itself exportable, only the generic class actually is.
+              // TODO: This special handling is confusing and brittle when it comes to how `AddObjectDeclarationsCodeAstTransformer` works.
+              //        Would be better to just let that transformer visit the whole model recursively and let it decide when to create something or not.
+              r.callBase();
+              return;
+            }
+          }
+
+          set.add(n);
+          if (typeDepths[typeDepths.length - 1] === 0 || model.types.includes(n)) {
+            setEdge.add(n);
+          }
+
+          // TODO: Need special handling for objects' properties? They should count as edge types!
+          //        Should this fix be inside AddObjectDeclarations? So it makes sure the type of properties get their AST node created?
+
+          const increaseBy = transparentKinds.includes(n.kind) ? 0 : 1;
+
+          typeDepths[typeDepths.length - 1] += increaseBy;
+          r.callBase();
+          typeDepths[typeDepths.length - 1] -= increaseBy;
+
+        } else {
+          r.callBase();
+        }
+      },
+      PROPERTY: (n, r) => {
+        try {
+          typeDepths.push(0);
+          r.callBase();
+        } finally {
+          typeDepths.pop();
+        }
+      },
     });
 
     return {
@@ -129,30 +169,6 @@ export class OmniUtil {
       edge: [...setEdge],
       named: [],
     };
-  }
-
-  private static addExportableType(set: Set<OmniType>, ctx: BFSTraverseContext, setEdge: Set<OmniType>): void {
-
-    if (set.has(ctx.type)) {
-      ctx.skip = true;
-      if (ctx.typeDepth == 0) {
-        setEdge.add(ctx.type);
-      }
-      return;
-    }
-
-    if (ctx.type.kind != OmniTypeKind.GENERIC_SOURCE) {
-      if (ctx.parent && (ctx.parent.kind == OmniTypeKind.GENERIC_SOURCE || ctx.parent.kind == OmniTypeKind.GENERIC_TARGET)) {
-
-        // The type that is inside the generic type is not itself exportable, only the generic class actually is.
-        return;
-      }
-    }
-
-    set.add(ctx.type);
-    if (ctx.typeDepth == 0) {
-      setEdge.add(ctx.type);
-    }
   }
 
   public static isGenericAllowedType(type: OmniType): boolean {
@@ -300,7 +316,7 @@ export class OmniUtil {
 
     const types: OmniType[] = [];
 
-    OmniUtil.visitTypesBreadthFirst(model, ctx => {
+    OmniUtil.visitTypesDepthFirst(model, ctx => {
 
       if (ctx.type.kind === OmniTypeKind.OBJECT) {
         if (ctx.type.extendedBy == type) {

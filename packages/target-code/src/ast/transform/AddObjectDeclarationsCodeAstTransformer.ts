@@ -43,13 +43,13 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
   transformAst(args: AstTransformerArguments<CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>): void {
 
     // TODO: Remove this "getAllExportableTypes" and instead use a visitor pattern where we find the relevant types for our first pass
-    const exportableTypes = OmniUtil.getAllExportableTypes(args.model, args.model.types);
+    const exportableTypes = OmniUtil.getAllExportableTypes(args.model);
 
     const nameResolver = args.root.getNameResolver();
 
     const namePairs: NamePair<OmniType & OmniOptionallyNamedType>[] = [];
     for (const type of exportableTypes.all) {
-      if (type.kind == OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
+      if (type.kind === OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
         // These should keep their names, which are generally just 'T'.
         continue;
       }
@@ -110,15 +110,15 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     isEdgeType: boolean,
   ): AstNode | undefined {
 
-    if (type.kind == OmniTypeKind.ENUM) {
+    if (type.kind === OmniTypeKind.ENUM) {
       return this.addEnum(type, undefined, root, options);
     } else if (OmniUtil.isComposition(type)) {
 
-      if (type.kind == OmniTypeKind.EXCLUSIVE_UNION || (type.name && isEdgeType)) {
+      if (type.kind === OmniTypeKind.EXCLUSIVE_UNION || (type.name && isEdgeType)) {
         return this.transformSubType(model, type, undefined, options, root);
       }
 
-    } else if (type.kind == OmniTypeKind.OBJECT) {
+    } else if (type.kind === OmniTypeKind.OBJECT) {
 
       // TODO: This should be removed and instead simplified elsewhere, where we compress/fix "incorrect" types
       // In Java we cannot extend from an enum. So we will try and redirect the output.
@@ -131,15 +131,15 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       }
 
       return this.transformSubType(model, type, undefined, options, root);
-    } else if (type.kind == OmniTypeKind.INTERFACE) {
-      if (type.of.kind == OmniTypeKind.GENERIC_TARGET) {
+    } else if (type.kind === OmniTypeKind.INTERFACE) {
+      if (type.of.kind === OmniTypeKind.GENERIC_TARGET) {
         throw new Error(`Do not know yet how to handle a generic interface. Fix it.`);
       } else {
         return this.transformInterface(type, options, root);
       }
-    } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
+    } else if (type.kind === OmniTypeKind.GENERIC_SOURCE) {
       return this.transformSubType(model, type.of, type, options, root, type.sourceIdentifiers);
-    } else if (type.kind == OmniTypeKind.GENERIC_TARGET) {
+    } else if (type.kind === OmniTypeKind.GENERIC_TARGET) {
       for (const targetIdentifier of type.targetIdentifiers) {
         if (OmniUtil.isComposition(targetIdentifier.type) && targetIdentifier.type.kind != OmniTypeKind.EXCLUSIVE_UNION) {
 
@@ -344,6 +344,16 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       }
     }
 
+    for (const property of OmniUtil.getPropertiesOf(type)) {
+      const propertyType = property.type;
+      if (!this._map.has(propertyType)) {
+        const ast = this.transform(model, root, options, propertyType, true);
+        if (ast) {
+          this._map.set(propertyType, ast);
+        }
+      }
+    }
+
     if (typeImplements.length > 0) {
       declaration.implements = new Code.ImplementsDeclaration(
         new Code.TypeList(...typeImplements.map(it => root.getAstUtils().createTypeNode(it))),
@@ -385,7 +395,8 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     const investigatedName = nameResolver.investigate({type: originalType || type, options: options});
     const javaClassName = nameResolver.build({name: investigatedName, with: NameParts.NAME, use: TypeUseKind.CONCRETE});
 
-    const javaType = root.getAstUtils().createTypeNode(type);
+    const astUtils = root.getAstUtils();
+    const javaType = astUtils.createTypeNode(type);
     const javaClassIdentifier = new Code.Identifier(javaClassName);
 
     if (genericSourceIdentifiers) {
@@ -393,8 +404,8 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       const genericSourceArgExpressions = genericSourceIdentifiers.map(it => new Code.GenericTypeDeclaration(
         new Code.Identifier(it.placeholderName),
         it,
-        it.upperBound ? root.getAstUtils().createTypeNode(it.upperBound) : undefined,
-        it.lowerBound ? root.getAstUtils().createTypeNode(it.lowerBound) : undefined,
+        it.upperBound ? astUtils.createTypeNode(it.upperBound) : undefined,
+        it.lowerBound ? astUtils.createTypeNode(it.lowerBound) : undefined,
       ));
 
       return new Code.ClassDeclaration(

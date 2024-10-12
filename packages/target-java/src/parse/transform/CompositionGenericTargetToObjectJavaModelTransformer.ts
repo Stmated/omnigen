@@ -19,12 +19,12 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
     const map = new Map<OmniType, OmniType>();
 
-    OmniUtil.visitTypesBreadthFirst(args.model, args => {
+    OmniUtil.visitTypesDepthFirst(args.model, args => {
 
-      const parent = args.owner;
+      const parent = args.parent;
       const type = args.type;
 
-      if (parent && 'kind' in parent && parent.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
+      if (parent && parent.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
 
         let newType: OmniType | undefined = map.get(type);
         if (!newType) {
@@ -34,7 +34,7 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
         parent.type = newType;
       }
-    }, false);
+    });
   }
 
   private createNewConcreteObjectFromComposition(parent: OmniType, type: OmniCompositionType): OmniType {

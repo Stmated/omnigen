@@ -1,9 +1,9 @@
 import crypto from 'crypto';
-import {OmniType, OmniTypeKind, StrictReadonly, TypeName} from '@omnigen/api';
+import {OmniType, OmniTypeKind, StrictReadonly, TypeName, TypeNameModifier} from '@omnigen/api';
 import {NamePair} from './NamePair';
 import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
-import {Case} from '../util';
+import {Case, Util} from '../util';
 import {OmniUtil} from './OmniUtil';
 
 const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation) => {
@@ -333,5 +333,112 @@ export class Naming {
     } else {
       throw new Error(`Unknown type ${OmniUtil.describe(type)} to get name from, add it to Naming#getName`);
     }
+  }
+
+  public static isSame(a: TypeName | undefined, b: TypeName | undefined): boolean {
+
+    if (typeof a === 'string' && typeof b === 'string') {
+      return (a === b);
+    }
+
+    if (a === undefined && b === undefined) {
+      return true;
+    } else if (a === undefined || b === undefined) {
+      return false;
+    }
+
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) {
+        return false;
+      }
+
+      for (let i = 0; a.length; i++) {
+        if (!Naming.isSame(a[i], b[i])) {
+          return false;
+        }
+      }
+
+      return true;
+    } else if (Array.isArray(a)) {
+      for (const aItem of a) {
+        if (!Naming.isSame(aItem, b)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else if (Array.isArray(b)) {
+      for (const bItem of b) {
+        if (!Naming.isSame(a, bItem)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    if (typeof a === 'string' && typeof b === 'object') {
+      if (!b.prefix && !b.suffix) {
+        return Naming.isSame(a, b.name);
+      }
+    } else if (typeof b === 'string' && typeof a === 'object') {
+      if (!a.prefix && !a.suffix) {
+        return Naming.isSame(a.name, b);
+      }
+    }
+
+    // TODO: This should be optimized so that we do not create new objects unless we really, really have to.
+    const realA: TypeNameModifier = (typeof a === 'string') ? {name: a} : a;
+    const realB: TypeNameModifier = (typeof b === 'string') ? {name: b} : b;
+
+    if ((realA.prefix === undefined) !== (realB.prefix === undefined)) {
+      return false;
+    }
+
+    if ((realA.suffix === undefined) !== (realB.suffix === undefined)) {
+      return false;
+    }
+
+    if (!Naming.isSame(realA.name, realB.name)) {
+      return false;
+    }
+
+    if (realA.prefix || realB.prefix) {
+      if (!Naming.isSame(realA.prefix, realB.prefix)) {
+        return false;
+      }
+    }
+
+    // TODO: Need to handle $comment and prefix
+    return true;
+  }
+
+  public static parse(value: string | undefined): TypeName | undefined {
+
+    if (!value) {
+      return undefined;
+    }
+
+    const hashIndex = value.indexOf('#');
+    const hash = (hashIndex === -1) ? undefined : value.substring(hashIndex + 1);
+
+    const parts = ((hashIndex === -1) ? value : value.substring(0, hashIndex)).split(/[/\\]/)
+      .map(it => it.trim())
+      .filter(Boolean)
+      .map(it => Util.trimAny(it, ':'));
+
+    if (hash) {
+      parts.push(hash);
+    }
+
+    const names: TypeName[] = [];
+
+    for (let i = 0; i < parts.length; i++) {
+
+      const slice: TypeName[] = parts.slice(parts.length - (i + 1), parts.length);
+      names.push(slice.reduce((p, c) => p ? {prefix: p, name: c} : c));
+    }
+
+    return names;
   }
 }

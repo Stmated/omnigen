@@ -1,5 +1,6 @@
 import {Naming} from './Naming';
 import {test} from 'vitest';
+import {OmniObjectType, OmniTypeKind} from '@omnigen/api';
 
 const obj1 = {};
 const obj2 = {};
@@ -258,3 +259,23 @@ test('Common words by total length with prefix repeated prefix and suffix', asyn
   ], 1)).toEqual('PrefixDuckSuffix');
 });
 
+test('multiple-prefix-unwrap', async ctx => {
+
+  ctx.expect(Naming.unwrap([
+    {name: 'n', prefix: {name: {prefix: {prefix: {name: 'p3'}, name: 'p2'}, name: 'p1'}}},
+    {name: 'n', prefix: {name: {prefix: {name: 'p2'}, name: 'p1'}}},
+    {name: 'n', prefix: {name: 'p1'}},
+  ])).toEqual('P3P2P1N');
+
+  ctx.expect(Naming.unwrap([
+    {name: 'n', prefix: {name: {prefix: {name: 'p2'}, name: 'p1'}}},
+    {name: 'n', prefix: {name: {prefix: {prefix: {name: 'p3'}, name: 'p2'}, name: 'p1'}}},
+    {name: 'n', prefix: {name: 'p1'}},
+  ])).toEqual('P2P1N');
+
+  ctx.expect(Naming.unwrap([
+    {name: 'n', prefix: {name: 'p1'}},
+    {name: 'n', prefix: {name: {prefix: {name: 'p2'}, name: 'p1'}}},
+    {name: 'n', prefix: {name: {prefix: {prefix: {name: 'p3'}, name: 'p2'}, name: 'p1'}}},
+  ])).toEqual('P1N');
+});

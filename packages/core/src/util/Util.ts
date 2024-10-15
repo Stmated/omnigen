@@ -37,10 +37,7 @@ export class Util {
    */
   public static getPathFromRoot(relative: string) {
 
-    // const filename = url.fileURLToPath(import.meta.url);
-    // const dirname = path.dirname(filename);
-
-    let dir = Util.getWorkingDirectory(); // dirname ?? __dirname;
+    let dir = Util.getWorkingDirectory();
 
     for (let maxSteps = 10; maxSteps >= 0; maxSteps--) {
 
@@ -57,19 +54,5 @@ export class Util {
     }
 
     throw new Error(`Could not find 'turbo.json'`);
-
-    //  (dir) {
-    //
-    //   dir = path.dirname(dir.dir
-    // }
-    //
-    // path = findUp.findUpSync('turbo.json', {cwd: path});
-    // path = path ? path.dirname(path) : undefined;
-    //
-    // if (!path) {
-    //   return relative;
-    // }
-    //
-    // return path.resolve(path, relative);
   }
 }

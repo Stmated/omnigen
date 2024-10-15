@@ -1057,24 +1057,28 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     const names = this.getSpecifiedNames(schema, dereferenced);
 
     if (typeof dereferenced === 'object') {
-      if (dereferenced.$id) {
-        names.push(dereferenced.$id);
+      const derefId = Naming.parse(dereferenced.$id);
+      if (derefId && !names.some(it => Naming.isSame(it, derefId))) {
+        names.push(derefId);
       }
     }
 
-    if (typeof schema == 'object') {
-      if (schema.$ref) {
-        names.push(schema.$ref);
+    if (typeof schema === 'object') {
+
+      const schemaRef = Naming.parse(schema.$ref);
+      if (schemaRef && !names.some(it => Naming.isSame(it, schemaRef))) {
+        names.push(schemaRef);
       }
 
       if (schema !== dereferenced) {
-        if (schema.$id && !names.includes(schema.$id)) {
-          names.push(schema.$id);
+        const schemaId = Naming.parse(schema.$id);
+        if (schemaId && !names.some(it => Naming.isSame(it, schemaId))) {
+          names.push(schemaId);
         }
       }
     }
 
-    if (names.length == 0) {
+    if (names.length === 0) {
       return undefined;
     }
 
@@ -1089,12 +1093,13 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
     const names = this.getLikelyNames(schema, dereferenced) ?? [];
 
-    if (fallback && !names.includes(fallback)) {
+    // TODO: This comparison needs to be done structurally and not by identity! Otherwise we might get duplicates.
+    if (fallback && !names.some(it => Naming.isSame(it, fallback))) {
       names.push(fallback);
     }
 
     for (const fallbackName of this.getFallbackNamesOfJsonSchemaType(schema)) {
-      if (!names.includes(fallbackName)) {
+      if (!names.some(it => Naming.isSame(it, fallbackName))) {
         names.push(fallbackName);
       }
     }
@@ -1102,9 +1107,6 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     return names;
   }
 
-  /**
-   * TODO: Remove, and figure out another way where this is not used prematurely. Should be up to the final user of the name to pick a suitable fallback
-   */
   public getFallbackNamesOfJsonSchemaType(schema: AnyJsonDefinition): TypeName[] {
 
     const names: TypeName[] = [];

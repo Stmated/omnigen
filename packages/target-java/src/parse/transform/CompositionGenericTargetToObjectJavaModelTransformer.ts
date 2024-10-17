@@ -1,5 +1,5 @@
 import {OmniCompositionType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
-import {OmniUtil} from '@omnigen/core';
+import {ANY_KIND, OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 import {JavaUtil} from '../../util';
 
 /**
@@ -19,21 +19,24 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
 
     const map = new Map<OmniType, OmniType>();
 
-    OmniUtil.visitTypesDepthFirst(args.model, args => {
+    // TODO: Change this so that it does not make an edit to the immutable model, instead it should reduce whole tree.
+    ProxyReducerOmni2.builder().reduce(args.model, {immutable: true}, {
+      [ANY_KIND]: (n, r) => {
 
-      const parent = args.parent;
-      const type = args.type;
+        const parent = OmniUtil.asWriteable(r.parent);
+        const type = OmniUtil.asWriteable(n);
 
-      if (parent && parent.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
+        if (parent && parent.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
 
-        let newType: OmniType | undefined = map.get(type);
-        if (!newType) {
-          newType = this.createNewConcreteObjectFromComposition(parent, type);
-          map.set(type, newType);
+          let newType: OmniType | undefined = map.get(type);
+          if (!newType) {
+            newType = this.createNewConcreteObjectFromComposition(parent, type);
+            map.set(type, newType);
+          }
+
+          parent.type = newType;
         }
-
-        parent.type = newType;
-      }
+      },
     });
   }
 

@@ -1,12 +1,11 @@
-import {OmniType, TypeOwner} from '@omnigen/api';
 import hash from 'object-hash';
 import crypto from 'crypto';
-import {Naming} from './Naming.js';
+import {Naming} from './Naming';
 import {TypeName} from '@omnigen/api';
 
 export class HashUtil {
 
-  public static getStructuralHashOf(item: OmniType, parent?: TypeOwner, otherHashes?: Map<any, string>): string {
+  public static getStructuralHashOf(item: object, parent?: unknown, otherHashes?: Map<any, string>): string {
 
     // TODO: This is way too hacky and weird. Need to have a better solution. Custom that visits type?
 

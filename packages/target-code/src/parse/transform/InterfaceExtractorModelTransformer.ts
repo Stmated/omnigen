@@ -40,17 +40,6 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
       },
     }).reduce(args.model);
 
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-    //
-    //   const type = ctx.type;
-    //   if (type.kind == OmniTypeKind.INTERFACE && type.of.kind != OmniTypeKind.INTERFACE) { // && !interfaceMap.has(type.of)) {
-    //     interfaceMap.set(type.of, type);
-    //   }
-    //
-    //   allTypes.push(ctx.type);
-    // });
-
     const handled: OmniType[] = [];
 
     // Then we go through all types and find those that have multiple inheritances and convert any 1..N extensions into interfaces.

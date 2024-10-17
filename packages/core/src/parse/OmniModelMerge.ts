@@ -1,9 +1,9 @@
 import {
   OmniExternalModelReferenceType, OmniItemKind,
   OmniModel,
-  OmniModelParserResult,
+  OmniModelParserResult, OmniNode,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, StrictReadonly,
 } from '@omnigen/api';
 import {Options} from '@omnigen/api';
 import {DFSTraverseContext} from './OmniTypeVisitor.js';
@@ -41,29 +41,32 @@ export class OmniModelMerge {
   public static getReplacements<T extends TypeOwner>(...roots: T[]): Replacement<T>[] {
 
     const replacements: Replacement<T>[] = [];
-    const collections = new Map<T, DFSTraverseContext[]>();
+    type TypeContext = {type: OmniType, depth: number, parent: StrictReadonly<OmniNode> | undefined};
+    const collections = new Map<T, TypeContext[]>();
     for (const model of roots) {
 
-      const collection: DFSTraverseContext[] = [];
-      OmniUtil.visitTypesDepthFirst(model, ctx => {
-        collection.push(ctx);
-        if (ctx.type.kind === OmniTypeKind.GENERIC_SOURCE) {
-          ctx.skip = true;
-        }
+      const collection: TypeContext[] = [];
+
+      ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
+        [ANY_KIND]: (n, r) => {
+          if (OmniUtil.isType(n)) {
+            collection.push({type: n, depth: r.depth, parent: r.parent});
+          }
+          r.callBase();
+        },
+        GENERIC_SOURCE: () => {},
       });
 
       collections.set(model, collection);
     }
 
-    const noopContext: DFSTraverseContext = {
+    const noopContext: TypeContext = {
       type: {kind: OmniTypeKind.UNKNOWN},
       depth: 9999999,
-      skip: false,
       parent: undefined,
-      visited: [],
     };
 
-    const previousContexts = new Map<TypeOwner, DFSTraverseContext>();
+    const previousContexts = new Map<TypeOwner, TypeContext>();
     const hashMaps = new Map<TypeOwner, Map<OmniType, string>>();
     const optionsMap = new Map<string, ReplacementOption<T>[]>();
 
@@ -72,7 +75,7 @@ export class OmniModelMerge {
 
       for (const [model, collection] of collections) {
 
-        const previousCtx: DFSTraverseContext = previousContexts.get(model) ?? noopContext;
+        const previousCtx = previousContexts.get(model) ?? noopContext;
 
         while (collection.length > 0) {
 
@@ -81,7 +84,7 @@ export class OmniModelMerge {
             continue;
           }
 
-          if (ctx.depth != previousCtx.depth) { // } || ctx.typeDepth != previousCtx.typeDepth) {
+          if (ctx.depth != previousCtx.depth) {
 
             // For next iteration we will only go through the types of this depth.
             previousContexts.set(model, ctx);

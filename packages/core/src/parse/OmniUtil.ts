@@ -236,13 +236,12 @@ export class OmniUtil {
 
     const types: OmniType[] = [];
 
-    OmniUtil.visitTypesDepthFirst(model, ctx => {
-
-      if (ctx.type.kind === OmniTypeKind.OBJECT) {
-        if (ctx.type.extendedBy == type) {
-          types.push(ctx.type);
+    ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
+      OBJECT: (n, r) => {
+        if (n.extendedBy === type) {
+          types.push(OmniUtil.asWriteable(n));
         }
-      }
+      },
     });
 
     return types;
@@ -2064,18 +2063,6 @@ export class OmniUtil {
 
       throw new Error(`Could not merge from ${OmniUtil.describe(from)} to ${OmniUtil.describe(to)}, because of diffs: ${diffs}`);
 
-      // const newNullable = (from.nullable || to.nullable) ?? false;
-      // if (newNullable !== to.nullable) {
-      //   if (newNullable && OmniUtil.isNullableType(to)) {
-      //     to.nullable = newNullable;
-      //   } else {
-      //     if (lossless && (from.nullable !== undefined || to.nullable !== undefined)) {
-      //       throw new Error(`Could not merge from ${OmniUtil.describe(from)} to ${OmniUtil.describe(to)} since one is nullable and the other is not`);
-      //     }
-      //   }
-      // }
-      //
-      // return OmniUtil.mergeTypeMeta(from, to, lossless, aggregate);
     } else if (from.kind === OmniTypeKind.ENUM && to.kind === OmniTypeKind.ENUM) {
 
       // TODO: Implement this!
@@ -2672,17 +2659,6 @@ export class OmniUtil {
 
   public static isUnion(type: OmniType) { // : type is OmniTypeOf<T, typeof OmniTypeKind.EXCLUSIVE_UNION | typeof OmniTypeKind.UNION> {
     return type.kind === OmniTypeKind.UNION || type.kind === OmniTypeKind.EXCLUSIVE_UNION;
-    // if (!type) {
-    //   return false;
-    // }
-    //
-    // switch (type.kind) {
-    //   case OmniTypeKind.UNION:
-    //   case OmniTypeKind.EXCLUSIVE_UNION:
-    //     return true;
-    //   default:
-    //     return false;
-    // }
   }
 
   public static isComposition(type: StrictReadonly<OmniNode> | undefined) {

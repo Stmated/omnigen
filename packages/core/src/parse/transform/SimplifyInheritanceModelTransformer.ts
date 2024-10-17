@@ -89,23 +89,8 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
           r.replace(OmniUtil.cloneAndCopyTypeMeta(reduced.extendedBy, OmniUtil.asWriteable(reduced)));
           r.persist();
         }
-
-        // ctx.replacement = OmniUtil.cloneAndCopyTypeMeta(ctx.type.extendedBy, ctx.type);
       },
     });
-
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-    //   if (ctx.type.kind == OmniTypeKind.OBJECT && ctx.type.extendedBy && OmniUtil.isPrimitive(ctx.type.extendedBy)) {
-    //
-    //     if (ctx.type.properties.length > 0) {
-    //       throw new Error(`Cannot make object ${OmniUtil.describe(ctx.type)} which extends primitive ${OmniUtil.describe(ctx.type.extendedBy)} into the primitive since we would lose properties`);
-    //     }
-    //
-    //     // Replace ourself with the extension.
-    //     ctx.replacement = OmniUtil.cloneAndCopyTypeMeta(ctx.type.extendedBy, ctx.type);
-    //   }
-    // });
   }
 
   private static simplifyComposition(

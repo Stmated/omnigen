@@ -2,6 +2,7 @@ import {OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniModel2ndPass
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil';
 import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2.ts';
+import {ANY_KIND} from '../../reducer2/types.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -12,6 +13,7 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
     type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<StrictReadonly<OmniType>> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 
+    const reducer = ProxyReducerOmni2.builder().build();
     ProxyReducerOmni2.builder().reduce(args.model, {immutable: true}, {
       GENERIC_TARGET: (n, r) => {
         for (const target of n.targetIdentifiers) {
@@ -47,7 +49,9 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
       // allowedDiffs.push(TypeDiffKind.POLYMORPHIC_LITERAL);
     }
 
-    const sourceIdentifierReplacements = new Map<OmniGenericSourceIdentifierType, StrictReadonly<OmniType>>();
+    const sourceIdentifierReplacements = new Map<OmniGenericSourceIdentifierType, StrictReadonly<OmniType>>(); // TODO: REMOVE!
+    const sourceIdentifierIdReplacements = new Map<number, StrictReadonly<OmniType>>();
+
     for (const [sourceIdentifier, info] of sourceIdentifierToTargetsMap.entries()) {
 
       let replacement: StrictReadonly<OmniType> | undefined = undefined;
@@ -73,43 +77,65 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
 
       if (replacement) {
         sourceIdentifierReplacements.set(sourceIdentifier, replacement);
+        sourceIdentifierIdReplacements.set(reducer.getId(sourceIdentifier), replacement);
       }
     }
 
-    // TODO: Rewrite to use the Reducer
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-      if (ctx.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-        const replacement = sourceIdentifierReplacements.get(ctx.type.sourceIdentifier);
+    args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+      GENERIC_TARGET_IDENTIFIER: (n, r) => {
+        const replacement = sourceIdentifierIdReplacements.get(r.getId(n.sourceIdentifier));
         if (replacement) {
-          ctx.replacement = null;
+          return r.remove();
         }
-      } else if (ctx.type.kind === OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
-        const replacement = sourceIdentifierReplacements.get(ctx.type);
-        if (replacement) {
-          ctx.replacement = OmniUtil.asWriteable(replacement);
-        }
-      } else if (ctx.type.kind === OmniTypeKind.GENERIC_SOURCE) {
-        for (let i = ctx.type.sourceIdentifiers.length - 1; i >= 0; i--) {
-          if (sourceIdentifierReplacements.has(ctx.type.sourceIdentifiers[i])) {
-            ctx.type.sourceIdentifiers.splice(i, 1);
+        return r.callBase();
+      },
+
+      // TODO: Split out content from the `ANY_KIND` into separate spec entries. They give better type security.
+      [ANY_KIND]: (n, r) => {
+
+        if (n.kind === OmniTypeKind.GENERIC_SOURCE_IDENTIFIER) {
+          const replacement = sourceIdentifierIdReplacements.get(r.getId(n));
+          if (replacement) {
+            // TODO: Should not need to modify the object to be writeable!
+            return r.replace(r.reduce(OmniUtil.asWriteable(replacement)));
+          }
+        } else if (n.kind === OmniTypeKind.GENERIC_SOURCE) {
+          for (let i = n.sourceIdentifiers.length - 1; i >= 0; i--) {
+            if (sourceIdentifierIdReplacements.has(r.getId(n.sourceIdentifiers[i]))) {
+              // TODO: Should not change the immutable model! It should be properly, separately, reduced!
+              OmniUtil.asWriteable(n).sourceIdentifiers.splice(i, 1);
+            }
+          }
+
+          if (n.sourceIdentifiers.length === 0) {
+            const reduced = r.reduce(n.of);
+            if (reduced) {
+              return r.replace(reduced);
+            } else {
+              return r.remove();
+            }
+          }
+
+        } else if (n.kind === OmniTypeKind.GENERIC_TARGET) {
+          for (let i = n.targetIdentifiers.length - 1; i >= 0; i--) {
+            if (sourceIdentifierIdReplacements.has(r.getId(n.targetIdentifiers[i].sourceIdentifier))) {
+              // TODO: Should not change the immutable model! It should be properly, separately, reduced!
+              OmniUtil.asWriteable(n).targetIdentifiers.splice(i, 1);
+            }
+          }
+
+          if (n.targetIdentifiers.length === 0) {
+            const reduced = r.reduce(n.source.of);
+            if (reduced) {
+              return r.replace(reduced);
+            } else {
+              return r.remove();
+            }
           }
         }
 
-        if (ctx.type.sourceIdentifiers.length === 0) {
-          ctx.replacement = ctx.type.of;
-        }
-
-      } else if (ctx.type.kind === OmniTypeKind.GENERIC_TARGET) {
-        for (let i = ctx.type.targetIdentifiers.length - 1; i >= 0; i--) {
-          if (sourceIdentifierReplacements.has(ctx.type.targetIdentifiers[i].sourceIdentifier)) {
-            ctx.type.targetIdentifiers.splice(i, 1);
-          }
-        }
-
-        if (ctx.type.targetIdentifiers.length === 0) {
-          ctx.replacement = ctx.type.source.of;
-        }
-      }
+        return r.callBase();
+      },
     });
   }
 }

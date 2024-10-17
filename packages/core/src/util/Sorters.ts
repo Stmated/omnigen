@@ -1,5 +1,7 @@
 import {OmniModel, OmniType} from '@omnigen/api';
 import {OmniUtil} from '../parse';
+import {ProxyReducerOmni2} from '../reducer2/ProxyReducerOmni2.ts';
+import {ANY_KIND} from '../reducer2/types.ts';
 
 export class Sorters {
 
@@ -13,8 +15,13 @@ export class Sorters {
       let aDependencies = typeCache.get(a);
       if (!aDependencies) {
         const dependencies: OmniType[] = [];
-        OmniUtil.visitTypesDepthFirst(a, ctx => {
-          dependencies.push(ctx.type);
+        ProxyReducerOmni2.builder().reduce(a, {immutable: true}, {
+          [ANY_KIND]: (n, r) => {
+            if (n !== a && OmniUtil.isType(n)) {
+              dependencies.push(n);
+            }
+            r.callBase();
+          },
         });
         aDependencies = dependencies;
       }
@@ -22,8 +29,13 @@ export class Sorters {
       let bDependencies = typeCache.get(b);
       if (!bDependencies) {
         const dependencies: OmniType[] = [];
-        OmniUtil.visitTypesDepthFirst(b, ctx => {
-          dependencies.push(ctx.type);
+        ProxyReducerOmni2.builder().reduce(b, {immutable: true}, {
+          [ANY_KIND]: (n, r) => {
+            if (n !== b && OmniUtil.isType(n)) {
+              dependencies.push(n);
+            }
+            r.callBase();
+          },
         });
         bDependencies = dependencies;
       }

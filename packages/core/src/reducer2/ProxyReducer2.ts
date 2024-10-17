@@ -18,6 +18,7 @@ export interface Options2<N extends object, D extends keyof N, O, InOpt extends 
    */
   readonly trackingStatsSource: ProxyReducerTrackingSource2;
   readonly immutable: boolean;
+  readonly once: boolean;
 }
 
 export interface RecursiveValue<T> {
@@ -63,7 +64,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     };
   }
 
-  public readonly options: Options2<N, D, O, Opt, S> & Opt;
+  public readonly _options: Options2<N, D, O, Opt, S> & Opt;
 
   private _id: number = 0;
 
@@ -71,7 +72,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
   private _persisted: Map<N, RecursiveValue<N>> | undefined;
 
   public constructor(options: Options2<N, D, O, Opt, S> & Opt) {
-    this.options = options;
+    this._options = options;
   }
 
   get depth(): number {
@@ -98,11 +99,6 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       this._persisted = new Map<N, RecursiveValue<N>>();
     }
 
-    // TODO: When persisting we should force creation of the `replacement` so we can reference the new one?
-    // if (replacement !== undefined) {
-    //   ongoing.replacement = replacement as FN;
-    // }
-
     this._persisted.set(ongoing.original as any, ongoing);
 
     return this;
@@ -113,7 +109,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const ongoing = this._visited[this._visited.length - 1]! as RecursiveValue<ResolvedRet<FN, D, O>>;
     if ((ongoing.replacement && ongoing.replacement !== replacement) || (!ongoing.replacement && ongoing.original !== replacement)) {
       ongoing.replacement = replacement;
-      // ongoing.changeCount++;
+
       for (let i = this._visited.length - 1; i >= 0; i--) {
         this._visited[i].changeCount++;
       }
@@ -134,7 +130,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
   private putInternal<P extends keyof FN, V extends FN[P], RV extends RecursiveValue<FN>>(ongoing: RV, prop: P, valueOrFn: MaybeFunction<FN, V>): void {
 
-    if (this.options.immutable) {
+    if (this._options.immutable) {
 
       // Settings things while immutable is one big waste of time.
       return;
@@ -166,11 +162,11 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
     let copy: StrictReadonly<FN>;
     if (prop) {
-      if (this.options.track !== ProxyReducerTrackMode2.NONE) {
+      if (this._options.track !== ProxyReducerTrackMode2.NONE) {
         copy = {
           ...ongoing.original,
           [prop]: value,
-          [PROP_KEY_ID]: ++this.options.trackingStatsSource.idCounter,
+          [PROP_KEY_ID]: ++this._options.trackingStatsSource.idCounter,
           [PROP_KEY_GENERATION]: ProxyReducer2.getGeneration(ongoing.original) + 1,
           [PROP_KEY_REDUCER_ID]: this.getNewReducerIds(ongoing.original),
         };
@@ -178,10 +174,10 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
         copy = {...ongoing.original, [prop]: value};
       }
     } else {
-      if (this.options.track !== ProxyReducerTrackMode2.NONE) {
+      if (this._options.track !== ProxyReducerTrackMode2.NONE) {
         copy = {
           ...ongoing.original,
-          [PROP_KEY_ID]: ++this.options.trackingStatsSource.idCounter,
+          [PROP_KEY_ID]: ++this._options.trackingStatsSource.idCounter,
           [PROP_KEY_GENERATION]: ProxyReducer2.getGeneration(ongoing.original) + 1,
           [PROP_KEY_REDUCER_ID]: this.getNewReducerIds(ongoing.original),
         };
@@ -231,7 +227,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const recursive = this._visited.find(it => it.original === original);
     if (recursive) {
 
-      if (this.options.immutable) {
+      if (this._options.immutable) {
 
         // Things are immutable, just return the original and we're done.
         return recursive.original as ReduceRet<Local, D, O, Opt, S>;
@@ -254,10 +250,13 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       changeCount: 0,
     };
 
-    // TODO: Add change counter to RecursiveValue, so we can know when we are done if we should throw away temp replacement?
-
     try {
       this._visited.push(visited);
+
+      if (this._options.once) {
+        this.persist();
+      }
+
       this.reduceInternal(visited);
       if (visited.changeCount === 0 && visited.replacement !== undefined) {
         delete visited.replacement;
@@ -276,7 +275,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     if (this._visited.length === 0) {
       this._persisted?.clear();
 
-      if (this.options.immutable) {
+      if (this._options.immutable) {
 
         // There was no return value found for the immutable visiting.
         // So we will return `undefined`.
@@ -293,11 +292,11 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
   private reduceInternal<Local extends N>(visited: RecursiveValue<Local>): void {
 
     const current = visited.replacement ?? visited.original;
-    const discriminator = current[this.options.discriminator];
+    const discriminator = current[this._options.discriminator];
 
-    for (; visited.recursionDepth < this.options.specs.length; visited.recursionDepth++) {
+    for (; visited.recursionDepth < this._options.specs.length; visited.recursionDepth++) {
 
-      const spec = this.options.specs[visited.recursionDepth];
+      const spec = this._options.specs[visited.recursionDepth];
       let fn: SpecFn2<N, Local, D, O, Opt, S> | undefined = (spec as any)[discriminator];
       if (!fn) {
         fn = (spec as any)[ANY_KIND];
@@ -307,7 +306,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       }
 
       const returned = fn(current as any, this as any);
-      if (this.options.immutable && returned !== undefined) {
+      if (this._options.immutable && returned !== undefined) {
         throw new AbortException(returned);
       }
       break;
@@ -353,7 +352,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       return existing;
     }
 
-    const newId = ++this.options.trackingStatsSource.idCounter;
+    const newId = ++this._options.trackingStatsSource.idCounter;
     (obj as any)[PROP_KEY_ID] = newId;
     return newId;
   }
@@ -379,24 +378,24 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
   private getNewReducerIds<FN>(node: FN) {
 
-    if (this.options.track === ProxyReducerTrackMode2.LAST) {
-      return this.options.reducerId;
+    if (this._options.track === ProxyReducerTrackMode2.LAST) {
+      return this._options.reducerId;
     } else {
       const existing = ProxyReducer2.getReducerId(node);
       if (existing) {
         if (Array.isArray(existing)) {
-          if (existing[existing.length - 1] !== this.options.reducerId) {
-            return [...existing, this.options.reducerId];
+          if (existing[existing.length - 1] !== this._options.reducerId) {
+            return [...existing, this._options.reducerId];
           } else {
             return existing;
           }
-        } else if (this.options.reducerId !== existing) {
-          return [existing, this.options.reducerId];
+        } else if (this._options.reducerId !== existing) {
+          return [existing, this._options.reducerId];
         } else {
           return existing;
         }
       } else {
-        return [this.options.reducerId];
+        return [this._options.reducerId];
       }
     }
   }

@@ -70,13 +70,13 @@ export class ProxyReducerBuilder2<N extends object, const D extends keyof N, O, 
 
     const defaultOptions = {
       immutable: false,
+      once: false,
     } as const satisfies ReducerOpt2;
 
     const newOptions = {
       ...defaultOptions,
       ...this._options,
       ...opt,
-      // immutable: opt.immutable ?? this._options.immutable ?? false,
     } as const satisfies ReducerOpt2;
 
     const stats = ProxyReducerBuilder2.getTrackingStatsSource(newOptions);
@@ -90,7 +90,6 @@ export class ProxyReducerBuilder2<N extends object, const D extends keyof N, O, 
       reducerId: ++stats.reducerIdCounter,
       specs: finalSpecs,
       discriminator: this._discriminator,
-      // immutable: newOptions?.immutable ?? false,
     } as const;
 
     return new ProxyReducer2<N, N, D, O, typeof newOptions, typeof finalSpecs>(reducerOptions).reduce(input);
@@ -113,6 +112,7 @@ export class ProxyReducerBuilder2<N extends object, const D extends keyof N, O, 
       specs: finalSpecs,
       discriminator: this._discriminator,
       immutable: this._options?.immutable ?? false,
+      once: this._options?.once ?? false,
     };
 
     return new ProxyReducer2<N, N, D, O, Opt, typeof finalSpecs>(reducerOptions);

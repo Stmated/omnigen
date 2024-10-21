@@ -1,4 +1,4 @@
-import * as fs from 'fs/promises';
+import * as fs from 'fs';
 import * as path from 'path';
 import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
@@ -42,12 +42,12 @@ export class SchemaFile implements SchemaSource {
     return this._fileName ? path.resolve(this._fileName) : undefined;
   }
 
-  async asObject<R>(): Promise<R> {
+  asObject<R>(): R {
     if (this._parsedObject !== undefined) {
-      return Promise.resolve(this._parsedObject as R);
+      return this._parsedObject as R;
     }
 
-    const str = (await this.asString()).trim();
+    const str = (this.asString()).trim();
     const name = (this._fileName ?? '').toLowerCase();
     if (name.endsWith('.yml') || name.endsWith('.yaml')) {
       this._parsedObject = YAML.parse(str);
@@ -64,7 +64,7 @@ export class SchemaFile implements SchemaSource {
     return this._parsedObject as R;
   }
 
-  async asString(): Promise<string> {
+  asString(): string {
     if (this._readContent !== undefined) {
       return this._readContent;
     }
@@ -72,7 +72,7 @@ export class SchemaFile implements SchemaSource {
     if (typeof this._input === 'string') {
       if (this._input.indexOf('\n') !== -1) {
         // If the input is multiline, then we assume it is the raw content.
-        return Promise.resolve(this._input);
+        return this._input;
       }
     }
 
@@ -82,7 +82,7 @@ export class SchemaFile implements SchemaSource {
 
     const path = this.getAbsolutePath() || '';
     logger.debug(`Reading content from ${path}`);
-    const buffer = await fs.readFile(path, {});
+    const buffer = fs.readFileSync(path, {});
     this._readContent = buffer.toString();
     return this._readContent;
   }

@@ -1914,14 +1914,6 @@ export class OmniUtil {
 
 
     if (extra.length > 0 && opt?.combine !== CombineMode.UNION) {
-
-      // There is no common ground between the two, since baseline is lacking some members.
-      // try {
-      //   throw new Error(`Hmm`);
-      // } catch (ex) {
-      //   logger.error(`Returning since we are not allowed to create a union: ${JSON.stringify(opt)}, with extra ${extra.map(it => it.value)} ${ex.stack}`);
-      // }
-
       return undefined;
     }
 
@@ -1953,7 +1945,7 @@ export class OmniUtil {
           if (copy.description) {
             copy.description = `${copy.description}\nFrom ${Naming.unwrap(a.name)}`;
           } else {
-            copy.description = `From ${Naming.unwrap(a.name)}`;
+            copy.description = `Enum property from ${Naming.unwrap(a.name)}`;
           }
         }
 
@@ -1968,7 +1960,7 @@ export class OmniUtil {
           if (copy.description) {
             copy.description = `${copy.description}\nFrom ${bUnwrapped}`;
           } else {
-            copy.description = `From ${Naming.unwrap(bUnwrapped)}`;
+            copy.description = `Enum property from ${Naming.unwrap(bUnwrapped)}`;
           }
         }
       }
@@ -2158,7 +2150,7 @@ export class OmniUtil {
       if (finalProperty.description) {
         finalProperty.description = `${finalProperty.description}\nFrom ${Naming.unwrap(from.name)}`;
       } else {
-        finalProperty.description = `From ${Naming.unwrap(from.name)}`;
+        finalProperty.description = `Merged property from object ${Naming.unwrap(from.name)}`;
       }
 
       // This is a new property, and we should add it for `to`.
@@ -2188,7 +2180,7 @@ export class OmniUtil {
           if (property.description) {
             property.description = `${property.description}\nFrom ${Naming.unwrap(from.name)}`;
           } else {
-            property.description = `From ${Naming.unwrap(from.name)}`;
+            property.description = `Property from object ${Naming.unwrap(from.name)}`;
           }
 
           PropertyUtil.addProperty(to, property, common);
@@ -2481,7 +2473,7 @@ export class OmniUtil {
     }
   }
 
-  public static addTo<T>(target: T | T[] | undefined, value: T | T[] | undefined): T | T[] | undefined {
+  public static addTo<T>(target: Arrayable<T> | undefined, value: Arrayable<T> | undefined): Arrayable<T> | undefined {
 
     if (target) {
       if (value) {
@@ -2489,13 +2481,18 @@ export class OmniUtil {
           if (Array.isArray(value)) {
             target.push(...value);
           } else {
-            target.push(value);
+            if (target.length === 0 || target[target.length - 1] !== value) {
+              target.push(value);
+            }
           }
           return target;
         } else {
           if (Array.isArray(value)) {
             return [target, ...value];
           } else {
+            if (target === value) {
+              return target;
+            }
             return [target, value];
           }
         }

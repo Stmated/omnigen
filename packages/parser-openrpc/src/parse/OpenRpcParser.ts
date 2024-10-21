@@ -93,7 +93,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
       docStore = new DocumentStore();
     }
 
-    const schemaObject = await schemaSource.asObject<OpenrpcDocument>();
+    const schemaObject = schemaSource.asObject<OpenrpcDocument>();
 
     const expander = new JsonExpander(uri => JsonPathFetcher.get(uri, docStore));
     expander.expand(schemaObject, schemaSource.getAbsolutePath());
@@ -109,7 +109,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
 
     // TODO: Completely wrong. Needs to be redone so that we have full control over the OpenRPC and its JsonSchema parts, and they can coexist naturally.
     //        Need to make it so that we can share functionality between the two formats, and visit the whole document properly between borders
-    const applyIdTransformer = new ApplyIdJsonSchemaTransformerFactory(schemaSource.getAbsolutePath());
+    const applyIdTransformer = new ApplyIdJsonSchemaTransformerFactory();
     const transformers = [
       applyIdTransformer.create(),
       new SimplifyJsonSchemaTransformerFactory().create(),

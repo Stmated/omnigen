@@ -1,14 +1,15 @@
 import {JSONSchema9Definition, JSONSchema9, JsonSchemaParser, RefResolver} from '@omnigen/parser-jsonschema';
-import {JsonObject} from 'json-pointer';
 import {OmniItemKind, OmniModel, ParserOptions} from '@omnigen/api';
 import {SchemaFile} from '@omnigen/core';
 import {OpenAPIV3_1 as OpenApi3} from 'openapi-types';
+import {DocumentStore} from '@omnigen/core-json';
 
 // TODO: This is the only one that should be able to handle 'discriminator' of JsonSchema -- move discriminator-related code into here
 
-export class OpenApiJsonSchemaParser<TRoot extends JsonObject, TOpt extends ParserOptions> extends JsonSchemaParser<TRoot, TOpt> {
+export class OpenApiJsonSchemaParser<TOpt extends ParserOptions> extends JsonSchemaParser<TOpt> {
 
   private readonly _schemaFile: SchemaFile;
+  private readonly _docStore = new DocumentStore()
 
   constructor(refResolver: RefResolver, options: TOpt, schemaFile: SchemaFile) {
     super(refResolver, options);
@@ -18,7 +19,7 @@ export class OpenApiJsonSchemaParser<TRoot extends JsonObject, TOpt extends Pars
   public parse(root: JSONSchema9): OmniModel {
 
     // NOTE: This is wrong and will very likely not work, since there is very little overlap. Would need to create a new type of visitor.
-    root = JsonSchemaParser.preProcessJsonSchema(this._schemaFile.getAbsolutePath(), root);
+    root = JsonSchemaParser.preProcessJsonSchema(this._schemaFile.getAbsolutePath(), root, this._docStore);
 
     const openApiDocument = root as OpenApi3.Document;
 

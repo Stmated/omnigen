@@ -133,7 +133,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
       // TODO: This should be removed and instead simplified elsewhere, where we compress/fix "incorrect" types
       // In Java we cannot extend from an enum. So we will try and redirect the output.
-      if (type.extendedBy && type.extendedBy.kind == OmniTypeKind.ENUM) {
+      if (type.extendedBy && type.extendedBy.kind === OmniTypeKind.ENUM) {
         if (OmniUtil.isEmptyType(type)) {
           return this.addEnum(type.extendedBy, type, root, options);
         } else {
@@ -382,7 +382,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     const nameResolver = root.getNameResolver();
     const investigatedName = nameResolver.investigate({type: type, customName: declaration.name.value, options: options});
-    const packageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE}); // JavaUtil.getPackageName(type, declaration.name.value, options);
+    const packageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
     const cu = new Code.CompilationUnit(
       new Code.PackageDeclaration(packageName),
       new Code.ImportList(),
@@ -404,11 +404,11 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
     const nameResolver = root.getNameResolver();
     const investigatedName = nameResolver.investigate({type: originalType || type, options: options});
-    const javaClassName = nameResolver.build({name: investigatedName, with: NameParts.NAME, use: TypeUseKind.CONCRETE});
+    const className = nameResolver.build({name: investigatedName, with: NameParts.NAME, use: TypeUseKind.CONCRETE});
 
     const astUtils = root.getAstUtils();
     const javaType = astUtils.createTypeNode(type);
-    const javaClassIdentifier = new Code.Identifier(javaClassName);
+    const javaClassIdentifier = new Code.Identifier(className);
 
     if (genericSourceIdentifiers) {
 

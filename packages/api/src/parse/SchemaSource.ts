@@ -2,7 +2,7 @@
 export interface SchemaSource {
   getAbsolutePath(): string | undefined;
 
-  asObject<R>(): Promise<R>;
+  asObject<R>(): R;
 
-  asString(): Promise<string>;
+  asString(): string;
 }

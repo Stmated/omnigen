@@ -14,7 +14,7 @@ export interface RefResolver {
   resolve<const T>(value: T): WithoutRef<T>;
 }
 
-type NewDocument = { uri: JsonItemAbsoluteUri, promise: Promise<JsonObject> };
+type NewDocument = { uri: JsonItemAbsoluteUri, object: JsonObject };
 type DynamicAnchor = {
   anchorName: string;
   path: string;
@@ -26,7 +26,7 @@ export class ExternalDocumentsFinder {
   private readonly _uri: string;
   private readonly _jsonSchema: JsonObject;
 
-  private readonly _documents: DocumentStore; // = new Map<string, JsonObject>();
+  private readonly _documents: DocumentStore;
 
   constructor(uri: string, jsonSchema: JsonObject, docStore?: DocumentStore) {
     this._uri = uri;
@@ -38,7 +38,7 @@ export class ExternalDocumentsFinder {
     return this._documents.values();
   }
 
-  async create(): Promise<RefResolver> {
+  create(): RefResolver {
 
     const rootUri = JsonPathResolver.toAbsoluteUriParts(undefined, this._uri);
     this._documents.set(rootUri.absoluteDocumentUri, this._jsonSchema);
@@ -58,8 +58,8 @@ export class ExternalDocumentsFinder {
 
       for (const newDocument of newDocuments) {
 
-        const awaited = await newDocument.promise;
-        const subSchema = awaited as JSONSchema9;
+        // const awaited = await newDocument.promise;
+        const subSchema = newDocument.object as JSONSchema9;
 
         this._documents.set(newDocument.uri.absoluteDocumentUri, subSchema);
         queue.push({uri: newDocument.uri, schema: subSchema});
@@ -73,17 +73,21 @@ export class ExternalDocumentsFinder {
         let maxRecursion = 10;
         while (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
 
+          // TODO: All this code does not really belong here -- it should be somewhere else, with code that specifically one deals with the exploding of $ref (inline or not inline)
           if (maxRecursion-- <= 0) {
             throw new Error(`Encountered too much recursion when resolving $ref: ${v.$ref}`);
           }
 
           const resolved = this.resolveRef(v.$ref, origin);
           const keys = Object.keys(v);
-          if (keys.length == 2 && '$id' in v) {
+          if (keys.length === 2 && '$id' in v) {
 
             // This object only contains $id and $ref, which makes it quite useless. Replace with the resolved.
             v = resolved;
           } else if (keys.length > 1) {
+
+            // TODO: This is a hack to make types not be removed because of being inline by code that thinks a schema-inline allOf item should be a hidden/unnamed type.
+            resolved['x-inline'] = false;
 
             delete v.$ref;
             if ('allOf' in v) {
@@ -254,16 +258,16 @@ export class ExternalDocumentsFinder {
       const newDocument = newDocuments.find(it => (it.uri.absoluteDocumentUri === absoluteUri.absoluteDocumentUri));
       if (!newDocument) {
 
-        let promise: Promise<JsonObject>;
+        let object: JsonObject; // Promise<JsonObject>;
         if (absoluteUri.protocol == 'file') {
-          promise = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
+          object = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
         } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {
-          promise = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
+          object = ProtocolHandler.http<JsonObject>(absoluteUri.absoluteDocumentUri);
         } else {
           throw new Error(`Unknown protocol ${absoluteUri.protocol}`);
         }
 
-        newDocuments.push({uri: absoluteUri, promise: promise});
+        newDocuments.push({uri: absoluteUri, object: object});
       }
     }
 

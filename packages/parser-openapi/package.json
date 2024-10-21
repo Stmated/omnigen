@@ -17,6 +17,7 @@
     "@omnigen/api": "workspace:*",
     "@omnigen/core": "workspace:*",
     "@omnigen/core-log": "workspace:*",
+    "@omnigen/core-json": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "json-schema": "^0.4.0",

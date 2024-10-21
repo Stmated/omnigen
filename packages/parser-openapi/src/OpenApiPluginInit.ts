@@ -26,7 +26,7 @@ export const OpenApiPlugin = createPlugin(
       ]);
     } else if (ctx.source == undefined) {
 
-      const obj = await ctx.schemaFile.asObject();
+      const obj = ctx.schemaFile.asObject();
       if (!obj || !(typeof obj == 'object') || !('openapi' in obj)) {
         return new z.ZodError([
           {code: 'custom', path: ['source'], message: `File is not an OpenAPI file`},
@@ -37,7 +37,7 @@ export const OpenApiPlugin = createPlugin(
     const documentFinder = new ExternalDocumentsFinder(ctx.schemaFile.getAbsolutePath() ?? '', ctx.schemaFile.asObject());
     const resolver = await documentFinder.create();
     const parser = new OpenApiJsonSchemaParser(resolver, ctx.parserOptions, ctx.schemaFile);
-    const root = await ctx.schemaFile.asObject<AnyJSONSchema>();
+    const root = ctx.schemaFile.asObject<AnyJSONSchema>();
     const model = parser.parse(root);
 
     return {

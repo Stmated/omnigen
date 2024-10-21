@@ -36,10 +36,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
 
   private readonly _hints: IdHint[] = [];
 
-  constructor(absolutePath: string | undefined) {
-    if (absolutePath) {
-      // this._hints.push({uri: absolutePath});
-    }
+  constructor() {
   }
 
   public pushPath(hint: IdHint | string) {
@@ -56,7 +53,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
 
   newIdFromContext(others: string[]): string {
 
-    const bestUri = ''; // this.addSlash(this._hints.findLast(it => !!it.uri)?.uri || '');
+    const bestUri = '';
 
     const parts: string[] = [];
     const tags: string[] = [];
@@ -69,10 +66,6 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       }
 
       let changed = false;
-      // if (hint.uri) {
-      //   bestUri = this.addSlash(hint.uri);
-      //   changed = true;
-      // }
 
       if (hint.id) {
         parts.push(hint.id);
@@ -111,15 +104,6 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
     // This might mess up reproducibility of runs, but there's not much we can do.
     return `${bestUri}_${ApplyIdJsonSchemaTransformerFactory._uniqueIdCounter++}`;
   }
-
-  // private addSlash(bestUri: string) {
-  //
-  //   if (bestUri && !bestUri.endsWith('/')) {
-  //     bestUri += '/';
-  //   }
-  //
-  //   return bestUri;
-  // }
 
   getSuffixes(i: number): string[] {
 

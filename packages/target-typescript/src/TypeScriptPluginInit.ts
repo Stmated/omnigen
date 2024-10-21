@@ -32,7 +32,7 @@ import {
   ZodAstNodeContext,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SimplifyGenericsModelTransformer, ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SimplifyGenericsModelTransformer, Visitor, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -144,6 +144,8 @@ export const TypeScriptPlugin = createPlugin(
     ];
 
     for (const transformer of transformers) {
+
+      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformModel(modelArgs);
     }
 
@@ -168,6 +170,8 @@ export const TypeScriptPlugin = createPlugin(
     ] as const;
 
     for (const transformer of transformers2) {
+
+      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformModel2ndPass(modelArgs2);
     }
 
@@ -218,8 +222,40 @@ export const TypeScriptPlugin = createPlugin(
       root: astNode,
     };
 
+    const debugExistenceName = process.env['DEBUG_IDENTIFIER'];
+    let debugExistenceIn: AstTransformer | undefined = undefined;
+    let debugExistenceOut: AstTransformer | undefined = undefined;
+
     for (const transformer of astTransformers) {
+
+      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformAst(astArgs);
+
+      if (debugExistenceName) {
+
+        // TODO: This debug code should be moved to an external helper class, so it can be used by any target and not just TypeScript.
+        const defaultVisitor = astArgs.root.createVisitor<void>();
+        const names: string[] = [];
+        astArgs.root.visit(Visitor.create(defaultVisitor, {
+          visitObjectDeclaration: (n, v) => {
+
+            const name = n.name.original ?? n.name.value;
+            names.push(name);
+            defaultVisitor.visitObjectDeclaration(n, v);
+          },
+        }));
+
+        if (!debugExistenceIn && names.includes(debugExistenceName)) {
+          debugExistenceIn = transformer;
+        }
+        if (!debugExistenceOut && debugExistenceIn && !names.includes(debugExistenceName)) {
+          debugExistenceOut = transformer;
+        }
+      }
+    }
+
+    if (debugExistenceName) {
+      logger.info(`DEBUG: Component '${debugExistenceName}' appeared after transformer '${debugExistenceIn?.constructor.name}' and disappeared after '${debugExistenceOut?.constructor.name}'`)
     }
 
     return {

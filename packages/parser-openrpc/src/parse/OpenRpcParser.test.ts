@@ -27,7 +27,7 @@ describe('Test Generic Model Creation', () => {
 
       const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS, jsonRpcVersion: '2.0'});
       try {
-        const model = (await parser.parse()).model;
+        const model = parser.parse().model;
         ctx.expect(model).toBeDefined();
       } catch (ex) {
         throw LoggerFactory.formatError(ex);
@@ -42,7 +42,7 @@ describe('Test Generic Model Creation', () => {
     );
 
     const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS, jsonRpcVersion: '2.0'});
-    const model = (await parser.parse()).model;
+    const model = parser.parse().model;
 
     ctx.expect(model).toBeDefined();
     ctx.expect(model.name).toEqual('Petstore Expanded');

@@ -52,10 +52,6 @@ export const ZodSomeTargetContextOut = ZodBaseContext.extend({
 const TypeLibraryPluginOut = ZodTypeLibraryContext
   .merge(ZodModelLibraryContext);
 
-// const ZodStdOptionsContext = ZodArgumentsContext
-//   // .merge(ZodParserOptionsContext)
-//   ;
-
 const CorePluginOut = ZodSchemaFileContext
   .merge(ZodArgumentsContext)
   .merge(ZodParserOptionsContext)
@@ -107,6 +103,8 @@ export const CommonTransformPlugin = createPlugin(
     ];
 
     for (const transformer of transformers) {
+
+      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformModel({
         model: ctx.model,
         options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
@@ -142,6 +140,8 @@ export const CommonTransform2Plugin = createPlugin(
     };
 
     for (const transformer of transformers) {
+
+      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformModel2ndPass(args);
     }
 

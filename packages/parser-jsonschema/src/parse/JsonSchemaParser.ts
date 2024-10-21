@@ -69,10 +69,10 @@ export class DefaultJsonSchemaParser implements Parser {
     this._parserOptions = parserOptions;
   }
 
-  async parse(): Promise<OmniModelParserResult<ParserOptions>> {
+  parse(): OmniModelParserResult<ParserOptions> {
 
     const docStore = new DocumentStore();
-    let root = await this._schemaFile.asObject<AnyJSONSchema>();
+    let root = this._schemaFile.asObject<AnyJSONSchema>();
     root = JsonSchemaParser.preProcessJsonSchema(this._schemaFile.getAbsolutePath(), root, docStore);
 
     const model: OmniModel = {
@@ -88,7 +88,7 @@ export class DefaultJsonSchemaParser implements Parser {
 
     const fileUri = this._schemaFile.getAbsolutePath() ?? '';
 
-    const refResolver = await (new ExternalDocumentsFinder(fileUri, root).create());
+    const refResolver = (new ExternalDocumentsFinder(fileUri, root).create());
 
     const jsonSchemaParser = new JsonSchemaParser(refResolver, this._parserOptions);
 
@@ -146,6 +146,8 @@ export class DefaultJsonSchemaParser implements Parser {
  *        It should be easy to use the JsonSchemaParser from other parsers; right now quite clumsy and locked to OpenRpc.
  */
 export class JsonSchemaParser<TOpt extends ParserOptions> {
+
+  private static _uniqueCounter = 0;
 
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typeMap = new Map<string, OmniType>();
@@ -340,7 +342,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     const transformers = [
       // new NormalizeDefsJsonSchemaTransformerFactory().create(),
       new SimplifyJsonSchemaTransformerFactory().create(),
-      new ApplyIdJsonSchemaTransformerFactory(absolutePath).create(),
+      new ApplyIdJsonSchemaTransformerFactory().create(),
     ];
 
     for (const transformer of transformers) {
@@ -1052,33 +1054,33 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   public getLikelyNames(
     schema: AnyJsonDefinition,
     dereferenced: AnyJsonDefinition,
-  ): TypeName[] | undefined {
+  ): TypeName | undefined {
 
-    const names = this.getSpecifiedNames(schema, dereferenced);
+    let names: TypeName | undefined = this.getSpecifiedNames(schema, dereferenced);
 
     if (typeof dereferenced === 'object') {
       const derefId = Naming.parse(dereferenced.$id);
-      if (derefId && !names.some(it => Naming.isSame(it, derefId))) {
-        names.push(derefId);
+      if (derefId) {
+        names = Naming.merge(names, derefId);
       }
     }
 
     if (typeof schema === 'object') {
 
       const schemaRef = Naming.parse(schema.$ref);
-      if (schemaRef && !names.some(it => Naming.isSame(it, schemaRef))) {
-        names.push(schemaRef);
+      if (schemaRef) {
+        names = Naming.merge(names, schemaRef);
       }
 
       if (schema !== dereferenced) {
         const schemaId = Naming.parse(schema.$id);
-        if (schemaId && !names.some(it => Naming.isSame(it, schemaId))) {
-          names.push(schemaId);
+        if (schemaId) {
+          names = Naming.merge(names, schemaId);
         }
       }
     }
 
-    if (names.length === 0) {
+    if (!names || (Array.isArray(names) && names.length === 0)) {
       return undefined;
     }
 
@@ -1091,17 +1093,15 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     fallback?: TypeName | undefined,
   ): TypeName {
 
-    const names = this.getLikelyNames(schema, dereferenced) ?? [];
+    let names: TypeName | undefined = this.getLikelyNames(schema, dereferenced) ?? [];
 
     // TODO: This comparison needs to be done structurally and not by identity! Otherwise we might get duplicates.
-    if (fallback && !names.some(it => Naming.isSame(it, fallback))) {
-      names.push(fallback);
+    if (fallback) {
+      names = Naming.merge(names, fallback);
     }
 
     for (const fallbackName of this.getFallbackNamesOfJsonSchemaType(schema)) {
-      if (!names.some(it => Naming.isSame(it, fallbackName))) {
-        names.push(fallbackName);
-      }
+      names = Naming.merge(names, fallbackName);
     }
 
     return names;
@@ -1156,7 +1156,19 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     return value as R;
   }
 
-  private static _uniqueCounter = 0;
+  public static getVendorExtensionBool(obj: unknown, key: string): boolean | undefined {
+
+    const value = JsonSchemaParser.getVendorExtension<unknown>(obj, key);
+    if (value === 'true' || value === true) {
+      return true;
+    }
+
+    if (value === 'false' || value === false) {
+      return false;
+    }
+
+    return undefined;
+  }
 
   private typeAndFormatToPrimitiveKind(lcType: string, lcFormat: string): OmniPrimitiveKinds {
 
@@ -1419,7 +1431,11 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
         const resolved = this._refResolver.resolve(entry);
         const preferredName = this.getPreferredName(entry, resolved, name);
         const omniType = this.jsonSchemaToType(preferredName, resolved).type;
-        omniType.inline = (resolved === entry);
+
+        // TODO: This 'inline' check is ugly, and other locations in the code that sets or reads 'x-inline' should probably have its code more controlled/centralized
+        const specificInline = JsonSchemaParser.getVendorExtensionBool(resolved, 'inline');
+        omniType.inline = (resolved === entry) && (specificInline === true || specificInline !== false);
+
         if (this._options.debug && omniType.inline) {
           omniType.debug = OmniUtil.addDebug(omniType.debug, `Made inline since the 'allOf' entry was inline in the spec`);
         }

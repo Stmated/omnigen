@@ -31,12 +31,8 @@ export interface JsonSchema9Visitor<S extends AnyJSONSchema = AnyJSONSchema> {
 
   $schema: DocVisitorTransformer<S['$schema'], this>;
   jsonSchemaType: DocVisitorTransformer<ToDefined<S['const']>, this>;
-  // jsonSchemaArray: DocVisitorTransformer<JsonSchemaDefinitionArray<S>, this>;
-  // jsonSchemaObject: DocVisitorTransformer<JsonSchemaDefinitionObject<S>, this>;
-  // jsonSchemaTypePrimitive: DocVisitorTransformer<JsonSchemaDefinitionPrimitive<S>, this>;
   jsonSchemaTypeName: DocVisitorTransformer<ToDefined<ToSingle<S['type']>>, this>;
   definitions: DocVisitorTransformer<S['definitions'], this>;
-  // definitions_option: DocVisitorTransformer<Entry<ToDefined<S['$defs']>[keyof ToDefined<S['$defs']>]>, this>;
   additionalItems: DocVisitorTransformer<S['additionalItems'], this>;
   additionalProperties: DocVisitorTransformer<S['additionalProperties'], this>;
   allOf: DocVisitorTransformer<S['allOf'], this>;
@@ -72,8 +68,6 @@ export interface JsonSchema9Visitor<S extends AnyJSONSchema = AnyJSONSchema> {
   title: DocVisitorTransformer<S['title'], this>;
   type: DocVisitorTransformer<S['type'], this>;
   format: DocVisitorTransformer<S['format'], this>;
-  // type_array: DocVisitorTransformer<Extract<S['type'], Array<any>>, this>;
-  // type_option: DocVisitorTransformer<ToDefined<ToSingle<S['type']>>, this>;
   uniqueItems: DocVisitorTransformer<S['uniqueItems'], this>;
   $ref: DocVisitorTransformer<S['$ref'], this>;
 

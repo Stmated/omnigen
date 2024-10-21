@@ -15,8 +15,6 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
     const typesToReplace = new Map<TypeNode, TypeNode>();
     const nameResolver = args.root.getNameResolver();
 
-    // const modelTypeReplacements = new Map<OmniType, OmniType>();
-
     args.root.visit({
       ...DefaultTypeScriptVisitor,
       visitClassDeclaration: (n, v) => {
@@ -70,6 +68,8 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
       reduceClassDeclaration: (n, r) => {
 
         if (n.type.omniType.inline) {
+
+          // TODO: This removal should be moved to a separate transformer, once which removes class declarations that are all used as inline. This is not the place for it.
           return undefined;
         }
 
@@ -81,7 +81,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
       },
       reduceCompilationUnit: (n, r) => {
         const result = defaultReducer.reduceCompilationUnit(n, r);
-        if (result && result.children.length == 0) {
+        if (result && result.children.length === 0) {
           return undefined;
         }
 

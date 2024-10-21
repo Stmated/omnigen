@@ -110,6 +110,7 @@ describe('jsonschema-typescript-render', () => {
       includeGenerated: false,
       singleFile: true,
       relaxedInspection: false,
+      debug: false,
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);

@@ -43,7 +43,7 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
 
   test('remove_descriptions', async ctx => {
@@ -55,7 +55,7 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
 
   // test('normalize_defs', async ctx => {
@@ -90,7 +90,7 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
 
   test('visit_into_unknown_with_redirect', async ctx => {
@@ -114,17 +114,17 @@ describe('jsonschema-7-visit', () => {
 
     const visited = visitor.visit(content, visitor);
 
-    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
 
-  test('normalize_ids', async ctx => {
+  test('normalize_ids', ctx => {
     const schemaFile = new SchemaFile(Util.getPathFromRoot('./packages/parser-jsonschema/examples/needs_absolute_ids.json'));
-    const schemaContent = await schemaFile.asObject<JSONSchema9Definition>();
+    const schemaContent = schemaFile.asObject<JSONSchema9Definition>();
 
     // Set custom path resolver, otherwise we will get absolute path inside our snapshot
-    const visitor = new ApplyIdJsonSchemaTransformerFactory('/fake/path').create();
+    const visitor = new ApplyIdJsonSchemaTransformerFactory().create();
     const visited = visitor.visit(schemaContent, visitor);
 
-    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite.name}/${ctx.task.name}.json`);
+    ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
 });

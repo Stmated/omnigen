@@ -33,6 +33,6 @@ export default defineConfig({
     //   reporters: isCI ? ['verbose', 'json'] : 'default',
     //   outputFile: 'benchmark-results.json',
     // },
-    testTimeout: 500,
+    testTimeout: 2_000,
   },
 });

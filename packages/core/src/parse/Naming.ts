@@ -1,15 +1,19 @@
 import crypto from 'crypto';
-import {OmniType, OmniTypeKind, StrictReadonly, TypeName, TypeNameModifier} from '@omnigen/api';
+import {OmniType, OmniTypeKind, StrictReadonly, TypeName} from '@omnigen/api';
 import {NamePair} from './NamePair';
 import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
 import {Case, Util} from '../util';
 import {OmniUtil} from './OmniUtil';
+import fs from 'fs';
+import path from 'path';
+
+const PATTERN_NUMBERS_ONLY = /^[0-9_\-]+$/;
 
 const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation) => {
   if (keepPunctuation) {
     if (parts && parts.length > 0) {
-      return `${parts.join('')}${name}`;
+      return `${parts.join('')}${Naming.prefixedPascalCase(name)}`;
     } else {
       return name;
     }
@@ -335,109 +339,153 @@ export class Naming {
     }
   }
 
-  public static isSame(a: TypeName | undefined, b: TypeName | undefined): boolean {
+  public static merge(a: TypeName, b: TypeName | undefined): TypeName;
+  public static merge(a: TypeName | undefined, b: TypeName): TypeName;
+  public static merge(a: TypeName, b: TypeName): TypeName;
+  public static merge(a: TypeName | undefined, b: TypeName | undefined): TypeName | undefined {
+
+    if (!a) {
+      return b;
+    } else if (!b) {
+      return a;
+    }
+
+    if (Naming.isSame(a, b, 0)) {
+      return a;
+    }
 
     if (typeof a === 'string' && typeof b === 'string') {
-      return (a === b);
+      return [a, b];
+    } else if (Array.isArray(a) && Array.isArray(b)) {
+      return [...a, ...b];
+    } else if (Array.isArray(a)) {
+      return [...a, b];
+    } else if (Array.isArray(b)) {
+      return [a, ...b];
+    } else {
+      return [a, b];
     }
+  }
 
-    if (a === undefined && b === undefined) {
+  private static isSame(a: TypeName, b: TypeName, depth: number): boolean {
+
+    if (a === b) {
       return true;
-    } else if (a === undefined || b === undefined) {
+    } else if (typeof a === 'string' && typeof b === 'string') {
       return false;
     }
 
-    if (Array.isArray(a) && Array.isArray(b)) {
-      if (a.length !== b.length) {
-        return false;
-      }
+    if (depth > 10) {
+      throw new Error(`The type names are too deep, the nesting is too great`);
+    }
 
-      for (let i = 0; a.length; i++) {
-        if (!Naming.isSame(a[i], b[i])) {
-          return false;
-        }
-      }
-
-      return true;
-    } else if (Array.isArray(a)) {
+    if (Array.isArray(a)) {
       for (const aItem of a) {
-        if (!Naming.isSame(aItem, b)) {
-          return false;
+        if (Naming.isSame(aItem, b, depth + 1)) {
+          return true;
         }
       }
 
-      return true;
+      return false;
     } else if (Array.isArray(b)) {
       for (const bItem of b) {
-        if (!Naming.isSame(a, bItem)) {
-          return false;
+        if (Naming.isSame(a, bItem, depth + 1)) {
+          return true;
         }
       }
 
-      return true;
-    }
-
-    if (typeof a === 'string' && typeof b === 'object') {
-      if (!b.prefix && !b.suffix) {
-        return Naming.isSame(a, b.name);
-      }
-    } else if (typeof b === 'string' && typeof a === 'object') {
-      if (!a.prefix && !a.suffix) {
-        return Naming.isSame(a.name, b);
-      }
-    }
-
-    // TODO: This should be optimized so that we do not create new objects unless we really, really have to.
-    const realA: TypeNameModifier = (typeof a === 'string') ? {name: a} : a;
-    const realB: TypeNameModifier = (typeof b === 'string') ? {name: b} : b;
-
-    if ((realA.prefix === undefined) !== (realB.prefix === undefined)) {
       return false;
     }
 
-    if ((realA.suffix === undefined) !== (realB.suffix === undefined)) {
+    const aName = (typeof a === 'object') ? a.name : a;
+    const bName = (typeof b === 'object') ? b.name : b;
+
+    const aPrefix = (typeof a === 'object') ? a.prefix : undefined;
+    const aSuffix = (typeof a === 'object') ? a.suffix : undefined;
+    const bPrefix = (typeof b === 'object') ? b.prefix : undefined;
+    const bSuffix = (typeof b === 'object') ? b.suffix : undefined;
+
+    if (!!aPrefix !== !!bPrefix) {
+      return false;
+    } else if (!!aSuffix !== !!bSuffix) {
       return false;
     }
 
-    if (!Naming.isSame(realA.name, realB.name)) {
+    if (!Naming.isSame(aName, bName, depth + 1)) {
+      return false;
+    } else if (aPrefix && bPrefix && !Naming.isSame(aPrefix, bPrefix, depth + 1)) {
+      return false;
+    } else if (aSuffix && bSuffix && !Naming.isSame(aSuffix, bSuffix, depth + 1)) {
       return false;
     }
 
-    if (realA.prefix || realB.prefix) {
-      if (!Naming.isSame(realA.prefix, realB.prefix)) {
-        return false;
-      }
-    }
-
-    // TODO: Need to handle $comment and prefix
     return true;
   }
 
-  public static parse(value: string | undefined): TypeName | undefined {
+  public static parse(value: string | undefined, stripLocalPath = true): TypeName | undefined {
 
     if (!value) {
       return undefined;
     }
 
     const hashIndex = value.indexOf('#');
+    let base = (hashIndex === -1) ? value : value.substring(0, hashIndex);
     const hash = (hashIndex === -1) ? undefined : value.substring(hashIndex + 1);
 
-    const parts = ((hashIndex === -1) ? value : value.substring(0, hashIndex)).split(/[/\\]/)
+    if (stripLocalPath) {
+
+      const lower = base.toLocaleLowerCase();
+      if (lower.startsWith('file:')) {
+        base = '';
+      } else if (base.includes(path.sep) && fs.existsSync(base)) {
+        base = '';
+      }
+    }
+
+    const parts = base.split(/[/\\]/)
       .map(it => it.trim())
       .filter(Boolean)
       .map(it => Util.trimAny(it, ':'));
 
-    if (hash) {
-      parts.push(hash);
+    const hashParts = !hash ? [] : hash.split(/[/\\]/)
+      .map(it => it.trim())
+      .filter(Boolean)
+      .map(it => Util.trimAny(it, ':'));
+
+    parts.push(...hashParts);
+
+    if (parts.length === 0) {
+      return undefined;
     }
 
     const names: TypeName[] = [];
 
-    for (let i = 0; i < parts.length; i++) {
-
-      const slice: TypeName[] = parts.slice(parts.length - (i + 1), parts.length);
-      names.push(slice.reduce((p, c) => p ? {prefix: p, name: c} : c));
+    const partsWithoutNonsense = parts.filter(it => !PATTERN_NUMBERS_ONLY.test(it));
+    if (partsWithoutNonsense.length !== parts.length) {
+      this.addPartsToNames(partsWithoutNonsense, names);
     }
+
+    this.addPartsToNames(parts, names);
+
+    return names;
+  }
+
+  private static addPartsToNames(parts: string[], names: TypeName[]) {
+
+    for (let i = 0; i < parts.length; i++) {
+      const slice: TypeName[] = parts.slice(parts.length - (i + 1), parts.length);
+      const name = slice.reduce((p, c) => p ? {prefix: p, name: c} : c);
+      if (!Naming.isSame(names, name, 0)) {
+        names.push(name);
+      }
+    }
+  }
+
+  /**
+   * Sorts a name, so that any name options are in an order of being more probable to be a nice-looking name.
+   * For example: some $id or $schema or similar meta-keys in some contracts contain a version number like `SomeService/2` -- then we likely wouldn't want `2` as the name.
+   */
+  public static sort(names: TypeName): TypeName {
 
     return names;
   }

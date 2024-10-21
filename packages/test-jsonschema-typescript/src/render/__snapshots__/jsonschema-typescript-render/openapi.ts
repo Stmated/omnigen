@@ -1,4 +1,4 @@
-export interface _20221007 extends _202210070 {
+export interface _20221007 extends Schema {
   readonly components?: Components | undefined;
   readonly externalDocs?: ExternalDocumentation | undefined;
   readonly info: Info;
@@ -9,16 +9,13 @@ export interface _20221007 extends _202210070 {
   readonly servers?: ReadonlyArray<Server> | undefined;
   readonly tags?: ReadonlyArray<Tag> | undefined;
   readonly webhooks?: _20221007Webhooks | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any;
 }
-
-export type _202210070 = object;
-export type _202210071 = object;
-export type _202210072 = object;
 
 export interface _20221007Webhooks {
   readonly [key: string]: CallbacksAdditionalProperties | undefined;
 }
+
+export type _31Schema = object;
 
 export interface AuthorizationCode extends SpecificationExtensions {
   readonly authorizationUrl: string;
@@ -105,7 +102,13 @@ export interface Contact extends SpecificationExtensions {
   readonly url?: string | undefined;
 }
 
-export type ContentAdditionalProperties = Examples;
+export interface Content {
+  readonly [key: string]: ContentAdditionalProperties | undefined;
+}
+
+export interface ContentAdditionalProperties extends Examples, SpecificationExtensions {
+
+}
 
 export interface EncodingHeaders {
   readonly [key: string]: EncodingHeadersAdditionalProperties | undefined;
@@ -132,7 +135,6 @@ export interface Examples {
   readonly example?: any;
   readonly examples?: ExamplesExamples | undefined;
   readonly schema?: MediaTypeSchemaMeta | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface ExamplesExamples {
@@ -146,13 +148,12 @@ export interface ExternalDocumentation extends SpecificationExtensions {
   readonly url: string;
 }
 
-export interface Header extends HeaderObject {
+export interface Header extends SpecificationExtensions {
   readonly content?: HeaderContent | undefined;
   readonly deprecated?: boolean | undefined;
   readonly description?: string | undefined;
   readonly required?: boolean | undefined;
   readonly schema?: HeaderSchemaMeta | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type Header1 = object;
@@ -182,14 +183,13 @@ export interface License extends SpecificationExtensions {
   readonly url?: string | undefined;
 }
 
-export interface Link extends LinkObject {
+export interface Link extends SpecificationExtensions {
   readonly body?: Server | undefined;
   readonly description?: string | undefined;
   readonly operationId?: string | undefined;
   readonly operationRef?: string | undefined;
   readonly parameters?: MapOfStrings | undefined;
   readonly requestBody?: any;
-  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type Link1 = object;
@@ -203,16 +203,16 @@ export interface MediaTypeEncoding {
   readonly [key: string]: MediaTypeEncodingAdditionalProperties | undefined;
 }
 
-export interface MediaTypeEncodingAdditionalProperties extends StylesForFormThen {
+export interface MediaTypeEncodingAdditionalProperties extends SpecificationExtensions {
   readonly allowReserved?: boolean | undefined;
   readonly contentType?: string | undefined;
   readonly explode?: boolean | undefined;
   readonly headers?: EncodingHeaders | undefined;
   readonly style?: EncodingStyle | undefined;
-  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type MediaTypeSchemaMeta = object;
+export type Oas31Schema = object;
 
 export interface OauthFlows extends SpecificationExtensions {
   readonly authorizationCode?: AuthorizationCode | undefined;
@@ -327,21 +327,25 @@ export interface ResponseLinks {
 
 export type ResponseLinksAdditionalProperties = Reference | Link;
 export type ResponseOrReference = Reference | Response;
-export type Responses = ResponsesThen;
+
+export interface Responses extends SpecificationExtensions, ResponsesThen {
+
+}
 
 export interface ResponsesThen {
   readonly default?: ResponseOrReference | undefined;
   readonly [key: string /* Pattern: "^[1-5](?:[0-9]{2}|XX)$" */]: ResponseOrReference | undefined;
 }
 
-export type Schema = Schemaobject | boolean;
+export type Schema = object;
+export type Schema1 = Schemaobject | boolean;
 export type Schemaobject = object;
 
 export interface SecurityRequirement {
   readonly [key: string]: ReadonlyArray<string> | undefined;
 }
 
-export interface SecurityScheme extends TypeHttp, TypeHttpBearer, TypeOauth2, TypeOidc, TypeApikey {
+export interface SecurityScheme extends TypeApikey, TypeHttp, TypeHttpBearer, TypeOauth2, TypeOidc, SpecificationExtensions {
 
 }
 
@@ -367,6 +371,10 @@ export interface ServerVariablesAdditionalProperties extends SpecificationExtens
   readonly default: string;
   readonly description?: string | undefined;
   readonly enum?: readonly [string, ...ReadonlyArray<string>] | undefined;
+}
+
+export interface SpecificationExtensions {
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type StylesForForm = StylesForFormThen | StylesForFormElse;
@@ -398,7 +406,6 @@ export interface TypeApikeyThen {
   readonly in: TypeApikeyIn;
   readonly name: string;
   readonly type: SecuritySchemeType;
-  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type TypeHttp = TypeHttpThen;

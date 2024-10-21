@@ -25,7 +25,7 @@ export const JsonSchemaPlugin = createPlugin(
       ]);
     } else if (ctx.source == undefined) {
 
-      const obj = await ctx.schemaFile.asObject();
+      const obj = ctx.schemaFile.asObject();
       if (!obj) {
         return new z.ZodError([
           {code: 'custom', path: ['source'], message: `File is empty`},
@@ -53,7 +53,7 @@ export const JsonSchemaPlugin = createPlugin(
     }
 
     const parser = new DefaultJsonSchemaParser(ctx.schemaFile, ctx.parserOptions);
-    const model = await parser.parse();
+    const model = parser.parse();
 
     return {
       ...ctx,

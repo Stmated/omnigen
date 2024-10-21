@@ -30,7 +30,8 @@
     "string-similarity": "^4.0.4",
     "ts-json-schema-generator": "^1.2.0",
     "yaml": "^2.5.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "sync-fetch": "^0.5.2"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
@@ -41,6 +42,7 @@
     "@types/node": "^18.13.0",
     "@types/object-hash": "^2.2.1",
     "@types/string-similarity": "^4.0.0",
+    "@types/sync-fetch": "^0.4.3",
     "colors": "^1.4.0",
     "nock": "^13.3.0",
     "typescript": "^5.5.4"

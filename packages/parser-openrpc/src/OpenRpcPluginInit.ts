@@ -35,7 +35,7 @@ export const OpenRpcPlugin = createPlugin(
       ]);
     } else if (ctx.source == undefined) {
 
-      const obj = await ctx.schemaFile.asObject();
+      const obj = ctx.schemaFile.asObject();
       if (!obj || !(typeof obj == 'object') || !('openrpc' in obj)) {
         return new z.ZodError([
           {code: 'custom', path: ['source'], message: `File is not an OpenRpc file`},
@@ -67,7 +67,7 @@ export const OpenRpcPlugin = createPlugin(
     };
 
     const openRpcParser = openRpcParserBootstrap.createParser(openRpcOptions);
-    const parseResult = await openRpcParser.parse();
+    const parseResult = openRpcParser.parse();
 
     // TODO: NEED TO UPDATE ALL OPTIONS AFTER WE HAVE FOUND NEW ONES IN THIS FILE!
     //          MUST HAVE A WAY OF RUNNING THIS EARLIER IN THE CHAIN! SPLIT INTO A PREP STEP AND THE ACTUAL PARSING!

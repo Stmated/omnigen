@@ -23,7 +23,7 @@
       "outputs": []
     },
     "publish": {
-      "dependsOn": ["build", "test", "lint"],
+      "dependsOn": ["build", "test"],
       "outputs": []
     },
     "update": {

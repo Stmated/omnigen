@@ -46,6 +46,6 @@
     "colors": "^1.4.0",
     "nock": "^13.5.6",
     "terser": "^5.43.1",
-    "typescript": "^5.9.2"
+    "typescript": "5.8.2"
   }
 }

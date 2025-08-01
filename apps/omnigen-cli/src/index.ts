@@ -7,6 +7,7 @@ import {BaseContext, FileContext} from '@omnigen/core-plugin';
 import {PluginManager} from '@omnigen/plugin';
 
 import {JsonSchemaPlugins} from '@omnigen/parser-jsonschema';
+import {OpenApiPlugins} from '@omnigen/parser-openapi';
 import {OpenRpcPlugins} from '@omnigen/parser-openrpc';
 import {JavaPlugins} from '@omnigen/target-java';
 import {TypeScriptPlugins} from '@omnigen/target-typescript';
@@ -29,7 +30,7 @@ try {
   logger.info(`Omnigen`);
 }
 
-console.log(`Loaded: ${[CorePlugins, JsonSchemaPlugins, OpenRpcPlugins, JavaPlugins, TypeScriptPlugins, CSharpPlugins].length} plugins`);
+console.log(`Loaded: ${[CorePlugins, JsonSchemaPlugins, OpenApiPlugins, OpenRpcPlugins, JavaPlugins, TypeScriptPlugins, CSharpPlugins].length} plugins`);
 
 (async () => {
 

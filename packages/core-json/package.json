@@ -30,6 +30,6 @@
     "@types/sync-fetch": "^0.4.3",
     "colors": "^1.4.0",
     "supports-color": "^9.4.0",
-    "typescript": "^5.9.2"
+    "typescript": "5.8.2"
   }
 }

@@ -26,6 +26,6 @@
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
-    "typescript": "^5.9.2"
+    "typescript": "5.8.2"
   }
 }

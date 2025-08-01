@@ -1,6 +1,6 @@
 {
   "name": "@omnigen-org/omnigen-cli",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "private": false,
   "license": "MIT",
   "type": "module",
@@ -37,6 +37,7 @@
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
+    "@omnigen/parser-openapi": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
     "@omnigen/plugin": "workspace:*",
     "@omnigen/target-csharp": "workspace:*",
@@ -47,6 +48,6 @@
     "@types/figlet": "^1.7.0",
     "@types/node": "^18.19.121",
     "tsx": "^4.20.3",
-    "typescript": "^5.9.2"
+    "typescript": "5.8.2"
   }
 }

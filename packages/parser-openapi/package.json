@@ -1,5 +1,5 @@
 {
-  "name": "@omnigen/parser-openapi3",
+  "name": "@omnigen/parser-openapi",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -31,6 +31,6 @@
     "@types/json-pointer": "^1.0.34",
     "@types/json-schema": "^7.0.15",
     "tsx": "^4.20.3",
-    "typescript": "^5.9.2"
+    "typescript": "5.8.2"
   }
 }

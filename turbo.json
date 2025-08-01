@@ -25,6 +25,9 @@
     "publish": {
       "dependsOn": ["build", "test", "lint"],
       "outputs": []
+    },
+    "update": {
+      "cache": false
     }
   }
 }

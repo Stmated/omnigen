@@ -1,5 +1,3 @@
-import {infer} from 'zod';
-
 export * from './Environment';
 
 export type ToDefined<T> = T extends any ? ((Exclude<T, undefined>) | (T & {})) : never;
@@ -18,7 +16,7 @@ export type Arrayable<T> = T | Array<T>;
 export type ReadonlyArrayable<T> = T | ReadonlyArray<T>;
 
 export type IsFunction<T, True, False> = T extends (...args: any[]) => any ? True : False;
-export type NonFunction<T> = IsFunction<T, never, T>; // T extends (...args: any[]) => any ? never : T;
+export type NonFunction<T> = IsFunction<T, never, T>;
 
 export type ToArrayItem<T> = T extends (infer U)[] ? U : never;
 

@@ -1,4 +1,4 @@
-import {Arrayable, MaybeReadonly, StrictReadonly} from '@omnigen/api';
+import {Arrayable} from '@omnigen/api';
 import {ProxyReducerDiscriminatorBuilder, ProxyReducerOptionsBuilder} from './ProxyReducerBuilder2';
 import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
 import {ANY_KIND, MaybeFunction, MutableProxyReducerInterface, YieldRet, ReduceRet, ResolvedRet, Spec2, SpecFn2} from './types';
@@ -23,7 +23,7 @@ export interface Options2<N extends object, D extends keyof N, O, InOpt extends 
 
 export interface RecursiveValue<T> {
   id: number;
-  original: StrictReadonly<T>;
+  original: T;
   replacement?: T | null;
   recursionDepth: number;
   changeCount: number;
@@ -81,9 +81,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     return this._visited.length - 1;
   }
 
-  get parent(): StrictReadonly<N> | undefined {
+  get parent(): N | undefined {
     const ptr = this._visited[this._visited.length - 2];
-    return (ptr?.replacement as StrictReadonly<typeof ptr.replacement>) ?? ptr?.original;
+    return (ptr?.replacement as typeof ptr.replacement) ?? ptr?.original;
   }
 
   put<P extends keyof FN, V extends FN[P]>(prop: P, value: MaybeFunction<FN, V>): this {
@@ -160,7 +160,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
   private cloneAndReturnNew<P extends keyof FN, V extends FN[P], RV extends RecursiveValue<FN>>(ongoing: RV, prop?: P, value?: V) {
 
-    let copy: StrictReadonly<FN>;
+    let copy: FN;
     if (prop) {
       if (this._options.track !== ProxyReducerTrackMode2.NONE) {
         copy = {
@@ -245,7 +245,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
     const visited: RecursiveValue<Local> = {
       id: ++this._id,
-      original: original as StrictReadonly<typeof original>,
+      original: original as typeof original,
       recursionDepth: 0,
       changeCount: 0,
     };
@@ -346,7 +346,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
   /**
    * @see PROP_KEY_ID
    */
-  public getId(obj: MaybeReadonly<N>): number { // } IsExactly<typeof generate, true, number, number | undefined> {
+  public getId(obj: N): number { // } IsExactly<typeof generate, true, number, number | undefined> {
     const existing = (obj as any)[PROP_KEY_ID];
     if (existing) {
       return existing;

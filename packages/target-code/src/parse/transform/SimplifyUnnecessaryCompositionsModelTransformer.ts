@@ -17,20 +17,20 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
     args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
       UNION: (_, r) => {
         const reduced = r.yieldBase();
-        const merged = this.maybeReduce(OmniUtil.asWriteable(reduced), r, lossless, features);
+        const merged = this.maybeReduce(reduced, r, lossless, features);
         if (merged) {
           r.replace(merged);
         }
       },
       EXCLUSIVE_UNION: (_, r) => {
         const reduced = r.yieldBase();
-        const merged = this.maybeReduce(OmniUtil.asWriteable(reduced), r, lossless, features);
+        const merged = this.maybeReduce(reduced, r, lossless, features);
         if (merged) {
           r.replace(merged);
         }
       },
       INTERSECTION: (_, r) => {
-        const reduced = OmniUtil.asWriteable(r.yieldBase());
+        const reduced = r.yieldBase();
         if (reduced && OmniUtil.isUnion(reduced) && reduced.types.length === 1) {
           r.replace(reduced.types[0]);
         }

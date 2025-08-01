@@ -1,4 +1,4 @@
-import {OmniNode, OmniPrimitiveKinds, OmniPrimitiveNull, OmniPrimitiveType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, OmniTypeOf, StrictReadonly, TargetFeatures} from '@omnigen/api';
+import {OmniNode, OmniPrimitiveKinds, OmniPrimitiveNull, OmniPrimitiveType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, OmniTypeOf, TargetFeatures} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniDescribeUtils} from './OmniDescribeUtils.ts';
 
@@ -6,7 +6,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class OmniTypeUtil {
 
-  public static isPrimitive<T extends StrictReadonly<OmniType>>(type: T | undefined): type is OmniTypeOf<T, OmniPrimitiveKinds> {
+  public static isPrimitive<T extends OmniType>(type: T | undefined): type is OmniTypeOf<T, OmniPrimitiveKinds> {
 
     if (!type) {
       return false;
@@ -32,7 +32,7 @@ export class OmniTypeUtil {
     }
   }
 
-  public static isComposition(type: StrictReadonly<OmniNode> | undefined) {
+  public static isComposition(type: OmniNode | undefined) {
 
     const kind = type?.kind;
     return kind === OmniTypeKind.UNION
@@ -99,7 +99,7 @@ export class OmniTypeUtil {
     return false;
   }
 
-  public static isNullableType(type: OmniType | StrictReadonly<OmniType>, features?: TargetFeatures): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
+  public static isNullableType(type: OmniType, features?: TargetFeatures): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
 
     if (type.kind === OmniTypeKind.NULL || type.kind === OmniTypeKind.VOID) {
       return true;

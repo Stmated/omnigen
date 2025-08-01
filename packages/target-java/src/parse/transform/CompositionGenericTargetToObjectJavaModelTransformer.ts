@@ -23,8 +23,8 @@ export class CompositionGenericTargetToObjectJavaModelTransformer implements Omn
     ProxyReducerOmni2.builder().reduce(args.model, {immutable: true}, {
       [ANY_KIND]: (n, r) => {
 
-        const parent = OmniUtil.asWriteable(r.parent);
-        const type = OmniUtil.asWriteable(n);
+        const parent = r.parent;
+        const type = n;
 
         if (parent && parent.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER && OmniUtil.isComposition(type)) {
 

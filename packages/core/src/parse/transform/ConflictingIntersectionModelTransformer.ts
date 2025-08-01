@@ -20,7 +20,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
       INTERSECTION: (_, r) => {
         const reduced = r.yieldBase();
         if (reduced && reduced.kind === OmniTypeKind.INTERSECTION) {
-          const replacement = this.replaceIntersection(OmniUtil.asWriteable(reduced), args.features);
+          const replacement = this.replaceIntersection(reduced, args.features);
           if (replacement) {
             r.replace(replacement);
           }

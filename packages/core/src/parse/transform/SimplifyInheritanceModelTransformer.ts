@@ -86,7 +86,7 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
           }
 
           // Replace ourself with the extension.
-          r.replace(OmniUtil.cloneAndCopyTypeMeta(reduced.extendedBy, OmniUtil.asWriteable(reduced)));
+          r.replace(OmniUtil.cloneAndCopyTypeMeta(reduced.extendedBy, reduced));
           r.persist();
         }
       },

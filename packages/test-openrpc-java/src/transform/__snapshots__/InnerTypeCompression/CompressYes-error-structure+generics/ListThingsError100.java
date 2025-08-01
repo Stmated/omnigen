@@ -33,4 +33,3 @@ public class ListThingsError100 extends JsonRpcErrorResponse<ListThingsError100.
     }
   }
 }
-

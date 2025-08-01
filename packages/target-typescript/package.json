@@ -24,12 +24,12 @@
     "@omnigen/core-plugin": "workspace:*",
     "@omnigen/plugin": "workspace:*",
     "@omnigen/target-code": "workspace:*",
-    "zod": "^3.22.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
-    "typescript": "^5.5.4"
+    "typescript": "^5.9.2"
   }
 }

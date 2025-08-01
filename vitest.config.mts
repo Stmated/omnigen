@@ -1,11 +1,28 @@
-import {defineConfig} from 'vitest/config';
+import {defineConfig, ViteUserConfig} from 'vitest/config';
 
 const isGithub = process.env.GITHUB_ACTIONS === 'true';
 const isCI = process.env.CI === 'true' || isGithub;
 const isReport = process.env.REPORT === 'true';
 
+type ToDefined<T> = T extends any ? ((Exclude<T, undefined>) | (T & {})) : never;
+
+let reporters: ToDefined<ViteUserConfig['test']>['reporters'];
+if (isGithub) {
+  reporters = ['dot', 'github-actions'];
+} else if (isReport) {
+  reporters = ['default', 'html'];
+} else {
+  reporters = [
+    ['default', {'summary': false}],
+  ];
+}
+
 export default defineConfig({
   test: {
+    projects: [
+      'packages/*',
+      'apps/*',
+    ],
     isolate: false,
     pool: 'threads',
     fileParallelism: false,
@@ -15,10 +32,7 @@ export default defineConfig({
     outputFile: {
       html: '.test/html/index.html',
     },
-    reporters: isGithub ? ['dot', 'github-actions']
-      : isReport ? ['default', 'html']
-        : ['basic' /* 'hanging-process' */],
-
+    reporters: reporters,
     coverage: {
       all: true,
       clean: true,

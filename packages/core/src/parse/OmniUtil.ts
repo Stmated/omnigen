@@ -3,7 +3,6 @@ import {
   CommonDenominatorType,
   DebugValue,
   Direction,
-  MaybeReadonly,
   Namespace,
   NamespaceArrayItem,
   ObjectEdgeName,
@@ -43,14 +42,12 @@ import {
   OmniTypeOf,
   OmniUnknownType,
   SmartUnwrappedType,
-  StrictReadonly,
   TargetFeatures,
   TypeDiffKind,
   TypeName,
   TypeOwner,
   TypeUseKind,
   UnknownKind,
-  Writeable,
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
@@ -140,7 +137,7 @@ export class OmniUtil {
     return unwrapped;
   }
 
-  public static asSubType(type: MaybeReadonly<OmniNode> | undefined): type is OmniSubTypeCapableType {
+  public static asSubType(type: OmniNode | undefined): type is OmniSubTypeCapableType {
 
     if (!type) {
       return false;
@@ -239,7 +236,7 @@ export class OmniUtil {
     ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
       OBJECT: (n, r) => {
         if (n.extendedBy === type) {
-          types.push(OmniUtil.asWriteable(n));
+          types.push(n);
         }
       },
     });
@@ -509,11 +506,11 @@ export class OmniUtil {
     return false;
   }
 
-  public static isNull(type: StrictReadonly<OmniType>) {
+  public static isNull(type: OmniType) {
     return type.kind === OmniTypeKind.NULL;
   }
 
-  public static isUndefined(type: StrictReadonly<OmniType>) {
+  public static isUndefined(type: OmniType) {
     return type.kind === OmniTypeKind.UNDEFINED;
   }
 
@@ -535,7 +532,7 @@ export class OmniUtil {
    *
    * @param type
    */
-  public static describe(type: StrictReadonly<OmniType> | undefined): string {
+  public static describe(type: OmniType | undefined): string {
     return OmniDescribeUtils.describe(type);
   }
 
@@ -544,11 +541,11 @@ export class OmniUtil {
    *
    * @param type The type to try and find a name for
    */
-  public static getTypeName(type: StrictReadonly<OmniType>): TypeName | undefined {
+  public static getTypeName(type: OmniType): TypeName | undefined {
     return OmniDescribeUtils.getTypeName(type);
   }
 
-  public static isNullableType(type: OmniType | StrictReadonly<OmniType>, features?: TargetFeatures): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
+  public static isNullableType(type: OmniType, features?: TargetFeatures): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
     return OmniTypeUtil.isNullableType(type, features);
   }
 
@@ -586,7 +583,7 @@ export class OmniUtil {
    *
    * NOT to be relied upon or used for naming output classes or types.
    */
-  public static getVirtualTypeName(type: StrictReadonly<OmniType>, depth?: number): TypeName {
+  public static getVirtualTypeName(type: OmniType, depth?: number): TypeName {
     return OmniDescribeUtils.getVirtualTypeName(type, depth);
   }
 
@@ -1011,18 +1008,11 @@ export class OmniUtil {
     return 0;
   }
 
-  /**
-   * This function should not be necessary, but we have it for now until all models are readonly and `StrictReadOnly` can be stripped out.
-   */
-  public static asWriteable<T>(value: T): Writeable<T> {
-    return value as Writeable<T>;
-  }
-
-  public static getCommonDenominator(options: TargetFeatures | CommonDenominatorOptions, types: ReadonlyArray<StrictReadonly<OmniType>>): CommonDenominatorType | undefined {
+  public static getCommonDenominator(options: TargetFeatures | CommonDenominatorOptions, types: ReadonlyArray<OmniType>): CommonDenominatorType | undefined {
 
     if (types.length === 1) {
       return {
-        type: OmniUtil.asWriteable(types[0]),
+        type: types[0],
       };
     }
 
@@ -1030,7 +1020,7 @@ export class OmniUtil {
 
     let commonDiffAmount = 0;
     let common: CommonDenominatorType = {
-      type: OmniUtil.asWriteable(types[0]),
+      type: types[0],
     };
 
     for (let i = 1; i < types.length; i++) {
@@ -1050,7 +1040,7 @@ export class OmniUtil {
     return common;
   }
 
-  public static isNameable(type: StrictReadonly<OmniType>) {
+  public static isNameable(type: OmniType) {
 
     return type.kind === OmniTypeKind.OBJECT
       || type.kind === OmniTypeKind.INTERFACE
@@ -1072,14 +1062,14 @@ export class OmniUtil {
    * @param opt - What level of things are allowed to be created to fulfill a non-undefined result, and how to solve the resolution of the two types.
    */
   public static getCommonDenominatorBetween(
-    a: StrictReadonly<OmniType>,
-    b: StrictReadonly<OmniType>,
+    a: OmniType,
+    b: OmniType,
     features: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
 
     if (a == b) {
-      return {type: OmniUtil.asWriteable(a)};
+      return {type: a};
     }
 
     if ((a.kind == OmniTypeKind.NULL || a.kind == OmniTypeKind.VOID) && b.kind == a.kind) {
@@ -1135,8 +1125,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenExclusiveUnionAndOther(
-    a: StrictReadonly<OmniExclusiveUnionType>,
-    b: StrictReadonly<OmniType>,
+    a: OmniExclusiveUnionType,
+    b: OmniType,
     features: TargetFeatures,
   ): CommonDenominatorType | undefined {
 
@@ -1201,8 +1191,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenEnumAndPrimitive(
-    a: StrictReadonly<OmniEnumType>,
-    b: StrictReadonly<OmniPrimitiveType>,
+    a: OmniEnumType,
+    b: OmniPrimitiveType,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
 
@@ -1218,8 +1208,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenGenericTargets(
-    a: StrictReadonly<OmniGenericTargetType>,
-    b: StrictReadonly<OmniGenericTargetType>,
+    a: OmniGenericTargetType,
+    b: OmniGenericTargetType,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType<OmniGenericTargetType> | undefined {
@@ -1308,8 +1298,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenObjectAndOther(
-    a: StrictReadonly<OmniType>,
-    b: StrictReadonly<OmniType>,
+    a: OmniType,
+    b: OmniType,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
@@ -1348,8 +1338,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenPropertiesByPosition(
-    a: StrictReadonly<OmniArrayPropertiesByPositionType>,
-    b: StrictReadonly<OmniArrayPropertiesByPositionType>,
+    a: OmniArrayPropertiesByPositionType,
+    b: OmniArrayPropertiesByPositionType,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType<OmniArrayPropertiesByPositionType> | undefined {
@@ -1374,7 +1364,7 @@ export class OmniUtil {
 
       // TODO: Return something else here instead, which is actually the common denominators between the two
       return {
-        type: OmniUtil.asWriteable(a),
+        type: a,
         diffs: diffs,
       };
     }
@@ -1634,7 +1624,7 @@ export class OmniUtil {
    * TODO: This could probably be improved by a whole lot; there are likely an unnecessary amount of comparisons
    */
   public static getDistinctTypes(
-    types: ReadonlyArray<StrictReadonly<OmniType>>,
+    types: ReadonlyArray<OmniType>,
     targetFeatures: TargetFeatures,
     allowedDiffPredicate: (diff: TypeDiffKind) => boolean = (() => false),
   ) {
@@ -1662,7 +1652,7 @@ export class OmniUtil {
       });
 
       if (!sameType) {
-        distinctTypes.push(OmniUtil.asWriteable(type));
+        distinctTypes.push(type);
       }
     }
 
@@ -1729,8 +1719,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenObjects(
-    a: StrictReadonly<OmniObjectType>,
-    b: StrictReadonly<OmniObjectType>,
+    a: OmniObjectType,
+    b: OmniObjectType,
     features: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
@@ -1882,8 +1872,8 @@ export class OmniUtil {
   }
 
   private static getCommonDenominatorBetweenEnums(
-    a: StrictReadonly<OmniEnumType>,
-    b: StrictReadonly<OmniEnumType>,
+    a: OmniEnumType,
+    b: OmniEnumType,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
 
@@ -1909,7 +1899,7 @@ export class OmniUtil {
     }
 
     if (extra.length == 0 && missing.length == 0) {
-      return {type: OmniUtil.asWriteable(a)};
+      return {type: a};
     }
 
 
@@ -2099,7 +2089,7 @@ export class OmniUtil {
       //   union.name = commonName;
       // }
 
-      let union: StrictReadonly<OmniCompositionType>;
+      let union: OmniCompositionType;
       if (it.type.kind === OmniTypeKind.UNION) {
         union = {...it.type, name: commonName ?? it.type.name, types: unionTypes};
       } else {
@@ -2108,7 +2098,7 @@ export class OmniUtil {
 
       return {
         ...it,
-        type: OmniUtil.asWriteable(union),
+        type: union,
       };
 
     } else {
@@ -2658,15 +2648,15 @@ export class OmniUtil {
     return type.kind === OmniTypeKind.UNION || type.kind === OmniTypeKind.EXCLUSIVE_UNION;
   }
 
-  public static isComposition(type: StrictReadonly<OmniNode> | undefined) {
+  public static isComposition(type: OmniNode | undefined) {
     return OmniTypeUtil.isComposition(type);
   }
 
-  public static isType(type: StrictReadonly<OmniNode>): type is Extract<OmniType, { kind: typeof type.kind }> {
+  public static isType(type: OmniNode): type is Extract<OmniType, { kind: typeof type.kind }> {
     return (type.kind in OmniTypeKind);
   }
 
-  public static isAbstract(type: StrictReadonly<OmniType>): boolean {
+  public static isAbstract(type: OmniType): boolean {
     if (type.kind === OmniTypeKind.OBJECT) {
       return !!type.abstract;
     }
@@ -2674,11 +2664,11 @@ export class OmniUtil {
     return false;
   }
 
-  public static isPrimitive<T extends StrictReadonly<OmniType>>(type: T | undefined): type is OmniTypeOf<T, OmniPrimitiveKinds> {
+  public static isPrimitive<T extends OmniType>(type: T | undefined): type is OmniTypeOf<T, OmniPrimitiveKinds> {
     return OmniTypeUtil.isPrimitive(type);
   }
 
-  public static asNonNullableIfHasDefault<T extends MaybeReadonly<OmniType>>(type: T, features: TargetFeatures) {
+  public static asNonNullableIfHasDefault<T extends OmniType>(type: T, features: TargetFeatures) {
 
     if (OmniUtil.isNullableType(type, features)) {
       if (!type.literal && type.value !== undefined) {

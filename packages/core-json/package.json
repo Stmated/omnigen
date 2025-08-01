@@ -14,22 +14,22 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "json-pointer": "^0.6.2",
-    "@omnigen/core-log": "workspace:*",
-    "@omnigen/core": "workspace:*",
     "@omnigen-org/json-expander": "workspace:*",
-    "sync-fetch": "^0.5.2",
+    "@omnigen/core": "workspace:*",
+    "@omnigen/core-log": "workspace:*",
     "change-case": "^5.4.4",
-    "debug": "^4.3.7"
+    "debug": "^4.4.1",
+    "json-pointer": "^0.6.2",
+    "sync-fetch": "^0.5.2"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@types/debug": "^4.1.12",
-    "@types/sync-fetch": "^0.4.3",
     "@types/json-pointer": "^1.0.34",
+    "@types/sync-fetch": "^0.4.3",
     "colors": "^1.4.0",
-    "typescript": "^5.6.2",
-    "supports-color": "^9.4.0"
+    "supports-color": "^9.4.0",
+    "typescript": "^5.9.2"
   }
 }

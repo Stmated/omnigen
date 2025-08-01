@@ -1,4 +1,5 @@
 import {OmniCompositionType, OmniItemKind, OmniObjectType, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind, TypeName} from '@omnigen/api';
+import {TestContext} from 'vitest';
 
 export type MapArg<T> = Array<[T, Array<T>]>;
 
@@ -36,5 +37,14 @@ export class TestUtils {
     }
 
     return map;
+  }
+
+  public static getSnapshotFileName(ctx: TestContext, fileName?: string): string {
+    if (fileName) {
+      return `./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`;
+    }
+
+    // We will just assume that the file is a JSON file if no fil1eName is provided.
+    return `./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`;
   }
 }

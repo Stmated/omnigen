@@ -12,11 +12,11 @@ describe('OpenRpc+CSharp Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
   });
 
-  function verify(ctx: TaskContext & TestContext, units: RenderedCompilationUnit[]) {
+  async function verify(ctx: TaskContext & TestContext, units: RenderedCompilationUnit[]) {
     const fileContents = new Map<string, string>();
     for (const cu of units) {
       fileContents.set(cu.fileName, cu.content);
-      ctx.expect(cu.content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${cu.fileName}`);
+      await ctx.expect(cu.content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${cu.fileName}`);
     }
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
   }

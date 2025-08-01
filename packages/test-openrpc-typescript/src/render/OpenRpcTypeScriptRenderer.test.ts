@@ -19,7 +19,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+    await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
   test('Type compressions', async ctx => {
@@ -36,7 +36,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+    await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
   test('compressable-types_classes', async ctx => {
@@ -53,7 +53,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+    await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
   test('Enum', async ctx => {
@@ -72,7 +72,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+    await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
   test('AdditionalProperties', async ctx => {
@@ -87,7 +87,7 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+    await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
   test('method-in-response', async ctx => {
@@ -104,6 +104,6 @@ describe('TypeScript Rendering', () => {
     });
 
     const fileContent = fileContents.get([...fileContents.keys()][0]);
-    ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+    await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 });

@@ -1,5 +1,5 @@
 import {OmniTypeUtil} from './OmniTypeUtil.ts';
-import {DEFAULT_UNKNOWN_KIND, NamespaceArrayItem, OmniPrimitiveConstantValue, OmniPrimitiveKinds, OmniPropertyName, OmniType, OmniTypeKind, StrictReadonly, TypeName, UnknownKind} from '@omnigen/api';
+import {DEFAULT_UNKNOWN_KIND, NamespaceArrayItem, OmniPrimitiveConstantValue, OmniPrimitiveKinds, OmniPropertyName, OmniType, OmniTypeKind, TypeName, UnknownKind} from '@omnigen/api';
 import {Naming} from './Naming.ts';
 import {assertUnreachable, Case} from '../util';
 
@@ -11,7 +11,7 @@ export class OmniDescribeUtils {
    *
    * @param type
    */
-  public static describe(type: StrictReadonly<OmniType> | undefined): string {
+  public static describe(type: OmniType | undefined): string {
 
     if (!type) {
       return '[undefined]';
@@ -122,7 +122,7 @@ export class OmniDescribeUtils {
    *
    * NOT to be relied upon or used for naming output classes or types.
    */
-  public static getVirtualTypeName(type: StrictReadonly<OmniType>, depth?: number): TypeName {
+  public static getVirtualTypeName(type: OmniType, depth?: number): TypeName {
 
     depth = depth ?? 0;
     if (depth >= 10) {
@@ -241,7 +241,7 @@ export class OmniDescribeUtils {
    *
    * @param type The type to try and find a name for
    */
-  public static getTypeName(type: StrictReadonly<OmniType>): TypeName | undefined {
+  public static getTypeName(type: OmniType): TypeName | undefined {
 
     if ('name' in type && type.name) {
       return type.name;

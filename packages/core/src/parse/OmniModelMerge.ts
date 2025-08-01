@@ -3,10 +3,9 @@ import {
   OmniModel,
   OmniModelParserResult, OmniNode,
   OmniType,
-  OmniTypeKind, StrictReadonly,
+  OmniTypeKind,
 } from '@omnigen/api';
 import {Options} from '@omnigen/api';
-import {DFSTraverseContext} from './OmniTypeVisitor.js';
 import {HashUtil} from './HashUtil.js';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from './OmniUtil.js';
@@ -41,7 +40,7 @@ export class OmniModelMerge {
   public static getReplacements<T extends TypeOwner>(...roots: T[]): Replacement<T>[] {
 
     const replacements: Replacement<T>[] = [];
-    type TypeContext = {type: OmniType, depth: number, parent: StrictReadonly<OmniNode> | undefined};
+    type TypeContext = { type: OmniType, depth: number, parent: OmniNode | undefined };
     const collections = new Map<T, TypeContext[]>();
     for (const model of roots) {
 
@@ -54,7 +53,8 @@ export class OmniModelMerge {
           }
           r.callBase();
         },
-        GENERIC_SOURCE: () => {},
+        GENERIC_SOURCE: () => {
+        },
       });
 
       collections.set(model, collection);

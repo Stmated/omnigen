@@ -19,7 +19,7 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
 
     args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
       UNION: (_, r) => {
-        const reduced = OmniUtil.asWriteable(r.yieldBase());
+        const reduced = r.yieldBase();
         if (reduced && OmniUtil.isUnion(reduced)) {
           const merged = this.maybeMerged(reduced, args.features);
           if (merged) {
@@ -28,7 +28,7 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
         }
       },
       EXCLUSIVE_UNION: (_, r) => {
-        const reduced = OmniUtil.asWriteable(r.yieldBase());
+        const reduced = r.yieldBase();
         if (reduced && OmniUtil.isUnion(reduced)) {
           const merged = this.maybeMerged(reduced, args.features);
           if (merged) {

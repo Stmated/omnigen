@@ -9,7 +9,7 @@ import {
   PartialProp,
   PropertiesInformation,
   PropertyDifference,
-  PropertyEquality, StrictReadonly,
+  PropertyEquality,
   TargetFeatures,
   TypeDiffKind,
 } from '@omnigen/api';
@@ -67,7 +67,7 @@ export class PropertyUtil {
   ): PropertiesInformation {
 
     let commonPropertyNames: Array<OmniPropertyName> | undefined = undefined;
-    const pairs: Array<StrictReadonly<OmniOwnedProperty>[]> = types.filter(OmniUtil.isPropertyOwner).map(t => {
+    const pairs: Array<OmniOwnedProperty[]> = types.filter(OmniUtil.isPropertyOwner).map(t => {
       return OmniUtil.getPropertiesOf(t).map(p => ({
         owner: t,
         property: p,
@@ -163,7 +163,7 @@ export class PropertyUtil {
       // return propertyEquality;
     }
 
-    const possiblePropertyTypes: Array<StrictReadonly<OmniType>> = [];
+    const possiblePropertyTypes: Array<OmniType> = [];
     for (let i = 0; i < properties.length; i++) {
 
       // NOTE: Need good test cases for this, to check that it really finds the lowest equality level

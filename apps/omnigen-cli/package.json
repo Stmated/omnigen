@@ -4,7 +4,9 @@
   "private": false,
   "license": "MIT",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -21,32 +23,30 @@
     "publish": "pnpm publish --access public --no-git-checks=true"
   },
   "dependencies": {
-    "commander": "^12.1.0",
     "@commander-js/extra-typings": "^12.1.0",
-    "figlet": "^1.7.0",
+    "commander": "^12.1.0",
+    "figlet": "^1.8.2",
     "json-schema": "^0.4.0",
-    "zod": "^3.22.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
-    "@types/node": "^18.13.0",
-    "@types/figlet": "^1.5.8",
-    "typescript": "^5.6.2",
-    "tsx": "^4.7.1",
-
     "@omnigen/api": "workspace:*",
-    "@omnigen/core-plugin": "workspace:*",
-    "@omnigen/core-log": "workspace:*",
+    "@omnigen/config-typescript": "workspace:*",
     "@omnigen/core": "workspace:*",
+    "@omnigen/core-log": "workspace:*",
+    "@omnigen/core-plugin": "workspace:*",
+    "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
+    "@omnigen/plugin": "workspace:*",
+    "@omnigen/target-csharp": "workspace:*",
     "@omnigen/target-java": "workspace:*",
     "@omnigen/target-typescript": "workspace:*",
-    "@omnigen/target-csharp": "workspace:*",
-    "@omnigen/plugin": "workspace:*",
-
-    "@rollup/plugin-esm-shim": "^0.1.7",
-    "@rollup/plugin-replace": "^6.0.1"
+    "@rollup/plugin-esm-shim": "^0.1.8",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^18.19.121",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
   }
 }

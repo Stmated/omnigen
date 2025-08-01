@@ -6,7 +6,6 @@ import {
   OmniModelTransformer2ndPassArgs,
   OmniType,
   OmniTypeKind,
-  StrictReadonly,
 } from '@omnigen/api';
 import {OmniUtil} from '../OmniUtil';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -16,7 +15,7 @@ const logger = LoggerFactory.create(import.meta.url);
 type SourceIdentifierPath = Array<OmniGenericSourceIdentifierType>;
 
 type Replacement = {
-  source: StrictReadonly<OmniGenericSourceType>;
+  source: OmniGenericSourceType;
   oldSourceId: OmniGenericSourceIdentifierType;
   newSourceId: OmniGenericSourceIdentifierType;
   path: SourceIdentifierPath

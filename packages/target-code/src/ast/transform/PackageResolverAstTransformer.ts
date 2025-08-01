@@ -122,7 +122,6 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
 
     const nameResolver = args.root.getNameResolver();
     let firstTypedChild: OmniType | undefined = undefined;
-    // if (!cuNamespace) {
 
     for (const child of unit.children) {
       if (child instanceof Code.Namespace) {
@@ -134,10 +133,7 @@ export class PackageResolverAstTransformer implements AstTransformer<CodeRootAst
     }
 
     if (unit.packageDeclaration) {
-
-      return unit.packageDeclaration.fqn.split(nameResolver.namespaceSeparator); // '/');
-
-      // return nameResolver.parse(unit.packageDeclaration.fqn).namespace; // {type: firstTypedChild, options: args.options}).namespace;
+      return unit.packageDeclaration.fqn.split(nameResolver.namespaceSeparator);
     }
 
     for (const child of unit.children) {

@@ -1,4 +1,4 @@
-import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind, StrictReadonly} from '@omnigen/api';
+import {OmniInterfaceType, OmniModelTransformer, OmniModelTransformerArgs, OmniObjectType, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
@@ -15,12 +15,12 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
 
   transformModel(args: OmniModelTransformerArgs): void {
 
-    const interfaceMap = new Map<StrictReadonly<OmniType>, OmniInterfaceType>();
+    const interfaceMap = new Map<OmniType, OmniInterfaceType>();
     const allTypes: OmniType[] = [];
 
     ProxyReducerOmni2.builder().options({immutable: true}).build({
       OBJECT: (n, r) => {
-        allTypes.push(OmniUtil.asWriteable(n));
+        allTypes.push(n);
         r.callBase();
       },
       DECORATING: (n, r) => {
@@ -65,7 +65,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
 
   private makeExtensionsInterfaces(
     type: OmniType,
-    interfaceMap: Map<StrictReadonly<OmniType>, StrictReadonly<OmniInterfaceType>>,
+    interfaceMap: Map<OmniType, OmniInterfaceType>,
     startConvertingAt = 0,
     depth = 0,
   ): void {
@@ -98,7 +98,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
   private getOrCreateInterfaceType(
     type: NotInterface,
     originator: OmniType,
-    interfaceMap: Map<StrictReadonly<OmniType>, StrictReadonly<OmniInterfaceType>>,
+    interfaceMap: Map<OmniType, OmniInterfaceType>,
   ): [OmniInterfaceType, 'existed' | 'new'] {
 
     const existing = interfaceMap.get(type);

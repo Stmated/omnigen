@@ -3,6 +3,7 @@ import {Direction} from '@omnigen/api';
 import {describe, test, vi} from 'vitest';
 import {SerializationLibrary} from '@omnigen/target-java';
 import {SerializationPropertyNameMode} from '@omnigen/target-code';
+import {TestUtils} from '@omnigen/utils-test';
 
 describe('InnerTypeCompression', () => {
 
@@ -22,7 +23,7 @@ describe('InnerTypeCompression', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 
@@ -43,7 +44,7 @@ describe('InnerTypeCompression', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
 
     // TODO: This is actually INCORRECT! It is not properly serializable with the @JsonValue annotation!
@@ -87,7 +88,7 @@ describe('InnerTypeCompression', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, fileContent] of fileContents) {
-      ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(fileContent).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName), fileName);
     }
   });
 });

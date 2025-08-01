@@ -16,13 +16,13 @@
   "dependencies": {
     "@omnigen/api": "workspace:*",
     "@omnigen/core-log": "workspace:*",
-    "zod": "^3.22.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^18.13.0",
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
+    "@types/node": "^18.19.121",
     "colors": "^1.4.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.9.2"
   }
 }

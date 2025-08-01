@@ -23,4 +23,3 @@ public class JsonRpcError {
     return this.message;
   }
 }
-

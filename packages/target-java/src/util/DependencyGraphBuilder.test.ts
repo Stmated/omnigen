@@ -426,7 +426,7 @@ function getInterfaces(model: OmniModel): OmniInterfaceOrObjectType[] {
   ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
     [ANY_KIND]: (n, r) => {
 
-      const asInterface = getAsInterface(model, OmniUtil.asWriteable(n));
+      const asInterface = getAsInterface(model, n);
       if (asInterface && !interfaces.includes(asInterface)) {
         interfaces.push(asInterface);
 

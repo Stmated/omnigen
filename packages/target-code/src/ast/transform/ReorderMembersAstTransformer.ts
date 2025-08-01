@@ -236,7 +236,7 @@ export class ReorderMembersAstTransformer implements AstTransformer<CodeRootAstN
         const baseType = OmniUtil.getTopLevelType(n.omniType);
         if (baseType) {
 
-          const baseTypes: OmniType[] = OmniUtil.getFlattenedTypes(baseType);
+          const baseTypes: Array<OmniType> = OmniUtil.getFlattenedTypes(baseType);
           if (baseTypes[0] !== baseType) {
             baseTypes.splice(0, 0, baseType);
           }

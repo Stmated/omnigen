@@ -13,18 +13,18 @@
   },
   "dependencies": {
     "@omnigen/api": "workspace:*",
-    "@omnigen/core-log": "workspace:*",
     "@omnigen/core": "workspace:*",
-    "@omnigen/parser-jsonschema": "workspace:*",
-    "@omnigen/target-typescript": "workspace:*",
+    "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
+    "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/plugin": "workspace:*",
-    "zod": "^3.22.4"
+    "@omnigen/target-typescript": "workspace:*",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
-    "typescript": "^5.5.4"
+    "typescript": "^5.9.2"
   }
 }

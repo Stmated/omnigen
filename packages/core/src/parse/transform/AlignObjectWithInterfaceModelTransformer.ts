@@ -18,7 +18,7 @@ export class AlignObjectWithInterfaceModelTransformer implements OmniModel2ndPas
       OBJECT: (_, r) => {
         const reduced = r.yieldBase();
         if (reduced && reduced.kind === OmniTypeKind.OBJECT) {
-          const unimplementedProperties = this.collectUnimplementedPropertiesFromInterfaces(OmniUtil.asWriteable(reduced));
+          const unimplementedProperties = this.collectUnimplementedPropertiesFromInterfaces(reduced);
           if (unimplementedProperties.length > 0) {
 
             // TODO: Add option for if we should make object abstract or actually add the property to the object

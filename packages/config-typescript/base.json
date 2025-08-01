@@ -1,6 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "base",
+  "exclude": [
+    "**/__snapshots__/**"
+  ],
   "compilerOptions": {
     "target": "ESNext",
     "module": "preserve",

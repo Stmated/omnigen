@@ -35,4 +35,3 @@ public class ListThingsRequest extends JsonRpcRequest {
 
   }
 }
-

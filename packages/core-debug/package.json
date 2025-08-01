@@ -4,7 +4,9 @@
   "private": false,
   "license": "MIT",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -19,7 +21,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "debug": "^4.3.7",
+    "debug": "^4.4.1",
     "strip-ansi": "^7.1.0"
   },
   "devDependencies": {

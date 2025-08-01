@@ -1,4 +1,4 @@
-import {Environment, StrictReadonly} from '@omnigen/api';
+import {Environment} from '@omnigen/api';
 import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
 import {ANY_KIND, Spec2, SpecFn2} from './types';
 import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';

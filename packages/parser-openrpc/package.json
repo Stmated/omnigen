@@ -14,27 +14,27 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@omnigen-org/json-expander": "workspace:*",
     "@omnigen/api": "workspace:*",
     "@omnigen/core": "workspace:*",
+    "@omnigen/core-json": "workspace:*",
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
-    "@omnigen/core-json": "workspace:*",
-    "@omnigen-org/json-expander": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@open-rpc/meta-schema": "1.14.2",
-    "@open-rpc/schema-utils-js": "^1.16.1",
-    "json-schema": "^0.4.0",
-    "string-similarity": "^4.0.4",
+    "@open-rpc/schema-utils-js": "^1.16.2",
     "json-pointer": "^0.6.2",
+    "json-schema": "^0.4.0",
     "openapi-types": "^12.1.3",
-    "zod": "^3.22.4"
+    "string-similarity": "^4.0.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/eslint-config-custom": "workspace:*",
-    "@types/json-schema": "^7.0.15",
-    "@types/string-similarity": "^4.0.0",
     "@types/json-pointer": "^1.0.34",
-    "typescript": "^5.5.4"
+    "@types/json-schema": "^7.0.15",
+    "@types/string-similarity": "^4.0.2",
+    "typescript": "^5.9.2"
   }
 }

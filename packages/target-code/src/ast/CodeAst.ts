@@ -15,7 +15,7 @@ import {
   Reducer,
   ReducerResult,
   Reference,
-  RootAstNode, StrictReadonly,
+  RootAstNode,
   TypeNode,
   VisitResult,
 } from '@omnigen/api';

@@ -19,8 +19,11 @@ import {
   NormalClassDeclarationCtx,
   NormalInterfaceDeclarationCtx,
   PackageDeclarationCtx,
-  SuperclassCtx,
-  SuperinterfacesCtx,
+  ClassExtendsCtx,
+  ClassImplementsCtx,
+  InterfaceExtendsCtx,
+  //SuperclassCtx,
+  //SuperinterfacesCtx,
   UnannClassTypeCtx,
 } from 'java-parser';
 
@@ -164,7 +167,7 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
     for (const list of ctx.variableDeclaratorList) {
       for (const dec of list.children.variableDeclarator) {
         for (const id of dec.children.variableDeclaratorId) {
-          for (const identifier of id.children.Identifier) {
+          for (const identifier of id.children.Identifier ?? []) {
             identifiers.push(identifier.image);
           }
         }
@@ -176,16 +179,16 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
     return super.fieldDeclaration(ctx, param);
   }
 
-  superclass(ctx: SuperclassCtx, param?: any): any {
+  classExtends(ctx: ClassExtendsCtx, param?: any): any {
     for (const parent of ctx.classType) {
       for (const identifier of parent.children.Identifier) {
         this.foundSuperClasses.push(identifier.image);
       }
     }
-    return super.superclass(ctx, param);
+    return super.classExtends(ctx, param);
   }
 
-  superinterfaces(ctx: SuperinterfacesCtx, param?: any): any {
+  classImplements(ctx: ClassImplementsCtx, param?: any): any {
     for (const parent of ctx.interfaceTypeList) {
       for (const interfaceType of parent.children.interfaceType) {
         for (const classType of interfaceType.children.classType) {
@@ -195,7 +198,20 @@ export class ParsedJavaTestVisitor extends BaseJavaCstVisitorWithDefaults {
         }
       }
     }
-    return super.superinterfaces(ctx, param);
+    return super.classImplements(ctx, param);
+  }
+
+  interfaceExtends(ctx: InterfaceExtendsCtx, param?: any): any {
+    for (const parent of ctx.interfaceTypeList) {
+      for (const interfaceType of parent.children.interfaceType) {
+        for (const classType of interfaceType.children.classType) {
+          for (const identifier of classType.children.Identifier) {
+            this.foundSuperInterfaces.push(identifier.image);
+          }
+        }
+      }
+    }
+    return super.interfaceExtends(ctx, param);
   }
 
   literal(ctx: LiteralCtx, param?: any): any {

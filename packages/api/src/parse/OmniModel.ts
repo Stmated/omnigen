@@ -4,7 +4,7 @@ import {ObjectName} from '../ast';
 import {OmniItemKind} from './OmniItemKind';
 import {Direction} from './ParserOptions';
 import {OmniNodeKind} from './OmniNodeKind';
-import {Arrayable, MaybeReadonly, StrictReadonly} from '../util';
+import {Arrayable} from '../util';
 
 export interface OmniParameter {
   name: string;
@@ -267,7 +267,7 @@ export interface OmniBaseType<T extends OmniTypeKind> {
   examples?: OmniExample<unknown>[] | undefined;
 }
 
-export type OmniTypeOf<T extends MaybeReadonly<OmniNode>, K extends OmniNodeKind> = Extract<T, { kind: K }>;
+export type OmniTypeOf<T extends OmniNode, K extends OmniNodeKind> = Extract<T, { kind: K }>;
 
 // TODO: Likely `NULL` should not be a primitive, and instead be its own separate type, since most properties are not relevant to `NULL`
 export type OmniPrimitiveNull = OmniTypeOf<OmniType, typeof OmniKindPrimitive.NULL>;

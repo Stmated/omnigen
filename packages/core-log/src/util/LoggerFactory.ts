@@ -239,13 +239,11 @@ class DefaultLogger implements Logger {
 
         const h = (137.508 * namespaceColorMap.size) % hsl.max[0];
 
-        const calculatedHsl = [
+        const rgb = hsl.rgb([
           h,
           Math.round(halfSaturation + (Math.random() * halfSaturation)),
           Math.round(halfLightness + (Math.random() * halfLightness)),
-        ];
-
-        const rgb = hsl.rgb(calculatedHsl);
+        ]);
 
         const newNamespaceColor = chalk.rgb(
           Math.floor(rgb[0]),

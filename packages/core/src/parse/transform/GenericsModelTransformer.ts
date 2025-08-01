@@ -357,6 +357,6 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       return OmniUtil.toReferenceType(info.commonType, CreateMode.ANY);
     }
 
-    return OmniUtil.asWriteable(info.commonType);
+    return info.commonType;
   }
 }

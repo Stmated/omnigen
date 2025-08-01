@@ -6,7 +6,19 @@ exports[`OpenRpc+CSharp Rendering > additional-properties 1`] = `
 ]
 `;
 
+exports[`OpenRpc+CSharp Rendering > additional-properties 2`] = `
+[
+  "additional-properties.cs",
+]
+`;
+
 exports[`OpenRpc+CSharp Rendering > compressable-types 1`] = `
+[
+  "compressable-types.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > compressable-types 2`] = `
 [
   "compressable-types.cs",
 ]
@@ -18,7 +30,19 @@ exports[`OpenRpc+CSharp Rendering > enum 1`] = `
 ]
 `;
 
+exports[`OpenRpc+CSharp Rendering > enum 2`] = `
+[
+  "enum.cs",
+]
+`;
+
 exports[`OpenRpc+CSharp Rendering > inherited-construction 1`] = `
+[
+  "inherited-construction.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > inherited-construction 2`] = `
 [
   "inherited-construction.cs",
 ]
@@ -30,13 +54,31 @@ exports[`OpenRpc+CSharp Rendering > inherited-construction_no_init 1`] = `
 ]
 `;
 
+exports[`OpenRpc+CSharp Rendering > inherited-construction_no_init 2`] = `
+[
+  "inherited-construction_no_init.cs",
+]
+`;
+
 exports[`OpenRpc+CSharp Rendering > method-in-response 1`] = `
 [
   "method-in-response.cs",
 ]
 `;
 
+exports[`OpenRpc+CSharp Rendering > method-in-response 2`] = `
+[
+  "method-in-response.cs",
+]
+`;
+
 exports[`OpenRpc+CSharp Rendering > multiple-inheritance 1`] = `
+[
+  "multiple-inheritance.cs",
+]
+`;
+
+exports[`OpenRpc+CSharp Rendering > multiple-inheritance 2`] = `
 [
   "multiple-inheritance.cs",
 ]

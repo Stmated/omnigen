@@ -1,4 +1,4 @@
-import {OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, StrictReadonly, TypeDiffKind} from '@omnigen/api';
+import {OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, TypeDiffKind} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil';
 import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2.ts';
@@ -10,7 +10,7 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs): void {
 
-    type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<StrictReadonly<OmniType>> };
+    type TargetInfo = { source: OmniGenericSourceType, targetTypes: Set<OmniType> };
     const sourceIdentifierToTargetsMap = new Map<OmniGenericSourceIdentifierType, TargetInfo>();
 
     const reducer = ProxyReducerOmni2.builder().build();
@@ -49,12 +49,12 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
       // allowedDiffs.push(TypeDiffKind.POLYMORPHIC_LITERAL);
     }
 
-    const sourceIdentifierReplacements = new Map<OmniGenericSourceIdentifierType, StrictReadonly<OmniType>>(); // TODO: REMOVE!
-    const sourceIdentifierIdReplacements = new Map<number, StrictReadonly<OmniType>>();
+    const sourceIdentifierReplacements = new Map<OmniGenericSourceIdentifierType, OmniType>(); // TODO: REMOVE!
+    const sourceIdentifierIdReplacements = new Map<number, OmniType>();
 
     for (const [sourceIdentifier, info] of sourceIdentifierToTargetsMap.entries()) {
 
-      let replacement: StrictReadonly<OmniType> | undefined = undefined;
+      let replacement: OmniType | undefined = undefined;
       if (info.targetTypes.size == 1) {
         // replacement = [...info.targetTypes.values()][0];
       } else {
@@ -97,13 +97,13 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
           const replacement = sourceIdentifierIdReplacements.get(r.getId(n));
           if (replacement) {
             // TODO: Should not need to modify the object to be writeable!
-            return r.replace(r.reduce(OmniUtil.asWriteable(replacement)));
+            return r.replace(r.reduce(replacement));
           }
         } else if (n.kind === OmniTypeKind.GENERIC_SOURCE) {
           for (let i = n.sourceIdentifiers.length - 1; i >= 0; i--) {
             if (sourceIdentifierIdReplacements.has(r.getId(n.sourceIdentifiers[i]))) {
               // TODO: Should not change the immutable model! It should be properly, separately, reduced!
-              OmniUtil.asWriteable(n).sourceIdentifiers.splice(i, 1);
+              n.sourceIdentifiers.splice(i, 1);
             }
           }
 
@@ -120,7 +120,7 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
           for (let i = n.targetIdentifiers.length - 1; i >= 0; i--) {
             if (sourceIdentifierIdReplacements.has(r.getId(n.targetIdentifiers[i].sourceIdentifier))) {
               // TODO: Should not change the immutable model! It should be properly, separately, reduced!
-              OmniUtil.asWriteable(n).targetIdentifiers.splice(i, 1);
+              n.targetIdentifiers.splice(i, 1);
             }
           }
 

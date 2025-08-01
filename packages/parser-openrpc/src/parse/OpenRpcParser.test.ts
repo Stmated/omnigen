@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {DEFAULT_PARSER_OPTIONS, OmniType, StrictReadonly} from '@omnigen/api';
+import {DEFAULT_PARSER_OPTIONS, OmniType} from '@omnigen/api';
 import {OmniTypeKind} from '@omnigen/api';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser';
 import {ANY_KIND, Naming, OmniUtil, ProxyReducerOmni2, SchemaFile, Util} from '@omnigen/core';
@@ -33,7 +33,7 @@ describe('Test Generic Model Creation', () => {
         throw LoggerFactory.formatError(ex);
       }
     }
-  }, {timeout: 5_000});
+  }, 5_000);
 
   test('PetStore should create expected model', async ctx => {
 
@@ -76,7 +76,7 @@ describe('Test Generic Model Creation', () => {
       'result',
     ]); // The others are in abstract supertype
 
-    const allTypes: Array<StrictReadonly<OmniType>> = [];
+    const allTypes: Array<OmniType> = [];
     ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
       [ANY_KIND]: (n, r) => {
         if (OmniUtil.isType(n)) {
@@ -103,5 +103,3 @@ describe('Test Generic Model Creation', () => {
     })).toContain('ErrorUnknownError');
   });
 });
-
-

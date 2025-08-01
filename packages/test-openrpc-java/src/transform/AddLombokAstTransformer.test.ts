@@ -21,5 +21,5 @@ test('lombok', async ctx => {
 
   const fileContent = fileContents.get('In.java');
 
-  ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.name}/In.Java`);
+  await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.name}/In.Java`);
 });

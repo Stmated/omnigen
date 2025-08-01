@@ -17,7 +17,7 @@ describe('jsonschema-typescript-render', () => {
 
     ctx.expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
     }
   });
 

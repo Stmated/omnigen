@@ -26,22 +26,5 @@ export class PatternPropertyAnyTypeScriptModelTransformer implements OmniModel2n
     //     }
     //   },
     // }).reduce(args.model);
-
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-    //
-    //   if (ctx.type.kind === OmniTypeKind.OBJECT || ctx.type.kind === OmniTypeKind.INTERFACE) {
-    //
-    //     for (const property of OmniUtil.getPropertiesOf(ctx.type)) {
-    //       if (OmniUtil.isPatternPropertyName(property.name)) {
-    //         if (property.type.kind === OmniTypeKind.UNKNOWN && property.type.unknownKind === UnknownKind.DYNAMIC_OBJECT) {
-    //           // TODO: This is slightly weird, turning it back to ANY when JsonSchemaParser turned it into DYNAMIC_OBJECT from ANY.
-    //           //        Should be a smarter way of knowing if property is a pattern property for additional properties, so we don't change the type when we want it to stay.
-    //           property.type = {...property.type, unknownKind: UnknownKind.ANY};
-    //         }
-    //       }
-    //     }
-    //   }
-    // });
   }
 }

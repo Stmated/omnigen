@@ -228,18 +228,6 @@ export class OmniModelMerge {
         },
       });
 
-      // // REMOVE;
-      // OmniUtil.visitTypesDepthFirst(common, ctx => {
-      //
-      //   if (ctx.type.kind === OmniTypeKind.EXTERNAL_MODEL_REFERENCE) {
-      //
-      //     // If the common model has an external model reference, then we should resolve it to the true type.
-      //     // This removes some chance of recursive models, and simplifies the model.
-      //     ctx.replacement = ctx.type.of;
-      //     externalReplacements[0]++;
-      //   }
-      // }, undefined, false);
-
       logger.debug(`Swapped out ${externalReplacements[0]} types from external references to resolved type`);
 
     } while (externalReplacements[0] > 0);

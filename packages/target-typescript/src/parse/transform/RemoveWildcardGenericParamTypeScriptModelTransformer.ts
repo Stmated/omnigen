@@ -23,23 +23,5 @@ export class RemoveWildcardGenericParamTypeScriptModelTransformer implements Omn
         }
       },
     }).reduce(args.model);
-
-    // // REMOVE
-    // const original = ;
-    // args.model = reducer;
-    // args.model = reduced;
-
-    // TODO: Replace with ProxyReducerOmni2 once it has been improved
-    // const reducer = ProxyReducerOmni.builder().build({
-    //   UNKNOWN: (n, a) => {
-    //     if (n.upperBound) {
-    //       return a.next(n.upperBound);
-    //     } else {
-    //       return n;
-    //     }
-    //   },
-    // });
-    // const original = args.model;
-    // args.model = reducer.reduce(original);
   }
 }

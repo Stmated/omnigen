@@ -77,50 +77,5 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
         r.put('type', compositionType);
       },
     });
-
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-    //
-    //   const properties = OmniUtil.getPropertiesOf(ctx.type);
-    //   for (const property of properties) {
-    //     if (property.required) {
-    //       continue;
-    //     }
-    //
-    //     const existing = typeToUndefinedMap.get(property.type);
-    //     if (existing) {
-    //
-    //       property.type = existing;
-    //       continue;
-    //     }
-    //
-    //     if (OmniUtil.isComposition(property.type)) {
-    //       if (property.type.types.find(it => OmniUtil.isUndefined(it))) {
-    //         continue;
-    //       }
-    //     } else if (OmniUtil.isUndefined(property.type)) {
-    //       continue;
-    //     }
-    //
-    //     if (property.type.kind === OmniTypeKind.UNKNOWN) {
-    //       const unknownKind = property.type.unknownKind ?? args.options.unknownType;
-    //       if (unknownKind === UnknownKind.ANY || unknownKind === UnknownKind.WILDCARD || unknownKind === UnknownKind.DYNAMIC) {
-    //         // `any` can be `undefined` so no need for `undefined`.
-    //         continue;
-    //       }
-    //     }
-    //
-    //     const compositionType: OmniCompositionType = {
-    //       kind: OmniTypeKind.EXCLUSIVE_UNION,
-    //       types: [property.type, StrictUndefinedTypeScriptModelTransformer._UNDEFINED_TYPE],
-    //       inline: true,
-    //       debug: OmniUtil.addDebug(property.type.debug, `Strict undefined made it an inline exclusive union of '${OmniUtil.describe(property.type)} | undefined'`),
-    //     };
-    //
-    //     typeToUndefinedMap.set(property.type, compositionType);
-    //
-    //     property.type = compositionType;
-    //   }
-    // });
   }
 }

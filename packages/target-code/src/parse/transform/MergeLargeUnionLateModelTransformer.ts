@@ -37,38 +37,6 @@ export class MergeLargeUnionLateModelTransformer implements OmniModel2ndPassTran
         }
       },
     });
-
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(args.model, ctx => {
-    //   if (ctx.type.kind === OmniTypeKind.UNION || ctx.type.kind === OmniTypeKind.EXCLUSIVE_UNION) {
-    //     const reduced = this.maybeMerged(ctx.type, args.targetFeatures);
-    //     if (reduced) {
-    //       ctx.replacement = reduced;
-    //     }
-    //     // const n = ctx.type;
-    //     // const unimplementedProperties = this.collectUnimplementedPropertiesFromInterfaces(n);
-    //     // if (unimplementedProperties.length > 0) {
-    //     //
-    //     //   // TODO: Add option for if we should make object abstract or actually add the property to the object
-    //     //
-    //     //   n.debug = OmniUtil.addDebug(n.debug, `Adding unimplemented interface properties ${unimplementedProperties.map(it => it.name).join(', ')}`);
-    //     //   n.properties = [
-    //     //     ...n.properties,
-    //     //     ...unimplementedProperties.map(it => ({
-    //     //       ...it,
-    //     //       owner: n, // TODO: Remove the notion of `owner` someday, so we do not need to clone the property
-    //     //     })),
-    //     //   ];
-    //     // }
-    //   }
-    // });
-
-    // const reducer = new ReducerOmni({
-    //   UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
-    //   EXCLUSIVE_UNION: (n, a) => this.maybeReduce(n, a, args.targetFeatures),
-    // });
-    //
-    // args.model = reducer.reduce(args.model);
   }
 
   private maybeMerged(n: OmniUnionType | OmniExclusiveUnionType, features: TargetFeatures) {

@@ -84,12 +84,7 @@ describe('Test Generic Model Creation', () => {
         r.callBase();
       },
     });
-
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(model, ctx => {
-    //   allTypes.push(ctx.type);
-    // });
-
+    
     ctx.expect(allTypes.map(it => OmniUtil.getVirtualTypeName(it))).toContain('DeletePetByIdResponse');
     ctx.expect(allTypes.map(it => OmniUtil.getVirtualTypeName(it))).toContain('ErrorUnknownError');
   });

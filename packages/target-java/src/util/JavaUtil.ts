@@ -124,25 +124,6 @@ export class JavaUtil {
         return undefined;
       },
     });
-
-    // // REMOVE
-    // return OmniUtil.visitTypesDepthFirst(model, ctx => {
-    //
-    //   const uw = OmniUtil.getUnwrappedType(ctx.type);
-    //   if (uw.kind == OmniTypeKind.ENUM || uw.kind == OmniTypeKind.INTERFACE) {
-    //     return;
-    //   }
-    //
-    //   if ('extendedBy' in uw && uw.extendedBy) {
-    //     if (uw.extendedBy == unwrapped) {
-    //       return unwrapped;
-    //     }
-    //
-    //     if (uw.extendedBy.kind == OmniTypeKind.INTERSECTION && uw.extendedBy.types.length > 0 && uw.extendedBy.types[0] === unwrapped) {
-    //       return unwrapped;
-    //     }
-    //   }
-    // });
   }
 
   public static getSubTypeToSuperTypesMap(model: OmniModel): Map<OmniSubTypeCapableType, OmniSuperTypeCapableType[]> {

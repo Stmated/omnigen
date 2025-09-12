@@ -97,19 +97,5 @@ export class ResolveGenericSourceIdentifiersAstTransformer implements AstTransfo
         map.set(n.sourceIdentifier, n.type);
       },
     });
-
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(type, ctx => {
-    //
-    //   if (ctx.type.kind === OmniTypeKind.OBJECT || ctx.type.kind == OmniTypeKind.GENERIC_SOURCE) {
-    //
-    //     ctx.skip = true;
-    //     return;
-    //   }
-    //   if (ctx.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-    //     map.set(ctx.type.sourceIdentifier, ctx.type.type);
-    //   }
-    //
-    // }, undefined, true);
   }
 }

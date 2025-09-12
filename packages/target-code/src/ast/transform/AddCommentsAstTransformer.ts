@@ -663,13 +663,6 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       r.yieldBase();
     }).build().reduce(model);
 
-    // // REMOVE
-    // OmniUtil.visitTypesDepthFirst(model, ctx => {
-    //   if (OmniUtil.isPropertyOwner(ctx.type) && ctx.type.properties.includes(property)) {
-    //     owners.push(ctx.type);
-    //   }
-    // });
-
     return owners;
   }
 }

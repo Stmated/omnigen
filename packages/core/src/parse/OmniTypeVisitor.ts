@@ -9,11 +9,6 @@ export interface DFSTraverseContext {
   type: OmniType;
   parent: TypeOwner | undefined;
 
-  /**
-   * TODO: Remove, and instead use a proper reducer pattern, so we can make all properties read-only.
-   * @deprecated Should be replaced with a proper reducer
-   */
-  replacement?: OmniType | null | undefined;
   depth: number;
   skip: boolean;
   visited: OmniType[];
@@ -150,43 +145,11 @@ export class OmniTypeVisitor {
     if (onDown) {
       ctx.type = input;
       const result = onDown(ctx);
-
-      const replacement = ctx.replacement;
-      if (replacement !== undefined) {
-
-        // We have been told to replace the input with this other type.
-        // The caller probably modified the type tree somehow.
-        if (ctx.parent) {
-          OmniUtil.swapType(ctx.parent, ctx.type, replacement, 1);
-        } else {
-          const from = OmniUtil.describe(ctx.type);
-          const to = !replacement ? 'Removed' : OmniUtil.describe(replacement);
-          logger.warn(`Could not swap '${from}' with ${to}' since no parent was known`);
-        }
-
-        if (!replacement) {
-          ctx.replacement = undefined;
-          return undefined;
-        } else {
-
-          // And we will instead keep searching downwards along the replacement.
-          input = replacement;
-          ctx.replacement = undefined;
-        }
-      }
-
       if (result !== undefined) return result;
 
       if (ctx.skip) {
         ctx.skip = false;
         return undefined;
-      }
-
-      if (replacement) {
-        const replacementResult = this.visitTypesDepthFirstInternal(replacement, ctx, onDown, onUp);
-        if (replacementResult !== undefined) {
-          return replacementResult;
-        }
       }
     }
 

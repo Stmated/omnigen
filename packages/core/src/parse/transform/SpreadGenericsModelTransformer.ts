@@ -1,14 +1,7 @@
-import {
-  OmniGenericSourceIdentifierType,
-  OmniGenericSourceType,
-  OmniGenericTargetIdentifierType,
-  OmniModel2ndPassTransformer,
-  OmniModelTransformer2ndPassArgs,
-  OmniType,
-  OmniTypeKind,
-} from '@omnigen/api';
+import {OmniGenericSourceIdentifierType, OmniGenericTargetIdentifierType, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniUtil} from '../OmniUtil';
 import {LoggerFactory} from '@omnigen/core-log';
+import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -34,6 +27,36 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
 
   transformModel2ndPass(args: OmniModelTransformer2ndPassArgs) {
 
+    // TODO: Rewrite the code to be easier to understand and maintain, to do things in steps and with proper immutability.
+    // First we search though the whole model for nested generic sources which needs to be spread/expanded.
+    // const sourcePath: OmniGenericSourceType[] = [];
+    // const sourceIdPath: OmniGenericSourceIdentifierType[] = [];
+    // ProxyReducerOmni2.builder().reduce(args.model, {immutable: true}, {
+    //   GENERIC_SOURCE: (source, r) => {
+    //
+    //     sourcePath.push(source);
+    //     r.callBase();
+    //     sourcePath.pop();
+    //
+    //     // Find the second-order
+    //     // ProxyReducerOmni2.builder().reduce(source, {immutable: true}, {
+    //     //   GENERIC_SOURCE_IDENTIFIER: (source, r) => {
+    //     //
+    //     //
+    //     //   },
+    //     // });
+    //     // const newSourceIdentifiers =
+    //   },
+    //   GENERIC_SOURCE_IDENTIFIER: (sourceId, r) => {
+    //
+    //     sourceIdPath.push(sourceId);
+    //     r.callBase();
+    //     sourceIdPath.pop();
+    //   },
+    // });
+
+
+    // TODO: More should be done here through relying on the IDs and not the object identity; relying on identity is brittle and can lead to bugs
     const replacements: Replacement[] = [];
 
     OmniUtil.visitTypesDepthFirst(args.model, ctxSource => {
@@ -45,9 +68,9 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
 
         for (const sourceSourceId of source.sourceIdentifiers) {
 
-          OmniUtil.visitTypesDepthFirst(sourceSourceId, ctxTargetId => {
-            if (ctxTargetId.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-              const targetId = ctxTargetId.type;
+          ProxyReducerOmni2.builder().reduce(sourceSourceId, {immutable: false, inline: true}, {
+            GENERIC_TARGET_IDENTIFIER: (targetId, r) => {
+
               const targetSourceId = targetId.sourceIdentifier;
 
               // TODO: Calculate a better placeholder name, one based on attempted uniqueness throughout all generated classes
@@ -81,9 +104,8 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
                 path: [sourceSourceId, targetSourceId],
               });
 
-              ctxTargetId.replacement = newTargetId;
-              ctxTargetId.skip = true;
-            }
+              r.replace(newTargetId);
+            },
           });
         }
 
@@ -100,19 +122,20 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
       }
     });
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctxTarget => {
-      if (ctxTarget.type.kind === OmniTypeKind.GENERIC_TARGET) {
-        const target = ctxTarget.type;
+    ProxyReducerOmni2.builder().reduce(args.model, {immutable: false, inline: true}, {
+      GENERIC_TARGET: (target, r) => {
+
         const source = target.source;
 
-        const sourceMatches = replacements.filter(it => it.source === source); // sourceToUpdateWith.get(source);
+        const sourceMatches = replacements.filter(it => it.source === source);
         if (sourceMatches.length === 0) {
           return;
         }
 
-        for (let i = 0; i < target.targetIdentifiers.length; i++) {
+        const newTargetIdentifiers = [...target.targetIdentifiers];
+        for (let i = 0; i < newTargetIdentifiers.length; i++) {
 
-          const targetId = target.targetIdentifiers[i];
+          const targetId = newTargetIdentifiers[i];
           const sourceIdMatches = sourceMatches.filter(it => it.oldSourceId === targetId.sourceIdentifier || it.newSourceId === targetId.sourceIdentifier); // .get(targetId.sourceIdentifier);
           if (sourceIdMatches.length === 0) {
             continue;
@@ -121,14 +144,13 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
           for (const replacement of sourceIdMatches) {
             let pointer: OmniType | undefined = target;
             for (const resolveItem of replacement.path) {
-              pointer = OmniUtil.visitTypesDepthFirst(pointer, ctxTargetTargetId => {
-                if (ctxTargetTargetId.type.kind === OmniTypeKind.GENERIC_TARGET_IDENTIFIER) {
-                  const targetTargetId = ctxTargetTargetId.type;
+              pointer = ProxyReducerOmni2.builder().reduce(pointer, {immutable: true}, {
+                GENERIC_TARGET_IDENTIFIER: (targetTargetId, r) => {
                   if (targetTargetId.sourceIdentifier === resolveItem) {
                     return targetTargetId.type;
                   }
-                }
-                return undefined;
+                  return undefined;
+                },
               });
 
               if (!pointer) {
@@ -142,11 +164,17 @@ export class SpreadGenericsModelTransformer implements OmniModel2ndPassTransform
               type: pointer,
             };
 
-            target.targetIdentifiers.splice(i, 0, newTargetId);
+            newTargetIdentifiers.splice(i, 0, newTargetId);
             i++;
           }
         }
-      }
+
+        r.put('targetIdentifiers', newTargetIdentifiers);
+      },
+
+      // if (ctxTarget.type.kind === OmniTypeKind.GENERIC_TARGET) {
+      //
+      // }
     });
   }
 }

@@ -427,6 +427,17 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     return newId;
   }
 
+  public getPersistentId(obj: N): number {
+    const existing = obj[PROP_PERSISTENT_KEY_ID];
+    if (existing) {
+      return existing;
+    }
+
+    const newId = this.getId(obj);
+    (obj as any)[PROP_PERSISTENT_KEY_ID] = newId;
+    return newId;
+  }
+
   public static getIdIfExists(obj: any): number | undefined {
     const existing = obj[PROP_KEY_ID];
     if (existing) {

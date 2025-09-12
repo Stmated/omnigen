@@ -34,6 +34,8 @@ export interface StatefulProxyReducerInterface<N extends object, FN extends N, D
   callBase(): void;
 
   getId(node: N): number;
+
+  getPersistentId(node: N): number;
 }
 
 export type Fn<N, V> = ((n: N) => V);

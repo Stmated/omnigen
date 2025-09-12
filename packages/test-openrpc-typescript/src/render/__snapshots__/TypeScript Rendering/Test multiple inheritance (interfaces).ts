@@ -25,11 +25,21 @@ export type GiveInGetOut2Response = JsonRpcResponse<Out2>;
 export type GiveInGetOutRequest = JsonRpcRequest<GiveInGetOutRequestParams, 'give_in_get_out'>;
 export type GiveInGetOutRequestParams = JsonRpcRequestParams;
 export type GiveInGetOutResponse = JsonRpcResponse<Out>;
-export type In = { readonly in_type?: string | undefined; } & UnionOfAB;
+export type In = InInterface & (A | B);
+
+export interface InInterface {
+  readonly in_type?: string | undefined;
+}
 
 export interface JsonRpcError {
+  /**
+   * @default -1
+   */
   readonly code?: number | undefined;
   readonly data?: unknown;
+  /**
+   * @default "Unknown Error"
+   */
   readonly message?: string | undefined;
 }
 
@@ -65,5 +75,3 @@ export interface Out {
 export interface Out2 extends B, C, A {
 
 }
-
-export type UnionOfAB = A | B;

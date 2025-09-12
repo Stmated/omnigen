@@ -56,8 +56,14 @@ export interface In2 {
 }
 
 export interface JsonRpcError {
+  /**
+   * @default -1
+   */
   readonly code?: number | undefined;
   readonly data?: unknown;
+  /**
+   * @default "Unknown Error"
+   */
   readonly message?: string | undefined;
 }
 

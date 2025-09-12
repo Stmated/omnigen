@@ -4,7 +4,7 @@
 export interface AbstractRequestData {
   readonly Password: string;
   readonly Username: string;
-  readonly [key: string]: unknown;
+  readonly [key: string]: Record<string, any> | undefined;
 }
 
 export interface AbstractResponseResult<TData, TMethod extends string> {
@@ -33,8 +33,14 @@ export type ErrorUnknown = JsonRpcErrorResponse;
 export type ErrorUnknownError = JsonRpcError;
 
 export interface JsonRpcError {
+  /**
+   * @default -1
+   */
   readonly code?: number | undefined;
   readonly data?: unknown;
+  /**
+   * @default "Unknown Error"
+   */
   readonly message?: string | undefined;
 }
 
@@ -75,7 +81,7 @@ export type RefundRequestParams = JsonRpcRequestParams<RefundRequestData>;
 export type RefundResponse = JsonRpcResponse<RefundResponseResult>;
 
 export interface RefundResponseData {
-  readonly orderid?: string | undefined;
+  readonly orderid: string;
   readonly result: string;
 }
 

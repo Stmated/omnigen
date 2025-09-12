@@ -52,14 +52,15 @@ public class RefundResponse extends JsonRpcResponse<RefundResponse.Result> {
     }
 
     public static class Data {
-      @JsonProperty(value = "orderid")
+      @JsonProperty(value = "orderid", required = true)
+      @JsonInclude
       private final String orderid;
       @JsonProperty(value = "result", required = true)
       @JsonInclude
       private final String result;
 
       public Data(
-        @JsonProperty(value = "orderid") String orderid,
+        @JsonProperty(value = "orderid", required = true) String orderid,
         @JsonProperty(value = "result", required = true) String result
       ) {
         this.orderid = orderid;

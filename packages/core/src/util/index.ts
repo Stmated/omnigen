@@ -5,6 +5,7 @@ export * from './Sorters';
 export * from './ToString';
 export * from './Case';
 export * from './Util';
+export * from './TypeNameUtil';
 export * from './CombineTypeUtils';
 export * from './TsTypes';
 

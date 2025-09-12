@@ -4,6 +4,7 @@ import {SerializationLibrary} from '@omnigen/target-java';
 import {Util} from '@omnigen/core';
 import {IncludeExampleCommentsMode} from '@omnigen/target-code';
 import {LoggerFactory} from '@omnigen/core-log';
+import {TestUtils} from '@omnigen/utils-test';
 
 describe('jsonschema-java-render', () => {
 
@@ -13,13 +14,14 @@ describe('jsonschema-java-render', () => {
 
     const rendered = await JsonSchemaToJavaTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/string_union.json'), {
       serializationLibrary: SerializationLibrary.JACKSON,
+      immutable: true,
     });
     const fileContents = Map.groupBy(rendered, it => it.fileName);
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
       ctx.expect(cu).toHaveLength(1);
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -34,7 +36,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -54,7 +56,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -71,7 +73,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -87,7 +89,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -105,7 +107,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -124,7 +126,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -139,7 +141,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -160,7 +162,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -178,7 +180,7 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
@@ -199,12 +201,11 @@ describe('jsonschema-java-render', () => {
 
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
     for (const [fileName, cu] of fileContents) {
-      await ctx.expect(cu[0].content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(cu[0].content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
   test('logging', () => {
-
 
     const logger = LoggerFactory.create('SomeLogger');
 

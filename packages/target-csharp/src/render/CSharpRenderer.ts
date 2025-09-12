@@ -321,5 +321,6 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
 
       return `<list type="${tag}">\n${indent}<item>${lines}</item>\n</list>`;
     },
+    visitFreeTextDefault: (n, v) => `\n<value>Default: ${render(n.content, v).trim()}</value>`,
   };
 };

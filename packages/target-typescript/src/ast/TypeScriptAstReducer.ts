@@ -22,7 +22,7 @@ export const createTypeScriptAstReducer = (partial?: Partial<Reducer<TypeScriptV
     ),
     reduceGetter: (n, r) => new Ts.Getter(
       assertDefined(n.identifier.reduce(r)),
-      assertDefined(n.target.reduce(r)),
+      n.target?.reduce(r),
       assertDefined(n.returnType.reduce(r)),
       n.comments?.reduce(r),
       assertDefined(n.modifiers.reduce(r)),

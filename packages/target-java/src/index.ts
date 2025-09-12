@@ -25,5 +25,6 @@ export const JAVA_FEATURES: TargetFeatures = {
   forcedImports: false,
   staticInnerTypes: StaticInnerTypeKind.DEFAULT_PARENT_ACCESSIBLE,
   unions: false,
+  interfaceWithFields: false,
 };
 

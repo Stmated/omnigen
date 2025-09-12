@@ -5,14 +5,14 @@ import {JsonSchema9Visitor} from './JsonSchema9Visitor';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {z} from 'zod';
 import {SchemaFile, Util} from '@omnigen/core';
-import {JSONSchema9Definition} from '../definitions';
+import {JSONSchema9, JSONSchema9Definition} from '../definitions';
 import {JsonSchemaMigrator} from '../migrate';
 import {TestUtils} from '@omnigen/utils-test';
 
 describe('jsonschema-7-visit', () => {
   test('unchanged', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/pet.json')).toString('utf-8'));
-    const visited = DefaultJsonSchema9Visitor.visit(content, DefaultJsonSchema9Visitor);
+    const visited = DefaultJsonSchema9Visitor.schema(content, DefaultJsonSchema9Visitor);
 
     ctx.expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
   });
@@ -31,7 +31,7 @@ describe('jsonschema-7-visit', () => {
       },
     };
 
-    visitor.visit(content, visitor);
+    visitor.schema(content, visitor);
     ctx.expect(callCount).toEqual(2);
   });
 
@@ -42,7 +42,7 @@ describe('jsonschema-7-visit', () => {
       maximum: v => (v ? v * 2 : v),
     };
 
-    const visited = visitor.visit(content, visitor);
+    const visited = visitor.schema(content, visitor);
 
     await ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
@@ -54,7 +54,7 @@ describe('jsonschema-7-visit', () => {
       description: () => undefined,
     };
 
-    const visited = visitor.visit(content, visitor);
+    const visited = visitor.schema(content, visitor);
 
     await ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
@@ -71,12 +71,12 @@ describe('jsonschema-7-visit', () => {
 
   test('keep_enum_var_names', async ctx => {
     const content = JSON.parse(fs.readFileSync(Util.getPathFromRoot('./packages/parser-jsonschema/examples/keep_x_enum_varnames.json')).toString('utf-8'));
-    const visitors = [new SimplifyJsonSchemaTransformerFactory().create()];
+    const visitors = [new SimplifyJsonSchemaTransformerFactory<JSONSchema9, JsonSchema9Visitor>(DefaultJsonSchema9Visitor).create()];
 
     let visited = content;
     visited = new JsonSchemaMigrator().migrate(visited);
     for (const visitor of visitors) {
-      visited = visitor.visit(content, visitor);
+      visited = visitor.schema(content, visitor);
     }
 
     ctx.expect(JSON.stringify(visited)).toEqual(JSON.stringify(content));
@@ -89,7 +89,7 @@ describe('jsonschema-7-visit', () => {
       $ref: v => (v ? v.replace(`$defs/B`, '$defs/C') : v),
     };
 
-    const visited = visitor.visit(content, visitor);
+    const visited = visitor.schema(content, visitor);
 
     await ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
@@ -113,7 +113,7 @@ describe('jsonschema-7-visit', () => {
       },
     };
 
-    const visited = visitor.visit(content, visitor);
+    const visited = visitor.schema(content, visitor);
 
     await ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });
@@ -123,8 +123,8 @@ describe('jsonschema-7-visit', () => {
     const schemaContent = schemaFile.asObject<JSONSchema9Definition>();
 
     // Set custom path resolver, otherwise we will get absolute path inside our snapshot
-    const visitor = new ApplyIdJsonSchemaTransformerFactory().create();
-    const visited = visitor.visit(schemaContent, visitor);
+    const visitor = new ApplyIdJsonSchemaTransformerFactory<JSONSchema9, JsonSchema9Visitor>(DefaultJsonSchema9Visitor).create();
+    const visited = visitor.schema_definition(schemaContent, visitor);
 
     // `./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`
     await ctx.expect(JSON.stringify(visited, undefined, 2)).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx));

@@ -1,3 +1,4 @@
+import {Arrayable} from '@omnigen/api';
 
 /**
  * Primitive type
@@ -26,8 +27,8 @@ export interface JSONSchema9Object {
 
 export type JSONSchema9Version = string;
 
-export type JSONSchema9Definition =
-  | JSONSchema9
+export type JSONSchema9Definition<S extends JSONSchema9 = JSONSchema9> =
+  | S
   | boolean;
 
 export type JSONSchema9DefinedFormat =
@@ -60,20 +61,20 @@ export interface JSONSchema9 {
   $recursiveAnchor?: boolean;
   $schema?: JSONSchema9Version;
   $vocabulary?: Record<string, boolean>;
-  $defs?: Record<string, JSONSchema9Definition>;
-  definitions?: Record<string, JSONSchema9Definition>;
+  $defs?: Record<string, JSONSchema9Definition<this>>;
+  definitions?: Record<string, JSONSchema9Definition<this>>;
   $comment?: string;
 
   $dynamicRef?: string;
   $dynamicAnchor?: string;
 
-  if?: JSONSchema9Definition;
-  then?: JSONSchema9Definition;
-  else?: JSONSchema9Definition;
-  allOf?: Array<JSONSchema9Definition>;
-  anyOf?: Array<JSONSchema9Definition>;
-  oneOf?: Array<JSONSchema9Definition> | undefined;
-  not?: JSONSchema9Definition;
+  if?: JSONSchema9Definition<this>;
+  then?: JSONSchema9Definition<this>;
+  else?: JSONSchema9Definition<this>;
+  allOf?: Array<JSONSchema9Definition<this>>;
+  anyOf?: Array<JSONSchema9Definition<this>>;
+  oneOf?: Array<JSONSchema9Definition<this>>;
+  not?: JSONSchema9Definition<this>;
   format?: JSONSchema9DefinedFormat | string;
   title?: string;
   description?: string;
@@ -91,12 +92,12 @@ export interface JSONSchema9 {
   required?: string[];
   dependentRequired?: Record<string, string[]>;
 
-  properties?: Record<string, JSONSchema9Definition>;
-  patternProperties?: Record<string, JSONSchema9Definition>;
-  additionalProperties?: JSONSchema9Definition;
-  unevaluatedProperties?: JSONSchema9Definition;
-  propertyNames?: JSONSchema9Definition;
-  dependentSchemas?: Record<string, JSONSchema9Definition>;
+  properties?: Record<string, JSONSchema9Definition<this>>;
+  patternProperties?: Record<string, JSONSchema9Definition<this>>;
+  additionalProperties?: JSONSchema9Definition<this>;
+  unevaluatedProperties?: JSONSchema9Definition<this>;
+  propertyNames?: JSONSchema9Definition<this>;
+  dependentSchemas?: Record<string, JSONSchema9Definition<this>>;
 
   multipleOf?: number;
   maximum?: number;
@@ -116,13 +117,11 @@ export interface JSONSchema9 {
   uniqueItems?: boolean;
   maxContains?: number;
 
-  items?:
-    | JSONSchema9Definition
-    | Array<JSONSchema9Definition>;
+  items?: Arrayable<JSONSchema9Definition<this>>;
 
-  additionalItems?: JSONSchema9Definition;
-  unevaluatedItems?: JSONSchema9Definition;
-  contains?: JSONSchema9Definition;
+  additionalItems?: JSONSchema9Definition<this>;
+  unevaluatedItems?: JSONSchema9Definition<this>;
+  contains?: JSONSchema9Definition<this>;
 }
 
 type DefinedEncoding =

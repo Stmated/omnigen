@@ -11,4 +11,5 @@ export const CSHARP_FEATURES: TargetFeatures = {
   staticInnerTypes: StaticInnerTypeKind.DEFAULT_STATIC,
   unions: false,
   explodedGenerics: true,
+  interfaceWithFields: false,
 };

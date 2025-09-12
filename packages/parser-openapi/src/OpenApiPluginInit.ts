@@ -35,7 +35,7 @@ export const OpenApiPlugin = createPlugin(
     }
 
     const documentFinder = new ExternalDocumentsFinder(ctx.schemaFile.getAbsolutePath() ?? '', ctx.schemaFile.asObject());
-    const resolver = await documentFinder.create();
+    const resolver = documentFinder.create();
     const parser = new OpenApiJsonSchemaParser(resolver, ctx.parserOptions, ctx.schemaFile);
     const root = ctx.schemaFile.asObject<AnyJSONSchema>();
     const model = parser.parse(root);

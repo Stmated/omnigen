@@ -1,4 +1,4 @@
-import {AstNode, NameParts, OmniInterfaceOrObjectType, OmniInterfaceType, OmniObjectType, OmniProperty, OmniType, Reference, RootAstNode} from '@omnigen/api';
+import {AstNode, NameParts, OmniInterfaceOrObjectType, OmniInterfaceType, OmniObjectType, OmniProperty, OmniType, Reference, RootAstNode, TargetFeatures} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JavaOptions} from '../options';
 import {JavaAndTargetOptions} from './AbstractJavaAstTransformer';
@@ -10,8 +10,13 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class JavaAstUtils extends CodeAstUtils {
 
-  public static addInterfaceProperties(root: RootAstNode, type: OmniInterfaceOrObjectType, body: Java.Block): void {
-    return CodeAstUtils.addInterfaceProperties(root, type, body);
+  public static addInterfaceProperties(
+    root: RootAstNode,
+    type: OmniInterfaceOrObjectType,
+    body: Java.Block,
+    features: TargetFeatures,
+  ): void {
+    return CodeAstUtils.addInterfaceProperties(root, type, body, features);
   }
 
   public static addOmniPropertyToBlockAsField(args: {
@@ -24,13 +29,23 @@ export class JavaAstUtils extends CodeAstUtils {
     return CodeAstUtils.addOmniPropertyToBlockAsField(args);
   }
 
-  public static addInterfaceOf(objectType: OmniObjectType, root: Java.JavaAstRootNode, options: JavaAndTargetOptions): OmniInterfaceType {
-    return CodeAstUtils.addInterfaceOf(objectType, root, options);
+  public static addInterfaceOf(
+    objectType: OmniObjectType,
+    root: Java.JavaAstRootNode,
+    options: JavaAndTargetOptions,
+    features: TargetFeatures,
+  ): OmniInterfaceType {
+    return CodeAstUtils.addInterfaceOf(objectType, root, options, features);
   }
 
-  public static createInterfaceWithBody(root: RootAstNode, type: OmniInterfaceType, options: JavaAndTargetOptions) {
+  public static createInterfaceWithBody(
+    root: RootAstNode,
+    type: OmniInterfaceType,
+    options: JavaAndTargetOptions,
+    features: TargetFeatures,
+  ) {
 
-    return CodeAstUtils.createInterfaceWithBody(root, type, options, () => {
+    return CodeAstUtils.createInterfaceWithBody(root, type, options, features, () => {
       const nameResolver = root.getNameResolver();
       const resolved = nameResolver.investigate({type: type, options: options});
       return nameResolver.build({name: resolved, with: NameParts.NAME});

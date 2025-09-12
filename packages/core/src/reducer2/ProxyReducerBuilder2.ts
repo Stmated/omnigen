@@ -130,7 +130,8 @@ export class ProxyReducerBuilder2<N extends object, const D extends keyof N, O, 
       return ProxyReducerTrackMode2.NONE;
     } else {
       if (options?.track === undefined) {
-        return (options?.debug ?? (Environment.test && Environment.debug))
+        const shouldDebug = (options?.debug ?? (Environment.test && Environment.debug));
+        return shouldDebug
           ? ProxyReducerTrackMode2.LAST
           : ProxyReducerTrackMode2.NONE;
       } else {

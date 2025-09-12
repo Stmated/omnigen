@@ -14,7 +14,7 @@ import {
   OmniType,
   OmniTypeKind,
   PackageOptions,
-  RootAstNode,
+  RootAstNode, TargetFeatures,
   TargetOptions,
   TypeUseKind,
 } from '@omnigen/api';
@@ -74,7 +74,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       }
 
       // NOTE: Check if wrapped type has a name and resolve/change it too?
-      if ('name' in type && type.name) {
+      if (OmniUtil.isNameable(type) && type.name) {
         namePairs.push({
           owner: type,
           name: type.name,
@@ -106,7 +106,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
         continue;
       }
 
-      const ast = this.transform(args.model, args.root, args.options, type, exportableTypes.edge.includes(type));
+      const ast = this.transform(args.model, args.root, args.options, type, exportableTypes.edge.includes(type), args.features);
       if (ast) {
         this._map.set(type, ast);
       }
@@ -119,6 +119,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     options: PackageOptions & TargetOptions & CodeOptions,
     type: OmniType,
     isEdgeType: boolean,
+    features: TargetFeatures,
   ): AstNode | undefined {
 
     if (type.kind === OmniTypeKind.ENUM) {
@@ -126,7 +127,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     } else if (OmniUtil.isComposition(type)) {
 
       if (type.kind === OmniTypeKind.EXCLUSIVE_UNION || (type.name && isEdgeType)) {
-        return this.transformSubType(model, type, undefined, options, root);
+        return this.transformSubType(model, type, undefined, options, features, root);
       }
 
     } else if (type.kind === OmniTypeKind.OBJECT) {
@@ -141,21 +142,21 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
         }
       }
 
-      return this.transformSubType(model, type, undefined, options, root);
+      return this.transformSubType(model, type, undefined, options, features, root);
     } else if (type.kind === OmniTypeKind.INTERFACE) {
       if (type.of.kind === OmniTypeKind.GENERIC_TARGET) {
         throw new Error(`Do not know yet how to handle a generic interface. Fix it.`);
       } else {
-        return this.transformInterface(type, options, root);
+        return this.transformInterface(type, options, root, features);
       }
     } else if (type.kind === OmniTypeKind.GENERIC_SOURCE) {
-      return this.transformSubType(model, type.of, type, options, root, type.sourceIdentifiers);
+      return this.transformSubType(model, type.of, type, options, features, root, type.sourceIdentifiers);
     } else if (type.kind === OmniTypeKind.GENERIC_TARGET) {
       for (const targetIdentifier of type.targetIdentifiers) {
         if (OmniUtil.isComposition(targetIdentifier.type) && targetIdentifier.type.kind != OmniTypeKind.EXCLUSIVE_UNION) {
 
           // If a composition is used as a generic argument, then we will be required to create a class for it.
-          return this.transformSubType(model, targetIdentifier.type, undefined, options, root);
+          return this.transformSubType(model, targetIdentifier.type, undefined, options, features, root);
         }
       }
     }
@@ -298,6 +299,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     type: OmniInterfaceType,
     options: PackageOptions & TargetOptions & CodeOptions,
     root: CodeRootAstNode,
+    features: TargetFeatures,
   ): Code.InterfaceDeclaration {
 
     const nameResolver = root.getNameResolver();
@@ -305,7 +307,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     const className = nameResolver.build({name: investigatedName, with: NameParts.NAME, use: TypeUseKind.DECLARED});
     const packageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
 
-    const declaration = CodeAstUtils.createInterfaceWithBody(root, type, options, () => className);
+    const declaration = CodeAstUtils.createInterfaceWithBody(root, type, options, features, () => className);
 
     root.children.push(new Code.CompilationUnit(
       new Code.PackageDeclaration(packageName),
@@ -321,6 +323,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     type: OmniType,
     originalType: OmniGenericSourceType | undefined,
     options: PackageOptions & TargetOptions & CodeOptions,
+    features: TargetFeatures,
     root: CodeRootAstNode,
     genericSourceIdentifiers?: OmniGenericSourceIdentifierType[],
   ): AstNode {
@@ -348,7 +351,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       );
 
       if (!this._map.has(typeExtends)) {
-        const ast = this.transform(model, root, options, typeExtends, false);
+        const ast = this.transform(model, root, options, typeExtends, false, features);
         if (ast) {
           this._map.set(typeExtends, ast);
         }
@@ -358,7 +361,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     for (const property of OmniUtil.getPropertiesOf(type)) {
       const propertyType = property.type;
       if (!this._map.has(propertyType)) {
-        const ast = this.transform(model, root, options, propertyType, true);
+        const ast = this.transform(model, root, options, propertyType, true, features);
         if (ast) {
           this._map.set(propertyType, ast);
         }
@@ -372,7 +375,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
       for (const typeInterface of typeImplements) {
         if (!this._map.has(typeInterface)) {
-          const ast = this.transform(model, root, options, typeInterface, false);
+          const ast = this.transform(model, root, options, typeInterface, false, features);
           if (ast) {
             this._map.set(typeInterface, ast);
           }
@@ -441,52 +444,46 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
 
   public static getAllExportableTypes(model: OmniModel): TypeCollection {
 
-    const set = new Set<OmniType>();
-    const setEdge = new Set<OmniType>();
+    const all = new Set<OmniType>();
+    const edges = new Set<OmniType>();
 
     const typeDepths: number[] = [0];
     ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
       [ANY_KIND]: (n, r) => {
 
-        if (OmniUtil.isType(n)) {
+        if (!OmniUtil.isType(n)) {
+          return r.callBase();
+        }
 
-          if (set.has(n)) {
-            if (typeDepths[typeDepths.length - 1] === 0 || model.types.includes(n)) {
-              setEdge.add(n);
-            }
-            return;
-          }
-
-          if (n.kind !== OmniTypeKind.GENERIC_SOURCE) {
-            if (r.parent && (r.parent.kind === OmniTypeKind.GENERIC_SOURCE || r.parent.kind === OmniTypeKind.GENERIC_TARGET)) {
-
-              // The type that is inside the generic type is not itself exportable, only the generic class actually is.
-              // TODO: This special handling is confusing and brittle when it comes to how `AddObjectDeclarationsCodeAstTransformer` works.
-              //        Would be better to just let that transformer visit the whole model recursively and let it decide when to create something or not.
-              r.callBase();
-              return;
-            }
-          }
-
-          set.add(n);
+        if (all.has(n)) {
           if (typeDepths[typeDepths.length - 1] === 0 || model.types.includes(n)) {
-            setEdge.add(n);
+            // This type has been found before, but this time it was found as a property or was part of manual model types.
+            edges.add(n);
           }
+        } /*else if (OmniUtil.isComposition(n) && n.inline) {
+          // Inline composition types are not edge types.
+          all.add(n);
+          return r.callBase();
+        } */ else if (n.kind !== OmniTypeKind.GENERIC_SOURCE && r.parent && (r.parent.kind === OmniTypeKind.GENERIC_SOURCE || r.parent.kind === OmniTypeKind.GENERIC_TARGET)) {
 
-          // TODO: Need special handling for objects' properties? They should count as edge types!
-          //        Should this fix be inside AddObjectDeclarations? So it makes sure the type of properties get their AST node created?
+          // The type that is inside the generic type is not itself exportable, only the generic class actually is.
+          // TODO: This special handling is confusing and brittle when it comes to how `AddObjectDeclarationsCodeAstTransformer` works.
+          //        Would be better to just let that transformer visit the whole model recursively and let it decide when to create something or not.
+          r.callBase();
+        } else {
+
+          all.add(n);
+          if (typeDepths[typeDepths.length - 1] === 0 || model.types.includes(n)) {
+            edges.add(n);
+          }
 
           const increaseBy = transparentKinds.includes(n.kind) ? 0 : 1;
-
           typeDepths[typeDepths.length - 1] += increaseBy;
           r.callBase();
           typeDepths[typeDepths.length - 1] -= increaseBy;
-
-        } else {
-          r.callBase();
         }
       },
-      PROPERTY: (n, r) => {
+      PROPERTY: (_, r) => {
         try {
           typeDepths.push(0);
           r.callBase();
@@ -497,8 +494,8 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     });
 
     return {
-      all: [...set],
-      edge: [...setEdge],
+      all: [...all],
+      edge: [...edges],
       named: [],
     };
   }

@@ -29,6 +29,10 @@ export const ADDITIONAL_PROPERTIES_FIELD_NAME = 'additionalProperties';
 
 export const LOMBOK_SINGULAR: ObjectName = {namespace: ['lombok'], edgeName: 'Singular'};
 
+/**
+ * Replaces a field with a pattern as name with a Map field, along with `get` and `put` methods.
+ * Also adds functionality to support (de)serialization libraries such as Jackson.
+ */
 export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTransformer {
 
   transformAst(args: JavaAstTransformerArgs): void {
@@ -340,9 +344,6 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
       additionalPropertiesTypeNode,
       undefined,
       modifiers,
-      // new Java.ModifierList(
-      //   new Java.Modifier(Java.ModifierKind.PUBLIC),
-      // ),
       annotations,
     );
   }

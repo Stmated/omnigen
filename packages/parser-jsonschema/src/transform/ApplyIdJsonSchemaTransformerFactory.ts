@@ -1,7 +1,7 @@
 import {JsonSchema9VisitorFactory} from '../visit/JsonSchema9VisitorFactory';
 import {JsonSchema9Visitor} from '../visit/JsonSchema9Visitor';
-import {DefaultJsonSchema9Visitor} from '../visit/DefaultJsonSchema9Visitor';
 import {Case, Util} from '@omnigen/core';
+import {JSONSchema9} from '../definitions';
 
 export type IdHint = {
   /**
@@ -25,18 +25,29 @@ export type IdHint = {
    */
   extra?: string;
   /**
+   * Something silly that should almost never be used, unless we're out of options. This could be an integer index or similar.
+   */
+  superfluous?: string;
+  /**
    * If true this must be appended to a previous hint and not used by itself. Likely difference being no '/' to delimit to the previous.
    */
   suffix?: boolean;
+
+  /**
+   * If true, this must be included in the name, in the relative position that it is found.
+   */
+  required?: boolean;
 };
 
-export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFactory {
+export class ApplyIdJsonSchemaTransformerFactory<S extends JSONSchema9, V extends JsonSchema9Visitor<S>> implements JsonSchema9VisitorFactory<S, V> {
 
   private static _uniqueIdCounter = 0;
 
   private readonly _hints: IdHint[] = [];
+  private readonly _baseVisitor: V;
 
-  constructor() {
+  constructor(baseVisitor: V) {
+    this._baseVisitor = baseVisitor;
   }
 
   public pushPath(hint: IdHint | string) {
@@ -61,7 +72,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
     for (let i = this._hints.length - 1; i >= 0; i--) {
 
       const hint = this._hints[i];
-      if (hint.suffix) {
+      if (hint.suffix || hint.required) {
         continue;
       }
 
@@ -86,8 +97,10 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
 
       if (changed) {
 
-        const allParts = parts.concat(tags);
-        const part = [...allParts].reverse().join('/');
+        const allParts = parts.concat(tags).reverse();
+        this.pushRequired(i, allParts);
+
+        const part = allParts.join('/');
         const suffixes = this.getSuffixes(i);
 
         for (const suffix of suffixes) {
@@ -100,130 +113,86 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       }
     }
 
+    // TODO: If no match so far, and all hints are suffixes, then we will take what we can from them and try again.
+    const isOnlyAdditions = this._hints.filter(it => it.suffix || it.required).length === this._hints.length;
+    if (isOnlyAdditions) {
+
+      const suffixes = this.getSuffixes();
+      for (const onlySuffix of suffixes) {
+
+        const suffixParts: string[] = [];
+        this.pushRequired(-1, suffixParts);
+        suffixParts.push(onlySuffix);
+        const suffix = suffixParts.join('');
+
+        if (suffix && !others.includes(suffix)) {
+          return suffix;
+        }
+      }
+    }
+
     // If all else fails, then take the most specific id, and add a unique id to the end of it.
     // This might mess up reproducibility of runs, but there's not much we can do.
     return `${bestUri}_${ApplyIdJsonSchemaTransformerFactory._uniqueIdCounter++}`;
   }
 
-  getSuffixes(i: number): string[] {
+  private pushRequired(i: number, allParts: string[]) {
 
-    let name = '';
-    const suffixes: string[] = [];
-    const suffixesWithExtra: string[] = [];
-    const tags: string[] = [];
-    const extras: string[] = [];
-
-    for (let s = i + 1; s < this._hints.length && this._hints[s].suffix; s++) {
-
-      const hint = this._hints[s];
-      let changed = false;
-      if (hint.name) {
-        name = Case.pascal(hint.name);
-        tags.length = 0;
-        extras.length = 0;
-        changed = true;
-      } else if (hint.tag) {
-        tags.push(hint.tag);
-        extras.length = 0;
-        changed = true;
-      } else if (hint.extra) {
-        extras.push(hint.extra);
-        changed = true;
-      }
-
-      if (changed) {
-
-        const newSuffix = `${name}${tags.map(it => Case.pascal(it)).join('')}`;
-        if (newSuffix && !suffixes.includes(newSuffix)) {
-          suffixes.push(newSuffix);
-        }
-
-        if (extras) {
-
-          for (let i = 0; i < extras.length; i++) {
-
-            const withExtra = `${newSuffix}${Case.pascal(extras[i])}`;
-            if (!suffixesWithExtra.includes(withExtra)) {
-              suffixesWithExtra.push(withExtra);
-            }
-          }
-
-          const extrasStr = extras.map(it => Case.pascal(it)).join('');
-
-          const joinedWithExtra = `${newSuffix}${extrasStr}`;
-          if (!suffixesWithExtra.includes(joinedWithExtra)) {
-            suffixesWithExtra.push(joinedWithExtra);
-          }
+    for (let n = i - 1; n >= 0; n--) {
+      if (this._hints[n].required) {
+        const req = this._hints[n];
+        const reqValue = req.id ?? req.name ?? req.tag ?? req.extra;
+        if (reqValue) {
+          allParts.splice(0, 0, reqValue);
         }
       }
     }
 
-    suffixes.reverse();
-    suffixes.push('');
-    suffixes.push(...suffixesWithExtra);
-
-    return suffixes;
+    for (let n = i + 1; n < this._hints.length; n++) {
+      if (this._hints[n].required) {
+        const req = this._hints[n];
+        const reqValue = req.id ?? req.name ?? req.tag ?? req.extra;
+        if (reqValue) {
+          allParts.push(reqValue);
+        }
+      }
+    }
   }
 
-  create(): JsonSchema9Visitor {
+  create(): V {
 
     const registeredIds: string[] = [];
 
+    // TODO: Should do this somehow first
+    // const idVisitor: JsonSchema9Visitor = {
+    //   ...this._baseVisitor,
+    //   $id: v => {
+    //     registeredIds.push(v);
+    //   }
+    // };
+
     return {
-      ...DefaultJsonSchema9Visitor,
+      ...this._baseVisitor,
       schema: (v, visitor) => {
 
         if (v.$ref && Object.keys(v).length === 1) {
 
           // Skip this one, since it is a clean redirect.
-          return DefaultJsonSchema9Visitor.schema(v, DefaultJsonSchema9Visitor);
+          return this._baseVisitor.schema(v, this._baseVisitor);
+        }
+
+        const setCustomId = () => {
+          const newId = this.newIdFromContext(registeredIds);
+          if (registeredIds.includes(newId)) {
+            throw new Error(`ID '${newId}' has already been assigned, there seems to be a uniqueness problem with your schema`);
+          }
+          (v as any)['x-omnigen-id'] = newId;
+          registeredIds.push(newId);
         }
 
         if (!v.$id) {
 
-          const hints: IdHint[] = [];
-
-          const typeExtras: string[] = [];
-          if (v.format) {
-            // typeExtras.push(v.format);
-            hints.push({tag: v.format, suffix: true});
-          }
-          if (v.const !== undefined) {
-            typeExtras.push(`const`);
-          }
-          if (v.enum && v.enum.length > 0) {
-            typeExtras.push(`enum`);
-          }
-
-          const typeExtra = typeExtras.map(it => Case.pascal(it)).join('');
-
-          if (v.type) {
-            const typeStrings = (v.type ? (Array.isArray(v.type) ? v.type : [v.type]) : []);
-            if (typeExtra) {
-              hints.push(...typeStrings.map(it => ({extra: `${Case.pascal(it)}${typeExtra}`, suffix: true})));
-            } else {
-              hints.push(...typeStrings.map(it => ({extra: it, suffix: true})));
-            }
-          } else if (typeExtra) {
-            hints.push({extra: typeExtra, suffix: true});
-          }
-
-          if (v.properties) {
-            const keys = Object.keys(v.properties);
-            if (keys.length == 1) {
-              hints.push({extra: `With${Case.pascal(keys[0])}`, suffix: true});
-            } else {
-              // Do something here? Like creating a tag that is a join of all property names, if there are fewer than, say... 4?
-            }
-          }
-
-          if (v.$dynamicRef) {
-            hints.push({tag: v.$dynamicRef.replaceAll('#', ''), suffix: true});
-          }
-
-          if (v.title) {
-            hints.push({name: v.title});
-          }
+          const hints = this.getSchemaHints(v);
 
           try {
             hints.forEach(it => this._hints.push(it));
@@ -236,7 +205,9 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
               this._hints.push(hint);
             }
 
-            return DefaultJsonSchema9Visitor.schema(v, visitor);
+            setCustomId();
+
+            return this._baseVisitor.schema(v, visitor);
           } finally {
             hints.forEach(_ => this._hints.pop());
           }
@@ -244,8 +215,13 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
         } else {
 
           try {
+
+            // TODO: We should search through the whole document once before visiting it, and accumulate all the $id -- since those should take precedence, and not find the first one.
             this._hints.push({id: v.$id});
-            return DefaultJsonSchema9Visitor.schema(v, visitor);
+            // Set even for those with $id, since we want a stable and safe name that we can trust internally.
+            setCustomId();
+            //registeredIds.push(v.$id);
+            return this._baseVisitor.schema(v, visitor);
           } finally {
             this._hints.pop();
           }
@@ -255,43 +231,67 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       schema_option: (item, visitor) => {
 
         try {
-          this.pushPath({extra: `${item.idx}`, suffix: true});
-          return DefaultJsonSchema9Visitor.schema_option(item, visitor);
+          this.pushPath({superfluous: `${item.idx}`, suffix: true});
+          return this._baseVisitor.schema_option(item, visitor);
         } finally {
           this.popPath();
         }
       },
-
-      $id: v => {
-        if (!v) {
-
-          const newId = this.newIdFromContext(registeredIds);
-          if (registeredIds.includes(newId)) {
-            throw new Error(`ID '${newId}' has already been assigned, there seems to be a uniqueness problem with your schema`);
-          }
-
-          registeredIds.push(newId);
-          return newId;
-        } else {
-
-          // Register the existing constant id, so it is not used by anything else.
-          registeredIds.push(v);
-        }
-
-        return v;
-      },
+      // $id: v => {
+      //   return v;
+      // },
       $defs_option: (e, visitor) => {
         try {
           this.pushPath({name: e.key});
-          return DefaultJsonSchema9Visitor.$defs_option(e, visitor);
+          return this._baseVisitor.$defs_option(e, visitor);
         } finally {
           this.popPath();
+        }
+      },
+      not: (e, visitor) => {
+
+        if (e !== undefined) {
+          let notPart: string;
+          if (typeof e === 'object') {
+            notPart = 'Matching';
+          } else {
+            if (e) {
+              notPart = 'Anything';
+            } else {
+              notPart = 'Nothing';
+            }
+          }
+
+          try {
+            this.pushPath({tag: `Not${notPart}`, suffix: true});
+            return this._baseVisitor.not(e, visitor);
+          } finally {
+            this.popPath();
+          }
+        }
+
+        return this._baseVisitor.not(e, visitor);
+      },
+      patternProperties: (e, visitor) => {
+        try {
+          this._hints.push({extra: 'PatternProperties', suffix: true});
+          return this._baseVisitor.patternProperties(e, visitor);
+        } finally {
+          this._hints.pop();
         }
       },
       properties_option: (e, visitor) => {
         try {
           this._hints.push({name: e.key, suffix: true});
-          return DefaultJsonSchema9Visitor.properties_option(e, visitor);
+          return this._baseVisitor.properties_option(e, visitor);
+        } finally {
+          this._hints.pop();
+        }
+      },
+      dependent_schema: (e, visitor) => {
+        try {
+          this._hints.push({name: `dependent/${e.key}`, suffix: true});
+          return this._baseVisitor.dependent_schema(e, visitor);
         } finally {
           this._hints.pop();
         }
@@ -299,7 +299,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       items: (e, visitor) => {
         try {
           this._hints.push({tag: 'Item', suffix: true});
-          return DefaultJsonSchema9Visitor.items(e, visitor);
+          return this._baseVisitor.items(e, visitor);
         } finally {
           this._hints.pop();
         }
@@ -307,7 +307,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       if: (e, visitor) => {
         try {
           this._hints.push({tag: 'If', suffix: true});
-          return DefaultJsonSchema9Visitor.if(e, visitor);
+          return this._baseVisitor.if(e, visitor);
         } finally {
           this._hints.pop();
         }
@@ -315,7 +315,7 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       then: (e, visitor) => {
         try {
           this._hints.push({tag: 'Then', suffix: true});
-          return DefaultJsonSchema9Visitor.then(e, visitor);
+          return this._baseVisitor.then(e, visitor);
         } finally {
           this._hints.pop();
         }
@@ -323,19 +323,161 @@ export class ApplyIdJsonSchemaTransformerFactory implements JsonSchema9VisitorFa
       else: (e, visitor) => {
         try {
           this._hints.push({tag: 'Else', suffix: true});
-          return DefaultJsonSchema9Visitor.else(e, visitor);
+          return this._baseVisitor.else(e, visitor);
         } finally {
           this._hints.pop();
         }
       },
       additionalProperties: (e, v) => {
         try {
-          this._hints.push({tag: 'Additional', suffix: true} satisfies IdHint);
-          return DefaultJsonSchema9Visitor.additionalProperties(e, v);
+          this._hints.push({tag: 'Additional', suffix: true});
+          return this._baseVisitor.additionalProperties(e, v);
         } finally {
           this._hints.pop();
         }
       },
     };
+  }
+
+  private getSchemaHints(v: JSONSchema9) {
+
+    const hints: IdHint[] = [];
+
+    const typeExtras: string[] = [];
+    if (v.format) {
+      // typeExtras.push(v.format);
+      hints.push({tag: v.format, suffix: true});
+    }
+    if (v.const !== undefined) {
+      typeExtras.push(`const`);
+    }
+    if (v.enum && v.enum.length > 0) {
+      typeExtras.push(`enum`);
+    }
+
+    const typeExtra = typeExtras.map(it => Case.pascal(it)).join('');
+
+    if (v.type) {
+      const typeStrings = (v.type ? (Array.isArray(v.type) ? v.type : [v.type]) : []);
+      if (typeExtra) {
+        hints.push(...typeStrings.map(it => ({superfluous: `${Case.pascal(it)}${typeExtra}`, suffix: true} satisfies IdHint)));
+      } else {
+        hints.push(...typeStrings.map(it => ({superfluous: it, suffix: true} satisfies IdHint)));
+      }
+    } else if (typeExtra) {
+      hints.push({extra: typeExtra, suffix: true});
+    }
+
+    if (v.properties) {
+      const keys = Object.keys(v.properties);
+      if (keys.length == 1) {
+        hints.push({extra: `With${Case.pascal(keys[0])}`, suffix: true});
+      } else {
+        // Do something here? Like creating a tag that is a join of all property names, if there are fewer than, say... 4?
+      }
+    }
+
+    if (v.required) {
+      const keys = Object.values(v.required);
+      if (keys.length == 1) {
+        hints.push({extra: `With${Case.pascal(keys[0])}`, suffix: true});
+      } else {
+        // Do something here? Like creating a tag that is a join of all property names, if there are fewer than, say... 4?
+      }
+    }
+
+    if (v.$dynamicRef) {
+      hints.push({tag: v.$dynamicRef.replaceAll('#', ''), suffix: true});
+    }
+
+    if (v.title) {
+      hints.push({name: v.title});
+    }
+
+    return hints;
+  }
+
+  getSuffixes(i?: number): string[] {
+
+    let name = '';
+    const suffixes: string[] = [];
+    const suffixesWithExtra: string[] = [];
+    const suffixesWithSuperfluous: string[] = [];
+    const tags: string[] = [];
+    const extras: string[] = [];
+    const superfluous: string[] = [];
+
+    for (let s = (i === undefined ? 0 : i + 1); s < this._hints.length && (this._hints[s].suffix || this._hints[s].required); s++) {
+
+      const hint = this._hints[s];
+      if (hint.required) {
+        continue;
+      }
+
+      let changed = false;
+      if (hint.name) {
+        name = Case.pascal(hint.name);
+        tags.length = 0;
+        extras.length = 0;
+        superfluous.length = 0;
+        changed = true;
+      } else if (hint.tag) {
+        tags.push(hint.tag);
+        extras.length = 0;
+        superfluous.length = 0;
+        changed = true;
+      } else if (hint.extra) {
+        extras.push(hint.extra);
+        superfluous.length = 0;
+        changed = true;
+      } else if (hint.superfluous) {
+        superfluous.push(hint.superfluous);
+        changed = true;
+      }
+
+      if (changed) {
+
+        const newSuffix = `${name}${tags.map(it => Case.pascal(it)).join('')}`;
+        if (newSuffix && !suffixes.includes(newSuffix)) {
+          suffixes.push(newSuffix);
+        }
+
+        const extrasStr = extras.map(it => Case.pascal(it)).join('');
+        const joinedWithExtra = `${newSuffix}${extrasStr}`;
+
+        if (extras) {
+
+          for (let i = 0; i < extras.length; i++) {
+
+            const withExtra = `${newSuffix}${Case.pascal(extras[i])}`;
+            if (!suffixesWithExtra.includes(withExtra)) {
+              suffixesWithExtra.push(withExtra);
+            }
+          }
+
+          if (!suffixesWithExtra.includes(joinedWithExtra)) {
+            suffixesWithExtra.push(joinedWithExtra);
+          }
+        }
+
+        if (superfluous) {
+
+          for (let i = 0; i < superfluous.length; i++) {
+
+            const withSuperfluous = `${joinedWithExtra}${Case.pascal(superfluous[i])}`;
+            if (!suffixesWithSuperfluous.includes(withSuperfluous)) {
+              suffixesWithSuperfluous.push(withSuperfluous);
+            }
+          }
+        }
+      }
+    }
+
+    suffixes.reverse();
+    suffixes.push('');
+    suffixes.push(...suffixesWithExtra);
+    suffixes.push(...suffixesWithSuperfluous);
+
+    return suffixes;
   }
 }

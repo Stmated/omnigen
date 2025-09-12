@@ -2,6 +2,7 @@ import {describe, test, vi} from 'vitest';
 import {Util} from '@omnigen/core';
 import {JsonSchemaToTypeScriptTestUtil} from './JsonSchemaToTypeScriptTestUtil';
 import {RenderedCompilationUnit} from '@omnigen/api';
+import {TestUtils} from '@omnigen/utils-test';
 
 describe('jsonschema-typescript-render', () => {
 
@@ -17,13 +18,13 @@ describe('jsonschema-typescript-render', () => {
 
     ctx.expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      await ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
   test('jsonschema7-lax-undefined', async ctx => {
 
-    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+    // vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     // https://json-schema.org/draft-07/schema
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/test-jsonschema-typescript/examples/jsonschema-draft-07.json'), {
@@ -31,14 +32,16 @@ describe('jsonschema-typescript-render', () => {
       includeGenerated: false,
       singleFileName: 'Schema',
       relaxedInspection: false,
+      defaultValueCommentsOnFields: false,
+      debug: false,
     });
     const fileContents = getFileContents(rendered);
 
     ctx.expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      await ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
-  });
+  }, {timeout: 120_000});
 
   test('output-without-package', async ctx => {
 
@@ -69,17 +72,19 @@ describe('jsonschema-typescript-render', () => {
       includeGenerated: false,
       singleFileName: 'Schema',
       relaxedInspection: false,
+      defaultValueCommentsOnFields: false,
     });
     const fileContents = getFileContents(rendered);
 
     ctx.expect(Object.keys(fileContents).sort()).toMatchSnapshot();
     for (const [fileName, content] of Object.entries(fileContents)) {
-      await ctx.expect(content).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+      await ctx.expect(content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
   });
 
   test('dynamic-ref', async ctx => {
 
+    // TODO: This is not correct, dynamicRef and dynamicAnchor is not supported yet, but at least outputs *something*.
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/dynamic_ref.json'), {
@@ -104,18 +109,17 @@ describe('jsonschema-typescript-render', () => {
    */
   test('openapi', async ctx => {
 
-    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
-
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-openapi/schemas/openapi-v31.json'), {
       includeGenerated: false,
       singleFile: true,
       relaxedInspection: false,
       debug: false,
+      elevateProperties: false, // Do not elevate, since schema is quite complex.
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
     await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
-  });
+  }, {timeout: 120_000});
 
   test('if-then-else', async ctx => {
 

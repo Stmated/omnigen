@@ -61,10 +61,10 @@ import {Rating} from 'string-similarity';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonRpcParserOptions, OpenRpcOptions, OpenRpcVersion} from '../options';
 import {
-  ApplyIdJsonSchemaTransformerFactory,
+  ApplyIdJsonSchemaTransformerFactory, DefaultJsonSchema9Visitor,
   ExternalDocumentsFinder,
   JSONSchema9,
-  JSONSchema9Definition,
+  JSONSchema9Definition, JsonSchema9Visitor,
   JsonSchemaParser,
   RefResolver,
   SchemaToTypeResult,
@@ -109,17 +109,17 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
 
     // TODO: Completely wrong. Needs to be redone so that we have full control over the OpenRPC and its JsonSchema parts, and they can coexist naturally.
     //        Need to make it so that we can share functionality between the two formats, and visit the whole document properly between borders
-    const applyIdTransformer = new ApplyIdJsonSchemaTransformerFactory();
+    const applyIdTransformer = new ApplyIdJsonSchemaTransformerFactory<JSONSchema9, JsonSchema9Visitor>(DefaultJsonSchema9Visitor);
     const transformers = [
       applyIdTransformer.create(),
-      new SimplifyJsonSchemaTransformerFactory().create(),
+      new SimplifyJsonSchemaTransformerFactory<JSONSchema9, JsonSchema9Visitor>(DefaultJsonSchema9Visitor).create(),
     ];
 
     // TODO: Make the visitor able to handle OpenRpc documents as well, rethink how we build the transforms -- we should give a visitor to decorate with overriding things
 
     const transform = (doc: JSONSchema9) => {
       for (const transformer of transformers) {
-        const transformed = transformer.visit(doc, transformer);
+        const transformed = transformer.schema(doc, transformer);
         if (transformed && typeof transformed === 'object') {
           doc = transformed;
         }
@@ -528,9 +528,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const schema = contentDescriptor.schema as JSONSchema9Definition;
     const resolved = this._refResolver.resolve(schema) as JSONSchema9Definition;
+    const name = this._jsonSchemaParser.getLikelyNames(schema, resolved);
     // const preferredName: TypeName = JsonSchemaParser.getVendorExtension(contentDescriptor, 'title') ?? this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
 
-    const type = this._jsonSchemaParser.jsonSchemaToType(undefined, resolved);
+    const type = this._jsonSchemaParser.jsonSchemaToType(name, resolved);
 
     return {
       type: type.type,
@@ -544,7 +545,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       suffix: 'Response',
     };
 
-    const resultSchema = contentDescriptor.schema as JSONSchema9Definition;
+    const resultSchema = contentDescriptor.schema as JSONSchema9Definition<JSONSchema9>;
     const resolvedResultSchema = this._refResolver.resolve(resultSchema);
 
     const resultTypeName: TypeName[] = [];
@@ -905,7 +906,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       return source;
     }
 
-    // const jsonSchemaParser = new JsonSchemaParser<JSONSchema9, JsonRpcParserOptions & ParserOptions>(refResolver, openrpcParserOptions);
     return this._jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', source, this._docStore);
   }
 

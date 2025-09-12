@@ -45,7 +45,7 @@ import {
   AddCommentsAstTransformer,
   AddCompositionMembersCodeAstTransformer,
   AddConstructorAstTransformer,
-  AddFieldsAstTransformer,
+  AddFieldsAstTransformer, AddFinalToApplicableFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
   AggregateIntersectionsModelTransformer,
@@ -80,8 +80,8 @@ export const ZodCSharpOptionsContext = z.object({
 });
 
 export const ZodCSharpTargetContext = z.object({
-    target: z.literal('csharp'),
-  })
+  target: z.literal('csharp'),
+})
   .merge(ZodTargetFeaturesContext);
 
 export const ZodCSharpInitContextIn = ZodModelContext.extend({
@@ -228,6 +228,7 @@ export const CSharpPlugin = createPlugin(
       new MethodToGetterCodeAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
       new RemoveEnumFieldsCodeAstTransformer(),
+      new AddFinalToApplicableFieldsAstTransformer(),
       new AddPropertyAccessorCSharpAstTransformer(),
       new JsonCSharpAstTransformer(),
       new ToCSharpAstTransformer(),

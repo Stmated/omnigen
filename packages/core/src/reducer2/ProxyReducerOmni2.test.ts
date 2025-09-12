@@ -1,7 +1,7 @@
 import {test} from 'vitest';
 import {OmniItemKind, OmniModel, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniTypeKind, OmniUnionType, OmniUnknownType, UnknownKind} from '@omnigen/api';
 import {ProxyReducerOmni2} from './ProxyReducerOmni2';
-import {expectTs, Simplify} from '../util';
+import {expectTs} from '../util';
 
 test('change-field', ctx => {
 
@@ -14,13 +14,9 @@ test('change-field', ctx => {
 
   const reducer = ProxyReducerOmni2.builder().build({
     MODEL: (n, r) => {
-      r.put('description', 'Hello'); // n.description = 'Hello';
+      r.put('description', 'Hello');
     },
   });
-
-  // type simp = Simplify<typeof reducer>;
-  //
-  // const s: simp = {};
 
   const reduced = reducer.reduce(model);
 

@@ -6,9 +6,11 @@ import jakarta.annotation.Generated;
 @SuppressWarnings("unused")
 public class description_inheritance {
   /**
+   * components_schemas_ResultSchema_description
+   * <p>
    * components_schemas_AbstractOne_description
    */
-  public static class AbstractOne extends AbstractOneObject {
+  public static class AbstractOne extends AbstractOneWithAbstractOnePropertyA {
     public AbstractOne(Integer abstractOnePropertyA, String abstractOnePropertyB) {
       super(abstractOnePropertyA, abstractOnePropertyB);
     }
@@ -17,11 +19,11 @@ public class description_inheritance {
   /**
    * components_schemas_AbstractOne_allOf_inline_description
    */
-  public static class AbstractOneObject {
+  public static class AbstractOneWithAbstractOnePropertyA {
     private final Integer abstractOnePropertyA;
     private final String abstractOnePropertyB;
 
-    public AbstractOneObject(Integer abstractOnePropertyA, String abstractOnePropertyB) {
+    public AbstractOneWithAbstractOnePropertyA(Integer abstractOnePropertyA, String abstractOnePropertyB) {
       this.abstractOnePropertyA = abstractOnePropertyA;
       this.abstractOnePropertyB = abstractOnePropertyB;
     }
@@ -50,9 +52,15 @@ public class description_inheritance {
     private final String abstractOtherPropertyB;
     private Integer abstractOtherPropertyA;
 
-    public AbstractOther(Integer abstractOnePropertyA, String abstractOnePropertyB, String abstractOtherPropertyB) {
+    public AbstractOther(
+      Integer abstractOnePropertyA,
+      String abstractOnePropertyB,
+      String abstractOtherPropertyB,
+      Integer abstractOtherPropertyA
+    ) {
       super(abstractOnePropertyA, abstractOnePropertyB);
       this.abstractOtherPropertyB = abstractOtherPropertyB;
+      this.abstractOtherPropertyA = abstractOtherPropertyA;
     }
 
     /**
@@ -60,10 +68,6 @@ public class description_inheritance {
      */
     public Integer getAbstractOtherPropertyA() {
       return this.abstractOtherPropertyA;
-    }
-
-    public void setAbstractOtherPropertyA(Integer abstractOtherPropertyA) {
-      abstractOtherPropertyA = abstractOtherPropertyA;
     }
 
     /**
@@ -242,14 +246,24 @@ public class description_inheritance {
    * components_contentDescriptors_RequestParamDescriptor_schema_description
    */
   public static class RequestParamDescriptor extends RequestParamSchema {
-    public RequestParamDescriptor(Integer abstractOnePropertyA, String abstractOnePropertyB, String abstractOtherPropertyB) {
-      super(abstractOnePropertyA, abstractOnePropertyB, abstractOtherPropertyB);
+    public RequestParamDescriptor(
+      Integer abstractOnePropertyA,
+      String abstractOnePropertyB,
+      String abstractOtherPropertyB,
+      Integer abstractOtherPropertyA
+    ) {
+      super(abstractOnePropertyA, abstractOnePropertyB, abstractOtherPropertyB, abstractOtherPropertyA);
     }
   }
 
   public static class RequestParamSchema extends AbstractOther {
-    public RequestParamSchema(Integer abstractOnePropertyA, String abstractOnePropertyB, String abstractOtherPropertyB) {
-      super(abstractOnePropertyA, abstractOnePropertyB, abstractOtherPropertyB);
+    public RequestParamSchema(
+      Integer abstractOnePropertyA,
+      String abstractOnePropertyB,
+      String abstractOtherPropertyB,
+      Integer abstractOtherPropertyA
+    ) {
+      super(abstractOnePropertyA, abstractOnePropertyB, abstractOtherPropertyB, abstractOtherPropertyA);
     }
   }
 
@@ -257,8 +271,8 @@ public class description_inheritance {
    * components_contentDescriptors_ResultDescriptor_schema_description
    */
   public static class ResultDescriptor extends ResultSchema {
-    public ResultDescriptor(Integer abstractOnePropertyA, String abstractOnePropertyB) {
-      super(abstractOnePropertyA, abstractOnePropertyB);
+    public ResultDescriptor(Integer abstractOnePropertyA, String abstractOnePropertyB, String resultSchemaPropertyA) {
+      super(abstractOnePropertyA, abstractOnePropertyB, resultSchemaPropertyA);
     }
   }
 
@@ -268,8 +282,9 @@ public class description_inheritance {
   public static class ResultSchema extends AbstractOne {
     private String resultSchemaPropertyA;
 
-    public ResultSchema(Integer abstractOnePropertyA, String abstractOnePropertyB) {
+    public ResultSchema(Integer abstractOnePropertyA, String abstractOnePropertyB, String resultSchemaPropertyA) {
       super(abstractOnePropertyA, abstractOnePropertyB);
+      this.resultSchemaPropertyA = resultSchemaPropertyA;
     }
 
     /**
@@ -277,10 +292,6 @@ public class description_inheritance {
      */
     public String getResultSchemaPropertyA() {
       return this.resultSchemaPropertyA;
-    }
-
-    public void setResultSchemaPropertyA(String resultSchemaPropertyA) {
-      resultSchemaPropertyA = resultSchemaPropertyA;
     }
   }
 }

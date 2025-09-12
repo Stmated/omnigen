@@ -1,0 +1,34 @@
+{
+  "name": "@omnigen/test-openapi-java",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "tsc -w",
+    "lint": "TIMING=1 eslint src/**/*.ts* --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@omnigen/api": "workspace:*",
+    "@omnigen/core": "workspace:*",
+    "@omnigen/core-log": "workspace:*",
+    "@omnigen/core-plugin": "workspace:*",
+    "@omnigen/parser-openapi": "workspace:*",
+    "@omnigen/plugin": "workspace:*",
+    "@omnigen/target-code": "workspace:*",
+    "@omnigen/target-java": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@omnigen/config-typescript": "workspace:*",
+    "@omnigen/eslint-config-custom": "workspace:*",
+    "@omnigen/utils-test": "workspace:*",
+    "java-parser": "^3.0.1",
+    "typescript": "5.9.2"
+  }
+}

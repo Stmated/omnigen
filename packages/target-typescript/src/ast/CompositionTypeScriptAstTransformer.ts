@@ -2,7 +2,7 @@ import {AstTransformer, AstTransformerArguments, NameParts, OmniType, PackageOpt
 import {TsRootNode} from './TsRootNode';
 import {DefaultTypeScriptVisitor} from '../visit';
 import {LoggerFactory} from '@omnigen/core-log';
-import {OmniUtil} from '@omnigen/core';
+import {OmniUtil, ProxyReducer2} from '@omnigen/core';
 import {Ts} from '../ast';
 import {Code} from '@omnigen/target-code';
 
@@ -30,10 +30,10 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
           const inlinedType: OmniType = {
             ...n.type.omniType,
             inline: true,
-            debug: OmniUtil.addDebug(n.type.omniType.debug, `Turned regular ${n.type.omniType.kind} into TS inline type`),
           };
 
-          // modelTypeReplacements.set(n.type.omniType, inlinedType);
+          OmniUtil.addDebugTo(inlinedType, `Turned class of kind ${n.type.omniType.kind} into TS inline type`);
+          OmniUtil.addDebugTo(inlinedType, `From type ${ProxyReducer2.getIdIfExists(n.type.omniType)}`);
 
           const aliasRhsTypeNode = args.root.getAstUtils().createTypeNode(inlinedType);
           const replacementAliasTargetNode = new Code.EdgeType(n.type.omniType, false);

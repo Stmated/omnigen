@@ -46,8 +46,8 @@
     "@rollup/plugin-esm-shim": "^0.1.8",
     "@rollup/plugin-replace": "^6.0.2",
     "@types/figlet": "^1.7.0",
-    "@types/node": "^18.19.121",
+    "@types/node": "^18.19.122",
     "tsx": "^4.20.3",
-    "typescript": "5.8.2"
+    "typescript": "5.9.2"
   }
 }

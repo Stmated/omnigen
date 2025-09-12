@@ -49,6 +49,7 @@ export class StrictUndefinedTypeScriptModelTransformer implements OmniModel2ndPa
         }
 
         if (OmniUtil.isComposition(property.type)) {
+          // TODO: This should check recursively, since the undefined might be nested among the compositions
           if (property.type.types.find(it => OmniUtil.isUndefined(it))) {
             return;
           }

@@ -25,13 +25,12 @@ describe('TypeScript Rendering', () => {
   test('Type compressions', async ctx => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    // TODO: This must pass when all other have been fixed!
-
     const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('compressable-types.json', {
       options: {
         generifyTypes: false,
         singleFile: true,
         includeGeneratedInFileHeader: false,
+        immutable: true,
       },
     });
 

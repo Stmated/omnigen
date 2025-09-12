@@ -150,6 +150,9 @@ export class PluginManager {
 
   public async execute<C extends z.infer<ZodObject<any>>, S extends ZodObject<any>>(args: ExecArgs<C, S>): Promise<ExecResults<S>> {
 
+    // Set long stacktrace limit, so it becomes easier to debug issues.
+    Error.stackTraceLimit = 200;
+
     const rootPath = this.findExecutionPath({
       inCtx: args.ctx,
       debug: args.debug,

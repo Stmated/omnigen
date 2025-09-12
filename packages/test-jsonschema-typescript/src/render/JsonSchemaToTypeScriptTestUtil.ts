@@ -1,4 +1,4 @@
-import {PackageOptions, RenderedCompilationUnit, TargetOptions} from '@omnigen/api';
+import {ModelTransformOptions, PackageOptions, RenderedCompilationUnit, TargetOptions} from '@omnigen/api';
 import {PluginManager} from '@omnigen/plugin';
 import {TypeScriptOptions, TypeScriptPlugins} from '@omnigen/target-typescript';
 import {LoggerFactory} from '@omnigen/core-log';
@@ -10,7 +10,7 @@ const logger = LoggerFactory.create(import.meta.url);
 
 export class JsonSchemaToTypeScriptTestUtil {
 
-  public static async render(inPath: string, options?: Partial<TypeScriptOptions> & Partial<TargetOptions> & Partial<PackageOptions>): Promise<RenderedCompilationUnit[]> {
+  public static async render(inPath: string, options?: Partial<TypeScriptOptions> & Partial<TargetOptions> & Partial<PackageOptions> & Partial<ModelTransformOptions>): Promise<RenderedCompilationUnit[]> {
 
     const pm = new PluginManager({includeAuto: true});
 

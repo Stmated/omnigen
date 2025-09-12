@@ -15,7 +15,7 @@ import {
   TypeDiffKind,
 } from '@omnigen/api';
 import {CodeOptions, ZodCodeOptions} from '../../options/CodeOptions';
-import {CreateMode, OmniUtil, PropertyUtil, Sorters} from '@omnigen/core';
+import {CreateMode, Naming, OmniUtil, PropertyUtil, Sorters} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const defaultBannedTypeDifferences: ReadonlyArray<TypeDiffKind> = [
@@ -102,6 +102,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
     options: ParserOptions & CodeOptions,
   ) {
 
+    const n = Naming.getNameString(subTypes[0]);
     const properties = PropertyUtil.getCommonProperties(
       tdiff => (stage === 1) ? true : OmniUtil.isDiffMatch(tdiff, defaultBannedTypeDifferences),
       pdiff => (stage === 1) ? true : PropertyUtil.isDiffMatch(pdiff, defaultBannedPropDifferences),
@@ -147,6 +148,8 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
             debug: OmniUtil.addDebug(propertyToElevate.property.debug, `elevated from:\n- ${info.properties.map(it => OmniUtil.describe(it.owner)).join('\n- ')}`),
           };
 
+          superType.debug = OmniUtil.addDebug(superType.debug, `Elevated property '${OmniUtil.getPropertyName(abstractProperty.name, true)}'`);
+
           superType.properties.push(abstractProperty);
         } else {
 
@@ -189,6 +192,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
             }).join('\n- ')}`),
           };
 
+          superType.debug = OmniUtil.addDebug(superType.debug, `Elevated general property '${OmniUtil.getPropertyName(generalProperty.name, true)}'`);
           superType.properties.push(generalProperty);
         }
 
@@ -205,10 +209,13 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
           debug: OmniUtil.addDebug(propertyToElevate.property.debug, `Elevated as common type from:\n- ${info.properties.map(it => OmniUtil.describe(it.owner)).join('\n- ')}`),
         });
 
+        superType.debug = OmniUtil.addDebug(superType.debug, `Elevated common-type property '${OmniUtil.getPropertyName(propertyToElevate.property.name, true)}'`);
+
         for (const subTypeProperty of info.properties) {
           const idx = subTypeProperty.owner.properties.indexOf(subTypeProperty.property);
           if (idx != -1) {
             subTypeProperty.owner.properties.splice(idx, 1);
+            subTypeProperty.owner.debug = OmniUtil.addDebug(subTypeProperty.owner.debug, `Removed common-type property '${OmniUtil.getPropertyName(subTypeProperty.property.name, true)}'`);
           }
         }
       }

@@ -1,3 +1,2 @@
-export type BaseTreeItem = BaseTreeItemLeaf | BaseTreeItemBranch;
-export type BaseTreeItemBranch = object;
-export type BaseTreeItemLeaf = object;
+export type BaseTreeItem0 = object;
+export type BaseTreeItem1 = object;

@@ -536,15 +536,6 @@ export class OmniUtil {
     return OmniDescribeUtils.describe(type);
   }
 
-  /**
-   * Gets the name of the type, or returns 'undefined' if the type is not named.
-   *
-   * @param type The type to try and find a name for
-   */
-  public static getTypeName(type: OmniType): TypeName | undefined {
-    return OmniDescribeUtils.getTypeName(type);
-  }
-
   public static isNullableType(type: OmniType, features?: TargetFeatures): type is ((OmniPrimitiveType & { nullable: true }) | OmniPrimitiveNull) {
     return OmniTypeUtil.isNullableType(type, features);
   }
@@ -724,6 +715,17 @@ export class OmniUtil {
               // This can happen if we are replacing a type with the GenericSource.
               // But the type in the extendedBy should not be a GenericSource, it should be a GenericTarget.
               // That will be handled inside GenericsOmniModelTransformer.
+            }
+          }
+        }
+
+        if (parent.subTypeHints) {
+          for (const hint of parent.subTypeHints) {
+            const found = OmniUtil.swapType(hint.type, from, to, maxDepth - 1);
+            if (found === null) {
+              throw new Error(`Cannot remove the type of the hint. Perhaps this should simply remove the hint?`);
+            } else if (found) {
+              hint.type = found;
             }
           }
         }
@@ -1047,6 +1049,9 @@ export class OmniUtil {
       || type.kind === OmniTypeKind.ENUM
       || type.kind === OmniTypeKind.ARRAY
       || type.kind === OmniTypeKind.DECORATING
+      || type.kind === OmniTypeKind.UNION
+      || type.kind === OmniTypeKind.EXCLUSIVE_UNION
+      || type.kind === OmniTypeKind.INTERSECTION
       || OmniUtil.isPrimitive(type);
   }
 
@@ -2339,15 +2344,17 @@ export class OmniUtil {
 
   public static mergeTypeMeta<T extends OmniType>(from: T, to: typeof from, lossless = true, aggregate = false, important = false): typeof to {
 
-    to.title = important
-      ? (from.title || to.title)
-      : (to.title || from.title);
+    if (from.title || to.title) {
+      to.title = important
+        ? (from.title || to.title)
+        : (to.title || from.title);
+    }
 
     if (aggregate && to.summary && from.summary) {
       if (to.summary != from.summary) {
         to.summary = `${to.summary}, ${from.summary}`;
       }
-    } else {
+    } else if (from.summary) {
       to.summary = from.summary || to.summary;
     }
 
@@ -2366,7 +2373,7 @@ export class OmniUtil {
       if (to.description !== from.description && to.summary !== from.description) {
         to.summary = `${to.summary}, ${from.description}`;
       }
-    } else {
+    } else if (from.description) {
       to.description = from.description || to.description;
     }
 
@@ -2433,16 +2440,17 @@ export class OmniUtil {
     return OmniUtil.addTo(previous, add);
   }
 
+  /**
+   * MUTATES the given debug-value owner, and returns the same object as was given.
+   */
   public static addDebugTo<T extends { debug?: DebugValue }>(obj: T, add: DebugValue): T {
 
     const newDebug = OmniUtil.addTo(obj.debug, add);
     if (newDebug === obj.debug) {
       return obj;
     } else {
-      return {
-        ...obj,
-        debug: newDebug,
-      };
+      obj.debug = newDebug;
+      return obj;
     }
   }
 
@@ -2496,7 +2504,7 @@ export class OmniUtil {
 
   public static copyName(from: OmniType, to: OmniType): void {
 
-    if ('name' in from && 'name' in to) {
+    if (OmniUtil.isNameable(from) && OmniUtil.isNameable(to)) {
       to.name = from.name;
     }
   }

@@ -44,8 +44,19 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/core-json/.test" />
       <excludeFolder url="file://$MODULE_DIR$/packages/core-json/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/node_modules" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/core-log/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/core-plugin/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/packages/parser-jsonschema/src/visit/__snapshots__" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-openapi/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/parser-openrpc/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/plugin/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/target-code/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/target-csharp/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/target-typescript/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-csharp/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-jsonschema-typescript/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/test-openapi-java/src/render/__snapshots__" />
     </content>
     <content url="file://$MODULE_DIR$/node_modules" />
     <orderEntry type="inheritedJdk" />

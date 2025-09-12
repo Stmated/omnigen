@@ -31,6 +31,6 @@
     "@omnigen/utils-test": "workspace:*",
     "@types/json-pointer": "^1.0.34",
     "@types/json-schema": "^7.0.15",
-    "typescript": "5.8.2"
+    "typescript": "5.9.2"
   }
 }

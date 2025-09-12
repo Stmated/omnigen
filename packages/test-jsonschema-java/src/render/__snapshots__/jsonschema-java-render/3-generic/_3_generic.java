@@ -30,10 +30,10 @@ public class _3_generic {
   }
 
   @Getter
-  public static class AB extends A<Integer, BBObject> {
+  public static class AB extends A<Integer, BB> {
     private final String ab;
 
-    public AB(String a, int ap, BBObject b, String ab) {
+    public AB(String a, int ap, BB b, String ab) {
       super(a, ap, b);
       this.ab = ab;
     }
@@ -63,10 +63,10 @@ public class _3_generic {
   }
 
   @Getter
-  public static class BBObject extends B<Integer, CB> {
+  public static class BB extends B<Integer, CB> {
     private final String bb;
 
-    public BBObject(String b, int bp, CB c, String bb) {
+    public BB(String b, int bp, CB c, String bb) {
       super(b, bp, c);
       this.bb = bb;
     }

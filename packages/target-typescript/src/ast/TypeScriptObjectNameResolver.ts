@@ -58,13 +58,28 @@ export class TypeScriptObjectNameResolver extends AbstractObjectNameResolver<Pac
       case OmniTypeKind.NUMBER:
         return {namespace: [], edgeName: 'number'};
       case OmniTypeKind.NULL:
+        return {namespace: [], edgeName: 'null'};
       case OmniTypeKind.UNDEFINED:
-        return {namespace: [], edgeName: 'object'};
+        return {namespace: [], edgeName: 'undefined'};
     }
   }
 
   protected getUnknownKind(type: OmniUnknownType, options: TypeScriptOptions): UnknownKind {
     return type.unknownKind ?? options.unknownType;
+  }
+
+  protected getUnknownTypeString(unknownKind: UnknownKind): string {
+    switch (unknownKind) {
+      case UnknownKind.OBJECT:
+      case UnknownKind.DYNAMIC_OBJECT:
+        return `object`;
+      case UnknownKind.DYNAMIC:
+      case UnknownKind.DYNAMIC_NATIVE:
+      case UnknownKind.WILDCARD:
+        return 'unknown';
+      case UnknownKind.ANY:
+        return 'any';
+    }
   }
 }
 
@@ -79,4 +94,6 @@ const TS_RESERVED_WORDS: string[] = [
 
   // Contextual Keywords
   'any', 'boolean', 'constructor', 'declare', 'get', 'module', 'require', 'number', 'set', 'string', 'symbol', 'type', 'from', 'of',
+
+  'object', 'Object',
 ];

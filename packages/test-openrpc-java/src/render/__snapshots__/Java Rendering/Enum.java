@@ -169,6 +169,9 @@ public class Enum {
     }
   }
 
+  /**
+   * TagOrSpeciesOrString4: An unknown freetext value
+   */
   public static class TagOrSpeciesOrString {
     private static final Map<Object, TagOrSpeciesOrString> _values = new HashMap<>();
     public static final TagOrSpeciesOrString _1337 = TagOrSpeciesOrString.get(1337d);

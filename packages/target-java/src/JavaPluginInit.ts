@@ -58,7 +58,7 @@ import {
   AddCommentsAstTransformer,
   AddCompositionMembersCodeAstTransformer,
   AddConstructorAstTransformer,
-  AddFieldsAstTransformer,
+  AddFieldsAstTransformer, AddFinalToApplicableFieldsAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
   AggregateIntersectionsModelTransformer,
   ElevatePropertiesModelTransformer,
@@ -88,8 +88,8 @@ export const ZodJavaOptionsContext = z.object({
 });
 
 export const ZodJavaTargetContext = z.object({
-    target: z.literal('java'),
-  })
+  target: z.literal('java'),
+})
   .merge(ZodTargetFeaturesContext);
 
 export const ZodJavaInitContextIn = ZodModelContext.extend({
@@ -194,6 +194,7 @@ export const JavaPlugin = createPlugin(
       astTransformers.push(new AddConstructorAstTransformer());
     }
     astTransformers.push(new PatternPropertiesToMapJavaAstTransformer());
+    astTransformers.push(new AddFinalToApplicableFieldsAstTransformer());
     astTransformers.push(new AddLombokAstTransformer());
     astTransformers.push(new AddAdditionalPropertiesInterfaceAstTransformer());
     astTransformers.push(new AddJakartaValidationAstTransformer());
@@ -211,6 +212,7 @@ export const JavaPlugin = createPlugin(
     astTransformers.push(new MapMemberAccessToJavaAstTransformer());
     astTransformers.push(new ToHardCodedTypeJavaAstTransformer());
     astTransformers.push(new ToConstructorBodySuperCallAstTransformer());
+
     astTransformers.push(new ToJavaAstTransformer());
     astTransformers.push(new DelegatesToJavaAstTransformer());
     astTransformers.push(new AddGeneratedAnnotationJavaAstTransformer());

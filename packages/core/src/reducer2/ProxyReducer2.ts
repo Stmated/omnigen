@@ -4,13 +4,14 @@ import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
 import {ANY_KIND, MaybeFunction, MutableProxyReducerInterface, YieldRet, ReduceRet, ResolvedRet, Spec2, SpecFn2} from './types';
 import {ReducerOpt2} from './ReducerOpt2';
 import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';
-import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID} from './symbols';
+import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID, PROP_KEY_REDUCER_STACKTRACES} from './symbols';
 
 export interface Options2<N extends object, D extends keyof N, O, InOpt extends ReducerOpt2, S extends ReadonlyArray<Spec2<N, D, O, InOpt>>> {
   readonly discriminator: D;
   readonly specs: S;
   readonly reducerId: number;
   readonly track: ProxyReducerTrackMode2;
+  readonly stacktrace?: boolean;
 
   /**
    * **WARNING**: Only set if you are writing test cases or for some inexplicable reason want to run in isolation.
@@ -66,7 +67,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
 
   public readonly _options: Options2<N, D, O, Opt, S> & Opt;
 
-  private _id: number = 0;
+  private _ongoing_id: number = 0;
 
   private readonly _visited: RecursiveValue<N>[] = [];
   private _persisted: Map<N, RecursiveValue<N>> | undefined;
@@ -109,6 +110,20 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const ongoing = this._visited[this._visited.length - 1]! as RecursiveValue<ResolvedRet<FN, D, O>>;
     if ((ongoing.replacement && ongoing.replacement !== replacement) || (!ongoing.replacement && ongoing.original !== replacement)) {
       ongoing.replacement = replacement;
+
+      if (ongoing.original && typeof ongoing.original === 'object' && ongoing.replacement && typeof ongoing.replacement === 'object') {
+        if ('debug' in ongoing.original || 'debug' in ongoing.replacement) {
+          if ('debug' in ongoing.original) {
+            if (Array.isArray(ongoing.original.debug)) {
+              ongoing.original.debug.push(`Replaced by ${ongoing.replacement}`);
+            } else {
+              ongoing.original.debug = [ongoing.original.debug, `Replaced by ${ongoing.replacement}`];
+            }
+          } else {
+            ongoing.original.debug = `Replaced by ${ongoing.replacement}`;
+          }
+        }
+      }
 
       for (let i = this._visited.length - 1; i >= 0; i--) {
         this._visited[i].changeCount++;
@@ -170,17 +185,22 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
           [PROP_KEY_GENERATION]: ProxyReducer2.getGeneration(ongoing.original) + 1,
           [PROP_KEY_REDUCER_ID]: this.getNewReducerIds(ongoing.original),
         };
+        this.setStacktrace(ongoing, copy);
+
       } else {
         copy = {...ongoing.original, [prop]: value};
       }
     } else {
       if (this._options.track !== ProxyReducerTrackMode2.NONE) {
+
         copy = {
           ...ongoing.original,
           [PROP_KEY_ID]: ++this._options.trackingStatsSource.idCounter,
           [PROP_KEY_GENERATION]: ProxyReducer2.getGeneration(ongoing.original) + 1,
           [PROP_KEY_REDUCER_ID]: this.getNewReducerIds(ongoing.original),
         };
+        this.setStacktrace(ongoing, copy);
+
       } else {
         copy = {...ongoing.original};
       }
@@ -189,6 +209,38 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     // Check if this is a recursive object, and in that case update the `replacement` so it can be detected by others.
     ongoing.replacement = copy as FN;
     return copy;
+  }
+
+  private setStacktrace<RV extends RecursiveValue<FN>>(ongoing: RV, copy: FN) {
+
+    // TODO: Prettify the stacktrace by removing stuff we do not care about (such as ProxyReducer2 entries and startup scaffolding (vitest, plugin manager, etc)
+    const stacktrace = (this._options.stacktrace || true ? new Error().stack : '') ?? '';
+    const existingStackTraces = (ongoing.original as any)[PROP_KEY_REDUCER_STACKTRACES];
+    if (stacktrace) {
+
+      const ignoredPatterns = ['ProxyReducer2.', 'Array.'];
+      const cutoffAfterPatterns = ['PluginManager.'];
+      const filteredLines = stacktrace.split('\n')
+        .filter(traceLine => !ignoredPatterns.some(pattern => traceLine.includes(pattern)));
+      const cutoffIndex = filteredLines.findIndex(it => cutoffAfterPatterns.some(pattern => it.includes(pattern)));
+      if (cutoffIndex !== -1) {
+        filteredLines.splice(cutoffIndex);
+      }
+      filteredLines.splice(0, 1); // Remove the `Error: ...` line
+      const filteredString = filteredLines.join('\n');
+
+      const reducerId = `${this._options.reducerId}`.padStart(4, '0');
+      const oid = `${ProxyReducer2.getIdIfExists(ongoing.original) ?? '?'}`.padStart(4, ' ');
+      const rid = `${ProxyReducer2.getIdIfExists(copy) ?? '?'}`.padEnd(4, ' ');
+      const now = new Date();
+      const minutesString = `${now.getMinutes()}`.padEnd(2, '0');
+      const secondsString = `${now.getSeconds()}`.padEnd(2, '0');
+      const msString = `${now.getMilliseconds()}`.padEnd(3, '0');
+      const timestamp = `${minutesString}:${secondsString}:${msString}`;
+      const extendedStacktrace = `[${timestamp}]  ${reducerId} ${oid}->${rid} vid:${ongoing.id} changes:${ongoing.changeCount}, recursionDepth:${ongoing.recursionDepth}, depth:${this.depth}\n${filteredString}`;
+
+      (copy as any)[PROP_KEY_REDUCER_STACKTRACES] = existingStackTraces ? [...existingStackTraces, extendedStacktrace] : [extendedStacktrace];
+    }
   }
 
   public yieldBase(): YieldRet<FN, D, O, Opt> {
@@ -237,14 +289,14 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
         return (recursive.replacement ?? undefined) as ReduceRet<Local, D, O, Opt, S>;
       } else {
 
-        // TODO: Need some way of having a lazy callback from the reduction, where we register a listener for recursive root completion!
-        //        Then we should be able to, after-the-fact to replace things... or something! This requires a solution!
+        // TODO: Need some way of having a lazy callback from the reduction, where we register a listener for recursive root completion.
+        //        Then we should be able to, after-the-fact to replace things... or something. This requires a solution!
         return this.cloneAndReturnNew(recursive as RecursiveValue<FN>) as ReduceRet<Local, D, O, Opt, S>;
       }
     }
 
     const visited: RecursiveValue<Local> = {
-      id: ++this._id,
+      id: ++this._ongoing_id,
       original: original as typeof original,
       recursionDepth: 0,
       changeCount: 0,
@@ -346,8 +398,8 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
   /**
    * @see PROP_KEY_ID
    */
-  public getId(obj: N): number { // } IsExactly<typeof generate, true, number, number | undefined> {
-    const existing = (obj as any)[PROP_KEY_ID];
+  public getId(obj: N): number {
+    const existing = ProxyReducer2.getIdIfExists(obj);
     if (existing) {
       return existing;
     }
@@ -355,6 +407,15 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const newId = ++this._options.trackingStatsSource.idCounter;
     (obj as any)[PROP_KEY_ID] = newId;
     return newId;
+  }
+
+  public static getIdIfExists(obj: any): number | undefined {
+    const existing = obj[PROP_KEY_ID];
+    if (existing) {
+      return existing;
+    }
+
+    return undefined;
   }
 
   /**

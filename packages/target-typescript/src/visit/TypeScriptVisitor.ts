@@ -21,7 +21,7 @@ export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R
       node.modifiers?.visit(visitor),
       node.of.visit(visitor),
     ],
-    visitGetter: (n, v) => [n.modifiers.visit(v), n.identifier.visit(v), n.target.visit(v), n.returnType.visit(v)],
+    visitGetter: (n, v) => [n.modifiers.visit(v), n.identifier.visit(v), n.target?.visit(v), n.returnType.visit(v)],
     visitSetter: (n, v) => [n.identifier.visit(v), n.targetType.visit(v), n.target.visit(v)],
   };
 };

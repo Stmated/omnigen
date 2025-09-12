@@ -50,6 +50,9 @@ components:
       properties:
         dogProperty:
           type: string
+        age:
+          type: number
+          maximum: 100
       allOf:
         - $ref: '#/components/schemas/Pet'
         - type: object

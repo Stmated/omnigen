@@ -2,7 +2,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {AstTransformer, AstTransformerArguments, PackageOptions, TargetOptions} from '@omnigen/api';
 import {TypeScriptOptions} from '../options';
 import {Ts} from '../ast';
-import {CodeAstUtils} from '@omnigen/target-code';
+import {Code, CodeAstUtils} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -36,6 +36,12 @@ export class AccessorTypeScriptAstTransformer implements AstTransformer<Ts.TsRoo
       // },
 
       reduceMethodDeclaration: n => {
+
+        if (!n.body && n.signature.identifier instanceof Code.GetterIdentifier) {
+
+          // TODO: Only do this if we're inside an interface. Perhaps this should be in an interface-specific ast transformer
+          return new Ts.Getter(n.signature.identifier, undefined, n.signature.type, n.signature.comments, n.signature.modifiers);
+        }
 
         const soloReturn = CodeAstUtils.getSoloReturnOfNoArgsMethod(n);
         if (soloReturn) {

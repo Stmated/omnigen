@@ -1,4 +1,6 @@
-export interface DependentSchemas extends StylesForCookieThen {
+export type DependentSchemas = DependentSchemasInterface & StylesForCookie & StylesForForm;
+
+export interface DependentSchemasInterface {
   readonly style?: string | undefined;
 }
 
@@ -15,9 +17,15 @@ export interface StylesForCookieThen {
 export type StylesForForm = StylesForFormThen | StylesForFormElse;
 
 export interface StylesForFormElse {
+  /**
+   * @default false
+   */
   readonly explode?: boolean | undefined;
 }
 
 export interface StylesForFormThen {
+  /**
+   * @default true
+   */
   readonly explode?: boolean | undefined;
 }

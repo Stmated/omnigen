@@ -7,7 +7,7 @@ import {
   OmniModel2ndPassTransformer,
   OmniModelTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniModelTransformerArgs,
+  OmniModelTransformerArgs, OmniNode,
   OmniType,
   OmniTypeKind,
   OmniUnionType,
@@ -15,6 +15,7 @@ import {
 import {OmniUtil} from '../OmniUtil';
 import {LoggerFactory} from '@omnigen/core-log';
 import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2';
+import {ANY_KIND} from '../../reducer2/types.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -58,10 +59,10 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
     if (args.options.simplifyTypeHierarchy) {
 
-      args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
+      args.model = ProxyReducerOmni2.builder().reduce(args.model, {immutable: false}, {
         INTERSECTION: (n, r) => {
-          if (n.types.length == 1) {
-            r.replace(n.types[0]);
+          if (n.types.length === 1) {
+            r.replace(r.reduce(n.types[0]));
           }
         },
       });

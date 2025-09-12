@@ -32,7 +32,7 @@ import {
   ZodAstNodeContext,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SimplifyGenericsModelTransformer, Visitor, ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, Naming, OmniUtil, SimplifyGenericsModelTransformer, Visitor, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -41,6 +41,7 @@ import {
   AddCommentsAstTransformer,
   AddConstructorAstTransformer,
   AddFieldsAstTransformer,
+  AddFinalToApplicableFieldsAstTransformer,
   AddGeneratedCommentAstTransformer,
   AddObjectDeclarationsCodeAstTransformer,
   ElevatePropertiesModelTransformer,
@@ -65,6 +66,8 @@ import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTrans
 import {AnyToUnknownTypeScriptModelTransformer} from './parse/transform/AnyToUnknownTypeScriptModelTransformer';
 import {FileHeaderTypeScriptAstTransformer} from './ast/FileHeaderTypeScriptAstTransformer';
 import {PatternPropertyAnyTypeScriptModelTransformer} from './parse/transform/PatternPropertyAnyTypeScriptModelTransformer';
+import {UnionSupertypeToTypeAliasTypeScriptModelTransformer} from './parse/transform/UnionSupertypeToTypeAliasTypeScriptModelTransformer.ts';
+import {InlineUnnamedCompositionsTypeScriptModelTransformer} from './parse/transform/InlineUnnamedCompositionsTypeScriptModelTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -73,8 +76,8 @@ export const ZodTypeScriptOptionsContext = z.object({
 });
 
 export const ZodTypeScriptTargetContext = z.object({
-    target: z.literal('typescript'),
-  })
+  target: z.literal('typescript'),
+})
   .merge(ZodTargetFeaturesContext);
 
 export const ZodTypeScriptInitContextIn = ZodModelContext.extend({
@@ -161,18 +164,36 @@ export const TypeScriptPlugin = createPlugin(
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
       new RemoveUnnecessaryPropertyModelTransformer(),
-      new PatternPropertyAnyTypeScriptModelTransformer(),
+      // new PatternPropertyAnyTypeScriptModelTransformer(),
       new AnyToUnknownTypeScriptModelTransformer(),
       new StrictUndefinedTypeScriptModelTransformer(),
       new RemoveWildcardGenericParamTypeScriptModelTransformer(),
+      new UnionSupertypeToTypeAliasTypeScriptModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),
       new SimplifyGenericsModelTransformer(),
+      new InlineUnnamedCompositionsTypeScriptModelTransformer(),
     ] as const;
 
     for (const transformer of transformers2) {
 
       logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformModel2ndPass(modelArgs2);
+    }
+
+    // Then run certain transformers again, to clean up changes done by other transformers.
+    const again_modelArgs: OmniModelTransformerArgs = {
+      model: modelArgs2.model,
+      options: {...ctx.tsOptions, ...ctx.modelTransformOptions},
+    };
+
+    const again_transformers: OmniModelTransformer[] = [
+      new SimplifyUnnecessaryCompositionsModelTransformer(),
+    ];
+
+    for (const again_transformer of again_transformers) {
+
+      logger.debug(`Running again: ${again_transformer.constructor.name}`);
+      again_transformer.transformModel(again_modelArgs);
     }
 
     const astNode = new Ts.TsRootNode([]);
@@ -186,9 +207,7 @@ export const TypeScriptPlugin = createPlugin(
       new ToConstructorBodySuperCallAstTransformer(),
       new AddAdditionalPropertiesInterfaceAstTransformer(),
       new AddCommentsAstTransformer(),
-      // new AddSubTypeHintsAstTransformer(),
       new InnerTypeCompressionAstTransformer(),
-      // new AddThrowsForKnownMethodsAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
       new CompositionTypeScriptAstTransformer(),
@@ -197,12 +216,12 @@ export const TypeScriptPlugin = createPlugin(
       new RemoveSuperfluousGetterTypeScriptAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
       new ClassToInterfaceTypeScriptAstTransformer(),
+      new AddFinalToApplicableFieldsAstTransformer(),
       new InterfaceToTypeAliasTypeScriptAstTransformer(),
       new ToTypeScriptAstTransformer(),
       new SingleFileTypeScriptAstTransformer(),
       new RemoveEnumFieldsCodeAstTransformer(),
       new PackageResolverAstTransformer(),
-      // new SimplifyGenericsAstTransformer(),
       new ReorderMembersAstTransformer(),
       new FileHeaderTypeScriptAstTransformer(),
       new AddGeneratedCommentAstTransformer(),
@@ -215,7 +234,7 @@ export const TypeScriptPlugin = createPlugin(
     };
 
     const astArgs: TypeScriptAstTransformerArgs = {
-      model: modelArgs2.model,
+      model: again_modelArgs.model,
       externals: [],
       features: TYPESCRIPT_FEATURES,
       options: options,

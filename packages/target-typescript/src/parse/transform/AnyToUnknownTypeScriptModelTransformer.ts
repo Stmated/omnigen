@@ -1,6 +1,6 @@
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniTypeKind, ParserOptions, TargetOptions, UnknownKind} from '@omnigen/api';
-import {ANY_KIND, ProxyReducerOmni2} from '@omnigen/core';
+import {ANY_KIND, OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 import {TypeScriptOptions} from '../../options';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -25,6 +25,7 @@ export class AnyToUnknownTypeScriptModelTransformer implements OmniModel2ndPassT
           if (unknownKind === UnknownKind.ANY) {
             r.replace({
               ...reduced,
+              debug: OmniUtil.addDebug(reduced.debug, 'Replaced ANY with WILDCARD (unknown) since that is preferred to ANY'),
               unknownKind: UnknownKind.WILDCARD,
             });
           }
@@ -37,6 +38,7 @@ export class AnyToUnknownTypeScriptModelTransformer implements OmniModel2ndPassT
             if (oneIsUndefined && oneIsUnknown) {
 
               // `unknown | undefined` is better off as just `unknown` since it means both.
+              OmniUtil.addDebugTo(oneIsUnknown, 'Removed undefined from union with unknown since unknown already covers it');
               r.replace(oneIsUnknown);
             }
           }

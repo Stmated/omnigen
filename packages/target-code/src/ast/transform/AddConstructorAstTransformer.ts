@@ -38,7 +38,7 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
 
     for (const classDeclaration of classDeclarations) {
 
-      const requirements = AddConstructorAstTransformer.getConstructorRequirements(args.root, classDeclaration);
+      const requirements = AddConstructorAstTransformer.getConstructorRequirements(args.root, classDeclaration, args.options);
 
       if (requirements && (requirements.fields.length > 0 || requirements.parameters.length > 0 || requirements.expressions.length > 0)) {
 
@@ -207,6 +207,7 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
   private static getConstructorRequirements(
     root: CodeRootAstNode,
     node: Code.AbstractObjectDeclaration,
+    options: TargetOptions & CodeOptions,
   ): ConstructorRequirements | undefined {
 
     const constructors: Code.ConstructorDeclaration[] = [];
@@ -237,12 +238,25 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
     }
 
     const fieldIdsWithSetters = setters.map(setter => setter.fieldRef.targetId);
-    const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => m.kind === Code.ModifierKind.FINAL || m.kind === Code.ModifierKind.READONLY));
+    const fieldsWithFinal = fields.filter(field => {
+      if (field.property && options.immutable) {
+        // NOTE: Not optimal special handling. But we do not want custom fields that are added by custom logic to be considered eligible for constructor injection.
+        return true;
+      }
+      return field.modifiers.children.some(m => m.kind === Code.ModifierKind.FINAL || m.kind === Code.ModifierKind.READONLY)
+    });
+    // const fieldsWithFinal = fields.filter(field => field.modifiers.children.some(m => options.immutable || m.kind === Code.ModifierKind.FINAL || m.kind === Code.ModifierKind.READONLY));
     const fieldsWithoutSetters = fields.filter(field => !fieldIdsWithSetters.includes(field.id));
     const fieldsWithoutInitializer = fieldsWithoutSetters.filter(field => field.initializer === undefined);
 
     const immediateRequired = fields.filter(field => {
-      return fieldsWithoutInitializer.includes(field) && (fieldIdsWithSetters.includes(field.id) || fieldsWithFinal.includes(field));
+      if (fieldsWithoutInitializer.includes(field)) {
+        if (fieldIdsWithSetters.includes(field.id) || fieldsWithFinal.includes(field)) {
+          return true;
+        }
+      }
+
+      return false;
     });
 
     const supertypeArguments: Code.ConstructorParameter[] = [];

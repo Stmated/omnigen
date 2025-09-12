@@ -29,6 +29,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
 
   protected abstract createInterfaceName(innerEdgeName: string, options: TOpt): string;
 
+  //TODO: This should replace all other `type.unknownKind ?? args.options.unknownType` usage out there in the codebase, and likely moved to its own resolver that we can use.
   protected abstract getUnknownKind(type: OmniUnknownType, options: TOpt): UnknownKind;
 
   public abstract parse(fqn: string): ObjectName;

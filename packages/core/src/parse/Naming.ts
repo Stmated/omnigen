@@ -1,34 +1,37 @@
 import crypto from 'crypto';
-import {OmniType, OmniTypeKind, TypeName} from '@omnigen/api';
+import {OmniType, OmniTypeKind, TypeName, UnknownKind} from '@omnigen/api';
 import {NamePair} from './NamePair';
 import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
-import {Case, Util} from '../util';
+import {Case, isDefined, Util} from '../util';
 import {OmniUtil} from './OmniUtil';
 import fs from 'fs';
 import path from 'path';
 
-const PATTERN_NUMBERS_ONLY = /^[0-9_\-]+$/;
+const PATTERN_NUMBERS_ONLY = /^[0-9_.\-]+$/;
+const PATTERN_VERSION = /^v\d+(\.\d+){0,2}$|^\d+(\.\d+){1,2}$/;
 
-const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation) => {
+const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation, nameCase) => {
   if (keepPunctuation) {
     if (parts && parts.length > 0) {
       return `${parts.join('')}${Naming.prefixedPascalCase(name)}`;
     } else {
       return name;
     }
+  } else if (parts && parts.length > 0) {
+    return `${parts.map(it => Naming.prefixedPascalCase(it)).join('')}${Naming.prefixedPascalCase(name)}`;
   } else {
-    if (parts && parts.length > 0) {
-      return `${parts.map(it => Naming.prefixedPascalCase(it)).join('')}${Naming.prefixedPascalCase(name)}`;
-    } else {
-      return Naming.prefixedPascalCase(name);
-    }
+    return Naming.prefixedPascalCase(name);
   }
 };
 
 export class Naming {
 
-  public static unwrap(name: TypeName): string {
+  public static unwrap(name: TypeName | undefined): string {
+
+    if (!name) {
+      return '';
+    }
 
     const unwrapped = Naming.unwrapWithCallback(name, DEF_UNWRAP_CALLBACK);
     if (unwrapped === undefined) {
@@ -56,7 +59,7 @@ export class Naming {
         const lastNamePart = nameParts[nameParts.length - 1];
         for (let i = nameParts.length - 1; i >= 0; i--) {
           const namePartsSlice = (i == nameParts.length - 1) ? [] : nameParts.slice(i, -1).reverse();
-          const result = callback(lastNamePart, namePartsSlice);
+          const result = callback(lastNamePart, namePartsSlice, undefined, undefined);
           if (result) {
             return result;
           }
@@ -70,30 +73,22 @@ export class Naming {
     }
 
     if (Array.isArray(input)) {
-
-      if (input.length > 0) {
-        for (const entry of input) {
-          const result = Naming.unwrapWithCallback(entry, (name, parts) => {
-            return callback(name, parts);
-          });
-
-          if (result) {
-            return result;
-          }
+      for (const entry of input) {
+        const result = Naming.unwrapWithCallback(entry, callback);
+        if (result) {
+          return result;
         }
       }
+    } else if (typeof input === 'object') {
+      return Naming.unwrapWithCallback(input.name, (name, parts, nameKeep, nameCase) => {
+        return Naming.unwrapWithCallback(input.prefix ?? '', (prefix, _prefixParts, prefixKeep, prefixCase) => {
+          return Naming.unwrapWithCallback(input.suffix ?? '', (suffix, _suffixParts, suffixKeep, suffixCase) => {
 
-      return undefined;
-    }
+            const casedPrefix = (input.case === 'pascal') ? Naming.prefixedPascalCase(prefix) : prefix;
+            const casedName = (input.case === 'pascal') ? Naming.prefixedPascalCase(name) : name;
+            const casedSuffix = (input.case === 'pascal') ? Naming.prefixedPascalCase(suffix) : suffix;
 
-    if (typeof input === 'object' && !Array.isArray(input)) {
-      return Naming.unwrapWithCallback(input.name, (name, parts) => {
-        return Naming.unwrapWithCallback(input.prefix ?? '', (prefix, _prefixParts) => {
-          return Naming.unwrapWithCallback(input.suffix ?? '', (suffix, _suffixParts) => {
-
-            // NOTE: Do we ever need to care about the prefix and suffix parts?
-            const modifiedName = `${prefix}${name}${suffix}`;
-            return callback(modifiedName, parts);
+            return callback(`${casedPrefix}${casedName}${casedSuffix}`, parts, prefix ? prefixKeep : nameKeep, prefix ? prefixCase : nameCase);
           });
         });
       });
@@ -111,9 +106,9 @@ export class Naming {
     for (const pair of pairs) {
 
       const pairNames: string[] = [];
-      let foundName = Naming.unwrapWithCallback(pair.name, (name, parts) => {
+      let foundName = Naming.unwrapWithCallback(pair.name, (name, parts, keep, nameCase) => {
 
-        const resolvedName = callback(name, parts);
+        const resolvedName = callback(name, parts, keep, nameCase);
         if (!resolvedName) {
           return undefined;
         }
@@ -166,13 +161,30 @@ export class Naming {
     return result;
   }
 
-  public static simplify(name: TypeName): TypeName {
+  public static simplify(name: TypeName | undefined, depth = 0): TypeName | undefined {
 
-    if (Array.isArray(name) && name.length == 1) {
-      return Naming.simplify(name[0]);
-    } else {
+    if (!name) {
+      return undefined;
+    }
+
+    if (depth > 10) {
+      // We're in a loop, bail out. Perhaps fix the places that create such structures.
       return name;
     }
+
+    if (Array.isArray(name)) {
+      if (name.length == 0) {
+        return undefined;
+      } else if (name.length == 1) {
+        return Naming.simplify(name[0], depth + 1);
+      } else {
+        return name.flatMap(it => Naming.simplify(it, depth + 1)).filter(isDefined);
+      }
+    } else if (typeof name === 'object' && name.name && Object.keys(name).length == 1) {
+      return Naming.simplify(name.name, depth + 1);
+    }
+
+    return name;
   }
 
   public static prefixedPascalCase(name: string): string {
@@ -322,26 +334,17 @@ export class Naming {
       return Naming.getName(type.source);
     } else if (type.kind == OmniTypeKind.GENERIC_SOURCE) {
       return Naming.getName(type.of);
-    } else if (type.kind == OmniTypeKind.OBJECT) {
-      return type.name;
-    } else if (type.kind == OmniTypeKind.ENUM) {
-      return type.name;
     } else if (type.kind == OmniTypeKind.INTERFACE) {
       return type.name ?? Naming.getName(type.of);
-    } else if (OmniUtil.isPrimitive(type)) {
-      return type.name;
-    } else if (type.kind == OmniTypeKind.ARRAY) {
-      return type.name;
     } else if (type.kind == OmniTypeKind.DECORATING) {
       return Naming.getName(type.of);
+    } else if (OmniUtil.isNameable(type)) {
+      return type.name;
     } else {
       throw new Error(`Unknown type ${OmniUtil.describe(type)} to get name from, add it to Naming#getName`);
     }
   }
 
-  public static merge(a: TypeName, b: TypeName | undefined): TypeName;
-  public static merge(a: TypeName | undefined, b: TypeName): TypeName;
-  public static merge(a: TypeName, b: TypeName): TypeName;
   public static merge(a: TypeName | undefined, b: TypeName | undefined): TypeName | undefined {
 
     if (!a) {
@@ -422,7 +425,7 @@ export class Naming {
     return true;
   }
 
-  public static parse(value: string | undefined, stripLocalPath = true): TypeName | undefined {
+  public static parseToParts(value: string | undefined, stripLocalPath = true): { parts: string[], hashes: string[], protocol: string | undefined } | undefined {
 
     if (!value) {
       return undefined;
@@ -442,17 +445,38 @@ export class Naming {
       }
     }
 
-    const parts = base.split(/[/\\]/)
+    const unfilteredParts = base.split(/[/\\]/)
       .map(it => it.trim())
-      .filter(Boolean)
+      .filter(Boolean);
+
+    let protocol: string | undefined = undefined;
+    if (unfilteredParts.length > 0 && unfilteredParts[0].endsWith(':')) {
+      protocol = Util.trimAny(unfilteredParts[0], ':').toLowerCase();
+    }
+
+    const parts = unfilteredParts
+      .filter(it => it !== 'http:' && it !== 'https:')
       .map(it => Util.trimAny(it, ':'));
 
     const hashParts = !hash ? [] : hash.split(/[/\\]/)
       .map(it => it.trim())
       .filter(Boolean)
-      .map(it => Util.trimAny(it, ':'));
+      .map(it => Util.trimAny(it, ':'))
+      .filter(it => !it.startsWith('$'));
 
-    parts.push(...hashParts);
+    return {parts, hashes: hashParts, protocol};
+  }
+
+  public static parse(value: string | undefined, stripLocalPath = true): TypeName | undefined {
+
+    const parsedParts = Naming.parseToParts(value, stripLocalPath);
+    if (!parsedParts) {
+      return undefined;
+    }
+
+    const parts: string[] = [];
+    parts.push(...parsedParts.parts);
+    parts.push(...parsedParts.hashes);
 
     if (parts.length === 0) {
       return undefined;
@@ -461,32 +485,29 @@ export class Naming {
     const names: TypeName[] = [];
 
     const partsWithoutNonsense = parts.filter(it => !PATTERN_NUMBERS_ONLY.test(it));
+    const versions = parts.filter(it => PATTERN_VERSION.test(it));
+
     if (partsWithoutNonsense.length !== parts.length) {
-      this.addPartsToNames(partsWithoutNonsense, names);
+      this.addPartsToNames(partsWithoutNonsense, names, versions);
     }
 
-    this.addPartsToNames(parts, names);
+    this.addPartsToNames(parts, names, versions);
 
-    return names;
+    return Naming.simplify(names);
   }
 
-  private static addPartsToNames(parts: string[], names: TypeName[]) {
+  private static addPartsToNames(parts: string[], names: TypeName[], suffixes: TypeName[]) {
 
     for (let i = 0; i < parts.length; i++) {
       const slice: TypeName[] = parts.slice(parts.length - (i + 1), parts.length);
-      const name = slice.reduce((p, c) => p ? {prefix: p, name: c} : c);
-      if (!Naming.isSame(names, name, 0)) {
-        names.push(name);
+      const reduced = slice.reduce((p, c) => p ? {prefix: p, name: c} : c);
+      const suffixed: TypeName[] = (suffixes.length > 0) ? suffixes.map(suffix => [reduced, {name: reduced, suffix} satisfies TypeName]) : [reduced];
+
+      for (const name of suffixed) {
+        if (!Naming.isSame(names, name, 0)) {
+          names.push(name);
+        }
       }
     }
-  }
-
-  /**
-   * Sorts a name, so that any name options are in an order of being more probable to be a nice-looking name.
-   * For example: some $id or $schema or similar meta-keys in some contracts contain a version number like `SomeService/2` -- then we likely wouldn't want `2` as the name.
-   */
-  public static sort(names: TypeName): TypeName {
-
-    return names;
   }
 }

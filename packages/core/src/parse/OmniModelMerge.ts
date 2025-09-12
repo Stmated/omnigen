@@ -12,6 +12,7 @@ import {OmniUtil} from './OmniUtil.js';
 import {TypeOwner} from '@omnigen/api';
 import {ProxyReducerOmni2} from '../reducer2/ProxyReducerOmni2.ts';
 import {ANY_KIND} from '../reducer2/types.ts';
+import {Naming} from './Naming.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -196,7 +197,7 @@ export class OmniModelMerge {
         model: common,
         of: replacement.to,
         name: {
-          name: OmniUtil.getTypeName(replacement.to) || OmniUtil.getVirtualTypeName(replacement.to),
+          name: Naming.getName(replacement.to) || OmniUtil.getVirtualTypeName(replacement.to),
         },
       };
 

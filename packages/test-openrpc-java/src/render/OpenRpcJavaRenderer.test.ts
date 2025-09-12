@@ -186,6 +186,7 @@ describe('Java Rendering', () => {
       javaOptions: {
         singleFile: true,
         singleFileName: 'description-inheritance',
+        immutable: true,
       },
     });
 

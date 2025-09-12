@@ -37,6 +37,7 @@ export const ZodCodeOptions = ZodTargetOptions.extend({
 
   commentsOnTypes: ZodCoercedBoolean.default('true'),
   commentsOnFields: ZodCoercedBoolean.default('false'),
+  defaultValueCommentsOnFields: ZodCoercedBoolean.default('true'),
   commentsOnGetters: ZodCoercedBoolean.default('true'),
   commentsOnConstructors: ZodCoercedBoolean.default('true'),
   includeExampleCommentsMode: z.enum(getEnumValues(IncludeExampleCommentsMode)).default(IncludeExampleCommentsMode.ALWAYS),

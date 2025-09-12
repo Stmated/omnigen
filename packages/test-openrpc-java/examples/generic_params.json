@@ -133,7 +133,7 @@
           "result": {"type": "string"}
         },
         "required": [
-          "orderId",
+          "orderid",
           "result"
         ],
         "type": "object"

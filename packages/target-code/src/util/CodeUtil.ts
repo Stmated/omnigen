@@ -12,6 +12,7 @@ import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} 
 import * as Code from '../ast/CodeAst';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode';
 import {FreeTextUtils} from './FreeTextUtils';
+import {FriendlyFreeTextIn} from '../ast/FreeText.ts';
 
 export class CodeUtil {
 
@@ -217,7 +218,7 @@ export class CodeUtil {
     return interfaces;
   }
 
-  public static addComment(existing: Code.Comment | undefined, text: string): Code.Comment {
+  public static addComment(existing: Code.Comment | undefined, text: FriendlyFreeTextIn): Code.Comment {
     return new Code.Comment(FreeTextUtils.add(existing?.text, text), existing?.kind);
   }
 }

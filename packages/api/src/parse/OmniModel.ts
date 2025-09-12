@@ -262,7 +262,7 @@ export interface OmniBaseType<T extends OmniTypeKind> {
    */
   summary?: string | undefined;
 
-  debug?: string | string[] | undefined;
+  debug?: DebugValue;
 
   examples?: OmniExample<unknown>[] | undefined;
 }
@@ -468,6 +468,7 @@ export type OmniPrimitiveTangibleKind = Exclude<OmniPrimitiveKinds, typeof OmniT
 
 export interface OmniItemBase<K extends OmniItemKind> {
   kind: K;
+  debug?: DebugValue;
 }
 
 export interface OmniEnumMember extends OmniItemBase<typeof OmniItemKind.ENUM_MEMBER> {

@@ -6,6 +6,7 @@ import {
   OmniLinkMapping,
   OmniModel,
   OmniOutput,
+  OmniPrimitiveType,
   OmniProperty,
   OmniPropertyOwner,
   OmniType,
@@ -13,7 +14,7 @@ import {
   PackageOptions,
   TargetOptions,
 } from '@omnigen/api';
-import {ANY_KIND, OmniUtil, ProxyReducerOmni2, Util, Visitor} from '@omnigen/core';
+import {isDefined, Naming, OmniUtil, ProxyReducerOmni2, Util, Visitor} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import * as Code from '../Code';
 import * as FreeText from '../FreeText';
@@ -47,6 +48,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
         // Add comment if enabled on fields or on getters/accessors.
         // It is up to any transformer which adds the accessors for the field to remove the comment from the field if it should not stay there.
         if (args.options.commentsOnFields) {
+
           if (n.property) {
             const commentsText = AddCommentsAstTransformer.getCommentsList(args.root, n.property, args.model, args.options);
             if (commentsText) {
@@ -57,6 +59,13 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
           const ownerCommentsText = AddCommentsAstTransformer.getOwnerComments(n.property?.type ?? n.type.omniType, args, false);
           if (ownerCommentsText) {
             n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, ownerCommentsText), n.comments?.kind);
+          }
+        }
+
+        if (args.options.defaultValueCommentsOnFields) {
+          const defaultValues = this.mapPrimitiveTypes(n.type.omniType, it => it.value);
+          if (defaultValues) {
+            n.comments = new Code.Comment(FreeTextUtils.add(n.comments?.text, defaultValues.map(v => new FreeText.FreeTextDefault(JSON.stringify(v)))), n.comments?.kind);
           }
         }
 
@@ -95,6 +104,32 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
     }));
   }
 
+  private mapPrimitiveTypes<R>(type: OmniType, mapper: ((t: OmniPrimitiveType) => R)): undefined | R[] {
+
+    if (OmniUtil.isComposition(type)) {
+
+      let allValues: R[] | undefined = undefined;
+      for (const t of type.types) {
+        const childValues = this.mapPrimitiveTypes(t, mapper);
+        if (childValues) {
+          if (!allValues) {
+            allValues = [];
+          }
+
+          allValues.push(...childValues.filter(isDefined));
+        }
+      }
+
+      return allValues;
+    }
+
+    if (OmniUtil.isPrimitive(type) && type.literal === false && type.value !== undefined) {
+      return [mapper(type)];
+    }
+
+    return undefined;
+  }
+
   public static getOwnerComments(
     type: OmniType,
     args: AstTransformerArguments<Code.CodeRootAstNode, PackageOptions & TargetOptions & CodeOptions>,
@@ -113,6 +148,21 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
   ): FreeText.FriendlyFreeTextIn | undefined {
 
     const comments: FreeText.FriendlyFreeTextIn[] = [];
+
+    if (OmniUtil.isComposition(type)) {
+
+      for (const child of type.types) {
+        const childComments = AddCommentsAstTransformer.getCommentsForType(root, child, model, options, secondary);
+        if (childComments) {
+          const childTypeName = Naming.getNameString(child);
+          if (childTypeName) {
+            comments.push(new FreeText.FreeTextDefinition(childTypeName, FreeTextUtils.extract(childComments)));
+          } else {
+            comments.push(childComments);
+          }
+        }
+      }
+    }
 
     let exampleIndex = 0;
     const handledResponse: OmniOutput[] = [];
@@ -478,7 +528,7 @@ export class AddCommentsAstTransformer implements AstTransformer<Code.CodeRootAs
       AddCommentsAstTransformer.addComment(new FreeText.FreeTextLine('@deprecated'), comments);
     }
 
-    if (property.type.kind != OmniTypeKind.OBJECT) {
+    if (property.type.kind !== OmniTypeKind.OBJECT) {
 
       // If the type is not an object, then we will never create a class just for its sake.
       // So we should propagate all the examples and all other data we can find about it, to the property's comments.

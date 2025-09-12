@@ -2,7 +2,7 @@ import {OmniTypeKind, PackageOptions, Renderer, TargetOptions} from '@omnigen/ap
 import {TypeScriptOptions} from '../options';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core';
-import {Code, CodeRenderContext, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, FreeTextUtils, render} from '@omnigen/target-code';
+import {Code, CodeRenderContext, CodeRendererOptions, CodeUtil, createCodeRenderer, DefaultCodeRendererOptions, FreeTextUtils, render} from '@omnigen/target-code';
 import {Ts} from '../ast';
 import {CommentKind} from '@omnigen/target-code/ast';
 
@@ -64,23 +64,23 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
       }
     },
 
-    visitField: (node, visitor) => {
+    visitField: (n, v) => {
 
-      const comments = node.comments ? `${render(node.comments, visitor)}\n` : '';
-      const annotations = node.annotations ? `${render(node.annotations, visitor)}\n` : '';
-      const modifiers = render(node.modifiers, visitor);
-      const typeName = render(node.type, visitor);
-      const initializer = node.initializer ? ` = ${render(node.initializer, visitor)}` : '';
-      const identifier = render(node.identifier, visitor);
+      const renderedComments = n.comments ? `${render(n.comments, v)}\n` : '';
+      const annotations = n.annotations ? `${render(n.annotations, v)}\n` : '';
+      const modifiers = render(n.modifiers, v);
+      const typeName = render(n.type, v);
+      const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
+      const identifier = render(n.identifier, v);
 
-      const isOptional = (node.property && !node.property.required);
-      const isPatternName = (node.property && OmniUtil.isPatternPropertyName(node.property.name));
+      const isOptional = (n.property && !n.property.required);
+      const isPatternName = (n.property && OmniUtil.isPatternPropertyName(n.property.name));
 
       const optional = (isOptional && !isPatternName) ? '?' : '';
       let key: string;
-      if (node.property && isPatternName) {
+      if (n.property && isPatternName) {
 
-        const pattern = OmniUtil.getPropertyNamePattern(node.property.name);
+        const pattern = OmniUtil.getPropertyNamePattern(n.property.name);
 
         let keyComment = '';
         if (pattern && pattern !== '.*') {
@@ -93,7 +93,7 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
       }
 
       return [
-        comments,
+        renderedComments,
         annotations,
         `${modifiers ? `${modifiers} ` : ''}${key}${optional}: ${typeName}${initializer};\n`,
       ];
@@ -148,7 +148,12 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
     visitGetter: (n, v) => {
       const comments = n.comments ? render(n.comments, v) : '';
-      return `${comments}${render(n.modifiers, v)} get ${n.identifier.visit(v)}() { return ${n.target.visit(v)}; }\n`.trimStart();
+      const signature = `${comments}${render(n.modifiers, v)} get ${n.identifier.visit(v)}()`;
+      if (n.target) {
+        return `${signature} { return ${n.target.visit(v)}; }\n`.trimStart();
+      } else {
+        return `${signature};\n`.trimStart();
+      }
     },
 
     visitSetter: (n, v) => {
@@ -269,7 +274,20 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
           throw new Error(`Unsupported composition kind '${n.omniType.kind}' for TS composition node`);
       }
 
-      return n.typeNodes.map(it => render(it, v)).join(` ${separator} `);
+      return n.typeNodes
+        .map(it => {
+
+          const content = render(it, v);
+          if (it instanceof Ts.CompositionType) {
+
+            // If we have nested compositions, then we wrap with parenthesis to differentiate.
+            return `(${content})`;
+          } else {
+            return content;
+          }
+
+        })
+        .join(` ${separator} `);
     },
 
     visitTypeAliasDeclaration: (n, v) => {
@@ -277,7 +295,11 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
       const modifiers = n.modifiers ? n.modifiers.visit(v) : `let`;
       let comments = n.comments ? `${n.comments.visit(v)}\n` : '';
       if (options.debug && n.omniType.debug) {
-        const tempCommentNode = new Code.Comment(FreeTextUtils.fromFriendlyFreeText(n.omniType.debug), CommentKind.MULTI);
+
+        const paragraph = new Code.FreeTexts(...OmniUtil.debugToStrings(n.omniType.debug, v => new Code.FreeTextLine(v)));
+        const tempCommentNode = new Code.Comment(paragraph, CommentKind.MULTI);
+
+        //const tempCommentNode = new Code.Comment(FreeTextUtils.fromFriendlyFreeText(n.omniType.debug), CommentKind.MULTI);
         comments += `${tempCommentNode.visit(v)}\n`;
       }
       return `${comments}${modifiers} type ${n.name.visit(v)} = ${n.of.visit(v)};\n`;

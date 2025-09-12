@@ -62,6 +62,7 @@ namespace generated.omnigen
         SPECIES_B,
     }
 
+    /// TagOrSpeciesOrString4: An unknown freetext value
     [JsonConverter(typeof(WrapperConverter<TagOrSpeciesOrString>), "Value")]
     public class TagOrSpeciesOrString
     {

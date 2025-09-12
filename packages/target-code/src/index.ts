@@ -21,6 +21,7 @@ export * from './ast/transform/RemoveEnumFieldsCodeAstTransformer';
 export * from './ast/transform/MethodToGetterCodeAstTransformer';
 export * from './ast/transform/AddCompositionMembersCodeAstTransformer';
 export * from './ast/transform/SimplifyAndCleanAstTransformer';
+export * from './ast/transform/AddFinalToApplicableFieldsAstTransformer';
 export * from './ast/transform/PrettyCodeAstTransformer';
 
 export * from './visitor/CodeVisitor';

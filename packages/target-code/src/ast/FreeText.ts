@@ -168,6 +168,42 @@ export class FreeTextExample extends AbstractFreeText {
   }
 }
 
+export class FreeTextDefault extends AbstractFreeText {
+  readonly content: AnyFreeText;
+
+  constructor(content: FriendlyFreeTextIn) {
+    super();
+    this.content = FreeTextUtils.fromFriendlyFreeText(content);
+  }
+
+  visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextDefault(this, visitor);
+  }
+
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
+    return reducer.reduceFreeTextDefault(this, reducer);
+  }
+}
+
+export class FreeTextDefinition extends AbstractFreeText {
+  readonly title: AnyFreeText;
+  readonly content: AnyFreeText;
+
+  constructor(title: FriendlyFreeTextIn, content: FriendlyFreeTextIn) {
+    super();
+    this.title = FreeTextUtils.fromFriendlyFreeText(title);
+    this.content = FreeTextUtils.fromFriendlyFreeText(content);
+  }
+
+  visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextDefinition(this, visitor);
+  }
+
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
+    return reducer.reduceFreeTextDefinition(this, reducer);
+  }
+}
+
 export class FreeTextCode extends AbstractFreeText {
   readonly content: AnyFreeText;
 

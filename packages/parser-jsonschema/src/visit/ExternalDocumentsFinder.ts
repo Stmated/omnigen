@@ -2,9 +2,7 @@ import pointer, {JsonObject} from 'json-pointer';
 import {getShallowPayloadString, ProtocolHandler} from '@omnigen/core';
 import {DocumentStore, JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
 import {JSONSchema9} from '../definitions';
-import {LoggerFactory} from '@omnigen/core-log';
-
-const logger = LoggerFactory.create(import.meta.url);
+import {ToSingle} from './helpers.ts';
 
 export type WithoutRef<T> = T extends { $ref: string }
   ? Exclude<T, { $ref: string }>
@@ -73,21 +71,23 @@ export class ExternalDocumentsFinder {
         let maxRecursion = 10;
         while (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
 
-          // TODO: All this code does not really belong here -- it should be somewhere else, with code that specifically one deals with the exploding of $ref (inline or not inline)
+          // TODO: All this code does not really belong here -- it should be somewhere else, with code that specifically only deals with the exploding of $ref (inline or not inline)
           if (maxRecursion-- <= 0) {
             throw new Error(`Encountered too much recursion when resolving $ref: ${v.$ref}`);
           }
 
           const resolved = this.resolveRef(v.$ref, origin);
           const keys = Object.keys(v);
-          if (keys.length === 2 && '$id' in v) {
+          const actualContentKeys = keys.filter(it => it != '$ref' && it != '$id' || !it.startsWith('x-omnigen-'));
+          if (actualContentKeys.length === 0) {
 
-            // This object only contains $id and $ref, which makes it quite useless. Replace with the resolved.
+            // This object only contains $id and $ref (and stuff), which makes it quite useless. Replace with the resolved.
             v = resolved;
           } else if (keys.length > 1) {
 
             // TODO: This is a hack to make types not be removed because of being inline by code that thinks a schema-inline allOf item should be a hidden/unnamed type.
-            resolved['x-inline'] = false;
+            resolved['x-omnigen-inline'] = false;
+            resolved['x-omnigen-name-hint'] = v.$ref;
 
             delete v.$ref;
             if ('allOf' in v) {

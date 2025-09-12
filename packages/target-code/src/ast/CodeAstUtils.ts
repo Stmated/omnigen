@@ -10,12 +10,12 @@ import {
   OmniInterfaceOrObjectType,
   OmniInterfaceType,
   OmniObjectType,
-  OmniProperty,
+  OmniProperty, OmniSuperTypeCapableType,
   OmniType,
   OmniTypeKind,
   PackageOptions,
   Reference,
-  RootAstNode,
+  RootAstNode, TargetFeatures,
   TargetOptions,
   TypeName,
   TypeNode,
@@ -169,7 +169,8 @@ export class CodeAstUtils implements AstTargetFunctions {
     root: RootAstNode,
     type: OmniInterfaceType,
     options: TargetOptions & CodeOptions,
-    classNameMapper: (t: typeof type, o: typeof options) => string,
+    features: TargetFeatures,
+    classNameMapper: (t: OmniInterfaceType<OmniSuperTypeCapableType>, o: TargetOptions & CodeOptions) => string,
   ) {
 
     const declaration = new Code.InterfaceDeclaration(
@@ -178,12 +179,17 @@ export class CodeAstUtils implements AstTargetFunctions {
       new Code.Block(),
     );
 
-    CodeAstUtils.addInterfaceProperties(root, type, declaration.body);
+    CodeAstUtils.addInterfaceProperties(root, type, declaration.body, features);
 
     return declaration;
   }
 
-  public static addInterfaceProperties(root: RootAstNode, type: OmniInterfaceOrObjectType, body: Code.Block): void {
+  public static addInterfaceProperties(
+    root: RootAstNode,
+    type: OmniInterfaceOrObjectType,
+    body: Code.Block,
+    features: TargetFeatures,
+  ): void {
 
     const interfaceLikeTarget = (type.kind === OmniTypeKind.INTERFACE) ? type.of : type;
 
@@ -195,22 +201,35 @@ export class CodeAstUtils implements AstTargetFunctions {
         continue;
       }
 
-      // TODO: The accessor name should be based on the PROPERTY NAME
-      //        Right now since real
-
       const identifier = new Code.Identifier(accessorName);
       const getterIdentifier = new Code.GetterIdentifier(identifier, property.type);
 
-      body.children.push(
-        new Code.MethodDeclaration(
-          new Code.MethodDeclarationSignature(
-            getterIdentifier,
-            new Code.EdgeType(property.type),
-            undefined,
-            new Code.ModifierList(),
+      if (features.interfaceWithFields) {
+
+        const field = new Code.Field(
+          new Code.EdgeType(property.type),
+          identifier,
+          new Code.ModifierList(),
+          undefined,
+          undefined,
+        );
+
+        field.property = property;
+
+        body.children.push(field);
+      } else {
+
+        body.children.push(
+          new Code.MethodDeclaration(
+            new Code.MethodDeclarationSignature(
+              getterIdentifier,
+              new Code.EdgeType(property.type),
+              undefined,
+              new Code.ModifierList(),
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -303,9 +322,9 @@ export class CodeAstUtils implements AstTargetFunctions {
 
     field.property = args.property;
 
-    if (args.property.readOnly === true || (args.property.readOnly === undefined && args.options.immutable) || OmniUtil.isNull(args.property.type)) {
-      field.modifiers.children.push(new Code.Modifier(Code.ModifierKind.FINAL));
-    }
+    // if (args.property.readOnly === true || (args.property.readOnly === undefined && args.options.immutable) || OmniUtil.isNull(args.property.type)) {
+    //   field.modifiers.children.push(new Code.Modifier(Code.ModifierKind.FINAL));
+    // }
 
     args.body.children.push(field);
     return field;
@@ -315,6 +334,7 @@ export class CodeAstUtils implements AstTargetFunctions {
     objectType: OmniObjectType,
     root: CodeRootAstNode,
     options: PackageOptions & TargetOptions & CodeOptions,
+    features: TargetFeatures,
   ): OmniInterfaceType {
 
     const objectDeclarations: Code.AbstractObjectDeclaration[] = [];
@@ -352,7 +372,7 @@ export class CodeAstUtils implements AstTargetFunctions {
       const interfaceName = nameResolver.build({name: name, with: NameParts.NAME, use: TypeUseKind.DECLARED});
       const packageName = nameResolver.build({name: name, with: NameParts.NAMESPACE});
 
-      const interfaceDeclaration = CodeAstUtils.createInterfaceWithBody(root, interfaceType, options, () => interfaceName);
+      const interfaceDeclaration = CodeAstUtils.createInterfaceWithBody(root, interfaceType, options, features, () => interfaceName);
 
       root.children.push(new Code.CompilationUnit(
         new Code.PackageDeclaration(packageName),

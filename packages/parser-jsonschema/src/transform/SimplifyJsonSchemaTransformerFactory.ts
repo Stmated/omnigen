@@ -1,40 +1,45 @@
-import {JsonSchema9Visitor} from '../visit/JsonSchema9Visitor';
-import {DefaultJsonSchema9Visitor} from '../visit/DefaultJsonSchema9Visitor';
+import {JsonSchema9Visitor} from '../visit';
 import {JsonSchema9VisitorFactory} from '../visit/JsonSchema9VisitorFactory';
+import {JSONSchema9} from '../definitions';
 
-const visitor: JsonSchema9Visitor = {
-  ...DefaultJsonSchema9Visitor,
-  schema: (v, visitor) => {
+export class SimplifyJsonSchemaTransformerFactory<S extends JSONSchema9, V extends JsonSchema9Visitor<S>> implements JsonSchema9VisitorFactory<S, V> {
 
-    if (v.oneOf && v.oneOf.length == 1) {
+  private readonly _baseVisitor: V;
 
-      // Weird way of writing the schema, but if it's just 1 then it's same as "allOf"
-      if (v.allOf) {
-        v.allOf.push(v.oneOf[0]);
-      } else {
-        v.allOf = v.oneOf;
-      }
+  constructor(baseVisitor: V) {
+    this._baseVisitor = baseVisitor
+  }
 
-      v.oneOf = undefined;
-    }
+  create(): V {
+    return {
+      ...this._baseVisitor,
+      schema: (v, visitor) => {
 
-    // if (v.enum && v.enum.length == 1) {
-    //
-    //   if (v.const !== undefined && v.const != v.enum[0]) {
-    //     throw new Error(`Cannot have a one-item enum and const set at the same time unless they are equal`);
-    //   } else {
-    //     v.const = v.enum[0];
-    //     delete v.enum;
-    //   }
-    // }
+        if (v.oneOf && v.oneOf.length == 1) {
 
-    return DefaultJsonSchema9Visitor.schema(v, visitor);
-  },
-};
+          // Weird way of writing the schema, but if it's just 1 then it's same as "allOf"
+          if (v.allOf) {
+            v.allOf.push(v.oneOf[0]);
+          } else {
+            v.allOf = v.oneOf;
+          }
 
-export class SimplifyJsonSchemaTransformerFactory implements JsonSchema9VisitorFactory {
+          delete v.oneOf;
+          //v.oneOf = undefined;
+        }
 
-  create(): JsonSchema9Visitor {
-    return visitor;
+        // if (v.enum && v.enum.length == 1) {
+        //
+        //   if (v.const !== undefined && v.const != v.enum[0]) {
+        //     throw new Error(`Cannot have a one-item enum and const set at the same time unless they are equal`);
+        //   } else {
+        //     v.const = v.enum[0];
+        //     delete v.enum;
+        //   }
+        // }
+
+        return this._baseVisitor.schema(v, visitor);
+      },
+    };
   }
 }

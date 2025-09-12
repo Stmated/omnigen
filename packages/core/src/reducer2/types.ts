@@ -24,7 +24,13 @@ export interface ProxyReducerInterface<N extends object, D extends keyof N, O, O
 }
 
 export interface StatefulProxyReducerInterface<N extends object, FN extends N, D extends keyof N, O, Opt extends ReducerOpt2, S extends ReadonlyArray<Spec2<N, D, O, Opt>>> extends ProxyReducerInterface<N, D, O, Opt, S> {
+  /**
+   * `#yieldBase` is synonymous with `#callBase` but returns the reduced value.
+   */
   yieldBase(): YieldRet<FN, D, O, Opt>;
+  /**
+   * `#callBase` is synonymous with `#yieldBase` but returns void.
+   */
   callBase(): void;
 
   getId(node: N): number;
@@ -46,6 +52,7 @@ export interface MutableProxyReducerInterface<N extends object, FN extends N, D 
    * TODO: Need a way to say that we do not want to persist, and make any parent spec `persist` into no-op -- so we can mark that it should be separately replaced for each call-site
    */
   persist(): this;
+  // persistSome(original: N, replacement: N): this;
 
   replace(replacement: ResolvedRet<FN, D, O>): this;
 

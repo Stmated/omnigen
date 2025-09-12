@@ -1,6 +1,5 @@
 import {Naming} from './Naming';
 import {test} from 'vitest';
-import {OmniObjectType, OmniTypeKind} from '@omnigen/api';
 
 const obj1 = {};
 const obj2 = {};

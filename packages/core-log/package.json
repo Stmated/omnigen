@@ -14,7 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "chalk": "^5.4.1",
+    "chalk": "^5.5.0",
     "color-space": "^2.3.2",
     "debug": "^4.4.1",
     "pretty-error": "^4.0.0",

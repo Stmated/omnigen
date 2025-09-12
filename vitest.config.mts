@@ -1,5 +1,11 @@
 import {defineConfig, ViteUserConfig} from 'vitest/config';
 
+import {fileURLToPath} from 'url';
+import {dirname} from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const isGithub = process.env.GITHUB_ACTIONS === 'true';
 const isCI = process.env.CI === 'true' || isGithub;
 const isReport = process.env.REPORT === 'true';
@@ -19,6 +25,7 @@ if (isGithub) {
 
 export default defineConfig({
   test: {
+    root: __dirname,
     projects: [
       'packages/*',
       'apps/*',

@@ -565,4 +565,113 @@ describe('struct-recursive', () => {
     ctx.expect(reduced?.bar?.foo?.x).toEqual(3);
     ctx.expect(reduced?.bar?.foo?.y).toEqual(22);
   });
+
+  // TODO: Create test case that creates the cycle of the petstore!
+
+  interface Base<K extends string> {
+    kind: K;
+  }
+
+  interface Relationship extends Base<'relationship'> {
+    readonly source: Person;
+    readonly target: Person;
+    readonly type: 'parent' | 'child' | 'sibling' | 'partner';
+  }
+
+  interface Person extends Base<'person'> {
+    readonly relationships: Relationship[];
+    readonly name: string;
+  }
+
+  interface Family extends Base<'family'> {
+    readonly people: Person[];
+    readonly name: string;
+  }
+
+  type PeopleTypes = Person | Relationship | Family;
+
+  const peopleReducerBaseBuilder = ProxyReducer2.builder<PeopleTypes, {}>().discriminator('kind').options({immutable: false});
+
+  const david: Person = {
+    kind: 'person',
+    name: 'David',
+    relationships: [],
+  };
+
+  const mona: Person = {
+    kind: 'person',
+    name: 'Mona',
+    relationships: [],
+  };
+
+  const chad: Person = {
+    kind: 'person',
+    name: 'Chad',
+    relationships: [],
+  };
+
+  const chiara: Person = {
+    kind: 'person',
+    name: 'Chiara',
+    relationships: [],
+  };
+
+  const family: Family = {
+    kind: 'family',
+    people: [david, mona, chad, chiara],
+    name: 'Borkbork',
+  }
+
+  david.relationships.push({kind: 'relationship', source: david, target: mona, type: 'partner'});
+  mona.relationships.push({kind: 'relationship', source: mona, target: david, type: 'partner'});
+
+  david.relationships.push({kind: 'relationship', source: david, target: chad, type: 'child'});
+  david.relationships.push({kind: 'relationship', source: david, target: chiara, type: 'child'});
+
+  mona.relationships.push({kind: 'relationship', source: mona, target: chad, type: 'child'});
+  mona.relationships.push({kind: 'relationship', source: mona, target: chiara, type: 'child'});
+
+  chad.relationships.push({kind: 'relationship', source: chad, target: david, type: 'parent'});
+  chad.relationships.push({kind: 'relationship', source: chad, target: mona, type: 'parent'});
+
+  chiara.relationships.push({kind: 'relationship', source: chiara, target: david, type: 'parent'});
+  chiara.relationships.push({kind: 'relationship', source: chiara, target: mona, type: 'parent'});
+
+  chiara.relationships.push({kind: 'relationship', source: chiara, target: chad, type: 'sibling'});
+
+  chad.relationships.push({kind: 'relationship', source: chad, target: chiara, type: 'sibling'});
+
+  const peopleReducerBuilder = peopleReducerBaseBuilder.spec({
+    person: (v, r) => {
+      if (v.relationships) r.put('relationships', v.relationships.map(it => r.reduce(it)).filter(isDefined));
+      r.put('name', `changed-${v.name}`);
+      r.persist().yieldBase();
+    },
+    relationship: (v, r) => {
+      r.put('source', r.reduce(v.source));
+      r.put('target', r.reduce(v.target));
+      r.yieldBase();
+    },
+    family: (v, r) => {
+      if (v.people) r.put('people', v.people.map(it => r.reduce(it)).filter(isDefined));
+      r.put('name', 'Borkbork-changed');
+      r.yieldBase();
+    },
+  });
+
+  test('recursive-family', ctx => {
+
+    const reducer = peopleReducerBuilder.build({});
+    const reduced = reducer.reduce(family);
+
+    ctx.expect(reduced).not.toBe(family);
+    // ctx.expect(reduced?.foo?.common).toEqual('bye1');
+    // ctx.expect(reduced?.foo?.x).toEqual(2);
+    // ctx.expect(reduced?.foo?.y).toEqual(11);
+    // ctx.expect(reduced?.foo?.baz?.v).toEqual(1);
+    // ctx.expect(reduced?.bar?.foo?.common).toEqual('bye2');
+    // ctx.expect(reduced?.bar?.foo?.foo?.common).toEqual('bye1');
+    // ctx.expect(reduced?.bar?.foo?.x).toEqual(3);
+    // ctx.expect(reduced?.bar?.foo?.y).toEqual(22);
+  });
 });

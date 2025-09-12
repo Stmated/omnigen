@@ -1,23 +1,3 @@
-export type ArrayableSchema = Schema | readonly [Schema, ...ReadonlyArray<Schema>];
-
-export interface Definitions {
-  readonly [key: string]: Schema | undefined;
-}
-
-export interface Dependencies {
-  readonly [key: string]: DependenciesAdditional | undefined;
-}
-
-export type DependenciesAdditional = Schema | ReadonlyArray<string>;
-
-export interface PatternProperties {
-  readonly [key: string]: Schema | undefined;
-}
-
-export interface Properties {
-  readonly [key: string]: Schema | undefined;
-}
-
 export type Schema = SchemaObject | boolean;
 
 export interface SchemaObject {
@@ -34,8 +14,8 @@ export interface SchemaObject {
   readonly contentEncoding?: string | undefined;
   readonly contentMediaType?: string | undefined;
   readonly default?: any;
-  readonly definitions?: Definitions | undefined;
-  readonly dependencies?: Dependencies | undefined;
+  readonly definitions?: SchemaObjectDefinitions | undefined;
+  readonly dependencies?: SchemaObjectDependencies | undefined;
   readonly description?: string | undefined;
   readonly else?: Schema | undefined;
   readonly enum?: readonly [any, ...ReadonlyArray<any>] | undefined;
@@ -44,7 +24,7 @@ export interface SchemaObject {
   readonly exclusiveMinimum?: number | undefined;
   readonly format?: string | undefined;
   readonly if?: Schema | undefined;
-  readonly items?: ArrayableSchema | undefined;
+  readonly items?: (Schema | readonly [Schema, ...ReadonlyArray<Schema>]) | undefined;
   readonly maximum?: number | undefined;
   readonly maxItems?: number | undefined;
   readonly maxLength?: number | undefined;
@@ -57,16 +37,32 @@ export interface SchemaObject {
   readonly not?: Schema | undefined;
   readonly oneOf?: readonly [Schema, ...ReadonlyArray<Schema>] | undefined;
   readonly pattern?: string | undefined;
-  readonly patternProperties?: PatternProperties | undefined;
-  readonly properties?: Properties | undefined;
+  readonly patternProperties?: SchemaObjectPatternProperties | undefined;
+  readonly properties?: SchemaObjectProperties | undefined;
   readonly propertyNames?: Schema | undefined;
   readonly readOnly?: boolean | undefined;
   readonly required?: ReadonlyArray<string> | undefined;
   readonly then?: Schema | undefined;
   readonly title?: string | undefined;
-  readonly type?: Type | undefined;
+  readonly type?: (SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>]) | undefined;
   readonly uniqueItems?: boolean | undefined;
   readonly writeOnly?: boolean | undefined;
+}
+
+export interface SchemaObjectDefinitions {
+  readonly [key: string]: Schema | undefined;
+}
+
+export interface SchemaObjectDependencies {
+  readonly [key: string]: (Schema | ReadonlyArray<string>) | undefined;
+}
+
+export interface SchemaObjectPatternProperties {
+  readonly [key: string]: Schema | undefined;
+}
+
+export interface SchemaObjectProperties {
+  readonly [key: string]: Schema | undefined;
 }
 
 export enum SimpleTypes {
@@ -78,5 +74,3 @@ export enum SimpleTypes {
   OBJECT = 'object',
   STRING = 'string',
 }
-
-export type Type = SimpleTypes | readonly [SimpleTypes, ...ReadonlyArray<SimpleTypes>];

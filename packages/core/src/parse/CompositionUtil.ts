@@ -3,6 +3,7 @@ import {
   OmniType,
   OmniTypeKind,
 } from '@omnigen/api';
+import {OmniUtil} from './OmniUtil.ts';
 
 export class CompositionUtil {
 
@@ -25,6 +26,7 @@ export class CompositionUtil {
         ? <OmniCompositionType>{
           kind: OmniTypeKind.UNION,
           types: compositionsAnyOfOr,
+          // inline: compositionsAnyOfOr.every(it => it.inline),
         }
         : compositionsAnyOfOr[0];
 
@@ -34,6 +36,7 @@ export class CompositionUtil {
         composition = {
           kind: OmniTypeKind.INTERSECTION,
           types: [composition, or],
+          // inline: compositionsAnyOfOr.every(it => it.inline),
         } satisfies OmniCompositionType;
       }
     }
@@ -45,6 +48,7 @@ export class CompositionUtil {
         ? <OmniCompositionType>{
           kind: OmniTypeKind.INTERSECTION,
           types: compositionsAllOfAnd,
+          // inline: compositionsAllOfAnd.every(it => it.inline),
         }
         : compositionsAllOfAnd[0];
 
@@ -65,6 +69,7 @@ export class CompositionUtil {
         ? <OmniCompositionType>{
           kind: OmniTypeKind.EXCLUSIVE_UNION,
           types: compositionsOneOfOr,
+          // inline: compositionsOneOfOr.every(it => it.inline),
         }
         : compositionsOneOfOr[0];
 
@@ -74,6 +79,7 @@ export class CompositionUtil {
         composition = {
           kind: OmniTypeKind.INTERSECTION,
           types: [composition, xor],
+          // inline: compositionsOneOfOr.every(it => it.inline),
         } satisfies OmniCompositionType;
       }
     }
@@ -82,6 +88,7 @@ export class CompositionUtil {
       const not: OmniCompositionType = {
         kind: OmniTypeKind.NEGATION,
         types: [compositionNot],
+        // inline: compositionNot.inline ?? false,
       };
 
       if (!composition) {

@@ -49,8 +49,7 @@
         "system_initiated": {"$ref": "#/definitions/DescriptiveStringBoolean"}
       },
       "required": [
-        "orderid",
-        "abort"
+        "orderid"
       ]
     },
 

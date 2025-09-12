@@ -70,12 +70,12 @@ export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Code
 export class Getter extends AbstractTypeScriptNode {
 
   readonly identifier: GetterIdentifier;
-  readonly target: AstNode;
+  readonly target: AstNode | undefined;
   readonly returnType: TypeNode;
   readonly modifiers: Code.ModifierList;
   readonly comments: Code.Comment | undefined;
 
-  constructor(identifier: GetterIdentifier, target: AstNode, returnType: TypeNode, comments: Code.Comment | undefined, modifiers: Code.ModifierList) {
+  constructor(identifier: GetterIdentifier, target: AstNode | undefined, returnType: TypeNode, comments: Code.Comment | undefined, modifiers: Code.ModifierList) {
     super();
     this.identifier = identifier;
     this.target = target;

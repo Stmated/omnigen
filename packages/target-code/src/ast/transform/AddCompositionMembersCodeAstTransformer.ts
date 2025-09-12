@@ -46,7 +46,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
         if (omniType.kind == OmniTypeKind.EXCLUSIVE_UNION) {
           this.addXOrMappingToBody(args.root, omniType, node, args.options, args.features);
         } else if (omniType.kind == OmniTypeKind.INTERSECTION) {
-          this.addAndCompositionToClassDeclaration(args.root, omniType, node, args.options);
+          this.addAndCompositionToClassDeclaration(args.root, omniType, node, args.options, args.features);
         }
 
         // Then keep searching deeper, into nested types
@@ -64,6 +64,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     andType: OmniIntersectionType,
     classDec: Code.ClassDeclaration,
     options: PackageOptions & TargetOptions & CodeOptions,
+    features: TargetFeatures,
   ): void {
 
     const implementsDeclarations = new Code.ImplementsDeclaration(
@@ -85,7 +86,7 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
           } else {
 
             if (type.kind === OmniTypeKind.OBJECT) {
-              const interfaceType = CodeAstUtils.addInterfaceOf(type, root, options);
+              const interfaceType = CodeAstUtils.addInterfaceOf(type, root, options, features);
               implementsDeclarations.types.children.push(root.getAstUtils().createTypeNode(interfaceType));
             } else if (type.kind === OmniTypeKind.INTERFACE) {
               implementsDeclarations.types.children.push(root.getAstUtils().createTypeNode(type));

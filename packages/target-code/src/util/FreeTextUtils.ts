@@ -91,7 +91,17 @@ export class FreeTextUtils {
       if (add instanceof FreeText.FreeTextExample) {
         for (const existingChild of existing.children) {
           if (existingChild instanceof FreeText.FreeTextExample) {
-            if (existingChild.content == add.content) {
+            if (FreeTextUtils.getText(existingChild.content) == FreeTextUtils.getText(add.content)) {
+              return original;
+            }
+          }
+        }
+      }
+
+      if (add instanceof FreeText.FreeTextRemark) {
+        for (const existingChild of existing.children) {
+          if (existingChild instanceof FreeText.FreeTextRemark) {
+            if (FreeTextUtils.getText(existingChild.content) == FreeTextUtils.getText(add.content)) {
               return original;
             }
           }
@@ -108,7 +118,7 @@ export class FreeTextUtils {
             const existingChildIndex = newChildren.indexOf(existingChild);
             newChildren.splice(existingChildIndex, 1, replacement);
 
-            return new FreeText.FreeTextSummary(newChildren);
+            return new FreeText.FreeTextSummary(FreeTextUtils.simplify(newChildren));
           }
         }
       }
@@ -148,7 +158,7 @@ export class FreeTextUtils {
       return new FreeText.FreeTexts();
     }
 
-    return existing;
+    return FreeTextUtils.simplify(existing);
   }
 
   public static simplify(text: FreeText.AnyFreeText | FreeText.AnyFreeText[]): FreeText.AnyFreeText {
@@ -216,5 +226,42 @@ export class FreeTextUtils {
     }
 
     return undefined;
+  }
+
+  public static extract(text: FreeText.FriendlyFreeTextIn): FreeText.FriendlyFreeTextIn {
+
+    if (typeof text == 'string') {
+      return text;
+    }
+
+    if (Array.isArray(text)) {
+      if (text.length == 1) {
+        return FreeTextUtils.extract(text[0]);
+      }
+
+      return text.map(it => FreeTextUtils.extract(it));
+    }
+
+    if (text instanceof FreeText.FreeTextSummary) {
+      return FreeTextUtils.extract(text.content);
+    }
+
+    if (text instanceof FreeText.FreeTextParagraph) {
+      return FreeTextUtils.extract(text.child);
+    }
+
+    if (text instanceof FreeText.FreeTextLine) {
+      return FreeTextUtils.extract(text.child);
+    }
+
+    if (text instanceof FreeText.FreeTextCode) {
+      return FreeTextUtils.extract(text.content);
+    }
+
+    if (text instanceof FreeText.FreeTextRemark) {
+      return FreeTextUtils.extract(text.content);
+    }
+
+    return text;
   }
 }

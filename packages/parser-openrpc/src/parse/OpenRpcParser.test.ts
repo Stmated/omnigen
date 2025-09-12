@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {DEFAULT_PARSER_OPTIONS, OmniType} from '@omnigen/api';
-import {OmniTypeKind} from '@omnigen/api';
+import {DEFAULT_PARSER_OPTIONS, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OpenRpcParserBootstrapFactory} from './OpenRpcParser';
 import {ANY_KIND, Naming, OmniUtil, ProxyReducerOmni2, SchemaFile, Util} from '@omnigen/core';
 import {DEFAULT_JSONRPC20_PARSER_OPTIONS} from '../options';
@@ -60,7 +59,7 @@ describe('Test Generic Model Creation', () => {
     ctx.expect(e.name).toEqual('get_pets');
     ctx.expect(e.responses).toHaveLength(2); // 1 result, 1 error
     ctx.expect(e.responses[0].name).toEqual('petsResult');
-    ctx.expect(Naming.unwrap(OmniUtil.getTypeName(e.responses[0].type) ?? 'N/A')).toEqual('GetPetsResponse'); // Should be 'pet'?
+    ctx.expect(Naming.getNameString(e.responses[0].type) ?? 'N/A').toEqual('GetPetsResponse'); // Should be 'pet'?
 
     const response0 = model.endpoints[0].responses[0];
     ctx.expect(response0.type.kind).toEqual(OmniTypeKind.OBJECT);
@@ -80,8 +79,6 @@ describe('Test Generic Model Creation', () => {
     ProxyReducerOmni2.builder().reduce(model, {immutable: true}, {
       [ANY_KIND]: (n, r) => {
         if (OmniUtil.isType(n)) {
-
-          console.log(n);
           allTypes.push(n);
         }
         r.callBase();
@@ -93,13 +90,7 @@ describe('Test Generic Model Creation', () => {
     //   allTypes.push(ctx.type);
     // });
 
-    ctx.expect(allTypes.map(it => {
-      const typeName = OmniUtil.getTypeName(it);
-      return typeName ? Naming.unwrap(typeName) : undefined;
-    })).toContain('DeletePetByIdResponse');
-    ctx.expect(allTypes.map(it => {
-      const typeName = OmniUtil.getTypeName(it);
-      return typeName ? Naming.unwrap(typeName) : undefined;
-    })).toContain('ErrorUnknownError');
+    ctx.expect(allTypes.map(it => OmniUtil.getVirtualTypeName(it))).toContain('DeletePetByIdResponse');
+    ctx.expect(allTypes.map(it => OmniUtil.getVirtualTypeName(it))).toContain('ErrorUnknownError');
   });
 });

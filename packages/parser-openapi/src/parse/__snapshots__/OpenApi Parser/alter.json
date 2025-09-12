@@ -1,0 +1,122 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "OneOfTest01",
+    "description": "This test illustrates an issue with inheritance\n\n",
+    "version": "4.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://serverRoot"
+    }
+  ],
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PetResponse"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PetRequest"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/PetResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Pet": {
+        "type": "object",
+        "properties": {
+          "basePetProperty": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "petType": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "petType",
+          "mapping": {
+            "cat": "#/components/schemas/Cat",
+            "dog": "#/components/schemas/Dog"
+          }
+        }
+      },
+      "Cat": {
+        "type": "object",
+        "properties": {
+          "catProperty": {
+            "type": "string"
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Pet"
+          },
+          {
+            "type": "object"
+          }
+        ]
+      },
+      "Dog": {
+        "type": "object",
+        "properties": {
+          "dogProperty": {
+            "type": "string"
+          },
+          "age": {
+            "type": "number",
+            "maximum": 200
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Pet"
+          },
+          {
+            "type": "object"
+          }
+        ]
+      }
+    },
+    "requestBodies": {
+      "PetRequest": {
+        "content": {
+          "application/json;charset=utf-8": {
+            "schema": {
+              "$ref": "#/components/schemas/Pet"
+            }
+          }
+        },
+        "required": true
+      }
+    },
+    "responses": {
+      "PetResponse": {
+        "description": "Success",
+        "content": {
+          "application/json;charset=utf-8": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Pet"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -45,6 +45,12 @@ export interface TargetFeatures {
   staticInnerTypes: StaticInnerTypeKind;
 
   /**
+   * In `Java` fields are not allowed in interfaces, instead method declarations are used.
+   * In `TypeScript` interfaces can have fields.
+   */
+  interfaceWithFields: boolean;
+
+  /**
    * True if the language supports unions natively,
    */
   unions: boolean;
@@ -73,6 +79,7 @@ export const OMNI_GENERIC_FEATURES: TargetFeatures = {
   unions: true,
   transparentAccessors: false,
   explodedGenerics: false,
+  interfaceWithFields: true,
 };
 
 export const OMNI_RESTRICTIVE_GENERIC_FEATURES: TargetFeatures = {
@@ -86,4 +93,5 @@ export const OMNI_RESTRICTIVE_GENERIC_FEATURES: TargetFeatures = {
   unions: false,
   transparentAccessors: false,
   explodedGenerics: false,
+  interfaceWithFields: true,
 };

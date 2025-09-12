@@ -192,7 +192,7 @@ export class AddAccessorsForFieldsAstTransformer implements AstTransformer<CodeR
     }
 
     toAdd.push(new Code.FieldBackedGetter(new Code.FieldReference(args.field), undefined, fieldComments, identifier));
-    if (!args.field.modifiers.children.find(it => it.kind === Code.ModifierKind.FINAL)) {
+    if (!args.field.modifiers.children.find(it => it.kind === Code.ModifierKind.FINAL) && !args.options.immutable) {
       toAdd.push(new Code.FieldBackedSetter(new Code.FieldReference(args.field), undefined, undefined, identifier));
     }
   }

@@ -123,9 +123,7 @@
           "NotificationURL": {"$ref": "#/components/schemas/NotificationUrl"}
         },
         "required": [
-          "NotificationURL",
-          "EndUserID",
-          "MessageID"
+          "NotificationURL"
         ],
         "additionalProperties": true,
         "type": "object"
@@ -158,7 +156,7 @@
           "result": {"type": "string"}
         },
         "required": [
-          "orderId",
+          "orderid",
           "result"
         ],
         "additionalProperties": false,

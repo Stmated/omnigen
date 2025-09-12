@@ -9,4 +9,5 @@ export const TYPESCRIPT_FEATURES: TargetFeatures = {
   relativeImports: true,
   forcedImports: true,
   transparentAccessors: true,
+  interfaceWithFields: true,
 };

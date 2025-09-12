@@ -40,7 +40,7 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
             if (OmniUtil.isComposition(superType.omniType) || (superType.omniType.kind === OmniTypeKind.INTERFACE && OmniUtil.isComposition(superType.omniType.of))) {
 
               // The extension is a composition, and our interface has members.
-              // TypeScript can only represent this as a type alias (or if all members of the composition are statically known.
+              // TypeScript can only represent this as a type alias (or if all members of the composition are statically known).
               // So we will convert this into a type alias of proper form instead.
 
               // TODO: This might be better if moved to a 2nd pass Model Transformer which creates the inline type(s) and intersection.

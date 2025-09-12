@@ -708,6 +708,8 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       const description = n.description ? ` ${render(n.description, v)}` : '';
       return `@see ${render(n.target, v)}${description}`;
     },
+    visitFreeTextDefault: (n, v) => `@default ${render(n.content, v)}`,
+    visitFreeTextDefinition: (n, v) => `${render(n.title, v)}: ${render(n.content, v)}`,
 
     visitNamespace: (n, v) => {
       return `package ${join(n.name.visit(v))};\n${join(n.block.visit(v))}`;

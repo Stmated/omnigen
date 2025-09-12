@@ -32,7 +32,7 @@ import {
   AddAccessorsForFieldsAstTransformer,
   AddCompositionMembersCodeAstTransformer,
   AddConstructorAstTransformer,
-  AddFieldsAstTransformer, Code,
+  AddFieldsAstTransformer, AddFinalToApplicableFieldsAstTransformer, Code,
   PackageResolverAstTransformer,
   RemoveConstantParametersAstTransformer,
   ReorderMembersAstTransformer,
@@ -128,6 +128,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
       new AddThrowsForKnownMethodsJavaAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new RemoveConstantParametersAstTransformer(),
+      new AddFinalToApplicableFieldsAstTransformer(),
       new JacksonJavaAstTransformer(),
       new PackageResolverAstTransformer(),
       new ReorderMembersAstTransformer(),
@@ -628,7 +629,7 @@ export class JavaHttpImplementationGenerator implements JavaHttpGeneratorType {
     const newExceptionType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
       name: {
-        name: OmniUtil.getTypeName(type) || 'Unknown',
+        name: Naming.getNameString(type) || 'Unknown',
         suffix: 'Exception',
       },
       properties: [],

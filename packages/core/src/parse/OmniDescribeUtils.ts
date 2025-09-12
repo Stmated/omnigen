@@ -205,9 +205,9 @@ export class OmniDescribeUtils {
       return `${type.fqn.namespace.map(it => OmniDescribeUtils.resolveNamespacePart(it)).join('.')}.${type.fqn.edgeName}`;
     } else if (OmniTypeUtil.isComposition(type)) {
 
-      let prefix: TypeName;
+      let prefix: string;
       if (type.kind == OmniTypeKind.EXCLUSIVE_UNION) {
-        prefix = ['UnionOf', 'ExclusiveUnionOf'];
+        prefix = 'ExclusiveUnionOf';
       } else if (type.kind == OmniTypeKind.UNION) {
         prefix = 'UnionOf';
       } else if (type.kind == OmniTypeKind.INTERSECTION) {
@@ -218,14 +218,10 @@ export class OmniDescribeUtils {
         assertUnreachable(type);
       }
 
-      return {
-        prefix: prefix,
-        name: {
-          prefix: '(',
-          name: type.types.map(it => OmniDescribeUtils.getVirtualTypeName(it, depth + 1)).join(','),
-        },
-        suffix: `)`,
-      };
+      const typeNames = type.types.map(it => Naming.unwrap(OmniDescribeUtils.getVirtualTypeName(it, depth + 1)));
+      const typeNamesString = typeNames.join(',');
+
+      return `${prefix}(${typeNamesString})`;
     }
 
     const typeName = OmniDescribeUtils.getTypeName(type);

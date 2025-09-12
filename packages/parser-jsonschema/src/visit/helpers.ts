@@ -1,21 +1,44 @@
-
 export type ToSingle<T> = T extends Array<infer Item> ? Item : T;
-export type DocVisitorTransformer<T, V> = (v: T, visitor: V) => typeof v | undefined;
+export type DocVisitorTransformer<T, V> = (v: T, visitor: V) => T | undefined;
 export type DocVisitorUnknownTransformer<T> = { path: [string, ...string[]], value: T };
 export type ToArray<T> = T extends Array<any> ? T : undefined;
-export type ToResolved<T> = T extends {$ref: any} ? Exclude<T, {$ref: any}> : T;
-export type Entry<T> = {key: string, value: T};
+export type ToResolved<T> = T extends { $ref: any } ? Exclude<T, { $ref: any }> : T;
+export type Entry<T> = { key: string, value: T };
 
 export function safeSet<O extends object, OK extends keyof O & string, V extends Pick<Record<PropertyKey, DocVisitorTransformer<O[OK], any>>, OK>>(
   owner: O,
   visitor: V,
-  prop: OK, 
+  prop: OK,
   handled: string[],
 ): void {
 
   handled.push(prop);
 
   const transformer = visitor[prop];
+  const transformed = transformer(owner[prop], visitor);
+
+  if (transformed === undefined) {
+    if (prop in owner) {
+      delete owner[prop];
+    }
+  } else {
+    owner[prop] = transformed;
+  }
+}
+
+export function safeSet2<
+  O extends object,
+  OK extends keyof O,
+  V extends Record<VK, DocVisitorTransformer<any, any>>,
+  VK extends keyof V,
+>(
+  owner: O,
+  visitor: V,
+  prop: OK,
+  visitorProp?: VK,
+): void {
+
+  const transformer = visitor[(visitorProp ?? prop) as VK];
   const transformed = transformer(owner[prop], visitor);
 
   if (transformed === undefined) {

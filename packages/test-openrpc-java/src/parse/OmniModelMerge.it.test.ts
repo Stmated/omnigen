@@ -130,7 +130,7 @@ describe('merge-models', () => {
 
     resultMerged.model.types.sort((a, b) => OmniUtil.describe(a).localeCompare(OmniUtil.describe(b)));
 
-    const typeNames = resultMerged.model.types.map(it => Naming.unwrap(OmniUtil.getTypeName(it) || ''));
+    const typeNames = resultMerged.model.types.map(it => Naming.getNameString(it || ''));
     ctx.expect(typeNames).toContain('JsonRpcRequestParams');
     // ctx.expect(typeNames).toContain('ListThingsRequestParams'); // TODO: This assertions should be true, but OmniModelMerge is broken after visiting changes
     ctx.expect(typeNames).toContain('Thing');

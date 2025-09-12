@@ -62,6 +62,8 @@ export const createCodeFreeTextReducer = (partial?: Partial<FreeTextReducer>): F
     reduceFreeTextCode: (n, r) => new FreeText.FreeTextCode(assertDefined(n.content.reduce(r))).withIdFrom(n),
     reduceFreeTextSummary: (n, r) => new FreeText.FreeTextSummary(assertDefined(n.content.reduce(r))).withIdFrom(n),
     reduceFreeTextRemark: (n, r) => new FreeText.FreeTextRemark(assertDefined(n.content.reduce(r))).withIdFrom(n),
+    reduceFreeTextDefault: (n, r) => new FreeText.FreeTextDefault(assertDefined(n.content.reduce(r))).withIdFrom(n),
+    reduceFreeTextDefinition: (n, r) => new FreeText.FreeTextDefinition(assertDefined(n.title.reduce(r)), assertDefined(n.content.reduce(r))).withIdFrom(n),
     ...partial,
   };
 };

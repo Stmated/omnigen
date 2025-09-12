@@ -78,6 +78,7 @@ export class OmniUtil {
 
   /**
    * TODO: Remove in favor of reducer
+   * @deprecated Remove in favor of reducer
    */
   public static visitTypesDepthFirst<R>(
     input: TypeOwner | undefined,
@@ -1053,6 +1054,13 @@ export class OmniUtil {
       || type.kind === OmniTypeKind.EXCLUSIVE_UNION
       || type.kind === OmniTypeKind.INTERSECTION
       || OmniUtil.isPrimitive(type);
+  }
+
+  public static isExtendable(type: OmniType) {
+
+    return type.kind === OmniTypeKind.OBJECT
+      || type.kind === OmniTypeKind.INTERFACE
+      || type.kind === OmniTypeKind.ENUM;
   }
 
   /**

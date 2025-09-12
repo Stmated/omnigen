@@ -19,7 +19,7 @@ import {ConflictingIntersectionModelTransformer, SchemaFile, SimplifyInheritance
 import {
   OmniModel2ndPassTransformer,
   OmniModelTransformer,
-  OmniModelTransformer2ndPassArgs,
+  OmniModelTransformer2ndPassArgs, OmniModelTransformerArgs,
   RenderedCompilationUnit,
   ZodModelTransformOptions,
   ZodPackageOptions,
@@ -30,6 +30,7 @@ import {DefaultOmniTypeLibrary} from './parse/DefaultOmniTypeLibrary';
 import {FileWriter} from './write';
 import {DefaultOmniModelLibrary} from './parse/DefaultOmniModelLibrary';
 import {LoggerFactory} from '@omnigen/core-log';
+import {SimplifyNullablePrimitivesModelTransformer} from './parse/transform/SimplifyNullablePrimitivesModelTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -97,21 +98,27 @@ export const CommonTransformPlugin = createPlugin(
   async ctx => {
 
     const transformers: OmniModelTransformer[] = [
+      new SimplifyNullablePrimitivesModelTransformer(),
       new SimplifyInheritanceModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
       // new GenericsModelTransformer(), // Maybe reintroduce, but with Omni generic target features
     ];
 
+    const transformArgs: OmniModelTransformerArgs = {
+      model: ctx.model,
+      options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
+    };
+
     for (const transformer of transformers) {
 
       logger.debug(`Running ${transformer.constructor.name}`);
-      transformer.transformModel({
-        model: ctx.model,
-        options: {...ctx.parserOptions, ...ctx.modelTransformOptions},
-      });
+      transformer.transformModel(transformArgs);
     }
 
-    return ctx;
+    return {
+      ...ctx,
+      model: transformArgs.model,
+    };
   },
 );
 
@@ -129,6 +136,7 @@ export const CommonTransform2Plugin = createPlugin(
       // new GenericsModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
       new ConflictingIntersectionModelTransformer(),
+      // new SimplifyNullablePrimitivesModelTransformer(),
       new SimplifyInheritanceModelTransformer(),
       // new AlignObjectWithInterfaceModelTransformer(),
     ];

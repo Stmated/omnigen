@@ -9,7 +9,7 @@ import {
   OmniModel,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniModelTransformerArgs,
+  OmniModelTransformerArgs, OmniNode,
   OmniProperty,
   OmniPropertyName,
   OmniPropertyOwner,
@@ -60,6 +60,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     });
 
     const sourceToTargets = new Map<OmniGenericSourceType, OmniGenericTargetType[]>();
+    const replacements = new Map<OmniNode, OmniNode>(); // TODO: This should have a number key! To use the node id from a reducer.
 
     for (const superType of superTypes) {
 
@@ -78,7 +79,37 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         continue;
       }
 
-      args.model = this.attemptHoistToSuperType(superType, subTypes, sourceToTargets, args.model, args.options, targetFeatures);
+      args.model = this.attemptHoistToSuperType(superType, subTypes, sourceToTargets, args.model, args.options, targetFeatures, replacements);
+    }
+
+    if (replacements.size > 0) {
+
+      ProxyReducerOmni2.builder().reduce(args.model, {inline: true}, {
+        GENERIC_SOURCE: (n, r) => {
+
+          // We should replace all occurrences of the generic source replacement, except for the generic source itself of course, or we'd loop infinitely.
+          const replacement = replacements.get(n.of);
+          if (replacement) {
+            if (replacement === n) {
+              return;
+            } else {
+              throw new Error(`Expected other replacement than the one given, multiple replacements must have been made`);
+            }
+          } else {
+            r.callBase();
+          }
+        },
+        [ANY_KIND]: (_, r) => {
+
+          const reduced = r.yieldBase();
+          if (reduced) {
+            const replacement = replacements.get(reduced);
+            if (replacement) {
+              r.replace(replacement).persist();
+            }
+          }
+        },
+      });
     }
   }
 
@@ -89,6 +120,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     model: OmniModel,
     options: ModelTransformOptions,
     features: TargetFeatures,
+    replacements: Map<OmniNode, OmniNode>,
   ): OmniModel {
 
     const commonProperties = PropertyUtil.getCommonProperties(
@@ -129,6 +161,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         model,
         options,
         features,
+        replacements,
       );
     }
 
@@ -145,6 +178,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
     model: OmniModel,
     options: ModelTransformOptions,
     features: TargetFeatures,
+    replacements: Map<OmniNode, OmniNode>,
   ): OmniModel {
 
     // If true, then the target does not allow generics like `Foo<'Bar'>` and instead need to widen it into `Foo<String>`.
@@ -196,16 +230,16 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         }
         targets.push(genericTarget);
 
-        if (ownerToGenericTargetMap.size == 0) {
+        if (ownerToGenericTargetMap.size === 0) {
 
           // Swap all places that uses the superType with the new GenericSource.
           // We do this for the first time we alter the GenericTarget, to do it as late as possible.
-          OmniUtil.swapType(model, superType, genericSource);
+          replacements.set(superType, genericSource);
         }
 
         ownerToGenericTargetMap.set(p.owner, genericTarget);
 
-        if ('extendedBy' in p.owner) {
+        if (OmniUtil.isExtendable(p.owner)) {
 
           // Replace the extended by from the original type to the generic target type.
           p.owner.extendedBy = genericTarget;

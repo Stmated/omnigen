@@ -24,6 +24,10 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
 
     const features = OMNI_GENERIC_FEATURES; // TODO: Make this use impl like JAVA_FEATURES -- need to move to 2nd pass?
 
+    if (!args.options.simplifyTypeHierarchy) {
+      return;
+    }
+
     args.model = ProxyReducerOmni2.builder().reduce(args.model, {}, {
       UNION: (_, r) => {
         const reduced = r.yieldBase();

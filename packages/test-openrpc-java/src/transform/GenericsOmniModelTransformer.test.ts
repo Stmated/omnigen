@@ -8,7 +8,7 @@ import {
   NameParts,
   OMNI_GENERIC_FEATURES,
   OmniItemKind,
-  type OmniModel,
+  type OmniModel, OmniModelTransformer2ndPassArgs,
   OmniTypeKind,
   PackageOptions,
 } from '@omnigen/api';
@@ -75,7 +75,7 @@ describe('Generics', () => {
       }),
     ]);
 
-    const model: OmniModel = {
+    let model: OmniModel = {
       kind: OmniItemKind.MODEL,
       name: 'model',
       schemaType: 'other',
@@ -90,11 +90,14 @@ describe('Generics', () => {
       ],
     };
 
-    transformer.transformModel2ndPass({
+    const transformArgs: OmniModelTransformer2ndPassArgs = {
       model: model,
       options: {...DEFAULT_PARSER_OPTIONS, ...DEFAULT_MODEL_TRANSFORM_OPTIONS, ...DEFAULT_TARGET_OPTIONS},
       features: OMNI_GENERIC_FEATURES,
-    });
+    };
+
+    transformer.transformModel2ndPass(transformArgs);
+    model = transformArgs.model;
 
     ctx.expect(model.types).toHaveLength(3);
 

@@ -4,7 +4,7 @@ import {ProxyReducerTrackMode2} from './ProxyReducerTrackMode2';
 import {ANY_KIND, MaybeFunction, MutableProxyReducerInterface, YieldRet, ReduceRet, ResolvedRet, Spec2, SpecFn2} from './types';
 import {ReducerOpt2} from './ReducerOpt2';
 import {ProxyReducerTrackingSource2} from './ProxyReducerTrackingSource2';
-import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID, PROP_KEY_REDUCER_STACKTRACES} from './symbols';
+import {PROP_KEY_GENERATION, PROP_KEY_ID, PROP_KEY_REDUCER_ID, PROP_KEY_REDUCER_STACKTRACES, PROP_PERSISTENT_KEY_ID} from './symbols';
 
 export interface Options2<N extends object, D extends keyof N, O, InOpt extends ReducerOpt2, S extends ReadonlyArray<Spec2<N, D, O, InOpt>>> {
   readonly discriminator: D;
@@ -41,6 +41,19 @@ class AbortException<T> extends Error {
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, AbortException.prototype);
   }
+}
+
+function getShallowPayloadStringInternal<T>(origin: T, depth: number, maxDepth: number): string {
+
+  return JSON.stringify(origin, (key, value) => {
+    if (value && typeof value === 'object' && key) {
+      if (depth < maxDepth) {
+        return JSON.parse(getShallowPayloadStringInternal(value, depth + 1, maxDepth));
+      }
+      return '[...]';
+    }
+    return value;
+  });
 }
 
 /**
@@ -115,12 +128,12 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
         if ('debug' in ongoing.original || 'debug' in ongoing.replacement) {
           if ('debug' in ongoing.original) {
             if (Array.isArray(ongoing.original.debug)) {
-              ongoing.original.debug.push(`Replaced by ${ongoing.replacement}`);
+              ongoing.original.debug.push(`Replaced by ${getShallowPayloadStringInternal(ongoing.replacement)}`);
             } else {
-              ongoing.original.debug = [ongoing.original.debug, `Replaced by ${ongoing.replacement}`];
+              ongoing.original.debug = [ongoing.original.debug, `Replaced by ${getShallowPayloadStringInternal(ongoing.replacement)}`];
             }
           } else {
-            ongoing.original.debug = `Replaced by ${ongoing.replacement}`;
+            ongoing.original.debug = `Replaced by ${getShallowPayloadStringInternal(ongoing.replacement)}`;
           }
         }
       }
@@ -165,7 +178,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
         this._visited[i].changeCount++;
       }
 
-      if (ongoing.replacement) {
+      if (this._options.inline) {
+        ongoing.original[prop] = value;
+      } else if (ongoing.replacement) {
         ongoing.replacement[prop] = value;
       } else {
         this.cloneAndReturnNew(ongoing, prop, value);
@@ -178,10 +193,12 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     let copy: FN;
     if (prop) {
       if (this._options.track !== ProxyReducerTrackMode2.NONE) {
+        const newId = ++this._options.trackingStatsSource.idCounter;
         copy = {
           ...ongoing.original,
           [prop]: value,
-          [PROP_KEY_ID]: ++this._options.trackingStatsSource.idCounter,
+          [PROP_KEY_ID]: newId,
+          [PROP_PERSISTENT_KEY_ID]: ProxyReducer2.getIdIfExists(ongoing.original) ?? newId,
           [PROP_KEY_GENERATION]: ProxyReducer2.getGeneration(ongoing.original) + 1,
           [PROP_KEY_REDUCER_ID]: this.getNewReducerIds(ongoing.original),
         };
@@ -192,10 +209,11 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       }
     } else {
       if (this._options.track !== ProxyReducerTrackMode2.NONE) {
-
+        const newId = ++this._options.trackingStatsSource.idCounter;
         copy = {
           ...ongoing.original,
-          [PROP_KEY_ID]: ++this._options.trackingStatsSource.idCounter,
+          [PROP_KEY_ID]: newId,
+          [PROP_PERSISTENT_KEY_ID]: ProxyReducer2.getIdIfExists(ongoing.original) ?? newId,
           [PROP_KEY_GENERATION]: ProxyReducer2.getGeneration(ongoing.original) + 1,
           [PROP_KEY_REDUCER_ID]: this.getNewReducerIds(ongoing.original),
         };
@@ -279,9 +297,9 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     const recursive = this._visited.find(it => it.original === original);
     if (recursive) {
 
-      if (this._options.immutable) {
+      if (this._options.immutable || this._options.inline) {
 
-        // Things are immutable, just return the original and we're done.
+        // Things are immutable or done inline, just return the original and we're done.
         return recursive.original as ReduceRet<Local, D, O, Opt, S>;
       }
 

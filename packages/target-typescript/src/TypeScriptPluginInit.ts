@@ -56,6 +56,7 @@ import {
   SimplifyGenericsAstTransformer,
   SimplifyUnnecessaryCompositionsModelTransformer,
   ToConstructorBodySuperCallAstTransformer,
+  SimplifyNullablePrimitivesModelTransformer,
 } from '@omnigen/target-code';
 import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
 import {TYPESCRIPT_FEATURES} from './features';

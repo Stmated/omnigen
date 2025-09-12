@@ -1,7 +1,7 @@
 import pointer, {JsonObject} from 'json-pointer';
 import {getShallowPayloadString, ProtocolHandler} from '@omnigen/core';
 import {DocumentStore, JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
-import {JSONSchema9} from '../definitions';
+import {JSONSchema9, PROP_INLINE, PROP_NAME_HINT} from '../definitions';
 import {ToSingle} from './helpers.ts';
 
 export type WithoutRef<T> = T extends { $ref: string }
@@ -78,7 +78,7 @@ export class ExternalDocumentsFinder {
 
           const resolved = this.resolveRef(v.$ref, origin);
           const keys = Object.keys(v);
-          const actualContentKeys = keys.filter(it => it != '$ref' && it != '$id' || !it.startsWith('x-omnigen-'));
+          const actualContentKeys = keys.filter(k => k != '$ref' && k != '$id' && typeof k !== 'symbol');
           if (actualContentKeys.length === 0) {
 
             // This object only contains $id and $ref (and stuff), which makes it quite useless. Replace with the resolved.
@@ -86,8 +86,8 @@ export class ExternalDocumentsFinder {
           } else if (keys.length > 1) {
 
             // TODO: This is a hack to make types not be removed because of being inline by code that thinks a schema-inline allOf item should be a hidden/unnamed type.
-            resolved['x-omnigen-inline'] = false;
-            resolved['x-omnigen-name-hint'] = v.$ref;
+            resolved[PROP_INLINE] = false;
+            resolved[PROP_NAME_HINT] = v.$ref;
 
             delete v.$ref;
             if ('allOf' in v) {

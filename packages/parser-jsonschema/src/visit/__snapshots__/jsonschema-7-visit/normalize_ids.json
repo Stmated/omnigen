@@ -4,15 +4,13 @@
     "PetId": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 1000000,
-      "x-omnigen-id": "PetId"
+      "maximum": 1000000
     },
     "Age": {
       "$id": "AgeIdToBeKept",
       "type": "integer",
       "minimum": 0,
-      "maximum": 1000000,
-      "x-omnigen-id": "AgeIdToBeKept"
+      "maximum": 1000000
     },
     "Animal": {
       "type": "object",
@@ -22,15 +20,12 @@
       ],
       "properties": {
         "kingdom": {
-          "type": "string",
-          "x-omnigen-id": "AnimalKingdom"
+          "type": "string"
         },
         "family": {
-          "type": "string",
-          "x-omnigen-id": "AnimalFamily"
+          "type": "string"
         }
-      },
-      "x-omnigen-id": "Animal"
+      }
     },
     "PetBase": {
       "type": "object",
@@ -48,19 +43,15 @@
               "$ref": "#/$defs/Age"
             }
           ],
-          "description": "Age of the Pet",
-          "x-omnigen-id": "PetBaseAge"
+          "description": "Age of the Pet"
         },
         "name": {
-          "type": "string",
-          "x-omnigen-id": "PetBaseName"
+          "type": "string"
         },
         "tag": {
-          "type": "string",
-          "x-omnigen-id": "PetBaseTag"
+          "type": "string"
         }
-      },
-      "x-omnigen-id": "PetBase"
+      }
     },
     "Pet": {
       "allOf": [
@@ -70,19 +61,16 @@
         {
           "$ref": "#/$defs/PetBase"
         }
-      ],
-      "x-omnigen-id": "Pet"
+      ]
     },
     "CatBase": {
       "type": "object",
       "properties": {
         "clawLength": {
           "$id": "CatClawLength",
-          "type": "number",
-          "x-omnigen-id": "CatClawLength"
+          "type": "number"
         }
-      },
-      "x-omnigen-id": "CatBase"
+      }
     },
     "Cat": {
       "allOf": [
@@ -92,9 +80,7 @@
         {
           "$ref": "#/$defs/CatBase"
         }
-      ],
-      "x-omnigen-id": "Cat"
+      ]
     }
-  },
-  "x-omnigen-id": "Schema"
+  }
 }

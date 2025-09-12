@@ -1,7 +1,7 @@
 import {JsonSchema9VisitorFactory} from '../visit/JsonSchema9VisitorFactory';
 import {JsonSchema9Visitor} from '../visit/JsonSchema9Visitor';
 import {Case, Util} from '@omnigen/core';
-import {JSONSchema9} from '../definitions';
+import {JSONSchema9, PROP_ID} from '../definitions';
 
 export type IdHint = {
   /**
@@ -186,7 +186,7 @@ export class ApplyIdJsonSchemaTransformerFactory<S extends JSONSchema9, V extend
           if (registeredIds.includes(newId)) {
             throw new Error(`ID '${newId}' has already been assigned, there seems to be a uniqueness problem with your schema`);
           }
-          (v as any)['x-omnigen-id'] = newId;
+          (v as any)[PROP_ID] = newId;
           registeredIds.push(newId);
         }
 

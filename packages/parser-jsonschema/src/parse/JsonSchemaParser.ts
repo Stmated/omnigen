@@ -33,7 +33,7 @@ import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactor
 import {DefaultJsonSchema9Visitor, ExternalDocumentsFinder, JsonSchema9Visitor, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
-import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName} from '../definitions';
+import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName, PROP_ID, PROP_INLINE, PROP_NAME_HINT} from '../definitions';
 import {DocumentStore, JsonPathFetcher} from '@omnigen/core-json';
 import {JsonExpander} from '@omnigen-org/json-expander';
 
@@ -52,7 +52,7 @@ export type AnyJsonDefinition<S extends JSONSchema9> = JSONSchema9Definition<S>;
 // TODO: Move into OpenApiJsonSchemaParser
 export type DiscriminatorAwareSchema = boolean | (AnyJSONSchema & DiscriminatorAware);
 
-const DISREGARDED_PROPERTIES: string[] = ['allOf', 'oneOf', 'anyOf', 'oneOf', 'not', '$id', 'type', 'default', '$comment', 'x-omnigen-id'] satisfies (keyof AnyJSONSchema | 'x-omnigen-id')[];
+const DISREGARDED_PROPERTIES: (keyof AnyJSONSchema | symbol)[] = ['allOf', 'oneOf', 'anyOf', 'oneOf', 'not', '$id', 'type', 'default', '$comment', PROP_ID] satisfies (keyof AnyJSONSchema | symbol)[];
 
 const CONTENT_PROPERTIES: string[] = [
   'properties', 'patternProperties', 'additionalProperties', 'unevaluatedProperties', 'propertyNames', 'enum', 'default', 'format',
@@ -1197,8 +1197,8 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     let names: TypeName | undefined = undefined;
     if (typeof schema == 'object') {
 
-      if ('x-omnigen-name-hint' in schema) {
-        const hint = schema['x-omnigen-name-hint'] as TypeName | undefined;
+      if (PROP_NAME_HINT in schema) {
+        const hint = (schema as any)[PROP_NAME_HINT] as TypeName | undefined;
         if (hint) {
           if (typeof hint === 'string') {
             names = Naming.merge(names, Naming.parse(hint));
@@ -1213,8 +1213,8 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     }
 
     if (typeof dereferenced === 'object' && dereferenced !== schema) {
-      if ('x-omnigen-name-hint' in dereferenced) {
-        names = Naming.merge(names, dereferenced['x-omnigen-name-hint'] as TypeName | undefined);
+      if (PROP_NAME_HINT in dereferenced) {
+        names = Naming.merge(names, (dereferenced as any)[PROP_NAME_HINT] as TypeName | undefined);
       }
 
       names = Naming.merge(names, Naming.parse(dereferenced.$id));
@@ -1360,18 +1360,14 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     return false;
   }
 
-  public static getVendorExtension<R>(obj: unknown, key: string): R | undefined {
+  public static getVendorExtension<R>(obj: unknown, key: string | symbol): R | undefined {
 
     if (typeof obj !== 'object') {
       return undefined;
     }
 
-    if (obj && 'obj' in obj && 'root' in obj) {
-      throw new Error(`You seem to have given a dereference object, when you should give the inner object.`);
-    }
-
-    const records = obj as Record<string, unknown>;
-    const value = records[`x-${key}`];
+    const records = obj as Record<string | symbol, unknown>;
+    const value = (typeof key === 'symbol') ? records[key] : records[`x-${key}`];
     if (value == undefined) {
       return undefined;
     }
@@ -1379,9 +1375,10 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     return value as R;
   }
 
-  public static getVendorExtensionBool(obj: unknown, key: string): boolean | undefined {
+  public static getVendorExtensionBool(obj: unknown, key: string | symbol): boolean | undefined {
 
     const value = JsonSchemaParser.getVendorExtension<unknown>(obj, key);
+
     if (value === 'true' || value === true) {
       return true;
     }
@@ -1633,7 +1630,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
         const omniType = this.jsonSchemaToType(Naming.simplify(preferredNames), resolved).type;
 
         // TODO: This 'inline' check is ugly, and other locations in the code that sets or reads 'x-omnigen-inline' should probably have its code more controlled/centralized
-        const specificInline = JsonSchemaParser.getVendorExtensionBool(resolved, 'omnigen-inline');
+        const specificInline = JsonSchemaParser.getVendorExtensionBool(resolved, PROP_INLINE);
         omniType.inline = (resolved === entry) && (specificInline === true || specificInline !== false);
 
         if (this._options.debug && omniType.inline) {
@@ -1835,8 +1832,8 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       return undefined;
     }
 
-    if ('x-omnigen-id' in schema && schema['x-omnigen-id']) {
-      return schema['x-omnigen-id'] as string;
+    if (PROP_ID in schema && schema[PROP_ID]) {
+      return schema[PROP_ID] as string;
     }
 
     return this.getId(schema);

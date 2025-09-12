@@ -29,31 +29,38 @@ export class SimplifyInheritanceModelTransformer implements OmniModelTransformer
 
   transformModel(args: OmniModelTransformerArgs): void {
 
-    OmniUtil.visitTypesDepthFirst(args.model, ctx => {
+    args.model = ProxyReducerOmni2.builder().reduce(args.model, {immutable: false}, {
+      OBJECT: (n, r) => {
 
-      if (ctx.type.kind === OmniTypeKind.OBJECT && ctx.type.extendedBy && ctx.type.extendedBy.kind === OmniTypeKind.INTERSECTION) {
+        const reduced = r.yieldBase();
+        if (reduced && reduced.kind === OmniTypeKind.OBJECT && reduced.extendedBy && reduced.extendedBy.kind === OmniTypeKind.INTERSECTION) {
 
-        // Intersection that has inline child types and is owned by an object can have their properties moved to the object.
-        // TODO: This might not always be true; the Intersection could be used elsewhere where this is not suitable. Needs a fix.
-        let obj: OmniType = ctx.type;
-        const types = ctx.type.extendedBy.types;
+          // Intersection that has inline child types and is owned by an object can have their properties moved to the object.
+          // TODO: This might not always be true; the Intersection could be used elsewhere where this is not suitable. Needs a fix.
+          let obj: OmniType = reduced;
+          const types = [...reduced.extendedBy.types];
 
-        for (let i = 0; i < types.length; i++) {
-          const child = types[i];
-          if (child.inline) {
-            obj = OmniUtil.mergeType(child, obj, OMNI_GENERIC_FEATURES);
-            types.splice(i, 1);
+          for (let i = 0; i < types.length; i++) {
+            const child = types[i];
+            if (child.inline) {
+              obj = OmniUtil.mergeType(child, obj, OMNI_GENERIC_FEATURES);
+              types.splice(i, 1);
+            }
+          }
+
+          if (obj !== reduced) {
+            if (obj.kind === OmniTypeKind.OBJECT) {
+
+              obj.extendedBy = {
+                ...reduced.extendedBy,
+                types: types,
+              };
+            }
+
+            r.replace(obj);
           }
         }
-
-        if (obj !== ctx.type) {
-          ctx.replacement = obj;
-          const idx = args.model.types.indexOf(ctx.type);
-          if (idx !== -1) {
-            args.model.types.splice(idx, 1, obj);
-          }
-        }
-      }
+      },
     });
 
     if (args.options.simplifyTypeHierarchy) {

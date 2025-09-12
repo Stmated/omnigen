@@ -250,12 +250,14 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
       const reducerId = `${this._options.reducerId}`.padStart(4, '0');
       const oid = `${ProxyReducer2.getIdIfExists(ongoing.original) ?? '?'}`.padStart(4, ' ');
       const rid = `${ProxyReducer2.getIdIfExists(copy) ?? '?'}`.padEnd(4, ' ');
+      const poid = `${ProxyReducer2.getPersistentIdIfExists(ongoing.original) ?? '?'}`.padStart(4, ' ');
+      const prid = `${ProxyReducer2.getPersistentIdIfExists(copy) ?? '?'}`.padEnd(4, ' ');
       const now = new Date();
       const minutesString = `${now.getMinutes()}`.padEnd(2, '0');
       const secondsString = `${now.getSeconds()}`.padEnd(2, '0');
       const msString = `${now.getMilliseconds()}`.padEnd(3, '0');
       const timestamp = `${minutesString}:${secondsString}:${msString}`;
-      const extendedStacktrace = `[${timestamp}]  ${reducerId} ${oid}->${rid} vid:${ongoing.id} changes:${ongoing.changeCount}, recursionDepth:${ongoing.recursionDepth}, depth:${this.depth}\n${filteredString}`;
+      const extendedStacktrace = `[${timestamp}]  ${reducerId} ${oid}->${rid}, ${poid}->${prid} vid:${ongoing.id} changes:${ongoing.changeCount}, recursionDepth:${ongoing.recursionDepth}, depth:${this.depth}\n${filteredString}`;
 
       (copy as any)[PROP_KEY_REDUCER_STACKTRACES] = existingStackTraces ? [...existingStackTraces, extendedStacktrace] : [extendedStacktrace];
     }
@@ -428,7 +430,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
   }
 
   public getPersistentId(obj: N): number {
-    const existing = obj[PROP_PERSISTENT_KEY_ID];
+    const existing = ProxyReducer2.getPersistentIdIfExists(obj);
     if (existing) {
       return existing;
     }
@@ -445,6 +447,15 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
     }
 
     return undefined;
+  }
+
+  public static getPersistentIdIfExists(obj: any): number | undefined {
+    const existing = obj[PROP_PERSISTENT_KEY_ID];
+    if (existing) {
+      return existing;
+    }
+
+    return ProxyReducer2.getIdIfExists(obj);
   }
 
   /**

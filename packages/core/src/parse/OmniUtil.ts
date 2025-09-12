@@ -20,12 +20,10 @@ import {
   OmniGenericTargetIdentifierType,
   OmniGenericTargetType,
   OmniHardcodedReferenceType,
-  OmniInput,
   OmniModel,
-  OmniNode, OmniNodeKind,
+  OmniNode,
   OmniObjectType,
   OmniOptionallyNamedType,
-  OmniOutput,
   OmniPrimitiveConstantValue,
   OmniPrimitiveKinds,
   OmniPrimitiveNull,
@@ -45,12 +43,10 @@ import {
   TargetFeatures,
   TypeDiffKind,
   TypeName,
-  TypeOwner,
   TypeUseKind,
   UnknownKind,
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
-import {DFSTraverseCallback, OmniTypeVisitor} from './OmniTypeVisitor';
 import {Naming} from './Naming';
 import {assertUnreachable, CombineMode, CombineOptions, CreateMode} from '../util';
 import {PropertyUtil} from './PropertyUtil';
@@ -75,19 +71,6 @@ type CommonDenominatorOptions = { features: TargetFeatures } & CombineOptions;
 const EMPTY_ARRAY: ReadonlyArray<any> = Object.freeze([]);
 
 export class OmniUtil {
-
-  /**
-   * TODO: Remove in favor of reducer
-   * @deprecated Remove in favor of reducer
-   */
-  public static visitTypesDepthFirst<R>(
-    input: TypeOwner | undefined,
-    onDown?: DFSTraverseCallback<R>,
-    onUp?: DFSTraverseCallback<R>,
-    onlyOnce = true,
-  ): R | undefined {
-    return new OmniTypeVisitor().visitTypesDepthFirst(input, onDown, onUp, onlyOnce);
-  }
 
   public static isGenericAllowedType(type: OmniType): boolean {
     if (OmniUtil.isPrimitive(type)) {

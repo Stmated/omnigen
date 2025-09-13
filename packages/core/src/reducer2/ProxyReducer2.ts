@@ -43,7 +43,7 @@ class AbortException<T> extends Error {
   }
 }
 
-function getShallowPayloadStringInternal<T>(origin: T, depth: number, maxDepth: number): string {
+function getShallowPayloadStringInternal<T>(origin: T, depth: number = 0, maxDepth: number = 2): string {
 
   return JSON.stringify(origin, (key, value) => {
     if (value && typeof value === 'object' && key) {
@@ -133,7 +133,7 @@ export class ProxyReducer2<N extends object, FN extends N, const D extends keyof
               ongoing.original.debug = [ongoing.original.debug, `Replaced by ${getShallowPayloadStringInternal(ongoing.replacement)}`];
             }
           } else {
-            ongoing.original.debug = `Replaced by ${getShallowPayloadStringInternal(ongoing.replacement)}`;
+            (ongoing.original as any).debug = `Replaced by ${getShallowPayloadStringInternal(ongoing.replacement)}`;
           }
         }
       }

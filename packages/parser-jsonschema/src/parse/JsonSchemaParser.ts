@@ -199,7 +199,9 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     // If contentDescriptor contains an anonymous schema,
     // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
     // That way we will not get duplicates of the schema when called from different locations.
-    const id = this.getInternalId(schema); // || (schema ? `Any_${JsonSchemaParser._uniqueCounter++}` : `Never_${JsonSchemaParser._uniqueCounter++}`);
+    const id = this.getInternalId(schema)
+      || (schema === true ? `__Any` : undefined)
+      || (schema === false ? `__Never` : undefined);
 
     if (id) {
       const existing = this._typeMap.get(id);
@@ -562,8 +564,19 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       for (const [propertyPattern, propertySchema] of Object.entries(schema.patternProperties)) {
 
         const resolved = this._refResolver.resolve(propertySchema);
-        const patternNameOptions: NameOptions = {suffix: {name: name, suffix: 'PatternProperties'}};
-        const patternPropertiesType = this.jsonSchemaToType(undefined, resolved, patternNameOptions);
+        let patternPropertyName = this.getSpecifiedNames(propertySchema, resolved);
+        if (!patternPropertyName) {
+          patternPropertyName = this.getDeducedNames(propertySchema, resolved);
+          if (!patternPropertyName) {
+            if (name) {
+              patternPropertyName = {name: name, suffix: 'PatternProperties'};
+            } else {
+              patternPropertyName = 'PatternProperties';
+            }
+          }
+        }
+
+        const patternPropertiesType = this.jsonSchemaToType(patternPropertyName, resolved);
 
         properties.push({
           kind: OmniItemKind.PROPERTY,
@@ -1042,7 +1055,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   private hasDirectContent(schema: AnyJSONSchema): boolean {
 
     const usefulProperties = Object.keys(schema).filter(k => {
-      if (DISREGARDED_PROPERTIES.includes(k)) {
+      if (DISREGARDED_PROPERTIES.includes(k as any)) {
         return false;
       }
 
@@ -1252,7 +1265,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   }
 
   public getDeducedDereferencedNames<S extends JSONSchema9>(
-    schema: JSONSchema9Definition<S>,
+    schema: JSONSchema9Definition<S> | undefined,
   ): TypeName | undefined {
 
     const names = this.getDeducedDereferencedUsualNames(schema);
@@ -1279,8 +1292,8 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   ): TypeName | undefined {
 
     let names = this.getDeducedDirectNames(schema);
-    names = Naming.merge(names, this.getDeducedDereferencedUsualNames(dereferenced));
-    return Naming.merge(names, this.getDeducedDereferencedUnusualNames(dereferenced));
+    return Naming.merge(names, this.getDeducedDereferencedNames(dereferenced));
+    // return Naming.merge(names, this.getDeducedDereferencedUnusualNames(dereferenced));
   }
 
   public getLikelyNames<S extends JSONSchema9>(
@@ -1917,9 +1930,9 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     }
 
     let derefJsonSchema = this._refResolver.resolve(schema);
-    if (!derefJsonSchema.$id) {
-      derefJsonSchema.$id = derefJsonSchema.title ?? name;
-    }
+    // if (!derefJsonSchema.$id) {
+    //   derefJsonSchema.$id = derefJsonSchema.title ?? name;
+    // }
 
     // const applyIdVisitorFactory = new ApplyIdJsonSchemaTransformerFactory(DefaultJsonSchema9Visitor);
     // const applyIdVisitor = applyIdVisitorFactory.create();

@@ -224,7 +224,7 @@ export class OpenRpcParserBootstrapFactory implements ParserBootstrapFactory<Jso
           }
 
           if (v && typeof v == 'object' && path.length >= 3 && path[path.length - 3] == 'components' && path[path.length - 2] == 'schemas' && typeof edgePath == 'string') {
-            applyIdTransformer.pushPath({name: edgePath});
+            applyIdTransformer.pushPath(edgePath);
             transform(v as JSONSchema9);
             registerOnPop(() => applyIdTransformer.popPath());
           }
@@ -345,10 +345,19 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     if (this.doc.components?.schemas) {
       for (const [key, schema] of Object.entries(this.doc.components.schemas)) {
         const deref = this._refResolver.resolve(schema) as JSONSchema9;
+        let schemaName = this._jsonSchemaParser.getSpecifiedNames(schema, deref);
+        if (!schemaName) {
+          schemaName = this._jsonSchemaParser.getDeducedNames(schema, deref);
+          if (schemaName) {
+            schemaName = {name: schemaName, suffix: key};
+          } else {
+            schemaName = key;
+          }
+        }
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
-        manualTypes.push(this._jsonSchemaParser.jsonSchemaToType(deref.$id || key, deref).type);
+        manualTypes.push(this._jsonSchemaParser.jsonSchemaToType(schemaName, deref).type);
       }
     }
 
@@ -528,7 +537,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const schema = contentDescriptor.schema as JSONSchema9Definition;
     const resolved = this._refResolver.resolve(schema) as JSONSchema9Definition;
-    const name = this._jsonSchemaParser.getLikelyNames(schema, resolved);
+    let name = this._jsonSchemaParser.getLikelyNames(schema, resolved);
+    if (!name) {
+      name = contentDescriptor.name;
+    }
     // const preferredName: TypeName = JsonSchemaParser.getVendorExtension(contentDescriptor, 'title') ?? this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
 
     const type = this._jsonSchemaParser.jsonSchemaToType(name, resolved);

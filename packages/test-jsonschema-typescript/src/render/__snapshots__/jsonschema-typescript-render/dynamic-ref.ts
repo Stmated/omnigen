@@ -1,2 +1,2 @@
-export type BaseTreeItem0 = object;
-export type BaseTreeItem1 = object;
+export type BaseTree = object;
+export type BoundedNumberTree = object;

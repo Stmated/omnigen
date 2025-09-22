@@ -1,0 +1,39 @@
+[
+  "ObjWithRefProps",
+  "WithDirectRef",
+  "WithPartialRef",
+  {
+    "name": "ObjWithRefProps",
+    "suffix": "WithDirectRef"
+  },
+  {
+    "name": "ObjWithRefProps",
+    "suffix": "WithPartialRef"
+  },
+  {
+    "name": "ObjWithRefProps",
+    "suffix": "Object"
+  },
+  {
+    "name": "WithDirectRef",
+    "suffix": "Object"
+  },
+  {
+    "name": "WithPartialRef",
+    "suffix": "Object"
+  },
+  {
+    "name": {
+      "name": "ObjWithRefProps",
+      "suffix": "WithDirectRef"
+    },
+    "suffix": "Object"
+  },
+  {
+    "name": {
+      "name": "ObjWithRefProps",
+      "suffix": "WithPartialRef"
+    },
+    "suffix": "Object"
+  }
+]

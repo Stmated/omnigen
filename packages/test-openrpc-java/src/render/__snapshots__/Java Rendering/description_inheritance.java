@@ -11,30 +11,11 @@ public class description_inheritance {
    * components_schemas_AbstractOne_description
    */
   public static class AbstractOne extends AbstractOneWithAbstractOnePropertyA {
-    public AbstractOne(Integer abstractOnePropertyA, String abstractOnePropertyB) {
-      super(abstractOnePropertyA, abstractOnePropertyB);
-    }
-  }
-
-  /**
-   * components_schemas_AbstractOne_allOf_inline_description
-   */
-  public static class AbstractOneWithAbstractOnePropertyA {
-    private final Integer abstractOnePropertyA;
     private final String abstractOnePropertyB;
 
-    public AbstractOneWithAbstractOnePropertyA(Integer abstractOnePropertyA, String abstractOnePropertyB) {
-      this.abstractOnePropertyA = abstractOnePropertyA;
+    public AbstractOne(Integer abstractOnePropertyA, String abstractOnePropertyB) {
+      super(abstractOnePropertyA);
       this.abstractOnePropertyB = abstractOnePropertyB;
-    }
-
-    /**
-     * components_schemas_NumberOrNull_description
-     * <p>
-     * components_schemas_NumberSchema_OneOf_Number_description
-     */
-    public Integer getAbstractOnePropertyA() {
-      return this.abstractOnePropertyA;
     }
 
     /**
@@ -46,6 +27,28 @@ public class description_inheritance {
   }
 
   /**
+   * components_schemas_AbstractOne_allOf_inline_description
+   */
+  public static class AbstractOneWithAbstractOnePropertyA {
+    private final Integer abstractOnePropertyA;
+
+    public AbstractOneWithAbstractOnePropertyA(Integer abstractOnePropertyA) {
+      this.abstractOnePropertyA = abstractOnePropertyA;
+    }
+
+    /**
+     * components_schemas_NumberOrNull_description
+     * <p>
+     * components_schemas_NumberSchema_OneOf_Number_description
+     */
+    public Integer getAbstractOnePropertyA() {
+      return this.abstractOnePropertyA;
+    }
+  }
+
+  /**
+   * components_contentDescriptors_RequestParamDescriptor_schema_description
+   * <p>
    * components_schemas_AbstractOther_description
    */
   public static class AbstractOther extends AbstractOne {
@@ -245,7 +248,7 @@ public class description_inheritance {
   /**
    * components_contentDescriptors_RequestParamDescriptor_schema_description
    */
-  public static class RequestParamDescriptor extends RequestParamSchema {
+  public static class RequestParamDescriptor extends AbstractOther {
     public RequestParamDescriptor(
       Integer abstractOnePropertyA,
       String abstractOnePropertyB,
@@ -270,9 +273,19 @@ public class description_inheritance {
   /**
    * components_contentDescriptors_ResultDescriptor_schema_description
    */
-  public static class ResultDescriptor extends ResultSchema {
+  public static class ResultDescriptor extends AbstractOne {
+    private String resultSchemaPropertyA;
+
     public ResultDescriptor(Integer abstractOnePropertyA, String abstractOnePropertyB, String resultSchemaPropertyA) {
-      super(abstractOnePropertyA, abstractOnePropertyB, resultSchemaPropertyA);
+      super(abstractOnePropertyA, abstractOnePropertyB);
+      this.resultSchemaPropertyA = resultSchemaPropertyA;
+    }
+
+    /**
+     * components_schemas_ResultSchema_allOf_inline_properties_ResultSchemaPropertyA_description
+     */
+    public String getResultSchemaPropertyA() {
+      return this.resultSchemaPropertyA;
     }
   }
 

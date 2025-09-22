@@ -278,3 +278,11 @@ test('multiple-prefix-unwrap', async ctx => {
     {name: 'n', prefix: {name: {prefix: {prefix: {name: 'p3'}, name: 'p2'}, name: 'p1'}}},
   ])).toEqual('P1N');
 });
+
+test('deduplicate non-array and array items', async ctx => {
+  ctx.expect(Naming.simplify(['A', ['A', 'B'], 'C'])).toEqual(['A', 'B', 'C']);
+});
+
+test('aggregate common denominator array', async ctx => {
+  ctx.expect(Naming.simplify([{name: 'A', suffix: 'S1'}, {name: 'A', suffix: 'S2'}])).toEqual({name: 'A', suffix: ['S1', 'S2']});
+});

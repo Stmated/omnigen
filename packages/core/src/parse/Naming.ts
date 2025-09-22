@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import {OmniType, OmniTypeKind, TypeName, UnknownKind} from '@omnigen/api';
+import {OmniType, OmniTypeKind, TypeName, TypeNameCase, UnknownKind} from '@omnigen/api';
 import {NamePair} from './NamePair';
 import {ResolvedNamePair} from './ResolvedNamePair';
 import {NameCallback} from './NameCallback';
@@ -24,6 +24,14 @@ const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation,
     return Naming.prefixedPascalCase(name);
   }
 };
+
+interface ParseParts {
+  parts: string[];
+  hashes: string[];
+  protocol: string | undefined;
+  at: string | undefined;
+  hashAt: string | undefined;
+}
 
 export class Naming {
 
@@ -161,6 +169,26 @@ export class Naming {
     return result;
   }
 
+  public static toCase(name: TypeName, toCase: TypeNameCase): TypeName {
+    if (typeof name === 'string' || Array.isArray(name)) {
+      return {name: name, case: toCase};
+    } else {
+      return {...name, case: toCase};
+    }
+  }
+
+  public static addSuffix(name: TypeName | undefined, suffix: TypeName): TypeName {
+    if (!name) {
+      return suffix;
+    }
+
+    if (typeof name === 'string' || Array.isArray(name)) {
+      return {name: name, suffix: suffix};
+    } else {
+      return {...name, suffix: Naming.merge(name.suffix, suffix)};
+    }
+  }
+
   public static simplify(name: TypeName | undefined, depth = 0): TypeName | undefined {
 
     if (!name) {
@@ -168,23 +196,125 @@ export class Naming {
     }
 
     if (depth > 10) {
-      // We're in a loop, bail out. Perhaps fix the places that create such structures.
+      // We're in an endless loop, bail out. Perhaps fix the places that create such structures.
       return name;
     }
 
     if (Array.isArray(name)) {
-      if (name.length == 0) {
+
+      const simplified = [...new Set(name.flatMap(it => Naming.simplify(it, depth + 1)).filter(isDefined))];
+
+      if (simplified.length === 0) {
         return undefined;
-      } else if (name.length == 1) {
-        return Naming.simplify(name[0], depth + 1);
-      } else {
-        return name.flatMap(it => Naming.simplify(it, depth + 1)).filter(isDefined);
+      } else if (simplified.length === 1) {
+        return simplified[0];
       }
-    } else if (typeof name === 'object' && name.name && Object.keys(name).length == 1) {
-      return Naming.simplify(name.name, depth + 1);
+
+      if (simplified.length > 1) {
+
+        // TODO: Rewrite this to step through the array and splice it as we go. Aggregating names and prefixes and suffixes inline.
+        let hasSameName = true;
+        for (let i = 1; i < simplified.length; i++) {
+          const p = Naming.getNameName(simplified[i - 1]);
+          const c = Naming.getNameName(simplified[i]);
+
+          if (!p || !c || !Naming.isSame(p, c, depth + 1)) {
+            hasSameName = false;
+            break;
+          }
+        }
+
+        if (hasSameName) {
+
+          const suffixes = simplified.map(it => Naming.getSuffix(it)).filter(isDefined);
+          if (suffixes.length === simplified.length) {
+
+            // Can replace [{name: X, suffix: A}, {name: X, suffix: B}] with {name: X, suffix: [A, B]}
+            const foundName = Naming.getNameName(simplified[0]);
+            if (foundName) {
+              return {name: foundName, suffix: Naming.simplify(suffixes)};
+            }
+          }
+        }
+      }
+
+      return simplified;
+    } else if (typeof name === 'object') {
+
+      if (name.prefix) {
+        const simplified = Naming.simplify(name.prefix);
+        if (name.prefix !== simplified) {
+          name = {...name, prefix: simplified};
+        }
+      }
+
+      if (name.suffix) {
+        const simplified = Naming.simplify(name.suffix);
+        if (name.suffix !== simplified) {
+          name = {...name, suffix: simplified};
+        }
+      }
+
+      if (name.name) {
+
+        const simplified = Naming.simplify(name.name);
+        if (!simplified) {
+          return undefined;
+        }
+
+        if (name.name !== simplified) {
+          name = {...name, name: simplified};
+        }
+
+        if (Object.keys(name).length == 1) {
+          return Naming.simplify(name.name, depth + 1);
+        }
+      }
     }
 
     return name;
+  }
+
+  private static getNameName(name: TypeName | undefined): TypeName | undefined {
+    if (typeof name === 'object' && !Array.isArray(name)) {
+      return name.name;
+    }
+    return undefined;
+  }
+
+  private static getSuffix(name: TypeName | undefined): TypeName | undefined {
+    if (typeof name === 'object' && !Array.isArray(name) && name.suffix) {
+      return name.suffix;
+    }
+    return undefined;
+  }
+
+  /**
+   * Utility function for debugging, when looking if a name contains a possible variant.
+   */
+  public static has(name: TypeName | undefined, needle: string): boolean {
+
+    if (!name) {
+      return false;
+    }
+
+    needle = needle.toLowerCase();
+
+    // TODO: Move the NameCallback args to single-arg options object, and add way to abort the unwrapping.
+    let found = false;
+    try {
+      Naming.unwrapWithCallback(name, variant => {
+
+        if (variant.toLowerCase() === needle) {
+          found = true;
+          throw new Error(`Abort :)`);
+        }
+      });
+    } catch (ex) {
+      // Ignore.
+    }
+
+    return found;
   }
 
   public static prefixedPascalCase(name: string): string {
@@ -345,6 +475,7 @@ export class Naming {
     }
   }
 
+  // TODO: There is likely a case here when we could merge things to be placed in `prefix` and `suffix` respectively based on some patterns?
   public static merge(a: TypeName | undefined, b: TypeName | undefined): TypeName | undefined {
 
     if (!a) {
@@ -357,14 +488,12 @@ export class Naming {
       return a;
     }
 
-    if (typeof a === 'string' && typeof b === 'string') {
-      return [a, b];
-    } else if (Array.isArray(a) && Array.isArray(b)) {
-      return [...a, ...b];
+    if (Array.isArray(a) && Array.isArray(b)) {
+      return Naming.simplify([...a, ...b]);
     } else if (Array.isArray(a)) {
-      return [...a, b];
+      return Naming.simplify([...a, b]);
     } else if (Array.isArray(b)) {
-      return [a, ...b];
+      return Naming.simplify([a, ...b]);
     } else {
       return [a, b];
     }
@@ -382,22 +511,38 @@ export class Naming {
       throw new Error(`The type names are too deep, the nesting is too great`);
     }
 
-    if (Array.isArray(a)) {
-      for (const aItem of a) {
-        if (Naming.isSame(aItem, b, depth + 1)) {
-          return true;
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) {
+        return false;
+      }
+
+      for (let i = 0; i < a.length; i++) {
+        const aItem = a[i];
+        const bItem = b[i];
+        if (!Naming.isSame(aItem, bItem, depth + 1)) {
+          return false;
         }
       }
 
+      return true;
+    } else if (Array.isArray(a)) {
       return false;
+      // for (const aItem of a) {
+      //   if (Naming.isSame(aItem, b, depth + 1)) {
+      //     return true;
+      //   }
+      // }
+      //
+      // return false;
     } else if (Array.isArray(b)) {
-      for (const bItem of b) {
-        if (Naming.isSame(a, bItem, depth + 1)) {
-          return true;
-        }
-      }
-
       return false;
+      // for (const bItem of b) {
+      //   if (Naming.isSame(a, bItem, depth + 1)) {
+      //     return true;
+      //   }
+      // }
+      //
+      // return false;
     }
 
     const aName = (typeof a === 'object') ? a.name : a;
@@ -425,7 +570,11 @@ export class Naming {
     return true;
   }
 
-  public static parseToParts(value: string | undefined, stripLocalPath = true): { parts: string[], hashes: string[], protocol: string | undefined } | undefined {
+  public static parseToParts(
+    value: string | undefined,
+    stripLocalPath = true,
+    separateAt = false,
+  ): ParseParts | undefined {
 
     if (!value) {
       return undefined;
@@ -433,7 +582,7 @@ export class Naming {
 
     const hashIndex = value.indexOf('#');
     let base = (hashIndex === -1) ? value : value.substring(0, hashIndex);
-    const hash = (hashIndex === -1) ? undefined : value.substring(hashIndex + 1);
+    let hash = (hashIndex === -1) ? undefined : value.substring(hashIndex + 1);
 
     if (stripLocalPath) {
 
@@ -442,6 +591,15 @@ export class Naming {
         base = '';
       } else if (base.includes(path.sep) && fs.existsSync(base)) {
         base = '';
+      }
+    }
+
+    let baseAt: string | undefined = undefined;
+    if (separateAt) {
+      let atIndex = base.lastIndexOf('@');
+      if (atIndex !== -1) {
+        baseAt = base.substring(atIndex + 1);
+        base = base.substring(0, atIndex);
       }
     }
 
@@ -458,18 +616,36 @@ export class Naming {
       .filter(it => it !== 'http:' && it !== 'https:')
       .map(it => Util.trimAny(it, ':'));
 
+    let hashAt: string | undefined = undefined;
+    if (separateAt && hash) {
+      let atIndex = hash.lastIndexOf('@');
+      if (atIndex !== -1) {
+        hashAt = hash.substring(atIndex + 1);
+        hash = hash.substring(0, atIndex);
+      }
+    }
+
     const hashParts = !hash ? [] : hash.split(/[/\\]/)
       .map(it => it.trim())
       .filter(Boolean)
       .map(it => Util.trimAny(it, ':'))
       .filter(it => !it.startsWith('$'));
 
-    return {parts, hashes: hashParts, protocol};
+    return {parts, hashes: hashParts, protocol, at: baseAt, hashAt};
   }
 
-  public static parse(value: string | undefined, stripLocalPath = true): TypeName | undefined {
+  public static parse(
+    value: string | undefined,
+    stripLocalPath = true,
+    stripAt = false,
+  ): TypeName | undefined {
 
-    const parsedParts = Naming.parseToParts(value, stripLocalPath);
+    const parsedParts = Naming.parseToParts(value, stripLocalPath, stripAt);
+    return Naming.parsePartsToVariants(parsedParts);
+  }
+
+  public static parsePartsToVariants(parsedParts: ParseParts | undefined): TypeName | undefined {
+
     if (!parsedParts) {
       return undefined;
     }

@@ -3,28 +3,9 @@ import fs from 'fs';
 import pointer, {JsonObject} from 'json-pointer';
 import {LoggerFactory} from '@omnigen/core-log';
 import {JsonUri} from '@omnigen-org/json-expander';
+import {DocumentStore} from './DocumentStore.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
-
-export class DocumentStore {
-  public readonly documents = new Map<string, JsonObject>();
-
-  public values() {
-    return this.documents.values();
-  }
-
-  public set(key: string, value: JsonObject) {
-    return this.documents.set(key, value);
-  }
-
-  public get(key: string) {
-    return this.documents.get(key);
-  }
-
-  public has(key: string) {
-    return this.documents.has(key);
-  }
-}
 
 export class JsonPathFetcher {
 
@@ -36,7 +17,7 @@ export class JsonPathFetcher {
       throw new Error(`Given path must have an absolute file path`);
     }
 
-    let document = store ? store.documents.get(path.absoluteFilePath) : undefined;
+    let document = store ? store.get(path.absoluteFilePath) : undefined;
     if (document) {
       logger.silent(`Has cached document '${path.absoluteFilePath}', will get path '${jsonPath}'`);
       return pointer.has(document, jsonPath) ? pointer.get(document, jsonPath) : undefined;
@@ -52,7 +33,7 @@ export class JsonPathFetcher {
     }
 
     if (store) {
-      store.documents.set(path.absoluteFilePath, document);
+      store.set(path.absoluteFilePath, document);
     }
 
     const has = pointer.has(document, jsonPath);

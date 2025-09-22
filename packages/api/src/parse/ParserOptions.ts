@@ -45,6 +45,12 @@ export const ZodParserOptions = ZodOptions.extend({
    */
   direction: z.enum(getEnumValues(Direction)).default(Direction.OUT),
 
+  /**
+   * If for example a JsonSchema contains `{properties: {...}, $ref: ...}` then the contents of the $ref is merged into the parent object.
+   * This creates less types in the generated output, and differentiates it from `allOf` that likely becomes supertypes.
+   */
+  mergeMixedReferences: ZodCoercedBoolean.default('t'),
+
   propertyNameMapper: z.union([z.custom<PropertyNameMapper>(), z.record(z.string(), z.string()), z.undefined()])
     .transform(input => {
       if (!input) {

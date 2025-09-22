@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Foo",
+    "suffix": "Suf"
+  },
+  {
+    "name": {
+      "name": "Foo",
+      "suffix": "Object"
+    },
+    "suffix": "Suf"
+  }
+]

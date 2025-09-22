@@ -1,0 +1,57 @@
+[
+  "PropB",
+  {
+    "name": "Owner",
+    "suffix": "PropB"
+  },
+  {
+    "name": "PropB",
+    "suffix": "Item"
+  },
+  {
+    "name": {
+      "name": "Owner",
+      "suffix": "PropB"
+    },
+    "suffix": "Item"
+  },
+  {
+    "name": "PropB",
+    "suffix": "Object"
+  },
+  {
+    "name": {
+      "name": "Owner",
+      "suffix": "PropB"
+    },
+    "suffix": "Object"
+  },
+  {
+    "name": {
+      "name": "PropB",
+      "suffix": "Item"
+    },
+    "suffix": "Object"
+  },
+  {
+    "name": {
+      "name": {
+        "name": "Owner",
+        "suffix": "PropB"
+      },
+      "suffix": "Item"
+    },
+    "suffix": "Object"
+  },
+  {
+    "name": "Item",
+    "suffix": "Ext"
+  },
+  {
+    "name": {
+      "name": "Item",
+      "suffix": "Ext"
+    },
+    "suffix": "Object"
+  }
+]

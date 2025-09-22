@@ -2,7 +2,8 @@ import {ZodSchemaFileContext} from '@omnigen/core';
 import {ActionKind, createPlugin, PluginAutoRegistry, ZodModelContext, ZodParserOptionsContext} from '@omnigen/core-plugin';
 import {z} from 'zod';
 import {OpenApiJsonSchemaParser} from './parse/OpenApiJsonSchemaParser';
-import {AnyJSONSchema, ExternalDocumentsFinder} from '@omnigen/parser-jsonschema';
+import {AnyJSONSchema, ExternalDocumentsFinder, JSONSchema9Definition} from '@omnigen/parser-jsonschema';
+import {OpenAPIV3_1} from 'openapi-types';
 
 export const ZodOpenApiSourceContext = z.object({
   source: z.literal('openapi'),
@@ -37,7 +38,7 @@ export const OpenApiPlugin = createPlugin(
     const documentFinder = new ExternalDocumentsFinder(ctx.schemaFile.getAbsolutePath() ?? '', ctx.schemaFile.asObject());
     const resolver = documentFinder.create();
     const parser = new OpenApiJsonSchemaParser(resolver, ctx.parserOptions, ctx.schemaFile);
-    const root = ctx.schemaFile.asObject<AnyJSONSchema>();
+    const root = ctx.schemaFile.asObject<OpenAPIV3_1.Document>();
     const model = parser.parse(root);
 
     return {

@@ -63,7 +63,7 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
         const reduced = r.yieldBase();
         let newChildren: OmniType[] | undefined = undefined;
         if (OmniUtil.isComposition(reduced)) {
-          newChildren = this.simplifyCombos(reduced);
+          newChildren = this.simplifyCombos(reduced, r.parent);
           if (newChildren) {
             r.put('types', newChildren);
           }
@@ -95,12 +95,17 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
     });
   }
 
-  private simplifyCombos(reduced: OmniCompositionType) {
+  private simplifyCombos(reduced: OmniCompositionType, parent?: OmniNode) {
     const newChildren: OmniType[] = [...reduced.types];
     for (let i = 0; i < newChildren.length; i++) {
       const child = newChildren[i];
-      if (child.kind === reduced.kind && (!child.name)) {
+      if (child.kind === reduced.kind && !child.name) {
         newChildren.splice(i, 1, ...child.types);
+        i--;
+      }
+
+      if (parent && parent.kind === OmniTypeKind.OBJECT && child.kind === OmniTypeKind.OBJECT && OmniUtil.isEmptyType(child)) {
+        newChildren.splice(i, 1);
         i--;
       }
     }

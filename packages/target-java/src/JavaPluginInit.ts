@@ -152,11 +152,13 @@ export const JavaPlugin = createPlugin(
       // new SimplifyInheritanceModelTransformer(),
       // new ElevatePropertiesModelTransformer(),
       // new GenericsModelTransformer(),
+      new SimplifyUnnecessaryCompositionsModelTransformer(), // Add once more below?
       new ElevatePropertiesModelTransformer(),
       new AggregateIntersectionsModelTransformer(),
       new CompositionGenericTargetToObjectJavaModelTransformer(),
+
       new InterfaceExtractorModelTransformer(),
-      new SimplifyUnnecessaryCompositionsModelTransformer(),
+
     ];
 
     for (const transformer of transformers) {

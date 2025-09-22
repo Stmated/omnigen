@@ -96,7 +96,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
     if (namePairs.length > 0) {
       const resolved = Naming.unwrapPairs(namePairs);
       for (const pair of resolved) {
-        pair.owner.name = CodeUtil.getSafeIdentifierName(Naming.prefixedPascalCase(pair.name));
+        pair.owner.name = CodeUtil.getSafeIdentifierName(pair.name);
       }
     }
 
@@ -159,6 +159,9 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
           return this.transformSubType(model, targetIdentifier.type, undefined, options, features, root);
         }
       }
+    } else if (type.kind === OmniTypeKind.ARRAY && type.name) {
+      // If it's an array and it has a name, then we should likely be adding it as as type as well.
+      return this.transformSubType(model, type, undefined, options, features, root);
     }
 
     return undefined;

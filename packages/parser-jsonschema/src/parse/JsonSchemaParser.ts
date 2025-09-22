@@ -1,6 +1,7 @@
 import {
   OMNI_GENERIC_FEATURES,
   OmniArrayKind,
+  OmniArrayType,
   OmniArrayTypes,
   OmniComparisonOperator,
   OmniCompositionType,
@@ -33,9 +34,10 @@ import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactor
 import {DefaultJsonSchema9Visitor, ExternalDocumentsFinder, JsonSchema9Visitor, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
-import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName, PROP_ID, PROP_INLINE, PROP_NAME_HINT} from '../definitions';
+import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName, PROP_ID} from '../definitions';
 import {DocumentStore, JsonPathFetcher} from '@omnigen/core-json';
 import {JsonExpander} from '@omnigen-org/json-expander';
+import {JsonSchemaNameParser, NameOptions} from './JsonSchemaNameParser.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -60,12 +62,6 @@ const CONTENT_PROPERTIES: string[] = [
 ] satisfies (keyof AnyJSONSchema)[];
 
 type JsonSchemaTypeWithAny = ToSingle<AnyJSONSchema['type']> | 'any';
-
-interface NameOptions {
-  suffix?: TypeName | undefined,
-  suffixPrioritized?: boolean;
-  requirePropertyTypeOwnerPrefix?: boolean;
-}
 
 export class DefaultJsonSchemaParser implements Parser {
 
@@ -100,12 +96,10 @@ export class DefaultJsonSchemaParser implements Parser {
 
     const jsonSchemaParser = new JsonSchemaParser(refResolver, this._parserOptions);
 
-    for (const [key, s] of this.getAllSchemas(root, jsonSchemaParser)) {
-
-      const resolved = refResolver.resolve(s);
+    for (const [nameOptions, s] of this.getAllSchemas(root, jsonSchemaParser)) {
 
       try {
-        const omniTypeRes = jsonSchemaParser.jsonSchemaToType(key, resolved);
+        const omniTypeRes = jsonSchemaParser.jsonSchemaToType(s, nameOptions);
         model.types.push(omniTypeRes.type);
       } catch (ex) {
         const schemaName = typeof s === 'boolean' ? '{}' : (s.$id ?? s.title ?? s.description ?? '???');
@@ -119,32 +113,25 @@ export class DefaultJsonSchemaParser implements Parser {
     };
   }
 
-  private* getAllSchemas<S extends JSONSchema9>(schema: JSONSchema9Definition<S>, parser: JsonSchemaParser<any>): Generator<[TypeName | undefined, AnyJsonDefinition<S>]> {
+  private* getAllSchemas<S extends JSONSchema9>(schema: JSONSchema9Definition<S>, parser: JsonSchemaParser<any>): Generator<[NameOptions | undefined, AnyJsonDefinition<S>]> {
 
     if (typeof schema === 'boolean') {
       return;
     }
 
     if (schema.properties || schema.patternProperties || schema.type || schema.default !== undefined || (schema.type === undefined && schema.enum) || schema.format) {
-
-      const names = parser.getLikelyNames(schema, undefined);
-      const simplified = Naming.simplify(names);
-      yield [simplified, schema];
+      yield [undefined, schema];
     }
 
     if (schema.$defs) {
       for (const [key, value] of Object.entries(schema.$defs)) {
-        const name: TypeName = [key, {name: key, suffix: 'Definition'}];
-        const likelyNames = parser.getLikelyNames(value, value);
-        yield [Naming.merge(name, likelyNames), value];
+        yield [{key: key, fallbackSuffix: 'Definition'}, value];
       }
     }
 
     if (schema.definitions) {
       for (const [key, value] of Object.entries(schema.definitions)) {
-        const name: TypeName = [key, {name: key, suffix: 'Definition'}];
-        const likelyNames = parser.getLikelyNames(value, value);
-        yield [Naming.merge(name, likelyNames), value];
+        yield [{key: key, fallbackSuffix: 'Definition'}, value];
       }
     }
   }
@@ -156,11 +143,10 @@ export class DefaultJsonSchemaParser implements Parser {
  */
 export class JsonSchemaParser<TOpt extends ParserOptions> {
 
-  private static _uniqueCounter = 0;
-
   // TODO: Move this to the root? But always have the key be the absolute path?
   private readonly _typeMap = new Map<string, OmniType>();
   private readonly _postDiscriminatorMapping: PostDiscriminatorMapping[] = [];
+  public readonly _nameParser = new JsonSchemaNameParser();
 
   private readonly _refResolver: RefResolver;
 
@@ -191,17 +177,26 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   }
 
   public jsonSchemaToType<S extends JSONSchema9>(
-    name: TypeName | undefined,
-    schema: AnyJsonDefinition<S>,
+    unresolvedSchema: AnyJsonDefinition<S>,
     nameOptions?: NameOptions,
   ): SchemaToTypeResult {
+
+    // If there was no lossless resolve, then if there is one here
+    if (this._options.mergeMixedReferences) {
+      unresolvedSchema = this.aggregateMixed(unresolvedSchema);
+    }
+
+    let resolvedSchema: JSONSchema9Definition | undefined = this._refResolver.resolveLossless(unresolvedSchema);
+    if (this._options.mergeMixedReferences) {
+      resolvedSchema = this.aggregateMixed(resolvedSchema);
+    }
 
     // If contentDescriptor contains an anonymous schema,
     // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
     // That way we will not get duplicates of the schema when called from different locations.
-    const id = this.getInternalId(schema)
-      || (schema === true ? `__Any` : undefined)
-      || (schema === false ? `__Never` : undefined);
+    const id = this.getInternalId(resolvedSchema)
+      || (resolvedSchema === true ? `__Any` : undefined)
+      || (resolvedSchema === false ? `__Never` : undefined);
 
     if (id) {
       const existing = this._typeMap.get(id);
@@ -212,6 +207,15 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       }
     }
 
+    if (resolvedSchema === unresolvedSchema) {
+      resolvedSchema = undefined;
+    }
+
+    const name = this._nameParser.parse(unresolvedSchema, resolvedSchema, nameOptions);
+    if (!name) {
+      throw new Error(`Could not find any possible name for the schema`);
+    }
+    const schema = resolvedSchema ?? unresolvedSchema;
     const extendedBy = this.getExtendedBy(schema, name);
     const defaultType = this.getDefaultFromSchema(schema, name);
 
@@ -255,34 +259,21 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
     const omniTypes: OmniType[] = [];
     for (const schemaType of schemaTypes) {
-      // TODO: Remove the "suffixPrioritized" and instead just add it to the "name" variable?
+
       let schemaTypeFallbackSuffix: TypeName | undefined;
-      if (schemaType && nameOptions?.suffix) {
-        // TODO: Should not need to add `Case.pascal` to the name -- should be up to the name resolver.
-        schemaTypeFallbackSuffix = {name: nameOptions.suffix, suffix: Case.pascal(schemaType)};
-      } else {
-        if (schemaType && schemaTypes.size > 1) {
-          schemaTypeFallbackSuffix = nameOptions?.suffix ?? Case.pascal(schemaType);
-        } else {
-          schemaTypeFallbackSuffix = nameOptions?.suffix ?? undefined;
-        }
+      if (schemaType && schemaTypes.size > 1) {
+        schemaTypeFallbackSuffix = nameOptions?.suffix ?? Case.pascal(schemaType);
       }
 
-      const schemaTypeNameOptions: NameOptions = {...nameOptions, suffix: schemaTypeFallbackSuffix, suffixPrioritized: (schemaTypes.size > 1)};
+      // const schemaTypeNameOptions: NameOptions = {suffix: schemaTypeFallbackSuffix, suffixPrioritized: true};
 
-      let omniType = this.jsonSchemaToNonObjectType(schema, name, extendedBy, defaultType, schemaType, schemaTypeNameOptions);
+      let omniType = this.jsonSchemaToNonObjectType(schema, id, name, extendedBy, defaultType, schemaType, {suffix: schemaTypeFallbackSuffix});
       if (!omniType) {
 
-        let schemaObjectName = name;
-        if (schemaObjectName && schemaTypeNameOptions?.suffix) {
-          const nameWithSuffix: TypeName = {name: TypeNameUtil.shallowCopy(schemaObjectName), suffix: schemaTypeNameOptions?.suffix};
-          if (schemaTypeNameOptions?.suffixPrioritized) {
-            // Prioritize the usage of the name with the suffix, and only fallback on without the suffix.
-            schemaObjectName = TypeNameUtil.addName(nameWithSuffix, schemaObjectName);
-          } else {
-            schemaObjectName = TypeNameUtil.addName(schemaObjectName, nameWithSuffix);
-          }
-        }
+        const schemaObjectName = schemaTypeFallbackSuffix
+          // Prioritize the usage of the name with the suffix, and only fallback on without the suffix.
+          ? {name: name, suffix: schemaTypeFallbackSuffix}
+          : name;
 
         // If it's nothing else, then it's an object.
         omniType = this.jsonSchemaToObjectType(schema, schemaObjectName, id, extendedBy);
@@ -302,43 +293,11 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       if (hasConditionalSchemas) {
 
         if (schema.then !== undefined) {
-          const resolved = this._refResolver.resolve(schema.then);
-          let conditionalName = this.getSpecifiedNames(schema.then, resolved);
-          if (!conditionalName) {
-            conditionalName = this.getDeducedDirectNames(schema.then);
-            if (!conditionalName) {
-              conditionalName = this.getDeducedDereferencedNames(resolved);
-              if (!conditionalName) {
-                conditionalName = name;
-                if (!conditionalName) {
-                  throw new Error(`Could not find a name for the 'then'`);
-                }
-              }
-              conditionalName = {name: conditionalName, suffix: 'Then'};
-            }
-          }
-          const conditionalType = this.jsonSchemaToType(conditionalName, resolved).type;
-          conditionalTypes.push(conditionalType);
+          conditionalTypes.push(this.jsonSchemaToType(schema.then, {ownerName: name, preferSuffix: 'Then'} satisfies NameOptions).type);
         }
 
         if (schema.else !== undefined) {
-          const resolved = this._refResolver.resolve(schema.else);
-          let conditionalName = this.getSpecifiedNames(schema.else, resolved);
-          if (!conditionalName) {
-            conditionalName = this.getDeducedDirectNames(schema.else);
-            if (!conditionalName) {
-              conditionalName = this.getDeducedDereferencedNames(resolved);
-              if (!conditionalName) {
-                conditionalName = name;
-                if (!conditionalName) {
-                  throw new Error(`Could not find a name for the 'else'`);
-                }
-              }
-              conditionalName = {name: conditionalName, suffix: 'Else'};
-            }
-          }
-          const conditionalType = this.jsonSchemaToType(conditionalName, resolved).type;
-          conditionalTypes.push(conditionalType);
+          conditionalTypes.push(this.jsonSchemaToType(schema.else, {ownerName: name, preferSuffix: 'Else'} satisfies NameOptions).type);
         }
 
         if (conditionalTypes.length > 0) {
@@ -382,7 +341,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
           union.types.push(...omniTypes);
           union.types.push(conditionalUnion);
 
-          const baseName = name ? {name: TypeNameUtil.shallowCopy(name), suffix: 'Base'} : union.name;
+          const baseName = name ? {name: TypeNameUtil.shallowCopy(name), suffix: 'Base'} satisfies TypeName : union.name;
           let unionName = name;
           if (OmniUtil.isNameable(mainType)) {
             unionName = mainType.name ?? name;
@@ -433,6 +392,54 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     return {
       type: omniType,
     };
+  }
+
+  private aggregateMixed<S extends JSONSchema9>(unresolvedSchema: AnyJsonDefinition<S>): AnyJsonDefinition<S> {
+
+    let mixedResolved: any = this._refResolver.resolveMixed(unresolvedSchema);
+    let aggregatedSchema: any = undefined;
+    while (mixedResolved) {
+
+      if (aggregatedSchema === undefined) {
+        if (typeof unresolvedSchema === 'object') {
+          // Do a shallow copy, so we do not alter the original.
+          aggregatedSchema = {...unresolvedSchema};
+        } else {
+          aggregatedSchema = unresolvedSchema;
+        }
+      }
+
+      if (typeof aggregatedSchema === 'object' && typeof mixedResolved === 'object') {
+
+        // Remove any previous $ref, and only replace with new one if one shows up.
+        delete aggregatedSchema.$ref;
+
+        const keys = [...new Set([...Object.keys(mixedResolved), ...Object.keys(aggregatedSchema)])];
+        for (const k of keys) {
+
+          // TODO: Skip merging $comments and such? Or Perhaps signify somehow that the comment came from a merged parent?
+
+          // TODO: If go from "object" type to non-object, then we should likely remove any "oneOf" etc?
+
+          const target = aggregatedSchema[k];
+          const parent = mixedResolved[k];
+
+          if (Array.isArray(target) || Array.isArray(parent)) {
+            const targetArray = Array.isArray(target) ? target : (target === undefined ? [] : [target]);
+            const parentArray = Array.isArray(parent) ? parent : (parent === undefined ? [] : [parent]);
+            aggregatedSchema[k] = [...targetArray, ...parentArray];
+          } else if (typeof target == 'object' && typeof parent === 'object') {
+            aggregatedSchema[k] = {...parent, ...target};
+          } else {
+            aggregatedSchema[k] = target ?? parent;
+          }
+        }
+      }
+
+      mixedResolved = this._refResolver.resolveMixed(mixedResolved);
+    }
+
+    return aggregatedSchema ?? unresolvedSchema;
   }
 
   public static preProcessSchema<
@@ -505,8 +512,8 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   private jsonSchemaToObjectType<S extends JSONSchema9>(
     schema: AnyJsonDefinition<S>,
     name: TypeName | undefined,
-    actualRef: string | undefined,
-    extendedBy?: OmniType,
+    internalId: string | undefined,
+    extendedBy: OmniType | undefined,
   ): OmniType {
 
     if (typeof schema == 'boolean') {
@@ -529,12 +536,12 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       abstract: JsonSchemaParser.vendorExtensionToBool(schema, 'x-abstract', false),
     };
 
-    if (actualRef && !this._typeMap.has(actualRef)) {
+    if (internalId && !this._typeMap.has(internalId)) {
 
       // Need to save it to the type map as soon as we can.
       // Otherwise we might end up with recursive loops in the schema.
       // This way we might be able to mitigate most of them.
-      this._typeMap.set(actualRef, type);
+      this._typeMap.set(internalId, type);
     }
 
     const properties: OmniProperty[] = [];
@@ -563,20 +570,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
       for (const [propertyPattern, propertySchema] of Object.entries(schema.patternProperties)) {
 
-        const resolved = this._refResolver.resolve(propertySchema);
-        let patternPropertyName = this.getSpecifiedNames(propertySchema, resolved);
-        if (!patternPropertyName) {
-          patternPropertyName = this.getDeducedNames(propertySchema, resolved);
-          if (!patternPropertyName) {
-            if (name) {
-              patternPropertyName = {name: name, suffix: 'PatternProperties'};
-            } else {
-              patternPropertyName = 'PatternProperties';
-            }
-          }
-        }
-
-        const patternPropertiesType = this.jsonSchemaToType(patternPropertyName, resolved);
+        const patternPropertiesType = this.jsonSchemaToType(propertySchema, {preferSuffix: 'PatternProperties', ownerName: name} satisfies NameOptions);
 
         properties.push({
           kind: OmniItemKind.PROPERTY,
@@ -593,17 +587,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     const additionalProperties = schema.additionalProperties ?? this._options.defaultAdditionalProperties;
     if (additionalProperties) {
 
-      const resolvedAdditional = this._refResolver.resolve(additionalProperties);
-
-      let additionalPropertiesNames = this.getSpecifiedNames(additionalProperties, resolvedAdditional);
-      if (!additionalPropertiesNames) {
-        additionalPropertiesNames = this.getDeducedNames(additionalProperties, resolvedAdditional);
-        if (!additionalPropertiesNames) {
-          additionalPropertiesNames = {name: name, suffix: 'AdditionalProperties'};
-        }
-      }
-
-      const additionalPropertiesTypeRes = this.jsonSchemaToType(additionalPropertiesNames, resolvedAdditional);
+      const additionalPropertiesTypeRes = this.jsonSchemaToType(additionalProperties, {ownerName: name, fallbackSuffix: 'AdditionalProperties'} satisfies NameOptions);
       const additionalPropertiesType = this.normalizeAdditionalPropertiesType(additionalPropertiesTypeRes.type);
 
       let additionalPropertiesPropertyName: OmniPropertyName | undefined = undefined;
@@ -653,8 +637,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
         title: extendedBy.title || type.title,
       };
 
-      // TODO: A bit ugly? Is there a better way, or just a matter of introducing a helper method that does it for us?
-      if ('name' in newType || (OmniUtil.isComposition(newType) && !newType.inline) || newType.kind == OmniTypeKind.INTERFACE) {
+      if (OmniUtil.isNameable(newType) || (OmniUtil.isComposition(newType) && !newType.inline)) {
 
         // The name should be kept the same, since it is likely much more specific.
         newType.name = type.name;
@@ -694,6 +677,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
   private jsonSchemaToNonObjectType<S extends JSONSchema9, D extends AnyJsonDefinition<S>>(
     schema: D,
+    internalId: string | undefined,
     name: TypeName | undefined,
     extendedBy: OmniType | undefined,
     defaultType: OmniType | undefined,
@@ -813,7 +797,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
         }
       }
     } else if (schemaType === 'array' || schema.items !== undefined) {
-      return this.toArrayType(schema, name, nameOptions);
+      return this.toArrayType(schema, name, internalId, nameOptions);
     }
 
     if (schemaType !== 'object') {
@@ -927,11 +911,13 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     let primitiveName: TypeName;
     if (name) {
       if (nameOptions?.suffix) {
-        if (nameOptions.suffixPrioritized) {
-          primitiveName = [{name: name, suffix: nameOptions.suffix}, name];
-        } else {
-          primitiveName = [name, {name: name, suffix: nameOptions.suffix}];
-        }
+        primitiveName = [{name: name, suffix: nameOptions.suffix}, name];
+
+        // if (nameOptions.suffixPrioritized) {
+        //
+        // } else {
+        //   primitiveName = [name, {name: name, suffix: nameOptions.suffix}];
+        // }
       } else {
         primitiveName = name;
       }
@@ -1088,20 +1074,9 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     schemaOwner: S,
   ): OmniProperty {
 
-    let propertyTypeName = this.getSpecifiedNames(schema, resolvedSchema);
-    if (!propertyTypeName) {
-      propertyTypeName = this.getDeducedDirectNames(schema);
-      if (!propertyTypeName) {
-        propertyTypeName = this.getDeducedDereferencedNames(resolvedSchema);
-        if (!propertyTypeName) {
-          propertyTypeName = [{prefix: ownerName, name: {name: propertyName, case: 'pascal'}}, propertyName];
-        }
-      }
-    }
-
     let propertyType: SchemaToTypeResult;
     try {
-      propertyType = this.jsonSchemaToType(propertyTypeName, resolvedSchema);
+      propertyType = this.jsonSchemaToType(schema, {preferredOwnerName: ownerName, key: {name: propertyName, case: 'pascal'}} satisfies NameOptions);
     } catch (ex) {
       throw new Error(`Could not convert json schema of property '${propertyName}' from ${schemaOwner.$id} to omni type, because: ${ex}`, {cause: ex});
     }
@@ -1201,163 +1176,6 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       property.debug = OmniUtil.addDebug(property.debug, `Setting required=true because schema said so`);
     }
   }
-
-  public getSpecifiedNames<S extends JSONSchema9>(
-    schema: AnyJsonDefinition<S>,
-    dereferenced: AnyJsonDefinition<S> | undefined,
-  ): TypeName | undefined {
-
-    let names: TypeName | undefined = undefined;
-    if (typeof schema == 'object') {
-
-      if (PROP_NAME_HINT in schema) {
-        const hint = (schema as any)[PROP_NAME_HINT] as TypeName | undefined;
-        if (hint) {
-          if (typeof hint === 'string') {
-            names = Naming.merge(names, Naming.parse(hint));
-          } else {
-            names = Naming.merge(names, hint);
-          }
-        }
-      }
-
-      names = Naming.merge(names, Naming.parse(schema.$id));
-      names = Naming.merge(names, schema.title);
-    }
-
-    if (typeof dereferenced === 'object' && dereferenced !== schema) {
-      if (PROP_NAME_HINT in dereferenced) {
-        names = Naming.merge(names, (dereferenced as any)[PROP_NAME_HINT] as TypeName | undefined);
-      }
-
-      names = Naming.merge(names, Naming.parse(dereferenced.$id));
-      names = Naming.merge(names, dereferenced.title);
-    }
-
-    return Naming.simplify(names);
-  }
-
-  public getDeducedDereferencedUsualNames<S extends JSONSchema9>(
-    schema: JSONSchema9Definition<S> | undefined,
-  ): TypeName | undefined {
-
-    let names: TypeName | undefined = undefined;
-    if (typeof schema === 'object') {
-      names = Naming.merge(names, schema.$dynamicAnchor);
-    }
-
-    return names;
-  }
-
-  public getDeducedDereferencedUnusualNames<S extends JSONSchema9>(
-    schema: JSONSchema9Definition<S> | undefined,
-  ): TypeName | undefined {
-
-    let names: TypeName | undefined = undefined;
-    if (typeof schema === 'object') {
-      const derefComment = Naming.parseToParts(schema.$comment);
-      if (derefComment && derefComment.protocol && derefComment.hashes.length > 0) {
-        names = Naming.merge(names, derefComment.hashes[0]);
-      }
-    }
-
-    return names;
-  }
-
-  public getDeducedDereferencedNames<S extends JSONSchema9>(
-    schema: JSONSchema9Definition<S> | undefined,
-  ): TypeName | undefined {
-
-    const names = this.getDeducedDereferencedUsualNames(schema);
-    return Naming.merge(names, this.getDeducedDereferencedUnusualNames(schema));
-  }
-
-  public getDeducedDirectNames<S extends JSONSchema9>(
-    schema: JSONSchema9Definition<S>,
-  ): TypeName | undefined {
-
-    let names: TypeName | undefined = undefined;
-    if (typeof schema === 'object') {
-      // names = Naming.merge(names, Naming.parse(schema.$id));
-      names = Naming.merge(names, Naming.parse(schema.$schema));
-      names = Naming.merge(names, Naming.parse(schema.$ref));
-    }
-
-    return names;
-  }
-
-  public getDeducedNames<S extends JSONSchema9>(
-    schema: JSONSchema9Definition<S>,
-    dereferenced: JSONSchema9Definition<S> | undefined,
-  ): TypeName | undefined {
-
-    let names = this.getDeducedDirectNames(schema);
-    return Naming.merge(names, this.getDeducedDereferencedNames(dereferenced));
-    // return Naming.merge(names, this.getDeducedDereferencedUnusualNames(dereferenced));
-  }
-
-  public getLikelyNames<S extends JSONSchema9>(
-    schema: JSONSchema9Definition<S>,
-    dereferenced: JSONSchema9Definition<S> | undefined,
-  ): TypeName | undefined {
-
-    let names = this.getSpecifiedNames(schema, dereferenced);
-    return Naming.merge(names, this.getDeducedNames(schema, dereferenced));
-  }
-
-  public getNameSuffixes(
-    schema: AnyJsonDefinition<JSONSchema9>,
-  ): TypeName[] {
-
-    let names: TypeName[] = [];
-
-    if (typeof schema === 'object') {
-      if (schema.required) {
-        for (const req of schema.required) {
-          names.push(`With${Case.pascal(req)}`);
-        }
-      }
-      if (schema.format) {
-        names.push(Case.pascal(schema.format));
-      }
-      if (schema.type) {
-        if (Array.isArray(schema.type)) {
-          for (const type of schema.type) {
-            names.push(Case.pascal(type));
-          }
-        } else {
-          names.push(Case.pascal(schema.type));
-        }
-      }
-      if (schema.format && schema.type) {
-        if (Array.isArray(schema.type)) {
-          for (const type of schema.type) {
-            names.push(`${Case.pascal(type)}${Case.pascal(schema.format)}`);
-          }
-        } else {
-          names.push(`${Case.pascal(schema.type)}${Case.pascal(schema.format)}`);
-        }
-      }
-    }
-
-    return names;
-  }
-
-  // public getFallbackNamesOfJsonSchemaType<S extends AnyJSONSchema>(schema: AnyJsonDefinition<S>): TypeName[] {
-  //
-  //   const names: TypeName[] = [];
-  //   if (typeof schema == 'object' && schema.type) {
-  //     if (Array.isArray(schema.type)) {
-  //       names.push(Case.pascal(schema.type.join('_')));
-  //     } else {
-  //       if (schema.type) {
-  //         names.push(Case.pascal(schema.type));
-  //       }
-  //     }
-  //   }
-  //
-  //   return names;
-  // }
 
   /**
    * TODO: This should be removed and placed inside a parser-agnostic transformer
@@ -1586,9 +1404,17 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     }
   }
 
+  private hasRef(schema: JSONSchema9Definition): boolean {
+    if (typeof schema === 'object') {
+      return schema.$ref !== undefined || schema.$dynamicRef !== undefined;
+    }
+
+    return false;
+  }
+
   private getExtendedBy<S extends JSONSchema9>(
     schema: AnyJsonDefinition<S>,
-    name: TypeName | undefined,
+    ownerName: TypeName | undefined,
   ): OmniType | undefined {
 
     if (typeof schema == 'boolean') {
@@ -1602,76 +1428,47 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
     if (schema.oneOf) {
       for (let i = 0; i < schema.oneOf.length; i++) {
-        const entry = schema.oneOf[i];
-        const resolved = this._refResolver.resolve(entry);
-        const preferredName = this.getLikelyNames(entry, resolved);
-        const preferredNames: TypeName[] = [];
-        if (preferredName) {
-          preferredNames.push(preferredName);
-          preferredNames.push({name: preferredName, suffix: `${i}`});
-        } else {
-          const finalName = name || this.getLikelyNames(schema, schema);
-          if (finalName) {
-            this.getNameSuffixes(resolved).forEach(suffix => preferredNames.push({name: finalName, suffix: suffix}));
-            preferredNames.push({name: finalName, suffix: `${i}`});
-          } else {
-            throw new Error(`Add some names here`);
-          }
-        }
-        compositionsOneOfOr.push(this.jsonSchemaToType(Naming.simplify(preferredNames), resolved).type);
+        compositionsOneOfOr.push(this.jsonSchemaToType(schema.oneOf[i], {ownerName: ownerName, fallbackSuffix: `${i}`} satisfies NameOptions).type);
       }
     }
 
-    if (schema.allOf) {
-      for (let i = 0; i < schema.allOf.length; i++) {
-        const entry = schema.allOf[i];
-        const resolved = this._refResolver.resolve(entry);
-        const preferredName = this.getLikelyNames(entry, resolved);
-        const preferredNames: TypeName[] = [];
-        if (preferredName) {
-          preferredNames.push(preferredName);
-          preferredNames.push({name: preferredName, suffix: `${i}`});
+    if (schema.allOf || schema.$ref) {
+
+      const resolved = schema.$ref ? this._refResolver.resolve(schema) : undefined;
+      if (resolved) {
+
+        // There is a $ref in the schema at this point, so we will treat it as-if part of `allOf`
+        const key = Naming.parse(schema.$ref);
+        const refType = this.jsonSchemaToType(resolved, {ownerName: ownerName, key: key} satisfies NameOptions).type;
+        if (refType.kind === OmniTypeKind.ARRAY) {
+
+          // TODO: If this is the case, then this is likely a schema that has something like `{$ref: 'some-array', minLength: 10}`
+          //        So it should instead be used to merge with its originating schema and make it a completely unique array type without any notion of "extending" or "supertype" or whatever.
+          // TODO: Fix! Do it in an ugly way for now!
+          // NOTE: This might not longer be an issue
+          throw new Error(`Not implemented to have an array as the $ref`);
+
         } else {
-          const finalName = name || this.getLikelyNames(schema, schema);
-          if (finalName) {
-            this.getNameSuffixes(resolved).forEach(suffix => preferredNames.push({name: finalName, suffix: suffix}));
-            preferredNames.push({name: finalName, suffix: `${i}`});
-          } else {
-            throw new Error(`Add some names here`);
+          compositionsAllOfAnd.push(refType);
+        }
+      }
+
+      if (schema.allOf) {
+        for (let i = 0; i < schema.allOf.length; i++) {
+          const omniType = this.jsonSchemaToType(schema.allOf[i], {ownerName: ownerName, fallbackSuffix: `${i}`} satisfies NameOptions).type;
+          if (!this.hasRef(schema.allOf[i])) {
+            // If the child is not a ref type, but a type specified anonymously, then we specify it as inline.
+            omniType.inline = omniType.inline ?? true;
           }
-        }
-        const omniType = this.jsonSchemaToType(Naming.simplify(preferredNames), resolved).type;
 
-        // TODO: This 'inline' check is ugly, and other locations in the code that sets or reads 'x-omnigen-inline' should probably have its code more controlled/centralized
-        const specificInline = JsonSchemaParser.getVendorExtensionBool(resolved, PROP_INLINE);
-        omniType.inline = (resolved === entry) && (specificInline === true || specificInline !== false);
-
-        if (this._options.debug && omniType.inline) {
-          omniType.debug = OmniUtil.addDebug(omniType.debug, `Made inline since the 'allOf' entry was inline in the spec`);
+          compositionsAllOfAnd.push(omniType);
         }
-        compositionsAllOfAnd.push(omniType);
       }
     }
 
     if (schema.anyOf) {
       for (let i = 0; i < schema.anyOf.length; i++) {
-        const entry = schema.anyOf[i];
-        const resolved = this._refResolver.resolve(entry);
-        const preferredName = this.getLikelyNames(entry, resolved);
-        const preferredNames: TypeName[] = [];
-        if (preferredName) {
-          preferredNames.push(preferredName);
-          preferredNames.push({name: preferredName, suffix: `${i}`});
-        } else {
-          const finalName = name || this.getLikelyNames(schema, schema);
-          if (finalName) {
-            this.getNameSuffixes(resolved).forEach(suffix => preferredNames.push({name: {name: finalName, case: 'pascal'}, suffix: suffix}));
-            preferredNames.push({name: finalName, suffix: `${i}`});
-          } else {
-            throw new Error(`Add some names here`);
-          }
-        }
-        compositionsAnyOfOr.push(this.jsonSchemaToType(Naming.simplify(preferredNames), resolved).type);
+        compositionsAnyOfOr.push(this.jsonSchemaToType(schema.anyOf[i], {ownerName: ownerName, fallbackSuffix: `${i}`} satisfies NameOptions).type);
       }
     }
 
@@ -1702,8 +1499,10 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
       // This is a name that might not be the best suitable one. Might need to be more restrictive, or send more information along with the type.
       // For the name to be decided later by the target.
-      composition.name = this.getLikelyNames(schema, schema);
-      composition.description = schema.description;
+      composition.name = this._nameParser.parse(schema);
+      if (!composition.description && schema.description) {
+        composition.description = schema.description;
+      }
     }
 
     return composition;
@@ -1746,10 +1545,10 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
         try {
 
           const fakeRef: Required<Pick<AnyJSONSchema, '$ref'>> = {$ref: ref};
-          const deref = this._refResolver.resolve(fakeRef);
-          const assumedId = this.getId(deref);
-          const assumedName = assumedId || ref;
-          const typeResult = this.jsonSchemaToType(assumedName, deref);
+          // const deref = this._refResolver.resolve(fakeRef);
+          // const assumedId = this.getId(deref);
+          // const assumedName = assumedId || ref;
+          const typeResult = this.jsonSchemaToType(fakeRef);
 
           const subTypeHint: OmniSubTypeHint = {
             kind: OmniItemKind.SUBTYPE_HINT,
@@ -1797,7 +1596,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
           continue;
         }
 
-        const subType = this.jsonSchemaToType(id, deref).type;
+        const subType = this.jsonSchemaToType(subSchema).type;
         if (subTypeHints.find(it => it.type == subType)) {
           logger.debug(`Skipping ${discriminatorPropertyName} as ${OmniUtil.describe(subType)} since it has a custom key`);
           continue;
@@ -1836,7 +1635,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       return undefined;
     }
 
-    return schema.$id;
+    return schema?.$id;
   }
 
   private getInternalId<S extends JSONSchema9>(schema: AnyJsonDefinition<S>): string | undefined {
@@ -1845,7 +1644,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       return undefined;
     }
 
-    if (PROP_ID in schema && schema[PROP_ID]) {
+    if (schema !== undefined && PROP_ID in schema && schema[PROP_ID]) {
       return schema[PROP_ID] as string;
     }
 
@@ -1855,6 +1654,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   private toArrayType<S extends JSONSchema9, D extends JSONSchema9Definition<S>>(
     schema: D,
     name: TypeName | undefined,
+    internalId: string | undefined,
     nameOptions?: NameOptions,
   ): OmniArrayTypes {
 
@@ -1864,7 +1664,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
     const items = schema['items'];
 
-    if (items === undefined || typeof items == 'boolean') {
+    if (items === undefined || typeof items === 'boolean') {
       // No items, so the schema for the array items is undefined.
       return {
         kind: OmniTypeKind.ARRAY,
@@ -1882,11 +1682,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       // TODO: This needs some seriously good implementation on the code-generator side of things.
       // TODO: What do we do here if the type can be inlined? Just ignore I guess?
 
-      const staticArrayTypes = items.map(it => {
-        const derefArrayItem = this._refResolver.resolve(it);
-        return this.jsonSchemaToType(this.getLikelyNames(it, derefArrayItem), derefArrayItem);
-      });
-
+      const staticArrayTypes = items.map(it => this.jsonSchemaToType(it));
       const commonDenominator = OmniUtil.getCommonDenominator(OMNI_GENERIC_FEATURES, staticArrayTypes.map(it => it.type))?.type;
 
       return {
@@ -1898,28 +1694,38 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
     } else {
 
-      const resolved = this._refResolver.resolve(items);
-      const arrayItemTypeName = this.getLikelyNames(items, resolved);
-      let arrayTypeName = name ?? arrayItemTypeName;
-      if (arrayTypeName && nameOptions?.suffix) {
-        arrayTypeName = [arrayTypeName, {name: arrayTypeName, suffix: nameOptions.suffix}];
-      }
+      const resolved = this._refResolver.resolve(schema);
+      const arrayName = this._nameParser.parse(schema, resolved, {onlyExplicit: true});
+      // let arrayTypeName = name ?? arrayItemTypeName;
+      // if (arrayTypeName && nameOptions?.suffix) {
+      //   arrayTypeName = [arrayTypeName, {name: arrayTypeName, suffix: nameOptions.suffix}];
+      // }
 
-      let safeItemTypeName: TypeName | undefined = arrayItemTypeName
-        ? arrayItemTypeName
-        : (arrayTypeName ? {name: arrayTypeName, suffix: 'Item'} : undefined);
-
-      const itemType = this.jsonSchemaToType(safeItemTypeName, resolved);
-
-      return {
+      const arrayType: OmniArrayType = {
         kind: OmniTypeKind.ARRAY,
         arrayKind: OmniArrayKind.LIST,
-        name: arrayTypeName,
+        name: arrayName,
         minLength: schema.minItems,
         maxLength: schema.maxItems,
         description: schema.description,
-        of: itemType.type,
+        of: {
+          // Temporary type while the item's type is being built
+          kind: OmniTypeKind.UNKNOWN,
+          unknownKind: UnknownKind.ANY,
+        },
       };
+
+      if (internalId) {
+
+        // Need to persist the array type early in case it is self-referential.
+        this._typeMap.set(internalId, arrayType);
+      }
+
+      // Then place the real type into the array.
+      const ownerName: TypeName = arrayName && name ? [arrayName, name] : (name ? [name] : []);
+      arrayType.of = this.jsonSchemaToType(items, {ownerName: ownerName, fallbackSuffix: 'Item'} satisfies NameOptions).type;
+
+      return arrayType;
     }
   }
 
@@ -1930,22 +1736,11 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     }
 
     let derefJsonSchema = this._refResolver.resolve(schema);
-    // if (!derefJsonSchema.$id) {
-    //   derefJsonSchema.$id = derefJsonSchema.title ?? name;
-    // }
+    derefJsonSchema = JsonSchemaParser.preProcessSchema(undefined, DefaultJsonSchema9Visitor, derefJsonSchema, 'schema', docStore);
 
-    // const applyIdVisitorFactory = new ApplyIdJsonSchemaTransformerFactory(DefaultJsonSchema9Visitor);
-    // const applyIdVisitor = applyIdVisitorFactory.create();
-
-    // applyIdVisitorFactory.pushPath({name: name, required: true});
-
-    derefJsonSchema = JsonSchemaParser.preProcessSchema(undefined, DefaultJsonSchema9Visitor, derefJsonSchema, 'schema', docStore); //, applyIdVisitor);
-
-    // TODO: We should force the property names type for this type to be prefixed with the class name, so we decrease the risk of clashes, and signifying that the owner is the error object.
-
-    const omniType = this.jsonSchemaToType(name, derefJsonSchema, {
-      requirePropertyTypeOwnerPrefix: true,
-    }).type;
+    const omniType = this.jsonSchemaToType(derefJsonSchema, {
+      alternatives: name,
+    } satisfies NameOptions).type;
     logger.debug(`Using the from jsonschema converted OmniType '${OmniUtil.describe(omniType)}'`);
     return omniType;
   }

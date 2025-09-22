@@ -78,6 +78,11 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
       case OmniTypeKind.GENERIC_TARGET_IDENTIFIER:
         return this.toObjectName(args.type, args.type.placeholderName || args.type.sourceIdentifier.placeholderName, args.options);
       case OmniTypeKind.ARRAY: {
+        if (args.type.name) {
+          const name = Naming.unwrap(args.type.name);
+          return this.toObjectName(args.type, name, args.options);
+        }
+        
         const itemName = this.investigate({...args, type: args.type.of});
         const name = `ArrayOf${itemName}`;
         return this.toObjectName(args.type, name, args.options);

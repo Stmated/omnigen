@@ -1,0 +1,34 @@
+[
+  "MyBaz",
+  {
+    "name": "MyBaz",
+    "suffix": "Bar"
+  },
+  {
+    "name": "Bar",
+    "suffix": "WithPropA"
+  },
+  "WithPropA",
+  {
+    "name": "MyBaz",
+    "suffix": "Object"
+  },
+  {
+    "name": {
+      "name": "MyBaz",
+      "suffix": "Bar"
+    },
+    "suffix": "Object"
+  },
+  {
+    "name": {
+      "name": "Bar",
+      "suffix": "WithPropA"
+    },
+    "suffix": "Object"
+  },
+  {
+    "name": "WithPropA",
+    "suffix": "Object"
+  }
+]

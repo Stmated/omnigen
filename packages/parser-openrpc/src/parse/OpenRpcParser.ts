@@ -344,20 +344,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     // We most likely still want those types to be included.
     if (this.doc.components?.schemas) {
       for (const [key, schema] of Object.entries(this.doc.components.schemas)) {
-        const deref = this._refResolver.resolve(schema) as JSONSchema9;
-        let schemaName = this._jsonSchemaParser.getSpecifiedNames(schema, deref);
-        if (!schemaName) {
-          schemaName = this._jsonSchemaParser.getDeducedNames(schema, deref);
-          if (schemaName) {
-            schemaName = {name: schemaName, suffix: key};
-          } else {
-            schemaName = key;
-          }
-        }
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
-        manualTypes.push(this._jsonSchemaParser.jsonSchemaToType(schemaName, deref).type);
+        manualTypes.push(this._jsonSchemaParser.jsonSchemaToType(schema, {key: key}).type);
       }
     }
 
@@ -422,8 +412,8 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     if (method.tags) {
       const tagNames: string[] = [];
       for (const tag of method.tags) {
-        const resolved = this._refResolver.resolve(tag);
-        const trimmed = (resolved?.name ?? '').trim();
+        const foundName = this._refResolver.getFirstResolved(tag, v => v.name);
+        const trimmed = (foundName ?? '').trim();
         if (trimmed.length > 0) {
           tagNames.push(trimmed);
         }
@@ -536,14 +526,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   ): SchemaToTypeResult {
 
     const schema = contentDescriptor.schema as JSONSchema9Definition;
-    const resolved = this._refResolver.resolve(schema) as JSONSchema9Definition;
-    let name = this._jsonSchemaParser.getLikelyNames(schema, resolved);
-    if (!name) {
-      name = contentDescriptor.name;
-    }
+
+    // const resolved = this._refResolver.resolve(schema) as JSONSchema9Definition;
     // const preferredName: TypeName = JsonSchemaParser.getVendorExtension(contentDescriptor, 'title') ?? this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
 
-    const type = this._jsonSchemaParser.jsonSchemaToType(name, resolved);
+    const type = this._jsonSchemaParser.jsonSchemaToType(schema, {key: contentDescriptor.name});
 
     return {
       type: type.type,
@@ -557,23 +544,15 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       suffix: 'Response',
     };
 
-    const resultSchema = contentDescriptor.schema as JSONSchema9Definition<JSONSchema9>;
-    const resolvedResultSchema = this._refResolver.resolve(resultSchema);
+    const resultSchema = contentDescriptor.schema as JSONSchema9Definition;
 
-    const resultTypeName: TypeName[] = [];
-
-    const likelyName = this._jsonSchemaParser.getLikelyNames(resultSchema, resolvedResultSchema);
-    if (likelyName) {
-      resultTypeName.push(likelyName);
-    }
-
-    resultTypeName.push(
-      contentDescriptor.name,
-      {name: responseTypeName, suffix: 'Result'},
-      {name: responseTypeName, suffix: 'ResultPayload'},
-    );
-
-    const resultType = this._jsonSchemaParser.jsonSchemaToType(resultTypeName, resolvedResultSchema);
+    const resultType = this._jsonSchemaParser.jsonSchemaToType(resultSchema, {
+      alternatives: [
+        contentDescriptor.name,
+        {name: responseTypeName, suffix: 'Result'},
+        {name: responseTypeName, suffix: 'ResultPayload'},
+      ],
+    });
 
     const responseType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,

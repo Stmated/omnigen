@@ -1,23 +1,25 @@
-export interface AuthorizationCode extends SpecificationExtensions {
+export interface AuthorizationCode {
   readonly authorizationUrl: string;
   readonly refreshUrl?: string | undefined;
   readonly scopes: MapOfStrings;
   readonly tokenUrl: string;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface Callbacks extends SpecificationExtensions {
-  readonly [key: string]: PathItemOrReference | undefined;
+export interface Callbacks {
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type CallbacksOrReference = Reference | Callbacks;
 
-export interface ClientCredentials extends SpecificationExtensions {
+export interface ClientCredentials {
   readonly refreshUrl?: string | undefined;
   readonly scopes: MapOfStrings;
   readonly tokenUrl: string;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface Components extends SpecificationExtensions {
+export interface Components {
   readonly callbacks?: ComponentsCallbacks | undefined;
   readonly examples?: ComponentsExamples | undefined;
   readonly headers?: ComponentsHeaders | undefined;
@@ -28,7 +30,7 @@ export interface Components extends SpecificationExtensions {
   readonly responses?: ComponentsResponses | undefined;
   readonly schemas?: ComponentsSchemas | undefined;
   readonly securitySchemes?: ComponentsSecuritySchemes | undefined;
-  readonly [key: string /* Pattern: "^(schemas|responses|parameters|examples|requestBodies|headers|securitySchemes|links|callbacks|pathItems)$" */]: ComponentsPatternProperties | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface ComponentsCallbacks {
@@ -66,19 +68,18 @@ export interface ComponentsResponses {
 }
 
 export interface ComponentsSchemas {
-  readonly [key: string]: ComponentsSchemasAdditionalProperties | undefined;
+  readonly [key: string]: SchemaObject | undefined;
 }
-
-export type ComponentsSchemasAdditionalProperties = object;
 
 export interface ComponentsSecuritySchemes {
   readonly [key: string]: SecuritySchemeOrReference | undefined;
 }
 
-export interface Contact extends SpecificationExtensions {
+export interface Contact {
   readonly email?: string | undefined;
   readonly name?: string | undefined;
   readonly url?: string | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface Content {
@@ -109,11 +110,12 @@ export enum EncodingStyle {
   DEEP_OBJECT = 'deepObject',
 }
 
-export interface Example extends SpecificationExtensions {
+export interface Example {
   readonly description?: string | undefined;
   readonly externalValue?: string | undefined;
   readonly summary?: string | undefined;
   readonly value?: any;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type ExampleOrReference = Reference | Example;
@@ -127,13 +129,17 @@ export interface ExamplesExamples {
   readonly [key: string]: ExampleOrReference | undefined;
 }
 
-export interface ExternalDocumentation extends SpecificationExtensions {
+export interface ExternalDocumentation {
   readonly description?: string | undefined;
   readonly url: string;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export type Header = HeaderInterface & SpecificationExtensions & (HeaderWithSchema | HeaderWithContent);
-export type HeaderContent = Content;
+export type Header = HeaderInterface & (HeaderWithSchema | HeaderWithContent);
+
+export interface HeaderContent {
+  readonly [key: string]: MediaType | undefined;
+}
 
 export interface HeaderInterface {
   readonly content?: HeaderContent | undefined;
@@ -146,11 +152,10 @@ export interface HeaderInterface {
    * @default false
    */
   readonly required?: boolean | undefined;
-  readonly schema?: HeaderSchema | undefined;
+  readonly schema?: SchemaObject | undefined;
 }
 
 export type HeaderOrReference = Reference | Header;
-export type HeaderSchema = object;
 
 export interface HeaderWithContent {
   readonly content: any;
@@ -160,13 +165,14 @@ export interface HeaderWithSchema {
   readonly schema: any;
 }
 
-export interface Implicit extends SpecificationExtensions {
+export interface Implicit {
   readonly authorizationUrl: string;
   readonly refreshUrl?: string | undefined;
   readonly scopes: MapOfStrings;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface Info extends SpecificationExtensions {
+export interface Info {
   readonly contact?: Contact | undefined;
   readonly description?: string | undefined;
   readonly license?: License | undefined;
@@ -174,15 +180,17 @@ export interface Info extends SpecificationExtensions {
   readonly termsOfService?: string | undefined;
   readonly title: string;
   readonly version: string;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface License extends SpecificationExtensions {
+export interface License {
   readonly identifier?: string | undefined;
   readonly name: string;
   readonly url?: string | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export type Link = LinkInterface & SpecificationExtensions & (LinkWithOperationRef | LinkWithOperationId);
+export type Link = LinkInterface & (LinkWithOperationRef | LinkWithOperationId);
 
 export interface LinkInterface {
   readonly body?: Server | undefined;
@@ -209,23 +217,22 @@ export interface MapOfStrings {
 
 export interface MediaType extends Examples, SpecificationExtensions {
   readonly encoding?: MediaTypeEncoding | undefined;
-  readonly schema?: MediaTypeSchema | undefined;
+  readonly schema?: SchemaObject | undefined;
 }
 
 export interface MediaTypeEncoding {
   readonly [key: string]: Encoding | undefined;
 }
 
-export type MediaTypeSchema = object;
-
-export interface OauthFlows extends SpecificationExtensions {
+export interface OauthFlows {
   readonly authorizationCode?: AuthorizationCode | undefined;
   readonly clientCredentials?: ClientCredentials | undefined;
   readonly implicit?: Implicit | undefined;
   readonly password?: Password | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface Operation extends SpecificationExtensions {
+export interface Operation {
   readonly callbacks?: OperationCallbacks | undefined;
   /**
    * @default false
@@ -241,6 +248,7 @@ export interface Operation extends SpecificationExtensions {
   readonly servers?: ReadonlyArray<Server> | undefined;
   readonly summary?: string | undefined;
   readonly tags?: ReadonlyArray<string> | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface OperationCallbacks {
@@ -248,7 +256,7 @@ export interface OperationCallbacks {
 }
 
 export type Parameter = ParameterBase & ParameterThen;
-export type ParameterBase = ParameterBaseInterface & SpecificationExtensions & (ParameterWithSchema | ParameterWithContent);
+export type ParameterBase = ParameterBaseInterface & (ParameterWithSchema | ParameterWithContent);
 
 export interface ParameterBaseInterface {
   readonly content?: ParameterContent | undefined;
@@ -263,10 +271,12 @@ export interface ParameterBaseInterface {
    * @default false
    */
   readonly required?: boolean | undefined;
-  readonly schema?: ParameterSchema | undefined;
+  readonly schema?: SchemaObject | undefined;
 }
 
-export type ParameterContent = Content;
+export interface ParameterContent {
+  readonly [key: string]: MediaType | undefined;
+}
 
 export enum ParameterIn {
   QUERY = 'query',
@@ -276,7 +286,6 @@ export enum ParameterIn {
 }
 
 export type ParameterOrReference = Reference | Parameter;
-export type ParameterSchema = object;
 
 export interface ParameterThen {
   /**
@@ -293,13 +302,14 @@ export interface ParameterWithSchema {
   readonly schema: any;
 }
 
-export interface Password extends SpecificationExtensions {
+export interface Password {
   readonly refreshUrl?: string | undefined;
   readonly scopes: MapOfStrings;
   readonly tokenUrl: string;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface PathItem extends SpecificationExtensions {
+export interface PathItem {
   readonly delete?: Operation | undefined;
   readonly description?: string | undefined;
   readonly get?: Operation | undefined;
@@ -312,12 +322,13 @@ export interface PathItem extends SpecificationExtensions {
   readonly servers?: ReadonlyArray<Server> | undefined;
   readonly summary?: string | undefined;
   readonly trace?: Operation | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type PathItemOrReference = Reference | PathItem;
 
-export interface Paths extends SpecificationExtensions {
-  readonly [key: string /* Pattern: "^\/" */]: PathItem | undefined;
+export interface Paths {
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface Reference {
@@ -326,22 +337,24 @@ export interface Reference {
   readonly summary?: string | undefined;
 }
 
-export interface RequestBody extends SpecificationExtensions {
+export interface RequestBody {
   readonly content: Content;
   readonly description?: string | undefined;
   /**
    * @default false
    */
   readonly required?: boolean | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export type RequestBodyOrReference = Reference | RequestBody;
 
-export interface Response extends SpecificationExtensions {
+export interface Response {
   readonly content?: Content | undefined;
   readonly description: string;
   readonly headers?: ResponseHeaders | undefined;
   readonly links?: ResponseLinks | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface ResponseHeaders {
@@ -355,17 +368,16 @@ export interface ResponseLinks {
 export type ResponseOrReference = Reference | Response;
 export type Responses = ResponsesBase & ResponsesThen;
 
-export interface ResponsesBase extends SpecificationExtensions {
+export interface ResponsesBase {
   readonly default?: ResponseOrReference | undefined;
-  readonly [key: string /* Pattern: "^[1-5](?:[0-9]{2}|XX)$" */]: ResponseOrReference | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface ResponsesThen {
   readonly default: any;
 }
 
-export type Schema = SchemaInterface & (SchemaWithPaths | SchemaWithComponents | SchemaWithWebhooks) & SpecificationExtensions;
-export type SchemaDefinition = SchemaObject | boolean;
+export type Schema = SchemaInterface & (SchemaWithPaths | SchemaWithComponents | SchemaWithWebhooks);
 
 export interface SchemaInterface {
   readonly components?: Components | undefined;
@@ -383,7 +395,8 @@ export interface SchemaInterface {
   readonly webhooks?: SchemaWebhooks | undefined;
 }
 
-export type SchemaObject = object;
+export type SchemaObject = SchemaObjectObject | boolean;
+export type SchemaObjectObject = object;
 
 export interface SchemaWebhooks {
   readonly [key: string]: PathItemOrReference | undefined;
@@ -420,16 +433,18 @@ export enum SecuritySchemeType {
   OPEN_ID_CONNECT = 'openIdConnect',
 }
 
-export interface Server extends SpecificationExtensions {
+export interface Server {
   readonly description?: string | undefined;
   readonly url: string;
   readonly variables?: ServerVariables | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface ServerVariable extends SpecificationExtensions {
+export interface ServerVariable {
   readonly default: string;
   readonly description?: string | undefined;
   readonly enum?: readonly [string, ...ReadonlyArray<string>] | undefined;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface ServerVariables {
@@ -456,10 +471,11 @@ export interface StylesForFormThen {
   readonly explode?: boolean | undefined;
 }
 
-export interface Tag extends SpecificationExtensions {
+export interface Tag {
   readonly description?: string | undefined;
   readonly externalDocs?: ExternalDocumentation | undefined;
   readonly name: string;
+  readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
 export interface TypeApikeyThen {

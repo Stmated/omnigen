@@ -1,8 +1,7 @@
 import pointer, {JsonObject} from 'json-pointer';
-import {getShallowPayloadString, ProtocolHandler} from '@omnigen/core';
+import {getShallowPayloadString, ProtocolHandler, Util} from '@omnigen/core';
 import {DocumentStore, JsonItemAbsoluteUri, JsonPathResolver, ObjectVisitor, PathItem} from '@omnigen/core-json';
-import {JSONSchema9, PROP_INLINE, PROP_NAME_HINT} from '../definitions';
-import {ToSingle} from './helpers.ts';
+import {JSONSchema9} from '../definitions';
 
 export type WithoutRef<T> = T extends { $ref: string }
   ? Exclude<T, { $ref: string }>
@@ -10,13 +9,20 @@ export type WithoutRef<T> = T extends { $ref: string }
 
 export interface RefResolver {
   resolve<const T>(value: T): WithoutRef<T>;
+  /**
+   * Only resolves if the value is a pure $ref, otherwise returns the original value. Will be up to the caller to do any merging.
+   */
+  resolveLossless<const T>(value: T): WithoutRef<T>;
+  resolveMixed<const T>(value: T): WithoutRef<T>;
+  getFirstResolved<const T, R>(value: T, mapper: (value: Partial<WithoutRef<T>>) => R | undefined): R | undefined;
 }
 
 type NewDocument = { uri: JsonItemAbsoluteUri, object: JsonObject };
-type DynamicAnchor = {
+
+export type DynamicAnchor = {
+  documentUri: string;
   anchorName: string;
-  path: string;
-  obj: object;
+  jsonPath: string;
 }
 
 export class ExternalDocumentsFinder {
@@ -25,6 +31,7 @@ export class ExternalDocumentsFinder {
   private readonly _jsonSchema: JsonObject;
 
   private readonly _documents: DocumentStore;
+  private readonly _anchors: DynamicAnchor[] = [];
 
   constructor(uri: string, jsonSchema: JsonObject, docStore?: DocumentStore) {
     this._uri = uri;
@@ -52,11 +59,9 @@ export class ExternalDocumentsFinder {
         break;
       }
 
-      const newDocuments = ExternalDocumentsFinder.searchInto(item.schema, item.uri, this._documents);
+      const newDocuments = ExternalDocumentsFinder.searchInto(item.schema, item.uri, this._documents, this._anchors);
 
       for (const newDocument of newDocuments) {
-
-        // const awaited = await newDocument.promise;
         const subSchema = newDocument.object as JSONSchema9;
 
         this._documents.set(newDocument.uri.absoluteDocumentUri, subSchema);
@@ -66,44 +71,55 @@ export class ExternalDocumentsFinder {
 
     return {
       resolve: v => {
-
-        const origin = v;
-        let maxRecursion = 10;
-        while (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
-
-          // TODO: All this code does not really belong here -- it should be somewhere else, with code that specifically only deals with the exploding of $ref (inline or not inline)
-          if (maxRecursion-- <= 0) {
-            throw new Error(`Encountered too much recursion when resolving $ref: ${v.$ref}`);
-          }
-
-          const resolved = this.resolveRef(v.$ref, origin);
-          const keys = Object.keys(v);
-          const actualContentKeys = keys.filter(k => k != '$ref' && k != '$id' && typeof k !== 'symbol');
-          if (actualContentKeys.length === 0) {
-
-            // This object only contains $id and $ref (and stuff), which makes it quite useless. Replace with the resolved.
-            v = resolved;
-          } else if (keys.length > 1) {
-
-            // TODO: This is a hack to make types not be removed because of being inline by code that thinks a schema-inline allOf item should be a hidden/unnamed type.
-            resolved[PROP_INLINE] = false;
-            resolved[PROP_NAME_HINT] = v.$ref;
-
-            delete v.$ref;
-            if ('allOf' in v) {
-              (v as any).allOf.push(resolved);
-            } else {
-              (v as any).allOf = [resolved];
-            }
-
-          } else {
-
-            // The only key is the $ref, so there is no need to spend time merging.
-            v = resolved;
-          }
+        if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
+          return this.resolveRef(v.$ref, v);
+        }
+        if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string') {
+          return this.resolveDynamicRef(v.$dynamicRef, v);
         }
 
         return v as WithoutRef<typeof v>;
+      },
+      resolveMixed: v => {
+        if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string' && Object.keys(v).length > 1) {
+          return this.resolveRef(v.$ref, v);
+        }
+        if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string' && Object.keys(v).length > 1) {
+          return this.resolveDynamicRef(v.$dynamicRef, v);
+        }
+
+        return undefined; // as WithoutRef<typeof v>;
+      },
+      resolveLossless: v => {
+        if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string' && Object.keys(v).length === 1) {
+          return this.resolveRef(v.$ref, v);
+        }
+        if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string' && Object.keys(v).length === 1) {
+          return this.resolveDynamicRef(v.$dynamicRef, v);
+        }
+        return v as WithoutRef<typeof v>;
+      },
+      getFirstResolved: (value, mapper) => {
+
+        let v = value;
+        do {
+
+          const mapped = mapper(v as Partial<WithoutRef<typeof v>>);
+          if (mapped !== undefined) {
+            return mapped;
+          }
+
+          if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string') {
+            v = this.resolveDynamicRef(v.$dynamicRef, v);
+          }
+
+          if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
+            v = this.resolveRef(v.$ref, v);
+          }
+
+        } while (v);
+
+        return undefined;
       },
     };
   }
@@ -140,67 +156,51 @@ export class ExternalDocumentsFinder {
     return element;
   }
 
+  private resolveDynamicRef<T>(ref: string, origin: T) {
+
+    const parts = /^#?(.+?)(?:@(.+))?$/.exec(ref);
+    if (!parts || !parts[1]) {
+      throw new Error(`Could not find the dynamic anchor name for ${ref}`);
+    }
+
+    const cleanRef = parts[1];
+    const foundAnchors = this._anchors.filter(it => it.anchorName === cleanRef);
+
+    if (foundAnchors.length > 1) {
+      let qwe = 0;
+    }
+
+    // TODO: We should search for the most suitable anchor here rather than the first. Closest wins! Compare Json paths
+    for (const foundAnchor of foundAnchors) {
+
+      const schema = this._documents.get(foundAnchor.documentUri!);
+      if (!schema) {
+        throw new Error(`Could not find document ${foundAnchor.documentUri} for anchor ${foundAnchor.anchorName}`);
+      }
+
+      try {
+        const element = pointer.get(schema, foundAnchor.jsonPath);
+        if (element !== undefined) {
+          return element;
+        }
+      } catch (ex) {
+
+        const shallowPayloadString = getShallowPayloadString(origin);
+        throw new Error(`Could not find element '${foundAnchor.jsonPath}' inside ${foundAnchor.documentUri}, referenced from resolved ${shallowPayloadString}: ${ex}`, {cause: ex});
+      }
+    }
+
+    throw new Error(`Could not find any suitable dynamic anchor for '${cleanRef} (has ${foundAnchors.map(it => it.anchorName).join(', ')})`);
+  }
+
   private static searchInto(
     schema: JsonObject,
     parentUri: JsonItemAbsoluteUri,
     documents: DocumentStore,
+    anchors: DynamicAnchor[],
   ): NewDocument[] {
 
     const newDocuments: NewDocument[] = [];
-
-    const dynamicAnchorMap = new Map<string, DynamicAnchor[]>();
-    const dynamicAnchorVisitor = new ObjectVisitor(args => {
-      if (args.path[args.path.length - 2] === '$dynamicAnchor') {
-
-        // TODO: Need to be able to access the parent objects, so we can save the correct object as the dynamicAnchor object.
-
-        const anchorName = String(args.path[args.path.length - 1]);
-        const stringPath = `${args.path.map(it => String(it)).join('/')}/`;
-
-        let anchors = dynamicAnchorMap.get(anchorName);
-        if (!anchors) {
-          anchors = [];
-          dynamicAnchorMap.set(anchorName, anchors);
-        }
-
-        anchors.push({anchorName: anchorName, path: stringPath, obj: args.obj});
-
-        // dynamicAnchorMap.set(stringPath, {anchorName: anchorName, obj: args.obj});
-      }
-
-      return true;
-    });
-    dynamicAnchorVisitor.visit(schema);
-
-    const dynamicRefMap = new Map<string, DynamicAnchor>();
-    const dynamicRefVisitor = new ObjectVisitor(args => {
-      if (args.path[args.path.length - 2] === '$dynamicRef') {
-        let anchorName = String(args.path[args.path.length - 1]);
-        if (anchorName.startsWith('#')) {
-          anchorName = anchorName.substring(1);
-        }
-
-        const stringPath = `${args.path.map(it => String(it)).join('/')}/`;
-        const anchors = dynamicAnchorMap.get(anchorName) ?? [];
-        let anchor: DynamicAnchor | undefined = undefined;
-        if (anchors.length == 1) {
-          anchor = anchors[0];
-        }
-
-        // TODO: Find the closest $dynamicAnchor for this $dynamicRef, then figure out where to take it from there
-        //        Figure something out :( :( :(
-        const closestDynamicAnchor = '';
-
-        if (!anchor) {
-          throw new Error(`Could not find any $dynamicAnchor for '${anchorName}' for $dynamicRef`);
-        }
-
-        dynamicRefMap.set(stringPath, anchor);
-      }
-
-      return true;
-    });
-    dynamicRefVisitor.visit(schema);
 
     const visitor = new ObjectVisitor(args => {
 
@@ -211,26 +211,21 @@ export class ExternalDocumentsFinder {
         return true;
       }
 
-      // TODO: Add support for $dynamicAnchor and $dynamicRef
-      // TODO: Perhaps separate this into different classes, one for making absolute ref only, et cetera
-
-      if (ExternalDocumentsFinder.getRefKey(path)) {
+      if (path[path.length - 1] === '$ref') {
         args.replaceWith = ExternalDocumentsFinder.relativeRefToAbsolute(obj, parentUri, documents, newDocuments);
-        return true;
-      }
+      } else if (path[path.length - 3] === 'discriminator' && path[path.length - 2] === 'mapping') {
+        args.replaceWith = ExternalDocumentsFinder.relativeRefToAbsolute(obj, parentUri, documents, newDocuments);
+      } else if (path[path.length - 1] === '$dynamicRef') {
+        // We replace with an internal format so we can compare the different json paths without keeping track of the document location inside the parser.
+        args.replaceWith = `${args.obj}@/${path.slice(0, -1).join('/')}`;
+      } else if (path[path.length - 1] === '$dynamicAnchor') {
 
-      // TODO: Add each found $dynamicRef to a list of unresolved ones
-      //        Record location and path
-      //        Then after search through parents using path.slice(0, -1)
-      //        Do not search for any $dynamicAnchor unless found a $dynamicRef
-      //        Go onwards from there -- try to figure out how all this should work...
+        const anchorName = String(args.obj);
+        const stringPath = `/${path.slice(0, -1).map(it => String(it)).join('/')}`;
+        anchors.push({anchorName: anchorName, jsonPath: stringPath, documentUri: parentUri.absoluteDocumentUri});
 
-      if (path[path.length - 1] === '$dynamicAnchor') {
-        const i = 0;
-      }
-
-      if (path[path.length - 1] === '$dynamicRef') {
-        const i = 0;
+        // We replace with an internal format so we can compare the different json paths without keeping track of the document location inside the parser.
+        args.replaceWith = `${args.obj}@/${path.slice(0, -1).join('/')}`;
       }
 
       return true;
@@ -241,13 +236,17 @@ export class ExternalDocumentsFinder {
     return newDocuments;
   }
 
-  private static getRefKey(path: PathItem[]) {
-    return (path[path.length - 1] === '$ref')
-      ? '$ref'
-      : (path[path.length - 3] === 'discriminator' && path[path.length - 2] === 'mapping')
-        ? path[path.length - 1]
-        : undefined;
-  }
+  // private static getRefKey(path: PathItem[]) {
+  //   if (path[path.length - 1] === '$ref') {
+  //     return '$ref';
+  //   } else {
+  //     if () {
+  //       return path[path.length - 1];
+  //     } else {
+  //       return undefined;
+  //     }
+  //   }
+  // }
 
   private static relativeRefToAbsolute(obj: string, parentUri: JsonItemAbsoluteUri, documents: DocumentStore, newDocuments: NewDocument[]): string {
 
@@ -258,7 +257,7 @@ export class ExternalDocumentsFinder {
       const newDocument = newDocuments.find(it => (it.uri.absoluteDocumentUri === absoluteUri.absoluteDocumentUri));
       if (!newDocument) {
 
-        let object: JsonObject; // Promise<JsonObject>;
+        let object: JsonObject;
         if (absoluteUri.protocol == 'file') {
           object = ProtocolHandler.file<JsonObject>(absoluteUri.absoluteDocumentUri);
         } else if (absoluteUri.protocol == 'http' || absoluteUri.protocol == 'https') {

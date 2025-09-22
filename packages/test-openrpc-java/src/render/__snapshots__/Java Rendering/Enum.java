@@ -170,7 +170,7 @@ public class Enum {
   }
 
   /**
-   * TagOrSpeciesOrString4: An unknown freetext value
+   * String: An unknown freetext value
    */
   public static class TagOrSpeciesOrString {
     private static final Map<Object, TagOrSpeciesOrString> _values = new HashMap<>();

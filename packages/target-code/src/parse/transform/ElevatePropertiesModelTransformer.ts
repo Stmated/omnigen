@@ -87,7 +87,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
     targetFeatures = targetFeatures ?? OMNI_RESTRICTIVE_GENERIC_FEATURES;
     for (const superType of superTypes) {
 
-      if (superType.kind === OmniTypeKind.OBJECT) {
+      if (superType.kind === OmniTypeKind.OBJECT && superType.inline !== true) {
         const subTypes = superTypeToSubTypes.get(superType)!;
         this.elevateObject(superType, subTypes, stage, targetFeatures, args.options);
       }

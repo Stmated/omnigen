@@ -121,6 +121,21 @@ describe('jsonschema-typescript-render', () => {
     await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   }, {timeout: 120_000});
 
+  test('openapi-no-merge-mixed-ref', async ctx => {
+
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-openapi/schemas/openapi-v31.json'), {
+      includeGenerated: false,
+      singleFile: true,
+      relaxedInspection: false,
+      debug: false,
+      elevateProperties: false, // Do not elevate, since schema is quite complex.
+      mergeMixedReferences: false, // Do not merge mixed references, will keep more SpecificationExtensions around.
+    });
+    const fileContents = getFileContents(rendered);
+    const keys = Object.keys(fileContents);
+    await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+  }, {timeout: 120_000});
+
   test('if-then-else', async ctx => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});

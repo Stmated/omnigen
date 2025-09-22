@@ -1,0 +1,22 @@
+[
+  "PropB",
+  {
+    "name": "Owner",
+    "suffix": "PropB"
+  },
+  {
+    "name": "PropB",
+    "suffix": "Item"
+  },
+  {
+    "name": {
+      "name": "Owner",
+      "suffix": "PropB"
+    },
+    "suffix": "Item"
+  },
+  {
+    "name": "Item",
+    "suffix": "Ext"
+  }
+]

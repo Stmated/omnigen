@@ -9,7 +9,7 @@ import {
   OmniObjectType,
   OmniSuperTypeCapableType,
   OmniType,
-  OmniTypeKind,
+  OmniTypeKind, UnknownKind,
 } from '@omnigen/api';
 import {JavaPotentialClassType, JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
@@ -270,11 +270,6 @@ describe('Test CompositionDependencyUtil', () => {
     // This would change if the search was done breadth-first vs depth-first.
     assertTypes(ctx, getInterfaces(args.model), [D, C, dInline]);
     ctx.expect(getClasses(args.model).map(it => it.name)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
-    // assertMap(ctx, map([
-    //   [D, [C, dInline]],
-    //   [E, [D]],
-    //   [F, [B, D]],
-    // ]), JavaUtil.getSubTypeToSuperTypesMap(args.model));
   });
 
   // TODO: A test case where we expect 'dInline' to not an interface, and inline it because it is single use non-edge type?
@@ -332,7 +327,7 @@ function map<T>(arg: MapArg<T>): Map<T, T[]> {
 }
 
 function obj(name: string, extendedBy?: OmniSuperTypeCapableType): OmniObjectType {
-  return TestUtils.obj(name, extendedBy);
+  return TestUtils.obj(name, extendedBy, [{kind: OmniItemKind.PROPERTY, name: 'prop', type: {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.WILDCARD}}]);
 }
 
 function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, typeof OmniTypeKind.INTERSECTION> {

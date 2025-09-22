@@ -105,4 +105,22 @@ describe('TypeScript Rendering', () => {
     const fileContent = fileContents.get([...fileContents.keys()][0]);
     await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
+
+  test('description-inheritance', async ctx => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const fileContents = await OpenRpcTypeScriptTestUtils.getFileContentsFromFile('description-inheritance.json', {
+      options: {
+        singleFile: true,
+        singleFileName: 'description-inheritance',
+        immutable: true,
+        commentsOnTypes: true, // TODO: This does not seem to work properly. The comments are lost on the transition to interfaces/advanced types
+      },
+    });
+
+    for (const [fileName, fileContent] of fileContents) {
+      await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${fileName}`);
+    }
+  });
 });

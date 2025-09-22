@@ -247,11 +247,7 @@ export class OpenApiJsonSchemaParser<TOpt extends ParserOptions> extends JsonSch
     };
 
     for (const [schemaKey, schema] of this.getAllSchemas(root)) {
-
-      const resolved = this.refResolver.resolve(schema);
-      const omniTypeRes = this.jsonSchemaToType(schemaKey, resolved);
-
-      model.types.push(omniTypeRes.type);
+      model.types.push(this.jsonSchemaToType(schema, {key: schemaKey}).type);
     }
 
     return model;

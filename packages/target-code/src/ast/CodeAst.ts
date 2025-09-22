@@ -86,7 +86,7 @@ export class EdgeType<T extends OmniType = OmniType> extends AbstractCodeNode im
 
 export class ArrayType<T extends OmniArrayType = OmniArrayType> extends AbstractCodeNode implements TypeNode<T> {
   readonly omniType: T;
-  readonly itemTypeNode: TypeNode;
+  itemTypeNode: TypeNode;
   readonly implementation?: boolean | undefined;
 
   constructor(omniType: T, of: TypeNode, implementation?: boolean | undefined) {
@@ -96,12 +96,35 @@ export class ArrayType<T extends OmniArrayType = OmniArrayType> extends Abstract
     this.implementation = implementation;
   }
 
+  private _visitationCount = 0;
+
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
-    return visitor.visitArrayType(this, visitor);
+
+    // TODO: Need to protect against recursive visiting in a better way! This would require it to be added everywhere :(
+    if (this._visitationCount > 0) {
+      return;
+    }
+
+    try {
+      this._visitationCount++;
+      return visitor.visitArrayType(this, visitor);
+    } finally {
+      this._visitationCount--;
+    }
   }
 
   reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<TypeNode> {
-    return reducer.reduceArrayType(this, reducer);
+
+    if (this._visitationCount > 0) {
+      return this;
+    }
+
+    try {
+      this._visitationCount++;
+      return reducer.reduceArrayType(this, reducer);
+    } finally {
+      this._visitationCount--;
+    }
   }
 }
 

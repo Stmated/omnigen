@@ -23,21 +23,6 @@ export class SimplifyTypePathsCSharpAstTransformer implements AstTransformer<CSh
       },
 
       reduceEdgeType: n => {
-
-        // const importName = n.getImportName();
-        // if (importDepth > 0 && importName && (importName === 'System' || (importName.startsWith('System.') && importName.match(/System\.\w+/)))) {
-        //
-        //   // Removed, since System.* is always automatically imported.
-        //   return undefined;
-        // }
-
-        // const localName = n.getLocalName();
-        // if (localName && localName.match(/System\.\w+/)) {
-        //
-        //   n.setLocalName(localName.substring('System.'.length));
-        //   return n;
-        // }
-
         return n;
       },
     });

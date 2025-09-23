@@ -16,10 +16,12 @@ export const createTypeScriptVisitor = <R>(partial?: Partial<TypeScriptVisitor<R
 
   return {
     ...createCodeVisitor(java, noop),
-    visitCompositionType: (node, visitor) => node.typeNodes.map(it => it.visit(visitor)),
-    visitTypeAliasDeclaration: (node, visitor) => [
-      node.modifiers?.visit(visitor),
-      node.of.visit(visitor),
+    visitCompositionType: (n, v) => n.typeNodes.map(it => it.visit(v)),
+    visitTypeAliasDeclaration: (n, v) => [
+      n.modifiers?.visit(v),
+      n.name.visit(v),
+      n.of.visit(v),
+      n.comments?.visit(v),
     ],
     visitGetter: (n, v) => [n.modifiers.visit(v), n.identifier.visit(v), n.target?.visit(v), n.returnType.visit(v)],
     visitSetter: (n, v) => [n.identifier.visit(v), n.targetType.visit(v), n.target.visit(v)],

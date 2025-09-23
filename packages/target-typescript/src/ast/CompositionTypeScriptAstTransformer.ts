@@ -46,7 +46,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
           args.root.children.push(new Code.CompilationUnit(
             new Code.PackageDeclaration(absolutePackageName),
             new Code.ImportList(),
-            typeAlias,
+            new Code.Statement(typeAlias),
           ));
 
           typesToReplace.set(n.type, replacementAliasTargetNode);

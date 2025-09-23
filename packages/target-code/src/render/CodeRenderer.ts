@@ -3,6 +3,7 @@ import {CodeOptions, CodeVisitor, createCodeVisitor} from '../';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AbortVisitingWithResult, assertUnreachable, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
 import * as Code from '../ast/Code';
+import {ModifierKind} from '../ast/Code';
 import {CodeRootAstNode} from '../ast/CodeRootAstNode';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -180,7 +181,6 @@ export const DefaultCodeRendererOptions: CodeRendererOptions = {
 };
 
 export interface CodeRenderContext {
-  insideDeclaration?: boolean;
   objectDecStack: Code.AbstractObjectDeclaration[];
   // TODO: Maybe change so that renderer either returns string OR the compilation unit.
   units: RenderedCompilationUnit[];
@@ -218,24 +218,25 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
 
     visitDeclarationReference: (n, v) => {
       const resolved = root.resolveNodeRef(n);
-      return `${render(resolved.identifier, v)}`;
+      return `${render(resolved.name, v)}`;
     },
 
     visitSelfReference: () => `this`,
     visitSuperReference: () => `super`,
     visitVariableDeclaration: (n, v) => {
 
-      const constant = (n.immutable) ? 'final ' : '';
+      const modifiers = new Code.ModifierList();
+      if (n.immutable) {
+        modifiers.children.push(new Code.Modifier(ModifierKind.CONST));
+      }
+
+      const modifiersString = (modifiers.children.length > 0) ? `${render(modifiers, v)} ` : '';
+
       const type = (options.preferInferredType || !n.type) ? 'var ' : `${render(n.type, v)} `;
       const name = render(n.identifier, v);
 
-      try {
-        ctx.insideDeclaration = true;
-        const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
-        return `${constant}${type}${name}${initializer}`;
-      } finally {
-        ctx.insideDeclaration = false;
-      }
+      const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
+      return `${modifiersString}${type}${name}${initializer}`;
     },
 
     visitHardCoded: n => n.content,
@@ -359,7 +360,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       let unitName: string | undefined = n.name;
       if (!unitName) {
 
-        // NOTE: This is quite ugly. There needs to be a better way to figure out the name/fileName of the unit.
+        // TODO: This is quite ugly. There needs to be a better way to figure out the name/fileName of the unit.
         const visitor = Visitor.create(root.createVisitor<string>(), {
           visitObjectDeclaration: objNode => {
             if (objNode.name.value) {
@@ -371,13 +372,16 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
         unitName = VisitResultFlattener.visitWithSingularResult(visitor, n, '');
 
         if (!unitName) {
-          for (const child of n.children) {
-            if ('name' in child && typeof child.name === 'object') {
-              const identifier = child.name as Code.Identifier; // TODO: Ugly cast. Make this type-safe either through helper or better name-handling.
-              unitName = identifier.value;
-              break;
-            }
-          }
+
+          const identifierVisitor = Visitor.create(root.createVisitor<string>(), {
+            visitIdentifier: identifier => {
+              if (identifier.value) {
+                throw new AbortVisitingWithResult(identifier.value);
+              }
+            },
+          });
+
+          unitName = VisitResultFlattener.visitWithSingularResult(identifierVisitor, n, '');
         }
 
         if (!unitName) {

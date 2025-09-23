@@ -105,7 +105,7 @@ describe('JsonSchemaNameParser', () => {
 
   test('property direct ref with resolved', async ctx => {
     const ownerName = parser.parse(schema1.$defs.ObjWithRefProps, undefined, {key: 'ObjWithRefProps'} satisfies NameOptions);
-    const resolvedProp = refResolver.resolve(schema1.$defs.ObjWithRefProps.properties.DirectRef);
+    const resolvedProp = refResolver.resolve(schema1.$defs.ObjWithRefProps.properties.DirectRef, []);
 
     const name = parser.parse(schema1.$defs.ObjWithRefProps.properties.DirectRef, resolvedProp, {ownerName});
     await ctx.expect(JSON.stringify(name, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
@@ -117,7 +117,7 @@ describe('JsonSchemaNameParser', () => {
   });
 
   test('property partial ref resolved', async ctx => {
-    const resolved = refResolver.resolve(schema1.$defs.ObjWithRefProps.properties.PartialRef);
+    const resolved = refResolver.resolve(schema1.$defs.ObjWithRefProps.properties.PartialRef, []);
     const name = parser.parse(schema1.$defs.ObjWithRefProps.properties.PartialRef, resolved, {ownerName: 'Owner'} satisfies NameOptions);
     await ctx.expect(JSON.stringify(name, undefined, 2)).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.json`);
   });

@@ -69,6 +69,8 @@ import {FileHeaderTypeScriptAstTransformer} from './ast/FileHeaderTypeScriptAstT
 import {PatternPropertyAnyTypeScriptModelTransformer} from './parse/transform/PatternPropertyAnyTypeScriptModelTransformer';
 import {UnionSupertypeToTypeAliasTypeScriptModelTransformer} from './parse/transform/UnionSupertypeToTypeAliasTypeScriptModelTransformer.ts';
 import {InlineUnnamedCompositionsTypeScriptModelTransformer} from './parse/transform/InlineUnnamedCompositionsTypeScriptModelTransformer.ts';
+import {VarDecToTypeAliasTypeScriptAstTransformer} from './ast/VarDecToTypeAliasTypeScriptAstTransformer.ts';
+import {RecursiveTypeAliasTypeScriptAstTransformer} from './ast/RecursiveTypeAliasTypeScriptAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -148,8 +150,6 @@ export const TypeScriptPlugin = createPlugin(
     ];
 
     for (const transformer of transformers) {
-
-      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformModel(modelArgs);
     }
 
@@ -176,8 +176,6 @@ export const TypeScriptPlugin = createPlugin(
     ] as const;
 
     for (const transformer of transformers2) {
-
-      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformModel2ndPass(modelArgs2);
     }
 
@@ -192,8 +190,6 @@ export const TypeScriptPlugin = createPlugin(
     ];
 
     for (const again_transformer of again_transformers) {
-
-      logger.debug(`Running again: ${again_transformer.constructor.name}`);
       again_transformer.transformModel(again_modelArgs);
     }
 
@@ -201,6 +197,8 @@ export const TypeScriptPlugin = createPlugin(
 
     const astTransformers: AstTransformer<Ts.TsRootNode, PackageOptions & TargetOptions & TypeScriptOptions>[] = [
       new AddObjectDeclarationsCodeAstTransformer(),
+      new VarDecToTypeAliasTypeScriptAstTransformer(),
+      new RecursiveTypeAliasTypeScriptAstTransformer(),
       new AddFieldsAstTransformer(),
       new AddAccessorsForFieldsAstTransformer(),
       new AddAbstractAccessorsAstTransformer(),
@@ -211,7 +209,9 @@ export const TypeScriptPlugin = createPlugin(
       new InnerTypeCompressionAstTransformer(),
       new ResolveGenericSourceIdentifiersAstTransformer(),
       new SimplifyGenericsAstTransformer(),
+
       new CompositionTypeScriptAstTransformer(),
+      // new RecursiveTypeAliasTypeScriptAstTransformer(),
       new AccessorTypeScriptAstTransformer(),
       new MethodToGetterCodeAstTransformer(),
       new RemoveSuperfluousGetterTypeScriptAstTransformer(),
@@ -247,8 +247,6 @@ export const TypeScriptPlugin = createPlugin(
     let debugExistenceOut: AstTransformer | undefined = undefined;
 
     for (const transformer of astTransformers) {
-
-      logger.debug(`Running ${transformer.constructor.name}`);
       transformer.transformAst(astArgs);
 
       if (debugExistenceName) {

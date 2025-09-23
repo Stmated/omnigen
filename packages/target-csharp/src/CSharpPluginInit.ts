@@ -70,6 +70,7 @@ import {SimplifyTypePathsCSharpAstTransformer} from './ast/SimplifyTypePathsCSha
 import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransformer';
 import {JsonCSharpAstTransformer} from './ast/JsonCSharpAstTransformer';
 import {ConstructorRemovalOnPropertyInitCSharpAstTransformer} from './ast/ConstructorRemovalOnPropertyInitCSharpAstTransformer';
+import {VarDecToTypeAliasCSharpAstTransformer} from './ast/VarDecToTypeAliasCSharpAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -209,6 +210,7 @@ export const CSharpPlugin = createPlugin(
 
     const astTransformers: AstTransformer<CSharpRootNode, PackageOptions & TargetOptions & CSharpOptions>[] = [
       new AddObjectDeclarationsCodeAstTransformer(),
+      new VarDecToTypeAliasCSharpAstTransformer(),
       new AddFieldsAstTransformer(),
       // new NonNumericEnumToConstClassAstTransformer(),
       // new AddAccessorsForFieldsAstTransformer(),

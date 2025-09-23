@@ -124,7 +124,7 @@ namespace generated.omnigen
             }
             else
             {
-                final var created = new TagOrSpeciesOrString(value);
+                var created = new TagOrSpeciesOrString(value);
                 TagOrSpeciesOrString._values[value] = created;
                 return created;
             }

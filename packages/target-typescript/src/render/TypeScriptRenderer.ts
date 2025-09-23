@@ -4,7 +4,7 @@ import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {OmniUtil} from '@omnigen/core';
 import {Code, CodeRenderContext, CodeRendererOptions, CodeUtil, createCodeRenderer, DefaultCodeRendererOptions, FreeTextUtils, render} from '@omnigen/target-code';
 import {Ts} from '../ast';
-import {CommentKind} from '@omnigen/target-code/ast';
+import {CommentKind, ModifierKind} from '@omnigen/target-code/ast';
 
 export type TypeScriptRenderer = TypeScriptVisitor<string> & Renderer;
 
@@ -193,9 +193,22 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
       if (node.kind === Code.ModifierKind.FINAL) {
         return 'readonly';
+      } else if (node.kind === Code.ModifierKind.CONST) {
+        return 'const';
       }
 
       return parentRenderer.visitModifier(node, visitor);
+    },
+
+    visitVariableDeclaration: (n, v) => {
+
+      const decString = n.immutable ? 'const ' : 'let ';
+
+      const type = (options.preferInferredType || !n.type) ? decString : `${render(n.type, v)} `;
+      const name = render(n.identifier, v);
+
+      const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
+      return `${type}${name}${initializer}`;
     },
 
     visitConstructor: (n, v) => {
@@ -292,17 +305,15 @@ export const createTypeScriptRenderer = (root: Ts.TsRootNode, options: PackageOp
 
     visitTypeAliasDeclaration: (n, v) => {
 
-      const modifiers = n.modifiers ? n.modifiers.visit(v) : `let`;
+      const modifiers = (n.modifiers && n.modifiers.children.length > 0) ? `${n.modifiers.visit(v)}` : ``;
       let comments = n.comments ? `${n.comments.visit(v)}\n` : '';
       if (options.debug && n.omniType.debug) {
 
         const paragraph = new Code.FreeTexts(...OmniUtil.debugToStrings(n.omniType.debug, v => new Code.FreeTextLine(v)));
         const tempCommentNode = new Code.Comment(paragraph, CommentKind.MULTI);
-
-        //const tempCommentNode = new Code.Comment(FreeTextUtils.fromFriendlyFreeText(n.omniType.debug), CommentKind.MULTI);
         comments += `${tempCommentNode.visit(v)}\n`;
       }
-      return `${comments}${modifiers} type ${n.name.visit(v)} = ${n.of.visit(v)};\n`;
+      return `${comments}${modifiers} type ${n.name.visit(v)} = ${n.of.visit(v)}`;
     },
 
     visitLiteral: (n, v) => {

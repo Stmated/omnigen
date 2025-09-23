@@ -107,6 +107,7 @@ export class CodeAstUtils implements AstTargetFunctions {
 
     for (const key of map.keys()) {
       if (!ids.includes(key)) {
+        logger.debug(`Removing reference mapping for ${key} since it is not among the found ids`);
         map.delete(key);
       }
     }

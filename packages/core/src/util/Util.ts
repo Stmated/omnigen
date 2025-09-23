@@ -55,4 +55,17 @@ export class Util {
 
     throw new Error(`Could not find 'turbo.json'`);
   }
+
+  public static getCommonPrefixLength(str: string, target: string): number {
+    let length = 0;
+    const minLength = Math.min(str.length, target.length);
+    for (let i = 0; i < minLength; i++) {
+      if (str[i] === target[i]) {
+        length++;
+      } else {
+        break;
+      }
+    }
+    return length;
+  }
 }

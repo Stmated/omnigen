@@ -25,12 +25,12 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
               const originalType = originalTypeNode.omniType;
               const inlinedTypeNode = this.getInlinedIfNeededTypeNode(originalType, originalTypeNode, args);
 
-              return new Ts.TypeAliasDeclaration(n.name, inlinedTypeNode, n.modifiers);
+              return new Ts.Statement(new Ts.TypeAliasDeclaration(n.name, inlinedTypeNode, n.modifiers).withIdFrom(originalTypeNode));
             }
           } else if (!n.implements) {
 
             const anyTypeNode = args.root.getAstUtils().createTypeNode({kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.OBJECT});
-            return new Ts.TypeAliasDeclaration(n.name, anyTypeNode, n.modifiers);
+            return new Ts.Statement(new Ts.TypeAliasDeclaration(n.name, anyTypeNode, n.modifiers));
           }
         } else {
 
@@ -60,7 +60,7 @@ export class InterfaceToTypeAliasTypeScriptAstTransformer implements AstTransfor
 
               const newTypeNode = new Ts.CompositionType(joinedCompositionType, [n.body, superType]);
 
-              return new Ts.TypeAliasDeclaration(n.name, newTypeNode, n.modifiers);
+              return new Ts.Statement(new Ts.TypeAliasDeclaration(n.name, newTypeNode, n.modifiers));
             }
           }
         }

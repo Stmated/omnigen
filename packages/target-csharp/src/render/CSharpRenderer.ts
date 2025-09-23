@@ -5,6 +5,7 @@ import {Code, CodeRenderContext, CodeRendererOptions, createCodeRenderer, Defaul
 import {CSharpRootNode} from '../ast';
 import {Case, OmniUtil} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
+import {ModifierKind} from '@omnigen/target-code/ast';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -76,6 +77,15 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       }
 
       return parent.visitModifier(n, v);
+    },
+
+    visitVariableDeclaration: (n, v) => {
+
+      const type = (options.preferInferredType || !n.type) ? 'var ' : `${render(n.type, v)} `;
+      const name = render(n.identifier, v);
+
+      const initializer = n.initializer ? ` = ${render(n.initializer, v)}` : '';
+      return `${type}${name}${initializer}`;
     },
 
     /**

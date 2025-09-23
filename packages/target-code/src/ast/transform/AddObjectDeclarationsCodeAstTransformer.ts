@@ -2,7 +2,7 @@ import {
   AstNode,
   AstTransformer,
   AstTransformerArguments,
-  NameParts,
+  NameParts, OmniArrayType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
@@ -161,7 +161,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       }
     } else if (type.kind === OmniTypeKind.ARRAY && type.name) {
       // If it's an array and it has a name, then we should likely be adding it as as type as well.
-      return this.transformSubType(model, type, undefined, options, features, root);
+      return this.addArray(model, type, undefined, options, features, root);
     }
 
     return undefined;
@@ -184,6 +184,40 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       new Code.PackageDeclaration(packageName),
       new Code.ImportList(),
       dec,
+    );
+
+    root.children.push(cu);
+    return cu;
+  }
+
+  private addArray(
+    model: OmniModel,
+    arrayType: OmniArrayType,
+    originalType: OmniGenericSourceType | undefined,
+    options: PackageOptions & TargetOptions & CodeOptions,
+    features: TargetFeatures,
+    root: CodeRootAstNode,
+  ): AstNode {
+
+    const typeNode = root.getAstUtils().createTypeNode(arrayType, false);
+
+    const nameResolver = root.getNameResolver();
+    const investigatedName = nameResolver.investigate({type: arrayType, options: options});
+    const identifierName = nameResolver.build({name: investigatedName, with: NameParts.NAME});
+    const packageName = nameResolver.build({name: investigatedName, with: NameParts.NAMESPACE});
+
+    // TODO: Wrong. It should be a new type of declaration for a `type` -- or perhaps we need a new `Code.ArrayDeclaration`
+    const dec = new Code.VariableDeclaration(
+      new Code.Identifier(identifierName),
+      typeNode,
+      undefined,
+      true,
+    );
+
+    const cu = new Code.CompilationUnit(
+      new Code.PackageDeclaration(packageName),
+      new Code.ImportList(),
+      new Code.Statement(dec),
     );
 
     root.children.push(cu);

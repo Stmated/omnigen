@@ -97,8 +97,8 @@ export abstract class CodeRootAstNode extends AbstractCodeNode implements RootAs
       },
       visitBoundedType: () => {
       },
-      visitArrayType: () => {
-      },
+      // visitArrayType: () => {
+      // },
       visitWildcardType: () => {
       },
       visitGenericType: () => {

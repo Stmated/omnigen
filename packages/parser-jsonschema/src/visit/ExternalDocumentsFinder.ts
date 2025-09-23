@@ -8,13 +8,13 @@ export type WithoutRef<T> = T extends { $ref: string }
   : T;
 
 export interface RefResolver {
-  resolve<const T>(value: T): WithoutRef<T>;
+  resolve<const T>(value: T, jsonPath: string[]): WithoutRef<T>;
   /**
    * Only resolves if the value is a pure $ref, otherwise returns the original value. Will be up to the caller to do any merging.
    */
-  resolveLossless<const T>(value: T): WithoutRef<T>;
-  resolveMixed<const T>(value: T): WithoutRef<T>;
-  getFirstResolved<const T, R>(value: T, mapper: (value: Partial<WithoutRef<T>>) => R | undefined): R | undefined;
+  resolveLossless<const T>(value: T, jsonPath: string[]): WithoutRef<T>;
+  resolveMixed<const T>(value: T, jsonPath: string[]): WithoutRef<T>;
+  getFirstResolved<const T, R>(value: T, jsonPath: string[], mapper: (value: Partial<WithoutRef<T>>) => R | undefined): R | undefined;
 }
 
 type NewDocument = { uri: JsonItemAbsoluteUri, object: JsonObject };
@@ -70,36 +70,36 @@ export class ExternalDocumentsFinder {
     }
 
     return {
-      resolve: v => {
+      resolve: (v, jsonPath) => {
         if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
           return this.resolveRef(v.$ref, v);
         }
         if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string') {
-          return this.resolveDynamicRef(v.$dynamicRef, v);
+          return this.resolveDynamicRef(v.$dynamicRef, jsonPath, v);
         }
 
         return v as WithoutRef<typeof v>;
       },
-      resolveMixed: v => {
+      resolveMixed: (v, jsonPath) => {
         if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string' && Object.keys(v).length > 1) {
           return this.resolveRef(v.$ref, v);
         }
         if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string' && Object.keys(v).length > 1) {
-          return this.resolveDynamicRef(v.$dynamicRef, v);
+          return this.resolveDynamicRef(v.$dynamicRef, jsonPath, v);
         }
 
         return undefined; // as WithoutRef<typeof v>;
       },
-      resolveLossless: v => {
+      resolveLossless: (v, jsonPath) => {
         if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string' && Object.keys(v).length === 1) {
           return this.resolveRef(v.$ref, v);
         }
         if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string' && Object.keys(v).length === 1) {
-          return this.resolveDynamicRef(v.$dynamicRef, v);
+          return this.resolveDynamicRef(v.$dynamicRef, jsonPath, v);
         }
         return v as WithoutRef<typeof v>;
       },
-      getFirstResolved: (value, mapper) => {
+      getFirstResolved: (value, jsonPath, mapper) => {
 
         let v = value;
         do {
@@ -110,7 +110,7 @@ export class ExternalDocumentsFinder {
           }
 
           if (v && typeof v == 'object' && '$dynamicRef' in v && typeof v.$dynamicRef == 'string') {
-            v = this.resolveDynamicRef(v.$dynamicRef, v);
+            v = this.resolveDynamicRef(v.$dynamicRef, jsonPath, v);
           }
 
           if (v && typeof v == 'object' && '$ref' in v && typeof v.$ref == 'string') {
@@ -156,18 +156,19 @@ export class ExternalDocumentsFinder {
     return element;
   }
 
-  private resolveDynamicRef<T>(ref: string, origin: T) {
+  private resolveDynamicRef<T>(ref: string, jsonPath: string[], origin: T) {
 
-    const parts = /^#?(.+?)(?:@(.+))?$/.exec(ref);
-    if (!parts || !parts[1]) {
-      throw new Error(`Could not find the dynamic anchor name for ${ref}`);
-    }
-
-    const cleanRef = parts[1];
+    const cleanRef = Util.trimAny(ref, '#');
+    const originPath = `/${jsonPath.join('/')}`;
     const foundAnchors = this._anchors.filter(it => it.anchorName === cleanRef);
 
-    if (foundAnchors.length > 1) {
-      let qwe = 0;
+    if (foundAnchors.length > 1 && originPath) {
+
+      foundAnchors.sort((a, b) => {
+        const aCommon = Util.getCommonPrefixLength(a.jsonPath, originPath);
+        const bCommon = Util.getCommonPrefixLength(b.jsonPath, originPath);
+        return bCommon - aCommon;
+      });
     }
 
     // TODO: We should search for the most suitable anchor here rather than the first. Closest wins! Compare Json paths
@@ -217,7 +218,7 @@ export class ExternalDocumentsFinder {
         args.replaceWith = ExternalDocumentsFinder.relativeRefToAbsolute(obj, parentUri, documents, newDocuments);
       } else if (path[path.length - 1] === '$dynamicRef') {
         // We replace with an internal format so we can compare the different json paths without keeping track of the document location inside the parser.
-        args.replaceWith = `${args.obj}@/${path.slice(0, -1).join('/')}`;
+        // args.replaceWith = `${args.obj}@/${path.slice(0, -1).join('/')}`;
       } else if (path[path.length - 1] === '$dynamicAnchor') {
 
         const anchorName = String(args.obj);
@@ -225,7 +226,7 @@ export class ExternalDocumentsFinder {
         anchors.push({anchorName: anchorName, jsonPath: stringPath, documentUri: parentUri.absoluteDocumentUri});
 
         // We replace with an internal format so we can compare the different json paths without keeping track of the document location inside the parser.
-        args.replaceWith = `${args.obj}@/${path.slice(0, -1).join('/')}`;
+        // args.replaceWith = `${args.obj}@/${path.slice(0, -1).join('/')}`;
       }
 
       return true;
@@ -235,18 +236,6 @@ export class ExternalDocumentsFinder {
 
     return newDocuments;
   }
-
-  // private static getRefKey(path: PathItem[]) {
-  //   if (path[path.length - 1] === '$ref') {
-  //     return '$ref';
-  //   } else {
-  //     if () {
-  //       return path[path.length - 1];
-  //     } else {
-  //       return undefined;
-  //     }
-  //   }
-  // }
 
   private static relativeRefToAbsolute(obj: string, parentUri: JsonItemAbsoluteUri, documents: DocumentStore, newDocuments: NewDocument[]): string {
 

@@ -246,18 +246,18 @@ export class OpenApiJsonSchemaParser<TOpt extends ParserOptions> extends JsonSch
       types: [],
     };
 
-    for (const [schemaKey, schema] of this.getAllSchemas(root)) {
-      model.types.push(this.jsonSchemaToType(schema, {key: schemaKey}).type);
+    for (const [schemaKey, jsonPath, schema] of this.getAllSchemas(root)) {
+      model.types.push(this.jsonSchemaToType(jsonPath, schema, {key: schemaKey}).type);
     }
 
     return model;
   }
 
-  private* getAllSchemas<S extends JSONSchema9>(document: OpenAPIV3_1.Document): Generator<[string | undefined, JSONSchema9Definition<S>]> {
+  private* getAllSchemas<S extends JSONSchema9>(document: OpenAPIV3_1.Document): Generator<[string | undefined, string[], JSONSchema9Definition<S>]> {
 
     if (document.components?.schemas) {
       for (const [schemaKey, schema] of Object.entries(document.components?.schemas)) {
-        yield [schemaKey, schema as JSONSchema9Definition<S>];
+        yield [schemaKey, ['components', 'schemas', schemaKey], schema as JSONSchema9Definition<S>];
       }
     }
   }

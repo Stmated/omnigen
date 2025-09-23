@@ -96,35 +96,12 @@ export class ArrayType<T extends OmniArrayType = OmniArrayType> extends Abstract
     this.implementation = implementation;
   }
 
-  private _visitationCount = 0;
-
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {
-
-    // TODO: Need to protect against recursive visiting in a better way! This would require it to be added everywhere :(
-    if (this._visitationCount > 0) {
-      return;
-    }
-
-    try {
-      this._visitationCount++;
-      return visitor.visitArrayType(this, visitor);
-    } finally {
-      this._visitationCount--;
-    }
+    return visitor.visitArrayType(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<TypeNode> {
-
-    if (this._visitationCount > 0) {
-      return this;
-    }
-
-    try {
-      this._visitationCount++;
-      return reducer.reduceArrayType(this, reducer);
-    } finally {
-      this._visitationCount--;
-    }
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<TypeNode | AstNode> {
+    return reducer.reduceArrayType(this, reducer);
   }
 }
 
@@ -400,10 +377,14 @@ export class StaticMemberReference extends AbstractCodeNode {
   }
 }
 
-export class Parameter extends AbstractCodeNode {
+export class Parameter extends AbstractCodeNode implements Identifiable {
   type: TypeNode;
   identifier: Identifier;
   annotations?: AnnotationList | undefined;
+
+  get name(): Identifier {
+    return this.identifier;
+  }
 
   constructor(type: TypeNode, identifier: Identifier, annotations?: AnnotationList) {
     super();
@@ -690,7 +671,7 @@ export class Comment extends AbstractCodeNode {
 /**
  * NOTE: Split into Field and FieldDeclaration? Or rename it? ArgumentDeclaration and VariableDeclaration precedence
  */
-export class Field extends AbstractCodeNode {
+export class Field extends AbstractCodeNode implements Identifiable {
   identifier: Identifier;
   /**
    * This type is not necessarily the same as the property's type, since it might have had local changes for just this field. Prefer the property's type if want to be accurate against contract.
@@ -701,6 +682,10 @@ export class Field extends AbstractCodeNode {
   modifiers: ModifierList;
   annotations?: AnnotationList | undefined;
   property?: OmniProperty;
+
+  get name(): Identifier {
+    return this.identifier;
+  }
 
   constructor(type: TypeNode, name: Identifier, modifiers?: ModifierList, initializer?: AbstractCodeNode | undefined, annotations?: AnnotationList) {
     super();
@@ -855,15 +840,15 @@ export class FieldReference extends AbstractCodeNode implements Reference<Field>
   }
 }
 
-export class DeclarationReference extends AbstractCodeNode implements Reference<VariableDeclaration | Parameter | ClassDeclaration> {
+export class DeclarationReference extends AbstractCodeNode implements Reference<Identifiable> {
   targetId: number;
 
-  constructor(target: number | VariableDeclaration | Parameter) {
+  constructor(target: number | Identifiable) {
     super();
     this.targetId = (typeof target === 'number') ? target : target.id;
   }
 
-  public resolve(root: RootAstNode): VariableDeclaration | Parameter {
+  public resolve(root: RootAstNode): Identifiable {
     return root.resolveNodeRef(this);
   }
 
@@ -876,11 +861,15 @@ export class DeclarationReference extends AbstractCodeNode implements Reference<
   }
 }
 
-export class VariableDeclaration extends AbstractCodeNode {
+export class VariableDeclaration extends AbstractCodeNode implements Identifiable {
   identifier: Identifier;
   type?: TypeNode | undefined;
   initializer?: AbstractCodeNode | undefined;
   immutable?: boolean | undefined;
+
+  get name(): Identifier {
+    return this.identifier;
+  }
 
   constructor(variableName: Identifier, initializer?: AbstractCodeNode, type?: TypeNode | undefined, immutable?: boolean) {
     super();
@@ -898,7 +887,7 @@ export class VariableDeclaration extends AbstractCodeNode {
     return visitor.visitVariableDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<VariableDeclaration> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<Identifiable> {
     return reducer.reduceVariableDeclaration(this, reducer);
   }
 }

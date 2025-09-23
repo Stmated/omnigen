@@ -19,21 +19,6 @@ export class AccessorTypeScriptAstTransformer implements AstTransformer<Ts.TsRoo
 
     const newRoot = args.root.reduce({
       ...defaultReducer,
-      // reduceFieldBackedGetter: n => {
-      //   const field = n.fieldRef.resolve(args.root);
-      //   return new Ts.Getter(
-      //     new Ts.GetterIdentifier(field.identifier, field.type),
-      //     n.fieldRef,
-      //   );
-      // },
-      // reduceFieldBackedSetter: n => {
-      //   const field = n.fieldRef.resolve(args.root);
-      //   return new Ts.Setter(
-      //     new Ts.SetterIdentifier(field.identifier, field.type),
-      //     field.type,
-      //     n.fieldRef,
-      //   );
-      // },
 
       reduceMethodDeclaration: n => {
 

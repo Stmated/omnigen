@@ -332,7 +332,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
   parse(): OmniModelParserResult<JsonRpcParserOptions & ParserOptions> {
 
-    const endpoints = this.doc.methods.map(it => this.toOmniEndpointFromMethod(this._refResolver.resolve(it)));
+    const endpoints = this.doc.methods.map((it, idx) => {
+      const methodJsonPath = ['methods', `${idx}`];
+      return this.toOmniEndpointFromMethod(methodJsonPath, this._refResolver.resolve(it, methodJsonPath));
+    });
     const contact = this.doc.info.contact ? this.toOmniContactFromContact(this.doc.info.contact) : undefined;
     const license = this.doc.info.license ? this.toOmniLicenseFromLicense(this.doc.info.license) : undefined;
     const servers = (this.doc.servers || []).map(server => this.toOmniServerFromServerObject(server));
@@ -347,7 +350,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
         // Call to get the type from the schema.
         // That way we make sure it's in the type map.
-        manualTypes.push(this._jsonSchemaParser.jsonSchemaToType(schema, {key: key}).type);
+        manualTypes.push(this._jsonSchemaParser.jsonSchemaToType(['components', 'schemas', key], schema, {key: key}).type);
       }
     }
 
@@ -393,7 +396,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  toOmniEndpointFromMethod(method: MethodObject): OmniEndpoint {
+  toOmniEndpointFromMethod(jsonPath: string[], method: MethodObject): OmniEndpoint {
 
     if (!method.name) {
       throw new Error(`Encountered Method without a 'name'-property, one must be set to:\n${JSON.stringify(method, undefined, 2)}`);
@@ -411,8 +414,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     if (method.tags) {
       const tagNames: string[] = [];
-      for (const tag of method.tags) {
-        const foundName = this._refResolver.getFirstResolved(tag, v => v.name);
+      for (let i = 0; i < method.tags.length; i++) {
+        const tag = method.tags[i];
+        const foundName = this._refResolver.getFirstResolved(tag, [...jsonPath, 'tags', `${i}`], v => v.name);
         const trimmed = (foundName ?? '').trim();
         if (trimmed.length > 0) {
           tagNames.push(trimmed);
@@ -437,8 +441,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       }
     }
 
-    const requestTypeAndProperties = this.toRequestTypeAndPropertiesFromMethod(method, methodNames);
-    const resultResponse = this.toOmniOutputFromContentDescriptor(method, this._refResolver.resolve(method.result), methodNames);
+    const requestTypeAndProperties = this.toRequestTypeAndPropertiesFromMethod(jsonPath, method, methodNames);
+    const resultJsonPath = [...jsonPath, 'result'];
+    const resolvedResult = this._refResolver.resolve(method.result, resultJsonPath);
+    const resultResponse = this.toOmniOutputFromContentDescriptor(resultJsonPath, method, resolvedResult, methodNames);
 
     const responses: OmniOutput[] = [];
 
@@ -454,16 +460,18 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       message: 'Unknown Error',
     });
 
-    const errorOutputs = errorsOrReferences.map(it => {
-      const deref = this._refResolver.resolve(it);
-      return this.errorToGenericOutput(Case.pascal(method.name), deref);
+    const errorOutputs = errorsOrReferences.map((it, idx) => {
+      const errorJsonPath = [...jsonPath, 'errors', `${idx}`];
+      const deref = this._refResolver.resolve(it, errorJsonPath);
+      return this.errorToGenericOutput(errorJsonPath, Case.pascal(method.name), deref);
     });
 
     responses.push(...errorOutputs);
 
-    const examples = (method.examples || []).map(it => {
-      const deref = this._refResolver.resolve(it);
-      return this.examplePairingToGenericExample(resultResponse.type, requestTypeAndProperties.properties || [], deref);
+    const examples = (method.examples || []).map((it, idx) => {
+      const exampleJsonPath = [...jsonPath, 'examples', `${idx}`];
+      const deref = this._refResolver.resolve(it, exampleJsonPath);
+      return this.examplePairingToGenericExample(exampleJsonPath, resultResponse.type, requestTypeAndProperties.properties || [], deref);
     });
 
     // TODO: Needs to be implemented, or solved some other way(s)
@@ -472,9 +480,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       const callbacks = method['x-callbacks'] as ToDefined<OpenApi.ComponentsObject['callbacks']>;
 
       for (const [eventName, eventOrRef] of Object.entries(callbacks)) {
-        const event = this._refResolver.resolve(eventOrRef);
+        const eventJsonPath = [...jsonPath, 'x-callbacks', eventName];
+        const event = this._refResolver.resolve(eventOrRef, eventJsonPath);
         for (const [callbackUrl, callbackOrRef] of Object.entries(event)) {
-          const callback = this._refResolver.resolve(callbackOrRef);
+          const callbackJsonPath = [...eventJsonPath, callbackUrl];
+          const callback = this._refResolver.resolve(callbackOrRef, callbackJsonPath);
         }
       }
     }
@@ -522,22 +532,24 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private toOmniTypeFromContentDescriptor(
+    jsonPath: string[],
     contentDescriptor: ContentDescriptorObject,
   ): SchemaToTypeResult {
 
     const schema = contentDescriptor.schema as JSONSchema9Definition;
-
-    // const resolved = this._refResolver.resolve(schema) as JSONSchema9Definition;
-    // const preferredName: TypeName = JsonSchemaParser.getVendorExtension(contentDescriptor, 'title') ?? this._jsonSchemaParser.getPreferredName(schema, resolved, fallbackName);
-
-    const type = this._jsonSchemaParser.jsonSchemaToType(schema, {key: contentDescriptor.name});
+    const type = this._jsonSchemaParser.jsonSchemaToType([...jsonPath, 'schema'], schema, {key: contentDescriptor.name});
 
     return {
       type: type.type,
     };
   }
 
-  private toOmniOutputFromContentDescriptor(method: MethodObject, contentDescriptor: ContentDescriptorObject, methodName: TypeName): OutputAndType {
+  private toOmniOutputFromContentDescriptor(
+    jsonPath: string[],
+    method: MethodObject,
+    contentDescriptor: ContentDescriptorObject,
+    methodName: TypeName,
+  ): OutputAndType {
 
     const responseTypeName: TypeName = {
       name: methodName,
@@ -546,7 +558,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const resultSchema = contentDescriptor.schema as JSONSchema9Definition;
 
-    const resultType = this._jsonSchemaParser.jsonSchemaToType(resultSchema, {
+    const resultType = this._jsonSchemaParser.jsonSchemaToType([...jsonPath, 'schema'], resultSchema, {
       alternatives: [
         contentDescriptor.name,
         {name: responseTypeName, suffix: 'Result'},
@@ -609,13 +621,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private errorToGenericOutput(parentName: string, error: ErrorObject): OmniOutput {
+  private errorToGenericOutput(jsonPath: string[], parentName: string, error: ErrorObject): OmniOutput {
 
     const isUnknownCode = (error.code === UNKNOWN_ERROR_CODE);
     if (isUnknownCode && this._unknownError) {
       return this._unknownError;
     } else {
-      const errorOutput = this.errorToGenericOutputReal(parentName, error, isUnknownCode);
+      const errorOutput = this.errorToGenericOutputReal(jsonPath, parentName, error, isUnknownCode);
       if (isUnknownCode) {
         if (!this._unknownError) {
           this._unknownError = errorOutput;
@@ -628,7 +640,12 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     }
   }
 
-  private errorToGenericOutputReal(parentName: string, error: ErrorObject, isUnknownCode: boolean): OmniOutput {
+  private errorToGenericOutputReal(
+    jsonPath: string[],
+    parentName: string,
+    error: ErrorObject,
+    isUnknownCode: boolean,
+  ): OmniOutput {
     const typeName = isUnknownCode
       ? `ErrorUnknown`
       : `${parentName}Error${error.code}`;
@@ -672,7 +689,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
 
     this.addJsonRpcErrorProperties(
-      errorType, error, isUnknownCode, this._jsonRpcErrorInstanceClass, this.doc, this._options,
+      jsonPath, errorType, error, isUnknownCode, this._jsonRpcErrorInstanceClass, this.doc, this._options,
     );
 
     const qualifiers: OmniPayloadPathQualifier[] = [{
@@ -703,6 +720,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private addJsonRpcErrorProperties(
+    jsonPath: string[],
     target: OmniObjectType,
     error: ErrorObject,
     isUnknownCode: boolean,
@@ -805,7 +823,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       });
     } else {
 
-      const optionsErrorSchema = this.toOmniType(options.jsonRpcErrorDataSchema);
+      const optionsErrorSchema = this.toOmniType(jsonPath, options.jsonRpcErrorDataSchema);
       if (!optionsErrorSchema) {
         throw new Error(`Has a JsonRpc error data schema, but it could not be converted into an omni type`);
       }
@@ -865,15 +883,20 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private examplePairingToGenericExample(
+    jsonPath: string[],
     valueType: OmniType,
     inputProperties: OmniProperty[],
     example: ExamplePairingObject,
   ): OmniExamplePairing {
 
     const params = example.params.map((paramOrRef, idx) => {
-      const param = this._refResolver.resolve(paramOrRef);
-      return this.exampleParamToGenericExampleParam(inputProperties, param, idx);
+      const paramJsonPath = [...jsonPath, 'params', `${idx}`];
+      const param = this._refResolver.resolve(paramOrRef, paramJsonPath);
+      return this.exampleParamToGenericExampleParam(paramJsonPath, inputProperties, param, idx);
     });
+
+    const resultJsonPath = [...jsonPath, 'result'];
+    const resolvedResult = this._refResolver.resolve(example.result, resultJsonPath);
 
     return {
       kind: OmniItemKind.EXAMPLE_PAIRING,
@@ -881,11 +904,12 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       description: example.description,
       summary: example['summary'] as string | undefined, // 'summary' does not exist in the OpenRPC object, but does in spec.
       params: params,
-      result: example.result ? this.toOmniExampleResultFromExampleObject(valueType, this._refResolver.resolve(example.result)) : undefined,
+      result: example.result ? this.toOmniExampleResultFromExampleObject(valueType, resolvedResult) : undefined,
     };
   }
 
   private toOmniType(
+    jsonPath: string[],
     source: OmniType | JsonRpcParserOptions['jsonRpcErrorDataSchema'],
   ): OmniType | undefined {
 
@@ -897,10 +921,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       return source;
     }
 
-    return this._jsonSchemaParser.transformErrorDataSchemaToOmniType('JsonRpcCustomErrorPayload', source, this._docStore);
+    return this._jsonSchemaParser.transformErrorDataSchemaToOmniType(jsonPath, 'JsonRpcCustomErrorPayload', source, this._docStore);
   }
 
   private exampleParamToGenericExampleParam(
+    jsonPath: string[],
     inputProperties: OmniProperty[],
     param: ExampleObject,
     paramIndex: number,
@@ -970,9 +995,9 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     };
   }
 
-  private toOmniPropertyFromContentDescriptor(owner: OmniPropertyOwner, descriptor: ContentDescriptorObject): OmniProperty {
+  private toOmniPropertyFromContentDescriptor(jsonPath: string[], owner: OmniPropertyOwner, descriptor: ContentDescriptorObject): OmniProperty {
 
-    const propertyType = this.toOmniTypeFromContentDescriptor(descriptor);
+    const propertyType = this.toOmniTypeFromContentDescriptor(jsonPath, descriptor);
 
     const property: OmniProperty = {
       kind: OmniItemKind.PROPERTY,
@@ -990,7 +1015,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     return property;
   }
 
-  private toRequestTypeAndPropertiesFromMethod(method: MethodObject, methodName: TypeName): TypeAndProperties {
+  private toRequestTypeAndPropertiesFromMethod(
+    jsonPath: string[],
+    method: MethodObject,
+    methodName: TypeName,
+  ): TypeAndProperties {
 
     const isCallback = this.isCallbackMethod(method);
     const requestName: TypeName = {
@@ -998,7 +1027,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       suffix: (isCallback ? this._options.jsonRpcCallbackMethodTypeSuffix : this._options.jsonRpcRequestMethodTypeSuffix) ?? 'Request',
     };
 
-    const requestParamsType = this.toRequestPropertyFromParameters(method, requestName);
+    const requestParamsType = this.toRequestPropertyFromParameters(jsonPath, method, requestName);
 
     const objectRequestType: OmniObjectType = {
       kind: OmniTypeKind.OBJECT,
@@ -1061,6 +1090,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private toRequestPropertyFromParameters(
+    jsonPath: string[],
     method: MethodObject,
     requestTypeName: TypeName,
   ) {
@@ -1073,8 +1103,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         properties: [],
       } satisfies OmniArrayPropertiesByPositionType;
 
-      requestParamsType.properties = method.params.map(it => {
-        return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._refResolver.resolve(it));
+      requestParamsType.properties = method.params.map((it, idx) => {
+        const paramJsonPath = [...jsonPath, 'params', `${idx}`];
+        const resolved = this._refResolver.resolve(it, paramJsonPath);
+        return this.toOmniPropertyFromContentDescriptor(paramJsonPath, requestParamsType, resolved);
       });
 
       requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(
@@ -1093,12 +1125,15 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         properties: [],
       } satisfies OmniObjectType;
 
-      const properties = method.params.map(it => {
-        try {
-          return this.toOmniPropertyFromContentDescriptor(requestParamsType, this._refResolver.resolve(it));
-        } catch (ex) {
-          throw new Error(`Could not convert from property '${OmniUtil.describe(requestParamsType)}' to OpenRpc Content Descriptor for method '${method.name}'`, {cause: ex});
-        }
+      const properties = method.params.map((it, idx) => {
+        // try {
+        const paramJsonPath = [...jsonPath, 'params', `${idx}`];
+        const resolved = this._refResolver.resolve(it, paramJsonPath);
+
+        return this.toOmniPropertyFromContentDescriptor(paramJsonPath, requestParamsType, resolved);
+        // } catch (ex) {
+        //   throw new Error(`Could not convert from property '${OmniUtil.describe(requestParamsType)}' to OpenRpc Content Descriptor for method '${method.name}'`, {cause: ex});
+        // }
       });
 
       if (properties.length > 0) {
@@ -1257,16 +1292,21 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   private toOmniLinkFromDocMethods(endpoint: OmniEndpoint, endpoints: OmniEndpoint[]): OmniLink[] {
 
     const continuations: OmniLink[] = [];
-    for (const methodOrRef of this.doc.methods) {
+    for (let i = 0; i < this.doc.methods.length; i++) {
+      const methodOrRef = this.doc.methods[i];
 
       // TODO: This is probably wrong! The reference can exist in another file; in the file that contains the endpoint
-      const method = this._refResolver.resolve(methodOrRef);
+      const methodJsonPath = ['methods', `${i}`];
+      const method = this._refResolver.resolve(methodOrRef, methodJsonPath);
 
-      for (const linkOrRef of (method.links || [])) {
-        const link = this._refResolver.resolve(linkOrRef);
+      const links = (method.links || []);
+      for (let n = 0; n < links.length; n++) {
+        const linkOrRef = links[n];
+        const linkJsonPath = [...methodJsonPath, 'links', `${n}`];
+        const link = this._refResolver.resolve(linkOrRef, linkJsonPath);
 
         try {
-          continuations.push(this.toOmniLinkFromLinkObject(endpoint, endpoints, link, link.hash));
+          continuations.push(this.toOmniLinkFromLinkObject(linkJsonPath, endpoint, endpoints, link, link.hash));
         } catch (ex) {
           const errorMessage = `Could not build link for ${endpoint.name}: ${ex instanceof Error ? ex.message : ''}`;
           if (!this._preferablyUniqueErrorLogs.has(errorMessage)) {
@@ -1313,7 +1353,13 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     return targetEndpoint;
   }
 
-  private toOmniLinkFromLinkObject(sourceEndpoint: OmniEndpoint, endpoints: OmniEndpoint[], link: LinkObject, refName?: string): OmniLink {
+  private toOmniLinkFromLinkObject(
+    jsonPath: string[],
+    sourceEndpoint: OmniEndpoint,
+    endpoints: OmniEndpoint[],
+    link: LinkObject,
+    refName?: string,
+  ): OmniLink {
 
     const targetEndpoint = this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
     const paramNames: string[] = Object.keys(link.params as object);

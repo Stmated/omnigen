@@ -13,20 +13,20 @@ export const createTypeScriptAstReducer = (partial?: Partial<Reducer<TypeScriptV
     reduceCompositionType: (n, r) => new Ts.CompositionType(
       n.omniType,
       n.typeNodes.map(it => it.reduce(r)).filter(isDefined),
-    ),
+    ).withIdFrom(n),
     reduceTypeAliasDeclaration: (n, r) => new Ts.TypeAliasDeclaration(
       assertDefined(n.name.reduce(r)),
       assertDefined(n.of.reduce(r)),
       n.modifiers?.reduce(r),
       n.comments?.reduce(r),
-    ),
+    ).withIdFrom(n),
     reduceGetter: (n, r) => new Ts.Getter(
       assertDefined(n.identifier.reduce(r)),
       n.target?.reduce(r),
       assertDefined(n.returnType.reduce(r)),
       n.comments?.reduce(r),
       assertDefined(n.modifiers.reduce(r)),
-    ),
+    ).withIdFrom(n),
     reduceSetter: (n, r) => {
       const identifier = assertDefined(n.identifier.reduce(r));
       if (!(identifier instanceof Ts.SetterIdentifier)) {
@@ -38,7 +38,7 @@ export const createTypeScriptAstReducer = (partial?: Partial<Reducer<TypeScriptV
         assertDefined(n.targetType.reduce(r)),
         assertDefined(n.target.reduce(r)),
         assertDefined(n.modifiers.reduce(r)),
-      );
+      ).withIdFrom(n);
     },
   };
 };

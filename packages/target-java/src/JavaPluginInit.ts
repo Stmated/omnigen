@@ -76,6 +76,7 @@ import {
   ToConstructorBodySuperCallAstTransformer,
 } from '@omnigen/target-code';
 import {BeanValidationJavaAstTransformer, MapMemberAccessToJavaAstTransformer, SimplifyTypePathsJavaAstTransformer, SingleFileJavaAstTransformer, ToJavaAstTransformer} from './transform';
+import {VarDecTypeJavaAstTransformer} from './transform/VarDecTypeJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -186,6 +187,7 @@ export const JavaPlugin = createPlugin(
 
     const astTransformers: AstTransformer<CodeRootAstNode, JavaAndTargetOptions>[] = [];
     astTransformers.push(new AddObjectDeclarationsCodeAstTransformer());
+    astTransformers.push(new VarDecTypeJavaAstTransformer());
     astTransformers.push(new AddFieldsAstTransformer());
     astTransformers.push(new AddAccessorsForFieldsAstTransformer());
     astTransformers.push(new AddCompositionMembersCodeAstTransformer());

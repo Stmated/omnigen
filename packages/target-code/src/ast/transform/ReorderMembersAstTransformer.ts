@@ -77,7 +77,9 @@ SortVisitorRegistry.INSTANCE.register((root, a, b, options) => {
 
 const getWeight = (node: AstNode, root: RootAstNode, options: TargetOptions): [number, string | undefined] => {
 
-  if (node instanceof Code.Field) {
+  if (node instanceof Code.Statement) {
+    return getWeight(node.child, root, options);
+  } else if (node instanceof Code.Field) {
 
     let weight = 300;
     let name: string | undefined;

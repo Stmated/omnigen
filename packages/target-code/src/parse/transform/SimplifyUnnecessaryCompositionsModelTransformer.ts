@@ -84,10 +84,6 @@ export class SimplifyUnnecessaryCompositionsModelTransformer implements OmniMode
               OmniUtil.copyName(reduced, replacement);
             }
 
-            // if (reduced.inline !== true && Naming.getName(replacement)) {
-            //   replacement.inline = reduced.inline ?? false;
-            // }
-
             r.replace(replacement);
           }
         }

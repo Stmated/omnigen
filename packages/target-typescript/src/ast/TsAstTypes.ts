@@ -1,7 +1,7 @@
 import {AstNode, OmniCompositionType, OmniType, Reducer, ReducerResult, TypeNode, VisitResult} from '@omnigen/api';
 import {TypeScriptVisitor} from '../visit';
 import {Code} from '@omnigen/target-code';
-import {GetterIdentifier, SetterIdentifier} from '@omnigen/target-code/ast';
+import {DeclarationReference, GetterIdentifier, SetterIdentifier} from '@omnigen/target-code/ast';
 
 export * from '@omnigen/target-code/ast';
 
@@ -27,7 +27,7 @@ export class CompositionType extends AbstractTypeScriptNode implements TypeNode 
     return visitor.visitCompositionType(this, visitor);
   }
 
-  reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<TypeNode> {
+  reduce(reducer: Reducer<TypeScriptVisitor<unknown>>): ReducerResult<TypeNode | DeclarationReference> {
     return reducer.reduceCompositionType(this, reducer);
   }
 }
@@ -52,10 +52,6 @@ export class TypeAliasDeclaration extends AbstractTypeScriptNode implements Code
   }
 
   visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {
-
-    // TODO: Figure out why this is okay -- make it a compilation error -- should not be able to call something which does not exist!
-    // TODO: Is the solution to replace AstVisitor visitor arg with `this` and then needing to keep a STRICT grip on what visitor is used and sent along?
-
     return visitor.visitTypeAliasDeclaration(this, visitor);
   }
 

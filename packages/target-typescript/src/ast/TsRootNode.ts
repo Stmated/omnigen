@@ -1,9 +1,9 @@
-import {AstNode, AstNodeWithChildren, AstTargetFunctions, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/api';
+import {AstNode, AstNodeWithChildren, AstTargetFunctions, NodeResolveCtx, ObjectNameResolver, ReducerResult, RootAstNode, TargetFunctions, VisitResult} from '@omnigen/api';
 import {createTypeScriptVisitor, TypeScriptVisitor} from '../visit';
 import {isDefined} from '@omnigen/core';
 import {DefaultTypeScriptAstReducer, TypeScriptAstReducer} from './TypeScriptAstReducer';
 import {TsAstUtils} from './TsAstUtils';
-import {Code} from '@omnigen/target-code';
+import {Code, CodeVisitor} from '@omnigen/target-code';
 import {TypeScriptObjectNameResolver} from './TypeScriptObjectNameResolver';
 import {TsModelFunctions} from '../parse/TsModelFunctions';
 
@@ -40,6 +40,16 @@ export class TsRootNode extends Code.CodeRootAstNode implements RootAstNode, Ast
 
   visit<R>(visitor: TypeScriptVisitor<R>): VisitResult<R> {
     return this.children.map(it => it.visit(visitor));
+  }
+
+  createIdVisitor(ctx: NodeResolveCtx<void, TypeScriptVisitor<void>>): Partial<TypeScriptVisitor<void>> {
+    return {
+      ...super.createIdVisitor(ctx),
+      visitTypeAliasDeclaration: (n, v) => {
+        ctx.map.set(n.id, n);
+        ctx.visitor.visitTypeAliasDeclaration(n, v);
+      },
+    };
   }
 
   reduce(reducer: TypeScriptAstReducer): ReducerResult<TsRootNode> {

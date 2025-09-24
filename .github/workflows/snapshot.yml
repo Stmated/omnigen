@@ -27,11 +27,12 @@ jobs:
       - run: pnpm i
       - run: pnpm run version-patch
       - run: git config --global user.email "stmated@gmail.com"
-      - run: git config --global user.name "Stmated"
+      - run: git config --global user.name "stmated"
       - run: git commit -a -m "[SNAPSHOT]"
       - run: git push
 
       - run: pnpm run build
+      - run: pnpm run test
       - run: pnpm run publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

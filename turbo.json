@@ -27,7 +27,7 @@
       "outputs": []
     },
     "publish": {
-      "dependsOn": ["build", "test"],
+      "dependsOn": ["build"],
       "outputs": []
     },
     "update": {

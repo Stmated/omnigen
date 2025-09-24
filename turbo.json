@@ -22,6 +22,10 @@
     "lint": {
       "outputs": []
     },
+    "version-patch": {
+      "cache": false,
+      "outputs": []
+    },
     "publish": {
       "dependsOn": ["build", "test"],
       "outputs": []

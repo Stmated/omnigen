@@ -1,8 +1,16 @@
 name: Publish Snapshot Package
 on:
-  release:
-    types:
-      - created
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version increment level"
+        type: choice
+        required: true
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   build:
@@ -25,7 +33,7 @@ jobs:
       - run: git config --global user.email "stmated@gmail.com"
       - run: git config --global user.name "stmated"
       - run: git pull
-      - run: pnpm run version-patch
+      - run: pnpm run version-${{version}}
       - run: git commit -a -m "[SNAPSHOT]"
       - run: git push
 

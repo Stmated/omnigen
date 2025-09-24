@@ -1,6 +1,6 @@
 {
   "name": "@omnigen-org/omnigen-cli",
-  "version": "0.0.74",
+  "version": "0.0.75",
   "private": false,
   "license": "MIT",
   "type": "module",

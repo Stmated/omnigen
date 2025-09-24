@@ -887,7 +887,7 @@ export class VariableDeclaration extends AbstractCodeNode implements Identifiabl
     return visitor.visitVariableDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<Identifiable> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceVariableDeclaration(this, reducer);
   }
 }

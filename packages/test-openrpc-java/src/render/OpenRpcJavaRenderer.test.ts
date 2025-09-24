@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as JavaParser from 'java-parser';
 import {JavaTestUtils, OpenRpcTestUtils, ParsedJavaTestVisitor} from '../util';
 import {describe, test, vi} from 'vitest';
@@ -17,82 +15,60 @@ describe('Java Rendering', () => {
 
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
-    // TODO: Do this both with and without compressing types -- create different versions and output them in a structure!
-    // TODO: Would it be crazy or cool to take ALL the types of all the models and create one HUGE output with common types?
-
     const errors: Error[] = [];
+
+    const mapOfMap = new Map<string, Map<string, string>>();
 
     for (const schemaName of OpenRpcTestUtils.getKnownSchemaNames()) {
 
-      let fileNames: string[];
-      try {
-        fileNames = await OpenRpcTestUtils.listExampleFileNames(schemaName);
-      } catch (ex) {
-        throw new Error(`Could not list filenames inside ${schemaName}: ${ex}`, {cause: ex instanceof Error ? ex : undefined});
-      }
-
-      for (const fileName of fileNames) {
+      for (const fileName of await OpenRpcTestUtils.listExampleFileNames(schemaName)) {
 
         try {
-
-          logger.info(`Will render ${fileName}`);
           const result = await JavaTestUtils.getResultFromFilePath(
             Util.getPathFromRoot(`./packages/parser-openrpc/examples/${fileName}`), {}, ZodCompilationUnitsContext,
           );
 
-          let baseDir: string;
-
-          const targetTestDir = path.resolve('./.target_test');
-
-          try {
-            baseDir = path.resolve(`./.target_test/${schemaName}/${path.basename(fileName, path.extname(fileName))}`);
-          } catch (ex) {
-            errors.push(new Error(`Could not resolve path of ${fileName}`, {cause: ex}));
-            continue;
-          }
-
           for (const cu of result.compilationUnits) {
-
-            if (cu.fileName.indexOf('#') !== -1) {
-              throw new Error(`'#' not allowed in CU '${cu.fileName}'`);
+            if (!mapOfMap.has(fileName)) {
+              mapOfMap.set(fileName, new Map<string, string>());
             }
-
-            const outDir = `${baseDir}/${cu.directories.join('/')}`;
-            if (!fs.existsSync(outDir)) {
-              fs.mkdirSync(outDir, {recursive: true});
-            }
-
-            const outPath = `${outDir}/${cu.fileName}`;
-
-            try {
-              fs.writeFileSync(outPath, cu.content);
-            } catch (ex) {
-              errors.push(new Error(`Could not write '${outPath}' of '${fileName}': ${ex}`, {cause: ex}));
-              continue;
-            }
-
-            let cst: JavaParser.CstNode;
-            try {
-              cst = JavaParser.parse(cu.content);
-              ctx.expect(cst).toBeDefined();
-            } catch (ex) {
-              errors.push(new Error(`Could not parse '${schemaName}' '${fileName}' in '${outPath}': ${ex}\n\n${cu.content}\n\n`, {cause: ex}));
-              continue;
-            }
-
-            // Visit the syntax tree, but do nothing with the result.
-            // It is only to see if any crashes can be found or not.
-            const visitor = new ParsedJavaTestVisitor();
-            visitor.visit(cst);
+            const map = mapOfMap.get(fileName)!;
+            map.set(cu.fileName, cu.content);
           }
-
-          // Everything went fine. So we delete the test output directory. If things went badly it will stay around.
-          fs.rmSync(targetTestDir, {recursive: true, force: true});
 
         } catch (ex) {
           errors.push(LoggerFactory.formatError(ex, `File ${fileName}`));
         }
       }
+    }
+
+    const aggregated = new Map<string, string>();
+
+    for (const sourceFileName of mapOfMap.keys()) {
+      const targetFiles = mapOfMap.get(sourceFileName)!;
+      for (const targetFileName of targetFiles.keys()) {
+        const targetContent = targetFiles.get(targetFileName)!;
+
+        aggregated.set(sourceFileName, `${(aggregated.get(sourceFileName) ?? '')}\n\n${targetContent}`);
+
+        try {
+          const cst = JavaParser.parse(targetContent);
+          ctx.expect(cst).toBeDefined();
+
+          const visitor = new ParsedJavaTestVisitor();
+          visitor.visit(cst);
+        } catch (ex) {
+          errors.push(new Error(`Could not parse '${sourceFileName}' in '${targetFileName}': ${ex}\n\n${targetContent}\n\n`, {cause: ex}));
+        }
+      }
+    }
+
+    ctx.expect([...aggregated.keys()].sort()).toMatchSnapshot();
+
+    for (const sourceFileName of aggregated.keys()) {
+      const targetContent = aggregated.get(sourceFileName)!;
+      const snapshotFileName = `./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${sourceFileName}.java`;
+      await ctx.expect(targetContent).toMatchFileSnapshot(snapshotFileName);
     }
 
     if (errors.length > 0) {

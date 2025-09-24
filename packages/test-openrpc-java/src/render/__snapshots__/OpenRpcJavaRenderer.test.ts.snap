@@ -126,3 +126,32 @@ public class GiveNumberGetCharRequestParams extends JsonRpcRequestParams<Double>
 }
 "
 `;
+
+exports[`Java Rendering > renderAll 1`] = `
+[
+  "additional-properties.json",
+  "api-with-examples.json",
+  "compressable-types.json",
+  "description-inheritance.json",
+  "enum.json",
+  "error-structure-1.1.json",
+  "error-structure-custom.json",
+  "error-structure.json",
+  "ethereum.json",
+  "inherited-construction.json",
+  "link-example.json",
+  "mappings.json",
+  "merge-a-multi-endpoints.json",
+  "merge-a.json",
+  "merge-b-multi-endpoints.json",
+  "merge-b.json",
+  "method-in-response.json",
+  "multiple-inheritance.json",
+  "packages.json",
+  "params-by-name.json",
+  "petstore-expanded.json",
+  "petstore.json",
+  "primitive-generics.json",
+  "simple-math.json",
+]
+`;

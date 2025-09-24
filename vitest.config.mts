@@ -43,17 +43,13 @@ export default defineConfig({
     coverage: {
       all: true,
       clean: true,
-      enabled: isReport || isCI,
+      enabled: isReport,
       provider: 'v8',
       include: ['**/*.ts'],
       reporter: isReport ? [['lcov', {}]]
         : ['lcovonly'],
       reportsDirectory: '.test/coverage',
     },
-    // benchmark: {
-    //   reporters: isCI ? ['verbose', 'json'] : 'default',
-    //   outputFile: 'benchmark-results.json',
-    // },
     testTimeout: 2_000,
   },
 });

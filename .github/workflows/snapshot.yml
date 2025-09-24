@@ -15,19 +15,16 @@ jobs:
           token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-      #        with:
-      #          version: 10
-      # Setup .npmrc file to publish to npm
       - uses: actions/setup-node@v4
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
           cache: "pnpm"
-      #      - run: npm version patch -m "[RELEASE] %s"
       - run: pnpm i
-      - run: pnpm run version-patch
       - run: git config --global user.email "stmated@gmail.com"
       - run: git config --global user.name "stmated"
+      - run: git pull
+      - run: pnpm run version-patch
       - run: git commit -a -m "[SNAPSHOT]"
       - run: git push
 

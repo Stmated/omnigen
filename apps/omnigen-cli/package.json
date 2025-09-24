@@ -20,6 +20,7 @@
     "dev": "npx tsc -w",
     "bin": "tsx src/index.ts",
     "build": "vite build",
+    "version-patch": "pnpm version patch",
     "publish": "pnpm publish --provenance --access public --no-git-checks=true"
   },
   "dependencies": {

@@ -33,7 +33,7 @@ jobs:
       - run: git config --global user.email "stmated@gmail.com"
       - run: git config --global user.name "stmated"
       - run: git pull
-      - run: pnpm run version-${{version}}
+      - run: pnpm run version-${{ inputs.version }}
       - run: git commit -a -m "[SNAPSHOT]"
       - run: git push
 

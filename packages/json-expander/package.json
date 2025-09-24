@@ -1,6 +1,6 @@
 {
   "name": "@omnigen-org/json-expander",
-  "version": "0.0.33",
+  "version": "0.0.34",
   "private": false,
   "license": "MIT",
   "type": "module",

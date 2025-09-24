@@ -1,7 +1,7 @@
 {
   "name": "omnigen",
   "packageManager": "pnpm@10.17.1",
-  "private": true,
+  "private": false,
   "type": "module",
   "scripts": {
     "preinstall": "npx only-allow pnpm",

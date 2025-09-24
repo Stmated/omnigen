@@ -28,7 +28,7 @@ jobs:
       - run: pnpm run version-patch
       - run: git config --global user.email "stmated@gmail.com"
       - run: git config --global user.name "Stmated"
-      - run: git commit -m "[SNAPSHOT]"
+      - run: git commit -a -m "[SNAPSHOT]"
       - run: git push
 
       - run: pnpm run build

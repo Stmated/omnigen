@@ -40,6 +40,8 @@ jobs:
       - run: pnpm run build
       - run: pnpm run test
       - run: npm adduser --registry=https://registry.npmjs.org
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm run publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

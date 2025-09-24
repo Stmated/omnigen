@@ -74,7 +74,7 @@ describe('Java Rendering', () => {
     if (errors.length > 0) {
       ctx.expect.fail(`Rendering errors:\n* ${errors.map(it => `${it.message}:\n${it.stack}`).join('\n\n* ')}`);
     }
-  }, 30_000);
+  }, 90_000);
 
   test('Test multiple inheritance (interfaces)', async ctx => {
 

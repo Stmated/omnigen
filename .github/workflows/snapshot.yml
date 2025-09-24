@@ -26,6 +26,7 @@ jobs:
       #      - run: npm version patch -m "[RELEASE] %s"
       - run: pnpm i
       - run: pnpm run version-patch
+      - run: git commit -m "[SNAPSHOT]"
       - run: git push
 
       - run: pnpm run build

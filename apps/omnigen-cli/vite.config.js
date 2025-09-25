@@ -2,7 +2,7 @@ import {resolve} from 'path';
 import {defineConfig} from 'vite';
 import {builtinModules} from 'module';
 import replace from '@rollup/plugin-replace';
-import {copyFileSync} from 'fs';
+import {copyFileSync, mkdirSync} from 'fs';
 
 export default defineConfig({
   build: {
@@ -29,9 +29,11 @@ export default defineConfig({
         {
           name: 'copy-worker',
           generateBundle() {
+            const distDir = resolve(__dirname, 'dist');
+            mkdirSync(distDir, {recursive: true});
             copyFileSync(
               resolve(__dirname, 'node_modules/sync-fetch/worker.js'),
-              resolve(__dirname, 'dist/worker.js'),
+              resolve(distDir, 'worker.js'),
             );
           },
         },

@@ -2,6 +2,7 @@ import {resolve} from 'path';
 import {defineConfig} from 'vite';
 import {builtinModules} from 'module';
 import replace from '@rollup/plugin-replace';
+import {copyFileSync} from 'fs';
 
 export default defineConfig({
   build: {
@@ -24,7 +25,18 @@ export default defineConfig({
         banner: `import * as __import_path from 'path';\nimport * as __import_url from 'url';\n`,
       },
 
-      plugins: [],
+      plugins: [
+        {
+          name: 'copy-worker',
+          generateBundle() {
+            copyFileSync(
+              resolve(__dirname, 'node_modules/sync-fetch/worker.js'),
+              resolve(__dirname, 'dist/worker.js'),
+            );
+          },
+        },
+      ],
+      treeshake: 'safest',
     },
     commonjsOptions: {},
     minify: false,
@@ -48,5 +60,6 @@ export default defineConfig({
   optimizeDeps: {
     noDiscovery: true,
     include: [],
+    exclude: ['sync-fetch'],
   },
 });

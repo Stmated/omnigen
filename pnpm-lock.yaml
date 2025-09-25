@@ -114,6 +114,9 @@ importers:
       json-schema:
         specifier: ^0.4.0
         version: 0.4.0
+      sync-fetch:
+        specifier: ^0.5.2
+        version: 0.5.2(encoding@0.1.13)
       zod:
         specifier: ^3.25.76
         version: 3.25.76

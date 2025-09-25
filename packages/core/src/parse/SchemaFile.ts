@@ -101,7 +101,7 @@ export class SchemaFile implements SchemaSource {
     const path = this.getAbsolutePath() || '';
     if (path.startsWith('http:') || path.startsWith('https:')) {
       logger.info(`Will fetch from URL: ${path}`);
-      this._readContent = fetch(uri, {method: 'GET', compress: false}).text();
+      this._readContent = fetch(path, {method: 'GET', compress: false}).text();
       return this._readContent;
     }
 

@@ -27,13 +27,14 @@ export default defineConfig({
 
       plugins: [
         {
+          // Quite ugly fix that should be handled in a better way
           name: 'copy-worker',
           generateBundle() {
             const distDir = resolve(__dirname, 'dist');
             mkdirSync(distDir, {recursive: true});
             copyFileSync(
               resolve(__dirname, 'node_modules/sync-fetch/worker.js'),
-              resolve(distDir, 'worker.js'),
+              resolve(distDir, 'worker.cjs'),
             );
           },
         },
@@ -57,6 +58,13 @@ export default defineConfig({
         __filename: '__import_url.fileURLToPath(import.meta.url)',
       },
       delimiters: ['', ''], // This ensures it doesn't break on tokens like `someVar__dirname`
+    }),
+    replace({
+      // Quite ugly fix that should be handled in a better way
+      values: {
+        __dirname: '"worker.js"',
+        __filename: '"worker.cjs"',
+      },
     }),
   ],
   optimizeDeps: {

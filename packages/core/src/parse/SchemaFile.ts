@@ -4,6 +4,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
 import {SchemaSource} from '@omnigen/api';
 import * as YAML from 'yaml';
+import fetch from 'sync-fetch';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -27,11 +28,21 @@ export class SchemaFile implements SchemaSource {
   getAbsolutePath(): string | undefined {
     if (typeof this._input === 'string') {
       if (this._input.indexOf('\n') !== -1) {
-        return this._fileName ? path.resolve(this._fileName) : undefined;
+        if (this._fileName) {
+          if (this._fileName.startsWith('http:') || this._fileName.startsWith('https:')) {
+            return this._fileName;
+          }
+          return path.resolve(this._fileName);
+        } else {
+          return undefined;
+        }
       }
     }
 
-    if (typeof this._input == 'string') {
+    if (typeof this._input === 'string') {
+      if (this._input.startsWith('http:') || this._input.startsWith('https:')) {
+        return this._input;
+      }
       return path.resolve(this._input);
     }
 
@@ -39,7 +50,14 @@ export class SchemaFile implements SchemaSource {
       return this._input.toString();
     }
 
-    return this._fileName ? path.resolve(this._fileName) : undefined;
+    if (this._fileName) {
+      if (this._fileName.startsWith('http:') || this._fileName.startsWith('https:')) {
+        return this._fileName;
+      }
+      return path.resolve(this._fileName);
+    } else {
+      return undefined;
+    }
   }
 
   asObject<R>(): R {
@@ -81,6 +99,12 @@ export class SchemaFile implements SchemaSource {
     }
 
     const path = this.getAbsolutePath() || '';
+    if (path.startsWith('http:') || path.startsWith('https:')) {
+      logger.info(`Will fetch from URL: ${path}`);
+      this._readContent = fetch(uri, {method: 'GET', compress: false}).text();
+      return this._readContent;
+    }
+
     logger.debug(`Reading content from ${path}`);
     const buffer = fs.readFileSync(path, {});
     this._readContent = buffer.toString();

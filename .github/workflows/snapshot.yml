@@ -44,8 +44,6 @@ jobs:
       #          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: 'Auth for npm'
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-      - name: 'Echo NPM user'
-        run: npm whoami
       - run: pnpm run publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

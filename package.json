@@ -17,7 +17,7 @@
     "sync:execute": "syncpack fix-mismatches",
     "update": "pnpm up -r",
     "version-patch": "turbo run version-patch",
-    "publish": "turbo run publish"
+    "publish-snapshot": "turbo run publish-snapshot"
   },
   "syncpack": {
     "versionGroups": [

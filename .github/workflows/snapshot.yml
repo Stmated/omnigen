@@ -30,20 +30,17 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: "pnpm"
       - run: pnpm i
-      - run: git config --global user.email "stmated@gmail.com"
-      - run: git config --global user.name "stmated"
-      - run: git pull
+      #      - run: git config --global user.email "stmated@gmail.com"
+      #      - run: git config --global user.name "stmated"
+      #      - run: git pull
       - run: pnpm run version-${{ inputs.version }}
-      - run: git commit -a -m "[Increment Version]"
-      - run: git push
+      #      - run: git commit -a -m "[Increment Version]"
+      #      - run: git push
 
       - run: pnpm run build
       - run: pnpm run test
-      #      - run: npm adduser --registry=https://registry.npmjs.org
-      #        env:
-      #          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: 'Auth for npm'
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-      - run: pnpm run publish
+      - run: pnpm run publish-snapshot
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

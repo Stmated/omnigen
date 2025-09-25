@@ -21,7 +21,7 @@
     "bin": "tsx src/index.ts",
     "build": "vite build",
     "version-patch": "pnpm version patch",
-    "publish": "pnpm publish --access public --no-git-checks=true"
+    "publish-snapshot": "npm version \"$(node -p 'require(\"./package.json\").version + \"-SNAPSHOT\"')\"; pnpm publish --tag snapshot --force --access public --no-git-checks=true"
   },
   "dependencies": {
     "@commander-js/extra-typings": "^12.1.0",

@@ -20,7 +20,10 @@ export default defineConfig({
         //   vue: 'Vue',
         // },
       },
-      treeshake: 'smallest',
+      treeshake: 'safest',
     },
+  },
+  optimizeDeps: {
+    exclude: ['sync-fetch'],
   },
 });

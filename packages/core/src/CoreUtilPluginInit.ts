@@ -74,10 +74,13 @@ export const CorePlugin = createPlugin(
     const parserOptions = ZodParserOptions.parse(currentArguments);
     const targetOptions = ZodTargetOptions.parse(currentArguments);
 
+    const schemaFile = new SchemaFile(ctx.file, ctx.file);
+    await schemaFile.prepare();
+
     return {
       ...ctx,
       target: ctx.arguments.target,
-      schemaFile: new SchemaFile(ctx.file, ctx.file),
+      schemaFile: schemaFile,
       parserOptions: parserOptions,
       modelTransformOptions: ZodModelTransformOptions.parse(currentArguments),
       targetOptions: targetOptions,
@@ -111,7 +114,7 @@ export const CommonTransformPlugin = createPlugin(
 
     for (const transformer of transformers) {
 
-      logger.debug(`Running ${transformer.constructor.name}`);
+      logger.trace(`Running ${transformer.constructor.name}`);
       transformer.transformModel(transformArgs);
     }
 
@@ -149,7 +152,7 @@ export const CommonTransform2Plugin = createPlugin(
 
     for (const transformer of transformers) {
 
-      logger.debug(`Running ${transformer.constructor.name}`);
+      logger.trace(`Running ${transformer.constructor.name}`);
       transformer.transformModel2ndPass(args);
     }
 

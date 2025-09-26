@@ -50,7 +50,7 @@ export class UnionSupertypeToTypeAliasTypeScriptModelTransformer implements Omni
 
           const newInterface: OmniInterfaceType = {
             kind: OmniTypeKind.INTERFACE,
-            name: {name: n.name, suffix: 'Interface'},
+            name: {prefix: args.options.interfaceNamePrefix, name: {name: n.name, case: 'pascal'}, suffix: args.options.interfaceNameSuffix},
             of: {
               kind: OmniTypeKind.OBJECT,
               name: `_Hidden_Exclusive_Inheritance__${this._uniqueCounter++}`,

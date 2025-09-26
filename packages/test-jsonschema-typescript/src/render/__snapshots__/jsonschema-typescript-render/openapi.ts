@@ -86,21 +86,10 @@ export interface Content {
   readonly [key: string]: MediaType | undefined;
 }
 
-export type Encoding = EncodingInterface & SpecificationExtensions & StylesForForm;
+export type Encoding = IEncoding & SpecificationExtensions & StylesForForm;
 
 export interface EncodingHeaders {
   readonly [key: string]: HeaderOrReference | undefined;
-}
-
-export interface EncodingInterface {
-  /**
-   * @default false
-   */
-  readonly allowReserved?: boolean | undefined;
-  readonly contentType?: string | undefined;
-  readonly explode?: boolean | undefined;
-  readonly headers?: EncodingHeaders | undefined;
-  readonly style?: EncodingStyle | undefined;
 }
 
 export enum EncodingStyle {
@@ -135,13 +124,34 @@ export interface ExternalDocumentation {
   readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export type Header = HeaderInterface & (HeaderWithSchema | HeaderWithContent);
+export type Header = IHeader & (HeaderWithSchema | HeaderWithContent);
 
 export interface HeaderContent {
   readonly [key: string]: MediaType | undefined;
 }
 
-export interface HeaderInterface {
+export type HeaderOrReference = Reference | Header;
+
+export interface HeaderWithContent {
+  readonly content: any;
+}
+
+export interface HeaderWithSchema {
+  readonly schema: any;
+}
+
+export interface IEncoding {
+  /**
+   * @default false
+   */
+  readonly allowReserved?: boolean | undefined;
+  readonly contentType?: string | undefined;
+  readonly explode?: boolean | undefined;
+  readonly headers?: EncodingHeaders | undefined;
+  readonly style?: EncodingStyle | undefined;
+}
+
+export interface IHeader {
   readonly content?: HeaderContent | undefined;
   /**
    * @default false
@@ -155,14 +165,13 @@ export interface HeaderInterface {
   readonly schema?: SchemaObject | undefined;
 }
 
-export type HeaderOrReference = Reference | Header;
-
-export interface HeaderWithContent {
-  readonly content: any;
-}
-
-export interface HeaderWithSchema {
-  readonly schema: any;
+export interface ILink {
+  readonly body?: Server | undefined;
+  readonly description?: string | undefined;
+  readonly operationId?: string | undefined;
+  readonly operationRef?: string | undefined;
+  readonly parameters?: MapOfStrings | undefined;
+  readonly requestBody?: any;
 }
 
 export interface Implicit {
@@ -183,6 +192,38 @@ export interface Info {
   readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
+export interface IParameterBase {
+  readonly content?: ParameterContent | undefined;
+  /**
+   * @default false
+   */
+  readonly deprecated?: boolean | undefined;
+  readonly description?: string | undefined;
+  readonly in: ParameterIn;
+  readonly name: string;
+  /**
+   * @default false
+   */
+  readonly required?: boolean | undefined;
+  readonly schema?: SchemaObject | undefined;
+}
+
+export interface ISchema {
+  readonly components?: Components | undefined;
+  readonly externalDocs?: ExternalDocumentation | undefined;
+  readonly info: Info;
+  /**
+   * @default "https://spec.openapis.org/oas/3.1/dialect/base"
+   */
+  readonly jsonSchemaDialect?: string | undefined;
+  readonly openapi: string;
+  readonly paths?: Paths | undefined;
+  readonly security?: ReadonlyArray<SecurityRequirement> | undefined;
+  readonly servers?: ReadonlyArray<Server> | undefined;
+  readonly tags?: ReadonlyArray<Tag> | undefined;
+  readonly webhooks?: SchemaWebhooks | undefined;
+}
+
 export interface License {
   readonly identifier?: string | undefined;
   readonly name: string;
@@ -190,17 +231,7 @@ export interface License {
   readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export type Link = LinkInterface & (LinkWithOperationRef | LinkWithOperationId);
-
-export interface LinkInterface {
-  readonly body?: Server | undefined;
-  readonly description?: string | undefined;
-  readonly operationId?: string | undefined;
-  readonly operationRef?: string | undefined;
-  readonly parameters?: MapOfStrings | undefined;
-  readonly requestBody?: any;
-}
-
+export type Link = ILink & (LinkWithOperationRef | LinkWithOperationId);
 export type LinkOrReference = Reference | Link;
 
 export interface LinkWithOperationId {
@@ -256,23 +287,7 @@ export interface OperationCallbacks {
 }
 
 export type Parameter = ParameterBase & ParameterThen;
-export type ParameterBase = ParameterBaseInterface & (ParameterWithSchema | ParameterWithContent);
-
-export interface ParameterBaseInterface {
-  readonly content?: ParameterContent | undefined;
-  /**
-   * @default false
-   */
-  readonly deprecated?: boolean | undefined;
-  readonly description?: string | undefined;
-  readonly in: ParameterIn;
-  readonly name: string;
-  /**
-   * @default false
-   */
-  readonly required?: boolean | undefined;
-  readonly schema?: SchemaObject | undefined;
-}
+export type ParameterBase = IParameterBase & (ParameterWithSchema | ParameterWithContent);
 
 export interface ParameterContent {
   readonly [key: string]: MediaType | undefined;
@@ -377,24 +392,7 @@ export interface ResponsesThen {
   readonly default: any;
 }
 
-export type Schema = SchemaInterface & (SchemaWithPaths | SchemaWithComponents | SchemaWithWebhooks);
-
-export interface SchemaInterface {
-  readonly components?: Components | undefined;
-  readonly externalDocs?: ExternalDocumentation | undefined;
-  readonly info: Info;
-  /**
-   * @default "https://spec.openapis.org/oas/3.1/dialect/base"
-   */
-  readonly jsonSchemaDialect?: string | undefined;
-  readonly openapi: string;
-  readonly paths?: Paths | undefined;
-  readonly security?: ReadonlyArray<SecurityRequirement> | undefined;
-  readonly servers?: ReadonlyArray<Server> | undefined;
-  readonly tags?: ReadonlyArray<Tag> | undefined;
-  readonly webhooks?: SchemaWebhooks | undefined;
-}
-
+export type Schema = ISchema & (SchemaWithPaths | SchemaWithComponents | SchemaWithWebhooks);
 export type SchemaObject = SchemaObjectObject | boolean;
 export type SchemaObjectObject = object;
 

@@ -45,7 +45,7 @@ export const JsonSchemaPlugin = createPlugin(
         ]);
       }
 
-      if (!schema && !('$id' in obj)) {
+      if (!schema && !('$id' in obj) && !('properties' in obj)) {
         return new z.ZodError([
           {code: 'custom', path: ['source'], message: `File is not a JsonSchema file`},
         ]);

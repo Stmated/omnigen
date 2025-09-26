@@ -21,3 +21,4 @@ target
 .test
 coverage/
 .DS_Store
+__generated__

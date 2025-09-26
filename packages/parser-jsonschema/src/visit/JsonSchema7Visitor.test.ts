@@ -120,6 +120,7 @@ describe('jsonschema-7-visit', () => {
 
   test('normalize_ids', async ctx => {
     const schemaFile = new SchemaFile(Util.getPathFromRoot('./packages/parser-jsonschema/examples/needs_absolute_ids.json'));
+    await schemaFile.prepare();
     const schemaContent = schemaFile.asObject<JSONSchema9Definition>();
 
     // Set custom path resolver, otherwise we will get absolute path inside our snapshot

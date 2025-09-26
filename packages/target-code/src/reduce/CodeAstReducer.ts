@@ -264,7 +264,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     ).withIdFrom(n),
     reduceDeclarationReference: n => n,
 
-    reduceAnnotationList: (n, r) => new Code.AnnotationList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
+    reduceAnnotationList: (n, r) => new Code.AnnotationList(n.children?.map(it => it.reduce(r)).filter(isDefined), n.multiline).withIdFrom(n),
     reduceAnnotation: (n, r) => {
 
       const type = assertDefined(n.type.reduce(r));

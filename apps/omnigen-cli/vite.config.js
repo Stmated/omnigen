@@ -2,7 +2,6 @@ import {resolve} from 'path';
 import {defineConfig} from 'vite';
 import {builtinModules} from 'module';
 import replace from '@rollup/plugin-replace';
-import {copyFileSync, mkdirSync} from 'fs';
 
 export default defineConfig({
   build: {
@@ -26,18 +25,34 @@ export default defineConfig({
       },
 
       plugins: [
-        {
-          // Quite ugly fix that should be handled in a better way
-          name: 'copy-worker',
-          generateBundle() {
-            const distDir = resolve(__dirname, 'dist');
-            mkdirSync(distDir, {recursive: true});
-            copyFileSync(
-              resolve(__dirname, 'node_modules/sync-fetch/worker.js'),
-              resolve(distDir, 'worker.cjs'),
-            );
-          },
-        },
+        // {
+        //   // Quite ugly fix that should be handled in a better way
+        //   name: 'copy-worker',
+        //   generateBundle() {
+        //     const distDir = resolve(__dirname, 'dist');
+        //     mkdirSync(distDir, {recursive: true});
+        //     copyFileSync(
+        //       resolve(__dirname, 'node_modules/sync-fetch/worker.js'),
+        //       resolve(distDir, 'worker.cjs'),
+        //     );
+        //     copyFileSync(
+        //       resolve(__dirname, 'node_modules/sync-fetch/shared.js'),
+        //       resolve(distDir, 'shared.cjs'),
+        //     );
+        //   },
+        // },
+        // {
+        //   name: 'fix-worker-extension',
+        //   generateBundle(options, bundle) {
+        //     for (const fileName in bundle) {
+        //       const file = bundle[fileName];
+        //       if (file.type === 'chunk' && file.code) {
+        //         file.code = file.code.replace(/["']worker\.js["']/g, '"worker.cjs"');
+        //         // file.code = file.code.replace(/["']shared\.js["']/g, '"shared.cjs"');
+        //       }
+        //     }
+        //   },
+        // },
       ],
       treeshake: 'safest',
     },
@@ -59,17 +74,10 @@ export default defineConfig({
       },
       delimiters: ['', ''], // This ensures it doesn't break on tokens like `someVar__dirname`
     }),
-    replace({
-      // Quite ugly fix that should be handled in a better way
-      values: {
-        __dirname: '"worker.js"',
-        __filename: '"worker.cjs"',
-      },
-    }),
   ],
   optimizeDeps: {
     noDiscovery: true,
     include: [],
-    exclude: ['sync-fetch'],
+    // exclude: ['sync-fetch'],
   },
 });

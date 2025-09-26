@@ -70,7 +70,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
               continue;
             }
 
-            const annotations = field.annotations || new Java.AnnotationList(...[]);
+            const annotations = field.annotations || new Java.AnnotationList();
             annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(field.identifier.value, field.property, Direction.BOTH, args.options, false));
             if (!field.annotations && annotations.children.length > 0) {
               field.annotations = annotations;
@@ -108,7 +108,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
             return;
           }
 
-          const annotations = n.signature.annotations || new Java.AnnotationList(...[]);
+          const annotations = n.signature.annotations || new Java.AnnotationList();
 
           if (this.shouldAddJsonPropertyAnnotation(getterField.identifier.value, getterField.property.name, args.options)) {
             annotations.children.push(...JacksonJavaAstTransformer.createJacksonAnnotations(getterField.identifier.value, getterField.property, Direction.OUT, args.options, true));
@@ -308,7 +308,7 @@ export class JacksonJavaAstTransformer extends AbstractJavaAstTransformer {
       return;
     }
 
-    const annotations = node.annotations || new Java.AnnotationList(...[]);
+    const annotations = node.annotations || new Java.AnnotationList();
 
     let hasJsonValue = false;
 

@@ -188,7 +188,7 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
     if (dec.annotations) {
       annotations = dec.annotations;
     } else {
-      annotations = new Java.AnnotationList(...[]);
+      annotations = new Java.AnnotationList();
       dec.annotations = annotations;
     }
 
@@ -235,19 +235,23 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
         annotations.children.push(new Java.Annotation(
           new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'Data'}}),
         ));
+
+        // @Value already implicitly states `AllArgsConstructor`
+        annotations.children.push(new Java.Annotation(
+          new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'AllArgsConstructor'}}),
+          new Java.AnnotationKeyValuePairList(),
+        ));
       }
 
-      annotations.children.push(new Java.Annotation(
-        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'AllArgsConstructor'}}),
-        new Java.AnnotationKeyValuePairList(),
-      ));
       annotations.children.push(new Java.Annotation(
         new Java.EdgeType(requiredArgsConstructorType),
         new Java.AnnotationKeyValuePairList(),
       ));
-      annotations.children.push(new Java.Annotation(
-        new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'NoArgsConstructor'}}),
-      ));
+      if (info.finalFields === 0 || !options.immutable) {
+        annotations.children.push(new Java.Annotation(
+          new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'NoArgsConstructor'}}),
+        ));
+      }
       annotations.children.push(new Java.Annotation(
         new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'experimental'], edgeName: 'NonFinal'}}),
       ));

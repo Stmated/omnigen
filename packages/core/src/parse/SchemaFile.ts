@@ -4,7 +4,6 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {PathLike} from 'fs';
 import {SchemaSource} from '@omnigen/api';
 import * as YAML from 'yaml';
-import fetch from 'sync-fetch';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -60,6 +59,35 @@ export class SchemaFile implements SchemaSource {
     }
   }
 
+  async prepare(): Promise<void> {
+
+
+    if (typeof this._input === 'string') {
+      if (this._input.indexOf('\n') !== -1) {
+        // If the input is multiline, then we assume it is the raw content.
+        this._readContent = this._input;
+        return;
+      }
+    }
+
+    if (this._input instanceof Buffer) {
+      this._readContent = this._input.toString();
+      return;
+    }
+
+    const path = this.getAbsolutePath() || '';
+    if (path.startsWith('http:') || path.startsWith('https:')) {
+      logger.info(`Will fetch from URL: ${path}`);
+      const response = await fetch(path, {method: 'GET'});
+      this._readContent = await response.text();
+      return;
+    }
+
+    logger.debug(`Reading content from ${path}`);
+    const buffer = fs.readFileSync(path, {});
+    this._readContent = buffer.toString();
+  }
+
   asObject<R>(): R {
     if (this._parsedObject !== undefined) {
       return this._parsedObject as R;
@@ -87,27 +115,6 @@ export class SchemaFile implements SchemaSource {
       return this._readContent;
     }
 
-    if (typeof this._input === 'string') {
-      if (this._input.indexOf('\n') !== -1) {
-        // If the input is multiline, then we assume it is the raw content.
-        return this._input;
-      }
-    }
-
-    if (this._input instanceof Buffer) {
-      return this._input.toString();
-    }
-
-    const path = this.getAbsolutePath() || '';
-    if (path.startsWith('http:') || path.startsWith('https:')) {
-      logger.info(`Will fetch from URL: ${path}`);
-      this._readContent = fetch(path, {method: 'GET', compress: false}).text();
-      return this._readContent;
-    }
-
-    logger.debug(`Reading content from ${path}`);
-    const buffer = fs.readFileSync(path, {});
-    this._readContent = buffer.toString();
-    return this._readContent;
+    throw new Error(`You must call 'prepare()' in an async context to pre-load the content`);
   }
 }

@@ -1,6 +1,6 @@
-export type DependentSchemas = DependentSchemasInterface & StylesForCookie & StylesForForm;
+export type DependentSchemas = IDependentSchemas & StylesForCookie & StylesForForm;
 
-export interface DependentSchemasInterface {
+export interface IDependentSchemas {
   readonly style?: string | undefined;
 }
 

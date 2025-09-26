@@ -61,6 +61,9 @@ export const ZodCodeOptions = ZodTargetOptions.extend({
 
   relaxedInspection: ZodCoercedBoolean.default('t')
     .describe(`If inspection is relaxed, then the auto-generated code might have file headers or similar added which ignores things such as unused declarations`),
+
+  compactAnnotations: ZodCoercedBoolean.default('f')
+    .describe('If enabled, then the target language can choose to render the annotations in a compact manner. How is target-dependant'),
 });
 
 export type CodeOptions = z.infer<typeof ZodCodeOptions>;

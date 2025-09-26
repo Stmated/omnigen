@@ -27,8 +27,10 @@ export default defineConfig({
   test: {
     root: __dirname,
     projects: [
+      'config/*',
       'packages/*',
       'apps/*',
+      'tests/*',
     ],
     isolate: false,
     pool: 'threads',

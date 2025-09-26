@@ -472,6 +472,17 @@ export class OmniUtil {
     return false;
   }
 
+  public static isCompletelyEmptyType(type: OmniType): boolean {
+
+    if (OmniUtil.isEmptyType(type)) {
+      if (type.kind === OmniTypeKind.OBJECT && !type.extendedBy && !type.subTypeHints && !type.description && !type.summary) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   public static hasMeta(type: OmniType): boolean {
 
     if (('name' satisfies keyof OmniObjectType) in type) {

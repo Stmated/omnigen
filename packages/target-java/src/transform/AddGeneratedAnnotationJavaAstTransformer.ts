@@ -18,7 +18,7 @@ export class AddGeneratedAnnotationJavaAstTransformer extends AbstractJavaAstTra
       visitObjectDeclaration: node => {
 
         if (!node.annotations) {
-          node.annotations = new Java.AnnotationList(...[]);
+          node.annotations = new Java.AnnotationList();
         }
 
         let annotationFqn: ObjectName;

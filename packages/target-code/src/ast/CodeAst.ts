@@ -327,9 +327,12 @@ export class AnnotationList extends AbstractCodeNode implements AstNodeWithChild
   children: Array<Annotation | VirtualAnnotationNode>;
   multiline = true;
 
-  constructor(...children: Array<Annotation | VirtualAnnotationNode>) {
+  constructor(children?: Array<Annotation | VirtualAnnotationNode> | undefined, multiline?: boolean) {
     super();
-    this.children = children;
+    this.children = children ?? [];
+    if (multiline !== undefined) {
+      this.multiline = multiline;
+    }
   }
 
   visit<R>(visitor: CodeVisitor<R>): VisitResult<R> {

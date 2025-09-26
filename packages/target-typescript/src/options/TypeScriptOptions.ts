@@ -4,6 +4,9 @@ import {ZodCodeOptions} from '@omnigen/target-code';
 
 export const ZodTypeScriptOptions = ZodCodeOptions.extend({
 
+  interfaceNamePrefix: z.string().default('I'),
+  interfaceNameSuffix: z.string().default(''),
+
   tsStrict: ZodCoercedBoolean.default('t'),
   preferSingleQuoteStrings: ZodCoercedBoolean.default('t'),
   explicitReturns: ZodCoercedBoolean.default('f'),

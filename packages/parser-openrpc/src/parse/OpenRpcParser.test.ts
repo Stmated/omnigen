@@ -20,8 +20,10 @@ describe('Test Generic Model Creation', () => {
       }
 
       const filePath = path.join(dirPath, file.name);
+      const schemaFile = new SchemaFile(filePath);
+      await schemaFile.prepare();
       const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
-        new SchemaFile(filePath),
+        schemaFile,
       );
 
       const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS, jsonRpcVersion: '2.0'});
@@ -36,8 +38,11 @@ describe('Test Generic Model Creation', () => {
 
   test('PetStore should create expected model', async ctx => {
 
+    const schemaFile = new SchemaFile(Util.getPathFromRoot('./packages/parser-openrpc/examples/petstore-expanded.json'));
+    await schemaFile.prepare();
+
     const parserBootstrap = await parserBootstrapFactory.createParserBootstrap(
-      new SchemaFile(Util.getPathFromRoot('./packages/parser-openrpc/examples/petstore-expanded.json')),
+      schemaFile,
     );
 
     const parser = parserBootstrap.createParser({...DEFAULT_PARSER_OPTIONS, ...DEFAULT_JSONRPC20_PARSER_OPTIONS, jsonRpcVersion: '2.0'});
@@ -84,7 +89,7 @@ describe('Test Generic Model Creation', () => {
         r.callBase();
       },
     });
-    
+
     ctx.expect(allTypes.map(it => OmniUtil.getVirtualTypeName(it))).toContain('DeletePetByIdResponse');
     ctx.expect(allTypes.map(it => OmniUtil.getVirtualTypeName(it))).toContain('ErrorUnknownError');
   });

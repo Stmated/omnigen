@@ -1,0 +1,24 @@
+{
+  "name": "@omnigen/test-npx",
+  "version": "0.0.1",
+  "packageManager": "pnpm@10.17.1",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "pregenerate": "ts-node ./src/server-mock.ts &",
+    "generate": "pnpm run --filter @omnigen-org/omnigen-cli build && node ../../apps/omnigen-cli/dist/omnigen-cli.js -i http://localhost:3000/schema-1.yaml -o __generated__/schema-1_yaml",
+    "test": "pnpm run generate"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "@types/express": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=24.8.0"
+  }
+}

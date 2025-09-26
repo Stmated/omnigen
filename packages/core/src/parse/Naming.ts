@@ -11,7 +11,7 @@ import path from 'path';
 const PATTERN_NUMBERS_ONLY = /^[0-9_.\-]+$/;
 const PATTERN_VERSION = /^v\d+(\.\d+){0,2}$|^\d+(\.\d+){1,2}$/;
 
-const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation, nameCase) => {
+const DEF_UNWRAP_CALLBACK: NameCallback<string> = (name, parts, keepPunctuation) => {
   if (keepPunctuation) {
     if (parts && parts.length > 0) {
       return `${parts.join('')}${Naming.prefixedPascalCase(name)}`;
@@ -54,7 +54,7 @@ export class Naming {
     callback: NameCallback<R>,
   ): R | undefined {
 
-    if (input == undefined) {
+    if (input === undefined) {
       return input;
     }
 
@@ -89,8 +89,8 @@ export class Naming {
       }
     } else if (typeof input === 'object') {
       return Naming.unwrapWithCallback(input.name, (name, parts, nameKeep, nameCase) => {
-        return Naming.unwrapWithCallback(input.prefix ?? '', (prefix, _prefixParts, prefixKeep, prefixCase) => {
-          return Naming.unwrapWithCallback(input.suffix ?? '', (suffix, _suffixParts, suffixKeep, suffixCase) => {
+        return Naming.unwrapWithCallback(input.prefix ?? '', (prefix, _, prefixKeep, prefixCase) => {
+          return Naming.unwrapWithCallback(input.suffix ?? '', (suffix, _, suffixKeep, suffixCase) => {
 
             const casedPrefix = (input.case === 'pascal') ? Naming.prefixedPascalCase(prefix) : prefix;
             const casedName = (input.case === 'pascal') ? Naming.prefixedPascalCase(name) : name;

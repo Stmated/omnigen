@@ -302,10 +302,6 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
 
     if (options.lombokBuilder) {
 
-      if (!additionalPropertiesField.annotations) {
-        additionalPropertiesField.annotations = new Java.AnnotationList();
-      }
-
       additionalPropertiesField.annotations.children.push(new Java.Annotation(
         new Java.EdgeType({
           kind: OmniTypeKind.HARDCODED_REFERENCE,

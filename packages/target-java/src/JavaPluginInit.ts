@@ -77,6 +77,7 @@ import {
 } from '@omnigen/target-code';
 import {BeanValidationJavaAstTransformer, MapMemberAccessToJavaAstTransformer, SimplifyTypePathsJavaAstTransformer, SingleFileJavaAstTransformer, ToJavaAstTransformer} from './transform';
 import {VarDecTypeJavaAstTransformer} from './transform/VarDecTypeJavaAstTransformer.ts';
+import {CompactAnnotationsJavaAstTransformer} from './transform/CompactAnnotationsJavaAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -226,6 +227,7 @@ export const JavaPlugin = createPlugin(
     astTransformers.push(new SimplifyTypePathsJavaAstTransformer());
     astTransformers.push(new SimplifyAndCleanAstTransformer());
     astTransformers.push(new SimplifyGenericsJavaAstTransformer());
+    astTransformers.push(new CompactAnnotationsJavaAstTransformer());
     astTransformers.push(new ReorderMembersAstTransformer());
     astTransformers.push(new PrettyCodeAstTransformer());
 

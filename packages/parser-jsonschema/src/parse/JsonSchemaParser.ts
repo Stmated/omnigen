@@ -545,7 +545,6 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     jsonPath: string[],
     schema: AnyJsonDefinition<S>,
     name: TypeName | undefined,
-    // internalId: string | undefined,
     extendedBy: OmniType | undefined,
   ): OmniType {
 
@@ -696,6 +695,10 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
       type.extendedBy = extendedBy;
       OmniUtil.addDebugTo(type, `Adding extension ${OmniUtil.describe(extendedBy)}`);
+    }
+
+    if (schema.type === undefined && !this.hasAnyContent(schema) && OmniUtil.isCompletelyEmptyType(type)) {
+      return {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY, debug: 'Completely empty object'};
     }
 
     return type;
@@ -1066,6 +1069,27 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     }
 
     return fallback;
+  }
+
+  private hasAnyContent(schema: AnyJSONSchema): boolean {
+
+    for (const [k, v] of Object.entries(schema)) {
+      if (CONTENT_PROPERTIES.includes(k) && v !== undefined) {
+        return true;
+      }
+    }
+
+    if (schema.if !== undefined
+      || schema.then !== undefined
+      || schema.else !== undefined
+      || schema.anyOf !== undefined
+      || schema.allOf !== undefined
+      || schema.oneOf !== undefined
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   private hasActualContent(schema: AnyJSONSchema): boolean {

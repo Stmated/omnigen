@@ -25,11 +25,12 @@ export type GiveInGetOut2Response = JsonRpcResponse<Out2>;
 export type GiveInGetOutRequest = JsonRpcRequest<GiveInGetOutRequestParams, 'give_in_get_out'>;
 export type GiveInGetOutRequestParams = JsonRpcRequestParams;
 export type GiveInGetOutResponse = JsonRpcResponse<Out>;
-export type In = InInterface & (A | B);
 
-export interface InInterface {
+export interface IIn {
   readonly in_type?: string | undefined;
 }
+
+export type In = IIn & (A | B);
 
 export interface JsonRpcError {
   /**

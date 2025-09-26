@@ -83,7 +83,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
     type FieldStackEntry = { annotate: Array<Code.Field | Cs.PropertyNode>, skip: Array<Code.Field | Cs.PropertyNode> };
     const fieldsStack: FieldStackEntry[] = [];
     const objectDecStack: Code.AbstractObjectDeclaration[] = [];
-    const converterStack: Array<{type?: OmniType, fieldName?: Cs.PropertyIdentifier | Code.Identifier}> = [];
+    const converterStack: Array<{ type?: OmniType, fieldName?: Cs.PropertyIdentifier | Code.Identifier }> = [];
 
     const delegateToObjectMapperNode = new Map<number, Code.TypeNode>();
 
@@ -153,7 +153,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
                 //   continue;
                 // }
 
-                const annotations = toAnnotate.annotations || new Code.AnnotationList(...[]);
+                const annotations = toAnnotate.annotations || new Code.AnnotationList();
                 annotations.children.push(...JsonCSharpAstTransformer.createJacksonAnnotations(attributes, toAnnotate.identifier, toAnnotate.property, Direction.BOTH, args.options, false));
                 if (!toAnnotate.annotations && annotations.children.length > 0) {
                   toAnnotate.annotations = annotations;
@@ -164,7 +164,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
                 //   continue;
                 // }
 
-                const annotations = toAnnotate.annotations || new Code.AnnotationList(...[]);
+                const annotations = toAnnotate.annotations || new Code.AnnotationList();
                 annotations.children.push(...JsonCSharpAstTransformer.createJacksonAnnotations(attributes, toAnnotate.identifier, toAnnotate.property, Direction.BOTH, args.options, false));
                 if (!toAnnotate.annotations && annotations.children.length > 0) {
                   toAnnotate.annotations = annotations;
@@ -225,7 +225,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
 
         if (getterField && getterField.property) {
 
-          const annotations = n.signature.annotations || new Code.AnnotationList(...[]);
+          const annotations = n.signature.annotations || new Code.AnnotationList();
 
           if (this.shouldAddJsonPropertyAnnotation(getterField.identifier.value, getterField.property.name, args.options)) {
             annotations.children.push(...JsonCSharpAstTransformer.createJacksonAnnotations(attributes, getterField.identifier, getterField.property, Direction.OUT, args.options, true));
@@ -433,7 +433,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
       return;
     }
 
-    const annotations = node.annotations || new Code.AnnotationList(...[]);
+    const annotations = node.annotations || new Code.AnnotationList();
 
     let hasJsonValue = false;
 

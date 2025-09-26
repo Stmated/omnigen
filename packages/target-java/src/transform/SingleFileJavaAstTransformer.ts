@@ -132,7 +132,7 @@ export class SingleFileJavaAstTransformer implements AstTransformer<JavaAstRootN
     );
 
     if (options.relaxedInspection) {
-      classDec.annotations = new Code.AnnotationList(
+      classDec.annotations = new Code.AnnotationList([
         new Code.Annotation(
           new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['java', 'lang'], edgeName: 'SuppressWarnings'}}),
           new Code.AnnotationKeyValuePairList(
@@ -142,7 +142,7 @@ export class SingleFileJavaAstTransformer implements AstTransformer<JavaAstRootN
             ),
           ),
         ),
-      );
+      ]);
     }
 
     unit.children.push(classDec);

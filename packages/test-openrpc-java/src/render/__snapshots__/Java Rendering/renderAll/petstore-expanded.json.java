@@ -410,18 +410,8 @@ import jakarta.annotation.Generated;
  * <p>As response: pet deleted</p>
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class DeletePetByIdResponse extends JsonRpcResponse<PetDeleted> {
-  public DeletePetByIdResponse(String id, PetDeleted result) {
+public class DeletePetByIdResponse extends JsonRpcResponse<Object> {
+  public DeletePetByIdResponse(String id, Object result) {
     super(id, result);
   }
-}
-
-
-package generated.omnigen;
-
-import jakarta.annotation.Generated;
-
-@Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class PetDeleted {
-
 }

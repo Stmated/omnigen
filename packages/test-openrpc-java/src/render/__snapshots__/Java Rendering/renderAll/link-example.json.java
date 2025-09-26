@@ -558,18 +558,8 @@ import jakarta.annotation.Generated;
  * <p>As response: the PR was successfully merged</p>
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class MergePullRequestResponse extends JsonRpcResponse<Merged> {
-  public MergePullRequestResponse(String id, Merged result) {
+public class MergePullRequestResponse extends JsonRpcResponse<Object> {
+  public MergePullRequestResponse(String id, Object result) {
     super(id, result);
   }
-}
-
-
-package generated.omnigen;
-
-import jakarta.annotation.Generated;
-
-@Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class Merged {
-
 }

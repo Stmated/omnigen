@@ -179,7 +179,7 @@ export const fileWriter = createPlugin(
     const fileWriteOptions = ZodFileWriteOptions.parse(currentArguments);
     const filesWritten: string[] = [];
 
-    logger.info(`Will start writing '${ctx.compilationUnits.length}' files: ${ctx.compilationUnits.map(it => it.fileName)}`);
+    logger.debug(`Will start writing '${ctx.compilationUnits.length}' files: ${ctx.compilationUnits.map(it => it.fileName)}`);
 
     if (fileWriteOptions.outputFiles) {
 

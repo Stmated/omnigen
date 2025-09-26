@@ -2,7 +2,7 @@ import {
   AstNode,
   AstTransformer,
   AstTransformerArguments,
-  NameParts, OmniArrayType,
+  NameParts, OmniArrayType, OmniDictionaryType,
   OmniEnumType,
   OmniGenericSourceIdentifierType,
   OmniGenericSourceType,
@@ -126,7 +126,7 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       return this.addEnum(type, undefined, root, options);
     } else if (OmniUtil.isComposition(type)) {
 
-      if (type.kind === OmniTypeKind.EXCLUSIVE_UNION || (type.name && isEdgeType)) {
+      if ((type.kind === OmniTypeKind.EXCLUSIVE_UNION && !type.inline) || (type.name && isEdgeType)) {
         return this.transformSubType(model, type, undefined, options, features, root);
       }
 
@@ -161,7 +161,10 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       }
     } else if (type.kind === OmniTypeKind.ARRAY && type.name) {
       // If it's an array and it has a name, then we should likely be adding it as as type as well.
-      return this.addArray(model, type, undefined, options, features, root);
+      return this.addArray(type, options, root);
+    } else if (type.kind === OmniTypeKind.DICTIONARY && type.name) {
+      // If it's a dictionary and it has a name, then we should likely be adding it as as type as well.
+      return this.addArray(type, options, root);
     }
 
     return undefined;
@@ -191,15 +194,12 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
   }
 
   private addArray(
-    model: OmniModel,
-    arrayType: OmniArrayType,
-    originalType: OmniGenericSourceType | undefined,
+    arrayType: OmniArrayType | OmniDictionaryType,
     options: PackageOptions & TargetOptions & CodeOptions,
-    features: TargetFeatures,
     root: CodeRootAstNode,
   ): AstNode {
 
-    const typeNode = root.getAstUtils().createTypeNode(arrayType, false);
+    const typeNode = root.getAstUtils().createTypeNode(arrayType, false, options.immutable);
 
     const nameResolver = root.getNameResolver();
     const investigatedName = nameResolver.investigate({type: arrayType, options: options});
@@ -219,6 +219,8 @@ export class AddObjectDeclarationsCodeAstTransformer implements AstTransformer<C
       new Code.ImportList(),
       new Code.Statement(dec),
     );
+
+    //this._map.set(arrayType, dec);
 
     root.children.push(cu);
     return cu;

@@ -15,7 +15,7 @@ export interface SchemaObject {
   readonly contentMediaType?: string;
   readonly default?: any;
   readonly definitions?: SchemaObjectDefinitions;
-  readonly dependencies?: SchemaObjectDependencies;
+  readonly dependencies?: ReadOnly<Record<string, Schema | ReadonlyArray<string>>>;
   readonly description?: string;
   readonly else?: Schema;
   readonly enum?: readonly [any, ...ReadonlyArray<any>];
@@ -51,10 +51,6 @@ export interface SchemaObject {
 
 export interface SchemaObjectDefinitions {
   readonly [key: string]: Schema;
-}
-
-export interface SchemaObjectDependencies {
-  readonly [key: string]: Schema | ReadonlyArray<string>;
 }
 
 export interface SchemaObjectPatternProperties {

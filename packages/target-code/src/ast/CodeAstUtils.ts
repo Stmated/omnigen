@@ -278,7 +278,7 @@ export class CodeAstUtils implements AstTargetFunctions {
 
     const fieldType = OmniUtil.asNonNullableIfHasDefault(args.property.type, OMNI_GENERIC_FEATURES);
 
-    const fieldTypeNode = args.root.getAstUtils().createTypeNode(fieldType);
+    const fieldTypeNode = args.root.getAstUtils().createTypeNode(fieldType, undefined, args.options.immutable);
     let originalName: TypeName | undefined = OmniUtil.getPropertyName(args.property.name);
     if (!originalName) {
       if (OmniUtil.isPatternPropertyName(args.property.name)) {

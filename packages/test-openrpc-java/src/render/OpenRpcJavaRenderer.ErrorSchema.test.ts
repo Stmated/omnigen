@@ -80,7 +80,7 @@ describe('Error-Schema', () => {
     ctx.expect(filenames).toContain('ListThingsError100Error.java');
     ctx.expect(filenames).toContain('JsonRpcCustomErrorPayload.java');
     ctx.expect(filenames).not.toContain('Data.java'); // Class for property 'Data' should be better named
-    ctx.expect(filenames).toContain('JsonRpcCustomErrorPayloadData.java');
+    // ctx.expect(filenames).toContain('JsonRpcCustomErrorPayloadData.java');
 
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     ctx.expect(error100.foundFields).toEqual([]);

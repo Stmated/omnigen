@@ -80,7 +80,7 @@ const DEBUG_ENV_KEY = 'DEBUG';
 const LOG_LEVEL_ENV_KEY = 'LOG_LEVEL';
 
 const hasDebugEnv = !!(process.env[DEBUG_ENV_KEY]);
-const rootLogLevel = (process.env[LOG_LEVEL_ENV_KEY] ?? 'debug').toLowerCase();
+const rootLogLevel = (process.env[LOG_LEVEL_ENV_KEY] ?? 'info').toLowerCase();
 const rootLogLevelIndex = LogLevelStrings.indexOf(rootLogLevel);
 if (rootLogLevelIndex === -1) {
   throw new Error(`Invalid log level: ${rootLogLevel}`);

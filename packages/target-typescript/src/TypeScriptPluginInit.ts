@@ -32,7 +32,7 @@ import {
   ZodAstNodeContext,
 } from '@omnigen/api';
 import {z} from 'zod';
-import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, Naming, OmniUtil, SimplifyGenericsModelTransformer, Visitor, ZodCompilationUnitsContext} from '@omnigen/core';
+import {AlignObjectWithInterfaceModelTransformer, GenericsModelTransformer, SimplifyGenericsModelTransformer, Visitor, ZodCompilationUnitsContext} from '@omnigen/core';
 import {createTypeScriptRenderer} from './render';
 import {
   AddAbstractAccessorsAstTransformer,
@@ -50,13 +50,13 @@ import {
   PackageResolverAstTransformer,
   PrettyCodeAstTransformer,
   RemoveConstantParametersAstTransformer,
-  RemoveEnumFieldsCodeAstTransformer, RemoveUnnecessaryPropertyModelTransformer,
+  RemoveEnumFieldsCodeAstTransformer,
+  RemoveUnnecessaryPropertyModelTransformer,
   ReorderMembersAstTransformer,
   ResolveGenericSourceIdentifiersAstTransformer,
   SimplifyGenericsAstTransformer,
   SimplifyUnnecessaryCompositionsModelTransformer,
   ToConstructorBodySuperCallAstTransformer,
-  SimplifyNullablePrimitivesModelTransformer,
 } from '@omnigen/target-code';
 import {TypeScriptOptions, ZodTypeScriptOptions} from './options';
 import {TYPESCRIPT_FEATURES} from './features';
@@ -66,7 +66,6 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {AccessorTypeScriptAstTransformer} from './ast/AccessorTypeScriptAstTransformer';
 import {AnyToUnknownTypeScriptModelTransformer} from './parse/transform/AnyToUnknownTypeScriptModelTransformer';
 import {FileHeaderTypeScriptAstTransformer} from './ast/FileHeaderTypeScriptAstTransformer';
-import {PatternPropertyAnyTypeScriptModelTransformer} from './parse/transform/PatternPropertyAnyTypeScriptModelTransformer';
 import {UnionSupertypeToTypeAliasTypeScriptModelTransformer} from './parse/transform/UnionSupertypeToTypeAliasTypeScriptModelTransformer.ts';
 import {InlineUnnamedCompositionsTypeScriptModelTransformer} from './parse/transform/InlineUnnamedCompositionsTypeScriptModelTransformer.ts';
 import {VarDecToTypeAliasTypeScriptAstTransformer} from './ast/VarDecToTypeAliasTypeScriptAstTransformer.ts';

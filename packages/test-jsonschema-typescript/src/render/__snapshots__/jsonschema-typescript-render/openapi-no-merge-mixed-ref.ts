@@ -18,60 +18,20 @@ export interface ClientCredentials extends SpecificationExtensions {
 }
 
 export interface Components extends SpecificationExtensions {
-  readonly callbacks?: ComponentsCallbacks | undefined;
-  readonly examples?: ComponentsExamples | undefined;
-  readonly headers?: ComponentsHeaders | undefined;
-  readonly links?: ComponentsLinks | undefined;
-  readonly parameters?: ComponentsParameters | undefined;
-  readonly pathItems?: ComponentsPathItems | undefined;
-  readonly requestBodies?: ComponentsRequestBodies | undefined;
-  readonly responses?: ComponentsResponses | undefined;
-  readonly schemas?: ComponentsSchemas | undefined;
-  readonly securitySchemes?: ComponentsSecuritySchemes | undefined;
+  readonly callbacks?: ReadOnly<Record<string, CallbacksOrReference>> | undefined;
+  readonly examples?: ReadOnly<Record<string, ExampleOrReference>> | undefined;
+  readonly headers?: ReadOnly<Record<string, HeaderOrReference>> | undefined;
+  readonly links?: ReadOnly<Record<string, LinkOrReference>> | undefined;
+  readonly parameters?: ReadOnly<Record<string, ParameterOrReference>> | undefined;
+  readonly pathItems?: ReadOnly<Record<string, PathItemOrReference>> | undefined;
+  readonly requestBodies?: ReadOnly<Record<string, RequestBodyOrReference>> | undefined;
+  readonly responses?: ReadOnly<Record<string, ResponseOrReference>> | undefined;
+  readonly schemas?: ReadOnly<Record<string, SchemaObject>> | undefined;
+  readonly securitySchemes?: ReadOnly<Record<string, SecuritySchemeOrReference>> | undefined;
   readonly [key: string /* Pattern: "^(schemas|responses|parameters|examples|requestBodies|headers|securitySchemes|links|callbacks|pathItems)$" */]: ComponentsPatternProperties | undefined;
 }
 
-export interface ComponentsCallbacks {
-  readonly [key: string]: CallbacksOrReference | undefined;
-}
-
-export interface ComponentsExamples {
-  readonly [key: string]: ExampleOrReference | undefined;
-}
-
-export interface ComponentsHeaders {
-  readonly [key: string]: HeaderOrReference | undefined;
-}
-
-export interface ComponentsLinks {
-  readonly [key: string]: LinkOrReference | undefined;
-}
-
-export interface ComponentsParameters {
-  readonly [key: string]: ParameterOrReference | undefined;
-}
-
-export interface ComponentsPathItems {
-  readonly [key: string]: PathItemOrReference | undefined;
-}
-
 export type ComponentsPatternProperties = object;
-
-export interface ComponentsRequestBodies {
-  readonly [key: string]: RequestBodyOrReference | undefined;
-}
-
-export interface ComponentsResponses {
-  readonly [key: string]: ResponseOrReference | undefined;
-}
-
-export interface ComponentsSchemas {
-  readonly [key: string]: SchemaObject | undefined;
-}
-
-export interface ComponentsSecuritySchemes {
-  readonly [key: string]: SecuritySchemeOrReference | undefined;
-}
 
 export interface Contact extends SpecificationExtensions {
   readonly email?: string | undefined;
@@ -79,15 +39,7 @@ export interface Contact extends SpecificationExtensions {
   readonly url?: string | undefined;
 }
 
-export interface Content {
-  readonly [key: string]: MediaType | undefined;
-}
-
 export type Encoding = IEncoding & SpecificationExtensions & StylesForForm;
-
-export interface EncodingHeaders {
-  readonly [key: string]: HeaderOrReference | undefined;
-}
 
 export enum EncodingStyle {
   FORM = 'form',
@@ -107,11 +59,7 @@ export type ExampleOrReference = Reference | Example;
 
 export interface Examples {
   readonly example?: any;
-  readonly examples?: ExamplesExamples | undefined;
-}
-
-export interface ExamplesExamples {
-  readonly [key: string]: ExampleOrReference | undefined;
+  readonly examples?: ReadOnly<Record<string, ExampleOrReference>> | undefined;
 }
 
 export interface ExternalDocumentation extends SpecificationExtensions {
@@ -119,8 +67,12 @@ export interface ExternalDocumentation extends SpecificationExtensions {
   readonly url: string;
 }
 
+export interface FixedFields10 {
+  readonly [key: string]: MediaType | undefined;
+}
+
 export type Header = IHeader & SpecificationExtensions & (HeaderWithSchema | HeaderWithContent);
-export type HeaderContent = Content;
+export type HeaderContent = FixedFields10;
 export type HeaderOrReference = Reference | Header;
 
 export interface HeaderWithContent {
@@ -138,7 +90,7 @@ export interface IEncoding {
   readonly allowReserved?: boolean | undefined;
   readonly contentType?: string | undefined;
   readonly explode?: boolean | undefined;
-  readonly headers?: EncodingHeaders | undefined;
+  readonly headers?: ReadOnly<Record<string, HeaderOrReference>> | undefined;
   readonly style?: EncodingStyle | undefined;
 }
 
@@ -210,7 +162,7 @@ export interface ISchema {
   readonly security?: ReadonlyArray<SecurityRequirement> | undefined;
   readonly servers?: ReadonlyArray<Server> | undefined;
   readonly tags?: ReadonlyArray<Tag> | undefined;
-  readonly webhooks?: SchemaWebhooks | undefined;
+  readonly webhooks?: ReadOnly<Record<string, PathItemOrReference>> | undefined;
 }
 
 export interface License extends SpecificationExtensions {
@@ -235,12 +187,8 @@ export interface MapOfStrings {
 }
 
 export interface MediaType extends Examples, SpecificationExtensions {
-  readonly encoding?: MediaTypeEncoding | undefined;
+  readonly encoding?: ReadOnly<Record<string, Encoding>> | undefined;
   readonly schema?: SchemaObject | undefined;
-}
-
-export interface MediaTypeEncoding {
-  readonly [key: string]: Encoding | undefined;
 }
 
 export interface OauthFlows extends SpecificationExtensions {
@@ -251,7 +199,7 @@ export interface OauthFlows extends SpecificationExtensions {
 }
 
 export interface Operation extends SpecificationExtensions {
-  readonly callbacks?: OperationCallbacks | undefined;
+  readonly callbacks?: ReadOnly<Record<string, CallbacksOrReference>> | undefined;
   /**
    * @default false
    */
@@ -268,13 +216,9 @@ export interface Operation extends SpecificationExtensions {
   readonly tags?: ReadonlyArray<string> | undefined;
 }
 
-export interface OperationCallbacks {
-  readonly [key: string]: CallbacksOrReference | undefined;
-}
-
 export type Parameter = ParameterBase & ParameterThen;
 export type ParameterBase = IParameterBase & SpecificationExtensions & (ParameterWithSchema | ParameterWithContent);
-export type ParameterContent = Content;
+export type ParameterContent = FixedFields10;
 
 export enum ParameterIn {
   QUERY = 'query',
@@ -334,7 +278,7 @@ export interface Reference {
 }
 
 export interface RequestBody extends SpecificationExtensions {
-  readonly content: Content;
+  readonly content: FixedFields10;
   readonly description?: string | undefined;
   /**
    * @default false
@@ -345,18 +289,10 @@ export interface RequestBody extends SpecificationExtensions {
 export type RequestBodyOrReference = Reference | RequestBody;
 
 export interface Response extends SpecificationExtensions {
-  readonly content?: Content | undefined;
+  readonly content?: FixedFields10 | undefined;
   readonly description: string;
-  readonly headers?: ResponseHeaders | undefined;
-  readonly links?: ResponseLinks | undefined;
-}
-
-export interface ResponseHeaders {
-  readonly [key: string]: HeaderOrReference | undefined;
-}
-
-export interface ResponseLinks {
-  readonly [key: string]: LinkOrReference | undefined;
+  readonly headers?: ReadOnly<Record<string, HeaderOrReference>> | undefined;
+  readonly links?: ReadOnly<Record<string, LinkOrReference>> | undefined;
 }
 
 export type ResponseOrReference = Reference | Response;
@@ -374,10 +310,6 @@ export interface ResponsesThen {
 export type Schema = ISchema & (SchemaWithPaths | SchemaWithComponents | SchemaWithWebhooks) & SpecificationExtensions;
 export type SchemaObject = SchemaObjectObject | boolean;
 export type SchemaObjectObject = object;
-
-export interface SchemaWebhooks {
-  readonly [key: string]: PathItemOrReference | undefined;
-}
 
 export interface SchemaWithComponents {
   readonly components: any;
@@ -413,17 +345,13 @@ export enum SecuritySchemeType {
 export interface Server extends SpecificationExtensions {
   readonly description?: string | undefined;
   readonly url: string;
-  readonly variables?: ServerVariables | undefined;
+  readonly variables?: ReadOnly<Record<string, ServerVariable>> | undefined;
 }
 
 export interface ServerVariable extends SpecificationExtensions {
   readonly default: string;
   readonly description?: string | undefined;
   readonly enum?: readonly [string, ...ReadonlyArray<string>] | undefined;
-}
-
-export interface ServerVariables {
-  readonly [key: string]: ServerVariable | undefined;
 }
 
 export interface SpecificationExtensions {

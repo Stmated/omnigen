@@ -1,0 +1,126 @@
+{
+  "first": [
+    "content",
+    "fixed-fields-10",
+    {
+      "name": [
+        "Foo",
+        "WithContent",
+        {
+          "name": "Foo",
+          "suffix": "WithContent"
+        }
+      ],
+      "suffix": "fixed-fields-10"
+    },
+    {
+      "name": [
+        "Foo",
+        "WithContent",
+        {
+          "name": "Foo",
+          "suffix": "WithContent"
+        }
+      ],
+      "suffix": "content"
+    },
+    {
+      "name": "content",
+      "suffix": "Object"
+    },
+    {
+      "name": "fixed-fields-10",
+      "suffix": "Object"
+    },
+    {
+      "name": {
+        "name": [
+          "Foo",
+          "WithContent",
+          {
+            "name": "Foo",
+            "suffix": "WithContent"
+          }
+        ],
+        "suffix": "fixed-fields-10"
+      },
+      "suffix": "Object"
+    },
+    {
+      "name": {
+        "name": [
+          "Foo",
+          "WithContent",
+          {
+            "name": "Foo",
+            "suffix": "WithContent"
+          }
+        ],
+        "suffix": "content"
+      },
+      "suffix": "Object"
+    }
+  ],
+  "second": [
+    "content",
+    "fixed-fields-10",
+    {
+      "name": [
+        "Bar",
+        "WithContent",
+        {
+          "name": "Bar",
+          "suffix": "WithContent"
+        }
+      ],
+      "suffix": "fixed-fields-10"
+    },
+    {
+      "name": [
+        "Bar",
+        "WithContent",
+        {
+          "name": "Bar",
+          "suffix": "WithContent"
+        }
+      ],
+      "suffix": "content"
+    },
+    {
+      "name": "content",
+      "suffix": "Object"
+    },
+    {
+      "name": "fixed-fields-10",
+      "suffix": "Object"
+    },
+    {
+      "name": {
+        "name": [
+          "Bar",
+          "WithContent",
+          {
+            "name": "Bar",
+            "suffix": "WithContent"
+          }
+        ],
+        "suffix": "fixed-fields-10"
+      },
+      "suffix": "Object"
+    },
+    {
+      "name": {
+        "name": [
+          "Bar",
+          "WithContent",
+          {
+            "name": "Bar",
+            "suffix": "WithContent"
+          }
+        ],
+        "suffix": "content"
+      },
+      "suffix": "Object"
+    }
+  ]
+}

@@ -190,34 +190,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class JsonRpcCustomErrorPayloadData implements IAdditionalProperties {
-  private Map<String, Object> additionalProperties = new HashMap<>();
-
-  public void addAdditionalProperty(String key, Object value) {
-    this.additionalProperties.put(key, value);
-  }
-
-  public Map<String, Object> getAdditionalProperties() {
-    return this.additionalProperties;
-  }
-}
-
-
-package generated.omnigen;
-
-import jakarta.annotation.Generated;
-import java.util.HashMap;
-import java.util.Map;
-
-@Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class JsonRpcCustomErrorPayload implements IAdditionalProperties {
-  private final JsonRpcCustomErrorPayloadData data;
+public class JsonRpcCustomErrorPayload {
+  private final Map<String, Object> data;
   private final String method;
   private final String signature;
   private final String uuid;
   private Map<String, Object> additionalProperties = new HashMap<>();
 
-  public JsonRpcCustomErrorPayload(String signature, String uuid, String method, JsonRpcCustomErrorPayloadData data) {
+  public JsonRpcCustomErrorPayload(String signature, String uuid, String method, Map<String, Object> data) {
     this.signature = signature;
     this.uuid = uuid;
     this.method = method;
@@ -228,7 +208,7 @@ public class JsonRpcCustomErrorPayload implements IAdditionalProperties {
     this.additionalProperties.put(key, value);
   }
 
-  public JsonRpcCustomErrorPayloadData getData() {
+  public Map<String, Object> getData() {
     return this.data;
   }
 
@@ -320,15 +300,4 @@ public class ErrorUnknownError extends JsonRpcError {
   public ErrorUnknownError(JsonRpcCustomErrorPayload error, String message, Integer code) {
     super(error, ((message == null) ? "Unknown Error" : message), ((code == null) ? -1 : code));
   }
-}
-
-
-package generated.omnigen;
-
-import jakarta.annotation.Generated;
-import java.util.Map;
-
-@Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public interface IAdditionalProperties {
-  Map<String, Object> getAdditionalProperties();
 }

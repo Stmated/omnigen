@@ -276,14 +276,14 @@ ${ctxString}
         }
       }
 
-      logger.info(`Executing '${pathItem.plugin.name}'${pathItem.needsEvaluation ? ', possibly not continuing' : ''}`);
+      logger.debug(`Executing '${pathItem.plugin.name}'${pathItem.needsEvaluation ? ', possibly not continuing' : ''}`);
       const result = await pathItem.plugin.execute(args.inCtx);
       if (result instanceof ZodError) {
 
         const message = JSON.stringify(result.flatten().fieldErrors);
 
         if (needsEvaluation) {
-          logger.warn(`Skipping '${pathItem.plugin.name}' since runtime context did not match: ${message}`);
+          logger.debug(`Skipping '${pathItem.plugin.name}' since runtime context did not match: ${message}`);
           return {results: [], message: message};
         } else {
           throw new Error(`Invalid '${pathItem.plugin.name}' execution, because: ${message}`);

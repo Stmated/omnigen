@@ -4,13 +4,13 @@ import {DefaultTypeScriptVisitor} from '../visit';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil, ProxyReducer2} from '@omnigen/core';
 import {Ts} from '../ast';
-import {Code} from '@omnigen/target-code';
+import {Code, CodeOptions} from '@omnigen/target-code';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRootNode, PackageOptions & TargetOptions> {
+export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRootNode, PackageOptions & CodeOptions & TargetOptions> {
 
-  transformAst(args: AstTransformerArguments<TsRootNode, PackageOptions & TargetOptions>): void {
+  transformAst(args: AstTransformerArguments<TsRootNode, PackageOptions & CodeOptions & TargetOptions>): void {
 
     const typesToReplace = new Map<TypeNode, TypeNode>();
     const nameResolver = args.root.getNameResolver();
@@ -93,7 +93,7 @@ export class CompositionTypeScriptAstTransformer implements AstTransformer<TsRoo
         if (replacementNode) {
           return replacementNode;
         } else if (OmniUtil.isComposition(n.omniType)) {
-          return args.root.getAstUtils().createTypeNode(n.omniType);
+          return args.root.getAstUtils().createTypeNode(n.omniType, undefined, args.options.immutable);
         }
 
         return n;

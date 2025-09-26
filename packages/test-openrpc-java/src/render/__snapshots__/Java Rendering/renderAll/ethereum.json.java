@@ -2088,12 +2088,12 @@ import java.util.List;
  * Addresses: List of contract addresses from which to monitor events
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
-public class FilterAddress {
+public class OneOrArrayOfAddresses {
   private final Object _raw;
   private List<String> _arrayOfString;
   private String _string;
 
-  public FilterAddress(Object raw) {
+  public OneOrArrayOfAddresses(Object raw) {
     this._raw = raw;
   }
 
@@ -2127,12 +2127,12 @@ import java.util.List;
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class Filter {
-  private final FilterAddress address;
+  private final OneOrArrayOfAddresses address;
   private final String fromBlock;
   private final String toBlock;
   private final List<String> topics;
 
-  public Filter(String fromBlock, String toBlock, FilterAddress address, List<String> topics) {
+  public Filter(String fromBlock, String toBlock, OneOrArrayOfAddresses address, List<String> topics) {
     this.fromBlock = fromBlock;
     this.toBlock = toBlock;
     this.address = address;
@@ -2142,7 +2142,7 @@ public class Filter {
   /**
    * Addresses: List of contract addresses from which to monitor events
    */
-  public FilterAddress getAddress() {
+  public OneOrArrayOfAddresses getAddress() {
     return this.address;
   }
 

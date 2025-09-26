@@ -52,12 +52,12 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
     root: RootAstNode,
     subClassDec: Code.ClassDeclaration,
     superRequirements: ConstructorRequirements,
-    options: TargetOptions,
+    options: CodeOptions & TargetOptions,
   ): Code.ConstructorDeclaration {
 
     const blockExpressions: AbstractCodeNode[] = [];
 
-    const [requiredSuperParameters, superCall, superLiterals] = this.addSuperConstructorCall(root, subClassDec, superRequirements.parameters);
+    const [requiredSuperParameters, superCall, superLiterals] = this.addSuperConstructorCall(root, subClassDec, superRequirements.parameters, options);
     const parameters: Code.ConstructorParameter[] = [];
 
     for (let i = 0; i < superRequirements.fields.length; i++) {
@@ -65,7 +65,7 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
       const constructorField = superRequirements.fields[i];
       const constructorFieldType = constructorField.property?.type ?? constructorField.type.omniType;
       const constructorFieldRef = new Code.FieldReference(constructorField);
-      const parameter = this.createConstructorParameter(constructorFieldRef, constructorFieldType, constructorField.identifier, root);
+      const parameter = this.createConstructorParameter(constructorFieldRef, constructorFieldType, constructorField.identifier, root, options);
       parameters.push(parameter);
 
       blockExpressions.push(new Code.Statement(new Code.BinaryExpression(
@@ -132,6 +132,7 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
     root: RootAstNode,
     subClassDec: Code.ClassDeclaration,
     superConstructorParameters: ReadonlyArray<Code.ConstructorParameter>,
+    options: CodeOptions,
   ): [Code.ConstructorParameter[], Code.SuperConstructorCall | undefined, Code.Literal[]] {
 
     if (superConstructorParameters.length == 0) {
@@ -164,7 +165,7 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
           superLiteralArguments.push(literal);
 
         } else {
-          const constructorParam = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier, root);
+          const constructorParam = this.createConstructorParameter(superParameter.ref, typeNode, superParameter.identifier, root, options);
           superConstructorArguments.push(new Code.DeclarationReference(constructorParam));
           requiredSuperArguments.push(constructorParam);
         }
@@ -190,7 +191,13 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
     return undefined;
   }
 
-  private createConstructorParameter(fieldRef: Reference<Code.AstNode>, type: OmniType | TypeNode, identifier: Code.Identifier, root: RootAstNode): Code.ConstructorParameter {
+  private createConstructorParameter(
+    fieldRef: Reference<Code.AstNode>,
+    type: OmniType | TypeNode,
+    identifier: Code.Identifier,
+    root: RootAstNode,
+    options: CodeOptions,
+  ): Code.ConstructorParameter {
 
     const schemaIdentifier = identifier.original || identifier.value;
     const safeName = CodeUtil.getPrettyParameterName(schemaIdentifier);
@@ -200,7 +207,7 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
       usedIdentifier = new Code.Identifier(safeName, schemaIdentifier);
     }
 
-    const typeNode = ('kind' in type) ? root.getAstUtils().createTypeNode(type) : type;
+    const typeNode = ('kind' in type) ? root.getAstUtils().createTypeNode(type, undefined, options.immutable) : type;
     return new Code.ConstructorParameter(fieldRef, typeNode, usedIdentifier);
   }
 

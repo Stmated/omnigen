@@ -4,3 +4,5 @@ export * from './JsonSchema9';
 export const PROP_ID = Symbol('x-omnigen-id');
 export const PROP_NAME_HINT = Symbol('x-omnigen-name-hint');
 export const PROP_INLINE = Symbol('x-omnigen-inline');
+
+export const PROP_SKIPPED_AGGREGATION = Symbol('x-omnigen-skipped-aggregation');

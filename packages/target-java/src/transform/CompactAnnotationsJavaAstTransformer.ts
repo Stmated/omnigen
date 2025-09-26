@@ -31,7 +31,6 @@ export class CompactAnnotationsJavaAstTransformer extends AbstractJavaAstTransfo
       reduceAnnotationList: (n, r) => {
 
         if (insideField && n.multiline && n.children) {
-          logger.info(`Inside field, and was multiline, making not multiline`);
           const newList = new Java.AnnotationList(n.children).withIdFrom(n);
           newList.multiline = false;
           return newList;

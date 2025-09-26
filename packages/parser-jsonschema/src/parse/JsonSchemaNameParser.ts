@@ -49,6 +49,9 @@ const DEFAULT_OPTIONS: NameOptions = {};
 
 export class JsonSchemaNameParser {
 
+  // TODO: If "explicitOnly" then $comment of resolved schema should not be used!
+  //        So we should never end up with a `FixedFields10`
+
   public parse(
     unresolved: AnyJsonDefinition<JSONSchema9>,
     resolved?: AnyJsonDefinition<JSONSchema9> | undefined,

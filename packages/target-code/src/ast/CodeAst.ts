@@ -100,7 +100,7 @@ export class ArrayType<T extends OmniArrayType = OmniArrayType> extends Abstract
     return visitor.visitArrayType(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<TypeNode | AstNode> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
     return reducer.reduceArrayType(this, reducer);
   }
 }
@@ -846,7 +846,7 @@ export class FieldReference extends AbstractCodeNode implements Reference<Field>
 export class DeclarationReference extends AbstractCodeNode implements Reference<Identifiable> {
   targetId: number;
 
-  constructor(target: number | Identifiable) {
+  constructor(target: number | Identifiable | VariableDeclaration) {
     super();
     this.targetId = (typeof target === 'number') ? target : target.id;
   }

@@ -20,60 +20,20 @@ export interface ClientCredentials {
 }
 
 export interface Components {
-  readonly callbacks?: ComponentsCallbacks | undefined;
-  readonly examples?: ComponentsExamples | undefined;
-  readonly headers?: ComponentsHeaders | undefined;
-  readonly links?: ComponentsLinks | undefined;
-  readonly parameters?: ComponentsParameters | undefined;
-  readonly pathItems?: ComponentsPathItems | undefined;
-  readonly requestBodies?: ComponentsRequestBodies | undefined;
-  readonly responses?: ComponentsResponses | undefined;
-  readonly schemas?: ComponentsSchemas | undefined;
-  readonly securitySchemes?: ComponentsSecuritySchemes | undefined;
+  readonly callbacks?: ReadOnly<Record<string, CallbacksOrReference>> | undefined;
+  readonly examples?: ReadOnly<Record<string, ExampleOrReference>> | undefined;
+  readonly headers?: ReadOnly<Record<string, HeaderOrReference>> | undefined;
+  readonly links?: ReadOnly<Record<string, LinkOrReference>> | undefined;
+  readonly parameters?: ReadOnly<Record<string, ParameterOrReference>> | undefined;
+  readonly pathItems?: ReadOnly<Record<string, PathItemOrReference>> | undefined;
+  readonly requestBodies?: ReadOnly<Record<string, RequestBodyOrReference>> | undefined;
+  readonly responses?: ReadOnly<Record<string, ResponseOrReference>> | undefined;
+  readonly schemas?: ReadOnly<Record<string, SchemaObject>> | undefined;
+  readonly securitySchemes?: ReadOnly<Record<string, SecuritySchemeOrReference>> | undefined;
   readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
-export interface ComponentsCallbacks {
-  readonly [key: string]: CallbacksOrReference | undefined;
-}
-
-export interface ComponentsExamples {
-  readonly [key: string]: ExampleOrReference | undefined;
-}
-
-export interface ComponentsHeaders {
-  readonly [key: string]: HeaderOrReference | undefined;
-}
-
-export interface ComponentsLinks {
-  readonly [key: string]: LinkOrReference | undefined;
-}
-
-export interface ComponentsParameters {
-  readonly [key: string]: ParameterOrReference | undefined;
-}
-
-export interface ComponentsPathItems {
-  readonly [key: string]: PathItemOrReference | undefined;
-}
-
 export type ComponentsPatternProperties = object;
-
-export interface ComponentsRequestBodies {
-  readonly [key: string]: RequestBodyOrReference | undefined;
-}
-
-export interface ComponentsResponses {
-  readonly [key: string]: ResponseOrReference | undefined;
-}
-
-export interface ComponentsSchemas {
-  readonly [key: string]: SchemaObject | undefined;
-}
-
-export interface ComponentsSecuritySchemes {
-  readonly [key: string]: SecuritySchemeOrReference | undefined;
-}
 
 export interface Contact {
   readonly email?: string | undefined;
@@ -87,10 +47,6 @@ export interface Content {
 }
 
 export type Encoding = IEncoding & SpecificationExtensions & StylesForForm;
-
-export interface EncodingHeaders {
-  readonly [key: string]: HeaderOrReference | undefined;
-}
 
 export enum EncodingStyle {
   FORM = 'form',
@@ -111,11 +67,7 @@ export type ExampleOrReference = Reference | Example;
 
 export interface Examples {
   readonly example?: any;
-  readonly examples?: ExamplesExamples | undefined;
-}
-
-export interface ExamplesExamples {
-  readonly [key: string]: ExampleOrReference | undefined;
+  readonly examples?: ReadOnly<Record<string, ExampleOrReference>> | undefined;
 }
 
 export interface ExternalDocumentation {
@@ -147,7 +99,7 @@ export interface IEncoding {
   readonly allowReserved?: boolean | undefined;
   readonly contentType?: string | undefined;
   readonly explode?: boolean | undefined;
-  readonly headers?: EncodingHeaders | undefined;
+  readonly headers?: ReadOnly<Record<string, HeaderOrReference>> | undefined;
   readonly style?: EncodingStyle | undefined;
 }
 
@@ -221,7 +173,7 @@ export interface ISchema {
   readonly security?: ReadonlyArray<SecurityRequirement> | undefined;
   readonly servers?: ReadonlyArray<Server> | undefined;
   readonly tags?: ReadonlyArray<Tag> | undefined;
-  readonly webhooks?: SchemaWebhooks | undefined;
+  readonly webhooks?: ReadOnly<Record<string, PathItemOrReference>> | undefined;
 }
 
 export interface License {
@@ -247,12 +199,8 @@ export interface MapOfStrings {
 }
 
 export interface MediaType extends Examples, SpecificationExtensions {
-  readonly encoding?: MediaTypeEncoding | undefined;
+  readonly encoding?: ReadOnly<Record<string, Encoding>> | undefined;
   readonly schema?: SchemaObject | undefined;
-}
-
-export interface MediaTypeEncoding {
-  readonly [key: string]: Encoding | undefined;
 }
 
 export interface OauthFlows {
@@ -264,7 +212,7 @@ export interface OauthFlows {
 }
 
 export interface Operation {
-  readonly callbacks?: OperationCallbacks | undefined;
+  readonly callbacks?: ReadOnly<Record<string, CallbacksOrReference>> | undefined;
   /**
    * @default false
    */
@@ -280,10 +228,6 @@ export interface Operation {
   readonly summary?: string | undefined;
   readonly tags?: ReadonlyArray<string> | undefined;
   readonly [key: string /* Pattern: "^x-" */]: any;
-}
-
-export interface OperationCallbacks {
-  readonly [key: string]: CallbacksOrReference | undefined;
 }
 
 export type Parameter = ParameterBase & ParameterThen;
@@ -367,17 +311,9 @@ export type RequestBodyOrReference = Reference | RequestBody;
 export interface Response {
   readonly content?: Content | undefined;
   readonly description: string;
-  readonly headers?: ResponseHeaders | undefined;
-  readonly links?: ResponseLinks | undefined;
+  readonly headers?: ReadOnly<Record<string, HeaderOrReference>> | undefined;
+  readonly links?: ReadOnly<Record<string, LinkOrReference>> | undefined;
   readonly [key: string /* Pattern: "^x-" */]: any;
-}
-
-export interface ResponseHeaders {
-  readonly [key: string]: HeaderOrReference | undefined;
-}
-
-export interface ResponseLinks {
-  readonly [key: string]: LinkOrReference | undefined;
 }
 
 export type ResponseOrReference = Reference | Response;
@@ -395,10 +331,6 @@ export interface ResponsesThen {
 export type Schema = ISchema & (SchemaWithPaths | SchemaWithComponents | SchemaWithWebhooks);
 export type SchemaObject = SchemaObjectObject | boolean;
 export type SchemaObjectObject = object;
-
-export interface SchemaWebhooks {
-  readonly [key: string]: PathItemOrReference | undefined;
-}
 
 export interface SchemaWithComponents {
   readonly components: any;
@@ -434,7 +366,7 @@ export enum SecuritySchemeType {
 export interface Server {
   readonly description?: string | undefined;
   readonly url: string;
-  readonly variables?: ServerVariables | undefined;
+  readonly variables?: ReadOnly<Record<string, ServerVariable>> | undefined;
   readonly [key: string /* Pattern: "^x-" */]: any;
 }
 
@@ -443,10 +375,6 @@ export interface ServerVariable {
   readonly description?: string | undefined;
   readonly enum?: readonly [string, ...ReadonlyArray<string>] | undefined;
   readonly [key: string /* Pattern: "^x-" */]: any;
-}
-
-export interface ServerVariables {
-  readonly [key: string]: ServerVariable | undefined;
 }
 
 export interface SpecificationExtensions {

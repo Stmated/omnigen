@@ -296,10 +296,10 @@ export type OmniCompositionType<T extends OmniType = OmniType, CK extends OmniKi
   , { kind: CK }>
   ;
 
-
-export interface OmniDictionaryType<K extends OmniType = OmniType, V extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.DICTIONARY> {
+export interface OmniDictionaryType<K extends OmniType = OmniType, V extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.DICTIONARY>, OmniOptionallyNamedType {
   keyType: K;
   valueType: V;
+  dictionaryKind?: DictionaryKind;
 }
 
 export interface OmniHardcodedReferenceType extends OmniBaseType<typeof OmniTypeKind.HARDCODED_REFERENCE> {
@@ -394,6 +394,22 @@ export const UnknownKind = {
   ANY: 'ANY',
 } as const;
 export type UnknownKind = (typeof UnknownKind)[keyof typeof UnknownKind];
+
+/**
+ * To be able to specify a more exact type of dictionary, where it is up to the target language how that should be represented.
+ */
+export const DictionaryKind = {
+  /**
+   * For `typescript` this would be a `Map<K, V>`
+   */
+  CLASS: 'CLASS',
+  /**
+   * For `typescript` this would be a `Record<K, V>`
+   */
+  STRUCTURE: 'STRUCTURE',
+} as const;
+export type DictionaryKind = (typeof DictionaryKind)[keyof typeof DictionaryKind];
+
 
 /**
  * Avoid using this, but can be helpful if has no access to any context/options.

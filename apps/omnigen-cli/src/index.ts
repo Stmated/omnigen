@@ -100,7 +100,7 @@ console.log(`Loaded: ${[CorePlugins, JsonSchemaPlugins, OpenApiPlugins, OpenRpcP
   } else {
 
     const registered = pluginManager.getPlugins().map(it => it.name).join(', ');
-    logger.info(`Will not import any plugins, will execute based on those already auto-registered: [${registered}]`);
+    logger.debug(`Will not import any plugins, will execute based on those already auto-registered: [${registered}]`);
   }
 
   const execution = await pluginManager.execute({ctx: runOptions, debug: true});

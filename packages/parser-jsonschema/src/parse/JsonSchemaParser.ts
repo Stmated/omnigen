@@ -1,11 +1,12 @@
 import {
+  DictionaryKind,
   OMNI_GENERIC_FEATURES,
   OmniArrayKind,
   OmniArrayType,
   OmniArrayTypes,
   OmniComparisonOperator,
   OmniCompositionType,
-  OmniDecoratingType,
+  OmniDecoratingType, OmniDictionaryType,
   OmniEnumMember,
   OmniEnumType,
   OmniExample,
@@ -34,7 +35,7 @@ import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactor
 import {DefaultJsonSchema9Visitor, ExternalDocumentsFinder, JsonSchema9Visitor, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
-import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName, PROP_ID} from '../definitions';
+import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName, PROP_ID, PROP_SKIPPED_AGGREGATION} from '../definitions';
 import {DocumentStore, JsonPathFetcher, ObjectVisitor} from '@omnigen/core-json';
 import {JsonExpander} from '@omnigen-org/json-expander';
 import {JsonSchemaNameParser, NameOptions} from './JsonSchemaNameParser.ts';
@@ -59,6 +60,10 @@ const DISREGARDED_PROPERTIES: (keyof AnyJSONSchema | symbol)[] = ['allOf', 'oneO
 const CONTENT_PROPERTIES: string[] = [
   'properties', 'patternProperties', 'additionalProperties', 'unevaluatedProperties', 'propertyNames', 'enum', 'default', 'format',
   'const', 'items', 'additionalItems', 'unevaluatedItems',
+] satisfies (keyof AnyJSONSchema)[];
+
+const META_PROPERTIES: string[] = [
+  'description', '$comment', '$schema', '$id', 'deprecated', 'title',
 ] satisfies (keyof AnyJSONSchema)[];
 
 type JsonSchemaTypeWithAny = ToSingle<AnyJSONSchema['type']> | 'any';
@@ -184,11 +189,6 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     nameOptions?: NameOptions,
   ): SchemaToTypeResult {
 
-    // TODO: Need to use PROP_ID sometimes -- like when we merge -- so that we do not create lots and lots of the same structures
-    //     Though why would that happen? We should only be cloning stuff that is unique for that child anyway? Why are there duplicates created of the wrong things?
-    // FIX ABOVE!
-
-    // If there was no lossless resolve, then if there is one here
     if (this._options.mergeMixedReferences) {
       const existing = this._mixedRefs.get(unresolvedSchema);
       const aggregated = existing ?? this.aggregateMixed(jsonPath, unresolvedSchema);
@@ -208,31 +208,23 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       }
     }
 
-    // If contentDescriptor contains an anonymous schema,
-    // then we want to be able to say that the ref to that schema is the ref of the contentDescriptor.
-    // That way we will not get duplicates of the schema when called from different locations.
-    // const id = this.getInternalId(resolvedSchema)
-    //   || (resolvedSchema === true ? `__Any` : undefined)
-    //   || (resolvedSchema === false ? `__Never` : undefined);
-
     const mainSchema = resolvedSchema ?? unresolvedSchema;
-    // if (id) {
     const existing = this._typeMap.get(mainSchema);
     if (existing) {
       return {
         type: existing,
       };
     }
-    // }
 
     if (resolvedSchema === unresolvedSchema) {
       resolvedSchema = undefined;
     }
 
-    const name = this._nameParser.parse(unresolvedSchema, resolvedSchema, nameOptions);
-    if (!name) {
-      throw new Error(`Could not find any possible name for the schema`);
-    }
+    const explicitName = this._nameParser.parse(unresolvedSchema, resolvedSchema, {...nameOptions, onlyExplicit: true});
+    const name = explicitName ?? this._nameParser.parse(unresolvedSchema, resolvedSchema, nameOptions);
+    // if (!name) {
+    //   throw new Error(`Could not find any possible name for the schema`);
+    // }
     const schema = resolvedSchema ?? unresolvedSchema;
     const extendedBy = this.getExtendedBy(jsonPath, schema, name);
     const defaultType = this.getDefaultFromSchema(schema, name);
@@ -285,10 +277,10 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
       // const schemaTypeNameOptions: NameOptions = {suffix: schemaTypeFallbackSuffix, suffixPrioritized: true};
 
-      let omniType = this.jsonSchemaToNonObjectType(jsonPath, schema, name, extendedBy, defaultType, schemaType, {suffix: schemaTypeFallbackSuffix});
+      let omniType = this.jsonSchemaToNonObjectType(jsonPath, schema, explicitName, name, extendedBy, defaultType, schemaType, {suffix: schemaTypeFallbackSuffix});
       if (!omniType) {
 
-        const schemaObjectName = schemaTypeFallbackSuffix
+        const schemaObjectName: TypeName | undefined = (name && schemaTypeFallbackSuffix)
           // Prioritize the usage of the name with the suffix, and only fallback on without the suffix.
           ? {name: name, suffix: schemaTypeFallbackSuffix}
           : name;
@@ -432,12 +424,20 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
           // TODO: Skip merging $comments and such? Or Perhaps signify somehow that the comment came from a merged parent?
 
-          // TODO: If go from "object" type to non-object, then we should likely remove any "oneOf" etc?
-
           const target = aggregatedSchema[k];
           const parent = mixedResolved[k];
 
-          if (Array.isArray(target) || Array.isArray(parent)) {
+          if (k === '$comment' || k === '$id') {
+
+            // Move these properties to a hidden little compartment.
+            // For others to fetch if they really need them for some reason.
+            if (!(PROP_SKIPPED_AGGREGATION in aggregatedSchema)) {
+              aggregatedSchema[PROP_SKIPPED_AGGREGATION] = {};
+            }
+
+            aggregatedSchema[PROP_SKIPPED_AGGREGATION][k] = parent;
+
+          } else if (Array.isArray(target) || Array.isArray(parent)) {
             const targetArray = Array.isArray(target) ? target : (target === undefined ? [] : [target]);
             const parentArray = Array.isArray(parent) ? parent : (parent === undefined ? [] : [parent]);
             aggregatedSchema[k] = [...targetArray, ...JSON.parse(JSON.stringify(parentArray))];
@@ -451,25 +451,6 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
 
       mixedResolved = this._refResolver.resolveMixed(mixedResolved, jsonPath);
     }
-
-    // if (aggregatedSchema && aggregatedSchema !== unresolvedSchema) {
-    //
-    //   // TODO: EXTREMELY UGLY! We should stop relying on the symbol id and instead just work by reference and then deep copy objects when merging...
-    //   // let uniqueCounter = 0;
-    //   const visitor = new ObjectVisitor(args => {
-    //     if (args.obj && typeof args.obj === 'object' && PROP_ID in args.obj) {
-    //       if (args.obj[PROP_ID].includes('__merge__')) {
-    //         // It has already been merged, let's not do it twice.
-    //     existing    return true;
-    //       }
-    //       args.obj[PROP_ID] = `${args.obj[PROP_ID]}__merge__${jsonPath.join('_')}`;
-    //     }
-    //
-    //     return true;
-    //   });
-    //
-    //   visitor.visit(aggregatedSchema);
-    // }
 
     return aggregatedSchema ?? unresolvedSchema;
   }
@@ -555,7 +536,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     if (!name) {
       name = this.getInternalId(schema);
       if (!name) {
-        throw new Error(`Could not find a name for schema ${JSON.stringify(schema)}`);
+        throw new Error(`Could not find a name for object schema ${JSON.stringify(schema)}`);
       }
     }
 
@@ -721,6 +702,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
   private jsonSchemaToNonObjectType<S extends JSONSchema9, D extends AnyJsonDefinition<S>>(
     jsonPath: string[],
     schema: D,
+    explicitName: TypeName | undefined,
     name: TypeName | undefined,
     extendedBy: OmniType | undefined,
     defaultType: OmniType | undefined,
@@ -841,6 +823,31 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       }
     } else if (schemaType === 'array' || schema.items !== undefined) {
       return this.toArrayType(jsonPath, schema, name);
+    } else if (schema.additionalProperties !== undefined) {
+      const usefulKeys = Object.keys(schema).filter(k => !META_PROPERTIES.includes(k));
+      if (usefulKeys.length === 1 || (usefulKeys.length === 2 && schema.type !== undefined)) {
+
+        // const dictionaryName = this._nameParser.parse(schema, undefined, {onlyExplicit: true});
+
+        if (!explicitName) {
+
+          // If the dictionary does not have a name, then we can simplify it into a regular dictionary type.
+          // Otherwise it will likely be turned into a named object with `additionalProperties`.
+          const dictionaryType: OmniDictionaryType = {
+            kind: OmniTypeKind.DICTIONARY,
+            keyType: {kind: OmniTypeKind.STRING},
+            dictionaryKind: DictionaryKind.STRUCTURE,
+            valueType: {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY},
+          };
+
+          // Save preemptively in case of recursive type.
+          this._typeMap.set(schema, dictionaryType);
+
+          dictionaryType.valueType = this.jsonSchemaToType([...jsonPath, 'additionalProperties'], schema.additionalProperties).type;
+
+          return dictionaryType;
+        }
+      }
     }
 
     if (schemaType !== 'object') {

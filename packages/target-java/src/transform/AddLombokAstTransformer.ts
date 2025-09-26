@@ -12,6 +12,7 @@ export interface StackInfo {
   cu: Java.AbstractObjectDeclaration;
   finalFields: number;
   normalFields: number;
+  initializedFields: number;
   skippingFactors: number;
   fieldsToPrivatize: Java.Field[];
 }
@@ -88,8 +89,9 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
 
           if (info) {
             if (node.modifiers.children.find(it => it.kind === Java.ModifierKind.FINAL)) {
-              // TODO: Remove the final modifier if all are final? lombok might complain but work anyway?
               info.finalFields++;
+            } else if (node.initializer) {
+              info.initializedFields++;
             } else {
               info.normalFields++;
             }
@@ -196,6 +198,7 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
       cu: dec,
       finalFields: 0,
       normalFields: 0,
+      initializedFields: 0,
       skippingFactors: 0,
       fieldsToPrivatize: [],
     });
@@ -222,7 +225,7 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
         });
       }
 
-      if (info.finalFields > 0 && info.normalFields == 0) {
+      if ((info.finalFields > 0 || info.initializedFields > 0) && info.normalFields === 0) {
         annotations.children.push(new Java.Annotation(
           new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'Value'}}),
         ));
@@ -235,23 +238,18 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
         annotations.children.push(new Java.Annotation(
           new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'Data'}}),
         ));
-
-        // @Value already implicitly states `AllArgsConstructor`
-        annotations.children.push(new Java.Annotation(
-          new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'AllArgsConstructor'}}),
-          new Java.AnnotationKeyValuePairList(),
-        ));
       }
 
-      annotations.children.push(new Java.Annotation(
-        new Java.EdgeType(requiredArgsConstructorType),
-        new Java.AnnotationKeyValuePairList(),
-      ));
-      if (info.finalFields === 0 || !options.immutable) {
-        annotations.children.push(new Java.Annotation(
-          new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'NoArgsConstructor'}}),
-        ));
+      if (info.finalFields === 0 && info.normalFields > 0 && options.fieldAccessorMode === FieldAccessorMode.LOMBOK) {
+        annotations.children.push(new Java.Annotation(new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'AllArgsConstructor'}})));
       }
+      if (info.finalFields > 0) {
+        annotations.children.push(new Java.Annotation(new Java.EdgeType(requiredArgsConstructorType)));
+      }
+      if ((info.finalFields === 0 && info.initializedFields === 0 && info.normalFields > 0) || !options.immutable) {
+        annotations.children.push(new Java.Annotation(new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok'], edgeName: 'NoArgsConstructor'}})));
+      }
+
       annotations.children.push(new Java.Annotation(
         new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'experimental'], edgeName: 'NonFinal'}}),
       ));
@@ -309,10 +307,7 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
 
       if (!annotations.children.some(it => it instanceof Java.Annotation ? (it.type.omniType.fqn.edgeName === requiredArgsConstructorType.fqn.edgeName) : false)) {
         if (!dec.body.children.some(it => it instanceof Java.ConstructorDeclaration)) {
-          annotations.children.push(new Java.Annotation(
-            new Java.EdgeType(requiredArgsConstructorType),
-            new Java.AnnotationKeyValuePairList(),
-          ));
+          annotations.children.push(new Java.Annotation(new Java.EdgeType(requiredArgsConstructorType)));
         }
       }
     }

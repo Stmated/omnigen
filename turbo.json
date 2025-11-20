@@ -30,6 +30,10 @@
       "dependsOn": ["build"],
       "outputs": []
     },
+    "publish-release": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
     "update": {
       "cache": false
     }

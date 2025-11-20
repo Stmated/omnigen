@@ -42,14 +42,28 @@ jobs:
       - name: 'Auth for npm'
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
-      - run: git commit -a -m "[+${{ inputs.version }} versions]"
-      - run: git push
+      - run: git commit -a -m "[+${{ inputs.version }} versions]" || echo "No changes to commit"
+      - run: git push || echo "Nothing to push"
 
-      - name: 'Create and push tag with root version'
+      - name: 'Create and push tag with root version if missing'
+        id: create_tag
         run: |
+          set -e
+          git fetch --tags --quiet
           ROOT_VERSION=$(node -p "require('./package.json').version")
-          git tag "v${ROOT_VERSION}"
-          git push origin "v${ROOT_VERSION}"
+          TAG="v${ROOT_VERSION}"
+          if git tag -l "$TAG" | grep -q .; then
+            echo "Tag $TAG already exists locally."
+          else
+            git tag "$TAG" 2>/dev/null || echo "Tag $TAG already exists (race)."
+            echo "Ensured local tag $TAG present."
+          fi
+          if git ls-remote --exit-code --tags origin "$TAG" >/dev/null 2>&1; then
+            echo "Remote already has $TAG; skipping push."
+          else
+            git push origin "$TAG" || echo "Race condition: remote already had $TAG."
+            echo "Ensured $TAG pushed to origin."
+          fi
 
       - run: pnpm run publish-release
         env:

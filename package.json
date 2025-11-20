@@ -1,6 +1,6 @@
 {
   "name": "omnigen",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "packageManager": "pnpm@10.17.1",
   "private": false,
   "type": "module",

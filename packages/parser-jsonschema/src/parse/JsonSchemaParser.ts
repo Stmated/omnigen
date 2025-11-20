@@ -1,4 +1,5 @@
 import {
+  Arrayable,
   DictionaryKind,
   OMNI_GENERIC_FEATURES,
   OmniArrayKind,
@@ -30,7 +31,7 @@ import {
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js';
-import {Case, CompositionUtil, isDefined, Naming, OmniUtil, SchemaFile, ToDefined, TypeNameUtil} from '@omnigen/core';
+import {Case, CompositionUtil, isDefined, Naming, OmniUtil, SchemaFile, ToDefined, TypeNameUtil, Util} from '@omnigen/core';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {DefaultJsonSchema9Visitor, ExternalDocumentsFinder, JsonSchema9Visitor, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
@@ -70,32 +71,37 @@ type JsonSchemaTypeWithAny = ToSingle<AnyJSONSchema['type']> | 'any';
 
 export class DefaultJsonSchemaParser implements Parser {
 
-  private readonly _schemaFile: SchemaFile;
+  private readonly _schemaFiles: Array<SchemaFile>;
   private readonly _parserOptions: ParserOptions;
 
-  constructor(schemaFile: SchemaFile, parserOptions: ParserOptions) {
-    this._schemaFile = schemaFile;
+  constructor(schemaFiles: Arrayable<SchemaFile>, parserOptions: ParserOptions) {
+    this._schemaFiles = Array.isArray(schemaFiles) ? schemaFiles : [schemaFiles];
     this._parserOptions = parserOptions;
   }
 
   parse(): OmniModelParserResult<ParserOptions> {
 
     const docStore = new DocumentStore();
-    let root = this._schemaFile.asObject<AnyJSONSchema>();
-    root = JsonSchemaParser.preProcessSchema(this._schemaFile.getAbsolutePath(), DefaultJsonSchema9Visitor, root, 'schema', docStore);
+    // const roots = Util.mapToDefined(this._schemaFiles, it => it.asObject<AnyJSONSchema>());
+    const roots: AnyJSONSchema[] = [];
+    for (let i = 0; i < this._schemaFiles.length; i++) {
+      const root = this._schemaFiles[i].asObject<AnyJSONSchema>();
+      roots.push(JsonSchemaParser.preProcessSchema(this._schemaFiles[i].getAbsolutePath(), DefaultJsonSchema9Visitor, root, 'schema', docStore));
+    }
 
     const model: OmniModel = {
       kind: OmniItemKind.MODEL,
-      name: root.$schema || root.$id || '',
+      name: roots.map(it => it.$schema || it.$id).find(Boolean) || '',
       version: '1.0',
       endpoints: [],
       servers: [],
-      schemaVersion: root.$schema || '',
+      schemaVersion: roots.map(it => it.$schema).find(Boolean) || '',
       schemaType: 'jsonschema',
       types: [],
     };
 
-    const fileUri = this._schemaFile.getAbsolutePath() ?? '';
+    const fileUri = this._schemaFiles.map(it => it.getAbsolutePath()).find(Boolean) ?? '';
+    const root = roots[0];
 
     const refResolver = (new ExternalDocumentsFinder(fileUri, root).create());
 
@@ -608,7 +614,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
         ownerName: name,
         fallbackSuffix: 'AdditionalProperties',
       } satisfies NameOptions);
-      const additionalPropertiesType = this.normalizeAdditionalPropertiesType(additionalPropertiesTypeRes.type);
+      // const additionalPropertiesType = this.normalizeAdditionalPropertiesType(additionalPropertiesTypeRes.type);
 
       let additionalPropertiesPropertyName: OmniPropertyName | undefined = undefined;
       if (schema.propertyNames) {
@@ -640,7 +646,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       properties.push({
         kind: OmniItemKind.PROPERTY,
         name: additionalPropertiesPropertyName,
-        type: additionalPropertiesType,
+        type: additionalPropertiesTypeRes.type,
       });
     }
 
@@ -670,12 +676,40 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     // This is not allowed in some languages. But it is up to the target language to decide how to handle it.
     if (extendedBy) {
 
-      if (!OmniUtil.asSuperType(extendedBy)) {
-        throw new Error(`Not allowed to use '${OmniUtil.describe(extendedBy)}' as a super-type`);
+      if (extendedBy.kind === OmniTypeKind.DICTIONARY) {
+        if (additionalProperties) {
+
+          // The current object has its own `additionalProperties`.
+          // TODO: We should actually merge the type so they have a common denominator key and value.
+          // For now just make it not extend.
+          extendedBy = undefined;
+
+        } else {
+
+          // The current object does not have any `additionalProperties`, so we should move the dictionary into one of those properties.
+          // TODO: Perhaps allow Dictionary as a supertype and then have a later transformer do this work instead
+
+          properties.push({
+            kind: OmniItemKind.PROPERTY,
+            name: {
+              isPattern: true,
+              name: /.*/,
+            },
+            type: extendedBy.valueType,
+          });
+
+          extendedBy = undefined;
+        }
       }
 
-      type.extendedBy = extendedBy;
-      OmniUtil.addDebugTo(type, `Adding extension ${OmniUtil.describe(extendedBy)}`);
+      if (extendedBy) {
+        if (!OmniUtil.asSuperType(extendedBy)) {
+          throw new Error(`Not allowed to use '${OmniUtil.describe(extendedBy)}' as a super-type`);
+        }
+
+        type.extendedBy = extendedBy;
+        OmniUtil.addDebugTo(type, `Adding extension ${OmniUtil.describe(extendedBy)}`);
+      }
     }
 
     if (schema.type === undefined && !this.hasAnyContent(schema) && OmniUtil.isCompletelyEmptyType(type)) {
@@ -683,20 +717,6 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
     }
 
     return type;
-  }
-
-  /**
-   * If the schema is "any", then for the case of AdditionalProperties we can restrict it into being a dictionary/object/map.
-   */
-  private normalizeAdditionalPropertiesType(type: OmniType): OmniType {
-
-    if (type.kind === OmniTypeKind.UNKNOWN && type.unknownKind === UnknownKind.ANY) {
-      // AdditionalProperties cannot be a primitive, it is always known to be an object of perhaps unknown contents.
-      // So it is more accurate to say that it is a `DYNAMIC_OBJECT` rather than `ANY`
-      return {...type, unknownKind: UnknownKind.DYNAMIC_OBJECT};
-    } else {
-      return type;
-    }
   }
 
   private jsonSchemaToNonObjectType<S extends JSONSchema9, D extends AnyJsonDefinition<S>>(
@@ -835,9 +855,10 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
           // Otherwise it will likely be turned into a named object with `additionalProperties`.
           const dictionaryType: OmniDictionaryType = {
             kind: OmniTypeKind.DICTIONARY,
-            keyType: {kind: OmniTypeKind.STRING},
             dictionaryKind: DictionaryKind.STRUCTURE,
+            keyType: {kind: OmniTypeKind.STRING},
             valueType: {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY},
+            debug: `Added because there were ${usefulKeys.length} and type ${schema.type} for schema with 'additionalTypes'`,
           };
 
           // Save preemptively in case of recursive type.

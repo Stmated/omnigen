@@ -1,5 +1,5 @@
 import {LoggerFactory} from '@omnigen/core-log';
-import {AstTransformer, AstTransformerArguments, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/api';
+import {AstTransformer, AstTransformerArguments, OmniHardcodedReferenceType, OmniTypeKind, PackageOptions, TargetOptions} from '@omnigen/api';
 import {CSharpOptions} from '../options';
 import {CSharpRootNode, Cs} from '../ast';
 import {Code} from '@omnigen/target-code';
@@ -56,7 +56,8 @@ export class VarDecToTypeAliasCSharpAstTransformer implements AstTransformer<CSh
         if (n.initializer instanceof Code.EdgeType || n.initializer instanceof Code.ArrayType || n.initializer instanceof Code.GenericType) {
 
           // TODO: This is wrong, and this is just a placeholder for now
-          newImports.push(new Code.ImportStatement(new Code.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: `using ${n.identifier.value} = ${n.initializer}`})));
+          const hardcoded: OmniHardcodedReferenceType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: `using ${n.identifier.value} = ${n.initializer}`}};
+          newImports.push([new Code.ImportStatement(new Code.EdgeType(hardcoded))]);
           return undefined;
         }
 

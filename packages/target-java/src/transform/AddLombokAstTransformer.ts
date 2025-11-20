@@ -1,11 +1,11 @@
 import {JavaAndTargetOptions, JavaAstTransformerArgs} from './AbstractJavaAstTransformer';
 import {AstTransformer, OmniHardcodedReferenceType, OmniType, OmniTypeKind} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
+import {ModifierKind} from '../ast/JavaAst';
 import {OmniUtil, Visitor} from '@omnigen/core';
 import {JACKSON_JSON_VALUE} from './JacksonJavaAstTransformer';
 import {JavaVisitor} from '../visit';
 import {FieldAccessorMode, JavaOptions} from '../options';
-import {ModifierKind} from '../ast/JavaAst';
 import {LOMBOK_SINGULAR} from './PatternPropertiesToMapJavaAstTransformer';
 
 export interface StackInfo {
@@ -283,10 +283,10 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
 
     if (options.lombokBuilder) {
 
-      const superBuilderAnnotationArguments = new Java.AnnotationKeyValuePairList();
+      const builderAnnotationArguments = new Java.AnnotationKeyValuePairList();
 
       if (options.immutable) {
-        superBuilderAnnotationArguments.children.push(new Java.AnnotationKeyValuePair(
+        builderAnnotationArguments.children.push(new Java.AnnotationKeyValuePair(
           new Java.Identifier('toBuilder'),
           new Java.Literal(true),
         ));
@@ -294,7 +294,7 @@ export class AddLombokAstTransformer implements AstTransformer<Java.JavaAstRootN
 
       annotations.children.push(new Java.Annotation(
         new Java.EdgeType({kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: ['lombok', 'experimental'], edgeName: 'SuperBuilder'}}),
-        superBuilderAnnotationArguments,
+        builderAnnotationArguments,
       ));
 
       if (!dec.modifiers.children.some(it => it.kind === Java.ModifierKind.ABSTRACT)) {

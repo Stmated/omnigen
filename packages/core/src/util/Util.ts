@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import url from 'url';
+import {Arrayable} from '@omnigen/api';
 
 // import * as findUp from 'find-up';
 
@@ -67,5 +68,55 @@ export class Util {
       }
     }
     return length;
+  }
+
+  /**
+   * TODO: Move to an `Arrayables` helper lib
+   */
+  public static count<T, R>(input: Arrayable<T>): number {
+    if (Array.isArray(input)) {
+      return input.length;
+    } else {
+      return 1;
+    }
+  }
+
+  /**
+   * TODO: Move to an `Arrayables` helper lib
+   */
+  public static forEach<T, R>(input: Arrayable<T>, callback: (v: T) => R | undefined): R | undefined {
+    if (Array.isArray(input)) {
+      for (const item of input) {
+        const result = callback(item);
+        if (result !== undefined) {
+          return result;
+        }
+      }
+      return undefined;
+    } else {
+      return callback(input);
+    }
+  }
+
+  /**
+   * TODO: Move to an `Arrayables` helper lib
+   */
+  public static mapToDefined<T, R>(input: Arrayable<T>, callback: (v: T) => R | undefined): Array<R> {
+    const array: Array<R> = [];
+    if (Array.isArray(input)) {
+      for (const item of input) {
+        const result = callback(item);
+        if (result !== undefined) {
+          array.push(result);
+        }
+      }
+    } else {
+      const result = callback(input);
+      if (result !== undefined) {
+        array.push(result);
+      }
+    }
+
+    return array;
   }
 }

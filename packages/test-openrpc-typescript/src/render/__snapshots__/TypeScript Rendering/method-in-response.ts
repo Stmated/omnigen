@@ -4,7 +4,7 @@
 export interface AbstractRequestData {
   readonly Password: string;
   readonly Username: string;
-  readonly [key: string]: Record<string, any> | undefined;
+  readonly [key: string]: unknown;
 }
 
 export interface AbstractResponseResult<TData, TMethod extends string> {

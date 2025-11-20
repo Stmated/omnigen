@@ -1,5 +1,6 @@
 {
   "name": "omnigen",
+  "version": "0.0.2",
   "packageManager": "pnpm@10.17.1",
   "private": false,
   "type": "module",
@@ -16,8 +17,9 @@
     "sync:prepare": "syncpack list-mismatches",
     "sync:execute": "syncpack fix-mismatches",
     "update": "pnpm up -r",
-    "version-patch": "turbo run version-patch",
-    "publish-snapshot": "turbo run publish-snapshot"
+    "version-patch": "pnpm version patch && turbo run version-patch",
+    "publish-snapshot": "turbo run publish-snapshot",
+    "publish-release": "turbo run publish-release"
   },
   "syncpack": {
     "versionGroups": [
@@ -49,6 +51,5 @@
   },
   "engines": {
     "node": ">=24.8.0"
-  },
-  "version": "0.0.2"
+  }
 }

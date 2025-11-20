@@ -1,5 +1,5 @@
 {
-  "$id": "https://example.com/dynamic_ref.json",
+  "$id": "https://example.com/dynamic_ref_leaf_array.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$dynamicAnchor": "leaf",
   "type": "array",

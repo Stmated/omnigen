@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnigen.com/schemas/additionalproperties-inheritance",
+
+  "$defs": {
+
+    "EmptyParent": {
+      "additionalProperties": true
+    },
+
+    "FullParent": {
+      "type": "object",
+      "additionalProperties": true,
+      "x-abstract": true
+    },
+
+    "EmptyChild": {
+      "allOf": [{"$ref": "#/$defs/EmptyParent"}],
+      "properties": {
+        "prop1": {
+          "type": "string"
+        }
+      }
+    },
+
+    "FullChild": {
+      "allOf": [{"$ref": "#/$defs/FullParent"}],
+      "properties": {
+        "prop2": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -97,6 +97,26 @@ describe('jsonschema-typescript-render', () => {
     await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
   });
 
+  // TODO: Add support for multiple files for $dynamicRef! What needs to be done is send around a `DocumentStore` instead of a `SchemaFile` everywhere, and make one `SchemaFile` "primary"
+  // TODO: Rewrite the ExternalDocumentsFinder to take no main schemaFile, and instead it has a function that can take many files and process them
+  // test('dynamic-ref-multiple-files', async ctx => {
+  //
+  //   // TODO: This is not correct, dynamicRef and dynamicAnchor is not supported yet, but at least outputs *something*.
+  //   vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+  //
+  //   const rendered = await JsonSchemaToTypeScriptTestUtil.render([
+  //     Util.getPathFromRoot('./packages/parser-jsonschema/examples/dynamic_ref.json'),
+  //     Util.getPathFromRoot('./packages/parser-jsonschema/examples/dynamic_ref_leaf_boolean.json'),
+  //   ], {
+  //     includeGenerated: false,
+  //     singleFile: true,
+  //     relaxedInspection: false,
+  //   });
+  //   const fileContents = getFileContents(rendered);
+  //   const keys = Object.keys(fileContents);
+  //   await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+  // });
+
   /**
    * NOTE: This is in essence very wrong, but there are no compiler errors. There are lots of JSONSchema functionality inside that is not yet supported:
    *        * dependentSchemas
@@ -146,6 +166,28 @@ describe('jsonschema-typescript-render', () => {
       orderObjectsByName: true,
       orderObjectsByDependency: false,
       relaxedInspection: false,
+    });
+    const fileContents = getFileContents(rendered);
+    const keys = Object.keys(fileContents);
+    await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
+  });
+
+  test('additionalproperties-inheritance', async ctx => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-jsonschema/examples/additionalproperties-inheritance.json'), {
+      includeGenerated: false,
+      singleFile: true,
+      elevateProperties: false,
+      orderObjectsByDependency: true,
+      preferInterfaces: true,
+      immutable: false,
+      singleFileName: 'Models',
+      shortenNestedTypeNames: true,
+      commentsOnFields: true,
+      compressSoloReferencedTypes: false,
+      anyAllowed: false,
     });
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);

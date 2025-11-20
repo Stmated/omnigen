@@ -1,0 +1,56 @@
+name: Publish Snapshot Package
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version increment level"
+        type: choice
+        required: true
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+          cache: "pnpm"
+      - run: pnpm i
+
+      - run: git config --global user.email "stmated@gmail.com"
+      - run: git config --global user.name "stmated"
+      - run: git pull
+
+      - run: pnpm run version-${{ inputs.version }}
+
+      - run: pnpm run build
+      - run: pnpm run test
+      - name: 'Auth for npm'
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - run: git commit -a -m "[+${{ inputs.version }} versions]"
+      - run: git push
+
+      - name: 'Create and push tag with root version'
+        run: |
+          ROOT_VERSION=$(node -p "require('./package.json').version")
+          git tag "v${ROOT_VERSION}"
+          git push origin "v${ROOT_VERSION}"
+
+      - run: pnpm run publish-release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -14,6 +14,7 @@ import {Ts} from '../ast';
 import {TypeScriptAstReducer} from './TypeScriptAstReducer';
 import {Code} from '@omnigen/target-code';
 import {TypeScriptOptions} from '../options';
+import {OmniUtil} from '@omnigen/core';
 
 export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode, TargetOptions & TypeScriptOptions> {
 
@@ -40,6 +41,7 @@ export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode,
               {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: type.keyType, sourceIdentifier: source.sourceIdentifiers[0]},
               {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: type.valueType, sourceIdentifier: source.sourceIdentifiers[1]},
             ],
+            debug: OmniUtil.addDebug(type.debug, `Converted DICTIONARY to TypeScript generic Map/Record`),
           };
 
           return astUtils.createTypeNode(genericTargetType, n.implementation);
@@ -70,7 +72,7 @@ export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode,
       case UnknownKind.DYNAMIC_OBJECT: {
 
         const targetKeyType: OmniType = {kind: OmniTypeKind.STRING};
-        const targetValueType: OmniType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'any'}};
+        const targetValueType: OmniType = {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY}; // {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'any'}};
 
         const source = this.getMapGenericSource(false);
         const genericTargetType: OmniGenericTargetType = {
@@ -80,6 +82,7 @@ export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode,
             {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: targetKeyType, sourceIdentifier: source.sourceIdentifiers[0]},
             {kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER, type: targetValueType, sourceIdentifier: source.sourceIdentifiers[1]},
           ],
+          debug: 'Created Record from Unknown: DYNAMIC_OBJECT',
         };
 
         return astUtils.createTypeNode(genericTargetType, implementation);
@@ -98,7 +101,7 @@ export class ToTypeScriptAstTransformer implements AstTransformer<Ts.TsRootNode,
 
   private static getMapGenericSource(implementation: boolean): OmniGenericSourceType {
 
-    const objectName = implementation ? 'Record' : 'Record';
+    const objectName = implementation ? 'Record' : 'Record'; // TODO: This should be possible to make into `Map` in some locations; not sure how yet. Better as post-transformer?
     let source = ToTypeScriptAstTransformer._MAP_GENERIC_SOURCES.get(objectName);
 
     if (!source) {

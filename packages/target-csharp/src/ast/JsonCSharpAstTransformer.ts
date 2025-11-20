@@ -7,7 +7,7 @@ import {
   OmniProperty,
   OmniPropertyName, OmniType,
   OmniTypeKind,
-  OmniUnknownType, PackageOptions,
+  OmniUnknownType, PackageOptions, ReducerResult,
   TargetOptions, TypeNode,
   TypeUseKind,
   UnknownKind,
@@ -17,7 +17,7 @@ import {LoggerFactory} from '@omnigen/core-log';
 import {Code, CodeAstUtils, CodeOptions, SerializationPropertyNameMode} from '@omnigen/target-code';
 import {CSharpOptions, SerializationLibrary} from '../options';
 import {Cs} from '../ast';
-import {Kinds, VirtualAnnotationKind} from '@omnigen/target-code/ast';
+import {DecoratingTypeNode, Kinds, VirtualAnnotationKind} from '@omnigen/target-code/ast';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -282,7 +282,8 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
           if (type.keyType.kind == OmniTypeKind.STRING) {
             const nodeName = attributes.JSON_NODE.name;
             if (type.valueType.kind == OmniTypeKind.UNKNOWN || (type.valueType.kind == OmniTypeKind.HARDCODED_REFERENCE && OmniUtil.isEqualObjectName(type.valueType.fqn, nodeName))) {
-              return args.root.getAstUtils().createTypeNode(type, n.implementation).reduce(r);
+              // TODO: The cast here should not be needed, figure out a safe way to make sure we return a type node -- perhaps a helper method that checks that the node is a TypeNode?
+              return args.root.getAstUtils().createTypeNode(type, n.implementation).reduce(r) as ReducerResult<TypeNode>;
             }
           }
         }

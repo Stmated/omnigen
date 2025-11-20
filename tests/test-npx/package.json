@@ -7,7 +7,9 @@
   "scripts": {
     "pregenerate": "ts-node ./src/server-mock.ts &",
     "generate": "pnpm run --filter @omnigen-org/omnigen-cli build && node ../../apps/omnigen-cli/dist/omnigen-cli.js -i http://localhost:3000/schema-1.yaml -o __generated__/schema-1_yaml",
-    "test": "pnpm run generate"
+    "test": "pnpm run generate",
+
+    "gen:trustly": "pnpm run --filter @omnigen-org/omnigen-cli build && node ../../apps/omnigen-cli/dist/omnigen-cli.js -i https://trustly-test-service.testing.int.trustly.cloud/v3/api-docs.yaml -o __generated__/trustly -a fieldAccessorMode=LOMBOK -a compactAnnotations=true"
   },
   "dependencies": {
     "express": "^5.1.0",

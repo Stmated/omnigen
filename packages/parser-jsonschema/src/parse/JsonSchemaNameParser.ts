@@ -77,19 +77,19 @@ export class JsonSchemaNameParser {
 
     let insertKeyIndex = 0;
 
-    const names_suffixes: TypeName[] = [];
+    // const names_suffixes: TypeName[] = [];
 
-    if (unresolved === true) {
-      names_suffixes.push('Always');
-    } else if (unresolved === false) {
-      names_suffixes.push('Never');
-    }
-
-    if (resolved === true) {
-      names_suffixes.push('AlwaysExt');
-    } else if (resolved === false) {
-      names_suffixes.push('NeverExt');
-    }
+    // if (unresolved === true) {
+    //   names_suffixes.push('Always');
+    // } else if (unresolved === false) {
+    //   names_suffixes.push('Never');
+    // }
+    //
+    // if (resolved === true) {
+    //   names_suffixes.push('AlwaysExt');
+    // } else if (resolved === false) {
+    //   names_suffixes.push('NeverExt');
+    // }
 
     if (unresolved && typeof unresolved === 'object') {
 
@@ -152,9 +152,9 @@ export class JsonSchemaNameParser {
         if (unresolved.then !== undefined) notConditionalKeys--;
         if (unresolved.else !== undefined) notConditionalKeys--;
 
-        if (notConditionalKeys === 0) {
-          names_suffixes.push('Phi');
-        }
+        // if (notConditionalKeys === 0) {
+        //   names_suffixes.push('Phi');
+        // }
       }
 
       unresolved_properties_suffixes = this.getWithPropertiesSuffixes(unresolved);
@@ -370,15 +370,15 @@ export class JsonSchemaNameParser {
     return name;
   }
 
-  private applySuffix(name: TypeName[], suffix: TypeName | undefined, intermix = false) {
-    if (suffix) {
-      for (let i = 0; i < name.length; i++) {
-        name[i] = {name: name[i], suffix: suffix} satisfies TypeName;
-      }
-    }
-
-    return name;
-  }
+  // private applySuffix(name: TypeName[], suffix: TypeName | undefined, intermix = false) {
+  //   if (suffix) {
+  //     for (let i = 0; i < name.length; i++) {
+  //       name[i] = {name: name[i], suffix: suffix} satisfies TypeName;
+  //     }
+  //   }
+  //
+  //   return name;
+  // }
 
   private addIfDefined(arr: (TypeName | undefined)[], name: TypeName | undefined) {
     if (name && (!Array.isArray(name) || name.length > 0)) {

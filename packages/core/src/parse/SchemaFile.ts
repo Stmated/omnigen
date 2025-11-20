@@ -7,7 +7,7 @@ import * as YAML from 'yaml';
 
 const logger = LoggerFactory.create(import.meta.url);
 
-export type SchemaFileInput = string | PathLike;
+export type SchemaFileInput = PathLike;
 
 /**
  * Used for caching and converting a target file or string into a structure object.

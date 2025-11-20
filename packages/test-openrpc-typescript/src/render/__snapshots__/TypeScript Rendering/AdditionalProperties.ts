@@ -47,5 +47,5 @@ export type ListThingsResponse = JsonRpcResponse;
 
 export interface Thing {
   readonly id: string;
-  readonly [key: string]: Record<string, any> | undefined;
+  readonly [key: string]: any;
 }

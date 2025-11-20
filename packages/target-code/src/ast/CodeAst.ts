@@ -703,7 +703,7 @@ export class Field extends AbstractCodeNode implements Identifiable {
     return visitor.visitField(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AbstractCodeNode> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<Identifiable> {
     return reducer.reduceField(this, reducer);
   }
 }
@@ -890,7 +890,7 @@ export class VariableDeclaration extends AbstractCodeNode implements Identifiabl
     return visitor.visitVariableDeclaration(this, visitor);
   }
 
-  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<AstNode> {
+  reduce(reducer: Reducer<CodeVisitor<unknown>>): ReducerResult<Identifiable> {
     return reducer.reduceVariableDeclaration(this, reducer);
   }
 }

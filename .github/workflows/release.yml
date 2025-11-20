@@ -1,4 +1,4 @@
-name: Publish Snapshot Package
+name: Publish Release Package
 on:
   workflow_dispatch:
     inputs:

@@ -71,6 +71,7 @@ import {AddCommentsCSharpAstTransformer} from './ast/AddCommentsCSharpAstTransfo
 import {JsonCSharpAstTransformer} from './ast/JsonCSharpAstTransformer';
 import {ConstructorRemovalOnPropertyInitCSharpAstTransformer} from './ast/ConstructorRemovalOnPropertyInitCSharpAstTransformer';
 import {VarDecToTypeAliasCSharpAstTransformer} from './ast/VarDecToTypeAliasCSharpAstTransformer.ts';
+import {AdditionalPropertiesCSharpModelTransformer} from './parse/transform/AdditionalPropertiesCSharpModelTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -193,6 +194,7 @@ export const CSharpPlugin = createPlugin(
     const transformers2: OmniModel2ndPassTransformer<TOpt>[] = [
       // new StrictUndefinedTypeScriptModelTransformer(),
       // new RemoveWildcardGenericParamTypeScriptModelTransformer(),
+      new AdditionalPropertiesCSharpModelTransformer(),
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
       new RemoveUnnecessaryPropertyModelTransformer(),

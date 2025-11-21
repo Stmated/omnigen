@@ -519,7 +519,7 @@ export class JsonCSharpAstTransformer implements AstTransformer<Code.CodeRootAst
       annotations.push(...jsonProperty);
     }
 
-    if (OmniUtil.getPropertyNamePattern(property.name)) {
+    if (OmniUtil.isPatternPropertyName(property.name)) {
 
       // This is a pattern property, and the only support for this at the moment is to add the "ExtensionData" attribute.
       if (attributes.JSON_ANY_GETTER.name) {

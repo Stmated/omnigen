@@ -83,15 +83,18 @@ export class Visitor {
     }
   }
 
-  public static single<const T>(
-    visitor: AstVisitor<any>,
+  /**
+   * TODO: The types here are ugly any should be improved
+   */
+  public static single<T, F>(
+    visitor: AstVisitor<T>,
     node: AstNode,
-    fallback: T,
-    reducer: (a: T, b: T) => T = (a, b) => a || b,
-  ): T {
+    fallback: F,
+    reducer: <A extends T, B extends T>(a: A, b: B) => A | B = (a, b) => a || b,
+  ): ReturnType<typeof reducer> | F {
 
     const result = Visitor.visitWithResult(visitor, node);
-    if (result == undefined) {
+    if (result === undefined) {
       return fallback;
     }
 

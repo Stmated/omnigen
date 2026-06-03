@@ -5,8 +5,7 @@ import jakarta.annotation.Generated;
 import java.util.List;
 
 /**
- * List all things
- * <p>As response: An array of things</p>
+ * An array of things
  */
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ListThingsResponse extends JsonRpcResponse {

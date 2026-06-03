@@ -1,10 +1,7 @@
 import {OmniExclusiveUnionType, OmniModelTransformer, OmniModelTransformerArgs, OmniTypeKind, OmniUnionType} from '@omnigen/api';
 import {OmniUtil} from '../OmniUtil';
-import {LoggerFactory} from '@omnigen/core-log';
 import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2';
 import {MutableProxyReducerInterface} from '../../reducer2/types.ts';
-
-const logger = LoggerFactory.create(import.meta.url);
 
 /**
  * Simplifies nullable primitives so that if there is a composition like `string | null` it becomes just `String`.
@@ -30,17 +27,6 @@ export class SimplifyNullablePrimitivesModelTransformer implements OmniModelTran
         },
       });
     }
-
-    // if (args.options.simplifyTypeHierarchy) {
-    //
-    //   args.model = ProxyReducerOmni2.builder().reduce(args.model, {immutable: false}, {
-    //     INTERSECTION: (n, r) => {
-    //       if (n.types.length === 1) {
-    //         r.replace(r.reduce(n.types[0]));
-    //       }
-    //     },
-    //   });
-    // }
   }
 
   /**
@@ -48,11 +34,11 @@ export class SimplifyNullablePrimitivesModelTransformer implements OmniModelTran
    */
   private static simplifyUnion(
     composition: OmniUnionType | OmniExclusiveUnionType,
-    r: MutableProxyReducerInterface<OmniUnionType | OmniExclusiveUnionType, OmniUnionType | OmniExclusiveUnionType, any, any, any, any>,
+    r: MutableProxyReducerInterface<OmniUnionType | OmniExclusiveUnionType, OmniUnionType | OmniExclusiveUnionType, never, never, never, never>,
   ): void {
 
     let changeCount = 0;
-    let newTypes = [...composition.types];
+    const newTypes = [...composition.types];
 
     if (newTypes.length === 2) {
       for (let i = 0; i < newTypes.length; i++) {
@@ -71,10 +57,16 @@ export class SimplifyNullablePrimitivesModelTransformer implements OmniModelTran
           // TODO: We should not do this -- we're setting "nullable" to the original composition member! It might be used in different contexts!
           // TODO: Instead we should use a type decorator, and say on the decorator that the type is nullable. But decorators are not supported everywhere.
           otherUnwrappedType.nullable = true;
+          if (type.description) {
+            otherUnwrappedType.description = OmniUtil.addTo(otherUnwrappedType.description, type.description);
+          }
+          if (type.summary) {
+            otherUnwrappedType.summary = OmniUtil.addTo(otherUnwrappedType.summary, type.summary);
+          }
 
           if (!OmniUtil.isNullableType(otherUnwrappedType)) {
             const referenceType = OmniUtil.toReferenceType(otherType);
-            newTypes[0] = referenceType
+            newTypes[0] = referenceType;
             if (referenceType !== otherType) {
               changeCount++;
             }

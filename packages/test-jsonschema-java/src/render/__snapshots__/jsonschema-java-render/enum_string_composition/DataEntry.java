@@ -12,14 +12,15 @@ public class DataEntry {
 
   /**
    * The current state of the withdrawal.
-   * <p>
-   * Enum Description
-   * <h2>Examples</h2>
-   * <ul>
-   *   <li>EXECUTING</li>
-   *   <li>EXECUTED</li>
-   *   <li>PENDING</li>
-   * </ul>
+   * <p>Enum Description</p>
+   * <section>
+   *   <h2>Examples</h2>
+   *   <ul>
+   *     <li>{@code "EXECUTING"}</li>
+   *     <li>{@code "EXECUTED"}</li>
+   *     <li>{@code "PENDING"}</li>
+   *   </ul>
+   * </section>
    */
   public String getTransferstate() {
     return this.transferstate;

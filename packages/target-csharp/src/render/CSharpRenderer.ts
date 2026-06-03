@@ -329,7 +329,7 @@ export const createCSharpRenderer = (root: CSharpRootNode, options: PackageOptio
       const indent = '  ';
       const lines = node.children.map(it => join(it.visit(visitor))).join(`</item>\n${indent}<item>`);
 
-      return `<list type="${tag}">\n${indent}<item>${lines}</item>\n</list>`;
+      return `\n<list type="${tag}">\n${indent}<item>${lines}</item>\n</list>`;
     },
     visitFreeTextDefault: (n, v) => `\n<value>Default: ${render(n.content, v).trim()}</value>`,
   };

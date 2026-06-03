@@ -1,7 +1,8 @@
 import {
   AstNameBuildArgs,
   NameParts,
-  Namespace, ObjectEdgeName,
+  Namespace,
+  ObjectEdgeName,
   ObjectName,
   ObjectNameResolveArgs,
   ObjectNameResolver,
@@ -19,7 +20,8 @@ import {
   UnknownKind,
 } from '@omnigen/api';
 import {Naming, OmniUtil} from '../parse';
-import {assertUnreachable, Case} from '../util';
+import {assertDefined, assertUnreachable, Case} from '../util';
+import {utils} from '@omnigen/utils';
 
 export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & TargetOptions & Options> implements ObjectNameResolver<TOpt> {
 
@@ -29,7 +31,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
 
   protected abstract createInterfaceName(innerEdgeName: string, options: TOpt): string;
 
-  //TODO: This should replace all other `type.unknownKind ?? args.options.unknownType` usage out there in the codebase, and likely moved to its own resolver that we can use.
+  // TODO: This should replace all other `type.unknownKind ?? args.options.unknownType` usage out there in the codebase, and likely moved to its own resolver that we can use.
   protected abstract getUnknownKind(type: OmniUnknownType, options: TOpt): UnknownKind;
 
   public abstract parse(fqn: string): ObjectName;
@@ -84,17 +86,17 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
         }
 
         const itemName = this.investigate({...args, type: args.type.of});
-        const name = `ArrayOf${itemName}`;
+        const name = `ArrayOf${this.build({name: itemName, with: NameParts.NAME})}`;
         return this.toObjectName(args.type, name, args.options);
       }
       case OmniTypeKind.TUPLE: {
         // TODO: `[String, String, String]` should be `StringTriplet` and `[Integer, Integer, String]` should be `IntegerPairThenString`
         // TODO: This should be output as just `(String, String String)` in languages like C# that supports tuples
         const itemNames = args.type.types.map(it => this.investigate({...args, type: it}));
-        const name = `TupleOf${itemNames.map(it => it.edgeName).join('')}`;
+        const name = `TupleOf${itemNames.map(it => this.build({name: it, with: NameParts.NAME})).join('')}`;
         return {
           edgeName: name,
-          namespace: itemNames[0].namespace,
+          namespace: assertDefined(itemNames[0]).namespace,
         };
       }
       case OmniTypeKind.ARRAY_PROPERTIES_BY_POSITION: {
@@ -154,7 +156,7 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
         if (args.type.name) {
 
           const name = Naming.unwrap(args.type.name);
-          const commonOptions = /* args.type.model.options as TOpt ||*/ args.options;
+          const commonOptions = /* args.type.model.options as TOpt || */ args.options;
           return this.toObjectName(args.type, name, commonOptions);
         }
 
@@ -243,18 +245,8 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
 
   protected static getDivergentNamespaceIndex(base: Namespace, other: Namespace): number {
 
-    let i = 0;
-    for (; i < base.length && i < other.length; i++) {
-      if (OmniUtil.resolveNamespacePart(base[i]) !== OmniUtil.resolveNamespacePart(other[i])) {
-        return i;
-      }
-    }
-
-    if (base.length != other.length) {
-      return i;
-    }
-
-    return -1;
+    return utils.findIndexAlongside(base, other, (a, b) => OmniUtil.resolveNamespacePart(a) !== OmniUtil.resolveNamespacePart(b))
+      ?? ((base.length !== other.length) ? base.length : -1);
   }
 
   protected getUnknownTypeString(unknownKind: UnknownKind): string {
@@ -322,17 +314,16 @@ export abstract class AbstractObjectNameResolver<TOpt extends PackageOptions & T
         default:
           return this.investigate({...args, type: it, use: TypeUseKind.DECLARED, boxed: true}).edgeName;
       }
-
     }))];
 
     let name: TypeName = {
       name: prefix,
     };
 
-    for (let i = 0; i < uniqueNames.length; i++) {
+    for (const item of uniqueNames) {
       name = {
         prefix: name,
-        name: OmniUtil.resolveObjectEdgeName(uniqueNames[i], args.use),
+        name: OmniUtil.resolveObjectEdgeName(item, args.use),
       };
     }
 

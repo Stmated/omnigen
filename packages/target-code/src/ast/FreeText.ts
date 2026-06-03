@@ -8,6 +8,7 @@ export abstract class AbstractFreeText extends AbstractCodeNode {
 }
 
 export class FreeText extends AbstractFreeText {
+
   readonly text: string;
 
   constructor(text: string) {
@@ -25,6 +26,7 @@ export class FreeText extends AbstractFreeText {
 }
 
 export class FreeTexts extends AbstractFreeText implements AstNodeWithChildren<AnyFreeText> {
+
   readonly children: Array<AnyFreeText>;
 
   constructor(...children: FriendlyFreeTextIn[]) {
@@ -44,6 +46,7 @@ export class FreeTexts extends AbstractFreeText implements AstNodeWithChildren<A
 export type FriendlyFreeTextIn = AnyFreeText | string | Array<FriendlyFreeTextIn>;
 
 export class FreeTextLine extends AbstractFreeText {
+
   readonly child: AnyFreeText;
 
   constructor(text: FriendlyFreeTextIn) {
@@ -61,6 +64,7 @@ export class FreeTextLine extends AbstractFreeText {
 }
 
 export class FreeTextIndent extends AbstractFreeText {
+
   readonly child: AnyFreeText;
 
   constructor(text: FriendlyFreeTextIn) {
@@ -78,6 +82,7 @@ export class FreeTextIndent extends AbstractFreeText {
 }
 
 export class FreeTextParagraph extends AbstractFreeText {
+
   readonly child: AnyFreeText;
 
   constructor(text: FriendlyFreeTextIn) {
@@ -95,6 +100,7 @@ export class FreeTextParagraph extends AbstractFreeText {
 }
 
 export class FreeTextList extends AbstractFreeText {
+
   readonly children: AnyFreeText[];
   readonly ordered: boolean;
 
@@ -114,6 +120,7 @@ export class FreeTextList extends AbstractFreeText {
 }
 
 export class FreeTextHeader extends AbstractFreeText {
+
   readonly level: number;
   readonly child: AnyFreeText;
 
@@ -133,6 +140,7 @@ export class FreeTextHeader extends AbstractFreeText {
 }
 
 export class FreeTextSection extends AbstractFreeText {
+
   readonly header: FreeTextHeader;
   readonly content: AnyFreeText;
 
@@ -152,6 +160,7 @@ export class FreeTextSection extends AbstractFreeText {
 }
 
 export class FreeTextExample extends AbstractFreeText {
+
   readonly content: AnyFreeText;
 
   constructor(content: FriendlyFreeTextIn) {
@@ -169,6 +178,7 @@ export class FreeTextExample extends AbstractFreeText {
 }
 
 export class FreeTextDefault extends AbstractFreeText {
+
   readonly content: AnyFreeText;
 
   constructor(content: FriendlyFreeTextIn) {
@@ -185,7 +195,28 @@ export class FreeTextDefault extends AbstractFreeText {
   }
 }
 
+export class FreeTextDeprecated extends AbstractFreeText {
+
+  readonly reason?: AnyFreeText | undefined;
+
+  constructor(reason?: FriendlyFreeTextIn | undefined) {
+    super();
+    if (reason) {
+      this.reason = FreeTextUtils.fromFriendlyFreeText(reason);
+    }
+  }
+
+  visit<R>(visitor: AstFreeTextVisitor<R>): VisitResult<R> {
+    return visitor.visitFreeTextDeprecated(this, visitor);
+  }
+
+  reduce(reducer: Reducer<AstFreeTextVisitor<unknown>>): ReducerResult<AnyFreeText> {
+    return reducer.reduceFreeTextDeprecated(this, reducer);
+  }
+}
+
 export class FreeTextDefinition extends AbstractFreeText {
+
   readonly title: AnyFreeText;
   readonly content: AnyFreeText;
 
@@ -205,6 +236,7 @@ export class FreeTextDefinition extends AbstractFreeText {
 }
 
 export class FreeTextCode extends AbstractFreeText {
+
   readonly content: AnyFreeText;
 
   constructor(content: FriendlyFreeTextIn) {
@@ -222,6 +254,7 @@ export class FreeTextCode extends AbstractFreeText {
 }
 
 export class FreeTextSummary extends AbstractFreeText {
+
   readonly content: AnyFreeText;
 
   constructor(content: FriendlyFreeTextIn) {
@@ -239,6 +272,7 @@ export class FreeTextSummary extends AbstractFreeText {
 }
 
 export class FreeTextRemark extends AbstractFreeText {
+
   readonly content: AnyFreeText;
 
   constructor(content: FriendlyFreeTextIn) {
@@ -256,6 +290,7 @@ export class FreeTextRemark extends AbstractFreeText {
 }
 
 export class FreeTextTypeLink extends AbstractFreeText {
+
   readonly type: AstNode;
 
   constructor(type: AstNode) {
@@ -273,6 +308,7 @@ export class FreeTextTypeLink extends AbstractFreeText {
 }
 
 export class FreeTextMemberLink extends AbstractFreeText {
+
   readonly type: AstNode;
   readonly member: AstNode;
 
@@ -292,6 +328,7 @@ export class FreeTextMemberLink extends AbstractFreeText {
 }
 
 export class FreeTextSee extends AbstractFreeText {
+
   readonly target: AnyFreeText;
   readonly description?: AnyFreeText | undefined;
 
@@ -314,6 +351,7 @@ export class FreeTextSee extends AbstractFreeText {
  * TODO: Remove in favor of the more general "MemberLink"
  */
 export class FreeTextPropertyLink extends AbstractFreeText {
+
   readonly type: AstNode;
   readonly property: OmniProperty;
 
@@ -332,20 +370,24 @@ export class FreeTextPropertyLink extends AbstractFreeText {
   }
 }
 
-export type AnyFreeText =
-  | FreeText
-  | FreeTextParagraph
-  | FreeTextLine
-  | FreeTextIndent
-  | FreeTextHeader
-  | FreeTextSection
-  | FreeTextList
-  | FreeTextPropertyLink
-  | FreeTextMemberLink
-  | FreeTextTypeLink
-  | FreeTexts
-  | FreeTextExample
-  | FreeTextCode
-  | FreeTextSummary
-  | FreeTextRemark
-  | FreeTextSee;
+export type AnyFreeText
+  = FreeText
+    | FreeTextParagraph
+    | FreeTextLine
+    | FreeTextIndent
+    | FreeTextHeader
+    | FreeTextSection
+    | FreeTextList
+    | FreeTextPropertyLink
+    | FreeTextMemberLink
+    | FreeTextTypeLink
+    | FreeTexts
+    | FreeTextExample
+    | FreeTextCode
+    | FreeTextSummary
+    | FreeTextRemark
+    | FreeTextSee
+    | FreeTextDefinition
+    | FreeTextDeprecated
+    | FreeTextDefault
+  ;

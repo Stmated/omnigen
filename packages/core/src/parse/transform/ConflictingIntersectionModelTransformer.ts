@@ -40,11 +40,11 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
     const enumMembers: OmniEnumMember[] = [];
 
     if (type.description) {
-      descriptions.push(type.description);
+      OmniUtil.appendTo(descriptions, type.description);
     }
 
     if (type.summary) {
-      summaries.push(type.summary);
+      OmniUtil.appendTo(descriptions, type.summary);
     }
 
     for (const child of type.types) {
@@ -58,15 +58,11 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
       }
 
       if (child.description) {
-        if (type.description) {
-          summaries.push(child.description);
-        } else {
-          descriptions.push(child.description);
-        }
+        OmniUtil.appendTo(descriptions, child.description);
       }
 
       if (child.summary) {
-        summaries.push(child.summary);
+        OmniUtil.appendTo(summaries, child.summary);
       }
     }
 
@@ -88,15 +84,29 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
         commonDenominator.type.name = type.name;
       }
 
+      if (commonDenominator.type.summary) {
+        OmniUtil.prependTo(summaries, commonDenominator.type.summary);
+      }
+      if (commonDenominator.type.description) {
+        OmniUtil.prependTo(descriptions, commonDenominator.type.description);
+      }
+
       if (summaries.length > 0) {
-        const str = summaries.join(', ');
-        commonDenominator.type.summary = `${commonDenominator.type.summary ?? ''}${str}`;
+        commonDenominator.type.summary = OmniUtil.simplifyArray(summaries);
       }
 
       if (descriptions.length > 0) {
-        const str = descriptions.join(', ');
-        commonDenominator.type.description = `${commonDenominator.type.description ?? ''}${str}`;
+        commonDenominator.type.description = OmniUtil.simplifyArray(descriptions);
       }
+
+      for (const t of type.types) {
+        OmniUtil.addDebugTo(commonDenominator.type, t.debug);
+      }
+
+      OmniUtil.addDebugTo(
+        commonDenominator.type,
+        `Conflicting Intersection to common denominator: enums:${enumCount}, promitives: ${primitiveCount}, other: ${otherCount}`,
+      );
 
       if (enumMembers.length > 0) {
 

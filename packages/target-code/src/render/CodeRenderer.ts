@@ -336,7 +336,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
       } else if (n.kind === Code.CommentKind.DOC) {
 
         const text = base
-          .replaceAll('\n\n', '\n<p>\n')
+          .replaceAll('\n\n', '\n') // Remove any superfluous empty newlines.
           .replaceAll('\n', '\n * ')
           .trim();
 
@@ -707,7 +707,7 @@ export const createCodeRenderer = (root: CodeRootAstNode, options: CodeOptions, 
     },
     visitFreeTextCode: (n, v) => `{@code ${render(n.content, v)}}`,
     visitFreeTextExample: (n, v) => `{@code ${render(n.content, v)}}`,
-    visitFreeTextSummary: (n, v) => `${render(n.content, v)}`,
+    visitFreeTextSummary: (n, v) => `\n${render(n.content, v)}`,
     visitFreeTextSee: (n, v) => {
       const description = n.description ? ` ${render(n.description, v)}` : '';
       return `@see ${render(n.target, v)}${description}`;

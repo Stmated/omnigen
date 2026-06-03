@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "generateCpuProfile": ".ts.profile.cpuprofile",
+    "extendedDiagnostics": true
+  }
+}

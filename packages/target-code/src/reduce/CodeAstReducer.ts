@@ -1,7 +1,7 @@
 import {AstNode, OmniTypeKind, reduce, Reducer, Reference} from '@omnigen/api';
 import * as Code from '../ast/CodeAst';
 import * as FreeText from '../ast/FreeText';
-import {assertDefined, isDefined, OmniUtil} from '@omnigen/core';
+import {assertDefined, assertTypeNode, asTypeNode, isDefined, OmniUtil} from '@omnigen/core';
 import {AstFreeTextVisitor} from '../visitor/FreeTextVisitor';
 import {CodeVisitor} from '../visitor/CodeVisitor';
 
@@ -30,7 +30,11 @@ export const createCodeFreeTextReducer = (partial?: Partial<FreeTextReducer>): F
       } else if (!content) {
         return header;
       } else {
-        return new FreeText.FreeTextSection(header as any, content as any).withIdFrom(n);
+        if (header instanceof FreeText.FreeTextHeader) {
+          return new FreeText.FreeTextSection(header, content).withIdFrom(n);
+        } else {
+          return new FreeText.FreeTextSection(new FreeText.FreeTextHeader(1, header), content).withIdFrom(n);
+        }
       }
     },
     reduceFreeTextLine: (n, r) => reduce(n.child, r, it => new FreeText.FreeTextLine(it).withIdFrom(it)),
@@ -63,6 +67,7 @@ export const createCodeFreeTextReducer = (partial?: Partial<FreeTextReducer>): F
     reduceFreeTextSummary: (n, r) => new FreeText.FreeTextSummary(assertDefined(n.content.reduce(r))).withIdFrom(n),
     reduceFreeTextRemark: (n, r) => new FreeText.FreeTextRemark(assertDefined(n.content.reduce(r))).withIdFrom(n),
     reduceFreeTextDefault: (n, r) => new FreeText.FreeTextDefault(assertDefined(n.content.reduce(r))).withIdFrom(n),
+    reduceFreeTextDeprecated: (n, r) => new FreeText.FreeTextDeprecated(n.reason?.reduce(r)).withIdFrom(n),
     reduceFreeTextDefinition: (n, r) => new FreeText.FreeTextDefinition(assertDefined(n.title.reduce(r)), assertDefined(n.content.reduce(r))).withIdFrom(n),
     ...partial,
   };
@@ -82,15 +87,15 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reduceWildcardType: n => n,
     reduceBoundedType: (n, r) => new Code.BoundedType(
       n.omniType,
-      assertDefined(n.type.reduce(r)),
-      n.upperBound?.reduce(r),
-      n.lowerBound?.reduce(r),
+      assertTypeNode(n.type.reduce(r)),
+      asTypeNode(n.upperBound?.reduce(r)),
+      asTypeNode(n.lowerBound?.reduce(r)),
     ).withIdFrom(n),
-    reduceArrayType: (n, r) => new Code.ArrayType(n.omniType, assertDefined(n.itemTypeNode.reduce(r)), n.implementation).withIdFrom(n),
+    reduceArrayType: (n, r) => new Code.ArrayType(n.omniType, assertTypeNode(n.itemTypeNode.reduce(r)), n.implementation).withIdFrom(n),
     reduceGenericType: (n, r) => {
       const baseType = n.baseType.reduce(r);
       if (baseType && baseType instanceof Code.EdgeType) {
-        const genericArguments = n.genericArguments.map(it => it.reduce(r)).filter(isDefined);
+        const genericArguments = n.genericArguments.map(it => it.reduce(r)).map(asTypeNode).filter(isDefined);
         return new Code.GenericType(baseType.omniType, baseType, genericArguments).withIdFrom(n);
       }
 
@@ -104,7 +109,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       }
 
       return new Code.Parameter(
-        type,
+        assertTypeNode(type),
         assertDefined(n.identifier.reduce(r)),
         n.annotations?.reduce(r),
       ).withIdFrom(n);
@@ -133,7 +138,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reduceModifier: n => n,
     reduceField: (n, r) => {
       const field = new Code.Field(
-        assertDefined(n.type.reduce(r)),
+        assertTypeNode(n.type.reduce(r)),
         assertDefined(n.identifier.reduce(r)),
         n.modifiers?.reduce(r),
         n.initializer?.reduce(r),
@@ -195,7 +200,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reduceMethodDeclarationSignature: (n, r) => {
       return new Code.MethodDeclarationSignature(
         assertDefined(n.identifier.reduce(r)),
-        assertDefined(n.type.reduce(r)),
+        assertTypeNode(n.type.reduce(r)),
         n.parameters?.reduce(r),
         n.modifiers?.reduce(r),
         n.annotations?.reduce(r),
@@ -206,7 +211,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     },
     reduceExtendsDeclaration: (n, r) => new Code.ExtendsDeclaration(assertDefined(n.types.reduce(r))).withIdFrom(n),
     reduceImplementsDeclaration: (n, r) => new Code.ImplementsDeclaration(assertDefined(n.types.reduce(r))).withIdFrom(n),
-    reduceTypeList: (n, r) => new Code.TypeList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
+    reduceTypeList: (n, r) => new Code.TypeList(...n.children.map(it => it.reduce(r)).map(asTypeNode).filter(isDefined)).withIdFrom(n),
     reduceLiteral: n => n,
     reduceIfStatement: (n, r) => new Code.IfStatement(
       assertDefined(n.predicate.reduce(r)),
@@ -235,7 +240,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       ).withIdFrom(n);
     },
     reduceImportStatement: (n, r) => {
-      const type = n.type.reduce(r);
+      const type = asTypeNode(n.type.reduce(r));
       return !type ? undefined : new Code.ImportStatement(type).withIdFrom(n);
     },
     reduceImportList: (n, r) => new Code.ImportList(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
@@ -245,7 +250,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       n.genericArguments?.reduce(r),
     ).withIdFrom(n),
     reduceNewStatement: (n, r) => new Code.NewStatement(
-      assertDefined(n.type.reduce(r)),
+      assertTypeNode(n.type.reduce(r)),
       n.constructorArguments?.reduce(r),
     ).withIdFrom(n),
     reduceThrowStatement: (n, r) => new Code.ThrowStatement(
@@ -259,7 +264,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reduceVariableDeclaration: (n, r) => new Code.VariableDeclaration(
       assertDefined(n.identifier.reduce(r)),
       n.initializer?.reduce(r),
-      n.type?.reduce(r),
+      asTypeNode(n.type?.reduce(r)),
       n.immutable,
     ).withIdFrom(n),
     reduceDeclarationReference: n => n,
@@ -302,7 +307,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
         return undefined;
       }
 
-      const toType = n.toType.reduce(r);
+      const toType = asTypeNode(n.toType.reduce(r));
       if (!toType) {
         return expression;
       }
@@ -317,7 +322,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     },
     reduceClassDeclaration: (n, r) => {
       const dec = new Code.ClassDeclaration(
-        assertDefined(n.type.reduce(r)),
+        assertTypeNode(n.type.reduce(r)),
         assertDefined(n.name.reduce(r)),
         assertDefined(n.body.reduce(r)),
         n.modifiers?.reduce(r),
@@ -336,12 +341,12 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     reduceGenericTypeDeclaration: (n, r) => new Code.GenericTypeDeclaration(
       assertDefined(n.name.reduce(r)),
       n.sourceIdentifier,
-      n.upperBounds?.reduce(r),
-      n.lowerBounds?.reduce(r),
+      asTypeNode(n.upperBounds?.reduce(r)),
+      asTypeNode(n.lowerBounds?.reduce(r)),
     ).withIdFrom(n),
     reduceInterfaceDeclaration: (n, r) => {
       const dec = new Code.InterfaceDeclaration(
-        assertDefined(n.type.reduce(r)),
+        assertTypeNode(n.type.reduce(r)),
         assertDefined(n.name.reduce(r)),
         assertDefined(n.body.reduce(r)),
         n.modifiers?.reduce(r),
@@ -435,7 +440,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
 
       return new Code.ConstructorParameter(
         ref as Reference<AstNode>,
-        assertDefined(n.type.reduce(r)),
+        assertTypeNode(n.type.reduce(r)),
         assertDefined(n.identifier.reduce(r)),
         n.annotations?.reduce(r),
       ).withIdFrom(n);
@@ -447,7 +452,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
     },
     reduceSuperConstructorCall: (n, r) => new Code.SuperConstructorCall(assertDefined(n.arguments.reduce(r))).withIdFrom(n),
 
-    reduceClassName: (n, r) => new Code.ClassName(assertDefined(n.type.reduce(r))).withIdFrom(n),
+    reduceClassName: (n, r) => new Code.ClassName(assertTypeNode(n.type.reduce(r))).withIdFrom(n),
     reduceClassReference: (n, r) => new Code.ClassReference(assertDefined(n.className.reduce(r))).withIdFrom(n),
     reduceArrayInitializer: (n, r) => new Code.ArrayInitializer(...n.children.map(it => it.reduce(r)).filter(isDefined)).withIdFrom(n),
     reduceStaticMemberReference: (n, r) => new Code.StaticMemberReference(
@@ -461,7 +466,7 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
       return (children.length > 0) ? new Code.Nodes(...children).withIdFrom(n) : undefined;
     },
     reduceDecoratingTypeNode: (n, r) => {
-      const of = n.of.reduce(r);
+      const of = asTypeNode(n.of.reduce(r));
       return of ? new Code.DecoratingTypeNode(of, n.omniType).withIdFrom(n) : undefined;
     },
 
@@ -484,14 +489,14 @@ export const createCodeReducer = (partial?: Partial<CodeReducer>): Readonly<Code
 
     reduceTypeNamespace: (n, r) => new Code.TypePath(
       n.parts.map(it => it.reduce(r)).filter(isDefined),
-      assertDefined(n.leaf.reduce(r)),
+      assertTypeNode(n.leaf.reduce(r)),
     ).withIdFrom(n),
 
     reduceGenericRef: n => n,
 
     reduceDelegate: (n, r) => new Code.Delegate(
-      n.parameterTypes.map(it => it.reduce(r)).filter(isDefined),
-      assertDefined(n.returnType.reduce(r)),
+      n.parameterTypes.map(it => it.reduce(r)).map(asTypeNode).filter(isDefined),
+      assertTypeNode(n.returnType.reduce(r)),
       n.kind,
     ).withIdFrom(n),
     reduceDelegateCall: (n, r) => new Code.DelegateCall(

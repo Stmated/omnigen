@@ -1,0 +1,9 @@
+{
+  "description": "Set the count",
+  "parameters": [
+    {
+      "name": "count",
+      "description": "The count value"
+    }
+  ]
+}

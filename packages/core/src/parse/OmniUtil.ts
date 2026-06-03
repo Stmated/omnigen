@@ -64,7 +64,7 @@ export interface TypeCollection {
   edge: OmniType[];
 }
 
-export type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType, b: OmniGenericTargetIdentifierType };
+export type TargetIdentifierTuple = { a: OmniGenericTargetIdentifierType; b: OmniGenericTargetIdentifierType };
 
 type CommonDenominatorOptions = { features: TargetFeatures } & CombineOptions;
 
@@ -485,20 +485,11 @@ export class OmniUtil {
 
   public static hasMeta(type: OmniType): boolean {
 
-    if (('name' satisfies keyof OmniObjectType) in type) {
-      return !!type.name;
-    }
-    if (('description' satisfies keyof OmniObjectType) in type) {
-      return !!type.description;
-    }
-    if (('summary' satisfies keyof OmniObjectType) in type) {
-      return !!type.summary;
-    }
-    if (('title' satisfies keyof OmniObjectType) in type) {
-      return !!type.title;
-    }
-
-    return false;
+    type ObjectKeys = keyof OmniObjectType;
+    return (('name' satisfies ObjectKeys) in type && !!type.name)
+      || (('description' satisfies ObjectKeys) in type && !!type.description)
+      || (('summary' satisfies ObjectKeys) in type && !!type.summary)
+      || (('title' satisfies ObjectKeys) in type && !!type.title);
   }
 
   public static isNull(type: OmniType) {
@@ -591,6 +582,7 @@ export class OmniUtil {
       return ({
         ...type,
         of: ofAsRef,
+        debug: OmniUtil.addDebug(type.debug, `Setting nullable=true to decorating type to make underlying a reference type`),
       } satisfies OmniDecoratingType) as T;
     }
 
@@ -614,6 +606,7 @@ export class OmniUtil {
       return {
         ...type,
         nullable: true,
+        debug: OmniUtil.addDebug(type.debug, `Setting nullable=true to make it a reference type`),
       } satisfies OmniPrimitiveType;
     }
 
@@ -1302,7 +1295,7 @@ export class OmniUtil {
   public static getDistinctTypes(
     types: ReadonlyArray<OmniType>,
     targetFeatures: TargetFeatures,
-    allowedDiffPredicate: (diff: TypeDiffKind) => boolean = (() => false),
+    allowedDiffPredicate: (diff: TypeDiffKind) => boolean = () => false,
   ) {
 
     const distinctTypes: Array<OmniType> = [];
@@ -2016,39 +2009,18 @@ export class OmniUtil {
   public static mergeTypeMeta<T extends OmniType>(from: T, to: typeof from, lossless = true, aggregate = false, important = false): typeof to {
 
     if (from.title || to.title) {
-      to.title = important
-        ? (from.title || to.title)
-        : (to.title || from.title);
+      to.title = (important ? from : to).title || (important ? to : from).title;
     }
 
-    if (aggregate && to.summary && from.summary) {
-      if (to.summary != from.summary) {
-        to.summary = `${to.summary}, ${from.summary}`;
-      }
-    } else if (from.summary) {
-      to.summary = from.summary || to.summary;
+    if (important) {
+      to.description = OmniUtil.addTo(from.description, to.description);
+      to.summary = OmniUtil.addTo(from.summary, to.summary);
+    } else {
+      to.description = OmniUtil.addTo(to.description, from.description);
+      to.summary = OmniUtil.addTo(to.summary, from.summary);
     }
 
-    if (to.description && from.description && !to.summary) {
-      if (important) {
-        to.summary = to.description;
-        to.description = from.description;
-      } else {
-        to.summary = from.description;
-      }
-    } else if (aggregate && to.description && from.description && important) {
-      if (to.description !== from.description && to.summary !== from.description) {
-        to.description = `${to.description}, ${from.description}`;
-      }
-    } else if (aggregate && to.summary && from.description && !important) {
-      if (to.description !== from.description && to.summary !== from.description) {
-        to.summary = `${to.summary}, ${from.description}`;
-      }
-    } else if (from.description) {
-      to.description = from.description || to.description;
-    }
-
-    if (from.examples) {
+    if (from.examples?.length) {
       if (!to.examples) {
         to.examples = [];
       }
@@ -2140,6 +2112,82 @@ export class OmniUtil {
     } else {
       return undefined;
     }
+  }
+
+  public static prependTo<T>(target: Array<T>, value: Arrayable<T>): void {
+
+    if (Array.isArray(value)) {
+      target.splice(0, 0, ...value);
+    } else {
+      target.splice(0, 0, value);
+    }
+  }
+
+  public static appendTo<T>(target: Array<T>, value: Arrayable<T>): void {
+
+    if (Array.isArray(value)) {
+      target.push(...value);
+    } else {
+      target.push(value);
+    }
+  }
+
+  public static simplifyArray<T>(array: Array<T>): Arrayable<T> {
+
+    if (array.length === 1) {
+      return array[0];
+    }
+
+    return array;
+  }
+
+  public static forEach<T>(array: Arrayable<T> | undefined, callback: (v: T, idx: number) => void): void {
+
+    if (array) {
+      if (Array.isArray(array)) {
+        array.forEach(callback);
+      } else {
+        callback(array, 0);
+      }
+    }
+  }
+
+  public static deleteFromArrayable<T>(arrayable: Arrayable<T> | undefined, needle: Arrayable<T> | undefined): Arrayable<T> | undefined {
+
+    if (!arrayable) {
+      return undefined;
+    }
+
+    if (Array.isArray(arrayable)) {
+      if (Array.isArray(needle)) {
+        return OmniUtil.simplifyArray(arrayable.filter(it => !needle.includes(it)));
+      } else {
+        return OmniUtil.simplifyArray(arrayable.filter(it => it != needle));
+      }
+    } else if (arrayable && Array.isArray(needle)) {
+      if (needle.includes(arrayable)) {
+        return undefined;
+      } else {
+        return arrayable;
+      }
+    } else if (arrayable === needle) {
+      return undefined;
+    }
+
+    return arrayable;
+  }
+
+  public static isEmpty<T>(arrayable: Arrayable<T> | undefined): boolean {
+
+    if (arrayable !== undefined) {
+      if (Array.isArray(arrayable)) {
+        return arrayable.length > 0;
+      }
+
+      return !Boolean(arrayable);
+    }
+
+    return false;
   }
 
   public static addTo<T>(target: Arrayable<T> | undefined, value: Arrayable<T> | undefined): Arrayable<T> | undefined {
@@ -2419,10 +2467,10 @@ export class OmniUtil {
   }
 }
 
-export type Diff =
-  PropertyDiff
-  | PropertyTypeDiff
-  | TypeDiff;
+export type Diff
+  = PropertyDiff
+    | PropertyTypeDiff
+    | TypeDiff;
 
 export interface BaseDiff<K extends DiffKind> {
   kind: K;

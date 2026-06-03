@@ -1,0 +1,6 @@
+{
+  "description": "Execute the operation",
+  "summary": "Runs it",
+  "deprecated": true,
+  "returnDescription": "Whether it succeeded"
+}

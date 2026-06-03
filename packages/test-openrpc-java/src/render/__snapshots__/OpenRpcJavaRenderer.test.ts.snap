@@ -63,6 +63,12 @@ exports[`Java Rendering > Type compressions 1`] = `
 ]
 `;
 
+exports[`Java Rendering > api-with-examples 1`] = `
+[
+  "api_with_examples.java",
+]
+`;
+
 exports[`Java Rendering > description-inheritance 1`] = `
 [
   "description_inheritance.java",

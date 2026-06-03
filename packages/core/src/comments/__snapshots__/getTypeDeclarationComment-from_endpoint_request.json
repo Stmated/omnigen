@@ -1,0 +1,10 @@
+{
+  "title": "InnerType",
+  "propertyComments": [
+    {
+      "title": "field",
+      "description": "An important field",
+      "summary": "Field summary"
+    }
+  ]
+}

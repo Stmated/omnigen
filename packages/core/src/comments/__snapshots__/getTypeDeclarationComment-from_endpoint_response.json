@@ -1,0 +1,11 @@
+{
+  "description": "Response object",
+  "title": "ResponseObj",
+  "responseComments": [
+    {
+      "title": "getDataResponse",
+      "description": "Successful response",
+      "summary": "Returns the data"
+    }
+  ]
+}

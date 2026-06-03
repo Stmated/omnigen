@@ -5,9 +5,7 @@ import {OmniTypeKind} from '@omnigen/api';
 import {Util, ZodCompilationUnitsContext} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 import {SerializationLibrary} from '@omnigen/target-java';
-import {SerializationPropertyNameMode} from '@omnigen/target-code';
-
-const logger = LoggerFactory.create(import.meta.url);
+import {IncludeExampleCommentsMode, SerializationPropertyNameMode} from '@omnigen/target-code';
 
 describe('Java Rendering', () => {
 
@@ -67,7 +65,8 @@ describe('Java Rendering', () => {
 
     for (const sourceFileName of aggregated.keys()) {
       const targetContent = aggregated.get(sourceFileName)!;
-      const snapshotFileName = `./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${sourceFileName}.java`;
+      const cleanSourceFileName = sourceFileName.replace('.json', '');
+      const snapshotFileName = `./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${cleanSourceFileName}.java`;
       await ctx.expect(targetContent).toMatchFileSnapshot(snapshotFileName);
     }
 
@@ -229,6 +228,24 @@ describe('Java Rendering', () => {
       javaOptions: {
         singleFile: true,
         singleFileName: ctx.task.name,
+      },
+    });
+
+    ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
+    for (const [fileName, fileContent] of fileContents) {
+      await ctx.expect(fileContent).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}/${fileName}`);
+    }
+  });
+
+  test('api-with-examples', async ctx => {
+
+    vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
+
+    const fileContents = await JavaTestUtils.getFileContentsFromFile('api-with-examples.json', {
+      javaOptions: {
+        singleFile: true,
+        singleFileName: ctx.task.name,
+        includeExampleCommentsMode: IncludeExampleCommentsMode.ALWAYS,
       },
     });
 

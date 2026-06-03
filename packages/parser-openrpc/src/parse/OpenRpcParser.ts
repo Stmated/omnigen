@@ -37,7 +37,7 @@ import {
   TypeName,
   UnknownKind,
 } from '@omnigen/api';
-import {Case, Naming, OmniUtil, ToDefined} from '@omnigen/core';
+import {assertDefined, Case, isDefined, Naming, OmniUtil, ToDefined} from '@omnigen/core';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
@@ -415,7 +415,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     if (method.tags) {
       const tagNames: string[] = [];
       for (let i = 0; i < method.tags.length; i++) {
-        const tag = method.tags[i];
+        const tag = method.tags[i]!;
         const foundName = this._refResolver.getFirstResolved(tag, [...jsonPath, 'tags', `${i}`], v => v.name);
         const trimmed = (foundName ?? '').trim();
         if (trimmed.length > 0) {
@@ -570,11 +570,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       kind: OmniTypeKind.OBJECT,
       name: responseTypeName,
       properties: [],
-      description: method.description,
-      summary: method.summary,
+      // description: contentDescriptor.description,
+      // summary: contentDescriptor.summary,
     };
 
-    OpenRpcParser.addJsonRpcResponseProperties(responseType, method, this._options);
+    OpenRpcParser.addJsonRpcResponseProperties(responseType, this._options);
 
     if (!this._jsonRpcResponseClass) {
 
@@ -892,7 +892,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
     const params = example.params.map((paramOrRef, idx) => {
       const paramJsonPath = [...jsonPath, 'params', `${idx}`];
       const param = this._refResolver.resolve(paramOrRef, paramJsonPath);
-      return this.exampleParamToGenericExampleParam(paramJsonPath, inputProperties, param, idx);
+      return this.exampleParamToGenericExampleParam(inputProperties, param, idx);
     });
 
     const resultJsonPath = [...jsonPath, 'result'];
@@ -925,7 +925,6 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private exampleParamToGenericExampleParam(
-    jsonPath: string[],
     inputProperties: OmniProperty[],
     param: ExampleObject,
     paramIndex: number,
@@ -1243,7 +1242,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
   private static addJsonRpcResponseProperties(
     target: OmniObjectType,
-    _method: MethodObject,
+    // _method: MethodObject,
     options: JsonRpcParserOptions & ParserOptions,
   ): void {
 
@@ -1293,22 +1292,21 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     const continuations: OmniLink[] = [];
     for (let i = 0; i < this.doc.methods.length; i++) {
-      const methodOrRef = this.doc.methods[i];
 
       // TODO: This is probably wrong! The reference can exist in another file; in the file that contains the endpoint
       const methodJsonPath = ['methods', `${i}`];
-      const method = this._refResolver.resolve(methodOrRef, methodJsonPath);
+      const method = this._refResolver.resolve(this.doc.methods[i]!, methodJsonPath);
 
       const links = (method.links || []);
       for (let n = 0; n < links.length; n++) {
-        const linkOrRef = links[n];
+        const linkOrRef = links[n]!;
         const linkJsonPath = [...methodJsonPath, 'links', `${n}`];
         const link = this._refResolver.resolve(linkOrRef, linkJsonPath);
 
         try {
-          continuations.push(this.toOmniLinkFromLinkObject(linkJsonPath, endpoint, endpoints, link, link.hash));
+          continuations.push(this.toOmniLinkFromLinkObject(/* linkJsonPath, */ endpoint, endpoints, link, link.hash));
         } catch (ex) {
-          const errorMessage = `Could not build link for ${endpoint.name}: ${ex instanceof Error ? ex.message : ''}`;
+          const errorMessage = `Could not build link for endpoint '${endpoint.name}': ${ex instanceof Error ? ex.message : ''}`;
           if (!this._preferablyUniqueErrorLogs.has(errorMessage)) {
             this._preferablyUniqueErrorLogs.add(errorMessage);
             logger.error(errorMessage);
@@ -1321,7 +1319,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private getTargetEndpoint(name: string, endpoints: OmniEndpoint[]): OmniEndpoint {
-    let targetEndpoint = endpoints.find(it => it.name == name);
+    let targetEndpoint = endpoints.find(it => it.name === name);
     if (!targetEndpoint) {
       const options = endpoints.map(it => it.name);
       const choice = name;
@@ -1354,7 +1352,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   }
 
   private toOmniLinkFromLinkObject(
-    jsonPath: string[],
+    // jsonPath: string[],
     sourceEndpoint: OmniEndpoint,
     endpoints: OmniEndpoint[],
     link: LinkObject,
@@ -1362,11 +1360,11 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
   ): OmniLink {
 
     const targetEndpoint = this.getTargetEndpoint(link.method || sourceEndpoint.name, endpoints);
-    const paramNames: string[] = Object.keys(link.params as object);
+    const paramNames = Object.keys(link.params);
 
     // The request type is always a class type, since it is created as such by us.
-    const requestClass = targetEndpoint.request.type as OmniObjectType;
-    const requestParamsParameter = requestClass.properties?.find(
+    const requestClassProperties = OmniUtil.getPropertiesOf(targetEndpoint.request.type);
+    const requestParamsParameter = requestClassProperties.find(
       it => OmniUtil.isPropertyNameEqual(it.name, 'params'),
     );
     if (!requestParamsParameter) {
@@ -1384,9 +1382,10 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
       if (requestResultParamParameter) {
 
+        const firstResponse = assertDefined(sourceEndpoint.responses[0]);
         const sourceParameter: OmniLinkSourceParameter = this.toOmniLinkSourceParameterFromLinkObject(
           // The first response is the Result, not Error or otherwise.
-          sourceEndpoint.responses[0].type,
+          firstResponse.type,
           sourceEndpoint.request.type,
           link,
           linkParamName,
@@ -1445,17 +1444,18 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
           : match[1];
 
         // const pathString = value.substring(2, value.length - 1);
-        const pathParts = pathString.split('.');
+        const pathParts = pathString?.split('.') ?? [];
 
-        let propertyPath = this.getPropertyPath(primaryType, pathParts);
-        if (propertyPath.length !== pathParts.length) {
+        let propertyPath = this.getPropertyPath(primaryType, pathParts) ?? [];
+        if (!propertyPath || propertyPath.length !== pathParts.length) {
 
           // The placeholder might be ${params.x} instead of ${result.x}
           // But ${result.a} makes more sense and is more usual, so we try that first.
-          const inputProperties = this.getPropertyPath(secondaryType, pathParts);
+          const inputProperties = this.getPropertyPath(secondaryType, pathParts) ?? [];
           if (inputProperties.length > propertyPath.length) {
             propertyPath = inputProperties;
           } else {
+
             const primaryName = OmniUtil.describe(primaryType);
             const secondaryName = OmniUtil.describe(secondaryType);
             throw new Error(`There is no property path '${pathString}' in '${primaryName}' nor '${secondaryName}'`);
@@ -1471,19 +1471,21 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
 
     return {
       kind: OmniItemKind.LINK_SOURCE_PARAMETER,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       constantValue: value,
     };
   }
 
-  private getPropertyPath(type: OmniType, pathParts: string[]): OmniProperty[] {
+  private getPropertyPath(type: OmniType, pathParts: string[]): OmniProperty[] | undefined {
     const propertyPath: OmniProperty[] = [];
     let pointer = type;
     for (let i = 0; i < pathParts.length; i++) {
+
+      const pathPart = pathParts[i]!;
       if (pointer.kind == OmniTypeKind.OBJECT) {
 
         const property = pointer.properties?.find(
-          it => OmniUtil.isPropertyNameMatching(it.name, pathParts[i]),
+          it => OmniUtil.isPropertyNameMatching(it.name, pathPart),
         );
         if (property) {
           propertyPath.push(property);
@@ -1494,17 +1496,17 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
       } else if (pointer.kind == OmniTypeKind.ARRAY) {
 
         // The target is an array.
-        const indexIndex = pathParts[i].indexOf('[');
+        const indexIndex = pathPart.indexOf('[');
         if (indexIndex != -1) {
           // There is an index in the property path. For not the solution is to strip it.
-          pathParts[i] = pathParts[i].substring(0, indexIndex);
+          pathParts[i] = pathPart.substring(0, indexIndex);
         }
 
         // Redirect the type to the type of the content of the array, and go again.
         pointer = pointer.of;
         i--;
       } else {
-        throw new Error(`Do not know how to handle '${OmniUtil.describe(type)}' in property path '${pathParts.join('.')}'`);
+        return undefined;
       }
     }
 

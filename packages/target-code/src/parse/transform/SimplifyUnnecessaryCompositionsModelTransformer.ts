@@ -1,16 +1,14 @@
 import {
   OMNI_GENERIC_FEATURES,
   OmniCompositionType,
-  OmniExclusiveUnionType, OmniIntersectionType,
   OmniModelTransformer,
   OmniModelTransformerArgs,
   OmniNode,
   OmniType,
   OmniTypeKind,
-  OmniUnionType,
   TargetFeatures,
 } from '@omnigen/api';
-import {isDefined, OmniUtil, ProxyReducerOmni2, ProxyReducerArg2, Naming} from '@omnigen/core';
+import {OmniUtil, ProxyReducerOmni2} from '@omnigen/core';
 
 /**
  * These are examples of unions that we will simplify/remove.

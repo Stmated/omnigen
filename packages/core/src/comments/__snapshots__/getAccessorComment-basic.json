@@ -1,0 +1,7 @@
+{
+  "description": "Accessor for name",
+  "summary": "Name getter",
+  "typeComment": {
+    "description": "The name"
+  }
+}

@@ -8,8 +8,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
-    "dev": "tsc -w",
-    "lint": "TIMING=1 eslint src/**/*.ts* --fix"
+    "dev": "tsc -w"
   },
   "dependencies": {
     "@omnigen/api": "workspace:*",
@@ -24,9 +23,8 @@
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/utils-test": "workspace:*",
     "java-parser": "^3.0.1",
-    "typescript": "5.9.2"
+    "typescript": "catalog:"
   }
 }

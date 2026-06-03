@@ -154,9 +154,8 @@ namespace generated.omnigen
     }
 
     /// <summary>
-    /// List all things
+    /// An array of things
     /// </summary>
-    /// <p>As response: An array of things</p>
     public class ListThingsResponse : JsonRpcResponse
     {
         public ListThingsResponse(string id, IList<Thing> result) : base(id, result) { }

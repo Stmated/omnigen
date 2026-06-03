@@ -1,6 +1,6 @@
-import {OmniType} from '../parse';
-import {PackageOptions} from '../options';
-import {TargetOptions} from '../interpret';
+import { OmniType } from '../parse';
+import { PackageOptions } from '../options';
+import { TargetOptions } from '../interpret';
 
 /**
  * Implementations of this interface deals with creating object names for OmniType.
@@ -39,25 +39,23 @@ export interface ObjectNameResolveArgs<TOpt extends PackageOptions & TargetOptio
   recursion?: OmniType[];
 }
 
-export type AstNameBuildArgs =
-  {
-    name: ObjectName | Namespace,
-    with: NameParts.NAMESPACE,
-    relativeTo?: Namespace | undefined,
-    use?: TypeUseKind.NAMESPACE_DECLARATION | TypeUseKind.IMPORT,
-  }
-  |
-  {
-    name: ObjectName,
-    with: NameParts.NAME,
-    use?: TypeUseKind,
-  }
-  |
-  {
-    name: ObjectName,
-    with: NameParts.FULL,
+export type AstNameBuildArgs
+  = {
+    name: ObjectName | Namespace;
+    with: NameParts.NAMESPACE;
     relativeTo?: Namespace | undefined;
-    use?: TypeUseKind,
+    use?: TypeUseKind.NAMESPACE_DECLARATION | TypeUseKind.IMPORT;
+  }
+  | {
+    name: ObjectName;
+    with: NameParts.NAME;
+    use?: TypeUseKind;
+  }
+  | {
+    name: ObjectName;
+    with: NameParts.FULL;
+    relativeTo?: Namespace | undefined;
+    use?: TypeUseKind;
   };
 
 /**
@@ -103,11 +101,7 @@ export interface NamespacePart {
 export type NamespaceArrayItem = NamespacePart | string;
 export type Namespace = Array<NamespaceArrayItem>;
 
-export type ObjectEdgeName =
-  string
-  | { onUse: string; onImport: string; }
-  ;
-
+export type ObjectEdgeName = string | { onUse: string; onImport: string };
 
 export interface ObjectName {
   namespace: Namespace;

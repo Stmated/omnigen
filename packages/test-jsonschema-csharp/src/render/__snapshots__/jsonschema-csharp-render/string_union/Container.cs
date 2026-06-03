@@ -9,7 +9,7 @@ namespace generated.omnigen
         /// Date of birth (YYYY-MM-DD, ISO 8601) of the beneficiary, or organisational number for the organisation.
         /// </summary>
         /// <remarks>Date string in the ISO 8601 format (YYYY-MM-DD)</remarks>
-        /// <example>2014-04-01</example>
+        /// <example>"2014-04-01"</example>
         [JsonProperty("dateOfBirth")]
         public string DateOfBirth { get; }
 

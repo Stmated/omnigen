@@ -26,12 +26,14 @@ public class RequestData {
 
     /**
      * A description
-     * <p>
-     * Date string in the ISO 8601 format (YYYY-MM-DD), An organization number
-     * <h2>Examples</h2>
-     * <ul>
-     *   <li>2014-04-01</li>
-     * </ul>
+     * <p>Date string in the ISO 8601 format (YYYY-MM-DD)</p>
+     * <p>An organization number</p>
+     * <section>
+     *   <h2>Examples</h2>
+     *   <ul>
+     *     <li>{@code "2014-04-01"}</li>
+     *   </ul>
+     * </section>
      */
     public String getDateOfBirth() {
       return this.dateOfBirth;

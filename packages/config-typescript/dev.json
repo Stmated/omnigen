@@ -1,5 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "dev",
-  "extends": "./base.json"
+  "extends": "./base.json",
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "declaration": false,
+    "declarationMap": false
+  }
 }

@@ -1,0 +1,22 @@
+{
+  "title": "WithExamples",
+  "exampleGroups": [
+    {
+      "examples": [
+        {
+          "value": {
+            "id": 1,
+            "name": "Alice"
+          },
+          "description": "First example"
+        },
+        {
+          "value": {
+            "id": 2,
+            "name": "Bob"
+          }
+        }
+      ]
+    }
+  ]
+}

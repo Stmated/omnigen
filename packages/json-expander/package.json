@@ -19,7 +19,6 @@
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
-    "lint": "TIMING=1 eslint src/**/*.ts* --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "rimraf ./dist && tsc --project ./tsconfig.build.json",
@@ -28,21 +27,20 @@
     "publish-release": "pnpm publish --tag latest --force --access public --no-git-checks=true"
   },
   "dependencies": {
+    "@commander-js/extra-typings": "^12.1.0",
     "@omnigen-org/core-debug": "workspace:*",
-    "commander": "^12.1.0",
-    "@commander-js/extra-typings": "^12.1.0"
+    "commander": "^12.1.0"
   },
   "peerDependencies": {
     "change-case": "^5.4.4",
-    "json-pointer": "^0.6.2",
-    "debug": "^4.3.7"
+    "debug": "^4.3.7",
+    "json-pointer": "^0.6.2"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
-    "@types/debug": "^4.1.12",
+    "@types/debug": "^4.1.13",
     "@types/json-pointer": "^1.0.34",
     "json-stringify-pretty-compact": "^4.0.0",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.1.3"
   }
 }

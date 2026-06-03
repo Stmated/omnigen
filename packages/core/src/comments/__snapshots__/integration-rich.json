@@ -1,0 +1,78 @@
+{
+  "type": {
+    "description": "A thing in the system",
+    "summary": "Thing entity",
+    "title": "Thing",
+    "exampleGroups": [
+      {
+        "title": "get thing #1",
+        "description": "Fetch thing with id 1",
+        "examples": [
+          {
+            "title": "thingId",
+            "value": 1
+          },
+          {
+            "title": "thing result",
+            "value": {
+              "id": 1,
+              "status": "active"
+            },
+            "description": "The fetched thing"
+          }
+        ]
+      }
+    ],
+    "links": [
+      {
+        "sourcePropertyNames": [
+          "id"
+        ],
+        "targetPropertyNames": [
+          "relatedId"
+        ]
+      }
+    ]
+  },
+  "prop": {
+    "description": "Status field",
+    "typeComment": {
+      "constantValue": "active"
+    },
+    "constantValue": "active"
+  },
+  "accessor": {
+    "description": "Unique identifier",
+    "links": [
+      {
+        "sourcePropertyNames": [
+          "id"
+        ],
+        "targetPropertyNames": [
+          "relatedId"
+        ]
+      }
+    ]
+  },
+  "mutator": {
+    "description": "Unique identifier",
+    "parameters": [
+      {
+        "name": "id"
+      }
+    ]
+  },
+  "ctor": {
+    "description": "Build a thing",
+    "parameters": [
+      {
+        "name": "id",
+        "description": "Unique identifier"
+      },
+      {
+        "name": "status",
+        "description": "Status field"
+      }
+    ]
+  }
+}

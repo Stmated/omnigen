@@ -75,6 +75,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     includeGenerated: false,
     orderObjectsByDependency: true,
     serializationEnsureRequiredFieldExistence: false,
+    responseUseComments: true,
   })));
 
   // test('sui-openrpc', async ctx => verify(task, await OpenRpcCSharpTestUtils.render(getFileName(task), {
@@ -95,6 +96,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     orderObjectsByDependency: true,
     includeGeneratedInFileHeader: false,
     serializationEnsureRequiredFieldExistence: false,
+    responseUseComments: true,
   })));
 
   test('method-in-response', async ctx => verify(ctx, await OpenRpcCSharpTestUtils.render(getFileName(ctx), {

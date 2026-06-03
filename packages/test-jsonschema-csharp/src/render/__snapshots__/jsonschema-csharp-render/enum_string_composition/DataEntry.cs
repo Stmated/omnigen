@@ -10,9 +10,9 @@ namespace generated.omnigen
         /// The current state of the withdrawal.
         /// </summary>
         /// <remarks>Enum Description</remarks>
-        /// <example>EXECUTING</example>
-        /// <example>EXECUTED</example>
-        /// <example>PENDING</example>
+        /// <example>"EXECUTING"</example>
+        /// <example>"EXECUTED"</example>
+        /// <example>"PENDING"</example>
         [JsonProperty("transferstate", Required = Required.Always)]
         [Required]
         public string Transferstate { get; }

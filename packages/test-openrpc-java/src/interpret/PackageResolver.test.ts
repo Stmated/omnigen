@@ -29,6 +29,7 @@ describe('PackageResolver', () => {
       serializationLibrary: SerializationLibrary.POJO,
       additionalPropertiesInterfaceAfterDuplicateCount: 1,
       allowCompressInterfaceToInner: false,
+      responseUseComments: true,
     };
 
     const packageOptions: Partial<PackageOptions> = {

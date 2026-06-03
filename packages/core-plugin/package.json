@@ -9,7 +9,6 @@
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsc -w",
-    "lint": "TIMING=1 eslint src/**/*.ts* --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -20,9 +19,8 @@
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
-    "@types/node": "^18.19.122",
+    "@types/node": "^18.19.130",
     "colors": "^1.4.0",
-    "typescript": "5.9.2"
+    "typescript": "catalog:"
   }
 }

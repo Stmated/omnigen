@@ -81,7 +81,7 @@ export class InterfaceExtractorModelTransformer implements OmniModelTransformer 
           }
         }
       } else {
-        logger.warn(`Do something?`);
+        logger.info(`TODO: Do something here? What to do if it is an '${type.kind}'`);
       }
 
     } else if (type.kind == OmniTypeKind.OBJECT || type.kind == OmniTypeKind.INTERFACE || type.kind == OmniTypeKind.ENUM) {

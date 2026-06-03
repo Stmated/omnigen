@@ -1,0 +1,13 @@
+{
+  "title": "SourceObj",
+  "links": [
+    {
+      "sourcePropertyNames": [
+        "srcField"
+      ],
+      "targetPropertyNames": [
+        "tgtField"
+      ]
+    }
+  ]
+}

@@ -27,7 +27,7 @@
   "dependencies": {
     "@commander-js/extra-typings": "^12.1.0",
     "commander": "^12.1.0",
-    "figlet": "^1.8.2",
+    "figlet": "^1.11.0",
     "json-schema": "^0.4.0",
     "zod": "^3.25.76"
   },
@@ -37,7 +37,6 @@
     "@omnigen/core": "workspace:*",
     "@omnigen/core-log": "workspace:*",
     "@omnigen/core-plugin": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
     "@omnigen/parser-jsonschema": "workspace:*",
     "@omnigen/parser-openapi": "workspace:*",
     "@omnigen/parser-openrpc": "workspace:*",
@@ -46,10 +45,10 @@
     "@omnigen/target-java": "workspace:*",
     "@omnigen/target-typescript": "workspace:*",
     "@rollup/plugin-esm-shim": "^0.1.8",
-    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-replace": "^6.0.3",
     "@types/figlet": "^1.7.0",
-    "@types/node": "^18.19.122",
-    "tsx": "^4.20.3",
-    "typescript": "5.9.2"
+    "@types/node": "^18.19.130",
+    "tsx": "^4.21.0",
+    "typescript": "catalog:"
   }
 }

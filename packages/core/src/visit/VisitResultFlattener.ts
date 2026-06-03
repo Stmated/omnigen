@@ -7,12 +7,12 @@ export class VisitResultFlattener {
     return Visitor.flattenToSingle(result);
   }
 
-  public static visitWithSingularResult<const T>(
+  public static visitWithSingularResult<const T, F>(
     visitor: AstVisitor<T>,
     node: AstNode,
-    fallback: T,
-    reducer: (a: T, b: T) => T = (a, b) => a || b,
-  ): T {
+    fallback: F,
+    reducer: <A extends T, B extends T>(a: A, b: B) => A | B = (a, b) => a || b,
+  ): ReturnType<typeof reducer> | F {
     return Visitor.single(visitor, node, fallback, reducer);
   }
 }

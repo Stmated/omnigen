@@ -1,0 +1,22 @@
+{
+  "title": "ResultObj",
+  "exampleGroups": [
+    {
+      "title": "happy path",
+      "description": "Fetch when everything is fine",
+      "examples": [
+        {
+          "title": "id",
+          "value": 42
+        },
+        {
+          "title": "result",
+          "value": {
+            "status": "ok"
+          },
+          "description": "The success result"
+        }
+      ]
+    }
+  ]
+}

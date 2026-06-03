@@ -1,0 +1,12 @@
+{
+  "children": [
+    {
+      "description": "First variant",
+      "title": "ChildA"
+    },
+    {
+      "description": "Second variant summary",
+      "title": "ChildB"
+    }
+  ]
+}

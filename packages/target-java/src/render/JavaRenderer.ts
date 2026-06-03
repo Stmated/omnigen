@@ -1,13 +1,10 @@
 import {Renderer} from '@omnigen/api';
 import * as Java from '../ast/JavaAst';
 import {JavaOptions} from '../options';
-import {LoggerFactory} from '@omnigen/core-log';
 import {createJavaVisitor, JavaVisitor} from '../visit';
 import {JavaUtil} from '../util';
 import {CodeRenderContext, CodeRendererOptions, createCodeRenderer, DefaultCodeRendererOptions, render} from '@omnigen/target-code';
 import {ToHardCodedTypeJavaAstTransformer} from '../transform';
-
-const logger = LoggerFactory.create(import.meta.url);
 
 export type JavaRenderer = JavaVisitor<string> & Renderer;
 

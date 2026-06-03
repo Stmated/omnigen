@@ -16,18 +16,16 @@
   "scripts": {
     "clean": "rimraf ./.turbo && rimraf ./node_modules && rimraf dist",
     "dev": "tsc -w",
-    "lint": "TIMING=1 eslint src/**/*.ts* --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "debug": "^4.4.1",
-    "strip-ansi": "^7.1.0"
+    "debug": "^4.4.3",
+    "strip-ansi": "^7.2.0"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
-    "@types/debug": "^4.1.12",
-    "rimraf": "^6.0.1"
+    "@types/debug": "^4.1.13",
+    "rimraf": "^6.1.3"
   }
 }

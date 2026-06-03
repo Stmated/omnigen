@@ -25,7 +25,9 @@ const logger = LoggerFactory.create(import.meta.url);
 
 try {
   figlet.parseFont('Chunky', chunky);
-  logger.info(`\n${figlet.textSync('Omnigen', 'Chunky')}`);
+  logger.info(`\n${figlet.textSync('Omnigen', {
+    font: 'Chunky'
+  })}`);
 } catch (ex) {
   logger.info(`Omnigen`);
 }
@@ -59,22 +61,23 @@ console.log(`Loaded: ${[CorePlugins, JsonSchemaPlugins, OpenApiPlugins, OpenRpcP
 
   const args: Record<string, string> = {};
   for (const [key, value] of (options.args ?? []).map(it => it.split('='))) {
-    args[key] = value;
-  }
-
-  if (options.types) {
-    if (options.types.length == 1) {
-      args['target'] = options.types[0];
-    } else if (options.types.length > 1) {
-      args['targets'] = options.types.join(',');
+    if (key !== undefined && value !== undefined) {
+      args[key] = value;
     }
   }
 
-  if (options.input.length == 1) {
-    args['file'] = options.input[0];
-  } else {
-    args['file'] = options.input.join(',');
+  if (options.types) {
+    if (options.types.length > 1) {
+      args['targets'] = options.types.join(',');
+    } else {
+      const [first] = options.types;
+      if (first !== undefined) {
+        args['target'] = first;
+      }
+    }
   }
+
+  args['file'] = options.input.join(',');
 
   args['outputDirBase'] = options.output;
   if (options.output) {

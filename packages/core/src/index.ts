@@ -2,6 +2,7 @@ import {PluginAutoRegistry} from '@omnigen/core-plugin';
 import {CommonTransformPlugin, CommonTransform2Plugin, fileWriter, CorePlugin} from './CoreUtilPluginInit';
 
 export * from './ast';
+export * from './comments';
 export * from './parse';
 export * from './util';
 export * from './visit';

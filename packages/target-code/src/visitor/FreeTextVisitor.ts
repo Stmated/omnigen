@@ -21,6 +21,7 @@ export interface AstFreeTextVisitor<R> extends AstVisitor<R> {
   visitFreeTextRemark: VisitFn<FreeText.FreeTextRemark, R, AstFreeTextVisitor<R>>;
   visitFreeTextDefault: VisitFn<FreeText.FreeTextDefault, R, AstFreeTextVisitor<R>>;
   visitFreeTextDefinition: VisitFn<FreeText.FreeTextDefinition, R, AstFreeTextVisitor<R>>;
+  visitFreeTextDeprecated: VisitFn<FreeText.FreeTextDeprecated, R, AstFreeTextVisitor<R>>;
 }
 
 export const createCodeFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisitor<R>>, n?: R): AstFreeTextVisitor<R> => {
@@ -48,6 +49,7 @@ export const createCodeFreeTextVisitor = <R>(partial?: Partial<AstFreeTextVisito
     visitFreeTextRemark: (n, v) => n.content.visit(v),
     visitFreeTextDefault: (n, v) => n.content.visit(v),
     visitFreeTextDefinition: (n, v) => [n.title.visit(v), n.content.visit(v)],
+    visitFreeTextDeprecated: (n, v) => n.reason?.visit(v),
     ...partial,
   };
 };

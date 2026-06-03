@@ -8,6 +8,8 @@ public class description_inheritance {
   /**
    * components_schemas_ResultSchema_description
    * <p>
+   * components_contentDescriptors_ResultDescriptor_schema_description
+   * <p>
    * components_schemas_AbstractOne_description
    */
   public static class AbstractOne extends AbstractOneWithAbstractOnePropertyA {
@@ -38,8 +40,8 @@ public class description_inheritance {
 
     /**
      * components_schemas_NumberOrNull_description
-     * <p>
-     * components_schemas_NumberSchema_OneOf_Number_description
+     * <p>components_schemas_NumberSchema_OneOf_Number_description</p>
+     * <p>components_schemas_NumberSchema_OneOf_Null_description</p>
      */
     public Integer getAbstractOnePropertyA() {
       return this.abstractOnePropertyA;
@@ -236,8 +238,7 @@ public class description_inheritance {
   }
 
   /**
-   * methods_method_description
-   * <p>As response: components_contentDescriptors_ResultDescriptor_description</p>
+   * components_contentDescriptors_ResultDescriptor_description
    */
   public static class MethodResponse extends JsonRpcResponse {
     public MethodResponse(String id, ResultDescriptor result) {

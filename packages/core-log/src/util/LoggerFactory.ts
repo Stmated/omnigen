@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import PrettyError from 'pretty-error';
 import * as process from 'node:process';
 import hsl from 'color-space/hsl.js';
+import {utils} from '@omnigen/utils';
 
 const pe = new PrettyError();
 
@@ -40,6 +41,8 @@ const baseColors = [
   chalk.cyanBright,
   chalk.whiteBright,
 ];
+
+const firstColor = baseColors[0]!;
 
 const namespaceColorMap = new Map<string, string>();
 
@@ -209,7 +212,6 @@ export class LoggerFactory {
   }
 }
 
-
 class DefaultLogger implements Logger {
 
   private static readonly _MAX_LOGGER_NAME_WIDTH = 25;
@@ -261,7 +263,7 @@ class DefaultLogger implements Logger {
         coloredName = newNamespaceColor(this._shortName);
       } else {
 
-        const newNamespaceColor = baseColors[namespaceColorMap.size % baseColors.length];
+        const newNamespaceColor = utils.getArrayItemWithIndexWrapAround(baseColors, namespaceColorMap.size);
         coloredName = newNamespaceColor(this._shortName);
       }
 
@@ -301,7 +303,7 @@ class DefaultLogger implements Logger {
 
   private log(levelIndex: keyof typeof LogLevelStrings & number, colorFn: (str: string) => string, args: any[]): void {
 
-    const level = LogLevelStrings[levelIndex];
+    const level = LogLevelStrings[levelIndex]!;
     if (hasDebugEnv && !Debug.enabled(`${this._name}:${level}`)) {
 
       // This logger has been disabled by the `DEBUG` env.

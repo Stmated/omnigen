@@ -14,12 +14,13 @@ public class Container {
 
   /**
    * Date of birth (YYYY-MM-DD, ISO 8601) of the beneficiary, or organisational number for the organisation.
-   * <p>
-   * Date string in the ISO 8601 format (YYYY-MM-DD)
-   * <h2>Examples</h2>
-   * <ul>
-   *   <li>2014-04-01</li>
-   * </ul>
+   * <p>Date string in the ISO 8601 format (YYYY-MM-DD)</p>
+   * <section>
+   *   <h2>Examples</h2>
+   *   <ul>
+   *     <li>{@code "2014-04-01"}</li>
+   *   </ul>
+   * </section>
    */
   public String getDateOfBirth() {
     return this.dateOfBirth;

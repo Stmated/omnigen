@@ -211,14 +211,14 @@
       "UserRepository": {
         "method": "getRepository",
         "params": {
-          "username": "${result.user.username}",
+          "username": "${result.username}",
           "slug": "${result.slug}"
         }
       },
       "RepositoryPullRequests": {
         "method": "getPullRequestsByRepository",
         "params": {
-          "username": "${result.user.username}",
+          "username": "${result.owner.username}",
           "slug": "${result.slug}"
         }
       },

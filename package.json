@@ -1,7 +1,7 @@
 {
   "name": "omnigen",
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "version": "0.0.6",
-  "packageManager": "pnpm@10.17.1",
   "private": false,
   "type": "module",
   "scripts": {
@@ -11,42 +11,33 @@
     "test": "vitest run",
     "test-report": "REPORT=true vitest run",
     "test:watch": "vitest",
-    "lint": "turbo run lint",
     "dev": "turbo run dev --parallel",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "lint": "eslint src/**/*.ts --fix",
     "sync:prepare": "syncpack list-mismatches",
     "sync:execute": "syncpack fix-mismatches",
     "update": "pnpm up -r",
     "version-patch": "pnpm version patch && turbo run version-patch",
     "publish-snapshot": "turbo run publish-snapshot",
-    "publish-release": "turbo run publish-release"
-  },
-  "syncpack": {
-    "versionGroups": [
-      {
-        "label": "Use workspace protocol when developing local packages",
-        "dependencies": [
-          "$LOCAL"
-        ],
-        "dependencyTypes": [
-          "dev"
-        ],
-        "pinVersion": "workspace:*"
-      }
-    ]
+    "publish-release": "turbo run publish-release",
+    "ts-profile-compile": "tsc -p ./tsconfig.trace.json --noEmit --generateTrace .ts-trace",
+    "ts-profile-install": "npm install --no-save @typescript/analyze-trace",
+    "ts-profile-analyze": "npx analyze-trace .ts-trace",
+    "ts-profile": "pnpm run ts-profile-compile && pnpm run ts-profile-install && pnpm run ts-profile-analyze"
   },
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
-    "@omnigen/eslint-config-custom": "workspace:*",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
-    "esbuild": "^0.25.8",
-    "eslint": "^9.33.0",
+    "esbuild": "^0.28.0",
+    "eslint": "^10.2.0",
+    "jiti": "^2.6.1",
     "madge": "^8.0.0",
-    "syncpack": "^13.0.4",
-    "turbo": "^2.5.8",
-    "typescript": "5.9.2",
-    "vite": "^7.1.1",
+    "turbo": "^2.9.5",
+    "typescript": "catalog:",
+    "typescript-eslint": "^8.58.1",
+    "vite": "^7.3.2",
     "vitest": "^3.2.4"
   },
   "engines": {

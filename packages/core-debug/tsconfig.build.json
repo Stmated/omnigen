@@ -3,7 +3,6 @@
   "extends": "@omnigen/config-typescript/build.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "baseUrl": "./src",
     "outDir": "./dist"
   },
   "exclude": [

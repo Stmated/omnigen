@@ -7,36 +7,36 @@ import {OmniTypeUtil} from '../parse/OmniTypeUtil.ts';
 import {OmniDescribeUtils} from '../parse/OmniDescribeUtils.ts';
 
 interface ProxyReducerOmniNodeOverrides2 {
-  [OmniTypeKind.BOOL]: OmniType | undefined,
-  [OmniTypeKind.CHAR]: OmniType | undefined,
-  [OmniTypeKind.DECIMAL]: OmniType | undefined,
-  [OmniTypeKind.DECORATING]: OmniType | undefined,
-  [OmniTypeKind.DICTIONARY]: OmniType | undefined,
-  [OmniTypeKind.DOUBLE]: OmniType | undefined,
-  [OmniTypeKind.ENUM]: OmniType | undefined,
-  [OmniTypeKind.EXCLUSIVE_UNION]: OmniType | undefined,
-  [OmniTypeKind.EXTERNAL_MODEL_REFERENCE]: OmniType | undefined,
-  [OmniTypeKind.FLOAT]: OmniType | undefined,
-  [OmniTypeKind.GENERIC_SOURCE]: OmniType | undefined,
-  [OmniTypeKind.GENERIC_TARGET]: OmniType | undefined,
-  [OmniTypeKind.HARDCODED_REFERENCE]: OmniType | undefined,
-  [OmniTypeKind.INTEGER]: OmniType | undefined,
-  [OmniTypeKind.INTEGER_SMALL]: OmniType | undefined,
-  [OmniTypeKind.INTERFACE]: OmniType | undefined,
-  [OmniTypeKind.INTERSECTION]: OmniType | undefined,
-  [OmniTypeKind.LONG]: OmniType | undefined,
-  [OmniTypeKind.NEGATION]: OmniType | undefined,
-  [OmniTypeKind.NULL]: OmniType | undefined,
-  [OmniTypeKind.NUMBER]: OmniType | undefined,
-  [OmniTypeKind.OBJECT]: OmniType | undefined,
-  [OmniTypeKind.STRING]: OmniType | undefined,
-  [OmniTypeKind.TUPLE]: OmniType | undefined,
-  [OmniTypeKind.UNDEFINED]: OmniType | undefined,
-  [OmniTypeKind.UNION]: OmniType | undefined,
-  [OmniTypeKind.UNKNOWN]: OmniType | undefined,
-  [OmniTypeKind.VOID]: OmniType | undefined,
+  [OmniTypeKind.BOOL]: OmniType | undefined;
+  [OmniTypeKind.CHAR]: OmniType | undefined;
+  [OmniTypeKind.DECIMAL]: OmniType | undefined;
+  [OmniTypeKind.DECORATING]: OmniType | undefined;
+  [OmniTypeKind.DICTIONARY]: OmniType | undefined;
+  [OmniTypeKind.DOUBLE]: OmniType | undefined;
+  [OmniTypeKind.ENUM]: OmniType | undefined;
+  [OmniTypeKind.EXCLUSIVE_UNION]: OmniType | undefined;
+  [OmniTypeKind.EXTERNAL_MODEL_REFERENCE]: OmniType | undefined;
+  [OmniTypeKind.FLOAT]: OmniType | undefined;
+  [OmniTypeKind.GENERIC_SOURCE]: OmniType | undefined;
+  [OmniTypeKind.GENERIC_TARGET]: OmniType | undefined;
+  [OmniTypeKind.HARDCODED_REFERENCE]: OmniType | undefined;
+  [OmniTypeKind.INTEGER]: OmniType | undefined;
+  [OmniTypeKind.INTEGER_SMALL]: OmniType | undefined;
+  [OmniTypeKind.INTERFACE]: OmniType | undefined;
+  [OmniTypeKind.INTERSECTION]: OmniType | undefined;
+  [OmniTypeKind.LONG]: OmniType | undefined;
+  [OmniTypeKind.NEGATION]: OmniType | undefined;
+  [OmniTypeKind.NULL]: OmniType | undefined;
+  [OmniTypeKind.NUMBER]: OmniType | undefined;
+  [OmniTypeKind.OBJECT]: OmniType | undefined;
+  [OmniTypeKind.STRING]: OmniType | undefined;
+  [OmniTypeKind.TUPLE]: OmniType | undefined;
+  [OmniTypeKind.UNDEFINED]: OmniType | undefined;
+  [OmniTypeKind.UNION]: OmniType | undefined;
+  [OmniTypeKind.UNKNOWN]: OmniType | undefined;
+  [OmniTypeKind.VOID]: OmniType | undefined;
 
-  [OmniItemKind.MODEL]: OmniModel,
+  [OmniItemKind.MODEL]: OmniModel;
 }
 
 export function assertProxySuperType2(type: undefined): undefined;
@@ -252,7 +252,9 @@ const DEFAULT_PROXY_REDUCER_OMNI_SPEC2: Spec2<OmniNode, 'kind', ProxyReducerOmni
     r.yieldBase();
   },
   EXAMPLE_PARAM: (n, r) => {
-    r.put('property', assertDefined(r.reduce(n.property)));
+    if (n.property) {
+      r.put('property', r.reduce(n.property));
+    }
     r.put('type', assertDefined(r.reduce(n.type)));
     r.yieldBase();
   },

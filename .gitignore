@@ -5,6 +5,7 @@
 .cache
 .local-pack
 .npm.work
+*.cpuprofile
 *.iml
 node_modules
 build/**
@@ -15,6 +16,7 @@ lib
 .next/**
 .target_test
 *.log
+.pnp.*
 target
 .performance-profile.json
 .profiling

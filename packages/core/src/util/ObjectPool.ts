@@ -54,7 +54,12 @@ export class ObjectPool<T> {
     }
 
     const value = this._cache[this._cursor];
+    if (!value) {
+      throw new Error(`There was a null entry inside the object pool cache at index ${this._cursor} (of ${this._cache.length})`);
+    }
+
     this._cache[this._cursor++] = null as unknown as T;
+
     return value;
   }
 
@@ -109,6 +114,10 @@ export class ObjectPool<T> {
    * @param count - The integer number of values to produce.
    */
   public allocate(count: number): void {
+    if (count <= 0) {
+      throw new Error(`Cannot allocate <= 0 instances to the pool`);
+    }
+
     const prevLength = this._cache.length;
     const nextLength = this._cache.length += count;
 

@@ -83,6 +83,7 @@ describe('InnerTypeCompression', () => {
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,
         compressSoloReferencedTypes: true,
         compressUnreferencedSubTypes: true,
+        responseUseComments: true,
       },
     });
 

@@ -19,8 +19,9 @@ namespace generated.omnigen
         /// <summary>
         /// A description
         /// </summary>
-        /// <remarks>Date string in the ISO 8601 format (YYYY-MM-DD), An organization number</remarks>
-        /// <example>2014-04-01</example>
+        /// <remarks>Date string in the ISO 8601 format (YYYY-MM-DD)</remarks>
+        /// <remarks>An organization number</remarks>
+        /// <example>"2014-04-01"</example>
         [JsonProperty("DateOfBirth")]
         public string DateOfBirth { get; }
 

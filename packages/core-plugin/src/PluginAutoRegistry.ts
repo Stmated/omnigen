@@ -23,9 +23,11 @@ export class PluginAutoRegistry {
       PluginAutoRegistry.registerInternal(this._store, plugins);
     } else {
 
-      for (let i = 0; i < plugins.length; i++) {
-        plugins[i] = PluginAutoRegistry.registerInternal(this._store, plugins[i]);
-      }
+      const store = this._store;
+      const registeredPlugins = plugins.map(it => PluginAutoRegistry.registerInternal(store, it));
+
+      plugins.length = 0;
+      plugins.push(...registeredPlugins);
     }
 
     return plugins;

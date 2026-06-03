@@ -1,0 +1,17 @@
+{
+  "description": "Construct a person",
+  "parameters": [
+    {
+      "name": "firstName",
+      "description": "First name"
+    },
+    {
+      "name": "lastName",
+      "description": "Last name",
+      "summary": "Surname"
+    },
+    {
+      "name": "age"
+    }
+  ]
+}

@@ -111,16 +111,16 @@ export type OmniArrayTypes = OmniArrayType | OmniArrayPropertiesByPositionType |
 
 export type OmniGenericIdentifierType = OmniGenericSourceIdentifierType | OmniGenericTargetIdentifierType;
 export type OmniGenericType = OmniGenericIdentifierType | OmniGenericSourceType | OmniGenericTargetType;
-export type OmniSubTypeCapableType =
-  OmniObjectType
-  | OmniEnumType
-  | OmniInterfaceType
-  | OmniExternalModelReferenceType<OmniSubTypeCapableType>
-  | OmniDecoratingType<OmniSubTypeCapableType>
-  | OmniIntersectionType<OmniSubTypeCapableType>
-  | OmniUnionType<OmniSubTypeCapableType>
-  | OmniExclusiveUnionType<OmniSubTypeCapableType>
-  | OmniNegationType<OmniSubTypeCapableType>
+export type OmniSubTypeCapableType
+  = | OmniObjectType
+    | OmniEnumType
+    | OmniInterfaceType
+    | OmniExternalModelReferenceType<OmniSubTypeCapableType>
+    | OmniDecoratingType<OmniSubTypeCapableType>
+    | OmniIntersectionType<OmniSubTypeCapableType>
+    | OmniUnionType<OmniSubTypeCapableType>
+    | OmniExclusiveUnionType<OmniSubTypeCapableType>
+    | OmniNegationType<OmniSubTypeCapableType>
   ;
 
 /**
@@ -130,75 +130,75 @@ export type OmniSubTypeCapableType =
 export type OmniInterfaceOrObjectType = OmniInterfaceType | OmniObjectType | OmniDecoratingType<OmniInterfaceOrObjectType>;
 
 // TODO: This need to be moved to be more language-specific, since it is not true for many languages
-export type OmniSuperTypeCapableType =
-  OmniObjectType
-  | OmniInterfaceType
-  | OmniGenericTargetType
-  | OmniEnumType
-  | OmniHardcodedReferenceType
-  | OmniIntersectionType<OmniSuperTypeCapableType>
-  | OmniUnionType<OmniSuperTypeCapableType>
-  | OmniExclusiveUnionType<OmniSuperTypeCapableType>
-  | OmniNegationType<OmniSuperTypeCapableType>
-  | OmniExternalModelReferenceType<OmniSuperTypeCapableType> // Needs to be unwrapped/resolved every time
-  | OmniDecoratingType<OmniSuperTypeCapableType>
-  | OmniPrimitiveType
+export type OmniSuperTypeCapableType
+  = | OmniObjectType
+    | OmniInterfaceType
+    | OmniGenericTargetType
+    | OmniEnumType
+    | OmniHardcodedReferenceType
+    | OmniIntersectionType<OmniSuperTypeCapableType>
+    | OmniUnionType<OmniSuperTypeCapableType>
+    | OmniExclusiveUnionType<OmniSuperTypeCapableType>
+    | OmniNegationType<OmniSuperTypeCapableType>
+    | OmniExternalModelReferenceType<OmniSuperTypeCapableType> // Needs to be unwrapped/resolved every time
+    | OmniDecoratingType<OmniSuperTypeCapableType>
+    | OmniPrimitiveType
   ;
 
-export type OmniSuperGenericTypeCapableType =
-  OmniObjectType
-  | OmniInterfaceType
-  | OmniDecoratingType<OmniSuperTypeCapableType>
-  | OmniExternalModelReferenceType<OmniSuperGenericTypeCapableType> // Needs to be unwrapped/resolved every time
-  | OmniHardcodedReferenceType
+export type OmniSuperGenericTypeCapableType
+  = | OmniObjectType
+    | OmniInterfaceType
+    | OmniDecoratingType<OmniSuperTypeCapableType>
+    | OmniExternalModelReferenceType<OmniSuperGenericTypeCapableType> // Needs to be unwrapped/resolved every time
+    | OmniHardcodedReferenceType
   ;
 
-export type OmniTypeComposition =
-  OmniIntersectionType
-  | OmniUnionType
-  | OmniExclusiveUnionType
-  | OmniNegationType
+export type OmniTypeComposition
+  = | OmniIntersectionType
+    | OmniUnionType
+    | OmniExclusiveUnionType
+    | OmniNegationType
   ;
 
-export type OmniPrimitiveNumericType =
-  OmniPrimitiveBaseType<typeof OmniTypeKind.INTEGER_SMALL>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.INTEGER>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.LONG>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.DOUBLE>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.FLOAT>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.DECIMAL>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.NUMBER>
+export type OmniPrimitiveNumericType
+  = | OmniPrimitiveBaseType<typeof OmniTypeKind.INTEGER_SMALL>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.INTEGER>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.LONG>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.DOUBLE>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.FLOAT>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.DECIMAL>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.NUMBER>
   ;
 
-export type OmniPrimitiveType =
-  OmniPrimitiveNumericType
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.STRING>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.CHAR>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.BOOL>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.VOID>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.NULL>
-  | OmniPrimitiveBaseType<typeof OmniTypeKind.UNDEFINED>
+export type OmniPrimitiveType
+  = | OmniPrimitiveNumericType
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.STRING>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.CHAR>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.BOOL>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.VOID>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.NULL>
+    | OmniPrimitiveBaseType<typeof OmniTypeKind.UNDEFINED>
   ;
 
-export type OmniType =
-  | OmniArrayTypes
-  | OmniObjectType
-  | OmniUnknownType
-  | OmniDictionaryType
-  | OmniHardcodedReferenceType
-  | OmniExternalModelReferenceType
-  | OmniPrimitiveType
-  | OmniTypeComposition
-  | OmniEnumType
-  | OmniGenericType
-  | OmniInterfaceType
-  | OmniDecoratingType
+export type OmniType
+  = | OmniArrayTypes
+    | OmniObjectType
+    | OmniUnknownType
+    | OmniDictionaryType
+    | OmniHardcodedReferenceType
+    | OmniExternalModelReferenceType
+    | OmniPrimitiveType
+    | OmniTypeComposition
+    | OmniEnumType
+    | OmniGenericType
+    | OmniInterfaceType
+    | OmniDecoratingType
   ;
 
 export type UnwrappableTypes<Inner extends OmniType> = (OmniExternalModelReferenceType<Inner> | OmniDecoratingType<Inner>) & OmniTypeWithInnerType<Inner>;
 
-export type SmartUnwrappedType<T extends OmniNode | undefined> =
-  T extends undefined
+export type SmartUnwrappedType<T extends OmniNode | undefined>
+  = T extends undefined
     ? undefined
     : T extends UnwrappableTypes<infer R>
       ? Exclude<R, UnwrappableTypes<any>>
@@ -255,12 +255,12 @@ export interface OmniBaseType<T extends OmniTypeKind> {
   absoluteUri?: string | undefined;
   accessLevel?: OmniAccessLevel | undefined;
   title?: string | undefined;
-  description?: string | undefined;
+  description?: Arrayable<string> | undefined;
 
   /**
    * Rename to `remarks` to separate it more clearly from 'description'. Or remove in favor of making `description` an array where order is importance.
    */
-  summary?: string | undefined;
+  summary?: Arrayable<string> | undefined;
 
   debug?: DebugValue;
 
@@ -292,11 +292,12 @@ export type OmniCompositionType<T extends OmniType = OmniType, CK extends OmniKi
   OmniIntersectionType<T>
   | OmniUnionType<T>
   | OmniExclusiveUnionType<T>
-  | OmniNegationType<T>
-  , { kind: CK }>
+  | OmniNegationType<T>,
+  { kind: CK }>
   ;
 
-export interface OmniDictionaryType<K extends OmniType = OmniType, V extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.DICTIONARY>, OmniOptionallyNamedType {
+export interface OmniDictionaryType<K extends OmniType = OmniType, V extends OmniType = OmniType>
+  extends OmniBaseType<typeof OmniTypeKind.DICTIONARY>, OmniOptionallyNamedType {
   keyType: K;
   valueType: V;
   dictionaryKind?: DictionaryKind;
@@ -306,7 +307,8 @@ export interface OmniHardcodedReferenceType extends OmniBaseType<typeof OmniType
   fqn: ObjectName;
 }
 
-export interface OmniExternalModelReferenceType<TType extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.EXTERNAL_MODEL_REFERENCE>, OmniNamedType, OmniTypeWithInnerType<TType> {
+export interface OmniExternalModelReferenceType<TType extends OmniType = OmniType>
+  extends OmniBaseType<typeof OmniTypeKind.EXTERNAL_MODEL_REFERENCE>, OmniNamedType, OmniTypeWithInnerType<TType> {
   model: OmniModel;
   name: TypeName;
 }
@@ -315,7 +317,8 @@ interface OmniArrayBase {
   arrayKind?: OmniArrayKind | undefined;
 }
 
-export interface OmniArrayType<Item extends OmniType = OmniType> extends OmniBaseType<typeof OmniTypeKind.ARRAY>, OmniTypeWithInnerType<Item>, OmniArrayBase, OmniOptionallyNamedType {
+export interface OmniArrayType<Item extends OmniType = OmniType>
+  extends OmniBaseType<typeof OmniTypeKind.ARRAY>, OmniTypeWithInnerType<Item>, OmniArrayBase, OmniOptionallyNamedType {
   minLength?: number | undefined;
   maxLength?: number | undefined;
   possiblySingle?: boolean;
@@ -470,7 +473,7 @@ export interface OmniPrimitiveBaseType<K extends OmniPrimitiveKinds = OmniPrimit
    * TODO: Should perhaps be an OmniPrimitiveType instead, with `literal: true` -- so we can have more lossless handling of the value (like comments for the "default" value)
    * TODO: Perhaps also remove the `literal` boolean and instead have two different `defaultValue` and `constValue` properties here instead, to separate them and make them clearer
    */
-  value?: OmniPrimitiveConstantValue | OmniPrimitiveConstantValue[] | undefined;
+  value?: Arrayable<OmniPrimitiveConstantValue> | undefined;
   /**
    * aka `const` -- cannot be set, it is a static, literal value that can be inlined without any issues.
    */
@@ -493,29 +496,29 @@ export interface OmniEnumMember extends OmniItemBase<typeof OmniItemKind.ENUM_ME
   description?: string;
 }
 
-export type OmniItem =
-  OmniModel
-  | OmniEnumMember
-  | OmniProperty
-  | OmniExample<unknown>
-  | OmniLicense
-  | OmniContact
-  | OmniLink
-  | OmniLinkMapping
-  | OmniLinkSourceParameter
-  | OmniLinkTargetParameter
-  | OmniEndpoint
-  | OmniExternalDocumentation
-  | OmniServer
-  | OmniCallback
-  | OmniExamplePairing
-  | OmniExampleParam
-  | OmniExampleResult
-  | OmniTransport
-  | OmniPayloadPathQualifier
-  | OmniOutput
-  | OmniInput
-  | OmniSubTypeHint
+export type OmniItem
+  = OmniModel
+    | OmniEnumMember
+    | OmniProperty
+    | OmniExample<unknown>
+    | OmniLicense
+    | OmniContact
+    | OmniLink
+    | OmniLinkMapping
+    | OmniLinkSourceParameter
+    | OmniLinkTargetParameter
+    | OmniEndpoint
+    | OmniExternalDocumentation
+    | OmniServer
+    | OmniCallback
+    | OmniExamplePairing
+    | OmniExampleParam
+    | OmniExampleResult
+    | OmniTransport
+    | OmniPayloadPathQualifier
+    | OmniOutput
+    | OmniInput
+    | OmniSubTypeHint
   ;
 
 export type OmniNode = OmniType | OmniItem;
@@ -530,7 +533,7 @@ export interface OmniEnumType extends OmniBaseType<typeof OmniTypeKind.ENUM>, Om
 export interface OmniGenericSourceIdentifierType<
   Lower extends OmniType = OmniType,
   Upper extends OmniType = OmniType,
-  Edges extends OmniType[] = OmniType[]
+  Edges extends OmniType[] = OmniType[],
 > extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE_IDENTIFIER> {
 
   placeholderName: string;
@@ -554,11 +557,15 @@ export interface OmniGenericTargetIdentifierType<T extends OmniType = OmniType> 
   type: T;
 }
 
-export interface OmniGenericSourceType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE>, OmniTypeWithInnerType<T> {
+export interface OmniGenericSourceType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType>
+  extends OmniBaseType<typeof OmniTypeKind.GENERIC_SOURCE>, OmniTypeWithInnerType<T> {
+
   sourceIdentifiers: OmniGenericSourceIdentifierType[];
 }
 
-export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType> extends OmniBaseType<typeof OmniTypeKind.GENERIC_TARGET> {
+export interface OmniGenericTargetType<T extends OmniSuperGenericTypeCapableType = OmniSuperGenericTypeCapableType>
+  extends OmniBaseType<typeof OmniTypeKind.GENERIC_TARGET> {
+
   source: OmniGenericSourceType<T>;
   targetIdentifiers: OmniGenericTargetIdentifierType[];
 }
@@ -585,7 +592,7 @@ export interface OmniOutput extends OmniItemBase<typeof OmniItemKind.OUTPUT> {
 
 export interface OmniExampleParam extends OmniItemBase<typeof OmniItemKind.EXAMPLE_PARAM> {
   name: string;
-  property: OmniProperty;
+  property: OmniProperty | undefined;
   description?: string | undefined;
   summary?: string | undefined;
   type: OmniType;
@@ -643,9 +650,9 @@ export interface OmniMessageQueueTransport extends OmniItemBase<typeof OmniItemK
   path: string;
 }
 
-export type OmniTransport =
-  OmniHttpTransport
-  | OmniMessageQueueTransport;
+export type OmniTransport
+  = OmniHttpTransport
+    | OmniMessageQueueTransport;
 
 export interface OmniEndpoint extends OmniItemBase<typeof OmniItemKind.ENDPOINT> {
   name: string;

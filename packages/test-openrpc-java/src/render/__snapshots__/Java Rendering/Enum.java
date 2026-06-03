@@ -160,8 +160,7 @@ public class Enum {
   }
 
   /**
-   * List all things
-   * <p>As response: An array of things</p>
+   * An array of things
    */
   public static class ListThingsResponse extends JsonRpcResponse {
     public ListThingsResponse(String id, List<Thing> result) {

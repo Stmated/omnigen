@@ -1,4 +1,4 @@
-import {beforeEach, describe, TaskContext, TestContext, test, vi} from 'vitest';
+import {beforeEach, describe, TestContext, test, vi} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OpenRpcCSharpTestUtils} from '../OpenRpcCSharpTestUtils';
 import {RenderedCompilationUnit} from '@omnigen/api';
@@ -12,7 +12,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
   });
 
-  async function verify(ctx: TaskContext & TestContext, units: RenderedCompilationUnit[]) {
+  async function verify(ctx: TestContext, units: RenderedCompilationUnit[]) {
     const fileContents = new Map<string, string>();
     for (const cu of units) {
       fileContents.set(cu.fileName, cu.content);
@@ -21,7 +21,7 @@ describe('OpenRpc+CSharp Rendering', () => {
     ctx.expect([...fileContents.keys()].sort()).toMatchSnapshot();
   }
 
-  function getFileName(ctx: TaskContext & TestContext): string {
+  function getFileName(ctx: TestContext): string {
 
     const taskName = ctx.task.name;
     const underscoreIdx = taskName.indexOf('_');

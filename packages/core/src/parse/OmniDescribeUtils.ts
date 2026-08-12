@@ -145,7 +145,12 @@ export class OmniDescribeUtils {
         name: type.properties.map(it => Case.pascal(String(OmniDescribeUtils.getPropertyNameOrPattern(it.name)))).join(''),
       };
     } else if (OmniTypeUtil.isPrimitive(type)) {
-      return OmniDescribeUtils.getVirtualPrimitiveKindName(type.kind, OmniTypeUtil.isNullableType(type));
+      const primitiveName = OmniDescribeUtils.getVirtualPrimitiveKindName(type.kind, OmniTypeUtil.isNullableType(type));
+      if (type.value) {
+        const constantName = OmniDescribeUtils.primitiveConstantValueToString(type.value);
+        return `${primitiveName}=${constantName}`;
+      }
+      return primitiveName;
     } else if (type.kind === OmniTypeKind.UNKNOWN) {
       if (type.valueDefault != undefined) {
         return OmniDescribeUtils.primitiveConstantValueToString(type.valueDefault);

@@ -1,6 +1,6 @@
 import {CommonDenominatorType, OMNI_GENERIC_FEATURES, OmniItemKind, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind, TypeDiffKind} from '@omnigen/api';
 import {Diff, DiffKind, OmniUtil, PropertyTypeDiff} from './OmniUtil';
-import {describe, test, TaskContext, TestContext} from 'vitest';
+import {describe, test, TestContext} from 'vitest';
 
 describe('OmniUtil', () => {
 
@@ -252,7 +252,7 @@ describe('OmniUtil', () => {
   });
 });
 
-const expectA = (ctx: TaskContext & TestContext, a: OmniPrimitiveType, b: OmniPrimitiveType): void => {
+const expectA = (ctx: TestContext, a: OmniPrimitiveType, b: OmniPrimitiveType): void => {
   ctx.expect(expectCommon(a, b).type).toEqual(a);
 };
 

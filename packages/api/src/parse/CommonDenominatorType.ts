@@ -1,9 +1,8 @@
 import {TypeDiffKind} from '../equality';
 import {OmniType} from './OmniModel';
 
-export interface CommonDenominatorType<T = OmniType> {
-
+export type CommonDenominatorType<T = OmniType> = {
   type: T;
+  constructedType?: T | undefined;
   diffs?: TypeDiffKind[] | undefined;
-  created?: boolean;
 }

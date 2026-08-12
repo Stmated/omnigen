@@ -22,7 +22,7 @@ describe('jsonschema-typescript-render', () => {
     }
   });
 
-  test('jsonschema7-lax-undefined', async ctx => {
+  test('jsonschema7-lax-undefined', {timeout: 120_000}, async ctx => {
 
     // vi.useFakeTimers({now: new Date('2000-01-02T03:04:05.000Z')});
 
@@ -41,7 +41,7 @@ describe('jsonschema-typescript-render', () => {
     for (const [fileName, content] of Object.entries(fileContents)) {
       await ctx.expect(content).toMatchFileSnapshot(TestUtils.getSnapshotFileName(ctx, fileName));
     }
-  }, {timeout: 120_000});
+  });
 
   test('output-without-package', async ctx => {
 
@@ -127,7 +127,7 @@ describe('jsonschema-typescript-render', () => {
    *
    * TODO: Currently incorrect output -- it refers to types that does not exist, like `SpecificationExtensions`. Something is wrong and needs narrower test cases.
    */
-  test('openapi', async ctx => {
+  test('openapi', {timeout: 120_000}, async ctx => {
 
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-openapi/schemas/openapi-v31.json'), {
       includeGenerated: false,
@@ -139,9 +139,9 @@ describe('jsonschema-typescript-render', () => {
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
     await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
-  }, {timeout: 120_000});
+  });
 
-  test('openapi-no-merge-mixed-ref', async ctx => {
+  test('openapi-no-merge-mixed-ref', {timeout: 120_000}, async ctx => {
 
     const rendered = await JsonSchemaToTypeScriptTestUtil.render(Util.getPathFromRoot('./packages/parser-openapi/schemas/openapi-v31.json'), {
       includeGenerated: false,
@@ -154,7 +154,7 @@ describe('jsonschema-typescript-render', () => {
     const fileContents = getFileContents(rendered);
     const keys = Object.keys(fileContents);
     await ctx.expect(fileContents[keys[0]]).toMatchFileSnapshot(`./__snapshots__/${ctx.task.suite?.name}/${ctx.task.name}.ts`);
-  }, {timeout: 120_000});
+  });
 
   test('if-then-else', async ctx => {
 

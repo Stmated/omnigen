@@ -1,7 +1,7 @@
 import {OmniItemKind, OmniObjectType, OmniPrimitiveTangibleKind, OmniProperty, OmniSuperTypeCapableType, OmniType, OmniTypeKind} from '@omnigen/api';
 import {OmniModelMerge, Replacement} from './OmniModelMerge';
 import {OmniUtil} from './OmniUtil';
-import {TaskContext, test, TestContext} from 'vitest';
+import {test, TestContext} from 'vitest';
 
 test('Not Similar', async ctx => {
 
@@ -111,7 +111,7 @@ test('Supertype (Diff levels)', async ctx => {
   ], ctx);
 });
 
-function compare(expected: Replacement<OmniType>[], given: Partial<Replacement<OmniType>>[], ctx: TaskContext & TestContext): void {
+function compare(expected: Replacement<OmniType>[], given: Partial<Replacement<OmniType>>[], ctx: TestContext): void {
 
   if (expected.length != given.length) {
     ctx.expect(expected).toEqual(given);

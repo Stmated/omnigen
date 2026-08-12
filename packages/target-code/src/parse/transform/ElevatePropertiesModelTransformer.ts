@@ -126,8 +126,10 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
       const propertyToElevate = info.properties[0];
       const uniqueDiffs = [...new Set(info.typeDiffs ?? [])];
 
-      if (uniqueDiffs.length == 1 && uniqueDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL) {
+      // TODO: Perhaps NOT elevate here if the diff is POLYMORPHIC_LITERAL? See `Test multiple inheritance (interfaces)` test case
 
+      if (uniqueDiffs.length == 1 && uniqueDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL) {
+        // TODO: This whole thing should probably be handled by `getCommonProperties` by giving a certain new CreateMode that allows literals
         if (OmniUtil.isAbstract(superType)) {
 
           // If the only difference is Polymorphic Literal ("hello" vs "hi"), and the supertype is already abstract, then we can add an abstract property.

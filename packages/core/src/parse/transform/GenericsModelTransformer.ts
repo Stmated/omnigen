@@ -9,7 +9,7 @@ import {
   OmniModel,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniModelTransformerArgs, OmniNode,
+  OmniModelTransformerArgs, OmniNode, OmniOwnedProperty,
   OmniProperty,
   OmniPropertyName,
   OmniPropertyOwner,
@@ -30,6 +30,7 @@ import {Case, CreateMode, isDefined, Sorters} from '../../util';
 import {Naming} from '../Naming';
 import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2.ts';
 import {ANY_KIND} from '../../reducer2/types.ts';
+import {OmniTypeUtil} from '../OmniTypeUtil.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -124,7 +125,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
   ): OmniModel {
 
     const commonProperties = PropertyUtil.getCommonProperties(
-      // We do not care *at all* if they have nothing in-common. Just nice if get one.
+      // We do not care AT ALL if they have nothing in-common. Just nice if we get one.
       () => false,
       () => false,
       features,
@@ -288,26 +289,30 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
         ),
       };
 
-      if (info.properties.every(it => it.property.readOnly)) {
-        newProperty.readOnly = true;
-      }
-      if (info.properties.every(it => it.property.writeOnly)) {
-        newProperty.writeOnly = true;
-      }
-      if (info.properties.every(it => it.property.required)) {
-        newProperty.required = true;
-      }
-      if (info.properties.every(it => it.property.deprecated)) {
-        newProperty.deprecated = true;
-      }
-      if (info.properties.every(it => it.property.abstract)) {
-        newProperty.abstract = true;
+      const booleanType: Array<keyof OmniOwnedProperty['property']> = [
+        'readOnly', 'writeOnly', 'required', 'deprecated', 'abstract'
+      ];
+
+      for (const k of booleanType) {
+        if (info.properties.every(it => it.property[k])) {
+          (newProperty as any)[k] = true;
+        }
       }
 
-      const existing = genericSource.of.properties.find(it => it.name === newProperty.name);
+      const existing = genericSource.of.properties.find(it => OmniUtil.isPropertyNameEqual(it.name, newProperty.name));
       if (existing) {
 
-        logger.warn(`Encountered property '${existing.name}' attempted to be added twice, which is unexpected behavior. Replacing with generic version.`);
+        // TODO: Check which one of the two is most generic, and use that one instead.
+        //        Give a more accurate log with different levels depending on severity of situation.
+        const diffs = OmniUtil.getDiff(newProperty.type, existing.type, features);
+        const diffStrings = OmniUtil.getDiffStrings(diffs);
+
+        const newTypeDesc = OmniUtil.describe(newProperty.type);
+        const existingTypeDesc = OmniUtil.describe(existing.type);
+
+        const vsString = `${newTypeDesc} vs ${existingTypeDesc}`;
+
+        logger.warn(`Property '${existing.name}' attempted to be hoisted twice, which is unexpected behavior. Replacing with generic version. Diffs: ${diffStrings.join(', ')}. ${vsString}`);
         const existingIndex = genericSource.of.properties.indexOf(existing);
         genericSource.of.properties.splice(existingIndex, 1, newProperty);
 
@@ -376,7 +381,7 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
   private toGenericUpperBoundType(info: PropertyInformation, features: TargetFeatures): OmniType | undefined {
 
-    if (info.commonType.kind == OmniTypeKind.UNKNOWN) {
+    if (info.commonType.kind === OmniTypeKind.UNKNOWN) {
       return undefined;
     }
 
@@ -391,6 +396,10 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       return OmniUtil.toReferenceType(info.commonType, CreateMode.ANY);
     }
 
-    return info.commonType;
+    // if (info.typeDiffs?.length === 1 && info.typeDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL) {
+    //   return
+    // }
+
+    return info.constructedType ?? info.commonType;
   }
 }

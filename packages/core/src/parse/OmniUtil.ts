@@ -684,7 +684,8 @@ export class OmniUtil {
 
     for (let i = 1; i < types.length; i++) {
 
-      const denominator = OmniUtil.getCommonDenominatorBetween(common.type, types[i], opt.features, opt);
+      const type = common.type ?? common.constructedType;
+      const denominator = OmniUtil.getCommonDenominatorBetween(type, types[i], opt.features, opt);
       if (!denominator) {
         return undefined;
       }
@@ -801,7 +802,8 @@ export class OmniUtil {
 
     let common = OmniUtil.getCommonDenominatorBetween(a.types[0], b, features);
     for (let i = 1; i < a.types.length && common; i++) {
-      common = OmniUtil.getCommonDenominatorBetween(common.type, a.types[i], features);
+      const t = common.constructedType ?? common.type;
+      common = OmniUtil.getCommonDenominatorBetween(t, a.types[i], features);
     }
 
     return common;
@@ -853,7 +855,8 @@ export class OmniUtil {
     }
 
     if (OmniUtil.canCreate(opt?.create, CreateMode.SIMPLE)) {
-      return {type: {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY}, diffs: [TypeDiffKind.ISOMORPHIC_TYPE], created: true};
+      const unknownType: OmniUnknownType = {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY};
+      return {constructedType: unknownType, type: unknownType, diffs: [TypeDiffKind.ISOMORPHIC_TYPE]};
     }
 
     return undefined;
@@ -916,7 +919,7 @@ export class OmniUtil {
 
       commonTargetIdentifiers.push({
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-        type: commonIdentifierType.type,
+        type: commonIdentifierType.constructedType ?? commonIdentifierType.type,
         sourceIdentifier: match.a.sourceIdentifier,
       });
 
@@ -1075,7 +1078,7 @@ export class OmniUtil {
     b: OmniPrimitiveType,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
-  ): CommonDenominatorType<OmniPrimitiveType> | undefined {
+  ): CommonDenominatorType | undefined {
 
     if (a.kind == b.kind && a.nullable == b.nullable && a.value == b.value && a.literal == b.literal) {
       return {type: a};
@@ -1130,13 +1133,25 @@ export class OmniUtil {
     common: CommonDenominatorType<OmniPrimitiveType | undefined>,
     targetFeatures: TargetFeatures,
     opt?: CombineOptions,
-  ): CommonDenominatorType<OmniPrimitiveType> | undefined {
-
-    // Then check if one of them is literal, but if the literal is the common type, then they are not covariant.
-    // const newTypeDifference = (targetFeatures.literalTypes) ? TypeDiffKind.POLYMORPHIC_LITERAL : TypeDiffKind.FUNDAMENTAL_TYPE;
+  ): CommonDenominatorType | undefined {
 
     if (a.literal && b.literal) {
-      return {type: OmniUtil.getGeneralizedType(common.type ?? a, opt?.create), diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL]};
+      if (!common.type) {
+        if (targetFeatures.literalTypes && OmniUtil.canCreate(opt?.create, CreateMode.SIMPLE)) {
+          const union: OmniExclusiveUnionType = {
+            kind: OmniTypeKind.EXCLUSIVE_UNION,
+            types: [a, b],
+            debug: 'Created from two literals with different values, a polymorphic literal type',
+          };
+          return {
+            type: OmniUtil.getGeneralizedType(common.type ?? a, opt?.create),
+            constructedType: union,
+            diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL],
+          };
+        }
+        return undefined;
+      }
+      return {type: OmniUtil.getGeneralizedType(common.type, opt?.create), diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL]};
     } else if (a.literal && !b.literal && common.type == a) {
       return {type: b, diffs: [...(common.diffs ?? []), TypeDiffKind.CONCRETE_VS_ABSTRACT]};
     } else if (!a.literal && b.literal && common.type == b) {
@@ -1631,9 +1646,9 @@ export class OmniUtil {
       };
 
       return {
+        constructedType: newEnum,
         type: newEnum,
         diffs: [TypeDiffKind.MISSING_MEMBERS],
-        created: true,
       };
     }
 
@@ -1893,6 +1908,33 @@ export class OmniUtil {
         return [{kind: DiffKind.TYPE, typeDiffs: common.diffs ?? [TypeDiffKind.FUNDAMENTAL_TYPE]}];
       }
     }
+  }
+
+  public static getDiffStrings(diffs: Diff[]): string[] {
+
+    const diffStrings: string[] = [];
+    for (const diff of diffs) {
+      switch (diff.kind) {
+        case DiffKind.MISSING_PROPERTY:
+          diffStrings.push(`Missing property: ${diff.propertyName}`);
+          break;
+        case DiffKind.EXTRA_PROPERTY:
+          diffStrings.push(`Extra property: ${diff.propertyName}`);
+          break;
+        case DiffKind.PROPERTY_TYPE:
+          diffStrings.push(`Property type difference: ${diff.propertyName}`);
+          break;
+        case DiffKind.TYPE:
+          const strings: string[] = [];
+          for (const typeDiff of diff.typeDiffs ?? []) {
+            strings.push(`${typeDiff}`);
+          }
+          diffStrings.push(`Type difference: ${strings.join(', ')}`);
+          break;
+      }
+    }
+
+    return diffStrings;
   }
 
   public static getDiffOfObjects(baseline: OmniObjectType, other: OmniObjectType, features: TargetFeatures): Diff[] {

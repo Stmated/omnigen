@@ -6,6 +6,7 @@ import {CodeOptions} from '../../options/CodeOptions';
 import {CodeUtil} from '../../util/CodeUtil';
 import {AbstractCodeNode} from '../AbstractCodeNode';
 import {LoggerFactory} from '@omnigen/core-log';
+import {SortVisitorRegistry} from './ReorderMembersAstTransformer.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -74,6 +75,11 @@ export class AddConstructorAstTransformer implements AstTransformer<CodeRootAstN
         new Code.DeclarationReference(parameter),
       )));
     }
+
+    // TODO: Uncomment this? Or decide some other way to make sure that the constructor is reliably sorted somehow.
+    // const comparator = SortVisitorRegistry.INSTANCE;
+    // requiredSuperParameters.sort((a, b) => comparator.compare(root, a, b, options));
+    // parameters.sort((a, b) => comparator.compare(root, a, b, options));
 
     const allConstructorParameters = requiredSuperParameters.concat(parameters);
 

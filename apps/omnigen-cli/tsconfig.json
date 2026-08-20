@@ -6,9 +6,7 @@
     "baseUrl": "./src",
     "outDir": "./dist",
 
-    "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "bundler",
     "sourceMap": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

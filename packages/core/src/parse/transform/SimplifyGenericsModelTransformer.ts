@@ -71,7 +71,7 @@ export class SimplifyGenericsModelTransformer implements OmniModel2ndPassTransfo
           // We just know what types are NOT distinct, according to the language features.
           // But one type might be Literal String and the other a regular String.
           // We should then prefer to have the regular String as result here, to not confuse other code.
-          replacement = OmniUtil.getGeneralizedType(distinctTypes[0]);
+          replacement = OmniUtil.getGeneralizedType(distinctTypes[0]) ?? distinctTypes[0];
         }
       }
 

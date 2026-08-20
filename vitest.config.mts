@@ -41,9 +41,11 @@ export default defineConfig({
     outputFile: {
       html: '.test/html/index.html',
     },
+    onConsoleLog(log, type, entity) {
+      return !(log.includes('[debug') || log.includes('[info'));
+    },
     reporters: reporters,
     coverage: {
-      all: true,
       clean: true,
       enabled: isReport,
       provider: 'v8',

@@ -16,8 +16,8 @@ public class Enum {
   }
 
   public static class ErrorUnknownError extends JsonRpcError {
-    public ErrorUnknownError(JsonNode data, String message, Integer code) {
-      super(data, ((message == null) ? "Unknown Error" : message), ((code == null) ? -1 : code));
+    public ErrorUnknownError(JsonNode data, Integer code, String message) {
+      super(data, ((code == null) ? -1 : code), ((message == null) ? "Unknown Error" : message));
     }
   }
 
@@ -29,10 +29,10 @@ public class Enum {
     private final JsonNode data;
     private final String message;
 
-    public JsonRpcError(JsonNode data, String message, int code) {
+    public JsonRpcError(JsonNode data, int code, String message) {
       this.data = data;
-      this.message = message;
       this.code = code;
+      this.message = message;
     }
 
     public int getCode() {
@@ -142,7 +142,7 @@ public class Enum {
 
   public static class ListThingsError100Error extends JsonRpcError {
     public ListThingsError100Error(JsonNode data, String message) {
-      super(data, ((message == null) ? "Server is busy" : message), 100);
+      super(data, 100, ((message == null) ? "Server is busy" : message));
     }
   }
 

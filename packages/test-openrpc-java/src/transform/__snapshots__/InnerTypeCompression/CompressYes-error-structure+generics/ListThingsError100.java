@@ -22,14 +22,23 @@ public class ListThingsError100 extends JsonRpcErrorResponse<ListThingsError100.
 
   public static class Error extends JsonRpcError {
     private final JsonNode data;
+    private final String message;
 
     public Error(String message, JsonNode data) {
-      super(100, ((message == null) ? "Server is busy" : message));
+      this.message = ((message == null) ? "Server is busy" : message);
       this.data = data;
+    }
+
+    public int getCode() {
+      return 100;
     }
 
     public JsonNode getData() {
       return this.data;
+    }
+
+    public String getMessage() {
+      return this.message;
     }
   }
 }

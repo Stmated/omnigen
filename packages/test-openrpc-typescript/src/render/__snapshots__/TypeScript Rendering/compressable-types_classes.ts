@@ -26,10 +26,10 @@ export class JsonRpcRequest<TParams extends JsonRpcRequestParams<any>, TMethod e
   get method() { return this._method; }
   get params() { return this._params; }
 
-  public constructor(id: string, method: TMethod, params: TParams) {
+  public constructor(id: string, params: TParams, method: TMethod) {
     this._id = id;
-    this._method = method;
     this._params = params;
+    this._method = method;
   }
 
   public get jsonrpc() { return '2.0'; }
@@ -82,7 +82,7 @@ export class GiveIn2GetOut2RequestParams extends JsonRpcRequestParams<In2> {
 
 export class GiveIn2GetOut2Request extends JsonRpcRequest<GiveIn2GetOut2RequestParams, 'give_in2_get_out2'> {
   public constructor(id: string, params: GiveIn2GetOut2RequestParams) {
-    super(id, 'give_in2_get_out2', params);
+    super(id, params, 'give_in2_get_out2');
   }
 }
 
@@ -94,7 +94,7 @@ export class GiveIn1GetOut1RequestParams extends JsonRpcRequestParams<In1> {
 
 export class GiveIn1GetOut1Request extends JsonRpcRequest<GiveIn1GetOut1RequestParams, 'give_in1_get_out1'> {
   public constructor(id: string, params: GiveIn1GetOut1RequestParams) {
-    super(id, 'give_in1_get_out1', params);
+    super(id, params, 'give_in1_get_out1');
   }
 }
 

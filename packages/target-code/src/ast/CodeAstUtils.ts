@@ -463,7 +463,7 @@ export class CodeAstUtils implements AstTargetFunctions {
 
   public static getField(root: Code.CodeRootAstNode, node: Code.AbstractCodeNode, name: string): Code.Field | undefined {
 
-    const defaultVisitor = root.createVisitor();
+    const defaultVisitor = root.createVisitor<Code.Field>();
     return Visitor.single(Visitor.create(defaultVisitor, {
       visitMethodDeclaration: () => {
       },

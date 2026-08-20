@@ -14,7 +14,7 @@ import {
 import {JavaPotentialClassType, JavaUtil} from './JavaUtil.js';
 import {MapArg, TestUtils} from '@omnigen/utils-test';
 import {ANY_KIND, OmniUtil, ProxyReducerOmni2, SimplifyInheritanceModelTransformer} from '@omnigen/core';
-import {describe, test, TaskContext, TestContext} from 'vitest';
+import {describe, test, TestContext} from 'vitest';
 import {LoggerFactory} from '@omnigen/core-log';
 import {AddObjectDeclarationsCodeAstTransformer, SimplifyUnnecessaryCompositionsModelTransformer} from '@omnigen/target-code';
 
@@ -334,7 +334,7 @@ function and<T extends OmniType>(...types: T[]): OmniCompositionType<T, typeof O
   return TestUtils.and(...types);
 }
 
-function assertTypes<T extends OmniType>(ctx: TaskContext & TestContext, actual: T[], expected: T[]) {
+function assertTypes<T extends OmniType>(ctx: TestContext, actual: T[], expected: T[]) {
 
   const actualDescriptions = actual.map(it => OmniUtil.describe(it)).join(', ');
   const expectedDescriptions = expected.map(it => OmniUtil.describe(it)).join(', ');
@@ -342,7 +342,7 @@ function assertTypes<T extends OmniType>(ctx: TaskContext & TestContext, actual:
   ctx.expect(actualDescriptions).toEqual(expectedDescriptions);
 }
 
-function assertMap<T extends OmniType>(ctx: TaskContext & TestContext, expected: Map<T, T[]>, actual: Map<T, T[]>, describer?: (t: T) => string) {
+function assertMap<T extends OmniType>(ctx: TestContext, expected: Map<T, T[]>, actual: Map<T, T[]>, describer?: (t: T) => string) {
 
   if (!describer) {
     describer = v => OmniUtil.describe(v);

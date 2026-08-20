@@ -217,17 +217,17 @@ namespace generated.omnigen
         [JsonProperty("message")]
         public string Message { get; }
 
-        public JsonRpcError(JToken data, string message, int code)
+        public JsonRpcError(JToken data, int code, string message)
         {
             this.Data = data;
-            this.Message = message;
             this.Code = code;
+            this.Message = message;
         }
     }
 
     public class ListThingsError100Error : JsonRpcError
     {
-        public ListThingsError100Error(JToken data, string message) : base(data, message ?? "Server is busy", 100) { }
+        public ListThingsError100Error(JToken data, string message) : base(data, 100, message ?? "Server is busy") { }
     }
 
     /// <summary>
@@ -258,7 +258,7 @@ namespace generated.omnigen
 
     public class ErrorUnknownError : JsonRpcError
     {
-        public ErrorUnknownError(JToken data, string message, int? code) : base(data, message ?? "Unknown Error", code ?? -1) { }
+        public ErrorUnknownError(JToken data, int? code, string message) : base(data, code ?? -1, message ?? "Unknown Error") { }
     }
 
     public class ErrorUnknown : JsonRpcErrorResponse<ErrorUnknownError>

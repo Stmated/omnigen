@@ -32,6 +32,7 @@ that take the generated code, and then through RegEx replace/insert your code wh
 Oh? The project changed how they print the strings and now everything is broken? Tough luck.
 
 ## How it works:
+
 Every code generation goes through these steps:
 * Conversion from schema to common model
 * Execution of transformers over the common model

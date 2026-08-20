@@ -161,8 +161,9 @@ export const TypeScriptPlugin = createPlugin(
     };
 
     const transformers2 = [
-      new ElevatePropertiesModelTransformer(),
+      new ElevatePropertiesModelTransformer(), // First move the obvious properties
       new GenericsModelTransformer(),
+      new ElevatePropertiesModelTransformer(true), // Then move those untouched by the generics transformer
       new RemoveUnnecessaryPropertyModelTransformer(),
       // new PatternPropertyAnyTypeScriptModelTransformer(),
       new AnyToUnknownTypeScriptModelTransformer(),

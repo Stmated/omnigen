@@ -1,12 +1,9 @@
-import {AstNode, AstTransformer, AstTransformerArguments, Direction, OmniPrimitiveType, OmniType, OmniTypeKind, TargetFeatures} from '@omnigen/api';
-import {AbortVisitingWithResult, Case, OmniUtil, Visitor, VisitResultFlattener} from '@omnigen/core';
+import {AstTransformer, AstTransformerArguments} from '@omnigen/api';
+import {OmniUtil} from '@omnigen/core';
 import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../Code';
-import {CodeOptions, SerializationPropertyNameMode} from '../../options/CodeOptions';
-import {CodeAstUtils} from '../CodeAstUtils';
-import {CodeVisitor} from '../../visitor/CodeVisitor';
+import {CodeOptions} from '../../options/CodeOptions';
 import {LoggerFactory} from '@omnigen/core-log';
-import {CodeUtil} from '../../util/CodeUtil';
 
 const logger = LoggerFactory.create(import.meta.url);
 

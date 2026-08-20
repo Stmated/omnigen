@@ -28,7 +28,7 @@ export class SortVisitorRegistry {
 
   public register(comparator: AstNodeComparator, importance = 0): void {
 
-    const weighted = {
+    const weighted: ImportantAstNodeComparator = {
       importance,
       comparator,
     };
@@ -123,6 +123,15 @@ const getWeight = (node: AstNode, root: RootAstNode, options: TargetOptions): [n
     const field = root.resolveNodeRef(node.fieldRef);
     const res = getWeight(field, root, options);
     const name = options.orderMembersByName ? (node.identifier?.value ?? res[1]) : undefined;
+    return [res[0], name];
+  } else if (node instanceof Code.ConstructorParameter) {
+    const resolved = root.resolveNodeRef(node.ref);
+    if (resolved && resolved instanceof Code.Field) {
+      return getWeight(resolved, root, options);
+    }
+
+    const res = getWeight(node.identifier, root, options);
+    const name = res[1] ?? node.identifier.value;
     return [res[0], name];
   }
 

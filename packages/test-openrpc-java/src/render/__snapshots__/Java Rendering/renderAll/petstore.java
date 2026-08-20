@@ -255,10 +255,10 @@ public class JsonRpcError {
   private final Object data;
   private final String message;
 
-  public JsonRpcError(Object data, String message, int code) {
+  public JsonRpcError(Object data, int code, String message) {
     this.data = data;
-    this.message = message;
     this.code = code;
+    this.message = message;
   }
 
   public int getCode() {
@@ -282,7 +282,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ListPetsError100Error extends JsonRpcError {
   public ListPetsError100Error(Object data, String message) {
-    super(data, ((message == null) ? "pets busy" : message), 100);
+    super(data, 100, ((message == null) ? "pets busy" : message));
   }
 }
 
@@ -305,8 +305,8 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ErrorUnknownError extends JsonRpcError {
-  public ErrorUnknownError(Object data, String message, Integer code) {
-    super(data, ((message == null) ? "Unknown Error" : message), ((code == null) ? -1 : code));
+  public ErrorUnknownError(Object data, Integer code, String message) {
+    super(data, ((code == null) ? -1 : code), ((message == null) ? "Unknown Error" : message));
   }
 }
 

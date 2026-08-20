@@ -16,6 +16,12 @@ export const ZodModelTransformOptions = ZodOptions.extend({
    * TODO: Deprecated -- remove in favor of using a language feature and only relying on 'generifyTypes' as option
    */
   generificationBoxAllowed: ZodCoercedBoolean.default('true'),
+
+  /**
+   * If true, then generic parameter's types can be sealed to the subtypes' concrete types.
+   * For example: `A{prop: 'hello'} & B{prop: 'hi'}` becomes `Parent<TProp: 'hello'|'hi'>` instead of `Parent<TProp: String>`
+   */
+  sealedGenericUpperBounds: ZodCoercedBoolean.default('f'),
 });
 
 export type IncomingModelTransformOptions = z.input<typeof ZodModelTransformOptions>;

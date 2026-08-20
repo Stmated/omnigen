@@ -192,13 +192,11 @@ export const CSharpPlugin = createPlugin(
     };
 
     const transformers2: OmniModel2ndPassTransformer<TOpt>[] = [
-      // new StrictUndefinedTypeScriptModelTransformer(),
-      // new RemoveWildcardGenericParamTypeScriptModelTransformer(),
       new AdditionalPropertiesCSharpModelTransformer(),
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
+      new ElevatePropertiesModelTransformer(true),
       new RemoveUnnecessaryPropertyModelTransformer(),
-      // new ElevatePropertiesModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),
       new SimplifyGenericsModelTransformer(),
       new SpreadGenericsModelTransformer(),

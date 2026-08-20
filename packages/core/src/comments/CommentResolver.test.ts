@@ -12,7 +12,7 @@ import {
   OmniTypeKind,
 } from '@omnigen/api';
 import {CommentResolver} from './CommentResolver';
-import type {TaskContext, TestContext} from 'vitest';
+import type {TestContext} from 'vitest';
 
 // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ function ep(
   };
 }
 
-function snap(ctx: TaskContext & TestContext, name?: string): string {
+function snap(ctx: TestContext, name?: string): string {
   if (name) {
     return `./__snapshots__/${ctx.task.suite?.name}-${ctx.task.name}-${name}.json`;
   } else {

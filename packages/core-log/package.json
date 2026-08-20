@@ -22,6 +22,7 @@
   "devDependencies": {
     "@omnigen/config-typescript": "workspace:*",
     "@omnigen/utils": "workspace:*",
-    "@types/debug": "^4.1.13"
+    "@types/debug": "^4.1.13",
+    "@types/node": "^26.1.2"
   }
 }

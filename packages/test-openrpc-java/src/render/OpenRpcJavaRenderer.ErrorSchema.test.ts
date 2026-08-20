@@ -38,10 +38,10 @@ describe('Error-Schema', () => {
     ctx.expect(error100.foundSuperClasses).toEqual(['JsonRpcErrorResponse']);
 
     const error100error = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
-    ctx.expect(error100error.foundFields).toEqual(['data']);
-
     const jsonRpcError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcError.java');
-    ctx.expect(jsonRpcError.foundFields).toEqual(['code', 'message']);
+
+    ctx.expect(error100error.foundFields).toEqual(['data', 'message']);
+    ctx.expect(jsonRpcError.foundFields).toEqual([]);
   });
 
   test('ErrorStructure-1.1', async ctx => {
@@ -85,7 +85,8 @@ describe('Error-Schema', () => {
     const error100 = JavaTestUtils.getParsedContent(fileContents, 'ListThingsError100Error.java');
     ctx.expect(error100.foundFields).toEqual([]);
     ctx.expect(error100.foundLiterals[0]).toEqual('"omnigen"');
-    ctx.expect(error100.foundLiterals[4]).toEqual(100);
+    ctx.expect(error100.foundLiterals[2]).toEqual(100);
+    ctx.expect(error100.foundLiterals[4]).toEqual("\"Server is busy\"");
 
     const customError = JavaTestUtils.getParsedContent(fileContents, 'JsonRpcCustomErrorPayload.java');
     ctx.expect(customError.foundFields).toEqual(['data', 'method', 'signature', 'uuid', ADDITIONAL_PROPERTIES_FIELD_NAME]);

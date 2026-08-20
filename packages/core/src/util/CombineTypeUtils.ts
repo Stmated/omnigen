@@ -1,7 +1,9 @@
 
 export enum CombineMode {
+  NONE = 'NONE',
   INTERSECTION = 'INTERSECTION',
   UNION = 'UNION',
+  ANY = 'ANY',
 }
 
 /**
@@ -11,6 +13,7 @@ export enum CombineMode {
 export enum CreateMode {
   NONE = 'NONE',
   SIMPLE = 'SIMPLE',
+  DOWNGRADE = 'DOWNGRADE',
   ANY = 'ANY',
 }
 

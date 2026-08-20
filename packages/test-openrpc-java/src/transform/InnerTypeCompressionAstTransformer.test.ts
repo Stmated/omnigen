@@ -75,9 +75,6 @@ describe('InnerTypeCompression', () => {
 
     const fileContents = await JavaTestUtils.getFileContentsFromFile('error-structure.json', {
       modelTransformOptions: {generifyTypes: true, elevateProperties: false},
-      // targetOptions: {
-      //   ...DEFAULT_TEST_TARGET_OPTIONS,
-      // },
       javaOptions: {
         serializationLibrary: SerializationLibrary.JACKSON,
         serializationPropertyNameMode: SerializationPropertyNameMode.IF_REQUIRED,

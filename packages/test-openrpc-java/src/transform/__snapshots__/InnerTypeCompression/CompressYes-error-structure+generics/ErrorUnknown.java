@@ -21,15 +21,26 @@ public class ErrorUnknown extends JsonRpcErrorResponse<ErrorUnknown.Error> {
   }
 
   public static class Error extends JsonRpcError {
+    private final int code;
     private final JsonNode data;
+    private final String message;
 
     public Error(Integer code, String message, JsonNode data) {
-      super(((code == null) ? -1 : code), ((message == null) ? "Unknown Error" : message));
+      this.code = ((code == null) ? -1 : code);
+      this.message = ((message == null) ? "Unknown Error" : message);
       this.data = data;
+    }
+
+    public int getCode() {
+      return this.code;
     }
 
     public JsonNode getData() {
       return this.data;
+    }
+
+    public String getMessage() {
+      return this.message;
     }
   }
 }

@@ -565,17 +565,21 @@ export class OmniUtil {
   }
 
   public static toReferenceType<T extends OmniType>(type: T): T;
-  public static toReferenceType<T extends OmniType>(type: T, create: CreateMode | undefined): T | undefined;
-  public static toReferenceType<T extends OmniType>(type: T, create?: CreateMode | undefined): T | undefined {
+  public static toReferenceType<T extends OmniType>(type: T, combOpt: CombineOptions | undefined): T | undefined;
+  public static toReferenceType<T extends OmniType>(type: T, combOpt?: CombineOptions | undefined): T | undefined {
+
+    if (combOpt === undefined) {
+      combOpt = {create: CreateMode.SIMPLE};
+    }
 
     if (type.kind === OmniTypeKind.DECORATING) {
 
-      const ofAsRef = OmniUtil.toReferenceType(type.of);
-      if (ofAsRef === type.of) {
+      const ofAsRef = OmniUtil.toReferenceType(type.of, combOpt);
+      if (!ofAsRef || ofAsRef === type.of) {
         return type;
       }
 
-      if (!OmniUtil.canCreate(create, CreateMode.SIMPLE)) {
+      if (!OmniUtil.canCreate(combOpt, CreateMode.SIMPLE)) {
         return undefined;
       }
 
@@ -599,7 +603,7 @@ export class OmniUtil {
         return type;
       }
 
-      if (!OmniUtil.canCreate(create, CreateMode.SIMPLE)) {
+      if (!OmniUtil.canCreate(combOpt, CreateMode.SIMPLE)) {
         return undefined;
       }
 
@@ -669,6 +673,10 @@ export class OmniUtil {
 
   public static getCommonDenominator(options: TargetFeatures | CommonDenominatorOptions, types: ReadonlyArray<OmniType>): CommonDenominatorType | undefined {
 
+    if (types.length === 0) {
+      return undefined;
+    }
+
     if (types.length === 1) {
       return {
         type: types[0],
@@ -684,8 +692,7 @@ export class OmniUtil {
 
     for (let i = 1; i < types.length; i++) {
 
-      const type = common.type ?? common.constructedType;
-      const denominator = OmniUtil.getCommonDenominatorBetween(type, types[i], opt.features, opt);
+      const denominator = OmniUtil.getCommonDenominatorBetween(common.type, types[i], opt.features, opt);
       if (!denominator) {
         return undefined;
       }
@@ -802,8 +809,7 @@ export class OmniUtil {
 
     let common = OmniUtil.getCommonDenominatorBetween(a.types[0], b, features);
     for (let i = 1; i < a.types.length && common; i++) {
-      const t = common.constructedType ?? common.type;
-      common = OmniUtil.getCommonDenominatorBetween(t, a.types[i], features);
+      common = OmniUtil.getCommonDenominatorBetween(common.type, a.types[i], features);
     }
 
     return common;
@@ -854,9 +860,9 @@ export class OmniUtil {
       return {type: b};
     }
 
-    if (OmniUtil.canCreate(opt?.create, CreateMode.SIMPLE)) {
+    if (OmniUtil.canCreate(opt, CreateMode.SIMPLE)) {
       const unknownType: OmniUnknownType = {kind: OmniTypeKind.UNKNOWN, unknownKind: UnknownKind.ANY};
-      return {constructedType: unknownType, type: unknownType, diffs: [TypeDiffKind.ISOMORPHIC_TYPE]};
+      return {type: unknownType, diffs: [TypeDiffKind.ISOMORPHIC_TYPE]};
     }
 
     return undefined;
@@ -919,7 +925,7 @@ export class OmniUtil {
 
       commonTargetIdentifiers.push({
         kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
-        type: commonIdentifierType.constructedType ?? commonIdentifierType.type,
+        type: commonIdentifierType.type,
         sourceIdentifier: match.a.sourceIdentifier,
       });
 
@@ -996,7 +1002,7 @@ export class OmniUtil {
       }
     }
 
-    if (!OmniUtil.canCreate(opt?.create, CreateMode.SIMPLE)) {
+    if (!OmniUtil.canCreate(opt, CreateMode.SIMPLE)) {
       return undefined;
     }
 
@@ -1057,7 +1063,7 @@ export class OmniUtil {
     }
 
     // NOTE: There might be some differences we can ignore; should check for them
-    if (!OmniUtil.canCreate(opt?.create, CreateMode.ANY) || !common) {
+    if (!OmniUtil.canCreate(opt, CreateMode.ANY) || !common) {
       return undefined;
     }
 
@@ -1116,9 +1122,7 @@ export class OmniUtil {
     }
 
     if (a.value !== b.value) {
-      return OmniUtil.getCommonDenominatorBetweenPrimitivesWithDifferentLiteralValues(
-        a, b, common, targetFeatures, opt,
-      );
+      return OmniUtil.getCommonDenominatorBetweenPrimitivesWithDifferentLiteralValues(a, b, common, targetFeatures, opt);
     }
 
     return {
@@ -1131,27 +1135,31 @@ export class OmniUtil {
     a: OmniPrimitiveType,
     b: OmniPrimitiveType,
     common: CommonDenominatorType<OmniPrimitiveType | undefined>,
-    targetFeatures: TargetFeatures,
+    features: TargetFeatures,
     opt?: CombineOptions,
   ): CommonDenominatorType | undefined {
 
     if (a.literal && b.literal) {
-      if (!common.type) {
-        if (targetFeatures.literalTypes && OmniUtil.canCreate(opt?.create, CreateMode.SIMPLE)) {
-          const union: OmniExclusiveUnionType = {
-            kind: OmniTypeKind.EXCLUSIVE_UNION,
-            types: [a, b],
-            debug: 'Created from two literals with different values, a polymorphic literal type',
-          };
-          return {
-            type: OmniUtil.getGeneralizedType(common.type ?? a, opt?.create),
-            constructedType: union,
-            diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL],
-          };
-        }
+
+      if (features.literalTypes && OmniUtil.canCreate(opt, CreateMode.SIMPLE) && OmniUtil.canCombine(opt, CombineMode.UNION)) {
+        const union: OmniExclusiveUnionType = {
+          kind: OmniTypeKind.EXCLUSIVE_UNION,
+          types: [a, b],
+          debug: 'Created from two literals with different values, a polymorphic literal type',
+        };
+
+        return {
+          type: union,
+          diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL],
+        };
+      }
+
+      const generalized = OmniUtil.getGeneralizedType(common.type ?? a, opt);
+      if (generalized) {
+        return {type: generalized, diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL]};
+      } else {
         return undefined;
       }
-      return {type: OmniUtil.getGeneralizedType(common.type, opt?.create), diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL]};
     } else if (a.literal && !b.literal && common.type == a) {
       return {type: b, diffs: [...(common.diffs ?? []), TypeDiffKind.CONCRETE_VS_ABSTRACT]};
     } else if (!a.literal && b.literal && common.type == b) {
@@ -1160,7 +1168,40 @@ export class OmniUtil {
 
     // One is literal and the other not, then diff is Concrete vs Abstract -- otherwise it is a Polymorphic Literal.
     const diff = (a.literal !== b.literal) ? TypeDiffKind.CONCRETE_VS_ABSTRACT : TypeDiffKind.POLYMORPHIC_LITERAL;
-    return {type: OmniUtil.getGeneralizedType(common.type ?? a, opt?.create), diffs: [...(common.diffs ?? []), diff]};
+    return {type: OmniUtil.getGeneralizedType(common.type ?? a, opt) ?? a, diffs: [...(common.diffs ?? []), diff]};
+
+    // if (a.literal && b.literal) {
+    //   if (common.type) {
+    //     return {type: OmniUtil.getGeneralizedType(common.type, opt) ?? common.type, diffs: [...(common.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL]};
+    //   } else {
+    //
+    //     if (features.literalTypes && OmniUtil.canCreate(opt, CreateMode.SIMPLE) && OmniUtil.canCombine(opt, CombineMode.UNION)) {
+
+    //     }
+    //
+    //     const generalizedA = OmniUtil.getGeneralizedType(a, opt);
+    //     const generalizedB = OmniUtil.getGeneralizedType(b, opt);
+    //
+    //     if (generalizedA && generalizedB) {
+    //
+    //       const commonGeneralized = OmniUtil.getCommonDenominatorBetween(generalizedA, generalizedB, features, opt);
+    //       if (commonGeneralized) {
+    //         return {type: commonGeneralized.type, diffs: [...(common.diffs ?? []), ...(commonGeneralized.diffs ?? []), TypeDiffKind.POLYMORPHIC_LITERAL]};
+    //       }
+    //     }
+    //
+    //     // return undefined;
+    //   }
+    // } else if (a.literal && !b.literal && common.type === a) {
+    //   return {type: b, diffs: [...(common.diffs ?? []), TypeDiffKind.CONCRETE_VS_ABSTRACT]};
+    // } else if (!a.literal && b.literal && common.type === b) {
+    //   return {type: a, diffs: [...(common.diffs ?? []), TypeDiffKind.CONCRETE_VS_ABSTRACT]};
+    // }
+    //
+    // // One is literal and the other not, then diff is Concrete vs Abstract -- otherwise it is a Polymorphic Literal.
+    // const diff = (a.literal !== b.literal) ? TypeDiffKind.CONCRETE_VS_ABSTRACT : TypeDiffKind.POLYMORPHIC_LITERAL;
+    // const commonOrA = common.type ?? a;
+    // return {type: OmniUtil.getGeneralizedType(commonOrA, opt) ?? commonOrA, diffs: [...(common.diffs ?? []), diff]};
   }
 
   private static getCommonDenominatorBetweenPrimitiveKinds(
@@ -1178,7 +1219,7 @@ export class OmniUtil {
       if (b.nullable) {
         return {type: b};
       } else {
-        const created = OmniUtil.toReferenceType(b, opt?.create);
+        const created = OmniUtil.toReferenceType(b, opt);
         if (!created) {
           return undefined;
         }
@@ -1284,7 +1325,7 @@ export class OmniUtil {
           };
         }
 
-        if (!OmniUtil.canCreate(opt?.create, CreateMode.ANY)) {
+        if (!OmniUtil.canCreate(opt, CreateMode.ANY)) {
           return undefined;
         }
 
@@ -1316,13 +1357,14 @@ export class OmniUtil {
     const distinctTypes: Array<OmniType> = [];
     for (const type of types) {
 
+      const opt = Object.freeze({create: CreateMode.NONE, combine: CombineMode.NONE});
       const sameType = distinctTypes.find(it => {
-        const common = OmniUtil.getCommonDenominatorBetween(type, it, targetFeatures, {create: CreateMode.NONE});
+        const common = OmniUtil.getCommonDenominatorBetween(type, it, targetFeatures, opt);
         if (!common) {
           return false;
         }
 
-        if (!common.diffs || common.diffs.length == 0) {
+        if (!common.diffs?.length) {
           return true;
         }
 
@@ -1358,9 +1400,13 @@ export class OmniUtil {
       || kind == OmniTypeKind.DECIMAL;
   }
 
-  public static getGeneralizedType<T extends OmniType>(type: T, create?: CreateMode): T {
+  public static getGeneralizedType<T extends OmniType>(type: T, opt?: CombineOptions): T | undefined {
 
-    if (OmniUtil.isPrimitive(type) && type.value !== undefined && OmniUtil.canCreate(create, CreateMode.SIMPLE)) {
+    if (OmniUtil.isPrimitive(type) && type.value !== undefined) {
+
+      if (!OmniUtil.canCreate(opt, CreateMode.DOWNGRADE)) {
+        return undefined;
+      }
 
       const generalizedPrimitive: typeof type = {
         ...type,
@@ -1374,15 +1420,22 @@ export class OmniUtil {
     return type;
   }
 
-  private static canCreate(create: CreateMode | undefined, match: CreateMode): boolean {
+  private static canCreate(opt: CombineOptions | undefined, match: CreateMode): boolean {
 
-    if (create === undefined) {
-      return match === CreateMode.SIMPLE;
-    } else if (create === CreateMode.SIMPLE) {
-      return (match === CreateMode.SIMPLE);
-    } else {
-      return (create === CreateMode.ANY);
+    const create = opt?.create ?? CreateMode.NONE;
+    if (create === CreateMode.ANY) {
+      return true;
     }
+    if (match === CreateMode.DOWNGRADE && create === CreateMode.SIMPLE) {
+      return true;
+    }
+    return create === match;
+  }
+
+  private static canCombine(opt: CombineOptions | undefined, match: CombineMode): boolean {
+
+    const combine = opt?.combine ?? CombineMode.INTERSECTION;
+    return (combine === CombineMode.ANY) || combine === match;
   }
 
   public static isDiffMatch(diffs: TypeDiffKind, matches: ReadonlyArray<TypeDiffKind>): boolean {
@@ -1586,16 +1639,16 @@ export class OmniUtil {
       return {type: a};
     }
 
-
-    if (extra.length > 0 && opt?.combine !== CombineMode.UNION) {
+    const canCombineToUnion = OmniUtil.canCombine(opt, CombineMode.UNION);
+    if (extra.length > 0 && !canCombineToUnion) {
       return undefined;
     }
 
-    if (OmniUtil.canCreate(opt?.create, CreateMode.ANY)) {
+    if (OmniUtil.canCreate(opt, CreateMode.ANY)) {
 
       let newEnumName = Naming.getCommonName([a.name, b.name]);
       if (!newEnumName) {
-        if (opt?.combine === CombineMode.UNION) {
+        if (canCombineToUnion) {
           newEnumName = {prefix: a.name, name: {prefix: 'And', name: b.name}};
         } else {
           // This name is bad. Hopefully if the enums are to be an intersection, they have a common name part.
@@ -1605,7 +1658,7 @@ export class OmniUtil {
 
       const unwrappedNew = Naming.unwrap(newEnumName);
 
-      const newMembers: OmniEnumMember[] = (opt?.combine === CombineMode.UNION)
+      const newMembers: OmniEnumMember[] = canCombineToUnion
         ? [...a.members, ...extra]
         : [...common];
 
@@ -1646,7 +1699,6 @@ export class OmniUtil {
       };
 
       return {
-        constructedType: newEnum,
         type: newEnum,
         diffs: [TypeDiffKind.MISSING_MEMBERS],
       };
@@ -2511,8 +2563,8 @@ export class OmniUtil {
 
 export type Diff
   = PropertyDiff
-    | PropertyTypeDiff
-    | TypeDiff;
+  | PropertyTypeDiff
+  | TypeDiff;
 
 export interface BaseDiff<K extends DiffKind> {
   kind: K;

@@ -5,17 +5,19 @@ import {
   OmniModelTransformer2ndPassArgs,
   OmniModelTransformerArgs,
   OmniObjectType,
+  OmniOwnedProperty,
   OmniProperty,
   OmniSubTypeCapableType,
   OmniType,
   OmniTypeKind,
   ParserOptions,
   PropertyDifference,
+  PropertyInformation,
   TargetFeatures,
   TypeDiffKind,
 } from '@omnigen/api';
 import {CodeOptions, ZodCodeOptions} from '../../options/CodeOptions';
-import {CreateMode, Naming, OmniUtil, PropertyUtil, Sorters} from '@omnigen/core';
+import {CreateMode, OmniUtil, PropertyUtil, Sorters} from '@omnigen/core';
 import {LoggerFactory} from '@omnigen/core-log';
 
 const defaultBannedTypeDifferences: ReadonlyArray<TypeDiffKind> = [
@@ -33,6 +35,8 @@ const defaultBannedPropDifferences: ReadonlyArray<PropertyDifference> = [
 const DEFAULT_CODE_OPTIONS: Readonly<CodeOptions> = ZodCodeOptions.parse({});
 
 const logger = LoggerFactory.create(import.meta.url);
+
+type Stages = 1 | 2;
 
 // TODO: This transformer should be split into two, one early that can be ran inside `CoreUtilPluginInit` and then one that can run after we know which target it is.
 // TODO: As well as separating it to one that can handle elevating generic properties (if the need arises)
@@ -54,6 +58,12 @@ const logger = LoggerFactory.create(import.meta.url);
  */
 export class ElevatePropertiesModelTransformer implements OmniModelTransformer, OmniModel2ndPassTransformer<ParserOptions & CodeOptions> {
 
+  private readonly _forcePolymorphicLiterals?: boolean | undefined;
+
+  constructor(forcePolymorphicLiterals?: boolean) {
+    this._forcePolymorphicLiterals = forcePolymorphicLiterals;
+  }
+
   transformModel(args: OmniModelTransformerArgs): void {
     this.transformInner({
       ...args,
@@ -68,7 +78,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
     this.transformInner(args, 2, args.features);
   }
 
-  transformInner(args: OmniModelTransformerArgs<ParserOptions & CodeOptions>, stage: 1 | 2, targetFeatures?: TargetFeatures): void {
+  transformInner(args: OmniModelTransformerArgs<ParserOptions & CodeOptions>, stage: Stages, targetFeatures?: TargetFeatures): void {
 
     if (!args.options.elevateProperties) {
 
@@ -97,12 +107,11 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
   private elevateObject(
     superType: OmniObjectType,
     subTypes: OmniSubTypeCapableType[],
-    stage: 1 | 2,
+    stage: Stages,
     features: TargetFeatures,
     options: ParserOptions & CodeOptions,
   ) {
 
-    const n = Naming.getNameString(subTypes[0]);
     const properties = PropertyUtil.getCommonProperties(
       tdiff => (stage === 1) ? true : OmniUtil.isDiffMatch(tdiff, defaultBannedTypeDifferences),
       pdiff => (stage === 1) ? true : PropertyUtil.isDiffMatch(pdiff, defaultBannedPropDifferences),
@@ -110,7 +119,7 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
       // These features will limit the kind of properties we can elevate, since it will go for common denominator.
       // It is up to syntax tree transformers to do the more specialized elevating later, if possible.
       features,
-      {create: CreateMode.NONE},
+      (stage === 1) ? {create: CreateMode.NONE} : {create: CreateMode.DOWNGRADE},
       ...subTypes,
     );
 
@@ -126,83 +135,9 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
       const propertyToElevate = info.properties[0];
       const uniqueDiffs = [...new Set(info.typeDiffs ?? [])];
 
-      // TODO: Perhaps NOT elevate here if the diff is POLYMORPHIC_LITERAL? See `Test multiple inheritance (interfaces)` test case
-
-      if (uniqueDiffs.length == 1 && uniqueDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL) {
-        // TODO: This whole thing should probably be handled by `getCommonProperties` by giving a certain new CreateMode that allows literals
-        if (OmniUtil.isAbstract(superType)) {
-
-          // If the only difference is Polymorphic Literal ("hello" vs "hi"), and the supertype is already abstract, then we can add an abstract property.
-          // NOTE: Perhaps there are better/more ways of doing this, but it is what we will do for now.
-          const abstractPropertyType: OmniType = (features.literalTypes && info.distinctTypes.length < options.literalUnionMaxCount)
-            ? {kind: OmniTypeKind.EXCLUSIVE_UNION, types: info.distinctTypes, debug: 'Polymorphic literal union'}
-            : info.commonType;
-
-          const abstractProperty: OmniProperty = {
-            ...propertyToElevate.property,
-            type: abstractPropertyType,
-            description: info.properties.every(it => (info.properties[0].property.description === it.property.description)) ? info.properties[0].property.description : undefined,
-            summary: info.properties.every(it => (info.properties[0].property.summary === it.property.summary)) ? info.properties[0].property.summary : undefined,
-            annotations: [], // TODO: Add annotations if they exist on all subtype properties?
-            abstract: true,
-            required: info.properties.every(it => it.property.required),
-            deprecated: info.properties.every(it => it.property.deprecated),
-            debug: OmniUtil.addDebug(propertyToElevate.property.debug, `elevated from:\n- ${info.properties.map(it => OmniUtil.describe(it.owner)).join('\n- ')}`),
-          };
-
-          superType.debug = OmniUtil.addDebug(superType.debug, `Elevated property '${OmniUtil.getPropertyName(abstractProperty.name, true)}'`);
-
-          superType.properties.push(abstractProperty);
-        } else {
-
-          let commonType: OmniType;
-          if (features.unions && info.distinctTypes.length < options.maxAutoUnionSize) {
-            commonType = {kind: OmniTypeKind.EXCLUSIVE_UNION, types: info.distinctTypes, inline: true};
-            commonType.debug = OmniUtil.addDebug(commonType.debug, `Made inline since unions are target-supported and distinct types are few`);
-          } else {
-            commonType = info.commonType;
-          }
-
-          const allSubTypesAreConstants = !features.unions && (info.properties.every(it => OmniUtil.getSpecifiedConstantValue(it.property.type) !== undefined));
-
-          const generalProperty: OmniProperty = {
-            ...propertyToElevate.property,
-            type: commonType,
-            description: info.properties.every(it => (info.properties[0].property.description === it.property.description)) ? info.properties[0].property.description : undefined,
-            summary: info.properties.every(it => (info.properties[0].property.summary === it.property.summary)) ? info.properties[0].property.summary : undefined,
-            annotations: [], // TODO: Add annotations if they exist on all subtype properties?
-            abstract: false,
-            // NOTE: This is not completely accurate, since just because the values are constants, it does not mean it should not be re-assignable
-            // TODO: The PROPER way of doing this is to have a `virtual` base property, and an overriding property that validates input. See scratch `omnigen.md`
-            readOnly: info.properties.every(it => it.property.readOnly) || allSubTypesAreConstants,
-            writeOnly: info.properties.every(it => it.property.writeOnly),
-            required: info.properties.some(it => it.property.required),
-            deprecated: info.properties.every(it => it.property.deprecated),
-            debug: OmniUtil.addDebug(propertyToElevate.property.debug, `elevated as polymorphic literal diff from:\n- ${info.properties.map(it => {
-              let constValue: string;
-              if (OmniUtil.isPrimitive(it.property.type) && it.property.type.literal) {
-                if (Array.isArray(it.property.type.value)) {
-                  const constKind = OmniUtil.nativeLiteralToPrimitiveKind(it.property.type.value);
-                  constValue = `const ${it.property.type.value.map(v => OmniUtil.literalToGeneralPrettyString(v, constKind)).join(' | ')} - `;
-                } else {
-                  constValue = `const ${OmniUtil.literalToGeneralPrettyString(it.property.type.value, it.property.type.kind)} - `;
-                }
-              } else {
-                constValue = '';
-              }
-              return `${constValue}${OmniUtil.describe(it.owner)}`;
-            }).join('\n- ')}`),
-          };
-
-          superType.debug = OmniUtil.addDebug(superType.debug, `Elevated general property '${OmniUtil.getPropertyName(generalProperty.name, true)}'`);
-          superType.properties.push(generalProperty);
-        }
-
-        for (const p of info.properties) {
-          p.property.hidden = true;
-        }
-
-      } else if (uniqueDiffs.length == 0) {
+      if (uniqueDiffs.length === 1 && (uniqueDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL || uniqueDiffs[0] === TypeDiffKind.CONCRETE_VS_ABSTRACT)) {
+        this.elevatePolymorphicLiteral(superType, propertyToElevate, info, uniqueDiffs[0], features, options);
+      } else if (uniqueDiffs.length === 0) {
 
         // There needs to be ZERO diffs to be able to elevate the property
         superType.properties.push({
@@ -220,6 +155,120 @@ export class ElevatePropertiesModelTransformer implements OmniModelTransformer, 
             subTypeProperty.owner.debug = OmniUtil.addDebug(subTypeProperty.owner.debug, `Removed common-type property '${OmniUtil.getPropertyName(subTypeProperty.property.name, true)}'`);
           }
         }
+      }
+    }
+  }
+
+  /**
+   * It is questionable if this should even be allowed when simply elevating properties.
+   * This is because there might be more specific transformers that can elevate them in another way, such as `GenericsModelTransformer`.
+   * But we will try our best to elevate when we can and should, but not otherwise.
+   */
+  private elevatePolymorphicLiteral(
+    superType: OmniObjectType,
+    propertyToElevate: OmniOwnedProperty,
+    info: PropertyInformation,
+    diff: TypeDiffKind,
+    features: TargetFeatures,
+    options: ParserOptions & CodeOptions,
+  ): void {
+
+    if (features.literalTypes && features.primitiveGenerics && features.unions && !this._forcePolymorphicLiterals) {
+
+      // If these things are all supported, then this hoisting is likely much better performed by a generics transformer
+      return;
+    }
+
+    // TODO: This whole thing should probably be handled by `getCommonProperties` by giving a certain new CreateMode that allows literals
+    const isAbstract = OmniUtil.isAbstract(superType); // || diff === TypeDiffKind.CONCRETE_VS_ABSTRACT;
+    if (isAbstract) {
+
+      // If the only difference is Polymorphic Literal ("hello" vs "hi"), and the supertype is already abstract, then we can add an abstract property.
+      // NOTE: Perhaps there are better/more ways of doing this, but it is what we will do for now.
+      const abstractPropertyType: OmniType = (features.literalTypes && info.distinctTypes.length < options.literalUnionMaxCount)
+        ? {kind: OmniTypeKind.EXCLUSIVE_UNION, types: info.distinctTypes, debug: 'Polymorphic literal union'}
+        : info.commonType;
+
+      const abstractProperty: OmniProperty = {
+        ...propertyToElevate.property,
+        type: abstractPropertyType,
+        description: info.properties.every(it => (info.properties[0].property.description === it.property.description)) ? info.properties[0].property.description : undefined,
+        summary: info.properties.every(it => (info.properties[0].property.summary === it.property.summary)) ? info.properties[0].property.summary : undefined,
+        annotations: [], // TODO: Add annotations if they exist on all subtype properties?
+        abstract: true,
+        required: info.properties.every(it => it.property.required),
+        deprecated: info.properties.every(it => it.property.deprecated),
+        debug: OmniUtil.addDebug(propertyToElevate.property.debug, `elevated from:\n- ${info.properties.map(it => OmniUtil.describe(it.owner)).join('\n- ')}`),
+      };
+
+      superType.debug = OmniUtil.addDebug(superType.debug, `Elevated property '${OmniUtil.getPropertyName(abstractProperty.name, true)}'`);
+
+      superType.properties.push(abstractProperty);
+    } else {
+
+      let commonType: OmniType;
+      if (features.unions && info.distinctTypes.length < options.maxAutoUnionSize) {
+        commonType = {kind: OmniTypeKind.EXCLUSIVE_UNION, types: info.distinctTypes, inline: true};
+        commonType.debug = OmniUtil.addDebug(commonType.debug, `Made inline since unions are target-supported and distinct types are few`);
+      } else {
+        commonType = info.commonType;
+      }
+
+      const generalProperty: OmniProperty = {
+        ...propertyToElevate.property,
+        type: commonType,
+        description: info.properties.every(it => (info.properties[0].property.description === it.property.description)) ? info.properties[0].property.description : undefined,
+        summary: info.properties.every(it => (info.properties[0].property.summary === it.property.summary)) ? info.properties[0].property.summary : undefined,
+        annotations: [], // TODO: Add annotations if they exist on all subtype properties?
+        abstract: false,
+        writeOnly: info.properties.every(it => it.property.writeOnly),
+        required: info.properties.some(it => it.property.required),
+        deprecated: info.properties.every(it => it.property.deprecated),
+        debug: OmniUtil.addDebug(propertyToElevate.property.debug, `elevated as polymorphic literal diff from:\n- ${info.properties.map(it => {
+          let constValue: string;
+          if (OmniUtil.isPrimitive(it.property.type) && it.property.type.literal) {
+            if (Array.isArray(it.property.type.value)) {
+              const constKind = OmniUtil.nativeLiteralToPrimitiveKind(it.property.type.value);
+              constValue = `const ${it.property.type.value.map(v => OmniUtil.literalToGeneralPrettyString(v, constKind)).join(' | ')} - `;
+            } else {
+              constValue = `const ${OmniUtil.literalToGeneralPrettyString(it.property.type.value, it.property.type.kind)} - `;
+            }
+          } else {
+            constValue = '';
+          }
+          return `${constValue}${OmniUtil.describe(it.owner)}`;
+        }).join('\n- ')}`),
+      };
+
+      const allSubTypesAreConstants = !features.unions && (info.properties.every(it => OmniUtil.getSpecifiedConstantValue(it.property.type) !== undefined));
+      if (allSubTypesAreConstants) {
+        // NOTE: This is not completely accurate, since just because the values are constants, it does not mean it should not be re-assignable
+        // TODO: The PROPER way of doing this is to have a `virtual` base property, and an overriding property that validates input. See scratch `omnigen.md`
+        generalProperty.readOnly = true;
+        generalProperty.debug = OmniUtil.addDebug(generalProperty.debug, `Made read-only since sub-properties are all constants`);
+      } else {
+
+        const hasReadOnly = info.properties.some(it => it.property.readOnly !== undefined);
+        if (hasReadOnly) {
+          generalProperty.readOnly = info.properties.every(it => it.property.readOnly);
+          generalProperty.debug = OmniUtil.addDebug(generalProperty.debug, `Made read-only=${generalProperty.readOnly} since at least one sub-property had read-only set`);
+        }
+      }
+
+      superType.debug = OmniUtil.addDebug(superType.debug, `Elevated general property '${OmniUtil.getPropertyName(generalProperty.name, true)}'`);
+      superType.properties.push(generalProperty);
+    }
+
+    if (!this._forcePolymorphicLiterals && !isAbstract) {
+
+      // TODO: Confusing logic, why it should be hidden or not depending on `forcePolymorphicLiterals`
+      //        But the idea is that the more accurate properties should be kept, and the same property also existing in the supertype.
+      //        WHAT TO DO: There should be a target feature like `propertyOverride` to say if it's allowed to have superType with exploded/common type, and subtype with overriding type.
+      //        For example `interface Supertype { prop: string | number }` with `interface Subtype extends Supertype { prop: string }` and it being legal
+      for (const p of info.properties) {
+
+        // We only hide the properties that are in the sub-types, since their more specific type information can be very useful later.
+        p.property.hidden = true;
       }
     }
   }

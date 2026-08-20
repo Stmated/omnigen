@@ -176,6 +176,7 @@ export const JavaPlugin = createPlugin(
     const transformers2: OmniModel2ndPassTransformer[] = [
       new ElevatePropertiesModelTransformer(),
       new GenericsModelTransformer(),
+      new ElevatePropertiesModelTransformer(true),
       new RemoveUnnecessaryPropertyModelTransformer(),
       new MergeLargeUnionLateModelTransformer(),
       new AlignObjectWithInterfaceModelTransformer(),

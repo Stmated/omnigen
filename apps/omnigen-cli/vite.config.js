@@ -9,7 +9,7 @@ export default defineConfig({
     outDir: 'dist',
     lib: {
       // Could also be a dictionary or array of multiple entry points
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(import.meta.dirname, 'src/index.ts'),
       name: '@omnigen-org/omnigen-cli',
       formats: ['es'],
     },

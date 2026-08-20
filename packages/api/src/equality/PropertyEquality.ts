@@ -6,6 +6,6 @@ export interface PropertyEquality {
   propertyDiffs?: PropertyDifference[] | undefined;
   typeDiffs?: TypeDiffKind[] | undefined;
   commonType?: OmniType | undefined;
-  constructedType?: OmniType | undefined;
+  // constructedType?: OmniType | undefined;
   //created?: boolean | undefined;
 }

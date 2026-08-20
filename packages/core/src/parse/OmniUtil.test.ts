@@ -1,6 +1,7 @@
-import {CommonDenominatorType, OMNI_GENERIC_FEATURES, OmniItemKind, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind, TypeDiffKind} from '@omnigen/api';
+import {CommonDenominatorType, OMNI_GENERIC_FEATURES, OmniItemKind, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind, TargetFeatures, TypeDiffKind} from '@omnigen/api';
 import {Diff, DiffKind, OmniUtil, PropertyTypeDiff} from './OmniUtil';
 import {describe, test, TestContext} from 'vitest';
+import {CombineOptions, CreateMode} from '../util';
 
 describe('OmniUtil', () => {
 
@@ -16,29 +17,7 @@ describe('OmniUtil', () => {
       {kind: OmniTypeKind.DOUBLE},
     ).diffs ?? []).toEqual([TypeDiffKind.SIZE, TypeDiffKind.PRECISION]);
 
-    // With default features, we cannot handle the literal types
-    ctx.expect(expectCommon(
-      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
-      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
-      {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: true},
-    ).diffs).toEqual([TypeDiffKind.POLYMORPHIC_LITERAL]);
 
-    // With Java, the literal types become the same type in the signature
-    const literalString = expectCommon(
-      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
-      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
-      {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: false},
-    );
-
-    // The diff itself is still a POLYMORPHIC_LITERAL, even though for the target the types are fundamentally incompatible.
-    // But it is up to the caller to decide what the diff means in its context.
-    ctx.expect(literalString.diffs).toEqual([TypeDiffKind.POLYMORPHIC_LITERAL]);
-    ctx.expect(OmniUtil.isPrimitive(literalString.type)).toEqual(true);
-
-    const literalPrimitiveString = (literalString.type as OmniPrimitiveType);
-    ctx.expect(literalPrimitiveString.kind).toEqual(OmniTypeKind.STRING);
-    ctx.expect(literalPrimitiveString.value).toBeUndefined();
-    ctx.expect(literalPrimitiveString.literal).toBeUndefined();
 
     expectA(
       ctx,
@@ -51,6 +30,59 @@ describe('OmniUtil', () => {
       {kind: OmniTypeKind.INTEGER, nullable: true},
       {kind: OmniTypeKind.INTEGER, nullable: false},
     );
+  });
+
+  test('EqualityLevel Polymorphic Strings', async ctx => {
+
+    // With Java, the literal types become the same type in the signature
+    const literalString = expectCommon(
+      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
+      {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: false},
+      {create: CreateMode.DOWNGRADE}
+    );
+
+    // The diff itself is still a `POLYMORPHIC_LITERAL`, even though for the target the types are fundamentally incompatible.
+    // But it is up to the caller to decide what the diff means in its context.
+    ctx.expect(literalString.diffs).toEqual([TypeDiffKind.POLYMORPHIC_LITERAL]);
+    ctx.expect(OmniUtil.isPrimitive(literalString.type)).toEqual(true);
+
+    const literalPrimitiveString = (literalString.type as OmniPrimitiveType);
+    ctx.expect(literalPrimitiveString.kind).toEqual(OmniTypeKind.STRING);
+    ctx.expect(literalPrimitiveString.value).toBeUndefined();
+    ctx.expect(literalPrimitiveString.literal).toBeUndefined();
+  });
+
+  test('EqualityLevel Polymorphic Strings Without Creation', async ctx => {
+
+    // With Java, the literal types become the same type in the signature
+    const literalString = expectCommon(
+      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
+      {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: false},
+      {create: CreateMode.NONE}
+    );
+
+    ctx.expect(literalString.diffs).toEqual([TypeDiffKind.FUNDAMENTAL_TYPE]);
+  });
+
+  test('EqualityLevel Polymorphic Literal', async ctx => {
+
+    const features: TargetFeatures = {...OMNI_GENERIC_FEATURES, primitiveGenerics: false, literalTypes: true};
+
+    // With default features, we cannot handle the literal types
+    ctx.expect(expectCommon(
+      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
+      features,
+    ).diffs).toEqual([TypeDiffKind.FUNDAMENTAL_TYPE]);
+
+    ctx.expect(expectCommon(
+      {kind: OmniTypeKind.STRING, literal: true, value: 'hello'},
+      {kind: OmniTypeKind.STRING, literal: true, value: 'bye'},
+      features,
+      {create: CreateMode.DOWNGRADE}
+    ).diffs).toEqual([TypeDiffKind.POLYMORPHIC_LITERAL]);
   });
 
   test('primitive diff', ctx => {
@@ -256,8 +288,8 @@ const expectA = (ctx: TestContext, a: OmniPrimitiveType, b: OmniPrimitiveType): 
   ctx.expect(expectCommon(a, b).type).toEqual(a);
 };
 
-const expectCommon = (a: OmniPrimitiveType, b: OmniPrimitiveType, features = OMNI_GENERIC_FEATURES): CommonDenominatorType => {
+const expectCommon = (a: OmniPrimitiveType, b: OmniPrimitiveType, features = OMNI_GENERIC_FEATURES, opt?: CombineOptions): CommonDenominatorType => {
 
-  return OmniUtil.getCommonDenominatorBetween(a, b, features)
+  return OmniUtil.getCommonDenominatorBetween(a, b, features, opt)
     || {type: {kind: OmniTypeKind.UNKNOWN}, diffs: [TypeDiffKind.FUNDAMENTAL_TYPE]};
 };

@@ -195,10 +195,10 @@ public class JsonRpcError {
   private final Object error;
   private final String message;
 
-  public JsonRpcError(Object error, String message, int code) {
+  public JsonRpcError(Object error, int code, String message) {
     this.error = error;
-    this.message = message;
     this.code = code;
+    this.message = message;
   }
 
   public int getCode() {
@@ -226,7 +226,7 @@ import jakarta.annotation.Generated;
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ListThingsError100Error extends JsonRpcError {
   public ListThingsError100Error(Object error, String message) {
-    super(error, ((message == null) ? "Server is busy" : message), 100);
+    super(error, 100, ((message == null) ? "Server is busy" : message));
   }
 }
 
@@ -249,7 +249,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "omnigen", date = "2000-01-02T03:04:05.000Z")
 public class ErrorUnknownError extends JsonRpcError {
-  public ErrorUnknownError(Object error, String message, Integer code) {
-    super(error, ((message == null) ? "Unknown Error" : message), ((code == null) ? -1 : code));
+  public ErrorUnknownError(Object error, Integer code, String message) {
+    super(error, ((code == null) ? -1 : code), ((message == null) ? "Unknown Error" : message));
   }
 }

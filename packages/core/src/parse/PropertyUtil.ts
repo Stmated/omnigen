@@ -14,7 +14,7 @@ import {
   TypeDiffKind,
 } from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.js';
-import {CombineOptions, CreateMode} from '../util';
+import {CombineMode, CombineOptions, CreateMode} from '../util';
 import {LoggerFactory} from '@omnigen/core-log';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
@@ -73,13 +73,14 @@ export class PropertyUtil {
         property: p,
       }));
     });
+
     for (const properties of pairs) {
 
-      const propertyNames = properties.map(p => p.property.name); // .filter(isDefined);
+      const propertyNames = properties.map(p => p.property.name);
       if (commonPropertyNames == undefined) {
         commonPropertyNames = propertyNames;
       } else {
-        commonPropertyNames = commonPropertyNames.filter(name => propertyNames.some(pn => OmniUtil.isPropertyNameEqual(pn, name))); // .includes(name));
+        commonPropertyNames = commonPropertyNames.filter(name => propertyNames.some(pn => OmniUtil.isPropertyNameEqual(pn, name)));
       }
 
       if (propertyNames.length <= 0) {
@@ -100,9 +101,7 @@ export class PropertyUtil {
       );
 
       const sameName = sameNameWithOwner.map(it => it.property);
-      const propertyEquality = this.getLowestAllowedPropertyEquality(
-        sameName, bannedTypeDiff, bannedPropDiff, targetFeatures, combineOpt,
-      );
+      const propertyEquality = this.getLowestAllowedPropertyEquality(sameName, bannedTypeDiff, bannedPropDiff, targetFeatures, combineOpt);
 
       if (propertyEquality) {
 
@@ -111,22 +110,7 @@ export class PropertyUtil {
           targetFeatures,
         );
 
-        let commonType = propertyEquality.commonType || {kind: OmniTypeKind.UNKNOWN};
-        let constructedType = propertyEquality.constructedType;
-
-        // if (propertyEquality.created) {
-        //   // The given type was created, and not an actual common type.
-        // }
-
-        /*let constructedType: OmniType | undefined = undefined;
-        if (propertyEquality.typeDiffs?.length === 1 && propertyEquality.typeDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL) {
-
-          // TODO: This should likely work under more circumstances, but for now we will only do it for polymorphic literals.
-          constructedType = {
-            kind: OmniTypeKind.EXCLUSIVE_UNION,
-            types: distinctTypes,
-          }
-        }*/
+        const commonType = propertyEquality.commonType || {kind: OmniTypeKind.UNKNOWN};
 
         const stringPropertyName = OmniUtil.getPropertyName(propertyName, true);
         information.byPropertyName[stringPropertyName] = {
@@ -135,7 +119,6 @@ export class PropertyUtil {
           propertyDiffs: propertyEquality.propertyDiffs,
           typeDiffs: propertyEquality.typeDiffs,
           commonType: commonType,
-          constructedType: constructedType,
           distinctTypes: distinctTypes,
         };
       }
@@ -155,7 +138,7 @@ export class PropertyUtil {
     const propertyEquality: PropertyEquality = {
       typeDiffs: [],
       propertyDiffs: [],
-      //type: {kind: OmniTypeKind.UNKNOWN},
+      // type: {kind: OmniTypeKind.UNKNOWN},
     };
 
     if (properties.length === 1) {
@@ -167,7 +150,6 @@ export class PropertyUtil {
     }
 
     const commonTypes: Array<OmniType> = [];
-    const constructedTypes: Array<OmniType> = [];
     for (let i = 0; i < properties.length; i++) {
 
       // NOTE: Need good test cases for this, to check that it really finds the lowest equality level
@@ -175,7 +157,8 @@ export class PropertyUtil {
       if (i == properties.length - 1) {
 
         // This is the last property. There is no next to compare to.
-        //possiblePropertyTypes.push(current.type);
+        //TODO: Problem is from removal of this! We do not get all the possible property types! Need to rethink how we get the common types of all properties so it works for property elevation!
+        // possiblePropertyTypes.push(current.type);
         continue;
       }
 
@@ -191,9 +174,7 @@ export class PropertyUtil {
         return undefined;
       }
 
-      if (equalityLevel.constructedType) {
-        constructedTypes.push(equalityLevel.constructedType);
-      } else if (equalityLevel.commonType) {
+      if (equalityLevel.commonType) {
         commonTypes.push(equalityLevel.commonType);
       }
 
@@ -214,15 +195,12 @@ export class PropertyUtil {
       }
     }
 
-    TODO: How to deal with `constructedTypes`???
-
     const commonType = OmniUtil.getCommonDenominator({features: targetFeatures}, commonTypes);
     if (commonType) {
 
       // We still want to keep the diffs that we collected.
       // But we also want the common type between the different properties that we have found.
       propertyEquality.typeDiffs = [...propertyEquality.typeDiffs ?? [], ...(commonType.diffs ?? [])];
-      propertyEquality.constructedType = commonType.constructedType;
       propertyEquality.commonType = commonType.type;
     }
 
@@ -257,7 +235,6 @@ export class PropertyUtil {
         propertyDiffs: [PropertyDifference.REQUIRED],
         typeDiffs: commonType.diffs,
         commonType: commonType.type,
-        constructedType: commonType.constructedType,
       };
     }
 
@@ -273,7 +250,6 @@ export class PropertyUtil {
         propertyDiffs: [PropertyDifference.FIELD_NAME],
         typeDiffs: commonType.diffs,
         commonType: commonType.type,
-        constructedType: commonType.constructedType,
       };
     }
 
@@ -282,7 +258,6 @@ export class PropertyUtil {
         propertyDiffs: [PropertyDifference.META],
         typeDiffs: commonType.diffs,
         commonType: commonType.type,
-        constructedType: commonType.constructedType,
       };
     }
 
@@ -290,7 +265,6 @@ export class PropertyUtil {
       propertyDiffs: [],
       typeDiffs: commonType.diffs,
       commonType: commonType.type,
-      constructedType: commonType.constructedType,
     };
   }
 }

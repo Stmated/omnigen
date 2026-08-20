@@ -9,7 +9,9 @@ import {
   OmniModel,
   OmniModel2ndPassTransformer,
   OmniModelTransformer2ndPassArgs,
-  OmniModelTransformerArgs, OmniNode, OmniOwnedProperty,
+  OmniModelTransformerArgs,
+  OmniNode,
+  OmniOwnedProperty,
   OmniProperty,
   OmniPropertyName,
   OmniPropertyOwner,
@@ -26,13 +28,16 @@ import {
 import {LoggerFactory} from '@omnigen/core-log';
 import {PropertyUtil} from '../PropertyUtil';
 import {OmniUtil} from '../OmniUtil';
-import {Case, CreateMode, isDefined, Sorters} from '../../util';
+import {Case, CombineMode, CreateMode, isDefined, Sorters} from '../../util';
 import {Naming} from '../Naming';
 import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2.ts';
 import {ANY_KIND} from '../../reducer2/types.ts';
-import {OmniTypeUtil} from '../OmniTypeUtil.ts';
 
 const logger = LoggerFactory.create(import.meta.url);
+
+const PROPERTY_TRANSFERABLE_BOOLEAN_PROP_KEYS: ReadonlyArray<keyof OmniOwnedProperty['property']> = [
+  'readOnly', 'writeOnly', 'required', 'deprecated', 'abstract',
+];
 
 /**
  * Takes an OmniModel, and tries to modify it to use generics where possible.
@@ -125,11 +130,13 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
   ): OmniModel {
 
     const commonProperties = PropertyUtil.getCommonProperties(
-      // We do not care AT ALL if they have nothing in-common. Just nice if we get one.
       () => false,
       () => false,
       features,
-      {create: CreateMode.SIMPLE},
+      {
+        create: CreateMode.SIMPLE,
+        combine: options.sealedGenericUpperBounds ? CombineMode.UNION : CombineMode.NONE,
+      },
       ...subTypes,
     );
 
@@ -141,13 +148,9 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
 
     const ownerToGenericTargetMap = new Map<OmniPropertyOwner, OmniGenericTargetType>();
     for (const propertyName in commonProperties.byPropertyName) {
-      if (!(propertyName in commonProperties.byPropertyName)) {
-        continue;
-      }
 
       const info = commonProperties.byPropertyName[propertyName];
       if (info.distinctTypes.length <= 1) {
-
         // There are 1 or less distinct types, so we will not replace it with generics.
         continue;
       }
@@ -188,13 +191,17 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       && !features.literalTypes
       && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? (it.value !== undefined) : false);
 
-    const genericName = (Object.keys(commonProperties.byPropertyName).length == 1) ? 'T' : `T${Case.pascal(OmniUtil.getPropertyName(info.propertyName, true))}`;
+    if (widenedPolymorphicLiteral) {
+      return model;
+    }
 
     const upperBound = this.toGenericUpperBoundType(info, features);
 
     const genericSourceIdentifier: OmniGenericSourceIdentifierType = {
       kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
-      placeholderName: genericName,
+      placeholderName: (Object.keys(commonProperties.byPropertyName).length === 1)
+        ? 'T'
+        : `T${Case.pascal(OmniUtil.getPropertyName(info.propertyName, true))}`,
     };
 
     this.maybeWildcardUpperBound(upperBound, genericSource, info.propertyName);
@@ -250,10 +257,13 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       let targetIdentifierType: OmniType;
       if (widenedPolymorphicLiteral) {
 
-        p.property.hidden = true;
+        if (!p.property.hidden) {
+          p.property.hidden = true;
+          p.property.debug = OmniUtil.addDebug(p.property.debug, `Set to hidden in generics transformer, since it is a widened polymorphic literal`);
+        }
+
         targetIdentifierType = {
           ...p.property.type,
-          // kind: OmniTypeKind.STRING,
           debug: OmniUtil.addDebug(p.property.type.debug, `Created as a generic placeholder for a widened polymorphic literal (since generic literals are not supported)`),
         };
 
@@ -277,52 +287,46 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       genericTarget.targetIdentifiers.push(targetIdentifier);
     }
 
-    if (genericSource.of.kind === OmniTypeKind.OBJECT) {
-
-      const newProperty: OmniProperty = {
-        kind: OmniItemKind.PROPERTY,
-        name: info.propertyName,
-        type: genericSourceIdentifier,
-        debug: OmniUtil.addDebug(
-          info.properties.flatMap(it => OmniUtil.prefixDebug(it.property.debug, Naming.getNameString(it.owner))).filter(isDefined),
-          `Merged into one generic property`,
-        ),
-      };
-
-      const booleanType: Array<keyof OmniOwnedProperty['property']> = [
-        'readOnly', 'writeOnly', 'required', 'deprecated', 'abstract'
-      ];
-
-      for (const k of booleanType) {
-        if (info.properties.every(it => it.property[k])) {
-          (newProperty as any)[k] = true;
-        }
-      }
-
-      const existing = genericSource.of.properties.find(it => OmniUtil.isPropertyNameEqual(it.name, newProperty.name));
-      if (existing) {
-
-        // TODO: Check which one of the two is most generic, and use that one instead.
-        //        Give a more accurate log with different levels depending on severity of situation.
-        const diffs = OmniUtil.getDiff(newProperty.type, existing.type, features);
-        const diffStrings = OmniUtil.getDiffStrings(diffs);
-
-        const newTypeDesc = OmniUtil.describe(newProperty.type);
-        const existingTypeDesc = OmniUtil.describe(existing.type);
-
-        const vsString = `${newTypeDesc} vs ${existingTypeDesc}`;
-
-        logger.warn(`Property '${existing.name}' attempted to be hoisted twice, which is unexpected behavior. Replacing with generic version. Diffs: ${diffStrings.join(', ')}. ${vsString}`);
-        const existingIndex = genericSource.of.properties.indexOf(existing);
-        genericSource.of.properties.splice(existingIndex, 1, newProperty);
-
-      } else {
-        genericSource.of.properties.push(newProperty);
-      }
-    } else {
+    if (genericSource.of.kind !== OmniTypeKind.OBJECT) {
 
       // Go back to info logging? Feels like this should have been filtered away earlier!
       throw new Error(`Encountered ${OmniUtil.describe(genericSource.of)} as generic source, which cannot represent properties, so cannot move ${info.propertyName} there`);
+    }
+
+    const newProperty: OmniProperty = {
+      kind: OmniItemKind.PROPERTY,
+      name: info.propertyName,
+      type: genericSourceIdentifier,
+      debug: OmniUtil.addDebug(
+        info.properties.flatMap(it => OmniUtil.prefixDebug(it.property.debug, `${Naming.getNameString(it.owner)} - `)).filter(isDefined),
+        `Merged properties from ${info.properties.map(it => Naming.unwrap(Naming.getName(it.owner))).join(', ')} into one generic property`,
+      ),
+    };
+
+    for (const k of PROPERTY_TRANSFERABLE_BOOLEAN_PROP_KEYS) {
+      if (info.properties.every(it => it.property[k])) {
+        (newProperty as any)[k] = true;
+      }
+    }
+
+    const existing = genericSource.of.properties.find(it => OmniUtil.isPropertyNameEqual(it.name, newProperty.name));
+    if (existing) {
+
+      // TODO: Check which one of the two is most generic, and use that one instead. Give a more accurate log with different levels depending on severity of situation.
+      const diffs = OmniUtil.getDiff(newProperty.type, existing.type, features);
+      const diffStrings = OmniUtil.getDiffStrings(diffs);
+
+      const newTypeDesc = OmniUtil.describe(newProperty.type);
+      const existingTypeDesc = OmniUtil.describe(existing.type);
+
+      const vsString = `${newTypeDesc} vs ${existingTypeDesc}`;
+
+      logger.warn(`Property '${existing.name}' attempted to be hoisted twice, which is unexpected behavior. Replacing with generic version. Diffs: ${diffStrings.join(', ')}. ${vsString}`);
+      const existingIndex = genericSource.of.properties.indexOf(existing);
+      genericSource.of.properties.splice(existingIndex, 1, newProperty);
+
+    } else {
+      genericSource.of.properties.push(newProperty);
     }
 
     return model;
@@ -385,21 +389,16 @@ export class GenericsModelTransformer implements OmniModel2ndPassTransformer {
       return undefined;
     }
 
-    // /*&& !features.literalTypes && info.distinctTypes.some(it => OmniUtil.isPrimitive(it) ? it.literal : false)/*
     if (info.typeDiffs?.includes(TypeDiffKind.FUNDAMENTAL_TYPE)) {
 
-      // If the type difference is fundamental, then we cannot have an upper bound set, since some have nothing in-common.
+      // If the type difference is fundamental, then we cannot have an upper bound set, since some have nothing in common.
       return undefined;
     }
 
     if (info.commonType && !features.primitiveGenerics && OmniUtil.isPrimitive(info.commonType)) {
-      return OmniUtil.toReferenceType(info.commonType, CreateMode.ANY);
+      return OmniUtil.toReferenceType(info.commonType, {create: CreateMode.ANY});
     }
 
-    // if (info.typeDiffs?.length === 1 && info.typeDiffs[0] === TypeDiffKind.POLYMORPHIC_LITERAL) {
-    //   return
-    // }
-
-    return info.constructedType ?? info.commonType;
+    return info.commonType;
   }
 }

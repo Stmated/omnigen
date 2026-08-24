@@ -1,7 +1,9 @@
-import {CommonDenominatorType, OMNI_GENERIC_FEATURES, OmniItemKind, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind, TargetFeatures, TypeDiffKind} from '@omnigen/api';
+import {CommonDenominatorType, OMNI_GENERIC_FEATURES, OmniGenericSourceIdentifierType, OmniGenericSourceType, OmniGenericTargetType, OmniItemKind, OmniObjectType, OmniPrimitiveType, OmniProperty, OmniType, OmniTypeKind, TargetFeatures, TypeDiffKind} from '@omnigen/api';
 import {Diff, DiffKind, OmniUtil, PropertyTypeDiff} from './OmniUtil';
+import {TypeInvestigator} from './TypeInvestigator';
 import {describe, test, TestContext} from 'vitest';
 import {CombineOptions, CreateMode} from '../util';
+import {PropertyUtil} from './PropertyUtil';
 
 describe('OmniUtil', () => {
 
@@ -30,6 +32,68 @@ describe('OmniUtil', () => {
       {kind: OmniTypeKind.INTEGER, nullable: true},
       {kind: OmniTypeKind.INTEGER, nullable: false},
     );
+  });
+
+  test('Common denominator is accumulated across all types', ctx => {
+
+    const common = TypeInvestigator.getCommonDenominator(OMNI_GENERIC_FEATURES, [
+      {kind: OmniTypeKind.INTEGER_SMALL},
+      {kind: OmniTypeKind.INTEGER},
+      {kind: OmniTypeKind.DOUBLE},
+    ]);
+
+    ctx.expect(common?.type.kind).toEqual(OmniTypeKind.DOUBLE);
+    ctx.expect(common?.diffs).toEqual([TypeDiffKind.SIZE]);
+  });
+
+  test('Common denominator retains nullable generic bounds over polymorphic literals in every order', ctx => {
+
+    const sourceIdentifier: OmniGenericSourceIdentifierType = {
+      kind: OmniTypeKind.GENERIC_SOURCE_IDENTIFIER,
+      placeholderName: 'T',
+    };
+    const source: OmniGenericSourceType = {
+      kind: OmniTypeKind.GENERIC_SOURCE,
+      of: {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: {namespace: [], edgeName: 'Box'}},
+      sourceIdentifiers: [sourceIdentifier],
+    };
+    const box = (type: OmniType): OmniGenericTargetType => ({
+      kind: OmniTypeKind.GENERIC_TARGET,
+      source,
+      targetIdentifiers: [{
+        kind: OmniTypeKind.GENERIC_TARGET_IDENTIFIER,
+        sourceIdentifier,
+        type,
+      }],
+    });
+    const types = [
+      box({kind: OmniTypeKind.NULL}),
+      box({kind: OmniTypeKind.NULL}),
+      box({kind: OmniTypeKind.INTEGER, literal: true, value: 1}),
+      box({kind: OmniTypeKind.INTEGER, literal: true, value: 2}),
+    ];
+
+    for (const [permutationIndex, permutation] of [...permutations(types)].entries()) {
+      const common = PropertyUtil.getCommonProperties(
+        () => false,
+        () => false,
+        OMNI_GENERIC_FEATURES,
+        {create: CreateMode.SIMPLE},
+        ...permutation.map((type, index): OmniObjectType => ({
+          kind: OmniTypeKind.OBJECT,
+          name: `Owner${index}`,
+          properties: [{kind: OmniItemKind.PROPERTY, name: 'value', type}],
+        })),
+      );
+
+      const commonType = common.byPropertyName.value.commonType as OmniGenericTargetType;
+      ctx.expect(commonType.targetIdentifiers[0].type, `permutation ${permutationIndex}`).toMatchObject({
+        kind: OmniTypeKind.INTEGER,
+        nullable: true,
+      });
+      ctx.expect(commonType.targetIdentifiers[0].type).not.toHaveProperty('literal');
+      ctx.expect(commonType.targetIdentifiers[0].type).not.toHaveProperty('value');
+    }
   });
 
   test('EqualityLevel Polymorphic Strings', async ctx => {
@@ -290,6 +354,20 @@ const expectA = (ctx: TestContext, a: OmniPrimitiveType, b: OmniPrimitiveType): 
 
 const expectCommon = (a: OmniPrimitiveType, b: OmniPrimitiveType, features = OMNI_GENERIC_FEATURES, opt?: CombineOptions): CommonDenominatorType => {
 
-  return OmniUtil.getCommonDenominatorBetween(a, b, features, opt)
+  return TypeInvestigator.getCommonDenominatorBetween(a, b, features, opt)
     || {type: {kind: OmniTypeKind.UNKNOWN}, diffs: [TypeDiffKind.FUNDAMENTAL_TYPE]};
 };
+
+function* permutations<T>(items: ReadonlyArray<T>): Generator<T[]> {
+
+  if (items.length <= 1) {
+    yield [...items];
+    return;
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    for (const remainder of permutations([...items.slice(0, i), ...items.slice(i + 1)])) {
+      yield [items[i], ...remainder];
+    }
+  }
+}

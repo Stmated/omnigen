@@ -24,6 +24,7 @@ import {CodeRootAstNode} from '../CodeRootAstNode';
 import * as Code from '../Code';
 import {DelegateKind, VirtualAnnotationKind} from '../Code';
 import {AbstractCodeNode} from '../AbstractCodeNode';
+import {TypeInvestigator} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -184,12 +185,12 @@ export class AddCompositionMembersCodeAstTransformer implements AstTransformer<C
     for (const type of types) {
 
       const otherType = handled.find(it => {
-        const commonDenominator = OmniUtil.getCommonDenominatorBetween(it, type, features);
+        const commonDenominator = TypeInvestigator.getCommonDenominatorBetween(it, type, features);
         if (!commonDenominator) {
           return false;
         }
 
-        const isDiff = OmniUtil.getDiffAmount(commonDenominator.diffs) > 0;
+        const isDiff = TypeInvestigator.getDiffAmount(commonDenominator.diffs) > 0;
 
         logger.silent(`Diffs ${isDiff} for ${OmniUtil.describe(it)} vs ${OmniUtil.describe(type)}: ${commonDenominator.diffs}}`);
         return !isDiff;

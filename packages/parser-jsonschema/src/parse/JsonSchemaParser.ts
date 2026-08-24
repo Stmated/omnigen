@@ -31,15 +31,16 @@ import {
 } from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {DiscriminatorAware} from './DiscriminatorAware.js';
-import {Case, CompositionUtil, isDefined, Naming, OmniUtil, SchemaFile, ToDefined, TypeNameUtil, Util} from '@omnigen/core';
+import {Case, CompositionUtil, isDefined, Naming, OmniUtil, SchemaFile, ToDefined, TypeNameUtil} from '@omnigen/core';
 import {ApplyIdJsonSchemaTransformerFactory, SimplifyJsonSchemaTransformerFactory} from '../transform';
 import {DefaultJsonSchema9Visitor, ExternalDocumentsFinder, JsonSchema9Visitor, RefResolver, ToSingle} from '../visit';
 import Ajv2020, {ErrorObject} from 'ajv/dist/2020';
 import {JsonSchemaMigrator} from '../migrate';
 import {JSONSchema9, JSONSchema9Definition, JSONSchema9Type, JSONSchema9TypeName, PROP_ID, PROP_SKIPPED_AGGREGATION} from '../definitions';
-import {DocumentStore, JsonPathFetcher, ObjectVisitor} from '@omnigen/core-json';
+import {DocumentStore, JsonPathFetcher} from '@omnigen/core-json';
 import {JsonExpander} from '@omnigen-org/json-expander';
 import {JsonSchemaNameParser, NameOptions} from './JsonSchemaNameParser.ts';
+import {TypeInvestigator} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -1806,7 +1807,7 @@ export class JsonSchemaParser<TOpt extends ParserOptions> {
       // TODO: What do we do here if the type can be inlined? Just ignore I guess?
 
       const staticArrayTypes = items.map((it, idx) => this.jsonSchemaToType([...jsonPath, 'items', `${idx}`], it));
-      const commonDenominator = OmniUtil.getCommonDenominator(OMNI_GENERIC_FEATURES, staticArrayTypes.map(it => it.type))?.type;
+      const commonDenominator = TypeInvestigator.getCommonDenominator(OMNI_GENERIC_FEATURES, staticArrayTypes.map(it => it.type))?.type;
 
       return {
         kind: OmniTypeKind.TUPLE,

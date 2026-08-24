@@ -37,7 +37,7 @@ import {
   TypeName,
   UnknownKind,
 } from '@omnigen/api';
-import {assertDefined, Case, isDefined, Naming, OmniUtil, ToDefined} from '@omnigen/core';
+import {assertDefined, Case, Naming, OmniUtil, ToDefined} from '@omnigen/core';
 import {parseOpenRPCDocument} from '@open-rpc/schema-utils-js';
 import {
   ContactObject,
@@ -75,6 +75,7 @@ import {JsonExpander} from '@omnigen-org/json-expander';
 import {z} from 'zod';
 import {ZodArguments} from '@omnigen/core-plugin';
 import {OpenAPIV3_1 as OpenApi} from 'openapi-types';
+import {TypeInvestigator} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -1108,7 +1109,7 @@ export class OpenRpcParser implements Parser<JsonRpcParserOptions & ParserOption
         return this.toOmniPropertyFromContentDescriptor(paramJsonPath, requestParamsType, resolved);
       });
 
-      requestParamsType.commonDenominator = OmniUtil.getCommonDenominator(
+      requestParamsType.commonDenominator = TypeInvestigator.getCommonDenominator(
         OMNI_GENERIC_FEATURES,
         requestParamsType.properties.map(it => it.type),
       )?.type;

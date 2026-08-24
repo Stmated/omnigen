@@ -1,6 +1,7 @@
 export * from './CompositionUtil';
 export * from './OmniModelMerge';
 export * from './OmniUtil';
+export * from './TypeInvestigator';
 export * from './Naming';
 export * from './PropertyUtil';
 

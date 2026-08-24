@@ -14,8 +14,9 @@ import {
   TypeDiffKind,
 } from '@omnigen/api';
 import {OmniUtil} from './OmniUtil.js';
-import {CombineMode, CombineOptions, CreateMode} from '../util';
+import {CombineOptions, CreateMode} from '../util';
 import {LoggerFactory} from '@omnigen/core-log';
+import {TypeInvestigator} from './TypeInvestigator.js';
 
 type NonNullableProperties<T> = { [P in keyof T]-?: NonNullable<T[P]>; };
 
@@ -195,7 +196,7 @@ export class PropertyUtil {
       }
     }
 
-    const commonType = OmniUtil.getCommonDenominator({features: targetFeatures}, commonTypes);
+    const commonType = TypeInvestigator.getCommonDenominator({features: targetFeatures, ...combineOpt}, commonTypes);
     if (commonType) {
 
       // We still want to keep the diffs that we collected.
@@ -222,7 +223,7 @@ export class PropertyUtil {
       return {propertyDiffs: [PropertyDifference.NAME]};
     }
 
-    let commonType = OmniUtil.getCommonDenominatorBetween(a.type, b.type, targetFeatures, combineOptions);
+    let commonType = TypeInvestigator.getCommonDenominatorBetween(a.type, b.type, targetFeatures, combineOptions);
     if (!commonType) {
 
       // If no common type was found, we will set the type to UNKNOWN, and level to NOT_EQUAL.

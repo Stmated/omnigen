@@ -5,6 +5,7 @@ import {TsRootNode} from './TsRootNode';
 import {TypeScriptAstTransformerArgs} from './TypeScriptAstVisitor';
 import {Case, OmniUtil} from '@omnigen/core';
 import {ModifierKind} from '@omnigen/target-code/ast';
+import {TypeInvestigator} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -207,7 +208,7 @@ export class ClassToInterfaceTypeScriptAstTransformer implements AstTransformer<
           if (superFields.length > 0) {
 
             const superTypes = superFields.map(it => it.type.omniType);
-            const commonType = OmniUtil.getCommonDenominator(args.features, [...superTypes, hiddenProp.type]);
+            const commonType = TypeInvestigator.getCommonDenominator(args.features, [...superTypes, hiddenProp.type]);
             if (commonType && commonType.diffs && commonType.diffs.length > 0) {
 
               CodeAstUtils.addOmniPropertyToBlockAsField({

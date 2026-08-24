@@ -19,6 +19,7 @@ import {CreateMode, OmniUtil} from '@omnigen/core';
 import {JavaOptions, SerializationLibrary} from '../options';
 import {JACKSON_JSON_ANY_GETTER, JACKSON_JSON_ANY_SETTER} from './JacksonJavaAstTransformer';
 import {LoggerFactory} from '@omnigen/core-log';
+import {TypeInvestigator} from '@omnigen/core';
 
 const logger = LoggerFactory.create(import.meta.url);
 
@@ -126,7 +127,7 @@ export class PatternPropertiesToMapJavaAstTransformer extends AbstractJavaAstTra
     if (decWithDictionary.size >= args.options.additionalPropertiesInterfaceAfterDuplicateCount) {
 
       // There are several objects which have additional properties, so we will introduce a common interface for them.
-      const commonDictionary = OmniUtil.getCommonDenominator({features: args.features, create: CreateMode.ANY}, allDictionaries)!;
+      const commonDictionary = TypeInvestigator.getCommonDenominator({features: args.features, create: CreateMode.ANY}, allDictionaries)!;
 
       if (!commonDictionary) {
 

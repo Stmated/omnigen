@@ -3,6 +3,7 @@ import {JavaUtil} from '../util';
 import {OmniHardcodedReferenceType, OmniTypeKind, RootAstNode, TargetFeatures, TypeNode} from '@omnigen/api';
 import {OmniUtil} from '@omnigen/core';
 import * as Java from '../ast/JavaAst';
+import {TypeInvestigator} from '@omnigen/core';
 
 /**
  * Replace higher level "delegate" with Java-specific interfaces and call-sites.
@@ -70,7 +71,7 @@ export class DelegatesToJavaAstTransformer extends AbstractJavaAstTransformer {
 
           if (n.parameterTypes.length == 1) {
             const sourceType = n.parameterTypes[0].omniType;
-            const common = OmniUtil.getCommonDenominatorBetween(sourceType, n.returnType.omniType, args.features);
+            const common = TypeInvestigator.getCommonDenominatorBetween(sourceType, n.returnType.omniType, args.features);
             if (common && common.type == sourceType) {
               hardType = {kind: OmniTypeKind.HARDCODED_REFERENCE, fqn: nameResolver.parse('java.util.function.UnaryOperator')};
             } else {

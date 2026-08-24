@@ -1,7 +1,7 @@
 ---
 name: critical-path-reviewer
 description: Performs a high-rigor, read-only correctness review of critical-path feature changes after implementation.
-model: gpt-5.6-sol
+model: claude-fable-5
 tools:
   - read
   - search

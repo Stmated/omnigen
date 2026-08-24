@@ -1,6 +1,7 @@
 import {OmniEnumMember, OmniExample, OmniIntersectionType, OmniItemKind, OmniModel2ndPassTransformer, OmniModelTransformer2ndPassArgs, OmniType, OmniTypeKind, TargetFeatures} from '@omnigen/api';
 import {LoggerFactory} from '@omnigen/core-log';
 import {OmniUtil} from '../OmniUtil';
+import {TypeInvestigator} from '../TypeInvestigator';
 import {ProxyReducerOmni2} from '../../reducer2/ProxyReducerOmni2';
 
 const logger = LoggerFactory.create(import.meta.url);
@@ -77,7 +78,7 @@ export class ConflictingIntersectionModelTransformer implements OmniModel2ndPass
       return undefined;
     }
 
-    const commonDenominator = OmniUtil.getCommonDenominator(features, type.types);
+    const commonDenominator = TypeInvestigator.getCommonDenominator(features, type.types);
     if (commonDenominator) {
 
       if (type.name && OmniUtil.isNameable(commonDenominator.type)) {
